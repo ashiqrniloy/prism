@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { assertIdentityMatchesOwnership } from "@arnilo/prism";
 import type { AgentIdentity, OwnershipScope, ToolEffectKey, ToolEffectRecord, ToolEffectStore, ToolResult } from "@arnilo/prism";
 
 /** Host-supplied identity/ownership for UI-initiated effect recording. */
@@ -30,7 +31,7 @@ export interface AppEffectKeyInput {
   readonly argumentsHash: string;
 }
 
-/** Stable effect key: identity + ownership + tool name + arguments hash (Phase 7 pattern). */
+/** Stable effect key: ownership + tool name + arguments hash (Phase 7 pattern). */
 export function deriveAppEffectKey(input: AppEffectKeyInput): string {
   return `prism:ag-ui-app:v1:${hashJson({
     tenant: input.ownership.tenantId,
@@ -61,10 +62,10 @@ export function hashJson(value: unknown): string {
  */
 export async function reconcileAppEffect(input: ReconcileAppEffectInput): Promise<ToolEffectRecord | undefined> {
   const { effectStore, identity, ownership, sessionId, runId, toolName, arguments: args, toolCallId, outcome, result, failure } = input;
+  assertIdentityMatchesOwnership(identity, ownership);
   const argumentsHash = hashJson(args);
   const key = deriveAppEffectKey({ ownership, sessionId, runId, toolName, argumentsHash });
   const base: ToolEffectKey = {
-    identity,
     ownership,
     key,
     sessionId,

@@ -139,7 +139,7 @@ describe("@arnilo/prism-providers/shared/anthropic-messages", () => {
         { type: "content_block_delta", index: 2, delta: { type: "input_json_delta", partial_json: '{"q":"x"}' } },
         { type: "content_block_stop", index: 2 },
         {
-          type: "message_delta",
+          type: "message.delta",
           delta: { stop_reason: "tool_use" },
           usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 4, cache_creation_input_tokens: 2 },
         },

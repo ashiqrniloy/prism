@@ -23,7 +23,7 @@ export interface CreateBusinessWorkerOptions {
   readonly workspaceRoot?: string;
 }
 
-export function createAppAgent(options: CreateBusinessWorkerOptions = {}): Agent {
+export async function createAppAgent(options: CreateBusinessWorkerOptions = {}): Promise<Agent> {
   const tenantId = options.tenantId ?? "tenant-corp";
   const userId = options.userId ?? "worker-1";
 
@@ -47,7 +47,7 @@ export function createAppAgent(options: CreateBusinessWorkerOptions = {}): Agent
       providerDone(),
     ]);
 
-  return createSecureAgent({
+  return await createSecureAgent({
     id: "business-worker",
     definitionRevision: "1",
     ownership: { tenantId, userId },

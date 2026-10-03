@@ -2,12 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   type AgentEvent,
-  type BeforeProviderTurnPayload,
+  type ProviderEvent,
+  type ProviderRequest,
   createAgent,
   createMemorySessionStore,
-  createMiddlewareRegistry,
   createMockProvider,
-  DeterministicTurnError,
   providerDone,
   providerTextDelta,
 } from "../index.js";
@@ -20,156 +19,120 @@ async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[
 
 const DESK_ANSWERS = new Map([["what is the desk?", "The desk answers from local records."]]);
 
-function deskMiddleware() {
-  const middleware = createMiddlewareRegistry();
-  middleware.use<BeforeProviderTurnPayload>("beforeProviderTurn", (payload) => {
-    const text = DESK_ANSWERS.get(payload.userText);
-    return text ? { ...payload, answer: { content: [{ type: "text", text }], provenance: { middleware: "desk" } } } : payload;
-  });
-  return middleware;
+/** A `model.call` around handler that skips `next`: no provider request, no usage. */
+function deskModelCall() {
+  return (hooks: import("../index.js").HookRegistrar) => {
+    hooks.on("model.call", async (request, next, context) => {
+      const userText = request.messages
+        .filter((message) => message.role === "user")
+        .flatMap((message) => message.content)
+        .filter((block): block is { type: "text"; text: string } => block.type === "text")
+        .map((block) => block.text)
+        .join("");
+      const text = DESK_ANSWERS.get(userText);
+      if (!text) return next(request);
+      return answerStream(text);
+    });
+  };
 }
 
-describe("deterministic no-model turns", () => {
-  it("answers without a provider call, records the message, and reports no usage", async () => {
-    const requests: unknown[] = [];
-    const agent = createAgent({
+async function* answerStream(text: string): AsyncIterable<ProviderEvent> {
+  yield { type: "message_start", messageId: "deterministic" };
+  yield providerTextDelta(text);
+  yield providerDone();
+}
+
+describe("host-answered turns that skip the provider", () => {
+  it("answers without a provider call", async () => {
+    const requests: ProviderRequest[] = [];
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("model answer"), providerDone()], {
         onRequest: (request) => requests.push(request),
       }),
-      middleware: deskMiddleware(),
+      hooks: deskModelCall(),
     });
-    const session = agent.createSession({ id: "deterministic-answer" });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     const result = await session.run("what is the desk?");
     const events = await reader;
 
     assert.equal(requests.length, 0, "deterministic turn must not reach the provider adapter");
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.text, "The desk answers from local records.");
     assert.equal(result.message?.role, "assistant");
-    assert.equal(result.usage, undefined, "usage is absent for a no-model turn, never zero");
+    // A `model.call` handler that skips `next` yields no `usage` event, so the turn reports the
+    // session's estimated usage. The retired `beforeProviderTurn` middleware could suppress usage
+    // entirely (`undefined`, never zero); a hook cannot, because estimation happens in the kernel.
+    assert.equal(result.usage?.estimated, true);
 
-    assert.deepEqual(
-      events.map((event) => event.type),
-      [
-        "agent_started",
-        "turn_started",
-        "deterministic_turn",
-        "message_started",
-        "message_delta",
-        "message_finished",
-        "turn_finished",
-        "agent_finished",
-      ],
-    );
-    const turn = events.find((event) => event.type === "deterministic_turn");
-    assert.equal(turn?.type === "deterministic_turn" ? turn.middleware : undefined, "desk");
-    assert.equal(turn?.type === "deterministic_turn" ? turn.turn : undefined, 1);
-    assert.ok(
-      events.every((event) => !event.type.startsWith("provider_turn")),
-      "no provider turn events for a deterministic turn",
-    );
-
-    // Provenance rides the assistant message (plan 096 Task 2), so the transcript itself proves no model ran.
-    assert.deepEqual(result.message?.metadata, { deterministic: { middleware: "desk" } });
-    const finished = events.find((event) => event.type === "message_finished");
-    assert.deepEqual(finished?.type === "message_finished" ? finished.message.metadata : undefined, {
-      deterministic: { middleware: "desk" },
-    });
+    // The turn still runs through the provider-round machinery, so the kernel emits its turn events
+    // around the host-supplied stream; what must stay absent is any call into the adapter.
+    const types = events.map((event) => event.type);
+    assert.equal(types.at(0), "run.started");
+    assert.equal(types.at(-1), "run.completed");
   });
 
-  it("replays a deterministic turn from the store with provenance intact", async () => {
+  it("records the answered message in the store", async () => {
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerDone()]),
-      middleware: deskMiddleware(),
-      store,
+      hooks: deskModelCall(),
+      slots: { store },
     });
 
-    await agent.createSession({ id: "deterministic-replay" }).run("what is the desk?");
+    await (await agent.session({ id: "deterministic-replay", create: true })).run("what is the desk?");
 
-    // Read back what the store kept: the transcript alone still names the answering middleware.
     const persisted = (await store.list("deterministic-replay")).filter((entry) => entry.kind === "message");
     const assistant = persisted.find((entry) => entry.message?.role === "assistant")?.message;
     assert.equal(assistant?.content[0]?.type === "text" ? assistant.content[0].text : undefined, "The desk answers from local records.");
-    assert.deepEqual(assistant?.metadata, { deterministic: { middleware: "desk" } });
   });
 
-  it("proceeds through the provider unchanged when middleware returns no answer", async () => {
+  it("proceeds through the provider unchanged when the handler calls next", async () => {
     const providerEvents: AgentEvent[][] = [];
-    const run = async (withMiddleware: boolean) => {
-      const agent = createAgent({
+    const run = async (withHook: boolean) => {
+      const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
         provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
-        ...(withMiddleware ? { middleware: deskMiddleware() } : {}),
+        ...(withHook ? { hooks: deskModelCall() } : {}),
       });
-      const session = agent.createSession();
+      const session = await agent.session();
       const reader = collect(session.subscribe());
       const result = await session.run("unmatched question");
       providerEvents.push(await reader);
       return result;
     };
 
-    const withMiddleware = await run(true);
-    const withoutMiddleware = await run(false);
+    const withHook = await run(true);
+    const withoutHook = await run(false);
 
-    assert.equal(withMiddleware.text, "Hello");
-    assert.equal(withMiddleware.text, withoutMiddleware.text);
+    assert.equal(withHook.text, "Hello");
+    assert.equal(withHook.text, withoutHook.text);
     assert.deepEqual(
       providerEvents[0].map((event) => event.type),
       providerEvents[1].map((event) => event.type),
-      "undefined answer must leave the provider round byte-for-byte identical",
+      "a handler that calls next must leave the provider round byte-for-byte identical",
     );
   });
 
-  it("runs deterministic content through output guardrails", async () => {
+  it("a model.response handler still sees the deterministic answer", async () => {
     const seen: string[] = [];
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerDone()]),
-      middleware: deskMiddleware(),
-      guardrails: {
-        output: [
-          {
-            name: "capture",
-            stage: "output",
-            evaluate: (context) => {
-              seen.push(context.value.content.map((block) => (block.type === "text" ? block.text : "")).join(""));
-              return { action: "allow" };
-            },
-          },
-        ],
+      hooks: (hooks) => {
+        deskModelCall()(hooks);
+        hooks.on("model.response", (message) => {
+          seen.push(message.content.map((block) => (block.type === "text" ? block.text : "")).join(""));
+          return undefined;
+        });
       },
     });
 
-    const result = await agent.createSession({ id: "deterministic-guardrail" }).run("what is the desk?");
+    const result = await (await agent.session()).run("what is the desk?");
     assert.equal(result.text, "The desk answers from local records.");
     assert.deepEqual(seen, ["The desk answers from local records."]);
-  });
-
-  it("fails closed on a malformed answer instead of calling the provider", async () => {
-    const requests: unknown[] = [];
-    const middleware = createMiddlewareRegistry();
-    middleware.use<BeforeProviderTurnPayload>("beforeProviderTurn", (payload) => ({
-      ...payload,
-      answer: { content: [], provenance: { middleware: "desk" } },
-    }));
-    const agent = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("model answer"), providerDone()], {
-        onRequest: (request) => requests.push(request),
-      }),
-      middleware,
-    });
-
-    await assert.rejects(
-      () => agent.createSession({ id: "deterministic-malformed" }).run("what is the desk?"),
-      (error) =>
-        error instanceof Error && error.cause instanceof DeterministicTurnError && error.cause.code === "ERR_PRISM_DETERMINISTIC_TURN",
-    );
-    assert.equal(requests.length, 0);
   });
 });

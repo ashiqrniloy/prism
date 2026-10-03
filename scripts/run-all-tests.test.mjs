@@ -168,9 +168,16 @@ test("the workspace test scripts declare bun test file sets that resolve on disk
   }
   // The two packages whose pre-flip globs needed shell quoting now pass a directory: Bun's glob
   // engine matches only the last path segment (measured 2026-09-25), so `dist/**` matched nothing.
-  for (const dir of ["packages/hooks", "packages/prism-coding-tools"]) {
-    assert.match(readManifest(join(ROOT, dir, "package.json")).scripts.test, /--timeout=0 dist$/, `${dir} must pass the dist directory`);
-  }
+  assert.match(
+    readManifest(join(ROOT, "packages/prism-coding-tools", "package.json")).scripts.test,
+    /--timeout=0 dist$/,
+    "coding-tools must pass the dist directory",
+  );
+  assert.match(
+    readManifest(join(ROOT, "packages/integrations/hooks-json", "package.json")).scripts.test,
+    /--timeout=0 src$/,
+    "hooks-json publishes source and tests src",
+  );
   const coreTest = readManifest(join(packagesDir, "prism-core", "package.json")).scripts.test;
   assert.ok(
     !coreTest.includes("$(") && !coreTest.includes('"dist/**'),

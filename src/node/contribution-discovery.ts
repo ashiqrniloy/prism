@@ -1,9 +1,8 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { isJsonObject } from "../config.js";
-import type { ContributionFileKind, DiscoveredContribution, JsonObject, Skill } from "../contracts.js";
+import type { ContributionFileKind, DiscoveredContribution, DiscoveredDeclaration, JsonObject, Skill } from "../contracts.js";
 import { parseSkillFile } from "../contribution-parsing.js";
-import type { ManifestContributionDeclaration, ManifestContributionKind } from "../manifests.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission } from "../security.js";
 import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
@@ -202,12 +201,7 @@ export async function loadSkillDirectory(directory: string, options: LoadSkillDi
 // ponytail: parseSkillFile/parseAgentFile live in ../contribution-parsing.ts (core, fs-free); this
 // Node module owns directory walking + manifest.json parsing only.
 
-function parseManifestDeclaration(
-  text: string,
-  path: string,
-  dirKind: ContributionFileKind,
-  fallbackName: string,
-): ManifestContributionDeclaration {
+function parseManifestDeclaration(text: string, path: string, _dirKind: ContributionFileKind, fallbackName: string): DiscoveredDeclaration {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -219,8 +213,7 @@ function parseManifestDeclaration(
   }
   const obj = parsed as Record<string, unknown>;
   const name = typeof obj.name === "string" && obj.name.length > 0 ? obj.name : fallbackName;
-  const declaration: ManifestContributionDeclaration = {
-    kind: kindToManifestKind(dirKind),
+  const declaration: DiscoveredDeclaration = {
     name,
     ...(typeof obj.module === "string" ? { module: obj.module } : {}),
     ...(typeof obj.exportName === "string" ? { exportName: obj.exportName } : {}),
@@ -232,29 +225,14 @@ function parseManifestDeclaration(
   return declaration;
 }
 
-function kindToManifestKind(kind: ContributionFileKind): ManifestContributionKind {
-  switch (kind) {
-    case "tool":
-      return "tool";
-    case "context":
-      return "contextProvider";
-    case "instructions":
-      return "systemPromptContribution";
-    case "skill":
-      return "skill";
-  }
-}
-
-// ponytail: Phase 29 fix — `${kind}s` produced `instructionss`/`contexts`; the documented layout is
-// `.agents/{skills,tools,context,instructions}/` (instructions and context are already the right form).
+// ponytail: Phase 29 fix — `${kind}s` produced `instructionss`; the documented layout is
+// `.agents/{skills,tools,instructions}/` (`instructions` is already the right form).
 function kindDirName(kind: ContributionFileKind): string {
   switch (kind) {
     case "skill":
       return "skills";
     case "tool":
       return "tools";
-    case "context":
-      return "context";
     case "instructions":
       return "instructions";
   }

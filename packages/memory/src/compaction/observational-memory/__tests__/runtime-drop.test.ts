@@ -29,8 +29,8 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
 describe("observational memory runtime dropper", () => {
   it("runtime_can_drop_after_same_run_reflection_and_pool_pressure", async () => {
     const store = createMemorySessionStore();
-    const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-    const session = agent.createSession({ id: "s1" });
+    const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+    const session = await agent.session({ id: "s1", create: true });
     await session.run("hello world");
     const sourceId = (await session.entries())[0]!.id;
     const workerProvider = sequenceProvider([

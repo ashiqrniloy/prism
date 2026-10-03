@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { clinePassModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createClinePassProvider } from "./provider.js";
 
 export interface ClinePassProviderPackageOptions {
@@ -10,18 +10,10 @@ export interface ClinePassProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createClinePassProviderPackage(options: ClinePassProviderPackageOptions = {}): ProviderPackage {
-  const providerId = options.id ?? "clinepass";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/clinepass",
-    description: "ClinePass provider package for Prism.",
-    docs: { links: ["docs/providers/clinepass.md"] },
-    setup(api) {
-      api.registerProvider(createClinePassProvider(options));
-      for (const model of options.models ?? clinePassModels) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+export function clinepassPackage(options: ClinePassProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.clinepass", "ClinePass provider package for Prism.", () => [
+    createClinePassProvider(options),
+  ]);
 }
 
 export {

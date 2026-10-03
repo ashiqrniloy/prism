@@ -90,7 +90,6 @@
     {
       "includes": [
         "src/agent-approval.ts",
-        "src/agent-loops.ts",
         "src/agent-tool-dispatch.ts",
         "packages/prism-coding-tools/src/agent/delete.ts",
         "packages/prism-coding-tools/src/agent/git*.ts",

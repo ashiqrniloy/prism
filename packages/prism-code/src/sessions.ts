@@ -7,7 +7,7 @@ import { execSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
-  type AgentSession,
+  type Session,
   type AIProvider,
   type CompactionResult,
   createMemorySessionStore,
@@ -20,7 +20,6 @@ import {
   type SessionStore,
 } from "@arnilo/prism";
 import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
-import { createCodingCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
 import type { PrismCodeConfig } from "./config.js";
 import { ensureHomeDir, resolvePrismHome } from "./home.js";
 
@@ -92,6 +91,14 @@ export function legacySessionDbNotice(config: PrismCodeConfig, home: string = re
   const legacy = resolve(config.cwd, ".prism", "sessions.db");
   if (!existsSync(legacy)) return undefined;
   return `prism-code: sessions are now stored in ${resolveSessionDbPath(config, home)}; the old ${legacy} can be deleted`;
+}
+
+/** The agent's `store` slot when it was assigned as an instance (a slot name string has no instance to hand back). */
+export function configuredSessionStore(agent: {
+  readonly config: { readonly slots?: { readonly store?: unknown } };
+}): SessionStore | undefined {
+  const store = agent.config.slots?.store;
+  return typeof store === "object" && store !== null ? (store as SessionStore) : undefined;
 }
 
 /**
@@ -312,27 +319,16 @@ export function formatSessionOption(
 }
 
 export interface CompactSessionOptions {
-  readonly session: AgentSession;
-  readonly provider: AIProvider;
-  readonly model: ModelConfig;
-  readonly customInstructions?: string;
+  readonly session: Session;
   readonly signal?: AbortSignal;
 }
 
 /**
- * Compacts the active session branch using the coding LLM compaction strategy.
+ * Compacts the active session branch with the agent's `compaction` slot compactor (roadmap §2.5),
+ * which Prism Code wires to the coding LLM compactor through `resolvePrismCodeCompaction`.
  * Raw transcript entries remain in the store; the session leaf moves to a new compaction entry.
  * If provider or summarization fails, throws without altering the session leaf.
  */
 export async function compactSession(options: CompactSessionOptions): Promise<CompactionResult> {
-  const strategy = createCodingCompactionStrategy({
-    provider: options.provider,
-    model: options.model,
-    customInstructions: options.customInstructions,
-  });
-
-  return options.session.compact({
-    strategy,
-    signal: options.signal,
-  });
+  return options.session.compact({ signal: options.signal });
 }

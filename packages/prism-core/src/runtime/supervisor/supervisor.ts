@@ -1,14 +1,15 @@
 import {
   AgentDelegationSuspendedError,
   type AgentEvent,
-  AgentRunError,
-  type AgentRunResult,
-  type AgentSession,
+  type AgentRunStatus,
+  type RunResult,
+  type Session,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
   assertIdentityPropagation,
   type BudgetAxisUsage,
   type BudgetConsumedCounters,
+  askEveryTool,
   createAgent,
   createEventMultiplexer,
   type NestedRunOutcome,
@@ -22,7 +23,7 @@ import {
   type ToolCallSummary,
   type Usage,
 } from "@arnilo/prism";
-import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorValidationError } from "./errors.js";
+import { SupervisorDeniedError, SupervisorError, SupervisorLimitError, SupervisorRunError, SupervisorValidationError } from "./errors.js";
 import {
   HARD_MILESTONE_EVERY_TURNS,
   narrowSupervisorLimits,
@@ -63,12 +64,12 @@ interface DelegationLaunch {
 
 interface RunningDelegation {
   readonly controller: AbortController;
-  readonly promise: Promise<AgentRunResult>;
+  readonly promise: Promise<RunResult>;
   cancelled: boolean;
 }
 
 type CompletedDelegation =
-  | { readonly result: AgentRunResult }
+  | { readonly result: RunResult }
   | { readonly cancelled: true }
   | { readonly cancelled: false; readonly error: unknown };
 
@@ -91,9 +92,9 @@ interface ChildCounters {
 /** Extra fields a `child_failed` event carries when the child produced a terminal result. */
 type ChildFailureAttribution = {
   readonly reason: string;
-  readonly status?: AgentRunResult["status"];
+  readonly status?: AgentRunStatus;
   readonly limit?: RunLimitBreach;
-  readonly stopReason?: AgentRunResult["stopReason"];
+  readonly stopReason?: RunResult["stopReason"];
   readonly usage?: Usage;
   /** Copied from `result.attribution` on a ceiling death (plan 108 T5); the breach stays in `limit`. */
   readonly consumed?: BudgetConsumedCounters;
@@ -107,16 +108,16 @@ const DELEGATION_NAMESPACE = "prism.supervisor-delegation";
  * BUG-2 guard (integration findings): a child factory returning a session
  * (or anything non-Agent) used to crash at `.config.permission` with a cryptic
  * TypeError. One shared shape check at both factory-result consumption sites;
- * constructor name ("AgentSession", "Object", ...) names the received type.
+ * constructor name ("Session", "Object", ...) names the received type.
  */
 function assertChildAgent(value: unknown, childId: string): void {
-  const candidate = value as { config?: unknown; createSession?: unknown } | null;
+  const candidate = value as { config?: unknown; session?: unknown } | null;
   if (
     !candidate ||
     typeof candidate !== "object" ||
     !candidate.config ||
     typeof candidate.config !== "object" ||
-    typeof candidate.createSession !== "function"
+    typeof candidate.session !== "function"
   ) {
     const name =
       value === null || value === undefined
@@ -130,23 +131,20 @@ function assertChildAgent(value: unknown, childId: string): void {
 
 /** Milestone subset for v1 child-event passthrough (tool calls + run start/finish). */
 const MILESTONE_CHILD_EVENT_TYPES = new Set<AgentEvent["type"]>([
-  "agent_started",
-  "agent_finished",
-  "agent_suspended",
-  "agent_denied",
-  "tool_execution_started",
-  "tool_execution_finished",
-  "tool_execution_error",
-  "tool_execution_blocked",
+  "run.started",
+  "run.completed",
+  "run.failed",
+  "run.suspended",
+  "decision.resolved",
+  "tool.started",
+  "tool.completed",
 ]);
 
 /** `report: "stream"` forwards the milestone subset plus per-turn provider/tool lifecycle (never per-token deltas). */
 const PASSTHROUGH_CHILD_EVENT_TYPES: ReadonlySet<AgentEvent["type"]> = new Set([
   ...MILESTONE_CHILD_EVENT_TYPES,
-  "turn_started",
-  "turn_finished",
-  "provider_turn_started",
-  "provider_turn_finished",
+  "turn.started",
+  "turn.completed",
 ]);
 
 /** FEATURE-4: wrap a child session subscribe with filter + redact + cap + rate coalescing + tag. */
@@ -216,7 +214,7 @@ function scaledLimits(parent: ResolvedSupervisorLimits, share: number): Supervis
 }
 
 function startChildEventPump(
-  session: AgentSession,
+  session: Session,
   tags: { readonly childId: string; readonly delegationId: string; readonly depth: number },
   limits: ResolvedSupervisorLimits,
   policy: ResolvedChildPolicy,
@@ -288,12 +286,12 @@ function startChildEventPump(
         if (next.done) break;
         const event = next.value;
         if (capped) continue;
-        if (event.type === "turn_started") turn = event.turn;
+        if (event.type === "turn.started") turn = event.turn;
         if (stream) {
           if (PASSTHROUGH_CHILD_EVENT_TYPES.has(event.type)) emit(event);
           continue;
         }
-        if (event.type === "turn_started" && everyTurns !== undefined && event.turn % everyTurns === 0) {
+        if (event.type === "turn.started" && everyTurns !== undefined && event.turn % everyTurns === 0) {
           emit(event);
           continue;
         }
@@ -453,11 +451,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     });
   }
 
-  async function delegate(
-    request: DelegationRequest,
-    chain: ChainContext = { path: [] },
-    launch?: DelegationLaunch,
-  ): Promise<AgentRunResult> {
+  async function delegate(request: DelegationRequest, chain: ChainContext = { path: [] }, launch?: DelegationLaunch): Promise<RunResult> {
     const child = options.children[request.childId];
     if (!child) throw new SupervisorDeniedError("Child is not allow-listed");
     if (chain.path.includes(request.childId)) throw new SupervisorLimitError("Delegation cycle detected");
@@ -495,7 +489,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
     let completionSent = false;
     // Kept across the limit-to-SupervisorLimitError translation so the catch below can still
     // publish structured plan-087 attribution (the conversion drops `error.result`).
-    let limitedResult: AgentRunResult | undefined;
+    let limitedResult: RunResult | undefined;
     noteDelegationStart(request.childId, delegationId, chain.parents);
 
     try {
@@ -539,12 +533,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
 
       const resourceId = `${id}/${delegationId}/${request.childId}`;
       const threadId = `${resourceId}/${encodeURIComponent(request.threadId ?? "default")}`;
-      const preliminaryPermission = intersectPolicies(
-        options.permission,
-        child.permission,
-        hookPermission,
-        toolBudgetPolicy(limits.maxToolCalls),
-      );
+      const preliminaryPermission = intersectPolicies(options.permission, child.permission, hookPermission);
       events.publish({ type: "delegation_started", childId: request.childId, delegationId, depth, resourceId, threadId });
       const childAgent = await abortable(
         Promise.resolve(
@@ -573,16 +562,22 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         controller.signal,
       );
       assertChildAgent(childAgent, request.childId);
-      const agent = createAgent({
+      const agent = await createAgent({
         ...childAgent.config,
-        permission: intersectPolicies(preliminaryPermission, childAgent.config.permission),
+        // The durable child gate (`interruptBeforeTool` successor): ask before every tool. Only a
+        // durable child (checkpoints configured) can suspend, so a non-durable child is ungated.
+        hooks: (hooks: import("@arnilo/prism").HookRegistrar) => {
+          childAgent.config.hooks?.(hooks);
+          if (options.checkpoints) askEveryTool()(hooks);
+          // The child permission policy is a `tool.call` gate now (no `AgentConfig.permission`).
+          registerPermissionGate(hooks, preliminaryPermission);
+        },
         ownership: options.ownership,
-        identity: childIdentity ?? childAgent.config.identity,
+        principal: childIdentity?.principal ?? childAgent.config.principal,
         effectStore: options.effectStore ?? childAgent.config.effectStore,
         redactor: options.redactor ?? childAgent.config.redactor,
       });
-      const session = agent.createSession({
-        id: `${delegationId}-session`,
+      const session = await agent.session({
         metadata: { supervisorId: id, delegationId, resourceId, threadId },
       });
       const stopChildEvents =
@@ -597,7 +592,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
               (event) => events.publish(event),
               options.childEventSink,
             );
-      let result: AgentRunResult;
+      let result: RunResult;
       try {
         result = await abortable(
           session.run(input, {
@@ -616,7 +611,6 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
                   runState: {
                     checkpoints: options.checkpoints,
                     definitionRevision: options.definitionRevision!,
-                    interruptBeforeTool: true,
                     resumeNestedRun,
                   },
                 }
@@ -624,30 +618,31 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           }),
           controller.signal,
         );
-      } catch (error) {
-        if (error instanceof AgentRunError && error.result.limit) {
-          limitedResult = error.result;
+      } finally {
+        await stopChildEvents?.();
+      }
+      if (result.status === "failed" || result.status === "aborted") {
+        if (result.limit) {
+          limitedResult = result;
           const label =
-            error.result.limit.limit === "maxTotalTokens"
+            result.limit.limit === "maxTotalTokens"
               ? "token"
-              : error.result.limit.limit === "maxToolCalls"
+              : result.limit.limit === "maxToolCalls"
                 ? "tool-call"
-                : error.result.limit.limit === "maxWallTimeMs"
+                : result.limit.limit === "maxWallTimeMs"
                   ? "timeout"
                   : "run";
           // The child's terminal result travels with the error: a host that catches it reads the
           // same `limit`/`attribution` the `child_failed` event carries, matching the plain-failure
-          // path, which rethrows the child's `AgentRunError` (and its `result`) as-is.
-          throw new SupervisorLimitError(`Delegation ${label} limit exceeded`, error.result);
+          // path, which throws a `SupervisorRunError` carrying the child's `result`.
+          throw new SupervisorLimitError(`Delegation ${label} limit exceeded`, result);
         }
-        throw error;
-      } finally {
-        await stopChildEvents?.();
+        throw new SupervisorRunError(result);
       }
       if (result.status === "suspended") {
         // Child approvals surface on the hosting root run: persist the rebuild mapping, then
         // signal core with the child's pending decisions (core hashes/attributes the ids).
-        const pending = result.interruption?.pendingDecisions;
+        const pending = result.pending;
         const version = result.runState?.version;
         if (!pending?.length || version === undefined) {
           throw new SupervisorError("Child run suspended without a pending-decision set");
@@ -667,34 +662,35 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
         throw new AgentDelegationSuspendedError({ runId: result.runId, sessionId: result.sessionId }, pending, path);
       }
       const totalTokens = result.usage?.totalTokens ?? (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0);
-      settleDelegation(
-        request.childId,
+      settleDelegation(request.childId, delegationId, depth, childStatus(result));
+      events.publish({
+        type: "delegation_finished",
+        childId: request.childId,
         delegationId,
         depth,
-        result.status,
-        result.status === "failed"
-          ? failureAttribution(result, safeError(result.error?.message ?? "Delegated run failed", options))
-          : undefined,
-      );
-      events.publish({ type: "delegation_finished", childId: request.childId, delegationId, depth, status: result.status, totalTokens });
+        status: childStatus(result),
+        totalTokens,
+      });
       await complete(toCompletion(result, request.childId, delegationId, depth, options));
       completionSent = true;
       return result;
     } catch (error) {
       if (error instanceof AgentDelegationSuspendedError) throw error;
       if (!(error instanceof SupervisorDeniedError && completionSent)) {
-        const result = error instanceof AgentRunError ? error.result : limitedResult;
+        const result = error instanceof SupervisorRunError ? error.result : limitedResult;
         const message = safeError(error, options);
         // A failure died on an error or a limit. Host cancels/aborts and policy denials are not
         // failures; a supervisor-level timeout is (its abort reason is a SupervisorLimitError).
         const abortedByHost = controller.signal.aborted && !(controller.signal.reason instanceof SupervisorLimitError);
         const failed =
-          !abortedByHost && !(error instanceof SupervisorDeniedError) && result?.status !== "denied" && result?.status !== "succeeded";
+          !abortedByHost &&
+          !(error instanceof SupervisorDeniedError) &&
+          (result === undefined || childStatus(result) === "failed" || childStatus(result) === "aborted");
         settleDelegation(
           request.childId,
           delegationId,
           depth,
-          failed ? "failed" : (result?.status ?? (controller.signal.aborted ? "aborted" : "rejected")),
+          failed ? "failed" : result ? childStatus(result) : controller.signal.aborted ? "aborted" : "rejected",
           failed ? failureAttribution(result, message) : undefined,
         );
         events.publish({ type: "delegation_error", childId: request.childId, delegationId, depth, error: message });
@@ -711,7 +707,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
               },
         );
       }
-      if (error instanceof AgentRunError || error instanceof SupervisorError) throw error;
+      if (error instanceof SupervisorError) throw error;
       throw new SupervisorError(safeError(error, options));
     } finally {
       clearTimeout(timer);
@@ -869,7 +865,7 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
       hookPermission = decision.permission;
     }
     const resourceId = `${id}/${mapping.delegationId}/${mapping.childId}`;
-    const permission = intersectPolicies(options.permission, child.permission, hookPermission, toolBudgetPolicy(limits.maxToolCalls));
+    const permission = intersectPolicies(options.permission, child.permission, hookPermission);
     const childAgent = await child.createAgent(
       Object.freeze({
         childId: mapping.childId,
@@ -892,15 +888,19 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
       }),
     );
     assertChildAgent(childAgent, mapping.childId);
-    const agent = createAgent({
+    const agent = await createAgent({
       ...childAgent.config,
-      permission: intersectPolicies(permission, childAgent.config.permission),
+      hooks: (hooks: import("@arnilo/prism").HookRegistrar) => {
+        childAgent.config.hooks?.(hooks);
+        if (checkpoints) askEveryTool()(hooks);
+        registerPermissionGate(hooks, permission);
+      },
       ownership: options.ownership,
-      identity: childIdentity ?? childAgent.config.identity,
+      principal: childIdentity?.principal ?? childAgent.config.principal,
       effectStore: options.effectStore ?? childAgent.config.effectStore,
       redactor: options.redactor ?? childAgent.config.redactor,
     });
-    let result: AgentRunResult;
+    let result: RunResult;
     try {
       result = await resumeAgentRun(
         agent,
@@ -930,62 +930,54 @@ export function createSupervisor(options: CreateSupervisorOptions): Supervisor {
           },
         },
       );
-    } catch (error) {
-      // Terminal symmetry with live `delegate()`: a resumed run that died settles its counters,
-      // publishes the terminal error, and runs the terminal hook. A rebuild error thrown by
-      // `resumeAgentRun` before the run starts (stale version, fingerprint drift) stays silent,
-      // so a duplicate resume attempt can never clean up a live suspended child.
-      if (!(error instanceof AgentRunError)) throw error;
-      const failed = error.result;
-      const message = safeError(error, options);
-      const abortedByHost = controller.signal.aborted && !(controller.signal.reason instanceof SupervisorLimitError);
-      const isFailure = !abortedByHost && failed.status !== "denied" && failed.status !== "succeeded";
-      settleDelegation(
-        mapping.childId,
-        mapping.delegationId,
-        depth,
-        isFailure ? "failed" : failed.status,
-        isFailure ? failureAttribution(failed, message) : undefined,
-      );
-      events.publish({ type: "delegation_error", childId: mapping.childId, delegationId: mapping.delegationId, depth, error: message });
-      await complete(toCompletion(failed, mapping.childId, mapping.delegationId, depth, options));
-      throw error;
     } finally {
       // Stops on every outcome, including a failed rebuild (stale version, fingerprint drift).
       await stopChildEvents?.();
       stopChildEvents = undefined;
       disposeResumeSignals();
     }
+    if (result.status === "failed" || result.status === "aborted") {
+      // Terminal symmetry with live `delegate()`: a resumed run that died settles its counters,
+      // publishes the terminal error, and runs the terminal hook. A rebuild error thrown by
+      // `resumeAgentRun` before the run starts (stale version, fingerprint drift) stays silent,
+      // so a duplicate resume attempt can never clean up a live suspended child.
+      const failed = result;
+      const message = safeError(failed.error?.message ?? "Delegated run failed", options);
+      const abortedByHost = controller.signal.aborted && !(controller.signal.reason instanceof SupervisorLimitError);
+      const isFailure = !abortedByHost;
+      settleDelegation(
+        mapping.childId,
+        mapping.delegationId,
+        depth,
+        isFailure ? "failed" : childStatus(failed),
+        isFailure ? failureAttribution(failed, message) : undefined,
+      );
+      events.publish({ type: "delegation_error", childId: mapping.childId, delegationId: mapping.delegationId, depth, error: message });
+      await complete(toCompletion(failed, mapping.childId, mapping.delegationId, depth, options));
+      throw new SupervisorRunError(failed);
+    }
     if (result.status === "suspended") {
       await saveMapping(nested.ref.runId, { ...mapping, version: result.runState?.version ?? mapping.version });
-      return { status: "suspended", pendingDecisions: result.interruption?.pendingDecisions ?? [] };
+      return { status: "suspended", pendingDecisions: result.pending ?? [] };
     }
     // Terminal symmetry with live `delegate()`: publish the finish and run the terminal hook.
     const totalTokens = result.usage?.totalTokens ?? (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0);
-    settleDelegation(
-      mapping.childId,
-      mapping.delegationId,
-      depth,
-      result.status,
-      result.status === "failed"
-        ? failureAttribution(result, safeError(result.error?.message ?? "Delegated run failed", options))
-        : undefined,
-    );
+    settleDelegation(mapping.childId, mapping.delegationId, depth, childStatus(result));
     events.publish({
       type: "delegation_finished",
       childId: mapping.childId,
       delegationId: mapping.delegationId,
       depth,
-      status: result.status,
+      status: childStatus(result),
       totalTokens,
     });
     await complete(toCompletion(result, mapping.childId, mapping.delegationId, depth, options));
-    if (result.status === "succeeded") {
+    if (childStatus(result) === "succeeded") {
       return { status: "completed", value: options.redactor?.redact(result.text) ?? result.text };
     }
     return {
       status: "failed",
-      code: result.status === "denied" ? "delegation_denied" : "delegation_failed",
+      code: childStatus(result) === "denied" ? "delegation_denied" : "delegation_failed",
       message: safeError(result.error?.message ?? `Delegated run ${result.status}`, options),
     };
   };
@@ -1067,10 +1059,10 @@ function waitFor<T>(promise: Promise<T>, signal: AbortSignal | undefined, timeou
  * (`status`/`stopReason`), the plan-086/087 breach when a configured ceiling fired, and the
  * plan-087 exhaustion attribution the result carries on that death (plan 108 T5).
  */
-function failureAttribution(result: AgentRunResult | undefined, reason: string): ChildFailureAttribution {
+function failureAttribution(result: RunResult | undefined, reason: string): ChildFailureAttribution {
   return {
     reason,
-    ...(result?.status !== undefined ? { status: result.status } : {}),
+    ...(result !== undefined ? { status: childStatus(result) } : {}),
     ...(result?.limit !== undefined ? { limit: result.limit } : {}),
     ...(result?.stopReason !== undefined ? { stopReason: result.stopReason } : {}),
     ...(result?.usage !== undefined ? { usage: result.usage } : {}),
@@ -1081,7 +1073,7 @@ function failureAttribution(result: AgentRunResult | undefined, reason: string):
 }
 
 function toCompletion(
-  result: AgentRunResult,
+  result: RunResult,
   childId: string,
   delegationId: string,
   depth: number,
@@ -1091,10 +1083,18 @@ function toCompletion(
     childId,
     delegationId,
     depth,
-    status: result.status,
+    status: childStatus(result),
     text: options.redactor?.redact(result.text) ?? result.text,
     usage: result.usage,
     error: result.error ? safeError(result.error.message, options) : undefined,
+  });
+}
+
+/** Register a child `tool.call` gate backed by a composed `PermissionPolicy` (roadmap §2.4). */
+function registerPermissionGate(hooks: import("@arnilo/prism").HookRegistrar, policy: PermissionPolicy): void {
+  hooks.on("tool.call", async (payload) => {
+    const decision = await policy.check({ kind: "tool", action: "execute", target: payload.name, metadata: {} });
+    return decision.allowed ? undefined : { deny: decision.reason ?? `Denied by supervisor policy: ${payload.name}` };
   });
 }
 
@@ -1111,17 +1111,9 @@ function intersectPolicies(...policies: readonly (PermissionPolicy | undefined)[
   };
 }
 
-function toolBudgetPolicy(max: number): PermissionPolicy {
-  let count = 0;
-  return {
-    check(request) {
-      if (request.kind !== "tool" || request.action !== "execute") return { allowed: true };
-      count += 1;
-      return count <= max ? { allowed: true } : { allowed: false, reason: "Delegation tool-call limit exceeded" };
-    },
-  };
-}
-
+// The delegation tool-call budget is enforced by the child's own run limits (`maxToolCalls`),
+// which charge before dispatch and surface as AgentRunError -> SupervisorLimitError. A permission
+// gate cannot carry that: a hook deny returns a denied tool result without charging the budget.
 function linkSignals(controller: AbortController, ...signals: readonly (AbortSignal | undefined)[]): () => void {
   const removers: (() => void)[] = [];
   for (const signal of signals) {
@@ -1169,4 +1161,14 @@ function requireOwnership(ownership: CreateSupervisorOptions["ownership"]): void
 function safeError(error: unknown, options: CreateSupervisorOptions): string {
   const message = error instanceof Error ? error.message : typeof error === "string" ? error : "Delegation failed";
   return options.redactor?.redact(message) ?? message;
+}
+
+/**
+ * The supervisor's own delegation vocabulary (the persisted run statuses) for a child run's result:
+ * a clean stop is still a success, a denied resume is `denied`.
+ */
+function childStatus(result: RunResult): AgentRunStatus {
+  if (result.status === "stopped" && result.stopReason === "denied") return "denied";
+  if (result.status === "completed" || result.status === "stopped") return "succeeded";
+  return result.status;
 }

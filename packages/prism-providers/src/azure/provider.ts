@@ -1,7 +1,8 @@
-import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
+import type { AIProvider, CredentialValueSource, ModelConfig, PackageInstance } from "@arnilo/prism";
+import { providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
+import { vendorPackage } from "../shared/package.js";
 
 /** Default Azure OpenAI API version (hosts may override; package never rewrites endpoint host). */
 export const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
@@ -98,27 +99,9 @@ export function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): 
   };
 }
 
-export function createAzureOpenAIProviderPackage(options: AzureOpenAIProviderPackageOptions): ProviderPackage {
-  const endpoint = requireEndpoint(options.endpoint);
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/azure",
-    description: "Azure OpenAI / Foundry enterprise provider for Prism.",
-    docs: { links: ["docs/providers/azure.md"] },
-    setup(api) {
-      api.registerProvider(createAzureOpenAIProvider(options));
-      for (const model of options.models ?? []) {
-        api.registerModel({ ...model, provider: options.id ?? "azure" });
-      }
-      api.registerAuthMethod({
-        kind: "api_key",
-        provider: options.id ?? "azure",
-        credentialName: "credential",
-        metadata: {
-          authStyle: options.authStyle ?? "bearer",
-          endpoint,
-          note: "Host supplies Entra workload token or Azure resource key; no env scan.",
-        },
-      });
-    },
-  });
+export function azurePackage(options: AzureOpenAIProviderPackageOptions): PackageInstance {
+  requireEndpoint(options.endpoint);
+  return vendorPackage("@arnilo/prism-providers.azure", "Azure OpenAI / Foundry enterprise provider for Prism.", () => [
+    createAzureOpenAIProvider(options),
+  ]);
 }

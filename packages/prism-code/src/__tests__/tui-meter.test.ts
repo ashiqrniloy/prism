@@ -39,7 +39,7 @@ function apply(state: TuiState, event: AgentEvent): TuiState {
 
 function turnFinished(usage: Usage, runId = "r1"): AgentEvent {
   return {
-    type: "provider_turn_finished",
+    type: "turn.completed",
     sessionId: "s1",
     runId,
     turn: 1,
@@ -70,16 +70,17 @@ describe("TUI usage meter", () => {
     state = tuiReducer(state, { type: "run_started", runId: "r1" });
     state = apply(state, turnFinished({ inputTokens: 10_000, outputTokens: 100 }));
     state = apply(state, {
-      type: "agent_finished",
+      type: "run.completed",
       sessionId: "s1",
       runId: "r1",
+      status: "completed",
       usage: { inputTokens: 10_000, outputTokens: 100 },
     });
     assert.equal(state.footer.usageTotals?.inputTokens, 10_000, "the run total repeats the counted turns");
 
     // A deterministic/resumed run with no per-turn usage contributes its run total as a fallback.
     state = tuiReducer(state, { type: "run_started", runId: "r2" });
-    state = apply(state, { type: "agent_finished", sessionId: "s1", runId: "r2", usage: { inputTokens: 2_000 } });
+    state = apply(state, { type: "run.completed", sessionId: "s1", runId: "r2", status: "completed", usage: { inputTokens: 2_000 } });
     assert.equal(state.footer.usageTotals?.inputTokens, 12_000);
   });
 
@@ -88,7 +89,7 @@ describe("TUI usage meter", () => {
     state = apply(state, turnFinished({ inputTokens: 120_000 }));
     assert.equal(state.footer.contextTokens, 120_000);
 
-    state = apply(state, { type: "compaction_finished", sessionId: "s1", summary: "sum", entriesCompacted: 20 });
+    state = apply(state, { type: "compaction.completed", sessionId: "s1", summary: "sum", entriesCompacted: 20 });
     assert.equal(state.footer.contextTokens, undefined, "pre-compaction reading overstates the rebuilt context");
 
     state = tuiReducer(state, {

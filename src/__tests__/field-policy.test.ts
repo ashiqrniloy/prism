@@ -242,7 +242,7 @@ describe("field policy seams at boundary owners (ERP-T9)", () => {
 
   test("telemetry boundary: agent events carry no denied canary", () => {
     const event = {
-      type: "agent_started",
+      type: "run.started",
       runId: "r1",
       sessionId: "s1",
       metadata: { prompt: `start ${canary}`, secret: `SK-${canary}` },

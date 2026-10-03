@@ -260,20 +260,6 @@ export function identityTelemetryAttributes(identity: AgentIdentity): Readonly<R
   };
 }
 
-/** Resolve run identity: explicit option wins; otherwise agent default. Assert when present. */
-export function resolveRunIdentity(
-  runIdentity: AgentIdentity | undefined,
-  agentIdentity: AgentIdentity | undefined,
-  ownership: OwnershipScope | undefined,
-  options: AssertIdentityActiveOptions = {},
-): AgentIdentity | undefined {
-  const identity = runIdentity ?? agentIdentity;
-  if (!identity) return undefined;
-  assertIdentityActive(identity, options);
-  assertIdentityMatchesOwnership(identity, ownership ?? ownershipFromIdentity(identity));
-  return identity;
-}
-
 function assertIdentityShape(identity: AgentIdentity, limits: ResolvedIdentityLimits): void {
   if (typeof identity.tenantId !== "string" || identity.tenantId.length === 0) {
     throw new IdentityError("Identity tenantId is required", "missing_tenant");

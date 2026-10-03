@@ -1,6 +1,6 @@
 import {
   type Agent,
-  type AgentRunResult,
+  type RunResult,
   type AIProvider,
   createAgent,
   createMemorySessionStore,
@@ -23,7 +23,7 @@ import {
 import {
   buildObservationalMemoryProjection,
   createObservationalMemory,
-  createObservationalMemoryCompactionStrategy,
+  createObservationalMemoryCompactor,
   recallObservationalMemory,
 } from "@arnilo/prism-memory/compaction/observational-memory";
 
@@ -77,17 +77,17 @@ function memoryWorkerProvider(store: SessionStore, sessionId: string): AIProvide
   };
 }
 
-function childAgent(model: string, text: string, store: SessionStore): Agent {
+async function childAgent(model: string, text: string, store: SessionStore): Promise<Agent> {
   // docs/supervisors.md — factory must return Agent, not a session (BUG-2)
-  return createAgent({
+  return await createAgent({
     model: { provider: "mock", model },
     provider: createMockProvider([providerTextDelta(text), providerDone()]),
-    store,
+    slots: { store },
   });
 }
 
-function requireSucceeded(result: AgentRunResult, childId: string): string {
-  if (result.status !== "succeeded") throw new Error(`${childId} ${result.status}`);
+function requireSucceeded(result: RunResult, childId: string): string {
+  if (result.status !== "completed") throw new Error(`${childId} ${result.status}`);
   return result.text;
 }
 
@@ -96,18 +96,19 @@ async function buildRuntime(store: SessionStore) {
     ownership: OWNERSHIP,
     limits: { maxTokens: MAX_TOKENS, maxToolCalls: MAX_TOOL_CALLS, timeoutMs: 15_000 },
     children: {
-      implementer: { createAgent: () => childAgent("implementer", "patched parser.ts", store) },
-      validator: { createAgent: () => childAgent("validator", "named checks ran", store) },
+      implementer: { createAgent: async () => await childAgent("implementer", "patched parser.ts", store) },
+      validator: { createAgent: async () => await childAgent("validator", "named checks ran", store) },
     },
   });
-  const parent = createAgent({
+  const parent = await createAgent({
     model: { provider: "mock", model: "parent" },
     provider: createMockProvider([providerTextDelta("ack"), providerDone()]),
-    store,
+    // Roadmap §2.5: the compactor is the `compaction` slot, not a per-call `compact({ strategy })`.
+    slots: { store, compaction: createObservationalMemoryCompactor({ keepRecentEntries: 4 }) },
   });
   const leafId = (await store.list(WORKSPACE_SESSION_ID)).at(-1)?.id;
   // Recreate from the store leaf so OM entries survive the simulated restart.
-  const session = parent.createSession({ id: WORKSPACE_SESSION_ID, ...(leafId ? { leafId } : {}) });
+  const session = await parent.session({ id: WORKSPACE_SESSION_ID, ...(leafId ? { leafId } : {}), create: true });
   const om = createObservationalMemory({
     observation: { provider: memoryWorkerProvider(store, WORKSPACE_SESSION_ID), model: { provider: "mock", model: "memory" } },
     context: { recentMessages: 4, compactAfterTokens: 999_999 },
@@ -117,7 +118,6 @@ async function buildRuntime(store: SessionStore) {
     appendEntry: (entry, options) => store.append(entry, options),
     sessionModel: { provider: "mock", model: "parent" },
   });
-  const compaction = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 4 });
 
   const workflow = defineWorkflow({
     id: "autonomous-coding-loop",
@@ -191,8 +191,9 @@ async function buildRuntime(store: SessionStore) {
       }),
       compact: functionNode({
         execute: async () => {
-          // docs/compaction-and-retry.md — compact at task boundary, never during a run
-          await attached.session.compact({ strategy: compaction });
+          // docs/compaction-and-retry.md — compact at task boundary, never during a run.
+          // Roadmap §2.5: the implementation is the agent's `compaction` slot, so this only sizes it.
+          await attached.session.compact();
           return { compacted: true };
         },
       }),

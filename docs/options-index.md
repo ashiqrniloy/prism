@@ -59,7 +59,7 @@ Field-level detail (defaults, bounds, failure modes) lives on the owning page �
 `SubscribeOptions`
 
 **Agent loops** — [`agent-loops.md`](agent-loops.md)  
-`AgentLoopOptions`, `TurnPolicyOptions`
+`TurnPolicyOptions`
 
 **Guardrails** — [`guardrails.md`](guardrails.md)
 `ClaimGroundingGuardrailOptions`

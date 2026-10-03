@@ -79,7 +79,7 @@ const agent = createPrismAcpAgent({
             }
           }
         }
-        yield { type: "message_delta", sessionId: "bench-session", runId: "run", content: { type: "text", text: "tick" } };
+        yield { type: "message.delta", sessionId: "bench-session", runId: "run", content: { type: "text", text: "tick" } };
         yield { type: "agent_done", sessionId: "bench-session", runId: "run", reason: "end_turn" };
       },
     },

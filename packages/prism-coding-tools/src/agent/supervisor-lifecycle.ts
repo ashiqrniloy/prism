@@ -1,4 +1,4 @@
-import { createDelegatedAgentStep, type DelegatedAgentStep } from "@arnilo/prism";
+import { createDelegatedAgentStep, type AgentEvent } from "@arnilo/prism";
 import type { Supervisor, SupervisorEvent } from "@arnilo/prism-core/runtime/supervisor";
 import { type CodingLifecycleEvent, DEFAULT_LIFECYCLE_MAX_REASON_BYTES, type SubagentFailure, type SubagentRecovery } from "./lifecycle.js";
 
@@ -19,7 +19,7 @@ export interface ObserveSupervisorLifecycleOptions {
     readonly runId: string;
     readonly adapterId: string;
     readonly externalConversationId: string;
-    readonly onEvent: (event: DelegatedAgentStep) => unknown;
+    readonly onEvent: (event: Extract<AgentEvent, { readonly type: "package.event" }>) => unknown;
   };
   /**
    * Attach redacted `failure` attribution (reason, run-limit axis, stop reason) to the

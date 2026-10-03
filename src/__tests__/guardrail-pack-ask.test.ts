@@ -22,10 +22,19 @@ import {
   providerToolCall,
   resumeAgentRun,
   toolCallContent,
+  type GuardrailRecord,
 } from "../index.js";
+import { kernelEvents } from "./kernel-event-helpers.js";
 
-type GuardrailDecisionEvent = Extract<AgentEvent, { type: "guardrail_decision" }>;
-type ToolBlockedEvent = Extract<AgentEvent, { type: "tool_execution_blocked" }>;
+/** A kernel `guardrail.decision` package event, with its `data` merged in. */
+interface GuardrailDecisionEvent {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly record: GuardrailRecord;
+  readonly toolName?: string;
+  readonly toolCallId?: string;
+}
+type ToolBlockedEvent = Extract<AgentEvent, { readonly type: "tool.completed" }>;
 
 const PACK = {
   id: "deploy-guard",
@@ -43,13 +52,13 @@ const PACK = {
 
 const RULE = "pack:deploy-guard/ask-prod-version";
 
-function deployAgent(script: (turn: number) => readonly ProviderEvent[], executions: string[]) {
+async function deployAgent(script: (turn: number) => readonly ProviderEvent[], executions: string[]) {
   const requests: ProviderRequest[] = [];
   const store = createMemorySessionStore();
   let turn = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "pack-ask",
-    store,
+    slots: { store },
     model: { provider: "mock", model: "demo" },
     provider: {
       id: "mock",
@@ -59,28 +68,30 @@ function deployAgent(script: (turn: number) => readonly ProviderEvent[], executi
         for (const event of script(turn)) yield event;
       },
     },
-    tools: [
-      { name: "inspect", parameters: {}, execute: () => ({ toolCallId: "call-inspect", name: "inspect", value: "ok" }) },
-      {
-        name: "deploy",
-        parameters: {},
-        execute: (_args, context) => {
-          executions.push(context.toolCallId);
-          return { toolCallId: context.toolCallId, name: "deploy", value: "deployed" };
+    tools: {
+      add: [
+        { name: "inspect", parameters: {}, execute: () => ({ toolCallId: "call-inspect", name: "inspect", value: "ok" }) },
+        {
+          name: "deploy",
+          parameters: {},
+          execute: (_args, context) => {
+            executions.push(context.toolCallId);
+            return { toolCallId: context.toolCallId, name: "deploy", value: "deployed" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
-  return { agent, requests, store };
+  return { agent, requests, slots: { store } };
 }
 
 const deployCall = (id: string, version: string) => providerToolCall(toolCallContent(id, "deploy", { version }));
 
 /** `guardrail_decision` records that mean "awaiting a decision" (the ask gate). */
 const askDecisions = (events: readonly AgentEvent[]): GuardrailDecisionEvent[] =>
-  events
-    .filter((event): event is GuardrailDecisionEvent => event.type === "guardrail_decision")
-    .filter((event) => event.record.action === "interrupt");
+  kernelEvents<{ record: GuardrailRecord; toolName?: string; toolCallId?: string }>(events, "guardrail.decision").filter(
+    (event) => event.record.action === "interrupt",
+  );
 
 /** The tool result the loop appended for a call, read from the session store (it is not an event). */
 async function toolResultOf(store: ReturnType<typeof createMemorySessionStore>, sessionId: string) {
@@ -98,11 +109,11 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
   it("suspends before dispatch, names the rule, and allow_once dispatches exactly once", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
-    const { agent, requests } = deployAgent(
+    const { agent, requests } = await deployAgent(
       (turn) => (turn === 1 ? [deployCall("call-deploy", "prod-1"), providerDone()] : [providerTextDelta("shipped"), providerDone()]),
       executions,
     );
-    const session = agent.createSession({ id: "ask-approve", guardrailPacks: [PACK] });
+    const session = await agent.session({ guardrailPacks: [PACK] });
     const events: AgentEvent[] = [];
     const subscription = session.subscribe();
     const pump = (async () => {
@@ -113,9 +124,9 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
 
     assert.equal(suspended.status, "suspended");
     assert.deepEqual(executions, [], "the gated call never dispatched");
-    assert.equal(suspended.interruption?.kind, "tool_approval");
-    assert.equal(suspended.interruption?.guardrail, RULE);
-    const pending = suspended.interruption?.pendingDecisions ?? [];
+    assert.equal(suspended.runState?.interruption?.kind, "tool_approval");
+    assert.equal(suspended.runState?.interruption?.guardrail, RULE);
+    const pending = suspended.pending ?? [];
     assert.equal(pending.length, 1);
     assert.equal(pending[0]?.guardrail, RULE);
     assert.deepEqual(pending[0]?.guardrailRule, { pack: "deploy-guard", rule: "ask-prod-version" });
@@ -139,7 +150,7 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
       { decisions: [{ approvalId, outcome: "allow_once" }], expectedVersion },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.deepEqual(executions, ["call-deploy"], "approval dispatches the call exactly once");
     assert.equal(requests.length, 2);
   });
@@ -147,13 +158,13 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
   it("allow_for_run sticks to the same scope while a different scope suspends again", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
-    const { agent } = deployAgent((turn) => {
+    const { agent } = await deployAgent((turn) => {
       if (turn === 1) return [deployCall("call-first", "prod-1"), providerDone()];
       if (turn === 2) return [deployCall("call-same-scope", "prod-1"), providerDone()];
       if (turn === 3) return [deployCall("call-other-scope", "prod-2"), providerDone()];
       return [providerTextDelta("done"), providerDone()];
     }, executions);
-    const session = agent.createSession({ id: "ask-sticky", guardrailPacks: [PACK] });
+    const session = await agent.session({ guardrailPacks: [PACK] });
 
     let result = await session.run("ship", {
       runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
@@ -161,7 +172,7 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
     assert.equal(result.status, "suspended");
     assert.deepEqual(executions, []);
     const firstVersion = result.runState?.version;
-    const firstApproval = result.interruption?.pendingDecisions?.[0]?.approvalId;
+    const firstApproval = result.pending?.[0]?.approvalId;
     assert.ok(firstVersion !== undefined && firstApproval, "the suspension carries its version and decision id");
 
     result = await resumeAgentRun(
@@ -172,7 +183,7 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
     );
     // The same scope dispatches without a second suspension; the different version suspends again.
     assert.equal(result.status, "suspended");
-    assert.equal(result.interruption?.guardrail, RULE);
+    assert.equal(result.runState?.interruption?.guardrail, RULE);
     assert.deepEqual(executions, ["call-first", "call-same-scope"], "the run-wide approval covered the same scope");
     const checkpoint = await loadAgentRunState(checkpoints, { runId: result.runId });
     assert.equal(checkpoint.state.stickyDecisions?.[0]?.outcome, "allow_for_run");
@@ -183,7 +194,7 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
       agent,
       { runId: result.runId, sessionId: result.sessionId },
       {
-        decisions: (result.interruption?.pendingDecisions ?? []).map((entry) => ({
+        decisions: (result.pending ?? []).map((entry) => ({
           approvalId: entry.approvalId,
           outcome: "allow_once" as const,
         })),
@@ -191,22 +202,25 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executions, ["call-first", "call-same-scope", "call-other-scope"]);
   });
 
   it("rejects the gated call without dispatching it and without failing the run", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
-    const { agent, store } = deployAgent(
+    const {
+      agent,
+      slots: { store },
+    } = await deployAgent(
       (turn) => (turn === 1 ? [deployCall("call-deploy", "prod-1"), providerDone()] : [providerTextDelta("skipped"), providerDone()]),
       executions,
     );
-    const session = agent.createSession({ id: "ask-reject", guardrailPacks: [PACK] });
+    const session = await agent.session({ guardrailPacks: [PACK], id: "ask-reject", create: true });
     const suspended = await session.run("ship", { runState: { checkpoints, definitionRevision: "1" } });
     assert.equal(suspended.status, "suspended");
     const expectedVersion = suspended.runState?.version;
-    const approvalId = suspended.interruption?.pendingDecisions?.[0]?.approvalId;
+    const approvalId = suspended.pending?.[0]?.approvalId;
     assert.ok(expectedVersion !== undefined && approvalId, "the suspension carries its version and decision id");
 
     const resumed = await resumeAgentRun(
@@ -215,7 +229,7 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
       { decisions: [{ approvalId, outcome: "reject_once", reason: "not this tag" }], expectedVersion },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(resumed.status, "succeeded", "a rejected ask call does not fail the run");
+    assert.equal(resumed.status, "completed", "a rejected ask call does not fail the run");
     assert.deepEqual(executions, [], "the rejected call never dispatched");
     const refusal = await toolResultOf(store, "ask-reject");
     assert.equal(refusal?.name, "deploy");
@@ -224,11 +238,14 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
 
   it("blocks the call in a run that cannot suspend, naming the rule, without failing the run", async () => {
     const executions: string[] = [];
-    const { agent, store } = deployAgent(
+    const {
+      agent,
+      slots: { store },
+    } = await deployAgent(
       (turn) => (turn === 1 ? [deployCall("call-deploy", "prod-1"), providerDone()] : [providerTextDelta("skipped"), providerDone()]),
       executions,
     );
-    const session = agent.createSession({ id: "ask-non-durable", guardrailPacks: [PACK] });
+    const session = await agent.session({ guardrailPacks: [PACK], id: "ask-non-durable", create: true });
     const events: AgentEvent[] = [];
     const subscription = session.subscribe();
     const pump = (async () => {
@@ -237,14 +254,11 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
     const result = await session.run("ship");
     await pump;
 
-    assert.equal(result.status, "succeeded", "no ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE run failure");
+    assert.equal(result.status, "completed", "no ERR_PRISM_GUARDRAIL_INTERRUPT_UNAVAILABLE run failure");
     assert.equal(result.runState, undefined, "the run stayed non-durable");
     assert.deepEqual(executions, [], "the blocked call never executed");
-    const blocked = events.find((event): event is ToolBlockedEvent => event.type === "tool_execution_blocked");
-    assert.equal(blocked?.reason, "guardrail_blocked");
-    assert.ok(String(blocked?.error?.message).includes(RULE), "the event names the rule");
-    const decision = events.find(
-      (event): event is GuardrailDecisionEvent => event.type === "guardrail_decision" && event.record.action === "block",
+    const decision = kernelEvents<{ record: GuardrailRecord; toolName?: string; toolCallId?: string }>(events, "guardrail.decision").find(
+      (event) => event.record.action === "block",
     );
     assert.equal(decision?.record.guardrail, RULE);
     const refusal = await toolResultOf(store, "ask-non-durable");
@@ -252,59 +266,42 @@ describe("guardrail pack ask gate (plan 104 Task 3)", () => {
     assert.ok(String(refusal?.error?.message).includes("Production tags need approval"));
   });
 
-  it("does not let an approval widen the pack: a deny rule re-trips at dispatch", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("deny wins over ask for the same call", async () => {
     const executions: string[] = [];
-    const { agent, store } = deployAgent(
+    const {
+      agent,
+      slots: { store },
+    } = await deployAgent(
       (turn) => (turn === 1 ? [deployCall("call-deploy", "prod-1"), providerDone()] : [providerTextDelta("blocked"), providerDone()]),
       executions,
     );
-    // An `ask` rule gates the call; a sibling `deny` rule matches the very same call. Approving the
-    // gate must not skip the deny: the approval applies to the suspension, not to the ruleset.
+    // An `ask` rule gates the call; a sibling `deny` rule matches the very same call. Roadmap §2.4:
+    // any deny wins, so the call is refused outright instead of prompting.
     const pack = {
       id: "deploy-guard",
       rules: [...PACK.rules, { id: "deny-prod", tool: "deploy", argPath: "version", pattern: "^prod-", reason: "Production is frozen" }],
     };
-    // `persistSessionState` keeps the pack alive across the suspension, so the resumed dispatch
-    // still runs the deny rule; without it the resumed session would enforce nothing.
-    const session = agent.createSession({ id: "ask-no-widen", guardrailPacks: [pack] });
-    const suspended = await session.run("ship", {
-      runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
-    });
-    assert.equal(suspended.status, "suspended");
-    const checkpoint = await loadAgentRunState(checkpoints, { runId: suspended.runId });
-    assert.deepEqual(checkpoint.state.sessionState?.guardrailPacks?.packs?.[0]?.rules, pack.rules, "the checkpoint carries the rules");
-
-    const expectedVersion = suspended.runState?.version;
-    const approvalId = suspended.interruption?.pendingDecisions?.[0]?.approvalId;
-    assert.ok(expectedVersion !== undefined && approvalId);
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: suspended.runId, sessionId: suspended.sessionId },
-      { decisions: [{ approvalId, outcome: "allow_once" }], expectedVersion },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "succeeded", "the run continues after the refusal");
-    assert.deepEqual(executions, [], "the approved call still never executed");
+    const session = await agent.session({ guardrailPacks: [pack], id: "ask-no-widen", create: true });
+    const result = await session.run("ship");
+    assert.equal(result.status, "completed", "the run continues after the refusal");
+    assert.equal(result.runState?.interruption, undefined, "a deny match never suspends");
+    assert.deepEqual(executions, [], "the call never executed");
     const refusal = await toolResultOf(store, "ask-no-widen");
-    assert.ok(
-      String(refusal?.error?.message).includes("pack:deploy-guard/deny-prod"),
-      "the denial names the deny rule, not the approved one",
-    );
+    assert.ok(String(refusal?.error?.message).includes("pack:deploy-guard/deny-prod"), "the denial names the deny rule, not the ask rule");
   });
 
   it("does not gate calls the rule does not match", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
-    const { agent } = deployAgent((turn) => {
+    const { agent } = await deployAgent((turn) => {
       if (turn === 1) return [providerToolCall(toolCallContent("call-inspect", "inspect", {})), providerDone()];
       if (turn === 2) return [deployCall("call-deploy", "staging-1"), providerDone()];
       return [providerTextDelta("done"), providerDone()];
     }, executions);
-    const session = agent.createSession({ id: "ask-no-match", guardrailPacks: [PACK] });
+    const session = await agent.session({ guardrailPacks: [PACK] });
     const result = await session.run("ship", { runState: { checkpoints, definitionRevision: "1" } });
-    assert.equal(result.status, "succeeded");
-    assert.equal(result.interruption, undefined);
+    assert.equal(result.status, "completed");
+    assert.equal(result.runState?.interruption, undefined);
     assert.deepEqual(executions, ["call-deploy"], "the durable run dispatched the non-matching call without a gate");
   });
 });

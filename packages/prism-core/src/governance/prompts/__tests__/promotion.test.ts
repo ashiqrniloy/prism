@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentRunResult } from "@arnilo/prism";
+import type { RunResult } from "@arnilo/prism";
 import type { Dataset, PairwiseScorer } from "../../evals/index.js";
 import type { PromptStore } from "../index.js";
 import { assertPromptPromotion, createMemoryPromptStore, PromptValidationError } from "../index.js";
 
-function result(text: string): AgentRunResult {
+function result(text: string): RunResult {
   return {
     sessionId: "eval-session",
     runId: `run-${text}`,
-    status: "succeeded",
+    status: "completed",
     text,
     content: [{ type: "text", text }],
+    messages: [],
   };
 }
 

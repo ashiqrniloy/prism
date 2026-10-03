@@ -37,9 +37,9 @@ export async function demo() {
 
   let turn = 0;
   let executed = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "durable-investigation",
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     provider: {
       id: "mock",
@@ -62,25 +62,27 @@ export async function demo() {
         yield providerDone();
       },
     },
-    tools: [
-      {
-        name: "gather",
-        parameters: { type: "object" },
-        execute: () => {
-          executed += 1;
-          return { toolCallId: "gather-1", name: "gather", value: { total: 4320.5, region: "North America" } };
+    tools: {
+      add: [
+        {
+          name: "gather",
+          parameters: { type: "object" },
+          execute: () => {
+            executed += 1;
+            return { toolCallId: "gather-1", name: "gather", value: { total: 4320.5, region: "North America" } };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
 
   // Worker 1: crashes; the durable store keeps the last turn-boundary checkpoint (status running).
-  const session = agent.createSession({ id: "investigation-session" });
+  const session = await agent.session({ id: "investigation-session", create: true });
   let runId: string | undefined;
   const subscription = session.subscribe();
   const pump = (async () => {
     for await (const event of subscription) {
-      if (event.type === "agent_started") runId = event.runId;
+      if (event.type === "run.started") runId = event.runId;
     }
   })();
   const crashed = await session

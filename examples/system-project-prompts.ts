@@ -43,12 +43,14 @@ export async function demo(): Promise<{ composed: string; reachedProvider: boole
       captured.push(request);
     },
   });
-  const session = createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider,
-    instructions: "You are helpful.",
-    systemPrompt: layers,
-  }).createSession();
+  const session = await (
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      instructions: "You are helpful.",
+      systemPrompt: layers,
+    })
+  ).session();
 
   // Fire run() (resolves into closeSubscribers) and drain the event stream in
   // parallel — subscribe() only ends once run completes and closes the stream.

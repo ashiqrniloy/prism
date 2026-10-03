@@ -37,34 +37,12 @@ describe("structured output", () => {
     assert.ok(modelSupportsStructuredOutput({ structuredOutput: "json_schema" }));
   });
 
-  it("merges native loop structured output into run provider options", () => {
+  it("merges agent and run provider options", () => {
     const merged = resolveRunProviderOptions(
-      {
-        loop: {
-          strategy: "generate-validate-revise",
-          validator: () => ({ ok: true }),
-          structuredOutput: { name: "answer", schema, strict: true },
-        },
-      },
-      {},
+      { providerOptions: { structuredOutput: { name: "answer", schema, strict: true } } },
+      { providerOptions: { sessionId: "s1" } },
     );
     assert.deepEqual(merged?.structuredOutput, { name: "answer", schema, strict: true });
-  });
-
-  it("artifact-loop mode keeps provider options without injecting loop schema", () => {
-    const merged = resolveRunProviderOptions(
-      {
-        providerOptions: { sessionId: "s1" },
-        loop: {
-          strategy: "generate-validate-revise",
-          validator: () => ({ ok: true }),
-          structuredOutput: { name: "answer", schema },
-          structuredOutputMode: "artifact-loop",
-        },
-      },
-      {},
-    );
-    assert.equal(merged?.structuredOutput, undefined);
     assert.equal(merged?.sessionId, "s1");
   });
 

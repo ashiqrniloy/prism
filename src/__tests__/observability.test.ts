@@ -62,10 +62,12 @@ describe("observability helpers", () => {
 
 describe("provider turn agent events", () => {
   it("emits provider_turn_started and provider_turn_finished with metadata", async () => {
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("hi"), providerDone({ inputTokens: 1, outputTokens: 2 })]),
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: createMockProvider([providerTextDelta("hi"), providerDone({ inputTokens: 1, outputTokens: 2 })]),
+      })
+    ).session();
 
     const reader = (async () => {
       const events: AgentEvent[] = [];
@@ -75,13 +77,13 @@ describe("provider turn agent events", () => {
     await session.run("hello");
     const events = await reader;
 
-    const started = events.find((event) => event.type === "provider_turn_started");
-    const finished = events.find((event) => event.type === "provider_turn_finished");
-    assert.ok(started?.type === "provider_turn_started");
-    assert.ok(finished?.type === "provider_turn_finished");
-    assert.equal(started.metadata.providerId, "mock");
-    assert.equal(started.metadata.attempt, 1);
-    assert.equal(typeof finished.metadata.latencyMs, "number");
+    const started = events.find((event) => event.type === "turn.started");
+    const finished = events.find((event) => event.type === "turn.completed");
+    assert.ok(started?.type === "turn.started");
+    assert.ok(finished?.type === "turn.completed");
+    assert.equal(started?.metadata?.providerId, "mock");
+    assert.equal(started?.metadata?.attempt, 1);
+    assert.equal(typeof finished?.metadata?.latencyMs, "number");
     assert.deepEqual(finished.usage, { inputTokens: 1, outputTokens: 2 });
   });
 });
@@ -127,14 +129,14 @@ describe("tool execution metadata", () => {
       emit,
     });
 
-    const finished = events.find((event) => event.type === "tool_execution_finished");
-    const error = events.find((event) => event.type === "tool_execution_error");
-    const blocked = events.find((event) => event.type === "tool_execution_blocked");
-    assert.equal(finished?.metadata.status, "finished");
-    assert.equal(error?.metadata.status, "error");
-    assert.equal(blocked?.metadata.status, "blocked");
-    assert.equal(typeof finished?.metadata.durationMs, "number");
-    assert.equal(typeof error?.metadata.durationMs, "number");
-    assert.equal(typeof blocked?.metadata.durationMs, "number");
+    const finished = events.find((event) => event.type === "tool.completed");
+    const error = events.find((event) => event.type === "tool.completed" && event.status === "error");
+    const blocked = events.find((event) => event.type === "tool.completed" && event.status === "blocked");
+    assert.equal(finished?.type === "tool.completed" ? finished.metadata.status : undefined, "finished");
+    assert.equal(error?.type === "tool.completed" ? error.metadata.status : undefined, "error");
+    assert.equal(blocked?.type === "tool.completed" ? blocked.metadata.status : undefined, "blocked");
+    assert.equal(typeof (finished?.type === "tool.completed" ? finished.metadata.durationMs : undefined), "number");
+    assert.equal(typeof (error?.type === "tool.completed" ? error.metadata.durationMs : undefined), "number");
+    assert.equal(typeof (blocked?.type === "tool.completed" ? blocked.metadata.durationMs : undefined), "number");
   });
 });

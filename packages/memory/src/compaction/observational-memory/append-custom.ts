@@ -1,4 +1,4 @@
-import type { AgentSession, SessionEntry } from "@arnilo/prism";
+import type { Session, SessionEntry } from "@arnilo/prism";
 import { createSessionEntry } from "@arnilo/prism";
 
 export interface ObservationalMemoryAppendOptions {
@@ -6,7 +6,7 @@ export interface ObservationalMemoryAppendOptions {
 }
 
 export interface CustomEntryAppendOptions {
-  readonly session: AgentSession;
+  readonly session: Session;
   readonly appendEntry: (entry: SessionEntry, options?: ObservationalMemoryAppendOptions) => Promise<void>;
 }
 

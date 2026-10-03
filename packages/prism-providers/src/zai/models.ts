@@ -108,7 +108,7 @@ export function zaiThinkingFamily(modelId: string): "reasoning_effort" | "thinki
 
 /**
  * Caller-gated Z.AI model discovery via OpenAI-compatible `GET /models`.
- * Never invoked by `createZaiProviderPackage` — hosts call this and pass results
+ * Never invoked by `zaiPackage` — hosts call this and pass results
  * via `models:` (or register themselves). Official docs list model codes on the
  * Chat Completions page / overview; use featured `zaiModels` as offline bootstrap.
  */

@@ -6,7 +6,6 @@ import {
   createAgent,
   createMemoryCheckpointStore,
   createMockProvider,
-  type ProviderRequestPolicy,
   providerDone,
   providerTextDelta,
   type SessionStore,
@@ -15,22 +14,23 @@ import {
 
 const model = { provider: "mock", model: "mock" };
 
-function agentWith(overrides: Record<string, unknown> = {}) {
-  return createAgent({
+async function agentWith(overrides: Record<string, unknown> = {}) {
+  return await createAgent({
     model,
     instructions: "Be terse.",
     systemPrompt: [{ id: "house-style", text: "Answer in the host's voice." }],
-    tools: [
-      {
-        name: "search",
-        description: "Search secrets users pasted",
-        parameters: { type: "object", properties: { q: { type: "string" } } },
-        execute: () => ({}),
-      },
-      { name: "read", exclusive: true, parameters: { type: "object", required: ["b", "a"] }, execute: () => ({}) },
-    ],
-    skills: [{ name: "research", instructions: "Plan first.", toolNames: ["search"] }],
-    guardrails: { output: [{ name: "no-secrets", stage: "output", revision: "3", evaluate: () => ({ action: "allow" }) }] },
+    tools: {
+      add: [
+        {
+          name: "search",
+          description: "Search secrets users pasted",
+          parameters: { type: "object", properties: { q: { type: "string" } } },
+          execute: () => ({}),
+        },
+        { name: "read", exclusive: true, parameters: { type: "object", required: ["b", "a"] }, execute: () => ({}) },
+      ],
+    },
+    skills: { add: [{ name: "research", instructions: "Plan first.", toolNames: ["search"] }] },
     limits: { maxTurns: 8 },
     thinkingLevel: "medium",
     ...overrides,
@@ -38,12 +38,12 @@ function agentWith(overrides: Record<string, unknown> = {}) {
 }
 
 describe("snapshotRunBundle", () => {
-  it("is byte-stable for identical configuration and moves for every listed contribution", () => {
-    const baseline = snapshotRunBundle({ agent: agentWith() });
+  it("is byte-stable for identical configuration and moves for every listed contribution", async () => {
+    const baseline = snapshotRunBundle({ agent: await agentWith() });
     assert.equal(baseline.schemaVersion, 1);
-    assert.deepEqual(snapshotRunBundle({ agent: agentWith() }), baseline, "two identical agents produce one snapshot");
+    assert.deepEqual(snapshotRunBundle({ agent: await agentWith() }), baseline, "two identical agents produce one snapshot");
     assert.match(baseline.digest, /^sha256:[0-9a-f]{64}$/);
-    assert.equal(baseline.fingerprint, agentFingerprint(agentWith(), ""), "the resume fingerprint rides along");
+    assert.equal(baseline.fingerprint, agentFingerprint(await agentWith(), ""), "the resume fingerprint rides along");
     assert.equal(baseline.limits.maxTurns, 8);
     assert.deepEqual(
       baseline.tools.map((tool) => [tool.name, tool.exclusive]),
@@ -53,65 +53,65 @@ describe("snapshotRunBundle", () => {
       ],
     );
     assert.equal(baseline.skills[0]?.name, "research");
-    assert.deepEqual(baseline.guardrails, [{ name: "no-secrets", stage: "output", revision: "3" }]);
-    assert.deepEqual(baseline.loop, { strategy: "single-shot", revision: "1" });
+    assert.deepEqual(baseline.guardrails, [], "host guardrails are retired; only pack rows remain");
+    assert.deepEqual(baseline.loop, { strategy: "default", revision: "1" });
     assert.equal(baseline.thinkingLevel, "medium");
     assert.equal(baseline.systemPrompt.contributions[0]?.id, "house-style");
     assert.ok(Object.isFrozen(baseline) && Object.isFrozen(baseline.tools) && Object.isFrozen(baseline.limits));
 
-    const drifted: [string, ReturnType<typeof agentWith> | undefined, Parameters<typeof snapshotRunBundle>[0]["run"]][] = [
-      ["added tool", agentWith({ tools: [...tools(), { name: "extra", parameters: { type: "object" }, execute: () => ({}) }] }), undefined],
+    const drifted: [string, Awaited<ReturnType<typeof agentWith>> | undefined, Parameters<typeof snapshotRunBundle>[0]["run"]][] = [
       [
-        "changed tool schema",
-        agentWith({ tools: [...tools(), { name: "extra", parameters: { type: "object", required: ["a", "b"] }, execute: () => ({}) }] }),
+        "added tool",
+        await agentWith({ tools: [...tools(), { name: "extra", parameters: { type: "object" }, execute: () => ({}) }] }),
         undefined,
       ],
-      ["thinking level", agentWith({ thinkingLevel: "high" }), undefined],
-      ["raised limit", agentWith({ limits: { maxTurns: 12 } }), undefined],
-      ["skill instructions", agentWith({ skills: [{ name: "research", instructions: "Plan last.", toolNames: ["search"] }] }), undefined],
       [
-        "guardrail revision",
-        agentWith({
-          guardrails: { output: [{ name: "no-secrets", stage: "output", revision: "4", evaluate: () => ({ action: "allow" }) }] },
+        "changed tool schema",
+        await agentWith({
+          tools: [...tools(), { name: "extra", parameters: { type: "object", required: ["a", "b"] }, execute: () => ({}) }],
         }),
         undefined,
       ],
-      ["system prompt", agentWith({ systemPrompt: [{ id: "house-style", text: "Answer in your own voice." }] }), undefined],
-      ["loop", undefined, { loop: { name: "custom-loop", revision: "9", run: async () => undefined } }],
-      ["run tool narrowing", undefined, { toolNames: ["search"] }],
+      ["thinking level", await agentWith({ thinkingLevel: "high" }), undefined],
+      ["raised limit", await agentWith({ limits: { maxTurns: 12 } }), undefined],
+      [
+        "skill instructions",
+        await agentWith({ skills: [{ name: "research", instructions: "Plan last.", toolNames: ["search"] }] }),
+        undefined,
+      ],
+      ["system prompt", await agentWith({ systemPrompt: [{ id: "house-style", text: "Answer in your own voice." }] }), undefined],
+      ["loop", await agentWith({ slots: { loop: { name: "custom-loop", revision: "9", run: async () => undefined } } }), undefined],
+      ["run tool narrowing", undefined, { tools: { only: ["search"] } }],
       ["run limits", undefined, { limits: { maxTurns: 2 } }],
       ["attention compiler", undefined, { attentionCompiler: { triggerRatio: 0.7 } }],
     ];
     for (const [label, agent, run] of drifted) {
-      const next = snapshotRunBundle({ agent: agent ?? agentWith(), ...(run ? { run } : {}) });
+      const next = snapshotRunBundle({ agent: agent ?? (await agentWith()), ...(run ? { run } : {}) });
       assert.notEqual(next.digest, baseline.digest, `${label} must change the digest`);
     }
   });
 
-  it("records_agent_and_run_request_policies_in_actual_execution_order", async () => {
-    const applied: string[] = [];
-    const policy = (name: string): ProviderRequestPolicy => ({
-      name,
-      apply: ({ request }) => {
-        applied.push(name);
-        return request;
-      },
-    });
-    const agent = createAgent({
+  it("records_hook_registration_ids_so_a_gate_change_moves_the_digest", async () => {
+    const withoutGate = await createAgent({ model, provider: createMockProvider([providerDone()]) });
+    const withGate = await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
-      providerRequestPolicies: [policy("agent-first"), policy("agent-second")],
+      provider: createMockProvider([providerDone()]),
+      hooks: (hooks) => hooks.on("model.request", (request) => request),
     });
-    const run = { providerRequestPolicies: policy("run-last") };
-    await agent.createSession().run("test", run);
-    assert.deepEqual(applied, ["agent-first", "agent-second", "run-last"]);
-    assert.deepEqual(snapshotRunBundle({ agent, run }).requestPolicies, applied);
-    assert.deepEqual(snapshotRunBundle({ agent, run: { providerRequestPolicies: [] } }).requestPolicies, applied.slice(0, 2));
-    const scalar = createAgent({ model, providerRequestPolicies: policy("agent-only") });
-    assert.deepEqual(snapshotRunBundle({ agent: scalar }).requestPolicies, ["agent-only"]);
+    const otherGate = await createAgent({
+      model,
+      provider: createMockProvider([providerDone()]),
+      hooks: (hooks) => hooks.on("model.response", (message) => message),
+    });
+    const digests = [
+      snapshotRunBundle({ agent: withoutGate }).digest,
+      snapshotRunBundle({ agent: withGate }).digest,
+      snapshotRunBundle({ agent: otherGate }).digest,
+    ];
+    assert.equal(new Set(digests).size, 3, "each distinct hook registration must move the digest");
   });
 
-  it("never inspects store contents, leaks no secret, and reaches no network primitive", () => {
+  it("never inspects store contents, leaks no secret, and reaches no network primitive", async () => {
     const secret = "sk-live-run-bundle";
     const poisoned = {
       kind: "postgres://user:hunter2@db.internal:5432/prism",
@@ -123,8 +123,8 @@ describe("snapshotRunBundle", () => {
       },
     } as unknown as SessionStore;
     const bundle = snapshotRunBundle({
-      agent: agentWith({ thinkingLevel: `secret ${secret}` }),
-      config: { id: "session-1", store: poisoned },
+      agent: await agentWith({ slots: { store: poisoned }, thinkingLevel: `secret ${secret}` }),
+      config: { id: "session-1" },
       memory: { kind: "pgvector", durable: true },
       run: {
         attentionCompiler: { compactRatio: 0.9, excludeTools: [`carries ${secret}`] },
@@ -156,13 +156,13 @@ describe("snapshotRunBundle", () => {
     const source = readFileSync(existsSync(js) ? js : new URL("../run-bundle.ts", import.meta.url), "utf8");
     assert.match(source, /export function snapshotRunBundle/, "the scan must read the module it names");
     assert.doesNotMatch(source, /"node:(?:dns|http|https|net|tls)"|\bfetch\(/);
-    assert.ok(!(snapshotRunBundle({ agent: agentWith() }) instanceof Promise), "snapshotRunBundle is synchronous");
+    assert.ok(!(snapshotRunBundle({ agent: await agentWith() }) instanceof Promise), "snapshotRunBundle is synchronous");
   });
 
   // Plan 124 Task 4: re-measured under Bun 1.4.2 (2026-09-25, five back-to-back runs) at
   // 0.56-0.70ms median (same-session Node 0.93-1.26ms), so the 5ms budget stays.
-  it("snapshots 100 tools inside the 5 ms budget", () => {
-    const many = createAgent({
+  it("snapshots 100 tools inside the 5 ms budget", async () => {
+    const many = await createAgent({
       model,
       tools: Array.from({ length: 100 }, (_, index) => ({
         name: `tool-${index}`,
@@ -188,8 +188,8 @@ describe("snapshotRunBundle", () => {
     assert.equal(snapshotRunBundle({ agent: many }).tools.length, 100);
   });
 
-  it("keeps a pinned golden digest for a fixed 32-tool agent", () => {
-    const golden = createAgent({
+  it("keeps a pinned golden digest for a fixed 32-tool agent", async () => {
+    const golden = await createAgent({
       id: "golden-agent",
       model,
       instructions: "Golden instructions.",
@@ -204,8 +204,11 @@ describe("snapshotRunBundle", () => {
       })),
     } as unknown as Parameters<typeof createAgent>[0]);
     // Pinned on purpose: any change to snapshot inputs or digest algorithm must be a deliberate re-pin.
-    // Re-pinned in plan 106 Task 2: the resolved `RunLimits` now carry `maxStopContinuations`.
-    assert.equal(snapshotRunBundle({ agent: golden }).digest, "sha256:a533aa01357e71f1a7ef5ec25b90a45a86f3430b98df00cc77cb17845b0f4e85");
+    // Re-pinned in plan 106 Task 2 (renamed to `maxContinuations` in plan 145 Task 4): the resolved
+    // `RunLimits` carry the `run.end` continuation cap.
+    // Re-pinned in plan 144 Task 4b: the default loop identity is `default`/`1` (was `single-shot`/`1`).
+    // Re-pinned in plan 144 Task 5: the fingerprint includes the (empty) hook registration-id set.
+    assert.equal(snapshotRunBundle({ agent: golden }).digest, "sha256:067b5cffc831a46b5928a616dc1c585a282f115a633329b93b36b8f9a5b16b64");
     assert.equal(snapshotRunBundle({ agent: golden }).tools.length, 32);
   });
 });

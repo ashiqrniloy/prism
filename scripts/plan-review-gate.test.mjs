@@ -127,7 +127,7 @@ const PLAN_108_TASK_1 = {
     "src/run-limits.ts",
     "describeBudgetExhaustion",
     "src/contracts-run-state.ts",
-    "AgentRunResult",
+    "RunResult",
     "src/agent-session/session.ts",
     "buildRunResult",
     "src/agent-session/session/assemble.ts",

@@ -8,8 +8,8 @@ import assert from "node:assert/strict";
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismDevInspector, DevInspectorError } from "../index.js";
 
-function mockAgent(): ReturnType<typeof createAgent> {
-  return createAgent({
+async function mockAgent(): ReturnType<typeof createAgent> {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
   });
@@ -21,7 +21,7 @@ function nonLoopbackAuthorize(): { ownership: { userId: string } } {
 
 describe("loopback bind policy (plan 040 Task 1)", () => {
   it("default bind is loopback and listens", async () => {
-    const inspector = createPrismDevInspector({ agent: mockAgent(), port: 0 });
+    const inspector = createPrismDevInspector({ agent: await mockAgent(), port: 0 });
     await inspector.listen();
     try {
       assert.equal(inspector.host, "127.0.0.1");
@@ -38,13 +38,13 @@ describe("loopback bind policy (plan 040 Task 1)", () => {
     }
   });
 
-  it("refuses non-loopback host without remoteAuthorize (fail closed) and without real authorize", () => {
-    assert.throws(
-      () => createPrismDevInspector({ agent: mockAgent(), host: "0.0.0.0" }),
+  it("refuses non-loopback host without remoteAuthorize (fail closed) and without real authorize", async () => {
+    await assert.rejects(
+      async () => createPrismDevInspector({ agent: await mockAgent(), host: "0.0.0.0" }),
       (error: unknown) => error instanceof DevInspectorError && error.code === "ERR_PRISM_DEV_REMOTE_BIND",
     );
-    assert.throws(
-      () => createPrismDevInspector({ agent: mockAgent(), host: "192.168.1.10", remoteAuthorize: () => true }),
+    await assert.rejects(
+      async () => createPrismDevInspector({ agent: await mockAgent(), host: "192.168.1.10", remoteAuthorize: () => true }),
       (error: unknown) => error instanceof DevInspectorError && error.code === "ERR_PRISM_DEV_REMOTE_BIND",
       "non-loopback bind also requires a real authorize callback",
     );
@@ -52,7 +52,7 @@ describe("loopback bind policy (plan 040 Task 1)", () => {
 
   it("non-loopback opt-in requires remoteAuthorize to resolve true at listen()", async () => {
     const refused = createPrismDevInspector({
-      agent: mockAgent(),
+      agent: await mockAgent(),
       host: "0.0.0.0",
       port: 0,
       remoteAuthorize: () => false,
@@ -61,7 +61,7 @@ describe("loopback bind policy (plan 040 Task 1)", () => {
     await assert.rejects(() => refused.listen(), DevInspectorError);
 
     const allowed = createPrismDevInspector({
-      agent: mockAgent(),
+      agent: await mockAgent(),
       host: "0.0.0.0",
       port: 0,
       remoteAuthorize: () => true,

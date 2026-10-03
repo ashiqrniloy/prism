@@ -1,14 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ProviderRequest } from "@arnilo/prism";
-import {
-  createAgent,
-  createContributionRegistries,
-  createMockProvider,
-  createSkillRegistry,
-  providerDone,
-  registerDiscoveredContributions,
-} from "@arnilo/prism";
+import { createAgent, createMockProvider, createSkillRegistry, providerDone } from "@arnilo/prism";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 
@@ -33,12 +26,8 @@ export async function demo(): Promise<{
     trust,
   });
 
-  // 2. Register: realized Skill objects land in the skills registry; other
-  //    kinds (tool/context/agent/instructions) register as descriptor stubs.
-  //    Discovery never imports or executes contribution code.
-  const registries = createContributionRegistries();
-  registerDiscoveredContributions(registries, discovered);
-  const skill = registries.skills.list()[0];
+  // 2. Realized skills come straight off the scanner. Discovery never imports contribution code.
+  const skill = discovered.find((entry) => entry.skill)?.skill;
 
   // 3. Run: mock provider captures the assembled request so we can prove the
   //    skill instructions were injected via activeSkills: ["greeter"].
@@ -48,15 +37,17 @@ export async function demo(): Promise<{
       captured.push(request);
     },
   });
-  const session = createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider,
-    skills: createSkillRegistry([skill!]),
-  }).createSession();
+  const session = await (
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      skills: { add: [skill!] },
+    })
+  ).session();
 
   // Fire run() (resolves into closeSubscribers) and drain the event stream in
   // parallel — subscribe() only ends once run completes and closes the stream.
-  const done = session.run("Hi", { activeSkills: ["greeter"] });
+  const done = session.run("Hi");
   for await (const _event of session.subscribe()) {
     void _event;
   }

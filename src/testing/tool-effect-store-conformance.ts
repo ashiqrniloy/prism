@@ -1,7 +1,6 @@
-import type { AgentIdentity, ToolEffectKey, ToolEffectStore, ToolResult } from "../contracts.js";
+import type { ToolEffectKey, ToolEffectStore, ToolResult } from "../contracts.js";
 
 export interface ToolEffectStoreConformanceOptions {
-  readonly identity?: AgentIdentity;
   readonly ownership?: ToolEffectKey["ownership"];
   readonly key?: string;
 }
@@ -12,9 +11,8 @@ export async function assertToolEffectStoreConforms(
   options: ToolEffectStoreConformanceOptions = {},
 ): Promise<void> {
   const store = await factory();
-  const identity = options.identity ?? testIdentity();
-  const ownership = options.ownership ?? { tenantId: identity.tenantId };
-  const base = key(identity, ownership, options.key ?? "prism:tool-effect:v1:conformance");
+  const ownership = options.ownership ?? { tenantId: "tenant" };
+  const base = key(ownership, options.key ?? "prism:tool-effect:v1:conformance");
   const first = await store.begin(base);
   if (first.outcome !== "acquired" || first.record.status !== "pending" || !first.record.claimToken) {
     throw new Error("store must acquire an absent tool effect as pending with a claim token");
@@ -38,7 +36,7 @@ export async function assertToolEffectStoreConforms(
   }
   await expectReject(() => store.markDispatched(transition(base, dispatched)), "store must reject stale claim/version transitions");
 
-  const unknownKey = key(identity, ownership, `${base.key}:unknown`, "call-unknown");
+  const unknownKey = key(ownership, `${base.key}:unknown`, "call-unknown");
   const unknownPending = await store.begin(unknownKey);
   const unknownDispatched = await store.markDispatched(transition(unknownKey, unknownPending.record));
   const unknown = await store.markUnknown({ ...transition(unknownKey, unknownDispatched), failure: { code: "test" } });
@@ -55,9 +53,8 @@ export async function assertToolEffectStoreConforms(
   if (cleanup.deleted < 1) throw new Error("store cleanup must remove terminal effects");
 }
 
-function key(identity: AgentIdentity, ownership: ToolEffectKey["ownership"], value: string, toolCallId = "call"): ToolEffectKey {
+function key(ownership: ToolEffectKey["ownership"], value: string, toolCallId = "call"): ToolEffectKey {
   return {
-    identity,
     ownership,
     key: value,
     sessionId: "session",
@@ -80,14 +77,4 @@ async function expectReject(run: () => Promise<unknown>, message: string): Promi
     return;
   }
   throw new Error(message);
-}
-
-function testIdentity(): AgentIdentity {
-  return {
-    tenantId: "tenant",
-    principal: { kind: "service", id: "conformance" },
-    scopes: ["tools:execute"],
-    issuedAt: "2026-01-01T00:00:00.000Z",
-    verified: true,
-  };
 }

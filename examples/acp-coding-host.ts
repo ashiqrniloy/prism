@@ -1,5 +1,5 @@
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentRunRef, AgentRunResume, AgentSession } from "@arnilo/prism";
+import type { AgentRunLifecycle, AgentRunRef, AgentRunResume, Session } from "@arnilo/prism";
 import { createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
 import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
 
@@ -39,7 +39,7 @@ const acpAgent = createPrismAcpAgent({
   sessionFactory: async (input) => {
     const sessionId = input.sessionId ?? `host-${hostSessions.size + 1}`;
     hostSessions.set(sessionId, { cwd: input.cwd, modeId: "edit" });
-    // A real host returns a full Prism AgentSession (durable run, prompt, steer,
+    // A real host returns a full Prism Session (durable run, prompt, steer,
     // cancel). This example only streams events, so it narrows to the interface.
     const binding = {
       session: {
@@ -47,12 +47,12 @@ const acpAgent = createPrismAcpAgent({
         async *stream() {
           if (input.coding?.filesystem) {
             const read = await input.coding.filesystem.readTextFile({ path: `${input.cwd}/README.md` });
-            yield { type: "message_delta", sessionId, runId: "run", content: { type: "text", text: `README: ${read.text}` } };
+            yield { type: "message.delta", sessionId, runId: "run", content: { type: "text", text: `README: ${read.text}` } };
           }
           yield { type: "agent_done", sessionId, runId: "run", reason: "end_turn" };
         },
       },
-    } as unknown as { session: AgentSession };
+    } as unknown as { session: Session };
     return binding;
   },
 
@@ -64,7 +64,7 @@ const acpAgent = createPrismAcpAgent({
       for (const decision of resume.decisions ?? []) {
         if (decision.outcome === "allow_once" || decision.outcome === "allow_for_run") approvals.add(decision.approvalId);
       }
-      yield { type: "agent_finished", sessionId: ref.sessionId, runId: ref.runId, reason: "end_turn" };
+      yield { type: "run.completed", sessionId: ref.sessionId, runId: ref.runId, reason: "end_turn" };
     },
   } as unknown as AgentRunLifecycle,
 
@@ -74,7 +74,7 @@ const acpAgent = createPrismAcpAgent({
       if (!sessionId) throw new Error("sessionId required");
       const entry = hostSessions.get(sessionId);
       if (!entry) throw new Error(`unknown session ${sessionId}`);
-      return { session: { id: sessionId, async *stream() {} } } as unknown as { session: AgentSession };
+      return { session: { id: sessionId, async *stream() {} } } as unknown as { session: Session };
     },
     async list() {
       return [...hostSessions.entries()].map(([sessionId, entry]) => ({ sessionId, cwd: entry.cwd }));

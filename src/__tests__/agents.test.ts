@@ -4,29 +4,24 @@ import { RuntimeAgentSession } from "../agent-session/session.js";
 import {
   type AgentDefinition,
   type AgentEvent,
-  AgentRunError,
   type AIProvider,
   applyThinkingLevelForModel,
+  type CompactionContext,
   type ContentBlock,
-  type ContextProvider,
   createAgent,
-  createAgentSession,
-  createContributionRegistries,
+  createDefaultCompactor,
   createMemorySessionStore,
-  createMiddlewareRegistry,
+  registerContextSources,
   createMockProvider,
   createProviderResolver,
   createSecretRedactor,
-  createSessionCachePolicy,
   createSkillRegistry,
   DEFAULT_SNAPSHOT_CACHE_TTL_MS,
   getSessionBranchEntries,
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
-  type InputBuilder,
-  type InstructionInjector,
   type Message,
-  type PromptBuilder,
   type ProviderRequest,
+  type Session,
   providerDone,
   providerTextDelta,
   providerToolCallDelta,
@@ -35,7 +30,9 @@ import {
   type SessionStore,
   type ToolDefinition,
   toolCallContent,
+  SubscriberOverflowError,
 } from "../index.js";
+import { failedRun } from "./run-result-helpers.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -68,17 +65,19 @@ async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise
 
 describe("agent session runtime", () => {
   it("rejects legacy RunOptions.maxToolRounds (removed 0.1.5 alias) before any side effects", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
-      tools: [
-        {
-          name: "echo",
-          execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
-        },
-      ],
+      tools: {
+        add: [
+          {
+            name: "echo",
+            execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
+          },
+        ],
+      },
     });
-    const session = agent.createSession({ id: "legacy-alias" });
+    const session = await agent.session({ id: "legacy-alias", create: true });
 
     await assert.rejects(
       // @ts-expect-error removed in 0.1.5; use RunOptions.limits.maxToolRounds instead (untyped-JS simulation)
@@ -95,11 +94,11 @@ describe("agent session runtime", () => {
   });
 
   it("streams mock provider text to subscriber", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
@@ -107,47 +106,35 @@ describe("agent session runtime", () => {
 
     assert.deepEqual(
       events.map((event) => event.type),
-      [
-        "agent_started",
-        "turn_started",
-        "provider_turn_started",
-        "message_started",
-        "message_delta",
-        "provider_turn_finished",
-        "message_finished",
-        "turn_finished",
-        "agent_finished",
-      ],
+      ["run.started", "turn.started", "message.delta", "turn.completed", "message.completed", "run.completed"],
     );
-    const delta = events.find((event) => event.type === "message_delta");
+    const delta = events.find((event) => event.type === "message.delta");
     assert.equal(delta?.content.type, "text");
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "Hello");
   });
 
   it("closes slow subscriber on bounded queue overflow", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("a"), providerTextDelta("b"), providerTextDelta("c"), providerDone()]),
     });
-    const session = agent.createSession({ id: "overflow-session" });
+    const session = await agent.session({ id: "overflow-session", create: true });
     const iterator = session.subscribe({ maxQueuedEvents: 2 })[Symbol.asyncIterator]();
 
     await session.run("Hi");
 
-    const overflow = await iterator.next();
-    assert.equal(overflow.done, false);
-    assert.equal(overflow.value.type, "event_subscriber_overflow");
-    assert.equal(overflow.value.type === "event_subscriber_overflow" ? overflow.value.maxQueuedEvents : undefined, 2);
-    assert.equal(overflow.value.type === "event_subscriber_overflow" ? overflow.value.overflow : undefined, "close");
-    assert.equal((await iterator.next()).done, true);
+    await assert.rejects(
+      () => iterator.next(),
+      (error: unknown) => error instanceof SubscriberOverflowError && error.maxQueuedEvents === 2,
+    );
   });
 
   it("drop_oldest subscriber overflow keeps the newest bounded events", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
     });
-    const session = agent.createSession({ id: "drop-oldest-session" });
+    const session = await agent.session({ id: "drop-oldest-session", create: true });
     const iterator = session.subscribe({ maxQueuedEvents: 2, overflow: "drop_oldest" })[Symbol.asyncIterator]();
 
     await session.run("Hi");
@@ -160,38 +147,38 @@ describe("agent session runtime", () => {
 
     assert.deepEqual(
       events.map((event) => event.type),
-      ["turn_finished", "agent_finished"],
+      ["message.completed", "run.completed"],
     );
   });
 
   it("resolves provider from AgentConfig.providerSource with no direct provider", async () => {
     const own = createMockProvider([providerTextDelta("from-resolver"), providerDone()], { id: "own" });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "own", model: "demo" },
       providerSource: createProviderResolver([own]),
     });
-    const session = agent.createSession({ id: "s-resolve" });
+    const session = await agent.session({ id: "s-resolve", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
     const events = await reader;
 
-    const delta = events.find((event) => event.type === "message_delta");
+    const delta = events.find((event) => event.type === "message.delta");
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "from-resolver");
   });
 
   it("fails closed when providerSource returns undefined for the model's provider", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "missing", model: "demo" },
       providerSource: createProviderResolver([]),
     });
-    const session = agent.createSession({ id: "s-missing" });
+    const session = await agent.session({ id: "s-missing", create: true });
     const reader = collect(session.subscribe());
 
-    await assert.rejects(() => session.run("Hi"), /Unknown provider: missing/);
+    await failedRun(session.run("Hi"), /Unknown provider: missing/);
     const events = await reader;
     assert.equal(
-      events.some((event) => event.type === "error"),
+      events.some((event) => event.type === "run.failed"),
       true,
     );
   });
@@ -199,17 +186,17 @@ describe("agent session runtime", () => {
   it("RunOptions.providerSource overrides AgentConfig.providerSource per run", async () => {
     const configProvider = createMockProvider([providerTextDelta("from-config"), providerDone()], { id: "config" });
     const runProvider = createMockProvider([providerTextDelta("from-run"), providerDone()], { id: "run" });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "run", model: "demo" },
       providerSource: createProviderResolver([configProvider]),
     });
-    const session = agent.createSession({ id: "s-override" });
+    const session = await agent.session({ id: "s-override", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { providerSource: createProviderResolver([runProvider]) });
     const events = await reader;
 
-    const delta = events.find((event) => event.type === "message_delta");
+    const delta = events.find((event) => event.type === "message.delta");
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "from-run");
   });
 
@@ -218,80 +205,80 @@ describe("agent session runtime", () => {
     // The resolver ALSO contains a provider for the model's `provider` id, so the
     // only way `direct` wins is if the resolver is bypassed entirely.
     const resolverProvider = createMockProvider([providerTextDelta("from-resolver"), providerDone()], { id: "direct" });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "direct", model: "demo" },
       provider: direct,
       providerSource: createProviderResolver([resolverProvider]),
     });
-    const session = agent.createSession({ id: "s-precedence" });
+    const session = await agent.session({ id: "s-precedence", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
     const events = await reader;
 
-    const delta = events.find((event) => event.type === "message_delta");
+    const delta = events.find((event) => event.type === "message.delta");
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "from-direct");
   });
 
   it("RunOptions.model override routes through the resolver with the new model", async () => {
     const a = createMockProvider([providerTextDelta("from-a"), providerDone()], { id: "a" });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "a", model: "demo" },
       providerSource: createProviderResolver([a]),
     });
-    const session = agent.createSession({ id: "s-model-override" });
+    const session = await agent.session({ id: "s-model-override", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { model: { provider: "a", model: "other" } });
     const events = await reader;
 
-    const delta = events.find((event) => event.type === "message_delta");
+    const delta = events.find((event) => event.type === "message.delta");
     assert.equal(delta?.content.type === "text" ? delta.content.text : undefined, "from-a");
   });
 
-  it("createAgentSession standalone uses agent config", async () => {
-    const agent = createAgent({
+  it("agent.session() uses agent config", async () => {
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
     });
-    const session = createAgentSession({ agent });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
 
     assert.equal(
-      (await reader).some((event) => event.type === "agent_finished"),
+      (await reader).some((event) => event.type === "run.completed"),
       true,
     );
   });
 
   it("session prompt delegates to run for string input", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
     });
-    const session = agent.createSession();
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
-    await session.prompt("Hi");
+    await session.run("Hi");
 
     assert.equal(
-      (await reader).some((event) => event.type === "message_delta"),
+      (await reader).some((event) => event.type === "message.delta"),
       true,
     );
   });
 
   it("missing provider fails closed and emits error", async () => {
-    const agent = createAgent({ model: { provider: "missing", model: "demo" } });
-    const session = agent.createSession();
+    const agent = await createAgent({ model: { provider: "missing", model: "demo" } });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
-    await assert.rejects(session.run("Hi"), /Unknown provider: missing/);
+    await failedRun(session.run("Hi"), /Unknown provider: missing/);
 
     const events = await reader;
     assert.equal(events.length, 1);
-    assert.equal(events[0]?.type, "error");
-    assert.equal(events[0]?.type === "error" ? events[0].error.message : undefined, "Unknown provider: missing");
+    assert.equal(events[0]?.type, "run.failed");
+    assert.equal(events[0]?.type === "run.failed" ? events[0].error.message : undefined, "Unknown provider: missing");
   });
 
   it("runs a disabled maxToolRounds (null) past the old default ceiling of 8 rounds", async () => {
@@ -310,16 +297,16 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
-    const session = agent.createSession();
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     const result = await session.run("Hi", { limits: { maxToolRounds: null } });
     const events = await reader;
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(requests.length, 10);
-    assert.equal(events.filter((event) => event.type === "tool_execution_finished").length, 9);
+    assert.equal(events.filter((event) => event.type === "tool.completed").length, 9);
   });
 
   it("executes one registered tool and continues", async () => {
@@ -337,8 +324,8 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
-    const session = agent.createSession();
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -350,12 +337,12 @@ describe("agent session runtime", () => {
       true,
     );
     assert.equal(
-      events.some((event) => event.type === "tool_execution_finished"),
+      events.some((event) => event.type === "tool.completed"),
       true,
     );
-    const deltas = events.filter((event) => event.type === "message_delta");
+    const deltas = events.filter((event) => event.type === "message.delta");
     const lastDelta = deltas[deltas.length - 1];
-    assert.equal(lastDelta?.type === "message_delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
+    assert.equal(lastDelta?.type === "message.delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
   });
 
   it("runtime_reconstructs_tool_call_delta_executes_persists_and_replays", async () => {
@@ -378,8 +365,13 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo], store: entriesStore });
-    const session = agent.createSession({ id: "delta-session" });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      tools: { add: [echo] },
+      slots: { store: entriesStore },
+    });
+    const session = await agent.session({ id: "delta-session", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -388,11 +380,11 @@ describe("agent session runtime", () => {
     assert.equal(requests.length, 2);
     assert.ok(
       events.some(
-        (event) => event.type === "message_delta" && event.content.type === "tool_call_delta" && event.content.argumentsText === '{"text":',
+        (event) => event.type === "message.delta" && event.content.type === "tool_call_delta" && event.content.argumentsText === '{"text":',
       ),
       "expected streamed tool_call_delta event",
     );
-    assert.equal(events.filter((event) => event.type === "tool_execution_finished").length, 1);
+    assert.equal(events.filter((event) => event.type === "tool.completed").length, 1);
     const replay = requests[1]!;
     const assistant = replay.messages.find((message) => message.role === "assistant");
     assert.ok(assistant, "expected assistant message in replay");
@@ -454,22 +446,22 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "should-not-run" };
       },
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
-    const session = agent.createSession();
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     const result = await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.text, "recovered");
     assert.equal(executed, 0, "tool must not execute on malformed arguments");
     assert.equal(
-      events.some((event) => event.type === "tool_execution_blocked" && event.reason === "invalid_arguments"),
+      events.some((event) => event.type === "tool.completed" && event.status === "blocked" && event.reason === "invalid_arguments"),
       true,
     );
     assert.equal(
-      events.some((event) => event.type === "error"),
+      events.some((event) => event.type === "run.failed"),
       false,
       "must not surface as run-level transport error",
     );
@@ -497,15 +489,14 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "should-not-run" };
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } })).session();
 
-    await assert.rejects(session.run("Hi"), (error: unknown) => {
-      assert.ok(error instanceof AgentRunError);
-      assert.equal(error.result.status, "failed");
-      assert.equal(error.result.error?.code, "incomplete_delta");
-      assert.match(error.result.error?.message ?? "", /Incomplete tool call delta/);
-      return true;
-    });
+    {
+      const outcome = await session.run("Hi");
+      assert.equal(outcome.status, "failed");
+      assert.equal(outcome.error?.code, "incomplete_delta");
+      assert.match(outcome.error?.message ?? "", /Incomplete tool call delta/);
+    }
     assert.equal(executed, 0);
   });
 
@@ -526,13 +517,12 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "nope" };
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } })).session();
 
-    await assert.rejects(session.run("Hi"), (error: unknown) => {
-      assert.ok(error instanceof AgentRunError);
-      assert.equal(error.result.error?.code, "incomplete_delta");
-      return true;
-    });
+    {
+      const outcome = await session.run("Hi");
+      assert.equal(outcome.error?.code, "incomplete_delta");
+    }
     assert.equal(executed, 0, "complete sibling must not execute when an incomplete delta fails the turn");
   });
 
@@ -551,8 +541,8 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: args }),
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
-    const session = agent.createSession();
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -573,9 +563,9 @@ describe("agent session runtime", () => {
       "expected tool_result in tool message",
     );
     assert.ok(replay.messages.indexOf(assistant) < replay.messages.indexOf(tool), "assistant tool_call must precede tool_result");
-    const deltas = events.filter((event) => event.type === "message_delta");
+    const deltas = events.filter((event) => event.type === "message.delta");
     const lastDelta = deltas[deltas.length - 1];
-    assert.equal(lastDelta?.type === "message_delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
+    assert.equal(lastDelta?.type === "message.delta" && lastDelta.content.type === "text" ? lastDelta.content.text : undefined, "done");
   });
 
   it("runtime_tool_replay_preserves_tool_error_result", async () => {
@@ -595,7 +585,7 @@ describe("agent session runtime", () => {
         throw new Error("tool failed");
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [boom] }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [boom] } })).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -619,19 +609,19 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider });
-    const session = agent.createSession();
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider });
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
     const events = await reader;
 
     assert.equal(
-      events.some((event) => event.type === "tool_execution_started"),
+      events.some((event) => event.type === "tool.started"),
       false,
     );
     assert.equal(
-      events.some((event) => event.type === "tool_execution_blocked"),
+      events.some((event) => event.type === "tool.completed" && event.status === "blocked"),
       true,
     );
   });
@@ -650,9 +640,9 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
 
-    await agent.createSession().run("Hi", { limits: { maxToolRounds: 1 } });
+    await (await agent.session()).run("Hi", { limits: { maxToolRounds: 1 } });
 
     assert.equal(calls, 2);
   });
@@ -667,21 +657,21 @@ describe("agent session runtime", () => {
       },
     };
     const echo: ToolDefinition = { name: "echo", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo" }) };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: [echo],
-      skills: [{ name: "wants-missing", toolNames: ["missing"], instructions: "Use missing." }],
+      tools: { add: [echo] },
+      skills: { add: [{ name: "wants-missing", toolNames: ["missing"], instructions: "Use missing." }] },
     });
 
-    await agent.createSession().run("Hi");
+    await (await agent.session()).run("Hi");
 
     assert.deepEqual(seen, [["echo"]]);
   });
 
   it("abort stops before next provider turn", async () => {
     let turns = 0;
-    let session!: ReturnType<typeof createAgent>["createSession"] extends (...args: never[]) => infer R ? R : never;
+    let session!: Awaited<ReturnType<Awaited<ReturnType<typeof createAgent>>["session"]>>;
     const provider: AIProvider = {
       id: "mock",
       async *generate() {
@@ -698,11 +688,11 @@ describe("agent session runtime", () => {
       },
     };
     const store = createMemorySessionStore();
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [stop], store });
-    session = agent.createSession({ id: "s1" });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [stop] }, slots: { store } });
+    session = await agent.session({ id: "s1", create: true });
     const reader = collect(session.subscribe());
 
-    await assert.rejects(session.run("Hi"), /stop/);
+    await failedRun(session.run("Hi"), /stop/, "aborted");
     await reader;
 
     assert.equal(turns, 1);
@@ -725,14 +715,14 @@ describe("agent session runtime", () => {
         );
       },
     };
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider });
     const controller = new AbortController();
-    const run = agent.createSession().run("Hi", { signal: controller.signal });
+    const run = (await agent.session()).run("Hi", { signal: controller.signal });
 
     await seenPromise;
     controller.abort(new Error("cancelled"));
 
-    await assert.rejects(run, /cancelled/);
+    await failedRun(run, /cancelled/, "aborted");
     assert.equal(seenSignal.aborted, true);
   });
 
@@ -748,7 +738,7 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session();
     const first = session.run("one");
 
     await assert.rejects(session.run("two"), /active run/);
@@ -756,11 +746,13 @@ describe("agent session runtime", () => {
     await first;
   });
 
-  it("steer without active run fails closed", () => {
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerDone()]),
-    }).createSession();
+  it("steer without active run fails closed", async () => {
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: createMockProvider([providerDone()]),
+      })
+    ).session();
     assert.throws(() => session.steer("later"), /no active run/);
   });
 
@@ -797,7 +789,10 @@ describe("agent session runtime", () => {
         },
       },
     ];
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools }).createSession({ id: "steer-turn" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: tools } })).session({
+      id: "steer-turn",
+      create: true,
+    });
     const reader = collect(session.subscribe());
     const run = session.run("Hi", { limits: { maxToolRounds: 2 } });
     await toolGate;
@@ -805,18 +800,14 @@ describe("agent session runtime", () => {
     releaseTool();
     const result = await run;
     const events = await reader;
-    assert.equal(result.status, "succeeded");
-    assert.equal(result.runId, events.find((e) => e.type === "agent_started")?.runId);
+    assert.equal(result.status, "completed");
+    assert.equal(result.runId, events.find((e) => e.type === "run.started")?.runId);
     assert.equal(requests.length, 2);
     const steered = requests[1]!.messages.some(
       (message) =>
         message.role === "user" && message.content.some((block) => block.type === "text" && block.text.includes("Prefer SQLite")),
     );
     assert.equal(steered, true);
-    assert.equal(
-      events.some((e) => e.type === "queue_updated" && e.size >= 1),
-      true,
-    );
     const entries = await session.entries();
     assert.equal(
       entries.some(
@@ -860,23 +851,19 @@ describe("agent session runtime", () => {
         },
       },
     ];
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      tools,
-      guardrails: {
-        input: [
-          {
-            name: "deny-steer",
-            stage: "input",
-            evaluate: ({ value }) =>
-              value.some((m) => m.content.some((b) => b.type === "text" && b.text.includes("blocked-steer")))
-                ? { action: "block", reason: "nope" }
-                : { action: "allow" },
-          },
-        ],
-      },
-    }).createSession({ id: "steer-blocked" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        tools: { add: tools },
+        hooks: (hooks) => {
+          // `run.input` drops a steered message by returning fewer messages than it received.
+          hooks.on("run.input", (messages) =>
+            messages.some((m) => m.content.some((b) => b.type === "text" && b.text.includes("blocked-steer"))) ? [] : messages,
+          );
+        },
+      })
+    ).session({ id: "steer-blocked", create: true });
     const reader = collect(session.subscribe());
     // Run-start input passes the guardrail ("Hi" is clean), so the run starts.
     const run = session.run("Hi", { limits: { maxToolRounds: 2 } });
@@ -886,11 +873,13 @@ describe("agent session runtime", () => {
     const result = await run;
     const events = await reader;
 
-    assert.equal(result.status, "succeeded");
-    const rejected = events.find((e) => e.type === "steer_rejected");
-    assert.ok(rejected && rejected.type === "steer_rejected");
-    assert.equal(rejected.record.action, "block");
-    assert.equal(rejected.record.guardrail, "deny-steer");
+    assert.equal(result.status, "completed");
+    const rejected = events.find((e) => e.type === "package.event" && e.name === "steer.rejected");
+    assert.ok(rejected && rejected.type === "package.event" && rejected.name === "steer.rejected");
+    const rejectedRecord = (rejected.data as { record: { action: string; guardrail: string; stage: string } }).record;
+    assert.equal(rejectedRecord.action, "block");
+    assert.equal(rejectedRecord.guardrail, "run.input");
+    assert.equal(rejectedRecord.stage, "input");
     // Dropped message never reaches the next provider turn or the session store.
     assert.equal(requests.length, 2);
     assert.equal(JSON.stringify(requests[1]!.messages).includes("blocked-steer"), false);
@@ -922,17 +911,20 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({ model: { provider: "blocking", model: "demo" }, provider }).createSession({ id: "steer-soft" });
+    const session = await (await createAgent({ model: { provider: "blocking", model: "demo" }, provider })).session({
+      id: "steer-soft",
+      create: true,
+    });
     const reader = collect(session.subscribe());
     const run = session.run("Hi");
     await firstReady;
     session.steer("Stop editing auth; fix tests first", { softInterrupt: true });
     const result = await run;
     const events = await reader;
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(firstSignal.aborted, true);
     assert.equal(requests.length, 2);
-    assert.equal(result.runId, events.find((e) => e.type === "agent_started")?.runId);
+    assert.equal(result.runId, events.find((e) => e.type === "run.started")?.runId);
     assert.equal(
       requests[1]!.messages.some(
         (message) =>
@@ -941,12 +933,12 @@ describe("agent session runtime", () => {
       true,
     );
     assert.equal(
-      events.some((e) => e.type === "message_delta" && e.content.type === "text" && e.content.text === "steered-ok"),
+      events.some((e) => e.type === "message.delta" && e.content.type === "text" && e.content.text === "steered-ok"),
       true,
     );
   });
 
-  it("steer queue overflow fails closed", async () => {
+  it("steer_over_cap_fails_closed", async () => {
     let release!: () => void;
     const blocked = new Promise<void>((resolve) => {
       release = resolve;
@@ -964,7 +956,7 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session();
     const run = session.run("one");
     await ready;
     for (let i = 0; i < 8; i += 1) session.steer(`msg-${i}`);
@@ -980,14 +972,14 @@ describe("agent session runtime", () => {
         yield { type: "error", error: { name: "ProviderError", message: "provider failed" } };
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session();
     const reader = collect(session.subscribe());
 
-    await assert.rejects(session.run("Hi"), /provider failed/);
+    await failedRun(session.run("Hi"), /provider failed/);
     const events = await reader;
 
     assert.equal(
-      events.some((event) => event.type === "error" && event.error.message === "provider failed"),
+      events.some((event) => event.type === "run.failed" && event.error.message === "provider failed"),
       true,
     );
   });
@@ -1007,23 +999,23 @@ describe("agent session runtime", () => {
         throw new Error("tool failed");
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [boom] }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [boom] } })).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
     const events = await reader;
 
     assert.equal(
-      events.some((event) => event.type === "tool_execution_error" && event.error.message === "tool failed"),
+      events.some((event) => event.type === "tool.completed" && event.status === "error" && event.error?.message === "tool failed"),
       true,
     );
     assert.equal(
-      events.some((event) => event.type === "message_delta" && event.content.type === "text" && event.content.text === "after error"),
+      events.some((event) => event.type === "message.delta" && event.content.type === "text" && event.content.text === "after error"),
       true,
     );
   });
 
-  it("uses configured input and prompt builders", async () => {
+  it("composes context.build ahead of the transcript and rewrites input through run.input", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = {
       id: "mock",
@@ -1032,34 +1024,36 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const inputBuilder: InputBuilder = {
-      name: "custom-input",
-      build: (_input, context) => [{ role: "user", content: [{ type: "text", text: `input:${String(context?.metadata?.source)}` }] }],
-    };
-    const promptBuilder: PromptBuilder = {
-      name: "custom-prompt",
-      build: (input) => [{ role: "system", content: [{ type: "text", text: "prompt" }] }, ...input.messages],
-    };
-    const middleware = createMiddlewareRegistry();
-    middleware.use<{ readonly messages: ProviderRequest["messages"] }>("prompt_build", (value) => ({
-      ...value,
-      messages: [...value.messages, { role: "system", content: [{ type: "text", text: "middleware" }] }],
-    }));
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      inputBuilder,
-      promptBuilder,
-      middleware,
       metadata: { source: "agent" },
+      hooks: (hooks) => {
+        hooks.on("context.build", (draft) => ({
+          ...draft,
+          messages: [{ role: "system", content: [{ type: "text", text: "prompt" }] }, ...draft.messages],
+        }));
+        hooks.on("run.input", (messages) => [
+          { role: "user", content: [{ type: "text", text: `input:${messages.length > 0 ? "rewritten" : "empty"}` }] },
+        ]);
+      },
     });
 
-    await agent.createSession({ metadata: { session: true } }).run("ignored", { metadata: { run: true } });
+    const session = await agent.session({ metadata: { session: true } });
+    await session.run("ignored", { metadata: { run: true } });
 
-    assert.equal(request.messages[0]?.content[0]?.type === "text" ? request.messages[0].content[0].text : undefined, "prompt");
-    assert.equal(request.messages[1]?.content[0]?.type === "text" ? request.messages[1].content[0].text : undefined, "input:agent");
-    assert.equal(request.messages[2]?.content[0]?.type === "text" ? request.messages[2].content[0].text : undefined, "middleware");
+    const texts = request.messages.map((m) => (m.content[0]?.type === "text" ? m.content[0].text : undefined));
+    assert.equal(texts[0], "prompt", "the context.build handler composes ahead of the transcript");
+    assert.equal(texts.at(-1), "ignored", "the run input stays last");
+    assert.equal(texts.filter((t) => t === "input:rewritten").length, 0, "turn 1 still sees the raw input");
     assert.deepEqual(request.metadata, { source: "agent", session: true, run: true });
+
+    // `run.input` rewrites what the session persists, so the rewritten message reaches the provider
+    // from the next turn on; a rejection still fails the run before the first provider request.
+    await session.run("second");
+    assert.ok(
+      request.messages.some((message) => message.content.some((block) => block.type === "text" && block.text === "input:rewritten")),
+    );
   });
 
   it("agent_config_instructions_preserves_existing_default_prompt_path", async () => {
@@ -1071,9 +1065,7 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({ model: { provider: "mock", model: "demo" }, provider, instructions: "Base" })
-      .createSession()
-      .run("Hi");
+    await (await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, instructions: "Base" })).session()).run("Hi");
 
     assert.equal(textOf(request.messages[0]), "System instruction:\nBase");
   });
@@ -1087,14 +1079,16 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      instructions: "Base",
-      systemPrompt: { id: "app", source: "app", text: "App" },
-    })
-      .createSession()
-      .run("Hi", { systemPrompt: false });
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          instructions: "Base",
+          systemPrompt: { id: "app", source: "app", text: "App" },
+        })
+      ).session()
+    ).run("Hi", { systemPrompt: false });
 
     assert.equal(textOf(request.messages[0]), "System instruction:\nBase");
     assert.equal(
@@ -1112,22 +1106,24 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      instructions: "Base",
-      systemPrompt: [
-        { id: "pkg", source: "package", text: "Package" },
-        { id: "app", source: "app", mode: "replace", text: "App" },
-      ],
-    })
-      .createSession()
-      .run("Hi", { systemPrompt: { id: "run", source: "run", text: "Run" } });
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          instructions: "Base",
+          systemPrompt: [
+            { id: "pkg", source: "package", text: "Package" },
+            { id: "app", source: "app", mode: "replace", text: "App" },
+          ],
+        })
+      ).session()
+    ).run("Hi", { systemPrompt: { id: "run", source: "run", text: "Run" } });
 
     assert.equal(textOf(request.messages[0]), "System instruction:\nApp\n\nRun");
   });
 
-  it("uses context providers and selected skills", async () => {
+  it("uses a context.build source and selected skills", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = {
       id: "mock",
@@ -1136,15 +1132,15 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const context: ContextProvider = { name: "ctx", resolve: () => [{ title: "Runtime context", content: "selected context" }] };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      context: [context],
-      skills: [{ name: "brief", instructions: "Be brief." }],
+      skills: { add: [{ name: "brief", instructions: "Be brief." }] },
+      hooks: (hooks) =>
+        registerContextSources(hooks, [{ name: "ctx", contextBlocks: [{ title: "Runtime context", content: "selected context" }] }]),
     });
 
-    await agent.createSession().run("Hi");
+    await (await agent.session()).run("Hi");
 
     const text = request.messages
       .flatMap((message) => message.content)
@@ -1152,256 +1148,6 @@ describe("agent session runtime", () => {
       .join("\n");
     assert.equal(text.includes("selected context"), true);
     assert.equal(text.includes("Skill brief"), true);
-  });
-
-  it("activeSkills selects only the named skill for the run", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize." },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
-
-    await agent.createSession().run("Hi", { activeSkills: ["summarize"] });
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill summarize"), true);
-    assert.equal(text.includes("Skill translate"), false);
-  });
-
-  it("two runs with different activeSkills activate different skills on the same config", async () => {
-    const seen: string[] = [];
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        seen.push(
-          input.messages
-            .flatMap((m) => m.content)
-            .map((b) => (b.type === "text" ? b.text : ""))
-            .join("|"),
-        );
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize." },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry }).createSession();
-
-    await session.run("a", { activeSkills: ["summarize"] });
-    await session.run("b", { activeSkills: ["translate"] });
-
-    assert.equal(seen[0]?.includes("Skill summarize"), true);
-    assert.equal(seen[0]?.includes("Skill translate"), false);
-    assert.equal(seen[1]?.includes("Skill translate"), true);
-    assert.equal(seen[1]?.includes("Skill summarize"), false);
-  });
-
-  it("Skill.context activates only when the skill is active", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const schema: ContextProvider = { name: "schema", resolve: () => [{ title: "Schema", content: "selected schema" }] };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize.", context: [schema] },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
-
-    await agent.createSession().run("Hi", { activeSkills: ["translate"] });
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("selected schema"), false);
-
-    await agent.createSession().run("Hi", { activeSkills: ["summarize"] });
-    const text2 = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text2.includes("selected schema"), true);
-  });
-
-  it("Skill.context blocks come after host AgentConfig.context blocks", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const hostCtx: ContextProvider = { name: "host", resolve: () => [{ title: "Host", content: "host-block" }] };
-    const skillCtx: ContextProvider = { name: "skill-ctx", resolve: () => [{ title: "Skill", content: "skill-block" }] };
-    const registry = createSkillRegistry([{ name: "with-ctx", instructions: "x", context: [skillCtx] }]);
-    const agent = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      context: [hostCtx],
-      skills: registry,
-    });
-
-    await agent.createSession().run("Hi", { activeSkills: ["with-ctx"] });
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.ok(text.includes("host-block"), "host context missing");
-    assert.ok(text.includes("skill-block"), "skill context missing");
-    assert.ok(text.indexOf("host-block") < text.indexOf("skill-block"), "host context must precede skill context");
-  });
-
-  it("skill with toolNames referencing an inactive tool fails fast before the first provider turn", async () => {
-    let turns = 0;
-    const store = createMemorySessionStore();
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate() {
-        turns += 1;
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([{ name: "needs-missing", instructions: "Use missing.", toolNames: ["missing"] }]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry, store }).createSession({
-      id: "skill-fail",
-    });
-
-    await assert.rejects(session.run("Hi", { activeSkills: ["needs-missing"] }), /requires inactive tool: missing/);
-    assert.equal(turns, 0);
-    assert.deepEqual(await store.list("skill-fail"), []);
-  });
-
-  it("RunOptions.skills overrides a plain-array AgentConfig.skills for the run", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const agent = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      skills: [{ name: "brief", instructions: "Be brief." }],
-    });
-
-    await agent.createSession().run("Hi", { skills: [{ name: "verbose", instructions: "Be verbose." }] });
-
-    let text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill verbose"), true);
-    assert.equal(text.includes("Skill brief"), false);
-
-    await agent.createSession().run("Hi", { skills: [] });
-
-    text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill verbose"), false);
-    assert.equal(text.includes("Skill brief"), false);
-  });
-
-  it("registry without activation injects zero skill messages by default", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize." },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
-
-    await agent.createSession().run("Hi");
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill summarize"), false);
-    assert.equal(text.includes("Skill translate"), false);
-  });
-
-  it("activateAllSkills restores all registry skills for migration hosts", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize." },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
-
-    await agent.createSession().run("Hi", { activateAllSkills: true });
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill summarize"), true);
-    assert.equal(text.includes("Skill translate"), true);
-  });
-
-  it("AgentConfig.activateAllSkills applies when run does not override activation", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize." },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const agent = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      skills: registry,
-      activateAllSkills: true,
-    });
-
-    await agent.createSession().run("Hi");
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill summarize"), true);
-    assert.equal(text.includes("Skill translate"), true);
   });
 
   it("plain-array AgentConfig.skills still activates all configured skills without overrides", async () => {
@@ -1413,57 +1159,28 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      skills: [{ name: "brief", instructions: "Be brief." }],
+      skills: { add: [{ name: "brief", instructions: "Be brief." }] },
     });
 
-    await agent.createSession().run("Hi");
+    await (await agent.session()).run("Hi");
 
     const text = request.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
     assert.equal(text.includes("Skill brief"), true);
-  });
-
-  it("RunOptions.skills overrides a SkillRegistry AgentConfig.skills for the run", async () => {
-    let request!: ProviderRequest;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        request = input;
-        yield providerDone();
-      },
-    };
-    const registry = createSkillRegistry([
-      { name: "summarize", instructions: "Summarize." },
-      { name: "translate", instructions: "Translate." },
-    ]);
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, skills: registry });
-
-    await agent.createSession().run("Hi", { skills: [{ name: "brief", instructions: "Be brief." }] });
-
-    const text = request.messages
-      .flatMap((m) => m.content)
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n");
-    assert.equal(text.includes("Skill brief"), true);
-    assert.equal(text.includes("Skill summarize"), false);
-    assert.equal(text.includes("Skill translate"), false);
   });
 
   it("external agent definition can create runtime agent", async () => {
-    const contributions = createContributionRegistries();
     const definition: AgentDefinition = {
       name: "demo",
-      create: () => createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([providerDone()]) }),
+      create: async () => await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([providerDone()]) }),
     };
-    contributions.agents.register("demo", definition);
-
-    const agent = await contributions.agents.resolve("demo").create!();
-    const session = agent.createSession({ id: "s1" });
+    const agent = await definition.create!();
+    const session = await agent.session({ id: "s1", create: true });
 
     await session.run("Hi");
     assert.equal(session.id, "s1");
@@ -1483,7 +1200,9 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo], store }).createSession({ id: "s1" });
+    const session = await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] }, slots: { store } })
+    ).session({ id: "s1", create: true });
 
     await session.run("Hi");
 
@@ -1510,7 +1229,10 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, slots: { store } })).session({
+      id: "s1",
+      create: true,
+    });
 
     await session.run("first");
     const firstLeaf = (await session.entries()).at(-1)!.id;
@@ -1553,7 +1275,10 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, slots: { store } })).session({
+      id: "s1",
+      create: true,
+    });
 
     await session.run("first");
     await session.run("second");
@@ -1576,12 +1301,16 @@ describe("agent session runtime", () => {
       },
     };
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      store,
-      compaction: { thresholdEntries: 100 },
-    }).createSession({ id: "cache" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        slots: { store },
+        compaction: { thresholdEntries: 100 },
+      })
+    ).session({ id: "cache", create: true });
+    assert.equal(reads, 1, "opening by id reads the branch once, to resume or create");
+    reads = 0;
 
     await session.run("first");
     assert.equal(reads, 2, "auto-compaction and provider assembly share the stable-leaf snapshot");
@@ -1592,64 +1321,146 @@ describe("agent session runtime", () => {
     assert.equal(reads, 4, "successful append invalidates once; stable-leaf reads remain shared");
   });
 
-  it("fork uses same session store and selected leaf", async () => {
+  it("fork_at_entry_copies_branch_and_package_state", async () => {
     const store = createMemorySessionStore();
-    const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+    const provider = createMockProvider([providerTextDelta("ok"), providerDone(), providerTextDelta("two"), providerDone()]);
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, slots: { store } })).session({
+      id: "s1",
+      create: true,
+    });
 
     await session.run("base");
-    const leaf = (await session.entries()).at(-1)!.id;
-    const fork = session.fork({ leafId: leaf });
-    await fork.run("forked");
+    const entries = await session.entries();
+    const firstAssistant = entries.find((entry) => entry.message?.role === "assistant")!;
+    await session.run("later");
 
-    assert.equal(
-      (await store.list("s1")).some((entry) => entry.message?.content[0]?.type === "text" && entry.message.content[0].text === "forked"),
-      true,
+    const fork = await session.fork({ at: firstAssistant.id });
+    assert.notEqual(fork.id, session.id, "a fork is a new session");
+    const copied = await store.list(fork.id);
+    assert.deepEqual(
+      copied.map((entry) => entry.message?.role),
+      ["user", "assistant"],
+      "only the branch that ends at `at` is copied",
     );
+    assert.ok(copied.every((entry) => entry.sessionId === fork.id));
+    assert.deepEqual(
+      copied.map((entry) => entry.id).filter((id) => entries.some((entry) => entry.id === id)),
+      [],
+      "copied entries get fresh ids",
+    );
+    assert.equal((await session.entries()).length, entries.length + 2, "the original is untouched");
+    assert.equal((await fork.messages()).length, 2);
   });
 
-  it("clone copies current branch to new session id", async () => {
+  it("messages_returns_stored_branch_not_context_draft", async () => {
+    const sentinel = "context-draft-sentinel";
+    const requests: ProviderRequest[] = [];
+    const provider = createMockProvider([providerTextDelta("ok"), providerDone()], { onRequest: (request) => requests.push(request) });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      hooks: (hooks) =>
+        hooks.on("context.build", (draft) => ({
+          ...draft,
+          messages: [{ role: "system", content: [{ type: "text", text: sentinel }] }, ...draft.messages],
+        })),
+    });
+    const session = await agent.session();
+    await session.run("hello");
+
+    assert.ok(JSON.stringify(requests[0]?.messages).includes(sentinel), "the provider saw the draft");
+    const messages = await session.messages();
+    assert.deepEqual(
+      messages.map((message) => message.role),
+      ["user", "assistant"],
+    );
+    assert.equal(JSON.stringify(messages).includes(sentinel), false, "a context.build mutation stays out of messages()");
+    // Mutating the returned array cannot change the session.
+    (messages as Message[]).length = 0;
+    assert.equal((await session.messages()).length, 2);
+  });
+
+  it("session_type_has_exactly_the_documented_members", async () => {
+    type Documented =
+      | "id"
+      | "leafId"
+      | "guardrailPackRefs"
+      | "run"
+      | "stream"
+      | "steer"
+      | "abort"
+      | "messages"
+      | "fork"
+      | "compact"
+      | "close"
+      | "subscribe"
+      | "entries"
+      | "checkout"
+      | "contextMeter"
+      | "getLoadedSkillNames"
+      | "restoreLoadedSkills"
+      | "resume";
+    type Exactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+    const exact: Exactly<keyof Session, Documented> = true;
+    assert.equal(exact, true);
+    const session = (await (
+      await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([providerDone()]) })
+    ).session()) as unknown as Record<string, unknown>;
+    assert.equal(session.prompt, undefined, "prompt was an alias for run and is deleted");
+    assert.equal(session.clone, undefined, "clone folded into fork");
+  });
+
+  it("fork_without_at_forks_from_leaf", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, slots: { store } })).session({
+      id: "s1",
+      create: true,
+    });
 
     await session.run("base");
-    const clone = await session.clone({ id: "s2" });
+    const fork = await session.fork();
 
-    assert.notEqual(clone.id, session.id);
+    assert.notEqual(fork.id, session.id);
     assert.deepEqual(
-      (await store.list("s2")).map((entry) => entry.sessionId),
-      ["s2", "s2"],
+      (await store.list(fork.id)).map((entry) => entry.sessionId),
+      [fork.id, fork.id],
     );
-    assert.notEqual((await store.list("s2"))[0]?.id, (await store.list("s1"))[0]?.id);
+    assert.deepEqual(await fork.messages(), await session.messages());
+    await assert.rejects(session.fork({ at: "no-such-entry" }));
   });
 
   it("model override appends model change entry", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerDone()]);
 
-    await createAgent({ model: { provider: "mock", model: "default" }, provider, store })
-      .createSession({ id: "s1" })
-      .run("Hi", { model: { provider: "mock", model: "override" } });
+    await (
+      await (
+        await createAgent({ model: { provider: "mock", model: "default" }, provider, slots: { store } })
+      ).session({ id: "s1", create: true })
+    ).run("Hi", { model: { provider: "mock", model: "override" } });
 
     const model = (await store.list("s1")).find((entry) => entry.kind === "model_change");
     assert.equal(model?.model?.model, "override");
   });
 
-  it("session.run returns AgentRunResult with final assistant text and usage", async () => {
+  it("session.run returns RunResult with final assistant text and usage", async () => {
     const provider = createMockProvider([
       providerTextDelta("Hello"),
       providerTextDelta(" world"),
       providerUsage({ inputTokens: 3, outputTokens: 2, totalTokens: 5 }),
       providerDone(),
     ]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "result-ok" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session({
+      id: "result-ok",
+      create: true,
+    });
 
     const result = await session.run("Hi");
 
     assert.equal(result.sessionId, "result-ok");
     assert.equal(typeof result.runId, "string");
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.text, "Hello world");
     assert.ok(result.content.every((block) => block.type === "text"));
     assert.equal(result.content.map((block) => (block.type === "text" ? block.text : "")).join(""), "Hello world");
@@ -1658,37 +1469,26 @@ describe("agent session runtime", () => {
     assert.ok(result.leafId);
   });
 
-  it("session.prompt shares the run result contract", async () => {
-    const provider = createMockProvider([providerTextDelta("ping"), providerDone()]);
-    const result = await createAgent({ model: { provider: "mock", model: "demo" }, provider })
-      .createSession()
-      .prompt("Hi");
-    assert.equal(result.status, "succeeded");
-    assert.equal(result.text, "ping");
-  });
-
-  it("failed and aborted runs throw AgentRunError with result shapes", async () => {
+  it("failed_run_returns_result_with_error: failed and aborted runs return their result", async () => {
     const failingProvider: AIProvider = {
       id: "mock",
       async *generate() {
         yield { type: "error", error: { name: "ProviderError", message: "provider failed" } };
       },
     };
-    const failing = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: failingProvider,
-    }).createSession({ id: "result-fail" });
-    await assert.rejects(
-      async () => failing.run("Hi"),
-      (error: unknown) => {
-        assert.ok(error instanceof AgentRunError);
-        assert.equal(error.result.status, "failed");
-        assert.equal(error.result.sessionId, "result-fail");
-        assert.equal(error.result.error?.message, "provider failed");
-        assert.match(error.message, /provider failed/);
-        return true;
-      },
-    );
+    const failing = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: failingProvider,
+      })
+    ).session({ id: "result-fail", create: true });
+    {
+      const outcome = await failing.run("Hi");
+      assert.equal(outcome.status, "failed");
+      assert.equal(outcome.sessionId, "result-fail");
+      assert.equal(outcome.error?.message, "provider failed");
+      assert.match(outcome.error?.message ?? "", /provider failed/);
+    }
 
     const provider: AIProvider = {
       id: "mock",
@@ -1698,34 +1498,36 @@ describe("agent session runtime", () => {
         });
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "result-abort" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session({
+      id: "result-abort",
+      create: true,
+    });
     const controller = new AbortController();
     const run = session.run("Hi", { signal: controller.signal });
     controller.abort(new Error("cancelled"));
-    await assert.rejects(
-      async () => run,
-      (error: unknown) => {
-        assert.ok(error instanceof AgentRunError);
-        assert.equal(error.result.status, "aborted");
-        assert.equal(error.result.sessionId, "result-abort");
-        assert.match(String(error.result.abortReason), /cancelled/);
-        return true;
-      },
-    );
+    {
+      const outcome = await run;
+      assert.equal(outcome.status, "aborted");
+      assert.equal(outcome.sessionId, "result-abort");
+      assert.match(String(outcome.abortReason), /cancelled/);
+    }
   });
 
   it("session.stream subscribes before the run and yields only owned-run events", async () => {
     const provider = createMockProvider([providerTextDelta("streamed"), providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "stream-1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session({
+      id: "stream-1",
+      create: true,
+    });
 
     const events: AgentEvent[] = [];
     for await (const event of session.stream("Hi")) events.push(event);
 
-    assert.equal(events[0]?.type, "agent_started");
-    assert.equal(events.at(-1)?.type, "agent_finished");
+    assert.equal(events[0]?.type, "run.started");
+    assert.equal(events.at(-1)?.type, "run.completed");
     const runIds = new Set(events.flatMap((event) => ("runId" in event && event.runId ? [event.runId] : [])));
     assert.equal(runIds.size, 1);
-    assert.ok(events.some((event) => event.type === "message_delta" && event.content.type === "text" && event.content.text === "streamed"));
+    assert.ok(events.some((event) => event.type === "message.delta" && event.content.type === "text" && event.content.text === "streamed"));
   });
 
   it("early stream consumer return aborts the owned run and releases the session", async () => {
@@ -1744,10 +1546,13 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "stream-early" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session({
+      id: "stream-early",
+      create: true,
+    });
 
     for await (const event of session.stream("Hi")) {
-      if (event.type === "message_delta") break;
+      if (event.type === "message.delta") break;
     }
 
     const result = await session.run("again");
@@ -1759,9 +1564,11 @@ describe("agent session runtime", () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
 
-    await createAgent({ model: { provider: "mock", model: "demo" }, provider, store })
-      .createSession({ id: "s1" })
-      .run("Hi");
+    await (
+      await (
+        await createAgent({ model: { provider: "mock", model: "demo" }, provider, slots: { store } })
+      ).session({ id: "s1", create: true })
+    ).run("Hi");
 
     assert.equal(JSON.stringify(await store.list("s1")).includes("secret"), false);
   });
@@ -1781,9 +1588,16 @@ describe("agent session runtime", () => {
       list: (id) => memory.list(id),
     };
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    await createAgent({ model: { provider: "mock", model: "demo" }, provider, store, redactor: createSecretRedactor([secret]) })
-      .createSession({ id: "s1" })
-      .run(`My token is ${secret}`);
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          slots: { store },
+          redactor: createSecretRedactor([secret]),
+        })
+      ).session({ id: "s1", create: true })
+    ).run(`My token is ${secret}`);
 
     assert.equal(
       seen.some((s) => s.includes(secret)),
@@ -1798,16 +1612,14 @@ describe("agent session runtime", () => {
     assert.equal(JSON.stringify(await memory.list("s1")).includes(secret), false, "persisted store has no raw secret");
   });
 
-  it("passes redacted current input and prior history to instruction injectors", async () => {
+  it("passes redacted current input and prior history to a run.input handler", async () => {
     const firstSecret = "input-secret-12345";
     const secondSecret = "next-secret-12345";
-    const captures: { input: readonly Message[]; history: readonly Message[] }[] = [];
-    const capture: InstructionInjector = {
-      name: "capture",
-      apply: (ctx) => {
-        captures.push({ input: ctx.input, history: ctx.history });
-        return { when: "every_turn" };
-      },
+    const captures: Message[][] = [];
+    // `run.input` sees this run's own input, already redacted; it never sees the history.
+    const capture = (messages: readonly Message[]) => {
+      captures.push([...messages]);
+      return undefined;
     };
     const provider: AIProvider = {
       id: "mock",
@@ -1816,12 +1628,14 @@ describe("agent session runtime", () => {
       },
     };
     const redactor = createSecretRedactor([firstSecret, secondSecret]);
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      redactor,
-      instructionInjectors: [capture],
-    }).createSession({ id: "s1" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        redactor,
+        hooks: (hooks) => hooks.on("run.input", capture, { id: "capture" }),
+      })
+    ).session();
 
     await session.run(`first ${firstSecret}`);
     await session.run(`second ${secondSecret}`);
@@ -1830,17 +1644,19 @@ describe("agent session runtime", () => {
     assert.equal(stored.includes(firstSecret), false, "persisted entries kept raw first secret");
     assert.equal(stored.includes(secondSecret), false, "persisted entries kept raw second secret");
     assert.equal(stored.includes("[REDACTED]"), true, "persisted entries were not redacted");
-    assert.equal(messageText(captures[0]!.input).includes(firstSecret), false, "current input leaked to injector");
-    assert.equal(messageText(captures[0]!.input).includes("[REDACTED]"), true, "current input was not redacted");
-    assert.equal(messageText(captures[1]!.input).includes(secondSecret), false, "second input leaked to injector");
-    assert.equal(messageText(captures[1]!.history).includes(firstSecret), false, "prior history leaked to injector");
-    assert.equal(messageText(captures[1]!.history).includes("[REDACTED]"), true, "prior history was not redacted");
+    assert.equal(messageText(captures[0]!).includes(firstSecret), false, "current input leaked to the handler");
+    assert.equal(messageText(captures[0]!).includes("[REDACTED]"), true, "current input was not redacted");
+    assert.equal(messageText(captures[1]!).includes(secondSecret), false, "second input leaked to the handler");
+    assert.equal(messageText(captures[1]!).includes(firstSecret), false, "prior run text leaked into the second input");
   });
 
   it("manual compact appends compaction entry and updates leaf", async () => {
     const store = createMemorySessionStore();
     const provider = createMockProvider([providerTextDelta("reply"), providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, store }).createSession({ id: "s1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, slots: { store } })).session({
+      id: "s1",
+      create: true,
+    });
 
     await session.run("old");
     const previousLeaf = (await session.entries()).at(-1)!.id;
@@ -1878,13 +1694,13 @@ describe("agent session runtime", () => {
           context,
         ),
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      store,
+      slots: { store },
       compaction: { thresholdEntries: 2, keepRecentEntries: 1 },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     await session.run("old");
     await session.run("new");
@@ -1906,12 +1722,12 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
       compaction: { thresholdEntries: 2, keepRecentEntries: 1 },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     await session.run("old");
     await session.run("new");
@@ -1928,7 +1744,7 @@ describe("agent session runtime", () => {
   it("compaction events are emitted with redacted summary", async () => {
     const secret = "secret-value";
     const provider = createMockProvider([providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "s1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session({ id: "s1", create: true });
 
     await session.run(`old ${secret}`);
     const eventsPromise = take(session.subscribe(), 2);
@@ -1937,26 +1753,35 @@ describe("agent session runtime", () => {
 
     assert.deepEqual(
       events.map((event) => event.type),
-      ["compaction_started", "compaction_finished"],
+      ["compaction.started", "compaction.completed"],
     );
     const finished = events[1];
-    assert.equal(finished?.type === "compaction_finished" && finished.summary.includes(secret), false);
-    assert.equal(finished?.type === "compaction_finished" && finished.summary.includes("[REDACTED]"), true);
+    assert.equal(finished?.type === "compaction.completed" && finished.summary?.includes(secret), false);
+    assert.equal(finished?.type === "compaction.completed" && finished.summary?.includes("[REDACTED]"), true);
   });
 
-  it("compaction middleware can adjust summary payload", async () => {
-    const middleware = createMiddlewareRegistry();
-    middleware.use("compaction", (payload: { readonly result: { readonly summary: string } }, next) =>
-      next({ ...payload, result: { ...payload.result, summary: "middleware summary" } }),
-    );
+  it("the compaction slot decides the summary that is written", async () => {
+    const compactor = {
+      name: "fixed-summary",
+      async compact(context: CompactionContext) {
+        const inner = await createDefaultCompactor().compact(context);
+        return { ...inner, summary: "slot summary", entries: inner.entries?.map((entry) => ({ ...entry, summary: "slot summary" })) };
+      },
+    };
     const provider = createMockProvider([providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, middleware }).createSession({ id: "s1" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        slots: { compaction: compactor },
+      })
+    ).session();
 
     await session.run("old");
     const result = await session.compact();
 
-    assert.equal(result.summary, "middleware summary");
-    assert.equal((await session.entries()).at(-1)?.summary, "middleware summary");
+    assert.equal(result.summary, "slot summary");
+    assert.equal((await session.entries()).at(-1)?.summary, "slot summary");
   });
 
   it("run compaction false disables configured auto compaction", async () => {
@@ -1968,11 +1793,13 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      compaction: { thresholdEntries: 0 },
-    }).createSession({ id: "s1" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        compaction: { thresholdEntries: 0 },
+      })
+    ).session({ id: "s1", create: true });
 
     await session.run("Hi", { compaction: false });
 
@@ -1996,9 +1823,15 @@ describe("agent session runtime", () => {
       },
     };
     const provider = createMockProvider([providerDone()]);
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider }).createSession({ id: "s1" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        slots: { compaction: strategy },
+      })
+    ).session({ id: "s1", create: true });
 
-    await session.compact({ strategy });
+    await session.compact();
 
     assert.equal(keys.includes("provider"), false);
     assert.equal(keys.includes("credentials"), false);
@@ -2015,11 +1848,13 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      retry: { baseDelayMs: 0, maxAttempts: 2 },
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        retry: { baseDelayMs: 0, maxAttempts: 2 },
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
@@ -2027,11 +1862,11 @@ describe("agent session runtime", () => {
 
     assert.equal(calls, 2);
     assert.equal(
-      events.some((event) => event.type === "retry_scheduled" && event.attempt === 1 && event.delayMs === 0),
+      events.some((event) => event.type === "turn.started" && event.attempt === 1 && event.retry?.delayMs === 0),
       true,
     );
     assert.equal(
-      events.some((event) => event.type === "message_delta" && event.content.type === "text" && event.content.text === "ok"),
+      events.some((event) => event.type === "message.delta" && event.content.type === "text" && event.content.text === "ok"),
       true,
     );
   });
@@ -2046,19 +1881,21 @@ describe("agent session runtime", () => {
         yield { type: "error", error: { message: "busy", code: 503 } };
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      retry: { baseDelayMs: 0, maxAttempts: 2 },
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        retry: { baseDelayMs: 0, maxAttempts: 2 },
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
-    await assert.rejects(session.run("Hi"), /busy/);
+    await failedRun(session.run("Hi"), /busy/);
     const events = await reader;
 
     assert.equal(calls, 1);
     assert.equal(
-      events.some((event) => event.type === "retry_scheduled"),
+      events.some((event) => event.type === "turn.started" && event.retry !== undefined),
       false,
     );
   });
@@ -2072,79 +1909,24 @@ describe("agent session runtime", () => {
         yield { type: "error", error: { message: "busy", code: 503 } };
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      retry: { baseDelayMs: 100, maxAttempts: 2 },
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        retry: { baseDelayMs: 100, maxAttempts: 2 },
+      })
+    ).session();
     const controller = new AbortController();
     const run = session.run("Hi", { signal: controller.signal });
 
     await new Promise((resolve) => setTimeout(resolve, 10));
     controller.abort(new Error("cancelled"));
 
-    await assert.rejects(run, /cancelled|aborted/i);
+    await failedRun(run, /cancelled|aborted/i, "aborted");
     assert.equal(calls, 1);
   });
 
-  it("retry middleware can stop or adjust retry decision", async () => {
-    let calls = 0;
-    const middleware = createMiddlewareRegistry();
-    middleware.use("retry", (payload: { readonly decision: { readonly retry: boolean; readonly delayMs?: number } }) => ({
-      ...payload,
-      decision: { retry: false, delayMs: 0 },
-    }));
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate() {
-        calls += 1;
-        yield { type: "error", error: { message: "busy", code: 503 } };
-      },
-    };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      middleware,
-      retry: { baseDelayMs: 0, maxAttempts: 2 },
-    }).createSession();
-
-    await assert.rejects(session.run("Hi"), /busy/);
-    assert.equal(calls, 1);
-  });
-
-  it("run inputLayout overrides agent inputLayout and reaches custom input builders", async () => {
-    const layouts: unknown[] = [];
-    const requests: ProviderRequest[] = [];
-    const inputBuilder: InputBuilder = {
-      name: "capture-layout",
-      build(_input, context) {
-        layouts.push(context?.inputLayout);
-        return [{ role: "user", content: [{ type: "text", text: String(context?.inputLayout) }] }];
-      },
-    };
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(input) {
-        requests.push(input);
-        yield providerDone();
-      },
-    };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      inputBuilder,
-      inputLayout: "cache_aware",
-    }).createSession();
-
-    await session.run("Hi");
-    await session.run("Hi", { inputLayout: "legacy" });
-
-    assert.deepEqual(layouts, ["cache_aware", "legacy"]);
-    assert.equal(textOf(requests[0]?.messages[0]), "cache_aware");
-    assert.equal(textOf(requests[1]?.messages[0]), "legacy");
-  });
-
-  it("provider request policy adds session cache options before provider generate", async () => {
+  it("a model.request transform adds session cache options before provider generate", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = {
       id: "mock",
@@ -2153,11 +1935,17 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      providerRequestPolicies: createSessionCachePolicy({ retention: "long" }),
-    }).createSession({ id: "cache-session" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        hooks: (hooks) => {
+          hooks.on("model.request", (req) => ({
+            request: { ...req, options: { ...req.options, cacheRetention: "long" } },
+          }));
+        },
+      })
+    ).session({ id: "cache-session", create: true });
 
     await session.run("Hi");
 
@@ -2177,10 +1965,12 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-    }).createSession({ id: "s1" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+      })
+    ).session({ id: "s1", create: true });
 
     await session.run("Hi");
 
@@ -2197,12 +1987,14 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo", cache: { kind: "cache_control" } },
-      provider,
-    })
-      .createSession({ id: "s1" })
-      .run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo", cache: { kind: "cache_control" } },
+          provider,
+        })
+      ).session({ id: "s1", create: true })
+    ).run("Hi");
 
     assert.equal(request.options?.sessionId, "s1");
     assert.equal(request.options?.cacheRetention, "short");
@@ -2218,13 +2010,15 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      providerOptions: { sessionId: "custom" },
-    })
-      .createSession({ id: "s1" })
-      .run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          providerOptions: { sessionId: "custom" },
+        })
+      ).session({ id: "s1", create: true })
+    ).run("Hi");
 
     assert.equal(request.options?.sessionId, "custom");
     assert.equal(request.options?.cacheKey, "custom");
@@ -2240,7 +2034,7 @@ describe("agent session runtime", () => {
       },
     };
     const model = { provider: "openai", model: "gpt" };
-    await createAgent({ model, provider, thinkingLevel: "low" }).createSession().run("Hi");
+    await (await (await await createAgent({ model, provider, thinkingLevel: "low" })).session()).run("Hi");
     assert.deepEqual(request.options?.compat, applyThinkingLevelForModel(undefined, "low", model).compat);
   });
 
@@ -2254,7 +2048,7 @@ describe("agent session runtime", () => {
       },
     };
     const model = { provider: "openai", model: "gpt" };
-    await createAgent({ model, provider, thinkingLevel: "low" }).createSession().run("Hi", { thinkingLevel: "high" });
+    await (await (await await createAgent({ model, provider, thinkingLevel: "low" })).session()).run("Hi", { thinkingLevel: "high" });
     assert.deepEqual(request.options?.compat, applyThinkingLevelForModel(undefined, "high", model).compat);
   });
 
@@ -2267,9 +2061,7 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({ model: { provider: "mock", model: "demo" }, provider })
-      .createSession()
-      .run("Hi");
+    await (await (await createAgent({ model: { provider: "mock", model: "demo" }, provider })).session()).run("Hi");
     assert.equal(request.options?.compat, undefined);
   });
 
@@ -2287,7 +2079,7 @@ describe("agent session runtime", () => {
       model: "gpt",
       capabilities: { reasoning: true, thinkingLevels: ["low", "medium", "high"] as const },
     };
-    await createAgent({ model, provider, thinkingLevel: "max" }).createSession().run("Hi");
+    await (await (await await createAgent({ model, provider, thinkingLevel: "max" })).session()).run("Hi");
     assert.equal((request.options?.compat?.reasoning as { effort?: string } | undefined)?.effort, "high");
   });
 
@@ -2300,18 +2092,20 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "openai", model: "gpt" },
-      provider,
-      thinkingLevel: "low",
-      providerOptions: { compat: { reasoning: { effort: "high", summary: "auto" } } },
-    })
-      .createSession()
-      .run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "openai", model: "gpt" },
+          provider,
+          thinkingLevel: "low",
+          providerOptions: { compat: { reasoning: { effort: "high", summary: "auto" } } },
+        })
+      ).session()
+    ).run("Hi");
     assert.deepEqual(request.options?.compat?.reasoning, { effort: "low", summary: "auto" });
   });
 
-  it("createSessionCachePolicy overlay still sets cacheKey and retention", async () => {
+  it("a model.request transform still sets cacheKey and retention over the stamped defaults", async () => {
     let request!: ProviderRequest;
     const provider: AIProvider = {
       id: "mock",
@@ -2320,27 +2114,28 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      providerRequestPolicies: createSessionCachePolicy({ cacheKey: "custom", retention: "long" }),
-    })
-      .createSession({ id: "s1" })
-      .run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          hooks: (hooks) => {
+            hooks.on("model.request", (req) => ({
+              request: { ...req, options: { ...req.options, cacheKey: "custom", cacheRetention: "long" } },
+            }));
+          },
+        })
+      ).session({ id: "s1", create: true })
+    ).run("Hi");
 
     assert.equal(request.options?.sessionId, "s1");
     assert.equal(request.options?.cacheKey, "custom");
     assert.equal(request.options?.cacheRetention, "long");
   });
 
-  it("provider request middleware runs once after policy", async () => {
+  it("model.request transforms run in registration order", async () => {
     const order: string[] = [];
     let request!: ProviderRequest;
-    const middleware = createMiddlewareRegistry();
-    middleware.use("provider_request", (input: ProviderRequest) => {
-      order.push(`middleware:${input.options?.cacheRetention}`);
-      return { ...input, metadata: { ...input.metadata, middleware: true } };
-    });
     const provider: AIProvider = {
       id: "mock",
       async *generate(input) {
@@ -2349,40 +2144,46 @@ describe("agent session runtime", () => {
       },
     };
 
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      middleware,
-      providerRequestPolicies: {
-        name: "mark",
-        apply(context) {
-          order.push("policy");
-          return { ...context.request, options: { ...context.request.options, cacheRetention: "short" } };
-        },
-      },
-    })
-      .createSession()
-      .run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          hooks: (hooks) => {
+            hooks.on("model.request", (req) => {
+              order.push("first");
+              return { ...req, options: { ...req.options, cacheRetention: "short" } };
+            });
+            hooks.on("model.request", (req) => {
+              order.push(`second:${req.options?.cacheRetention}`);
+              return { request: { ...req, metadata: { ...req.metadata, middleware: true } } };
+            });
+          },
+        })
+      ).session()
+    ).run("Hi");
 
-    assert.deepEqual(order, ["policy", "middleware:short"]);
+    assert.deepEqual(order, ["first", "second:short"]);
     assert.equal(request.metadata?.middleware, true);
   });
 
   it("usage carries provider-reported cache fields into finish metadata", async () => {
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerUsage({ inputTokens: 10, cacheReadTokens: 4, cacheWriteTokens: 2 }), providerDone()]),
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: createMockProvider([providerUsage({ inputTokens: 10, cacheReadTokens: 4, cacheWriteTokens: 2 }), providerDone()]),
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi");
 
     const events = await reader;
-    const finished = events.find((event) => event.type === "agent_finished");
-    const providerTurn = events.find((event) => event.type === "provider_turn_finished");
-    assert.equal(finished?.type === "agent_finished" ? finished.usage?.cacheReadTokens : undefined, 4);
-    assert.equal(finished?.type === "agent_finished" ? finished.usage?.cacheWriteTokens : undefined, 2);
-    assert.deepEqual(providerTurn?.type === "provider_turn_finished" ? providerTurn.metadata.cache : undefined, {
+    const finished = events.find((event) => event.type === "run.completed");
+    const providerTurn = events.find((event) => event.type === "turn.completed");
+    assert.equal(finished?.type === "run.completed" ? finished.usage?.cacheReadTokens : undefined, 4);
+    assert.equal(finished?.type === "run.completed" ? finished.usage?.cacheWriteTokens : undefined, 2);
+    assert.deepEqual(providerTurn?.type === "turn.completed" ? providerTurn.metadata?.cache : undefined, {
       cacheReadTokens: 4,
       cacheWriteTokens: 2,
       hitRate: 0.4,
@@ -2397,23 +2198,24 @@ describe("agent session runtime", () => {
         throw new Error(`bad ${secret}`);
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      providerRequestPolicies: {
-        name: "secret",
-        apply: ({ request }) => ({
-          request: { ...request, options: { ...request.options, headers: { authorization: secret } } },
-          secrets: [secret],
-        }),
-      },
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        hooks: (hooks) => {
+          hooks.on("model.request", (request) => ({
+            request: { ...request, options: { ...request.options, headers: { authorization: secret } } },
+            secrets: [secret],
+          }));
+        },
+      })
+    ).session();
     const reader = collect(session.subscribe());
 
-    await assert.rejects(session.run("Hi"), /\[REDACTED\]/);
+    await failedRun(session.run("Hi"), /\[REDACTED\]/);
 
-    const error = (await reader).find((event) => event.type === "error");
-    assert.equal(error?.type === "error" ? error.error.message.includes(secret) : true, false);
+    const error = (await reader).find((event) => event.type === "run.failed");
+    assert.equal(error?.type === "run.failed" ? error.error.message.includes(secret) : true, false);
   });
 
   it("provider request policy auth header overrides caller-supplied providerOptions headers", async () => {
@@ -2429,19 +2231,20 @@ describe("agent session runtime", () => {
       },
     };
     const providerKey = "provider-real-key";
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      // Caller tries to inject its own auth header via AgentConfig + per-run override.
-      providerOptions: { headers: { authorization: "caller-evil" } },
-      providerRequestPolicies: {
-        name: "provider-auth",
-        apply: ({ request: req }) => ({
-          request: { ...req, options: { ...req.options, headers: { ...req.options?.headers, authorization: providerKey } } },
-          secrets: [providerKey],
-        }),
-      },
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        // Caller tries to inject its own auth header via AgentConfig + per-run override.
+        providerOptions: { headers: { authorization: "caller-evil" } },
+        hooks: (hooks) => {
+          hooks.on("model.request", (req) => ({
+            request: { ...req, options: { ...req.options, headers: { ...req.options?.headers, authorization: providerKey } } },
+            secrets: [providerKey],
+          }));
+        },
+      })
+    ).session();
 
     await session.run("Hi", { providerOptions: { headers: { authorization: "caller-evil-run" } } });
 
@@ -2457,9 +2260,9 @@ describe("agent session runtime", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ model: { provider: "mock", model: "default" }, provider });
+    const agent = await createAgent({ model: { provider: "mock", model: "default" }, provider });
 
-    await agent.createSession().run("Hi", { model: { provider: "mock", model: "override" } });
+    await (await agent.session()).run("Hi", { model: { provider: "mock", model: "override" } });
 
     assert.equal(request.model.model, "override");
   });
@@ -2481,29 +2284,30 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "ok" };
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: [echo],
+      tools: { add: [echo] },
       validator: (_tool, args) => (args.forbidden ? "forbidden argument" : undefined),
       redactor: { redact: (value) => value },
     });
-    const session = agent.createSession();
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
-    const blocked = events.find((event) => event.type === "tool_execution_blocked");
-    assert.equal(blocked?.type === "tool_execution_blocked" && blocked.reason, "validation_failed");
-    assert.equal(blocked?.type === "tool_execution_blocked" && blocked.error.message, "forbidden argument");
+    const blocked = events.find((event) => event.type === "tool.completed" && event.status === "blocked");
+    assert.equal(blocked?.type === "tool.completed" ? blocked.reason : undefined, "validation_failed");
+    assert.equal(blocked?.type === "tool.completed" ? blocked.error?.message : undefined, "forbidden argument");
     assert.equal(
-      events.some((event) => event.type === "tool_execution_started"),
+      events.some((event) => event.type === "tool.started"),
       false,
     );
     assert.equal(
-      events.some((event) => event.type === "tool_execution_finished"),
+      events.some((event) => event.type === "tool.completed" && event.status === "finished"),
       false,
+      "a blocked call must never settle as finished",
     );
     assert.equal(executed.length, 0);
   });
@@ -2525,13 +2329,13 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "ok" };
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: [echo],
+      tools: { add: [echo] },
       validator: () => undefined,
     });
-    const session = agent.createSession();
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
@@ -2557,13 +2361,13 @@ describe("agent session runtime", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "ok" };
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: [echo],
+      tools: { add: [echo] },
       validator: () => "agent-level block",
     });
-    const session = agent.createSession();
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 }, validate: () => undefined });
@@ -2585,18 +2389,18 @@ describe("agent session runtime", () => {
       name: "echo",
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const session = createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: [echo] }).createSession();
+    const session = await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } })).session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
     assert.equal(
-      events.some((event) => event.type === "tool_execution_blocked" && event.reason === "validation_failed"),
+      events.some((event) => event.type === "tool.completed" && event.status === "blocked" && event.reason === "validation_failed"),
       false,
     );
     assert.equal(
-      events.some((event) => event.type === "tool_execution_finished"),
+      events.some((event) => event.type === "tool.completed"),
       true,
     );
   });
@@ -2612,27 +2416,27 @@ describe("agent session runtime", () => {
       },
     };
     const echo: ToolDefinition = { name: "echo", execute: () => ({ toolCallId: "x", name: "echo", value: "ok" }) };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: [echo],
+      tools: { add: [echo] },
       validator: () => ({ name: "ValidatorError", message: `errored on ${secret}` }),
       redactor: createSecretRedactor([secret]),
     });
-    const session = agent.createSession();
+    const session = await agent.session();
     const reader = collect(session.subscribe());
 
     await session.run("Hi", { limits: { maxToolRounds: 1 } });
     const events = await reader;
 
-    const blocked = events.find((event) => event.type === "tool_execution_blocked");
-    const msg = blocked?.type === "tool_execution_blocked" ? blocked.error.message : undefined;
+    const blocked = events.find((event) => event.type === "tool.completed" && event.status === "blocked");
+    const msg = blocked?.type === "tool.completed" ? blocked.error?.message : undefined;
     assert.equal(msg?.includes(secret), false);
     assert.equal(msg?.includes("[REDACTED]"), true);
   });
 
   it("session snapshot cache TTL is host-tunable and defaults to the 1000ms contract value", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
     });

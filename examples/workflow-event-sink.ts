@@ -1,12 +1,4 @@
-import {
-  createAgent,
-  createAgentSession,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import {
   agentNode,
   conditionalNode,
@@ -31,7 +23,7 @@ const provider = createMockProvider([
   providerDone(),
 ]);
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
 });
@@ -89,7 +81,7 @@ export async function demo() {
     workflow,
     { query: "status" },
     {
-      agentFactory: () => createAgentSession({ agent }),
+      agentFactory: () => agent.session(),
       redactor,
       ownership: { tenantId: "demo" },
       signal: AbortSignal.timeout(30_000),

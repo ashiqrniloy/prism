@@ -1,4 +1,4 @@
-import type { AgentRunResult, ContentBlock, Message } from "@arnilo/prism";
+import type { RunResult, ContentBlock, Message } from "@arnilo/prism";
 import { createA2AAgentCard } from "./a2a-card.js";
 import { type ResolvedA2ALimits, resolveA2ALimits } from "./a2a-parts.js";
 import {
@@ -56,7 +56,7 @@ export function createA2AClient(options: A2AClientOptions): A2AClient {
     });
   }
 
-  async function send(input: string, call: { readonly signal?: AbortSignal } = {}): Promise<AgentRunResult> {
+  async function send(input: string, call: { readonly signal?: AbortSignal } = {}): Promise<RunResult> {
     return withRequest(call.signal, async (signal) => {
       assertInput(input, limits.maxRequestBytes);
       await getCardWithin(signal);
@@ -426,7 +426,7 @@ function requestBody(id: number, method: "SendMessage" | "SendStreamingMessage",
   return { jsonrpc: "2.0", id, method, params: { message: { role: "user", messageId: `message-${id}`, parts: [{ text: input }] } } };
 }
 
-function taskResult(task: A2ATask, options: A2AClientOptions): AgentRunResult {
+function taskResult(task: A2ATask, options: A2AClientOptions): RunResult {
   if (task.status.state === "TASK_STATE_SUBMITTED" || task.status.state === "TASK_STATE_WORKING")
     throw new A2AError("A2A response task is not terminal", 502, "ERR_PRISM_A2A_REMOTE");
   if (task.status.state === "TASK_STATE_INPUT_REQUIRED" || task.status.state === "TASK_STATE_AUTH_REQUIRED")
@@ -434,7 +434,7 @@ function taskResult(task: A2ATask, options: A2AClientOptions): AgentRunResult {
   const text = (task.artifacts ?? []).flatMap((artifact) => artifact.parts.flatMap((part) => ("text" in part ? [part.text] : []))).join("");
   const safeText = options.redactor?.redact(text) ?? text;
   const status =
-    task.status.state === "TASK_STATE_COMPLETED" ? "succeeded" : task.status.state === "TASK_STATE_CANCELED" ? "aborted" : "failed";
+    task.status.state === "TASK_STATE_COMPLETED" ? "completed" : task.status.state === "TASK_STATE_CANCELED" ? "aborted" : "failed";
   const content: readonly ContentBlock[] = safeText ? [{ type: "text", text: safeText }] : [];
   const message: Message | undefined = safeText ? { role: "assistant", content } : undefined;
   return Object.freeze({
@@ -443,6 +443,7 @@ function taskResult(task: A2ATask, options: A2AClientOptions): AgentRunResult {
     status,
     text: safeText,
     content,
+    messages: message ? [message] : [],
     message,
     error: status === "failed" ? { message: "Remote A2A task failed" } : undefined,
     abortReason: status === "aborted" ? "Remote A2A task canceled" : undefined,

@@ -171,9 +171,9 @@ describe("createSqlitePersistence", () => {
       runId: "new-run",
       tenantId: "tenant-a",
       timestamp: old,
-      type: "agent_started",
+      type: "run.started",
       redacted: true,
-      event: { type: "agent_started", sessionId, runId: "new-run" },
+      event: { type: "run.started", sessionId, runId: "new-run" },
     });
     assert.equal((await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0]?.updatedAt, recent);
 
@@ -231,9 +231,15 @@ describe("createSqlitePersistence", () => {
       runId: "new-run",
       tenantId: "tenant-a",
       timestamp: "2026-01-04T00:00:00.003Z",
-      type: "turn_started",
+      type: "turn.started",
       redacted: true,
-      event: { type: "turn_started", sessionId, runId: "new-run", turn: 1 },
+      event: {
+        type: "turn.started",
+        sessionId,
+        runId: "new-run",
+        turn: 1,
+        metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+      },
     });
     const current = (await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0];
     assert.equal(current?.updatedAt, "2026-01-04T00:00:00.003Z");
@@ -283,15 +289,21 @@ describe("createSqlitePersistence", () => {
     await persistence.appendEvent({
       ...base,
       id: "event-a",
-      type: "agent_started",
-      event: { type: "agent_started", sessionId: base.sessionId, runId: base.runId },
+      type: "run.started",
+      event: { type: "run.started", sessionId: base.sessionId, runId: base.runId },
     });
     await persistence.appendEvent({
       ...base,
       id: "event-b",
-      type: "turn_started",
+      type: "turn.started",
       timestamp: "2026-01-01T00:00:01.000Z",
-      event: { type: "turn_started", sessionId: base.sessionId, runId: base.runId, turn: 1 },
+      event: {
+        type: "turn.started",
+        sessionId: base.sessionId,
+        runId: base.runId,
+        turn: 1,
+        metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+      },
     });
     assert.deepEqual(
       (await persistence.queryEvents({ runId: base.runId })).items.map((item) => item.sequence),

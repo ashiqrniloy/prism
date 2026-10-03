@@ -126,11 +126,13 @@ function describeContent(content: ContentBlock): string {
  */
 export function applyAgentEvent(view: RunView, event: AgentEvent): void {
   switch (event.type) {
-    case "agent_started":
+    case "run.started":
       view.runId = event.runId;
       view.status = "running";
+      // A durable resume re-opens the run: clear the decision buttons it settled.
+      if (event.resumed) view.decisions = [];
       return;
-    case "agent_suspended": {
+    case "run.suspended": {
       view.status = "suspended";
       view.expectedVersion = event.version;
       const { interruption } = event;
@@ -160,23 +162,28 @@ export function applyAgentEvent(view: RunView, event: AgentEvent): void {
       view.items.push({ kind: "note", level: "warn", text: `suspended: ${interruption.reason}` });
       return;
     }
-    case "agent_resumed":
-      view.status = "running";
+    case "decision.resolved":
       view.decisions = [];
       return;
-    case "agent_denied":
-      view.status = "denied";
-      view.decisions = [];
-      return;
-    case "agent_finished":
+    case "run.completed":
       addUsage(view.usage, event.usage);
       view.status = "finished";
-      if (event.finishReason) view.finishReason = event.finishReason;
+      if (event.stopReason) view.finishReason = event.stopReason;
       return;
-    case "turn_started":
-      view.items.push({ kind: "turn", turn: event.turn });
+    case "turn.started":
+      // The loop's own start and each provider attempt both land here; only the loop's carries no
+      // metadata, so a retry shows its cause instead of a second turn row.
+      if (event.retry) {
+        view.items.push({
+          kind: "note",
+          level: "warn",
+          text: `retry scheduled (attempt ${event.attempt} in ${event.retry.delayMs}ms): ${event.retry.error.message ?? stringify(event.retry.error)}`,
+        });
+        return;
+      }
+      if (!event.metadata) view.items.push({ kind: "turn", turn: event.turn });
       return;
-    case "message_delta": {
+    case "message.delta": {
       const content = event.content;
       if (content.type === "tool_call" || content.type === "tool_result") {
         const toolCallId = content.type === "tool_call" ? content.id : content.toolCallId;
@@ -200,86 +207,72 @@ export function applyAgentEvent(view: RunView, event: AgentEvent): void {
       view.items.push({ kind: "note", level: "info", text: `${describeContent(content)}: ${stringify(content).slice(0, 400)}` });
       return;
     }
-    case "tool_execution_started":
+    case "tool.started":
       upsertTool(view, event.call.id, (item) => {
         item.name = event.call.name;
         item.argsText = JSON.stringify(event.call.arguments, null, 2);
       });
       return;
-    case "tool_execution_progress":
+    case "tool.progress":
       upsertTool(view, event.toolCallId, (item) => {
         item.note = stringify(event.progress ?? event.metadata);
       });
       return;
-    case "tool_execution_finished": {
-      const toolCallId = event.result?.toolCallId ?? event.result?.name ?? "";
+    case "tool.completed": {
+      const toolCallId = event.toolCallId ?? event.result?.toolCallId ?? event.result?.name ?? "";
       if (!toolCallId) return;
       upsertTool(view, toolCallId, (item) => {
-        item.name = event.result.name ?? item.name;
-        item.status = event.result.error ? "error" : "ok";
-        item.resultText = event.result.error
-          ? `error: ${event.result.error.message ?? stringify(event.result.error)}`
-          : stringify(event.result.value ?? event.result.content);
+        item.name = event.name ?? event.result?.name ?? item.name;
+        item.status = event.status === "blocked" ? "blocked" : event.status === "error" || event.error ? "error" : "ok";
+        if (event.status === "blocked") item.note = event.reason;
+        item.resultText =
+          event.status === "blocked"
+            ? undefined
+            : event.error
+              ? `error: ${event.error.message ?? stringify(event.error)}`
+              : stringify(event.result?.value ?? event.result?.content);
       });
       return;
     }
-    case "tool_execution_error": {
-      // Malformed payloads (no call identity) still surface as a note.
-      const toolCallId = event.call?.id ?? "";
-      if (!toolCallId && !event.call?.name) {
-        view.items.push({ kind: "note", level: "error", text: `tool error: ${event.error.message ?? stringify(event.error)}` });
-        return;
-      }
-      upsertTool(view, toolCallId, (item) => {
-        item.name = event.call?.name ?? item.name;
-        item.status = "error";
-        item.resultText = `error: ${event.error.message ?? stringify(event.error)}`;
-      });
-      return;
-    }
-    case "tool_execution_blocked":
-      upsertTool(view, event.toolCallId, (item) => {
-        item.name = event.name;
-        item.status = "blocked";
-        item.note = event.reason;
-      });
-      return;
-    case "provider_turn_finished":
+    case "turn.completed":
       addUsage(view.usage, event.usage);
       if (event.error)
         view.items.push({ kind: "note", level: "warn", text: `provider turn error: ${event.error.message ?? stringify(event.error)}` });
       return;
-    case "run_limit_exceeded":
-      view.items.push({ kind: "note", level: "warn", text: `run limit exceeded: ${stringify(event.breach).slice(0, 400)}` });
-      return;
-    case "error":
+    case "run.failed":
       view.status = "failed";
-      view.items.push({ kind: "note", level: "error", text: `error: ${event.error.message ?? stringify(event.error)}` });
+      view.items.push({
+        kind: "note",
+        level: "error",
+        text: event.limit
+          ? `run limit exceeded: ${stringify(event.limit).slice(0, 400)}`
+          : `error: ${event.error.message ?? stringify(event.error)}`,
+      });
       return;
-    case "compaction_started":
+    case "compaction.started":
       view.items.push({ kind: "note", level: "info", text: "compaction started" });
       return;
-    case "compaction_finished":
-      view.items.push({ kind: "note", level: "info", text: `compaction finished: ${event.summary.slice(0, 400)}` });
-      return;
-    case "retry_scheduled":
+    case "compaction.completed":
       view.items.push({
         kind: "note",
-        level: "warn",
-        text: `retry scheduled (attempt ${event.attempt} in ${event.delayMs}ms): ${event.error.message ?? stringify(event.error)}`,
+        level: "info",
+        text: `compaction finished: ${(event.summary ?? event.error?.message ?? "").slice(0, 400)}`,
       });
       return;
-    case "steer_rejected":
-      view.items.push({ kind: "note", level: "warn", text: `steered message rejected: ${describeMessage(event.message)}` });
+    case "package.event": {
+      // Kernel modules ride `package.event` until their owning phase names them.
+      if (event.name === "steer.rejected") {
+        view.items.push({ kind: "note", level: "warn", text: `steered message rejected: ${stringify(event.data).slice(0, 400)}` });
+        return;
+      }
+      if (event.name === "guardrail.decision") {
+        view.items.push({ kind: "note", level: "warn", text: `guardrail: ${stringify(event.data).slice(0, 400)}` });
+        return;
+      }
+      view.items.push({ kind: "note", level: "info", text: `${event.package}/${event.name}` });
       return;
-    case "event_subscriber_overflow":
-      view.items.push({
-        kind: "note",
-        level: "warn",
-        text: `event subscriber overflow: dropped ${event.droppedEvents} (queued max ${event.maxQueuedEvents})`,
-      });
-      return;
-    case "message_finished":
+    }
+    case "message.completed":
       // Safety net for runs that never stream deltas: show the finished
       // assistant text only when nothing streamed (deltas → last item is the
       // merged message and the finished copy is redundant).
@@ -290,10 +283,8 @@ export function applyAgentEvent(view: RunView, event: AgentEvent): void {
         if (text && !(last?.kind === "message")) view.items.push({ kind: "message", label: "assistant", text });
       }
       return;
-    case "turn_finished":
-    case "provider_turn_started":
-    case "message_started":
-    case "queue_updated":
+    case "turn.completed":
+    case "turn.started":
       return; // Redundant with deltas / not inspector-relevant.
     default:
       // Delegated steps, artifact lifecycle, and any future event type.
@@ -429,7 +420,7 @@ export async function mountInspector(root: HTMLElement): Promise<MountHandles> {
       return;
     }
     applyAgentEvent(view, event);
-    if (event.type === "agent_started") refreshRuns();
+    if (event.type === "run.started") refreshRuns();
     scheduleRender();
   }
 
@@ -601,6 +592,7 @@ export async function mountInspector(root: HTMLElement): Promise<MountHandles> {
       });
       const result = (await response.json().catch(() => ({}))) as {
         status?: string;
+        stopReason?: string;
         error?: { message?: string };
         runState?: { version?: number; interruption?: { pendingDecisions?: readonly DecisionView[] } };
       };
@@ -610,14 +602,15 @@ export async function mountInspector(root: HTMLElement): Promise<MountHandles> {
       } else if (result.status === "suspended" && result.runState?.interruption?.pendingDecisions) {
         view.expectedVersion = result.runState.version;
         view.decisions = [...result.runState.interruption.pendingDecisions];
-      } else if (result.status === "denied") {
+      } else if (result.status === "stopped" && result.stopReason === "denied") {
         view.status = "denied";
         view.decisions = [];
       } else {
         // Resumed: the durable event source (when wired) keeps streaming; the
         // live view stays as-is until the run's own events arrive.
         view.decisions = [];
-        if (result.status) view.status = result.status as RunStatus;
+        if (result.status)
+          view.status = (result.status === "completed" || result.status === "stopped" ? "succeeded" : result.status) as RunStatus;
       }
       scheduleRender();
     } catch (error) {

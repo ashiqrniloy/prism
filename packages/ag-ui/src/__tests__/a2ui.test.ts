@@ -29,7 +29,8 @@ describe("A2UI painting middleware", () => {
   it("is inert without a2ui option (0.0.24 parity)", async () => {
     const mapper = createAgUiEventMapper();
     const events = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -52,7 +53,8 @@ describe("A2UI painting middleware", () => {
       a2ui: { catalogId, mode: "fixed-schema" },
     });
     const first = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -76,7 +78,8 @@ describe("A2UI painting middleware", () => {
     assert.equal(EventSchemas.safeParse(snapshot).success, true);
 
     const second = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -103,7 +106,8 @@ describe("A2UI painting middleware", () => {
       a2ui: { catalogId, mode: "fixed-schema", limits: { maxOperationsPerMessage: 2 } },
     });
     const beforeCreate = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -120,7 +124,8 @@ describe("A2UI painting middleware", () => {
     assert.ok(beforeCreate.some((event) => event.type === EventType.CUSTOM && event.name === A2UI_ERROR_EVENT));
 
     const badVersion = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -137,7 +142,8 @@ describe("A2UI painting middleware", () => {
     assert.ok(badVersion.some((event) => event.type === EventType.CUSTOM && event.name === A2UI_ERROR_EVENT));
 
     const oversized = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -165,7 +171,8 @@ describe("A2UI painting middleware", () => {
       a2ui: { catalogId, mode: "fixed-schema", allowedCatalogIds: [catalogId] },
     });
     const events = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -186,7 +193,7 @@ describe("A2UI painting middleware", () => {
       a2ui: { catalogId, mode: "streaming", renderToolName: "render_a2ui" },
     });
     const partial = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s",
       runId: "r",
       content: {
@@ -203,7 +210,7 @@ describe("A2UI painting middleware", () => {
     );
 
     const complete = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s",
       runId: "r",
       content: {
@@ -262,10 +269,10 @@ describe("A2UI painting middleware", () => {
 
   it("handler surfaces a2uiActions to input.project when a2ui is opted in", async () => {
     let seen: readonly { type: string; surfaceId: string; actionName: string }[] | undefined;
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "a2ui-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -277,7 +284,7 @@ describe("A2UI painting middleware", () => {
     const handler = createAgUiHandler({
       authorize: () => ({ ownership: { userId: "u1" } }),
       a2ui: { catalogId, mode: "fixed-schema" },
-      sessionFactory: () => agent.createSession({ id: "s1" }),
+      sessionFactory: async () => await agent.session({ id: "s1", create: true }),
       limits: { requestTimeoutMs: 5_000 },
       input: {
         project: ({ a2uiActions }) => {
@@ -308,10 +315,10 @@ describe("A2UI painting middleware", () => {
 
   it("handler fixed-schema paints tool results end-to-end", async () => {
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "paint-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -326,24 +333,26 @@ describe("A2UI painting middleware", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "paint",
-          parameters: { type: "object" },
-          execute: () => ({
-            toolCallId: "paint-1",
+      tools: {
+        add: [
+          {
             name: "paint",
-            value: {
-              a2ui_operations: [createSurface("demo"), updateComponents("demo", [{ id: "root", component: "Text", text: "painted" }])],
-            },
-          }),
-        },
-      ],
+            parameters: { type: "object" },
+            execute: () => ({
+              toolCallId: "paint-1",
+              name: "paint",
+              value: {
+                a2ui_operations: [createSurface("demo"), updateComponents("demo", [{ id: "root", component: "Text", text: "painted" }])],
+              },
+            }),
+          },
+        ],
+      },
     });
     const handler = createAgUiHandler({
       authorize: () => ({ ownership: { userId: "u1" } }),
       a2ui: { catalogId, mode: "fixed-schema" },
-      sessionFactory: () => agent.createSession({ id: "s1" }),
+      sessionFactory: async () => await agent.session({ id: "s1", create: true }),
       limits: { requestTimeoutMs: 5_000 },
     });
     const response = await handler(
@@ -371,14 +380,16 @@ describe("A2UI painting middleware", () => {
   it("drops duplicate createSurface for an existing surface", async () => {
     const mapper = createAgUiEventMapper({ a2ui: { catalogId, mode: "fixed-schema" } });
     await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: { toolCallId: "t1", name: "paint", value: { a2ui_operations: [createSurface("s1", catalogId)] } },
       metadata: { durationMs: 1, status: "finished" },
     });
     const dup = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {

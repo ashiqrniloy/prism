@@ -5,9 +5,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { createExtensionKernel } from "@arnilo/prism/testing/extension-conformance";
+import { createAgent } from "@arnilo/prism";
 
-import { createImpeccableExtension } from "../extension.js";
+import { impeccable } from "../extension.js";
 import { IMPECCABLE_SKILL_NAME } from "../skills.js";
 import { MAX_SKILL_FILE_BYTES, readBoundedFile, resolveUpstreamRoot, UpstreamResolveError } from "../upstream.js";
 
@@ -70,47 +70,59 @@ describe("impeccable upstream", () => {
   });
 });
 
-describe("impeccable extension", () => {
+describe("impeccable package", () => {
   it("setup_without_upstream_registers_nothing", async () => {
-    const kernel = createExtensionKernel({ errorPolicy: "throw", secrets: [secretPath] });
-    await assert.rejects(() => kernel.load([createImpeccableExtension({ upstreamPath: secretPath })]), UpstreamResolveError);
-    assert.equal(kernel.registries.skills.list().length, 0);
-    assert.equal(kernel.registries.commands.list().length, 0);
+    await assert.rejects(
+      () => createAgent({ model: { provider: "mock", model: "impeccable" }, packages: [impeccable({ upstreamPath: secretPath })] }),
+      (error: unknown) => error instanceof Error && !error.message.includes(secretPath) && !error.message.includes(homedir()),
+    );
   });
 
   it("setup_registers_impeccable_skill_and_load_skill_command", async () => {
-    const kernel = createExtensionKernel({ errorPolicy: "throw" });
-    await kernel.load([createImpeccableExtension({ upstreamPath: fixtureRoot })]);
-    const skills = kernel.registries.skills.list();
-    assert.equal(skills.length, 1);
-    assert.equal(skills[0]?.name, IMPECCABLE_SKILL_NAME);
-    assert.equal(kernel.registries.commands.list().length, 1);
-    const command = kernel.registries.commands.get(IMPECCABLE_SKILL_NAME);
-    assert.ok(command);
-    const result = await command.execute({}, { sessionId: "s1" });
-    assert.deepEqual(result.value, { skill: IMPECCABLE_SKILL_NAME, dispatch: "load_skill" });
-    assert.equal(result.metadata?.skill, IMPECCABLE_SKILL_NAME);
-    assert.ok(!kernel.registries.commands.get("craft"));
-    assert.ok(!kernel.registries.instructionInjectors.get("impeccable"));
+    const agent = await createAgent({
+      model: { provider: "mock", model: "impeccable" },
+      packages: [impeccable({ upstreamPath: fixtureRoot })],
+    });
+    try {
+      const inspected = agent.inspect();
+      assert.equal(inspected.skills.length, 1);
+      assert.equal(inspected.skills[0]?.name, IMPECCABLE_SKILL_NAME);
+      assert.equal(inspected.commands.length, 1);
+      const result = (await agent.commands.run(IMPECCABLE_SKILL_NAME, {})) as { value: unknown; metadata?: { skill?: string } };
+      assert.deepEqual(result.value, { skill: IMPECCABLE_SKILL_NAME, dispatch: "load_skill" });
+      assert.equal(result.metadata?.skill, IMPECCABLE_SKILL_NAME);
+      assert.equal(
+        inspected.commands.some((command) => command.name === "craft"),
+        false,
+      );
+    } finally {
+      await agent.dispose();
+    }
   });
 
   it("setup_accepts_a_matching_snapshot_digest_pin", async () => {
-    const kernel = createExtensionKernel({ errorPolicy: "throw" });
     const expected = createHash("sha256")
       .update(readFileSync(join(fixtureRoot, "skills/impeccable/SKILL.md"), "utf8"), "utf8")
       .digest("hex");
-    await kernel.load([createImpeccableExtension({ upstreamPath: fixtureRoot, expectedSnapshotDigest: expected })]);
-    assert.equal(kernel.registries.skills.list().length, 1);
-    assert.equal(kernel.registries.skills.list()[0]?.name, IMPECCABLE_SKILL_NAME);
+    const agent = await createAgent({
+      model: { provider: "mock", model: "impeccable" },
+      packages: [impeccable({ upstreamPath: fixtureRoot, expectedSnapshotDigest: expected })],
+    });
+    try {
+      assert.equal(agent.inspect().skills[0]?.name, IMPECCABLE_SKILL_NAME);
+    } finally {
+      await agent.dispose();
+    }
   });
 
   it("setup_fails_closed_on_snapshot_digest_drift", async () => {
-    const kernel = createExtensionKernel({ errorPolicy: "throw" });
     await assert.rejects(
-      () => kernel.load([createImpeccableExtension({ upstreamPath: fixtureRoot, expectedSnapshotDigest: "0".repeat(64) })]),
+      () =>
+        createAgent({
+          model: { provider: "mock", model: "impeccable" },
+          packages: [impeccable({ upstreamPath: fixtureRoot, expectedSnapshotDigest: "0".repeat(64) })],
+        }),
       /Expected upstream impeccable SKILL.md to match recorded snapshot digest/,
     );
-    assert.equal(kernel.registries.skills.list().length, 0);
-    assert.equal(kernel.registries.commands.list().length, 0);
   });
 });

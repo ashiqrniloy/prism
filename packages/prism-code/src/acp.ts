@@ -4,8 +4,9 @@ import type { AgentApp, McpServer } from "@agentclientprotocol/sdk";
 import { ndJsonStream } from "@agentclientprotocol/sdk";
 import {
   type Agent,
-  type AgentIdentity,
+  type Principal,
   type AIProvider,
+  askEveryTool,
   type CheckpointStore,
   createAgent,
   createAgentRunLifecycle,
@@ -14,18 +15,19 @@ import {
   createToolRegistry,
   type ExecutionPolicy,
   type OwnershipScope,
+  SessionNotFoundError,
   type SessionStore,
   type ToolDefinition,
   type ToolRegistry,
 } from "@arnilo/prism";
 import { type AcpSessionBinding, createAcpClientFilesystem, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import { createAcpFilesystemOperations, createTodoContinuationStopHook } from "@arnilo/prism-coding-tools/agent";
+import { createAcpFilesystemOperations, registerTodoContinuation } from "@arnilo/prism-coding-tools/agent";
 import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 import { createPrismCodeApprovalPolicy } from "./approval.js";
 import { resolvePrismCodeCompaction, resolvePrismCodeContextBudget, resolvePrismCodeToolResultFold } from "./compaction.js";
 import type { PrismCodeConfig, PrismCodeModeConfig } from "./config.js";
 import { PrismCodeCredentialManager } from "./credentials.js";
-import { resolveContinueOnOpenTodos, resolvePrismCodeLimits, resolvePrismCodeLoop } from "./limits.js";
+import { registerCostStop, resolveContinueOnOpenTodos, resolvePrismCodeLimits, resolvePrismCodeLoop } from "./limits.js";
 import { createProviderCache, type ProviderCache } from "./providers.js";
 import { prepareSessionDbPath } from "./sessions.js";
 import { loadReplacementToolModules, loadToolModules } from "./tool-modules.js";
@@ -207,15 +209,8 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
     checkpoints = persistence.checkpoints;
   }
 
-  const ownership: OwnershipScope = { userId: config.userId ?? "local" };
-  const identity: AgentIdentity = {
-    tenantId: "local",
-    userId: config.userId ?? "local",
-    principal: { kind: "user", id: config.userId ?? "local" },
-    scopes: ["coding"],
-    issuedAt: new Date().toISOString(),
-    verified: true,
-  };
+  const ownership: OwnershipScope = { tenantId: "local", userId: config.userId ?? "local" };
+  const principal: Principal = { kind: "user", id: config.userId ?? "local" };
 
   const addTools = await loadToolModules(config.tools?.add ?? [], config.cwd, {
     allowList: config.tools?.allowedModules,
@@ -229,11 +224,11 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
 
   // Same web plane and wiki extension contributions as the SDK surfaces.
   const web = await resolveWebTools(config, credentials);
-  const wiki = await resolveWikiContributions(config, { webTools: web.tools });
-  addTools.push(...web.tools, ...wiki.tools);
+  const wiki = resolveWikiContributions(config, { webTools: web.tools });
+  addTools.push(...web.tools);
 
   const defaultAgentId = "prism-code-agent";
-  // Human approval in ACP is the client's permission request (interruptBeforeTool); the shared policy
+  // Human approval in ACP is the client's permission request (the host ask-every-tool hook); the shared policy
   // still applies execution security hard denies and path containment before any tool runs.
   const acpApproval = createPrismCodeApprovalPolicy({ roots: [config.cwd], cwd: config.cwd, mode: "auto" });
   const defaultTools = buildSessionTools({
@@ -247,28 +242,37 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
   const resolvedLimits = resolvePrismCodeLimits(config.limits);
   const resolvedLoop = resolvePrismCodeLoop(config.loop);
   const continueOnOpenTodos = resolveContinueOnOpenTodos(config.loop);
-  const todoStopHook = continueOnOpenTodos ? createTodoContinuationStopHook() : undefined;
+
   const resolvedCompaction = resolvePrismCodeCompaction(config.compaction, sessionModel, cache);
   const resolvedToolResultFold = resolvePrismCodeToolResultFold();
   const resolvedContextBudget = resolvePrismCodeContextBudget(sessionModel);
 
-  const baseAgent = createAgent({
+  const baseAgent = await createAgent({
     id: defaultAgentId,
     model: sessionModel,
     providerSource: (model) => cache.get(model),
-    store,
-    tools: defaultTools,
+    slots: { store },
+    tools: { add: defaultTools.list() },
     ownership,
-    identity,
+    principal,
     limits: resolvedLimits,
-    ...(resolvedLoop ? { loop: resolvedLoop } : {}),
-    ...(todoStopHook ? { stopHooks: [todoStopHook] } : {}),
-    compaction: resolvedCompaction,
+    // Roadmap §2.5: the compactor is the `compaction` slot; `compaction` keeps only the sizing knobs.
+    ...(resolvedCompaction === false
+      ? { compaction: false }
+      : {
+          compaction: resolvedCompaction.options,
+          slots: { ...(resolvedLoop ? { loop: resolvedLoop } : {}), compaction: resolvedCompaction.compactor },
+        }),
     toolResultFold: resolvedToolResultFold,
     contextBudget: resolvedContextBudget,
-    ...(wiki.instructionInjectors.length > 0 ? { instructionInjectors: wiki.instructionInjectors } : {}),
-    ...(wiki.skills.length > 0 ? { skills: wiki.skills } : {}),
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    ...(wiki.package ? { packages: [wiki.package] } : {}),
+    hooks: (registrar) => {
+      askEveryTool()(registrar);
+      registerCostStop(registrar, resolvedLimits.maxCost);
+      if (continueOnOpenTodos) registerTodoContinuation(registrar);
+      if (resolvedCompaction !== false) resolvedCompaction.registerTrigger(registrar);
+    },
+    runState: { checkpoints, definitionRevision: "1" },
   });
 
   const sessionAgents = new Map<string, Agent>();
@@ -285,12 +289,12 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
     }
   >();
 
-  const resolveAgent = ({ agentId }: { agentId: string }) => {
+  const resolveAgent = async ({ agentId }: { agentId: string }) => {
     if (agentId === defaultAgentId) return { agent: baseAgent, definitionRevision: "1" };
     let sessionAgent = sessionAgents.get(agentId);
     if (!sessionAgent) {
       if (agentId.startsWith(`${defaultAgentId}:`)) {
-        sessionAgent = createAgent({ ...baseAgent.config, id: agentId, tools: defaultTools });
+        sessionAgent = await createAgent({ ...baseAgent.config, id: agentId, tools: { add: defaultTools.list() } });
         sessionAgents.set(agentId, sessionAgent);
       } else {
         throw new Error(`Unknown ACP session agent: ${agentId}`);
@@ -308,7 +312,9 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
     name: "Prism Code ACP Agent",
     authorize: () => ({ ownership }),
     sessionFactory: async (input) => {
-      const sessionId = input.sessionId ?? randomUUID();
+      // The agent key only names the per-session agent; the session id is whatever
+      // `agent.session()` opens it (a fresh id, or the id the ACP core chose or resumed).
+      const agentKey = input.sessionId ?? randomUUID();
       let fsOperations: ReturnType<typeof createAcpFilesystemOperations> | undefined;
       if (input.coding?.filesystem) {
         fsOperations = createAcpFilesystemOperations(input.coding.filesystem);
@@ -325,16 +331,19 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
         permissions: acpApproval.policy,
       });
 
-      const agentId = `${defaultAgentId}:${sessionId}`;
-      const sessionAgent = createAgent({
+      const agentId = `${defaultAgentId}:${agentKey}`;
+      const sessionAgent = await createAgent({
         ...baseAgent.config,
         id: agentId,
-        tools: sessionTools,
+        tools: { add: sessionTools.list() },
       });
       sessionAgents.set(agentId, sessionAgent);
 
+      // The ACP core hands a host-chosen id to open a new session and the stored id to reopen one.
+      const session = await sessionAgent.session(input.sessionId ? { id: input.sessionId, create: true } : undefined);
+      const sessionId = session.id;
       const binding: AcpSessionBinding = {
-        session: sessionAgent.createSession({ id: sessionId }),
+        session,
         agentId,
         tools: sessionTools,
       };
@@ -367,8 +376,8 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
         }));
       },
       async delete({ sessionId }) {
+        sessionAgents.delete(activeSessions.get(sessionId)?.binding.agentId ?? `${defaultAgentId}:${sessionId}`);
         activeSessions.delete(sessionId);
-        sessionAgents.delete(`${defaultAgentId}:${sessionId}`);
       },
     },
     coding: {
@@ -395,15 +404,21 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
                       replaceTools,
                       permissions: acpApproval.policy,
                     });
-                    const updatedAgent = createAgent({
+                    const updatedAgentId = entry.binding.agentId ?? `${defaultAgentId}:${entry.sessionId}`;
+                    const updatedAgent = await createAgent({
                       ...baseAgent.config,
-                      id: `${defaultAgentId}:${sessionId}`,
-                      tools: updatedTools,
+                      id: updatedAgentId,
+                      tools: { add: updatedTools.list() },
                     });
-                    sessionAgents.set(`${defaultAgentId}:${sessionId}`, updatedAgent);
+                    sessionAgents.set(updatedAgentId, updatedAgent);
+                    // A session with no entries is not in the store yet, so it reopens as a fresh one.
+                    const reopened = await updatedAgent.session({ id: entry.sessionId, create: true }).catch((error: unknown) => {
+                      if (error instanceof SessionNotFoundError) return updatedAgent.session();
+                      throw error;
+                    });
                     entry.binding = {
-                      session: updatedAgent.createSession({ id: sessionId }),
-                      agentId: `${defaultAgentId}:${sessionId}`,
+                      session: reopened,
+                      agentId: updatedAgentId,
                       tools: updatedTools,
                     };
                   }

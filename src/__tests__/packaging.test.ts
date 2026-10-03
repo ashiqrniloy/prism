@@ -43,6 +43,8 @@ const packages: Array<{
   isCore?: boolean;
   isSubpaths?: boolean;
   isMeta?: boolean;
+  /** Publishes TypeScript source (`./src/index.ts`) instead of `dist`. */
+  sourceExport?: boolean;
 }> = [
   { dir: ".", name: "@arnilo/prism", isCore: true },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
@@ -53,7 +55,7 @@ const packages: Array<{
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
-  { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
+  { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json", sourceExport: true },
   { dir: "packages/agent-sdk", name: "@arnilo/prism-agent-sdk" },
   { dir: "packages/prism-code", name: "@arnilo/prism-code" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
@@ -111,6 +113,7 @@ describe("packaging guard", () => {
           // Checked-in init templates intentionally include *.tmpl names that look like
           // tsconfig/tests; they are scaffold inputs, not package internals.
           if (f.startsWith("templates/")) return false;
+          if (pkg.sourceExport && f.startsWith("src/") && f.endsWith(".ts") && !f.includes("__tests__")) return false;
           return deniedPatterns.some((d) => d.pattern.test(f)) || isSourceTs(f);
         });
         const labels = junk.map((f) => `${f} (${deniedPatterns.find((d) => d.pattern.test(f))?.label ?? "source .ts"})`);
@@ -144,6 +147,11 @@ describe("packaging guard", () => {
         it("ships the docs hub, CLI bin, and init templates", () => {
           const files = getPackList(pkg.dir, pkg.name);
           assert.ok(files.includes("docs/index.md"), `${pkg.name} missing docs/index.md`);
+          assert.equal(
+            files.some((file) => file.startsWith("docs/next/")),
+            false,
+            `${pkg.name} must not pack staged docs/next pages`,
+          );
           assert.ok(files.includes("dist/cli.js"), `${pkg.name} missing dist/cli.js`);
           assert.ok(files.includes("templates/init/package.json.tmpl"), `${pkg.name} missing init templates`);
           assert.ok(files.includes("templates/init/src/agent.ts.tmpl"), `${pkg.name} missing agent template`);

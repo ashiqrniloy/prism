@@ -8,7 +8,6 @@ import { estimateRequestExtrasTokens, measureInputCost } from "../context-budget
 import {
   assembleProviderInput,
   type ContextBudget,
-  type ContextProvider,
   createAgent,
   createMemorySessionStore,
   estimateMessageTokens,
@@ -33,10 +32,6 @@ const TOOLS: ToolDefinition[] = [
     parameters: { type: "object", properties: { q: { type: "string" } } },
     execute: () => ({ toolCallId: "c1", name: "search", value: "ok" }),
   },
-];
-
-const CONTEXT_PROVIDERS: ContextProvider[] = [
-  { name: "notes", resolve: () => [{ id: "n1", title: "Notes", content: "project context ".repeat(20) }] },
 ];
 
 const SKILLS: Skill[] = [{ name: "writer", instructions: "Write concisely and cite sources.".repeat(4) }];
@@ -68,16 +63,15 @@ function estimateContext(contextBudget?: ContextBudget): RoundContext {
 describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
   it("report path: the fallback reuses the budget pass's keptTokens verbatim, labeled low without a tokenizer", async () => {
     const seen: ProviderRequest[] = [];
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "exact-report",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: MODEL,
       provider: capturingProvider(seen),
-      tools: TOOLS,
-      context: CONTEXT_PROVIDERS,
+      tools: { add: TOOLS },
       contextBudget: { maxInputTokens: 4_096, reportOmissions: true },
     });
-    const session = agent.createSession({ id: "exact-report-session" });
+    const session = await agent.session({ id: "exact-report-session", create: true });
     const result = await session.run("hello, measure me", { limits: { maxTurns: 4 } });
 
     const request = seen[0];
@@ -97,16 +91,15 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
 
   it("report path with a host tokenizer: keptTokens reused and labeled high, still an estimate", async () => {
     const seen: ProviderRequest[] = [];
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "exact-report-tokenizer",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: MODEL,
       provider: capturingProvider(seen),
-      tools: TOOLS,
-      context: CONTEXT_PROVIDERS,
+      tools: { add: TOOLS },
       contextBudget: { maxInputTokens: 4_096, reportOmissions: true, tokenEstimator: (text) => Math.ceil(text.length / 3) },
     });
-    const session = agent.createSession({ id: "exact-report-tokenizer-session" });
+    const session = await agent.session({ id: "exact-report-tokenizer-session", create: true });
     const result = await session.run("hello, measure me", { limits: { maxTurns: 4 } });
     const captured = seen[0];
     assert.ok(captured, "the provider must have seen the assembled request");
@@ -120,17 +113,16 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
   it("tokenizer path: no report, the host tokenizer projects the request through the assembler's own shapes", async () => {
     const seen: ProviderRequest[] = [];
     const stub = (text: string) => Math.ceil(text.length / 3);
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "exact-tokenizer",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: MODEL,
       provider: capturingProvider(seen),
-      tools: TOOLS,
-      context: CONTEXT_PROVIDERS,
-      skills: SKILLS,
+      tools: { add: TOOLS },
+      skills: { add: SKILLS },
       contextBudget: { maxInputTokens: 4_096, tokenEstimator: stub },
     });
-    const session = agent.createSession({ id: "exact-tokenizer-session" });
+    const session = await agent.session({ id: "exact-tokenizer-session", create: true });
     const result = await session.run("hello, measure me", { limits: { maxTurns: 4 } });
 
     const request = seen[0];
@@ -150,7 +142,6 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       history: [{ role: "user" as const, content: [{ type: "text" as const, text: "earlier question" }] }],
       skills: SKILLS,
       skillsDisclosure: "eager",
-      contextProviders: CONTEXT_PROVIDERS,
       tools: TOOLS,
       contextBudget: { maxInputTokens: 4_096, tokenEstimator: stub },
     });
@@ -176,7 +167,6 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       history: [{ role: "user" as const, content: [{ type: "text" as const, text: "earlier question" }] }],
       skills: SKILLS,
       skillsDisclosure: "eager",
-      contextProviders: CONTEXT_PROVIDERS,
       tools: TOOLS,
       contextBudget: { maxInputTokens: 4_096, reportOmissions: true },
     });
@@ -206,13 +196,13 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       void text;
       return 7;
     };
-    const agentFor = (mode: "off" | "strict" | "fallback") =>
-      createAgent({
+    const agentFor = async (mode: "off" | "strict" | "fallback") =>
+      await createAgent({
         id: `exact-${mode}`,
-        store: createMemorySessionStore(),
+        slots: { store: createMemorySessionStore() },
         model: MODEL,
         provider: capturingProvider([]),
-        tools: TOOLS,
+        tools: { add: TOOLS },
         // No reportOmissions: without a report the fallback seam itself projects through the
         // tokenizer, so only this mode adds estimator calls on top of the budget pass's own.
         contextBudget: { maxInputTokens: 4_096, tokenEstimator: counting },
@@ -220,19 +210,16 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       });
 
     run = 0;
-    const off = await agentFor("off").createSession({ id: "s-off" }).run("hello");
+    const off = await (await (await agentFor("off")).session({ id: "s-off", create: true })).run("hello");
     assert.equal(off.usage, undefined, "off leaves usage absent");
     run = 1;
-    const strict = await agentFor("strict")
-      .createSession({ id: "s-strict" })
-      .run("hello")
-      .then(
-        (value) => value,
-        () => undefined,
-      );
+    const strict = await (await (await agentFor("strict")).session({ id: "s-strict", create: true })).run("hello").then(
+      (value) => value,
+      () => undefined,
+    );
     void strict;
     run = 2;
-    const fallback = await agentFor("fallback").createSession({ id: "s-fallback" }).run("hello");
+    const fallback = await (await (await agentFor("fallback")).session({ id: "s-fallback", create: true })).run("hello");
     assert.ok(fallback.usage?.estimated, "the fallback run does estimate");
 
     assert.equal(calls[0], calls[1], "off and strict consult the tokenizer exactly as little: assembly only");

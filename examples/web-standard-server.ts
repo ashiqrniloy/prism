@@ -1,7 +1,7 @@
 import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismHandler } from "@arnilo/prism-core/runtime/server";
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "offline" },
   provider: createMockProvider([providerTextDelta("served"), providerDone()]),
 });

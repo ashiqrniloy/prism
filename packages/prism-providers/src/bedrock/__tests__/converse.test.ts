@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { JsonObject, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import {
   assertAbortIsObserved,
@@ -9,12 +10,7 @@ import {
   assertUsageAccounting,
 } from "@arnilo/prism/testing/provider-conformance";
 import { AwsEventStreamError, crc32, readAwsEventStream } from "../eventstream.js";
-import {
-  BEDROCK_THINKING_DEFAULT_BUDGET,
-  bedrockConverseBody,
-  createBedrockConverseProvider,
-  createBedrockProviderPackage,
-} from "../index.js";
+import { BEDROCK_THINKING_DEFAULT_BUDGET, bedrockConverseBody, createBedrockConverseProvider, bedrockPackage } from "../index.js";
 
 const CREDENTIAL = { accessKeyId: "AKIATEST", secretAccessKey: "secret-key", sessionToken: "session-token" };
 
@@ -472,8 +468,7 @@ describe("@arnilo/prism-providers/bedrock native Converse route", () => {
 
   it("package setup selects the route, stays inert, and records the route", async () => {
     const calls: unknown[] = [];
-    let registered: string | undefined;
-    const pkg = createBedrockProviderPackage({
+    const pkg = bedrockPackage({
       region: "us-east-1",
       credential: () => {
         calls.push("credential");
@@ -487,15 +482,8 @@ describe("@arnilo/prism-providers/bedrock native Converse route", () => {
         throw new Error("should not fetch");
       }) as typeof fetch,
     });
-    assert.equal(pkg.metadata?.route, "converse");
-    await pkg.setup({
-      registerProvider: (provider: { id: string }) => {
-        registered = provider.id;
-      },
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as never);
-    assert.equal(registered, "bedrock");
+    assert.equal(pkg.definition.name, "@arnilo/prism-providers.bedrock");
+    await loadProviderPackage(pkg);
     assert.deepEqual(calls, []);
   });
 });

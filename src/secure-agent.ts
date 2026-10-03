@@ -1,6 +1,7 @@
 import { validateRunStateOptions } from "./agent-run-state.js";
 import { createAgent } from "./agents.js";
-import type { Agent, AgentConfig, Guardrails, SecureAgentOptions } from "./contracts.js";
+import { askEveryTool } from "./hooks/index.js";
+import type { Agent, AgentConfig, SecureAgentOptions } from "./contracts.js";
 import {
   assertHostCompositionReadiness,
   HostCompositionError,
@@ -13,7 +14,7 @@ import {
 } from "./host-composition.js";
 import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
 import { resolveRunLimits } from "./run-limits.js";
-import { createToolParameterValidator, createToolRegistry } from "./tools.js";
+import { createToolParameterValidator } from "./tools.js";
 
 export {
   assertHostCompositionReadiness,
@@ -27,12 +28,10 @@ export {
 };
 
 /** Build an opt-in agent whose security-critical defaults cannot be replaced per run. */
-export function createSecureAgent(options: SecureAgentOptions): Agent {
+export async function createSecureAgent(options: SecureAgentOptions): Promise<Agent> {
   if (!options.id.trim()) throw new TypeError("Secure agent requires a non-empty id");
   if (!options.definitionRevision.trim()) throw new TypeError("Secure agent requires a non-empty definitionRevision");
   if (!options.redactor || typeof options.redactor.redact !== "function") throw new TypeError("Secure agent requires a redactor");
-  if (!options.permission || typeof options.permission.check !== "function")
-    throw new TypeError("Secure agent requires a permission policy");
   if (!options.trust || typeof options.trust.check !== "function") throw new TypeError("Secure agent requires a trust policy");
   if (!options.toolArgumentValidator || typeof options.toolArgumentValidator.validate !== "function")
     throw new TypeError("Secure agent requires a tool argument validator");
@@ -50,59 +49,47 @@ export function createSecureAgent(options: SecureAgentOptions): Agent {
     assertIdentityMatchesOwnership(options.identity, options.ownership);
   }
   if (options.composition) {
-    assertHostCompositionReadiness({ ...options.composition, agent: options });
+    assertHostCompositionReadiness({ ...options.composition, agent: options, identity: options.identity });
   }
-  const runState = Object.freeze({ ...options.runState, definitionRevision: options.definitionRevision, interruptBeforeTool: true });
+  const runState = Object.freeze({ ...options.runState, definitionRevision: options.definitionRevision });
   validateRunStateOptions(runState);
+  const hostHooks = options.hooks;
   const config: AgentConfig = Object.freeze({
     ...withoutSecureFields(options),
+    // `interruptBeforeTool` retired: a secure agent asks before every tool through a host hook.
+    hooks: (hooks: import("./hooks/index.js").HookRegistrar) => {
+      hostHooks?.(hooks);
+      askEveryTool()(hooks);
+    },
     id: options.id,
-    tools: createToolRegistry(options.tools, { duplicate: "error" }),
+    tools: { add: options.tools },
     validator: createToolParameterValidator(options.toolArgumentValidator, { missingSchema: "reject" }),
     redactor: options.redactor,
-    permission: options.permission,
     trust: options.trust,
     ownership: Object.freeze({ ...options.ownership }),
-    ...(options.identity ? { identity: Object.freeze({ ...options.identity, scopes: Object.freeze([...options.identity.scopes]) }) } : {}),
+    ...(options.identity ? { principal: options.identity.principal } : {}),
     limits: Object.freeze({ ...options.limits }),
-    guardrails: freezeGuardrails(options.guardrails),
     runState,
     secure: true,
   });
-  return createAgent(config);
+  return await createAgent(config);
 }
 
 function withoutSecureFields(
   options: SecureAgentOptions,
-): Omit<
-  AgentConfig,
-  "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "guardrails" | "runState" | "secure"
-> {
+): Omit<AgentConfig, "tools" | "validator" | "redactor" | "trust" | "ownership" | "principal" | "limits" | "runState" | "secure"> {
   const {
     tools: _tools,
     toolArgumentValidator: _validator,
     redactor: _redactor,
-    permission: _permission,
     trust: _trust,
     ownership: _ownership,
     identity: _identity,
     limits: _limits,
-    guardrails: _guardrails,
     definitionRevision: _revision,
     runState: _runState,
     composition: _composition,
     ...config
   } = options;
   return config;
-}
-
-function freezeGuardrails(guardrails: Guardrails | undefined): Guardrails | undefined {
-  if (!guardrails) return undefined;
-  return Object.freeze({
-    ...guardrails,
-    input: Object.freeze([...(guardrails.input ?? [])]),
-    output: Object.freeze([...(guardrails.output ?? [])]),
-    toolInput: Object.freeze([...(guardrails.toolInput ?? [])]),
-    toolOutput: Object.freeze([...(guardrails.toolOutput ?? [])]),
-  });
 }

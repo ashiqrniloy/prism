@@ -36,9 +36,9 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "evt-1",
     sessionId,
     runId,
-    type: "agent_started",
+    type: "run.started",
     timestamp: "2026-08-04T00:00:00.000Z",
-    event: { type: "agent_started", sessionId, runId },
+    event: { type: "run.started", sessionId, runId },
     redacted: true,
     ...ownership,
   });
@@ -46,9 +46,9 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "evt-2",
     sessionId,
     runId,
-    type: "message_delta",
+    type: "message.delta",
     timestamp: "2026-08-04T00:00:01.000Z",
-    event: { type: "message_delta", sessionId, runId, content: { type: "text", text: "hello" } },
+    event: { type: "message.delta", sessionId, runId, content: { type: "text", text: "hello" } },
     redacted: true,
     ...ownership,
   });
@@ -78,8 +78,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const base = {
     call,
     registry: createToolRegistry([tool]),
-    context: { sessionId, runId, toolCallId: "call-1" },
-    identity,
+    context: { sessionId, runId, toolCallId: "call-1", principal: identity.principal },
     ownership,
     effectStore,
   };
@@ -99,8 +98,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const unknownCall = {
     call: { type: "tool_call" as const, id: "call-2", name: "mail.send", arguments: {} },
     registry: createToolRegistry([failing]),
-    context: { sessionId, runId, toolCallId: "call-2" },
-    identity,
+    context: { sessionId, runId, toolCallId: "call-2", principal: identity.principal },
     ownership,
     effectStore,
   };
@@ -112,7 +110,6 @@ export async function demo(): Promise<Record<string, unknown>> {
   // force an explicit unknown+resolve cycle on a third key through the store API surface hosts already use.
   const key = {
     ownership,
-    identity,
     key: "prism:tool-effect:v1:00000000000000000000000000000000000000000000000000000000000000aa",
     sessionId,
     runId,

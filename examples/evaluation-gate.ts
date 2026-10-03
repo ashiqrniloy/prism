@@ -2,7 +2,7 @@ import { createAgent, createMockProvider, providerDone, providerTextDelta } from
 import { assertEvaluationThreshold, defineDataset, defineScorer, runExperiment } from "@arnilo/prism-core/governance/evals";
 
 const report = await runExperiment({
-  agent: createAgent({
+  agent: await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("answer [1]"), providerDone()]),
   }),

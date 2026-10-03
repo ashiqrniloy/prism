@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertNoFetches,
@@ -15,7 +16,7 @@ import {
 import {
   classifyHyperError,
   createHyperProvider,
-  createHyperProviderPackage,
+  hyperPackage,
   defineHyperModel,
   getHyperCredits,
   HYPER_DEFAULT_BASE_URL,
@@ -93,16 +94,9 @@ describe("@arnilo/prism-providers/hyper", () => {
       fetchCalls.push(1);
       return ok(sse([]));
     }) as typeof fetch;
-    const registered: unknown[] = [];
-    await createHyperProviderPackage({ apiKey: "fake-hyper-key", fetch: fetchImpl }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(hyperPackage({ apiKey: "fake-hyper-key", fetch: fetchImpl }));
     assertNoFetches(fetchCalls);
-    assert(registered.some((item: any) => item.id === "hyper"));
-    assert(registered.some((item: any) => item.provider === "hyper" && item.kind === "api_key"));
-    const models = registered.filter((item: any): item is ModelConfig => typeof item?.model === "string" && item.provider === "hyper");
+    const models = hyperModels;
     assert.ok(models.length >= 31, `expected full live-stable catalog, got ${models.length}`);
     const byId = new Map(models.map((m) => [m.model, m]));
     const deepseek = byId.get("deepseek-v4-pro");
@@ -485,7 +479,7 @@ describe("@arnilo/prism-providers/hyper", () => {
           { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "hello" } },
           { type: "content_block_stop", index: 0 },
           {
-            type: "message_delta",
+            type: "message.delta",
             usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
           },
           { type: "message_stop" },

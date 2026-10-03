@@ -3,9 +3,10 @@ import { describe, it } from "bun:test";
 import { HttpAgent } from "@ag-ui/client";
 import { EventType } from "@ag-ui/core";
 import {
+  askEveryTool,
   type AgentEventRecord,
   type AgentRunRef,
-  type AgentSession,
+  type Session,
   createAgent,
   createAgentRunLifecycle,
   createMemoryAgentEventSource,
@@ -56,7 +57,7 @@ function request(value: string, suffix = "") {
 describe("createAgUiHandler", () => {
   it("runs only the final text user input through an authorized host session", async () => {
     const inputs: string[] = [];
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -70,7 +71,7 @@ describe("createAgUiHandler", () => {
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "session-1" }),
+      sessionFactory: async () => await agent.session({ id: "session-1", create: true }),
     });
 
     const response = await handler(
@@ -93,8 +94,8 @@ describe("createAgUiHandler", () => {
         EventType.STEP_STARTED,
         EventType.TEXT_MESSAGE_START,
         EventType.TEXT_MESSAGE_CONTENT,
-        EventType.TEXT_MESSAGE_END,
         EventType.STEP_FINISHED,
+        EventType.TEXT_MESSAGE_END,
         EventType.RUN_FINISHED,
       ],
     );
@@ -123,7 +124,7 @@ describe("createAgUiHandler", () => {
     let executed = 0;
     let seen: { readonly state: unknown; readonly tools: readonly unknown[]; readonly frontendTools: readonly unknown[] } | undefined;
     let prepared: AgUiPreparedInput | undefined;
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -132,7 +133,7 @@ describe("createAgUiHandler", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++executed }) }],
+      tools: { add: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++executed }) }] },
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -144,9 +145,9 @@ describe("createAgUiHandler", () => {
           return { messages: [{ id: "user-2", role: "user" as const, content: [{ type: "text" as const, text: "hello" }] }] };
         },
       },
-      sessionFactory: ({ input }) => {
+      sessionFactory: async ({ input }) => {
         prepared = input;
-        return agent.createSession({ id: "ignore-session" });
+        return await agent.session({ id: "ignore-session", create: true });
       },
     });
     const client = new HttpAgent({
@@ -178,7 +179,7 @@ describe("createAgUiHandler", () => {
   });
 
   it("answers a state-or-tools post exactly like a bare-text post under inputPolicy.ignore", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -191,7 +192,7 @@ describe("createAgUiHandler", () => {
     const handler = createAgUiHandler({
       authorize: () => authorization,
       inputPolicy: { clientState: "ignore" },
-      sessionFactory: () => agent.createSession({ id: "ignore-session" }),
+      sessionFactory: async () => await agent.session({ id: "ignore-session", create: true }),
     });
 
     const posted = await handler(
@@ -210,8 +211,8 @@ describe("createAgUiHandler", () => {
 
   it("keeps honoring validated client input by default and with an explicit honor policy", async () => {
     const observed: unknown[] = [];
-    const makeHandler = (inputPolicy?: { readonly clientState: "honor" | "ignore" }) => {
-      const agent = createAgent({
+    const makeHandler = async (inputPolicy?: { readonly clientState: "honor" | "ignore" }) => {
+      const agent = await createAgent({
         model: { provider: "mock", model: "mock" },
         provider: {
           id: "mock",
@@ -230,12 +231,12 @@ describe("createAgUiHandler", () => {
             return { messages: [{ id: "user-2", role: "user" as const, content: [{ type: "text" as const, text: "hello" }] }] };
           },
         },
-        sessionFactory: () => agent.createSession({ id: "honor-session" }),
+        sessionFactory: async () => await agent.session({ id: "honor-session", create: true }),
       });
     };
     const posted = body({ state: { client: "projected by the host" } });
-    const implicit = await makeHandler()(request(posted));
-    const explicit = await makeHandler({ clientState: "honor" })(request(posted));
+    const implicit = await (await makeHandler())(request(posted));
+    const explicit = await (await makeHandler({ clientState: "honor" }))(request(posted));
     assert.equal(implicit.status, 200);
     assert.equal(await stableBody(implicit), await stableBody(explicit));
     assert.deepEqual(observed, [{ client: "projected by the host" }, { client: "projected by the host" }]);
@@ -281,8 +282,8 @@ describe("createAgUiHandler", () => {
   it("accepts host-projected full input and client tool continuation without executing it", async () => {
     let calls = 0;
     let selected: readonly { readonly name: string; readonly execution: "client" }[] | undefined;
-    let session: AgentSession | undefined;
-    const agent = createAgent({
+    let session: Session | undefined;
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -291,7 +292,7 @@ describe("createAgUiHandler", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++calls }) }],
+      tools: { add: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++calls }) }] },
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -310,9 +311,9 @@ describe("createAgUiHandler", () => {
           ],
         }),
       },
-      sessionFactory: ({ input }) => {
+      sessionFactory: async ({ input }) => {
         selected = input.frontendTools;
-        session = agent.createSession({ id: "full-input-session" });
+        session = await agent.session({ id: "full-input-session", create: true });
         return session;
       },
     });
@@ -361,7 +362,7 @@ describe("createAgUiHandler", () => {
   });
 
   it("works with official HttpAgent over SSE and publishes truthful capabilities", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -373,7 +374,7 @@ describe("createAgUiHandler", () => {
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "http-session" }),
+      sessionFactory: async () => await agent.session({ id: "http-session", create: true }),
     });
     const client = new HttpAgent({
       url: "https://example.test/ag-ui",
@@ -397,7 +398,7 @@ describe("createAgUiHandler", () => {
       () =>
         createAgUiHandler({
           authorize: () => authorization,
-          sessionFactory: () => agent.createSession(),
+          sessionFactory: async () => await agent.session(),
           capabilities: { transport: { websocket: true } },
         }),
       /Unsupported AG-UI transport/,
@@ -409,11 +410,12 @@ describe("createAgUiHandler", () => {
     let writes = 0;
     let turn = 0;
     let suspended: AgentRunRef | undefined;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "approval-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate() {
@@ -422,9 +424,11 @@ describe("createAgUiHandler", () => {
           yield providerDone();
         },
       },
-      tools: [
-        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
-      ],
+      tools: {
+        add: [
+          { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
+        ],
+      },
     });
     const lifecycle = createAgentRunLifecycle({
       checkpoints,
@@ -432,7 +436,7 @@ describe("createAgUiHandler", () => {
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "approval-session" }),
+      sessionFactory: async () => await agent.session({ id: "approval-session", create: true }),
       lifecycle,
       resolveRun: () => (suspended ? { ref: suspended, agentId: "approval-agent" } : undefined),
       onSuspended: ({ run }) => {
@@ -481,11 +485,12 @@ describe("createAgUiHandler", () => {
     let writes = 0;
     let turn = 0;
     let suspended: AgentRunRef | undefined;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "batch-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate() {
@@ -498,9 +503,11 @@ describe("createAgUiHandler", () => {
           yield providerDone();
         },
       },
-      tools: [
-        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-b1", name: "write", value: ++writes }) },
-      ],
+      tools: {
+        add: [
+          { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-b1", name: "write", value: ++writes }) },
+        ],
+      },
     });
     const lifecycle = createAgentRunLifecycle({
       checkpoints,
@@ -509,7 +516,7 @@ describe("createAgUiHandler", () => {
     let receivedDecisions: readonly { readonly approvalId: string; readonly outcome: string }[] | undefined;
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "batch-session" }),
+      sessionFactory: async () => await agent.session({ id: "batch-session", create: true }),
       lifecycle: {
         ...lifecycle,
         resumeStream: ((
@@ -580,11 +587,12 @@ describe("createAgUiHandler", () => {
     let writes = 0;
     let turn = 0;
     let suspended: AgentRunRef | undefined;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "aggregate-approval-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate() {
@@ -593,18 +601,20 @@ describe("createAgUiHandler", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "write",
-          parameters: { type: "object" },
-          execute: () => ({ toolCallId: "write-aggregate", name: "write", value: ++writes }),
-        },
-      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: { type: "object" },
+            execute: () => ({ toolCallId: "write-aggregate", name: "write", value: ++writes }),
+          },
+        ],
+      },
     });
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "aggregate-session" }),
+      sessionFactory: async () => await agent.session({ id: "aggregate-session", create: true }),
       lifecycle,
       resolveRun: () => (suspended ? { ref: suspended, agentId: "aggregate-approval-agent" } : undefined),
       onSuspended: ({ run }) => {
@@ -666,16 +676,24 @@ describe("createAgUiHandler", () => {
       }),
       async resume(_ref: AgentRunRef, value: { decision?: string }) {
         decision = value.decision;
-        return { sessionId: "session-1", runId: "stored-run", status: "denied" as const, text: "", content: [] };
+        return {
+          sessionId: "session-1",
+          runId: "stored-run",
+          status: "stopped" as const,
+          stopReason: "denied" as const,
+          text: "",
+          content: [],
+          messages: [],
+        };
       },
       async *resumeStream(_ref: AgentRunRef, value: { decision?: string }) {
         decision = value.decision;
         yield {
-          type: "agent_denied" as const,
+          type: "decision.resolved" as const,
           sessionId: "session-1",
           runId: "stored-run",
-          interruption: { kind: "tool_approval" as const, reason: "approval" },
-          version: 2,
+          decisions: [{ toolCallId: "tool-1", outcome: "deny" as const }],
+          via: "resume" as const,
         };
       },
     };
@@ -701,7 +719,7 @@ describe("createAgUiHandler", () => {
     assert.ok((await events(response)).some((item) => item.type === EventType.RUN_ERROR));
   });
 
-  it("advertises and executes approveWithEdits mapping edited arguments to RunDecision", async () => {
+  it("advertises and executes approveWithEdits mapping edited arguments to Decision", async () => {
     let receivedResume: any;
     const lifecycle = {
       status: async () => ({
@@ -733,14 +751,15 @@ describe("createAgUiHandler", () => {
       }),
       async resume(_ref: AgentRunRef, value: any) {
         receivedResume = value;
-        return { sessionId: "session-1", runId: "stored-run", status: "succeeded" as const, text: "", content: [] };
+        return { sessionId: "session-1", runId: "stored-run", status: "completed" as const, text: "", content: [], messages: [] };
       },
       async *resumeStream(_ref: AgentRunRef, value: any) {
         receivedResume = value;
         yield {
-          type: "agent_finished" as const,
+          type: "run.completed" as const,
           sessionId: "session-1",
           runId: "stored-run",
+          status: "completed" as const,
         };
       },
     };
@@ -981,11 +1000,11 @@ describe("createAgUiHandler", () => {
         version: 3,
       }),
       async resume() {
-        return { sessionId: "session-1", runId: "stored-run", status: "succeeded" as const, text: "", content: [] };
+        return { sessionId: "session-1", runId: "stored-run", status: "completed" as const, text: "", content: [], messages: [] };
       },
       async *resumeStream(_ref: AgentRunRef, value: any) {
         receivedResume = value;
-        yield { type: "agent_finished" as const, sessionId: "session-1", runId: "stored-run" };
+        yield { type: "run.completed" as const, sessionId: "session-1", runId: "stored-run", status: "completed" as const };
       },
     };
 
@@ -1039,7 +1058,7 @@ describe("createAgUiHandler", () => {
       ...owned,
     });
     await source.append(
-      record("event-1", { type: "agent_started", sessionId: "session-1", runId: "stored-run" }, "2026-07-22T00:00:00.000Z"),
+      record("event-1", { type: "run.started", sessionId: "session-1", runId: "stored-run" }, "2026-07-22T00:00:00.000Z"),
     );
     const cursor = (await source.page({ ownership: owned, sessionId: "session-1", runId: "stored-run" })).items[0]!.cursor;
     let sessions = 0;
@@ -1060,12 +1079,16 @@ describe("createAgUiHandler", () => {
     await source.append(
       record(
         "event-2",
-        { type: "message_delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "live" } },
+        { type: "message.delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "live" } },
         "2026-07-22T00:00:01.000Z",
       ),
     );
     await source.append(
-      record("event-3", { type: "agent_finished", sessionId: "session-1", runId: "stored-run" }, "2026-07-22T00:00:02.000Z"),
+      record(
+        "event-3",
+        { type: "run.completed", sessionId: "session-1", runId: "stored-run", status: "completed" },
+        "2026-07-22T00:00:02.000Z",
+      ),
     );
     const output = await outputPromise;
     assert.deepEqual(
@@ -1091,31 +1114,24 @@ describe("createAgUiHandler", () => {
       redacted: true,
       ...owned,
     });
+    // A limit death is one `run.failed` carrying its breach and attribution, so it is the run's
+    // terminal record rather than a non-terminal breach followed by an error.
     await source.append(
       record(
-        "event-limit",
+        "event-death",
         {
-          type: "run_limit_exceeded",
+          type: "run.failed",
           sessionId: "session-1",
           runId: "stored-run",
-          breach: { limit: "maxTurns", maximum: 1, observed: 2 },
+          error: { message: "run limit exceeded" },
+          limit: { limit: "maxTurns", maximum: 1, observed: 2 },
+          attribution: {
+            consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
+            closestOtherAxes: [],
+            recentToolCalls: [],
+          },
         },
         "2026-07-22T00:00:00.000Z",
-      ),
-    );
-    await source.append(
-      record(
-        "event-attr",
-        {
-          type: "budget_exhausted",
-          sessionId: "session-1",
-          runId: "stored-run",
-          limit: "maxTurns",
-          consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
-          closestOtherAxes: [],
-          recentToolCalls: [],
-        },
-        "2026-07-22T00:00:01.000Z",
       ),
     );
     const replay = createAgentEventSourceAgUiReplay(source, {
@@ -1126,24 +1142,15 @@ describe("createAgUiHandler", () => {
     const breached = await replay.page(request);
     assert.deepEqual(
       breached.records.map((item) => item.event.type),
-      ["run_limit_exceeded", "budget_exhausted"],
+      ["run.failed"],
     );
-    assert.equal(breached.terminal, false, "a limit breach must not end an AG-UI replay; the run's error follows");
+    assert.equal(breached.terminal, true, "a limit death ends an AG-UI replay");
 
     assert.ok(replay.subscribe, "source-backed replay must expose a live subscription");
     const live = replay.subscribe(request)[Symbol.asyncIterator]();
-    await source.append(
-      record(
-        "event-death",
-        { type: "error", sessionId: "session-1", runId: "stored-run", error: { message: "run limit exceeded" } },
-        "2026-07-22T00:00:02.000Z",
-      ),
-    );
-    assert.equal((await live.next()).value?.record.event.type, "run_limit_exceeded");
-    assert.equal((await live.next()).value?.record.event.type, "budget_exhausted");
-    assert.equal((await live.next()).value?.record.event.type, "error");
+    assert.equal((await live.next()).value?.record.event.type, "run.failed");
     const closed = await replay.page(request);
-    assert.equal(closed.terminal, true, "the run's error ends the replay");
+    assert.equal(closed.terminal, true, "the run's outcome ends the replay");
   });
 
   it("replays one redacted terminal page without starting a new session", async () => {
@@ -1158,18 +1165,18 @@ describe("createAgUiHandler", () => {
               id: "event-1",
               sessionId: "session-1",
               runId: "stored-run",
-              type: "agent_started",
+              type: "run.started",
               timestamp: "2026-07-22T00:00:00.000Z",
-              event: { type: "agent_started", sessionId: "session-1", runId: "stored-run" },
+              event: { type: "run.started", sessionId: "session-1", runId: "stored-run" },
               redacted: true,
             },
             {
               id: "event-2",
               sessionId: "session-1",
               runId: "stored-run",
-              type: "agent_finished",
+              type: "run.completed",
               timestamp: "2026-07-22T00:00:01.000Z",
-              event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" },
+              event: { type: "run.completed", sessionId: "session-1", runId: "stored-run", status: "completed" },
               redacted: true,
             },
           ];

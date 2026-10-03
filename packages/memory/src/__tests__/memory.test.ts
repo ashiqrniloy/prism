@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createSecretRedactor, resolveContextProviders } from "@arnilo/prism";
+import { createSecretRedactor } from "@arnilo/prism";
 import { MemoryConflictError, MemoryLimitError, MemoryValidationError } from "../errors.js";
 import {
   assertFiniteVector,
@@ -349,10 +349,12 @@ describe("@arnilo/prism-memory", () => {
     await memory.updateWorking({ name: "Ada", preferences: { format: "concise" } });
     await memory.remember({ entries: [{ id: "1", text: "Prefers concise answers" }] }, { wait: true });
 
-    const blocks = await resolveContextProviders({
-      providers: [memory.createContextProvider({ includeWorking: true, includeSemantic: true })],
-      messages: [{ role: "user", content: [{ type: "text", text: "What format do I prefer?" }] }],
-    });
+    const draft = await memory.contextBlocks(
+      { messages: [{ role: "user", content: [{ type: "text", text: "What format do I prefer?" }] }] },
+      { sessionId: "s", runId: "r", emit: () => undefined, reject: () => ({ __prismHookRejection: "x" }) },
+      { includeWorking: true, includeSemantic: true },
+    );
+    const blocks = draft?.context ?? [];
     assert.ok(blocks.some((block) => String(block.content).includes("Ada")));
     assert.ok(blocks.some((block) => String(block.content).toLowerCase().includes("concise")));
   });
@@ -475,11 +477,12 @@ describe("@arnilo/prism-memory", () => {
       { wait: true },
     );
 
-    const blocks = await resolveContextProviders({
-      providers: [memory.createContextProvider({ includeWorking: false, includeSemantic: true })],
-      messages: [{ role: "user", content: [{ type: "text", text: "favorite color is teal" }] }],
-    });
-    const injected = blocks.map((block) => String(block.content)).join("\n");
+    const draft = await memory.contextBlocks(
+      { messages: [{ role: "user", content: [{ type: "text", text: "favorite color is teal" }] }] },
+      { sessionId: "s", runId: "r", emit: () => undefined, reject: () => ({ __prismHookRejection: "x" }) },
+      { includeWorking: false, includeSemantic: true },
+    );
+    const injected = (draft?.context ?? []).map((block) => String(block.content)).join("\n");
     const recalled = await memory.recall("favorite color is teal", { topK: 8 });
     assert.ok(recalled.hits.some((hit) => hit.id === "open"));
     assert.ok(

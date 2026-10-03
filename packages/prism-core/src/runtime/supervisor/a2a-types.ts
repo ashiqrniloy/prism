@@ -1,4 +1,4 @@
-import type { AgentIdentity, AgentRunResult, AgentSession, OwnershipScope, SecretRedactor } from "@arnilo/prism";
+import type { AgentIdentity, RunResult, Session, OwnershipScope, SecretRedactor } from "@arnilo/prism";
 
 export const A2A_PROTOCOL_VERSION = "1.0";
 export interface A2AAgentInterface {
@@ -121,7 +121,7 @@ export type A2AAuthorizer = (input: {
   readonly signal: AbortSignal;
 }) => false | A2AAuthorization | Promise<false | A2AAuthorization>;
 export interface A2AAgentExposure {
-  readonly sessionFactory: (authorization: A2AAuthorization) => AgentSession | Promise<AgentSession>;
+  readonly sessionFactory: (authorization: A2AAuthorization) => Session | Promise<Session>;
 }
 
 export interface A2ATaskPage {
@@ -245,7 +245,7 @@ export interface A2AClientOptions {
 }
 export interface A2AClient {
   getCard(options?: { readonly signal?: AbortSignal }): Promise<A2AAgentCard>;
-  send(input: string, options?: { readonly signal?: AbortSignal }): Promise<AgentRunResult>;
+  send(input: string, options?: { readonly signal?: AbortSignal }): Promise<RunResult>;
   sendMessage(message: A2AMessage, options?: { readonly signal?: AbortSignal; readonly returnImmediately?: boolean }): Promise<A2ATask>;
   stream(input: string, options?: { readonly signal?: AbortSignal }): AsyncIterable<string>;
   /** Rich `SendStreamingMessage` events. Host-supplied messages remain subject to client bounds/card verification. */

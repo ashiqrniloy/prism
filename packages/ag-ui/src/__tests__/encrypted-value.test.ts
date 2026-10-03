@@ -7,7 +7,7 @@ import { createReasoningEncryptedValue } from "../encrypted-value.js";
 import { DEFAULT_MAX_REASONING_BYTES } from "../limits.js";
 
 const content: ThinkingContent = { type: "thinking", text: "secret reasoning" };
-const event: AgentEvent = { type: "message_delta", sessionId: "s1", runId: "r1", content };
+const event: AgentEvent = { type: "message.delta", sessionId: "s1", runId: "r1", content };
 
 describe("createReasoningEncryptedValue", () => {
   it("returns the bounded encrypted value from the host encrypt function", async () => {

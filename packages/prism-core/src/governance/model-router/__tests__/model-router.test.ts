@@ -147,14 +147,11 @@ describe("../index.js", () => {
     assert.equal(result.diagnostics.identityRefs?.principalId, "a1");
     assert.ok(!JSON.stringify(result.diagnostics).includes("sk-"));
 
-    const patched = await result.providerRequestPolicy.apply({
-      request: {
-        model: withRouting,
-        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-        options: { compat: { openRouterRouting: { order: ["openai"] } } },
-      } as ProviderRequest,
-    });
-    const patchedRequest = "request" in patched ? patched.request : patched;
+    const patchedRequest = await result.modelRequestTransform({
+      model: withRouting,
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { openRouterRouting: { order: ["openai"] } } },
+    } as ProviderRequest);
     assert.equal(patchedRequest.options?.compat?.openRouterRouting, undefined);
     assert.equal(seen.length, 1);
 

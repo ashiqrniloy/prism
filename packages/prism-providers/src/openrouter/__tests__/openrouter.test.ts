@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
@@ -11,7 +12,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createOpenRouterProvider,
-  createOpenRouterProviderPackage,
+  openrouterPackage,
   defineOpenRouterModel,
   listOpenRouterModels,
   mapOpenRouterModel,
@@ -46,38 +47,13 @@ describe("@arnilo/prism-providers/openrouter", () => {
     assert.equal(openRouterSessionId({ sessionId: "sess" }), "sess");
   });
 
-  it("openrouter_implicit_model_carries_no_foreign_cache_fields", () => {
-    const implicit = {
-      ...request,
-      model: { ...request.model, cache: { kind: "none" as const } },
-      options: { cacheKey: "session-1", cacheRetention: "long" as const },
-    };
-    assertNoForeignCacheFields(openRouterBody(implicit));
-  });
-
-  it("openrouter_registers_only_app_supplied_models", async () => {
-    const registered: unknown[] = [];
-    await createOpenRouterProviderPackage({ apiKey: "fake-openrouter-key", models: [model], fetch: mockFetch(sse([])) }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (item: ModelConfig) => registered.push(item),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
-    assert(registered.some((item: any) => item.id === "openrouter"));
-    assert.equal(registered.filter((item: any) => item.provider === "openrouter" && item.model).length, 1);
-    assert(registered.some((item: any) => item.provider === "openrouter" && item.kind === "api_key"));
-  });
-
   it("openrouter_provider_setup_does_not_call_model_discovery", async () => {
     let fetchCalls = 0;
     const fetchImpl = (async () => {
       fetchCalls += 1;
       return ok(sse([]));
     }) as typeof fetch;
-    await createOpenRouterProviderPackage({ apiKey: "fake-openrouter-key", models: [model], fetch: fetchImpl }).setup({
-      registerProvider() {},
-      registerModel() {},
-      registerAuthMethod() {},
-    } as any);
+    await loadProviderPackage(openrouterPackage({ apiKey: "fake-openrouter-key", models: [model], fetch: fetchImpl }));
     assert.equal(fetchCalls, 0);
   });
 

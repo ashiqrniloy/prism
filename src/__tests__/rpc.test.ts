@@ -20,49 +20,55 @@ class MemoryWritable extends Writable {
   }
 }
 
-function createSession(id?: string) {
-  return createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
-  }).createSession({ id });
+async function createSession(id?: string) {
+  return (
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    })
+  ).session({ id, create: true });
 }
 
-function createBlockingSession(id?: string) {
-  return createAgent({
-    model: { provider: "blocking", model: "demo" },
-    provider: {
-      id: "blocking",
-      async *generate(request: any) {
-        yield providerTextDelta("working");
-        while (!request.signal?.aborted) {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-        }
-        throw request.signal.reason;
-      },
-    },
-  }).createSession({ id });
-}
-
-function createSoftSteerSession(id?: string) {
-  let calls = 0;
-  return createAgent({
-    model: { provider: "soft-steer", model: "demo" },
-    provider: {
-      id: "soft-steer",
-      async *generate(request: any) {
-        calls += 1;
-        if (calls === 1) {
+async function createBlockingSession(id?: string) {
+  return (
+    await createAgent({
+      model: { provider: "blocking", model: "demo" },
+      provider: {
+        id: "blocking",
+        async *generate(request: any) {
           yield providerTextDelta("working");
           while (!request.signal?.aborted) {
             await new Promise((resolve) => setTimeout(resolve, 10));
           }
           throw request.signal.reason;
-        }
-        yield providerTextDelta("steered");
-        yield providerDone();
+        },
       },
-    },
-  }).createSession({ id });
+    })
+  ).session({ id, create: true });
+}
+
+async function createSoftSteerSession(id?: string) {
+  let calls = 0;
+  return (
+    await createAgent({
+      model: { provider: "soft-steer", model: "demo" },
+      provider: {
+        id: "soft-steer",
+        async *generate(request: any) {
+          calls += 1;
+          if (calls === 1) {
+            yield providerTextDelta("working");
+            while (!request.signal?.aborted) {
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+            throw request.signal.reason;
+          }
+          yield providerTextDelta("steered");
+          yield providerDone();
+        },
+      },
+    })
+  ).session({ id, create: true });
 }
 
 async function run(input: string, commands: any[] = []) {
@@ -120,7 +126,7 @@ describe("rpc", () => {
 
   it("rpc_prompt_correlates_response_and_async_events_by_id", async () => {
     const lines = await run(`${JSON.stringify({ id: "1", command: "prompt", params: { input: "Hi" } })}\n`);
-    assert.ok(lines.some((line: any) => line.type === "event" && line.id === "1" && line.event.type === "message_delta" && line.sessionId));
+    assert.ok(lines.some((line: any) => line.type === "event" && line.id === "1" && line.event.type === "message.delta" && line.sessionId));
     assert.ok(lines.some((line: any) => line.id === "1" && line.ok === true && line.result.sessionId));
   });
 
@@ -142,7 +148,7 @@ describe("rpc", () => {
         { id: "1", command: "compact" },
         { id: "2", command: "prompt", params: { input: "Hi" } },
         { id: "3", command: "messages" },
-        { id: "4", command: "cloneSession", params: { id: "s2" } },
+        { id: "4", command: "forkSession" },
         { id: "5", command: "switchSession", params: { sessionId: "s3" } },
       ]
         .map((line) => JSON.stringify(line))
@@ -150,7 +156,7 @@ describe("rpc", () => {
     );
     assert.ok(lines.some((line: any) => line.id === "1" && line.ok === true && typeof line.result.summary === "string"));
     assert.ok(lines.some((line: any) => line.id === "3" && line.ok === true && Array.isArray(line.result.entries)));
-    assert.ok(lines.some((line: any) => line.id === "4" && line.ok === true && line.result.sessionId === "s2"));
+    assert.ok(lines.some((line: any) => line.id === "4" && line.ok === true && typeof line.result.sessionId === "string"));
     assert.ok(lines.some((line: any) => line.id === "5" && line.ok === true && line.result.sessionId === "s3"));
   });
 
@@ -293,7 +299,7 @@ describe("rpc", () => {
     assert.ok(promptResponse);
 
     assert.ok(!lines.some((line: any) => line.type === "event" && line.id === "abort-1"));
-    assert.ok(lines.some((line: any) => line.type === "event" && line.id === "run-1" && line.event.type === "error"));
+    assert.ok(lines.some((line: any) => line.type === "event" && line.id === "run-1" && line.event.type === "run.failed"));
   });
 
   it("rpc_state_responds_while_prompt_is_running", async () => {
@@ -394,39 +400,32 @@ describe("rpc", () => {
 
     const events = lines.filter((line: any) => line.type === "event");
     assert.ok(events.every((line: any) => line.id === "run-1"));
-    assert.ok(events.some((line: any) => line.event.type === "agent_started" || line.event.type === "turn_started"));
-    assert.ok(events.some((line: any) => line.event.type === "error"));
+    assert.ok(events.some((line: any) => line.event.type === "run.started" || line.event.type === "turn.started"));
+    assert.ok(events.some((line: any) => line.event.type === "run.failed"));
   });
 
-  it("rpc_fork_keeps_parent_handle_and_mints_branch_handle", async () => {
+  it("rpc_fork_keeps_parent_handle_and_registers_the_forked_session", async () => {
     const s = await interactive();
     await s.send({ id: "1", command: "prompt", params: { input: "Hi" } });
     const msgs = await s.send({ id: "2", command: "messages" });
-    const entries = msgs.result.entries as Array<{ id: string }>;
+    const entries = msgs.result.entries as Array<{ id: string; sessionId: string }>;
+    const parentSessionId = entries[0]!.sessionId;
     const earlierLeaf = entries[0]!.id;
-    // fork at an explicit earlier leaf so the branch diverges from the parent tip deterministically
-    const fork = await s.send({ id: "3", command: "forkSession", params: { leafId: earlierLeaf } });
+    // fork at an explicit earlier entry: the new session holds only the branch that ends there
+    const fork = await s.send({ id: "3", command: "forkSession", params: { at: earlierLeaf } });
     assert.equal(fork.ok, true);
-    const sessionId = fork.result.sessionId;
-    // fork reuses sessionId (branch, not copy) -> mints a distinct handle id, parent untouched.
-    assert.equal(fork.result.handleId, `${sessionId}#2`);
-    assert.equal(fork.result.leafId, earlierLeaf);
+    const forkedId = fork.result.sessionId;
+    assert.notEqual(forkedId, parentSessionId, "a fork is a new session, not a branch of the parent");
+    assert.equal(fork.result.handleId, forkedId);
+    assert.notEqual(fork.result.leafId, earlierLeaf, "copied entries get fresh ids");
     const state = await s.send({ id: "4", command: "state" });
     const handles = state.result.handles as Array<{ handleId: string; sessionId: string; leafId?: string }>;
     assert.equal(handles.length, 2);
-    assert.ok(
-      handles.some((h) => h.handleId === sessionId),
-      "parent handle survived the fork",
-    );
-    assert.ok(
-      handles.some((h) => h.handleId === `${sessionId}#2`),
-      "fork handle registered",
-    );
-    // both handles share sessionId but resolve to distinct leaves (branch model)
-    const parent = handles.find((h) => h.handleId === sessionId)!;
-    const child = handles.find((h) => h.handleId === `${sessionId}#2`)!;
-    assert.equal(parent.sessionId, sessionId);
-    assert.equal(child.sessionId, sessionId);
+    const parent = handles.find((h) => h.handleId === parentSessionId);
+    const child = handles.find((h) => h.handleId === forkedId);
+    assert.ok(parent, "parent handle survived the fork");
+    assert.ok(child, "fork handle registered");
+    assert.equal(child.sessionId, forkedId);
     assert.notEqual(parent.leafId, child.leafId);
     await s.close();
   });
@@ -451,18 +450,20 @@ describe("rpc", () => {
     // Task 6 checkout criterion: after checkout to an existing leaf, a subsequent append branches
     // and `messages` reflects the NEW branch path (the abandoned tip drops out).
     let n = 0;
-    const counting = () => (id?: string) =>
-      createAgent({
-        model: { provider: "mock", model: "demo" },
-        provider: {
-          id: "mock",
-          async *generate() {
-            n++;
-            yield providerTextDelta(`reply${n}`);
-            yield providerDone();
+    const counting = () => async (id?: string) =>
+      (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider: {
+            id: "mock",
+            async *generate() {
+              n++;
+              yield providerTextDelta(`reply${n}`);
+              yield providerDone();
+            },
           },
-        },
-      }).createSession({ id });
+        })
+      ).session({ id, create: true });
     const s = await interactive(counting());
 
     await s.send({ id: "1", command: "prompt", params: { input: "one" } }); // reply1

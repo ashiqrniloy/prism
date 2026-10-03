@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentSession } from "@arnilo/prism";
+import type { AgentEvent, Session } from "@arnilo/prism";
 import type { WorkflowEvent } from "../../runtime/workflows/types.js";
 
 export type PrismSpanStatus = "ok" | "error";
@@ -62,7 +62,7 @@ export interface OpenTelemetryInstrumentationOptions {
   readonly enabled?: boolean;
   readonly tracer?: PrismTracer;
   readonly meter?: PrismMeter;
-  readonly parentContext?: PrismContext | ((event: Extract<AgentEvent, { type: "agent_started" }>) => PrismContext | undefined);
+  readonly parentContext?: PrismContext | ((event: Extract<AgentEvent, { type: "run.started" }>) => PrismContext | undefined);
   readonly onTraceReference?: (reference: TraceReference) => void;
   readonly maxTraceReferences?: number;
   readonly onExporterError?: (error: unknown) => void;
@@ -103,7 +103,7 @@ export interface OpenTelemetryInstrumentation {
   handleEvaluation(evaluation: EvaluationTelemetry): void;
   handleWorkflowEvent(event: WorkflowEvent): void;
   traceId(runId: string): string | undefined;
-  attachSession(session: Pick<AgentSession, "id" | "subscribe">): () => void;
+  attachSession(session: Pick<Session, "id" | "subscribe">): () => void;
   attachWorkflow(bus: { subscribe(): AsyncIterable<WorkflowEvent> } | AsyncIterable<WorkflowEvent>): () => void;
 }
 
@@ -309,7 +309,7 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
   const handleAgentEvent = (event: AgentEvent) => {
     if (!enabled) return;
     switch (event.type) {
-      case "agent_started":
+      case "run.started":
         safe(() => {
           if (!tracer) return;
           const spanKey = key("agent", event.runId);
@@ -330,7 +330,7 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
           rememberTrace(event.runId, span);
         });
         break;
-      case "agent_finished":
+      case "run.completed":
         safe(() => {
           finishWhere(
             (item) => item.runId === event.runId && item !== active.get(key("agent", event.runId)),
@@ -342,44 +342,47 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
           if (start !== undefined) agentDuration?.record((Date.now() - start) / 1000, attrs({ "gen_ai.operation.name": "invoke_agent" }));
         });
         break;
-      case "agent_suspended":
-      case "agent_denied":
+      case "run.suspended":
+      case "decision.resolved":
         safe(() => {
-          finishWhere((item) => item.runId === event.runId, event.type === "agent_suspended" ? "Agent suspended" : "Agent denied");
+          finishWhere((item) => item.runId === event.runId, event.type === "run.suspended" ? "Agent suspended" : "Decisions resolved");
           startedAt.delete(event.runId);
         });
         break;
-      case "provider_turn_started":
+      case "turn.started":
+        // The loop's own turn start carries no provider metadata; only an attempt opens a chat span.
+        if (!event.metadata) break;
         safe(() => {
-          const attempt = event.metadata.attempt ?? 1;
+          const attempt = event.metadata!.attempt ?? 1;
           startChild(
             key("provider", event.runId, event.turn, attempt),
             event.runId,
             event.sessionId,
-            `chat ${event.metadata.model.model}`,
+            `chat ${event.metadata!.model.model}`,
             "client",
             {
               "gen_ai.operation.name": "chat",
-              "gen_ai.provider.name": event.metadata.providerId,
-              "gen_ai.request.model": event.metadata.model.model,
+              "gen_ai.provider.name": event.metadata!.providerId,
+              "gen_ai.request.model": event.metadata!.model.model,
               "prism.turn": event.turn,
-              ...(event.metadata.attempt ? { "prism.attempt": event.metadata.attempt } : {}),
+              ...(event.metadata!.attempt ? { "prism.attempt": event.metadata!.attempt } : {}),
             },
           );
         });
         break;
-      case "provider_turn_finished":
+      case "turn.completed":
+        if (!event.metadata) break;
         safe(() => {
-          const spanKey = key("provider", event.runId, event.turn, event.metadata.attempt ?? 1);
+          const spanKey = key("provider", event.runId, event.turn, event.metadata!.attempt ?? 1);
           const item = active.get(spanKey);
-          if (item && event.metadata.httpStatus !== undefined)
-            item.span.setAttribute("http.response.status_code", event.metadata.httpStatus);
+          if (item && event.metadata!.httpStatus !== undefined)
+            item.span.setAttribute("http.response.status_code", event.metadata!.httpStatus);
           finish(spanKey, event.error ? "error" : "ok", event.error?.message);
           inferenceDuration?.record(
-            (event.metadata.latencyMs ?? 0) / 1000,
+            (event.metadata!.latencyMs ?? 0) / 1000,
             attrs({
               "gen_ai.operation.name": "chat",
-              "gen_ai.provider.name": event.metadata.providerId,
+              "gen_ai.provider.name": event.metadata!.providerId,
               outcome: event.error ? "error" : "success",
             }),
           );
@@ -387,16 +390,16 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
           if (usage?.inputTokens !== undefined)
             tokenUsage?.record(
               usage.inputTokens,
-              attrs({ "gen_ai.operation.name": "chat", "gen_ai.provider.name": event.metadata.providerId, "gen_ai.token.type": "input" }),
+              attrs({ "gen_ai.operation.name": "chat", "gen_ai.provider.name": event.metadata!.providerId, "gen_ai.token.type": "input" }),
             );
           if (usage?.outputTokens !== undefined)
             tokenUsage?.record(
               usage.outputTokens,
-              attrs({ "gen_ai.operation.name": "chat", "gen_ai.provider.name": event.metadata.providerId, "gen_ai.token.type": "output" }),
+              attrs({ "gen_ai.operation.name": "chat", "gen_ai.provider.name": event.metadata!.providerId, "gen_ai.token.type": "output" }),
             );
         });
         break;
-      case "tool_execution_started":
+      case "tool.started":
         safe(() =>
           startChild(key("tool", event.runId, event.call.id), event.runId, event.sessionId, `execute_tool ${event.call.name}`, "internal", {
             "gen_ai.operation.name": "execute_tool",
@@ -405,20 +408,12 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
           }),
         );
         break;
-      case "tool_execution_finished":
-      case "tool_execution_error":
-      case "tool_execution_blocked":
+      case "tool.completed":
         safe(() => {
-          const id =
-            event.type === "tool_execution_finished"
-              ? event.result.toolCallId
-              : event.type === "tool_execution_error"
-                ? event.call.id
-                : event.toolCallId;
           finish(
-            key("tool", event.runId, id),
-            event.type === "tool_execution_finished" ? "ok" : "error",
-            event.type === "tool_execution_finished" ? undefined : event.error.message,
+            key("tool", event.runId, event.toolCallId || event.result?.toolCallId),
+            event.status === "finished" ? "ok" : "error",
+            event.status === "finished" ? undefined : event.error?.message,
           );
           toolDuration?.record(
             event.metadata.durationMs / 1000,
@@ -426,22 +421,24 @@ export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrum
           );
         });
         break;
-      case "guardrail_decision":
+      case "package.event":
         safe(() => {
-          if (!tracer) return;
+          if (event.name !== "guardrail.decision" || !tracer) return;
+          const record = (event.data as { record?: { stage?: string; action?: string } } | undefined)?.record;
+          if (!record) return;
           const span = tracer.startSpan("prism.guardrail.evaluate", {
             kind: "internal",
             parent: parent(event.runId),
             attributes: {
-              "prism.guardrail.stage": event.record.stage,
-              "prism.guardrail.action": event.record.action,
+              "prism.guardrail.stage": record.stage ?? "unknown",
+              "prism.guardrail.action": record.action ?? "unknown",
             },
           });
-          span.setStatus(event.record.action === "allow" ? "ok" : "error");
+          span.setStatus(record.action === "allow" ? "ok" : "error");
           span.end();
         });
         break;
-      case "error":
+      case "run.failed":
         safe(() => {
           if (event.runId) {
             finishWhere((item) => item.runId === event.runId, event.error.message);

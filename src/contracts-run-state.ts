@@ -1,7 +1,5 @@
 import type { CheckpointRestoreHandler } from "./checkpoint-restore.js";
 import type {
-  AgentSessionCloneOptions,
-  AgentSessionForkOptions,
   CheckpointRecord,
   CheckpointStore,
   CompactionOptions,
@@ -17,6 +15,7 @@ import type {
   OwnershipScope,
   RunLimitBreach,
   SessionEntry,
+  SessionForkOptions,
   SubscribeOptions,
   ToolCallContent,
   Usage,
@@ -79,7 +78,7 @@ export interface AgentRunInterruption {
 }
 
 /** One host decision applied to one pending approval request. */
-export interface RunDecision {
+export interface Decision {
   readonly approvalId: string;
   readonly outcome: ApprovalOutcome;
   /** Bounded to 2 KiB; redacted. */
@@ -117,7 +116,7 @@ export interface NestedRunRef {
   readonly path: readonly string[];
   readonly approvals: readonly NestedRunApproval[];
   /** Decisions persisted by a partial batch, keyed by root-visible approval id. */
-  readonly decisions?: Readonly<Record<string, RunDecision>>;
+  readonly decisions?: Readonly<Record<string, Decision>>;
 }
 
 /** Outcome of resuming a nested run through the host-supplied hook. */
@@ -133,7 +132,7 @@ export type NestedRunOutcome =
  */
 export type ResumeNestedRun = (
   nested: { readonly ref: AgentRunRef; readonly toolCallId: string; readonly path: readonly string[] },
-  decisions: readonly RunDecision[],
+  decisions: readonly Decision[],
 ) => Promise<NestedRunOutcome>;
 
 /**
@@ -213,8 +212,6 @@ export interface AgentRunStateOptions {
    * repeating the option.
    */
   readonly checkpointPolicy?: "decision" | "every-turn";
-  /** Suspend every tool call before its side effect. */
-  readonly interruptBeforeTool?: boolean;
   /**
    * Sidecar metadata written with every checkpoint of this run (and carried into a resumed
    * run). A provider is resolved at each checkpoint write, so a host closure can pin state
@@ -269,7 +266,7 @@ export interface AgentRunResume {
    */
   readonly decision?: "approve" | "deny" | "continue";
   /** Batch decision path; exactly one of decision/decisions. Applied as one atomic CAS transition. */
-  readonly decisions?: readonly RunDecision[];
+  readonly decisions?: readonly Decision[];
 }
 
 /**
@@ -306,7 +303,7 @@ export interface AgentRunResumeOptions {
    * starts, so an observer (e.g. the supervisor's child-event pump) can subscribe while the
    * run is still live. The session is valid only for the duration of this resume.
    */
-  readonly onSession?: (session: AgentSession) => void;
+  readonly onSession?: (session: Session) => void;
   /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names into the resumed session catalog. */
   readonly persistSessionState?: boolean;
   /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies (requires `persistSessionState` too). */
@@ -364,11 +361,34 @@ export class AgentLoopStateError extends Error {
   }
 }
 
-/** Terminal result of `session.run()` / `session.prompt()`. Failed and aborted runs throw {@link AgentRunError} with this shape attached. */
-export interface AgentRunResult {
+/** How a run ended, as the host sees it. `AgentRunStatus` stays the persisted checkpoint/ledger vocabulary. */
+export type RunResultStatus = "completed" | "stopped" | "suspended" | "failed" | "aborted";
+
+/**
+ * Map the persisted run status (and the clean-stop reason, when the loop recorded one) to the status
+ * a host sees: a bare `succeeded` is `completed`, a clean stop is `stopped`, and a denied resume is a
+ * `stopped` run whose `stopReason` is `denied`.
+ */
+export function toRunResultStatus(status: AgentRunStatus, stopReason?: AgentFinishReason): RunResultStatus {
+  switch (status) {
+    case "succeeded":
+      return stopReason ? "stopped" : "completed";
+    case "denied":
+      return "stopped";
+    default:
+      return status;
+  }
+}
+
+/**
+ * Result of `session.run()`. A run that fails or is aborted after it started resolves to a result
+ * with `status: "failed" | "aborted"` and `error`; it does not throw. Only a call that cannot start
+ * a run at all (an active run, an invalid option) rejects.
+ */
+export interface RunResult {
   readonly sessionId: string;
   readonly runId: string;
-  readonly status: AgentRunStatus;
+  readonly status: RunResultStatus;
   /** Branch leaf after the run settles. */
   readonly leafId?: string;
   /** Concatenated text blocks from the final assistant message, or `""` when none. */
@@ -377,37 +397,29 @@ export interface AgentRunResult {
   readonly content: readonly ContentBlock[];
   /** Final assistant message when the run produced one. */
   readonly message?: Message;
+  /** Messages this run appended to the branch (input, assistant turns, tool results), in order. */
+  readonly messages: readonly Message[];
   /** Aggregate usage across provider turns (`run_total` scope). */
   readonly usage?: Usage;
   /** Present when the run hit a configured resource ceiling. */
   readonly limit?: RunLimitBreach;
   /**
    * Present with `limit` when the run died on a ceiling: the same plan-087 attribution payload the
-   * `budget_exhausted` event carries (`limit` stays on {@link AgentRunResult.limit}).
+   * `run.failed` event carries (`limit` stays on {@link RunResult.limit}).
    */
   readonly attribution?: BudgetExhaustionAttribution;
   /** Present when `status` is `"failed"` or when a failed attempt still produced partial output. */
   readonly error?: ErrorInfo;
   /** String form of the abort reason when `status` is `"aborted"`. */
   readonly abortReason?: string;
-  /** Present when the loop stopped on a ceiling or host turn policy instead of a natural end. */
+  /** Why a `stopped` run stopped: a ceiling, a `turn.before` stop, a `run.end` continuation cap, or `denied`. */
   readonly stopReason?: AgentFinishReason;
-  /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). */
+  /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). */
   readonly stopDetail?: string;
+  /** Present when `status` is `"suspended"`: the unresolved decisions to pass to `session.resume`. Redacted. */
+  readonly pending?: readonly PendingDecision[];
   /** Present for durable suspended/terminal runs. Payload is redacted and bounded. */
   readonly runState?: AgentRunState;
-  /** Present only while awaiting an operator decision. */
-  readonly interruption?: AgentRunInterruption;
-}
-
-export class AgentRunError extends Error {
-  readonly result: AgentRunResult;
-
-  constructor(result: AgentRunResult, options?: { readonly cause?: unknown }) {
-    super(result.error?.message ?? (result.status === "aborted" ? "Agent run aborted" : "Agent run failed"), options);
-    this.name = "AgentRunError";
-    this.result = result;
-  }
 }
 
 /** Mid-run steer queue: default pending message count (fail closed at this cap). */
@@ -428,7 +440,7 @@ export interface SteerOptions {
   readonly softInterrupt?: boolean;
 }
 
-export interface AgentSession {
+export interface Session {
   readonly id: string;
   /**
    * Plan 104 Task 2: guardrail pack refs this session enforces (the restored rows after a durable
@@ -439,8 +451,7 @@ export interface AgentSession {
   /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
    *  Undefined until the first entry lands (a fresh session with no history). */
   readonly leafId: string | undefined;
-  run(input: string | Message | readonly Message[], options?: RunOptions): Promise<AgentRunResult>;
-  prompt(input: string, options?: RunOptions): Promise<AgentRunResult>;
+  run(input: string | Message | readonly Message[], options?: RunOptions): Promise<RunResult>;
   /**
    * Enqueue user text into an active run. Default injects before the next provider turn.
    * `softInterrupt: true` aborts the current provider stream, then continues the same run.
@@ -461,14 +472,28 @@ export interface AgentSession {
    */
   subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
   /**
-   * Plan 106 R2: session teardown. Dispatches `session_shutdown` middleware once (idempotent), then
-   * closes every subscriber (`acrossRuns` included); calling it twice is a no-op. Call after the
+   * Session teardown: closes every subscriber (`acrossRuns` included); calling it twice is a no-op. Call after the
    * active run settles. Subscriber-only teardown stays `break`ing the `for await` (or calling the
    * iterator's `return()`). See [Agent/session runtime](agent-session-runtime.md).
    */
   close(): Promise<void>;
   abort(reason?: unknown): void;
+  /**
+   * The stored messages of the current branch (after `message.append`), never the `context.build`
+   * draft a provider saw. Reads the branch snapshot cache, so a warm session adds no store read.
+   */
+  messages(): Promise<readonly Message[]>;
+  /** Kernel member: the current branch's raw entries (hosts that render or project the transcript). */
   entries(): Promise<readonly SessionEntry[]>;
+  /**
+   * Continue this session's suspended run with one decision per pending `ask`. It reads the suspension
+   * from the session's branch, so it works on a fresh `agent.session({ id })` in a new process over the
+   * same store. Every pending id must be decided exactly once: an unknown, duplicate, or missing id, no
+   * pending suspension, or a drifted agent (fingerprint, hook ids, loop revision) fails closed. It yields
+   * `decision.resolved`, then the resumed run's events from `run.started { resumed: true }`.
+   */
+  resume(decisions: readonly Decision[], options?: RunOptions): AsyncIterable<AgentEvent>;
+  /** Kernel member: re-point this session at another entry of its own branch tree (Prism Code branching). */
   checkout(leafId?: string): Promise<void>;
   /**
    * Context-fill read (plan 091 T2): latest provider turn's input tokens
@@ -476,8 +501,11 @@ export interface AgentSession {
    * budget, and used ratio. Before any provider turn it estimates stored history.
    */
   contextMeter(): ContextMeter;
-  fork(options?: AgentSessionForkOptions): AgentSession;
-  clone(options?: AgentSessionCloneOptions): Promise<AgentSession>;
+  /**
+   * Copy the branch that ends at `at` (default: the current leaf) into a new session, package state
+   * included, and resolve that session opened. The original is untouched.
+   */
+  fork(options?: SessionForkOptions): Promise<Session>;
   /** Plan 137 Task 3: loaded skill names currently active in this session. */
   getLoadedSkillNames?(): readonly string[];
   /** Plan 015 / Plan 137 Task 3: re-add loaded skill names to session. */

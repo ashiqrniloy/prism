@@ -8,11 +8,21 @@
           "scripts/e2e-full-surface.test.mjs",
           "src/__tests__/agent-approval-coverage.test.ts",
           "src/__tests__/agent-config.types.test.ts",
-          "src/__tests__/agent-loops.test.ts",
+          "src/__tests__/agent-hooks.test.ts",
+          "src/__tests__/hook-catalog-freeze.test.ts",
+          "src/__tests__/cli-instruction-sources.test.ts",
+          "src/__tests__/node-instruction-sources.test.ts",
+          "src/__tests__/context-build.test.ts",
           "src/__tests__/agent-run-lifecycle.test.ts",
           "src/__tests__/agent-run-state.test.ts",
           "src/__tests__/agents.test.ts",
           "src/__tests__/artifacts-coverage.test.ts",
+          "src/__tests__/ask-resolution.test.ts",
+          "examples/custom-loop.ts",
+          "examples/define-package.ts",
+          "examples/session.ts",
+          "examples/approval.ts",
+          "examples/host-hooks.ts",
           "src/__tests__/batch.test.ts",
           "src/__tests__/cache-helpers.test.ts",
           "src/__tests__/cache-telemetry.test.ts",
@@ -21,19 +31,16 @@
           "src/__tests__/cli-dev.test.ts",
           "src/__tests__/cli-discovery.test.ts",
           "src/__tests__/cli-init.test.ts",
-          "src/__tests__/cli-instruction-injectors.test.ts",
+          "src/__tests__/cli-instruction-sources.test.ts",
           "src/__tests__/cli-provider-add.test.ts",
           "src/__tests__/cli-system-project-prompts.test.ts",
           "src/__tests__/cli.test.ts",
           "src/__tests__/compaction.test.ts",
           "src/__tests__/compatibility-0-0-3.test.ts",
-          "src/__tests__/config-manifests.test.ts",
           "src/__tests__/content.test.ts",
           "src/__tests__/context-budget.test.ts",
           "src/__tests__/contribution-discovery.types.test.ts",
           "src/__tests__/contribution-parsing.test.ts",
-          "src/__tests__/contributions-discovered.test.ts",
-          "src/__tests__/contributions.test.ts",
           "src/__tests__/conversations-coverage.test.ts",
           "src/__tests__/core-boundaries.test.ts",
           "src/__tests__/cost-catalog.test.ts",
@@ -45,21 +52,21 @@
           "src/__tests__/durable-loops.test.ts",
           "src/__tests__/embeddings.test.ts",
           "src/__tests__/execution-policy.test.ts",
-          "src/__tests__/extensions.test.ts",
           "src/__tests__/field-policy.test.ts",
           "src/__tests__/fixtures.test.ts",
           "src/__tests__/guardrails.test.ts",
           "src/__tests__/handoff-swarm-example.test.ts",
+          "src/__tests__/hook-bus.test.ts",
+          "src/__tests__/hook-catalog-coverage.test.ts",
+          "src/__tests__/hook-invariants.test.ts",
           "src/__tests__/identity.test.ts",
           "src/__tests__/images.test.ts",
           "src/__tests__/index.test.ts",
           "src/__tests__/input-pipeline.test.ts",
           "src/__tests__/install-smoke.test.ts",
-          "src/__tests__/instruction-injection-assembler.test.ts",
-          "src/__tests__/instruction-injection.test.ts",
-          "src/__tests__/instruction-injection.types.test.ts",
+          "src/__tests__/kernel-imports-no-package.test.ts",
           "src/__tests__/leak-sessions.test.ts",
-          "src/__tests__/middleware.test.ts",
+          "src/__tests__/loop-dispatch.test.ts",
           "src/__tests__/mock-provider.test.ts",
           "src/__tests__/moderation.test.ts",
           "src/__tests__/network-free-guard.test.ts",
@@ -77,7 +84,6 @@
           "src/__tests__/release.test.ts",
           "src/__tests__/resources.test.ts",
           "src/__tests__/retry.test.ts",
-          "src/__tests__/rpc-instruction-injectors.test.ts",
           "src/__tests__/rpc.test.ts",
           "src/__tests__/run-decisions.test.ts",
           "src/__tests__/run-ledger-batching.test.ts",
@@ -87,6 +93,7 @@
           "src/__tests__/secure-agent.test.ts",
           "src/__tests__/session-stores.test.ts",
           "src/__tests__/skill-disclosure.test.ts",
+          "src/__tests__/slot-registry.test.ts",
           "src/__tests__/skill-load.test.ts",
           "src/__tests__/skills.test.ts",
           "src/__tests__/speech.test.ts",
@@ -94,6 +101,8 @@
           "src/__tests__/supply-chain-security.test.ts",
           "src/__tests__/system-prompts.test.ts",
           "src/__tests__/thinking.test.ts",
+          "src/__tests__/tool-effects-annotation.test.ts",
+          "src/__tests__/run-controller.test.ts",
           "src/__tests__/tool-result-fold.test.ts",
           "src/__tests__/tool-search.test.ts",
           "src/__tests__/tools.test.ts",
@@ -135,6 +144,15 @@
         "suites": [
           "scripts/e2e-full-surface.test.mjs",
           "src/__tests__/provider-media.test.ts"
+        ],
+        "mode": ""
+      },
+      "./testing": {
+        "suites": [
+          "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/hook-catalog-coverage.test.ts",
+          "src/__tests__/hook-invariants.test.ts",
+          "src/__tests__/package-conformance.test.ts"
         ],
         "mode": ""
       },
@@ -198,13 +216,6 @@
         ],
         "mode": ""
       },
-      "./testing/extension-conformance": {
-        "suites": [
-          "scripts/e2e-full-surface.test.mjs",
-          "src/__tests__/conformance-helpers.test.ts"
-        ],
-        "mode": ""
-      },
       "./testing/persistence-schema": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs",
@@ -263,10 +274,10 @@
         ],
         "mode": ""
       },
-      "./node/instruction-injectors": {
+      "./node/instruction-sources": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs",
-          "src/__tests__/node-instruction-injectors.test.ts"
+          "src/__tests__/node-instruction-sources.test.ts"
         ],
         "mode": ""
       },
@@ -1172,11 +1183,11 @@
         "mode": ""
       }
     },
-    "@arnilo/prism-hooks": {
+    "@arnilo/prism-hooks-json": {
       ".": {
         "suites": [
-          "packages/hooks/src/__tests__/compile.test.ts",
-          "packages/hooks/src/__tests__/schema.test.ts",
+          "packages/integrations/hooks-json/src/__tests__/compile.test.ts",
+          "packages/integrations/hooks-json/src/__tests__/schema.test.ts",
           "examples/hooks-json.ts",
           "scripts/e2e-full-surface.test.mjs"
         ],

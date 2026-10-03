@@ -234,7 +234,7 @@ describe("prism-code live smoke", () => {
 
       // A green named check: `coding_check` finished with exit code 0 on the agent's own test file.
       const events = parseJsonEvents(result.stdout);
-      const checks = events.filter((event) => event.type === "tool_execution_finished" && event.result?.name === "coding_check");
+      const checks = events.filter((event) => event.type === "tool.completed" && event.result?.name === "coding_check");
       assert.ok(checks.length >= 1, `the run must call coding_check: ${events.map((e) => e.type).join(", ")}`);
       assert.ok(
         checks.some((event) => event.result?.error === undefined && event.result?.metadata?.exitCode === 0),

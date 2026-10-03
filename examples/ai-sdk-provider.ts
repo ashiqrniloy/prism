@@ -35,7 +35,7 @@ const model = createFakeLanguageModel([
 ]);
 
 const provider = createAiSdkProvider({ model });
-const agent = createAgent({
+const agent = await createAgent({
   provider,
   model: {
     provider: provider.id,
@@ -44,6 +44,6 @@ const agent = createAgent({
   },
 });
 
-const result = await agent.createSession().run("Demonstrate AI SDK interoperability");
+const result = await (await agent.session()).run("Demonstrate AI SDK interoperability");
 console.log(result.text);
 console.log(result.usage);

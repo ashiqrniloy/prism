@@ -6,7 +6,7 @@ import { Readable, Writable } from "node:stream";
 import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
-import type { AgentSession, ProviderRequest } from "../contracts.js";
+import type { Session, ProviderRequest } from "../contracts.js";
 import { createAgent, createMockProvider } from "../index.js";
 import { createSkillRegistry } from "../skills.js";
 
@@ -37,18 +37,20 @@ async function writeFileDeep(path: string, text: string): Promise<void> {
 
 /** Builds a session whose mock provider captures the assembled request messages,
  *  and whose skills come from the discovered skills threaded through CliOptions. */
-function capturingSession(captured: ProviderRequest[]): (options: CliOptions) => AgentSession {
-  return (options) => {
+function capturingSession(captured: ProviderRequest[]): (options: CliOptions) => Promise<Session> {
+  return async (options) => {
     const provider = createMockProvider([{ type: "done" }], {
       onRequest: (req) => {
         captured.push(req);
       },
     });
-    return createAgent({
-      model: { provider: "mock", model: "m" },
-      provider,
-      ...(options.discoveredSkills.length > 0 ? { skills: createSkillRegistry(options.discoveredSkills) } : {}),
-    }).createSession();
+    return (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider,
+        ...(options.discoveredSkills.length > 0 ? { skills: { add: options.discoveredSkills } } : {}),
+      })
+    ).session();
   };
 }
 
@@ -95,9 +97,9 @@ describe("cli discovery flags", () => {
 
     const code = await runCli(["--agents-config", configRoot, "-p", "Hi", "--provider", "mock"], {
       ...io,
-      createSession: (options) => {
+      createSession: async (options) => {
         seen.push(options);
-        return createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) }).createSession();
+        return (await createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) })).session();
       },
     });
 
@@ -135,9 +137,9 @@ describe("cli discovery flags", () => {
     const code = await runCli(["-p", "Hi", "--provider", "mock"], {
       ...io,
       workspaceRoot: root,
-      createSession: (options) => {
+      createSession: async (options) => {
         seen.push(options);
-        return createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) }).createSession();
+        return (await createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) })).session();
       },
     });
 
@@ -155,9 +157,9 @@ describe("cli discovery flags", () => {
     const code = await runCli(["--discover", "--no-discovery", "-p", "Hi", "--provider", "mock"], {
       ...io,
       workspaceRoot: root,
-      createSession: (options) => {
+      createSession: async (options) => {
         seen.push(options);
-        return createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) }).createSession();
+        return (await createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) })).session();
       },
     });
 
@@ -175,13 +177,15 @@ describe("cli discovery flags", () => {
     const code = await runCli(["--discover", "--discover-kinds", "skill", "-p", "Hi", "--provider", "mock"], {
       ...io,
       workspaceRoot: root,
-      createSession: (options) => {
+      createSession: async (options) => {
         seen.push(options);
-        return createAgent({
-          model: { provider: "mock", model: "m" },
-          provider: createMockProvider([{ type: "done" }]),
-          skills: createSkillRegistry(options.discoveredSkills),
-        }).createSession();
+        return (
+          await createAgent({
+            model: { provider: "mock", model: "m" },
+            provider: createMockProvider([{ type: "done" }]),
+            skills: { add: options.discoveredSkills },
+          })
+        ).session();
       },
     });
 

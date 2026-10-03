@@ -129,22 +129,23 @@ async function measureAgUiMapperSync() {
   });
   const events = [];
   for (let i = 0; i < MAPPER_EVENTS; i += 1) {
-    events.push({ type: "message_delta", sessionId: "s", runId: "r", content: { type: "text", text: `delta ${i}` } });
+    events.push({ type: "message.delta", sessionId: "s", runId: "r", content: { type: "text", text: `delta ${i}` } });
     events.push({
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s",
       runId: "r",
       call: { id: `t${i}`, name: "read", arguments: { path: `/x/${i}` } },
     });
     events.push({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: { toolCallId: `t${i}`, name: "read", value: i },
       metadata: { durationMs: 1, status: "finished" },
     });
     events.push({
-      type: "message_finished",
+      type: "message.completed",
       sessionId: "s",
       runId: "r",
       message: { id: `m${i}`, role: "assistant", content: [{ type: "text", text: `done ${i}` }] },

@@ -19,7 +19,7 @@ for (const spec of specs) {
   loaded.push(spec);
   if (spec === "@arnilo/prism") {
     assert.equal(mod.version, pkg.version, "public entry must expose the manifest version");
-    for (const name of ["createAgent", "AgentRunError", "resumeAgentRunStream", "createMemoryCheckpointStore"]) {
+    for (const name of ["createAgent", "AgentRunStateError", "resumeAgentRunStream", "createMemoryCheckpointStore"]) {
       assert.equal(typeof mod[name], "function", `public entry must export ${name}`);
     }
     assert.equal(typeof mod.AGENT_RUN_STATE_NAMESPACE, "string", "public entry must export AGENT_RUN_STATE_NAMESPACE");

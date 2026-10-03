@@ -1,4 +1,4 @@
-import { type AgentLoopOptions, type AgentLoopStrategy, HARD_RUN_LIMITS, type RunLimits, type TurnPolicyOptions } from "@arnilo/prism";
+import { HARD_RUN_LIMITS, type HookRegistrar, type LoopStrategy, type RunLimits, type TurnBeforePayload } from "@arnilo/prism";
 import { PrismCodeConfigError } from "./errors.js";
 
 // ---------------------------------------------------------------------------
@@ -19,7 +19,7 @@ export const PRISM_CODE_DEFAULT_LIMITS: RunLimits = Object.freeze({
   maxInputTokens: null,
   maxOutputTokens: null,
   maxTotalTokens: null,
-  maxStopContinuations: null,
+  maxContinuations: null,
   maxRequestBytes: HARD_RUN_LIMITS.maxRequestBytes,
   maxResponseBytes: HARD_RUN_LIMITS.maxResponseBytes,
 });
@@ -44,7 +44,7 @@ export interface PrismCodeLimitsConfig {
   readonly maxInputTokens?: number | null;
   readonly maxOutputTokens?: number | null;
   readonly maxTotalTokens?: number | null;
-  readonly maxStopContinuations?: number | null;
+  readonly maxContinuations?: number | null;
   readonly maxCost?: PrismCodeMaxCostConfig | number;
 }
 
@@ -57,7 +57,7 @@ export type PrismCodeLoopConfig =
       readonly continueOnOpenTodos?: boolean;
       readonly [key: string]: unknown;
     }
-  | AgentLoopStrategy;
+  | LoopStrategy;
 
 // ---------------------------------------------------------------------------
 // Validation Helpers & Known Keys
@@ -74,7 +74,7 @@ export const KNOWN_LIMITS_KEYS = new Set([
   "maxInputTokens",
   "maxOutputTokens",
   "maxTotalTokens",
-  "maxStopContinuations",
+  "maxContinuations",
   "maxCost",
 ]);
 
@@ -143,7 +143,7 @@ export function validatePrismCodeLimits(raw: unknown, source = "limits"): PrismC
       continue;
     }
 
-    if (key === "maxStopContinuations") {
+    if (key === "maxContinuations") {
       if (val !== null && (typeof val !== "number" || !Number.isSafeInteger(val) || val < 0)) {
         fail(`${source}.${key}`, "must be a non-negative integer or null");
       }
@@ -169,7 +169,7 @@ export function validatePrismCodeLoop(raw: unknown, source = "loop"): PrismCodeL
   }
   if (isRecord(raw)) {
     if (typeof (raw as Record<string, unknown>).run === "function") {
-      return raw as unknown as AgentLoopStrategy;
+      return raw as unknown as LoopStrategy;
     }
     rejectUnknown(raw, KNOWN_LOOP_KEYS, source);
     let strategy: string | undefined;
@@ -231,19 +231,15 @@ export function resolvePrismCodeLimits(configLimits?: PrismCodeLimitsConfig): Ru
   return result as RunLimits;
 }
 
-export function resolvePrismCodeLoop(loopConfig?: PrismCodeLoopConfig): AgentLoopStrategy | AgentLoopOptions | undefined {
-  if (!loopConfig) return undefined;
-  if (typeof loopConfig === "string") {
-    return { strategy: loopConfig as "single-shot" };
+/**
+ * Resolve the loop slot: a host-supplied `LoopStrategy` (an object with a `run` function) passes
+ * through; string/shape configs (including `toolConcurrency`) resolve to the kernel default.
+ */
+export function resolvePrismCodeLoop(loopConfig?: PrismCodeLoopConfig): LoopStrategy | undefined {
+  if (!loopConfig || typeof loopConfig !== "object" || typeof (loopConfig as { run?: unknown }).run !== "function") {
+    return undefined;
   }
-  if (typeof (loopConfig as Record<string, unknown>).run === "function") {
-    return loopConfig as AgentLoopStrategy;
-  }
-  const obj = loopConfig as { strategy?: string; toolConcurrency?: number };
-  return {
-    strategy: (obj.strategy as "single-shot") ?? "single-shot",
-    ...(obj.toolConcurrency !== undefined ? { toolConcurrency: obj.toolConcurrency } : {}),
-  };
+  return loopConfig as LoopStrategy;
 }
 
 /**
@@ -258,20 +254,20 @@ export function resolveContinueOnOpenTodos(loopConfig?: PrismCodeLoopConfig): bo
 }
 
 // ---------------------------------------------------------------------------
-// Clean Cost Turn Policy
+// Clean Cost Gate
 // ---------------------------------------------------------------------------
 
-export function createCostTurnPolicy(maxCost?: { amount: number; currency?: string } | number): TurnPolicyOptions | undefined {
-  if (maxCost === undefined || maxCost === null) return undefined;
-  const target =
-    typeof maxCost === "number" ? { amount: maxCost, currency: "USD" } : { amount: maxCost.amount, currency: maxCost.currency ?? "USD" };
-
-  return {
-    stop: (ctx) => {
-      if (ctx.usage?.cost !== undefined && ctx.usage.cost >= target.amount) {
-        return { action: "stop", reason: "max_cost" };
-      }
-      return { action: "continue" };
-    },
-  };
+/**
+ * Stop the run cleanly once provider-reported cost reaches `maxCost`, as a `turn.before` decide
+ * hook (roadmap §2.4). The run settles with `stopReason: "hook_stop"` and `stopDetail: "max_cost"`.
+ * Registering nothing when `maxCost` is unset keeps the bus free of a gate that can never fire.
+ */
+export function registerCostStop(hooks: HookRegistrar, maxCost?: { amount: number; currency?: string } | number): void {
+  if (maxCost === undefined || maxCost === null) return;
+  const amount = typeof maxCost === "number" ? maxCost : maxCost.amount;
+  hooks.on(
+    "turn.before",
+    (turn: TurnBeforePayload) => (turn.usage?.cost !== undefined && turn.usage.cost >= amount ? { stop: "max_cost" } : undefined),
+    { id: "max-cost" },
+  );
 }

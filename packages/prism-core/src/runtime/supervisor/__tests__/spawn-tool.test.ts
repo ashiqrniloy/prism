@@ -7,6 +7,7 @@ import {
   createMockProvider,
   createSecretRedactor,
   type JsonObject,
+  type LoopStrategy,
   providerDone,
   providerTextDelta,
   providerToolCall,
@@ -15,10 +16,29 @@ import {
 } from "@arnilo/prism";
 import { createCancelAgentTool, createSpawnAgentTool, createSupervisor, createWaitAgentTool } from "../index.js";
 
+/** Test loop with bounded tool concurrency (the kernel default loop is sequential). */
+function concurrentLoop(concurrency: number): LoopStrategy {
+  return {
+    name: `test-concurrent-${concurrency}`,
+    revision: "1",
+    async run(run) {
+      for (;;) {
+        const turn = await run.turn();
+        if (turn.stopped) return;
+        if (turn.toolCalls.length > 0) {
+          await run.executeTools(turn.toolCalls, { concurrency });
+          continue;
+        }
+        if (!(await run.end()).continue) return;
+      }
+    },
+  };
+}
+
 const ownership = { tenantId: "tenant", userId: "user" };
 const invocation = { sessionId: "parent-session", runId: "parent-run", toolCallId: "spawn-1" };
-const doneAgent = (text = "child", tokens = 2): Agent =>
-  createAgent({
+const doneAgent = async (text = "child", tokens = 2): Promise<Agent> =>
+  await createAgent({
     model: { provider: "mock", model: "test" },
     provider: createMockProvider([providerTextDelta(text), providerUsage({ totalTokens: tokens }), providerDone()]),
   });
@@ -34,9 +54,9 @@ describe("createSpawnAgentTool", () => {
       ownership,
       children: {
         research: {
-          createAgent: () => {
+          createAgent: async () => {
             created += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -51,7 +71,7 @@ describe("createSpawnAgentTool", () => {
     const supervisor = createSupervisor({
       ownership,
       redactor: createSecretRedactor(["canary"]),
-      children: { research: { createAgent: () => doneAgent("canary", 3) } },
+      children: { research: { createAgent: async () => await doneAgent("canary", 3) } },
     });
     const events = supervisor.subscribe()[Symbol.asyncIterator]();
     const result = await execute(createSpawnAgentTool({ supervisor }), { childId: "research", input: "canary" });
@@ -65,7 +85,7 @@ describe("createSpawnAgentTool", () => {
   });
 
   it("starts async children, waits for them, and cancels only local handles", async () => {
-    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent("async") } } });
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: async () => await doneAgent("async") } } });
     const spawn = createSpawnAgentTool({ supervisor });
     const wait = createWaitAgentTool({ supervisor });
     const launched = await execute(spawn, { childId: "research", input: "x", mode: "async" });
@@ -153,7 +173,7 @@ describe("createSpawnAgentTool", () => {
 
   it("advertises only host-controlled arguments and ignores injected ones", async () => {
     const tool = createSpawnAgentTool({
-      supervisor: createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } }),
+      supervisor: createSupervisor({ ownership, children: { research: { createAgent: async () => await doneAgent() } } }),
     });
     const schema = tool.parameters as { readonly additionalProperties?: boolean; readonly properties?: Readonly<Record<string, unknown>> };
     assert.equal(tool.exclusive, false);
@@ -186,9 +206,9 @@ describe("createSpawnAgentTool", () => {
       children: {
         research: {
           scopes: ["write"],
-          createAgent: () => {
+          createAgent: async () => {
             created += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -202,7 +222,7 @@ describe("createSpawnAgentTool", () => {
   it("returns hook denials as tool errors and releases the child slot", async () => {
     const supervisor = createSupervisor({
       ownership,
-      children: { research: { createAgent: () => doneAgent() } },
+      children: { research: { createAgent: async () => await doneAgent() } },
       hooks: { before: () => ({ allowed: false, reason: "review denied" }) },
     });
     const events = supervisor.subscribe()[Symbol.asyncIterator]();
@@ -219,9 +239,9 @@ describe("createSpawnAgentTool", () => {
       limits: { maxActiveChildren: 2 },
       children: {
         research: {
-          createAgent: () => {
+          createAgent: async () => {
             created += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -237,9 +257,9 @@ describe("createSpawnAgentTool", () => {
       },
     };
     let turn = 0;
-    const parent = createAgent({
+    const parent = await createAgent({
       model: { provider: "mock", model: "test" },
-      loop: { strategy: "single-shot", toolConcurrency: 3 },
+      slots: { loop: concurrentLoop(3) },
       provider: {
         id: "mock",
         async *generate() {
@@ -254,9 +274,9 @@ describe("createSpawnAgentTool", () => {
           yield providerDone();
         },
       },
-      tools: [spawn],
+      tools: { add: [spawn] },
     });
-    const result = await parent.createSession().run("spawn");
+    const result = await (await parent.session()).run("spawn");
     assert.equal(result.status, "succeeded");
     assert.equal(created, 2);
     assert.deepEqual(errors, ["Active child limit exceeded"]);
@@ -271,17 +291,17 @@ describe("createSpawnAgentTool", () => {
       limits: { maxActiveChildren: 1 },
       children: {
         research: {
-          createAgent: () => {
+          createAgent: async () => {
             created += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
     });
     let turn = 0;
-    const parent = createAgent({
+    const parent = await createAgent({
       model: { provider: "mock", model: "test" },
-      loop: { strategy: "single-shot", toolConcurrency: 3 },
+      slots: { loop: concurrentLoop(3) },
       provider: {
         id: "mock",
         async *generate() {
@@ -296,19 +316,21 @@ describe("createSpawnAgentTool", () => {
           yield providerDone();
         },
       },
-      tools: [
-        createSpawnAgentTool({ supervisor }),
-        {
-          name: "write",
-          exclusive: true,
-          execute: (_args, context) => {
-            writes += 1;
-            return { toolCallId: context.toolCallId, name: "write", content: [] };
+      tools: {
+        add: [
+          createSpawnAgentTool({ supervisor }),
+          {
+            name: "write",
+            exclusive: true,
+            execute: (_args, context) => {
+              writes += 1;
+              return { toolCallId: context.toolCallId, name: "write", content: [] };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const result = await parent.createSession().run("spawn");
+    const result = await (await parent.session()).run("spawn");
     assert.equal(result.status, "succeeded");
     assert.equal(created, 2);
     assert.equal(writes, 1);
@@ -324,13 +346,13 @@ describe("createSpawnAgentTool", () => {
         outer: {
           createAgent: async (context) => {
             await context.delegate({ childId: "inner", input: "x" });
-            return doneAgent();
+            return await doneAgent();
           },
         },
         inner: {
-          createAgent: () => {
+          createAgent: async () => {
             innerCreated += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -344,7 +366,7 @@ describe("createSpawnAgentTool", () => {
 
 describe("createSpawnAgentTool lifetime and report policy", () => {
   it("passes only the legacy request fields when the new options are omitted", async () => {
-    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } });
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: async () => await doneAgent() } } });
     const realDelegate = supervisor.delegate;
     let captured: Record<string, unknown> | undefined;
     (supervisor as unknown as { delegate: typeof realDelegate }).delegate = ((request: Parameters<typeof realDelegate>[0]) => {
@@ -357,7 +379,7 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
   });
 
   it("fails closed on malformed lifetime, report, milestone, and share args", async () => {
-    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } });
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: async () => await doneAgent() } } });
     const spawn = createSpawnAgentTool({ supervisor });
     assert.match((await execute(spawn, { childId: "research", input: "x", lifetime: "forever" })).error?.message ?? "", /lifetime/);
     assert.match((await execute(spawn, { childId: "research", input: "x", report: "all" })).error?.message ?? "", /report/);
@@ -372,7 +394,7 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
   it("starts session-lifetime spawns as async handles even when mode is sync", async () => {
     const supervisor = createSupervisor({
       ownership,
-      children: { research: { policy: { lifetime: "session" }, createAgent: () => doneAgent() } },
+      children: { research: { policy: { lifetime: "session" }, createAgent: async () => await doneAgent() } },
     });
     const result = await execute(createSpawnAgentTool({ supervisor }), { childId: "research", input: "x", lifetime: "session" });
     const handle = result.value as { readonly delegationId: string; readonly status: string };
@@ -383,7 +405,7 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
   });
 
   it("does not enable child-event passthrough the host did not opt into", async () => {
-    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: () => doneAgent() } } });
+    const supervisor = createSupervisor({ ownership, children: { research: { createAgent: async () => await doneAgent() } } });
     const events = supervisor.subscribe()[Symbol.asyncIterator]();
     const result = await execute(createSpawnAgentTool({ supervisor }), { childId: "research", input: "x", report: "stream" });
     assert.equal(result.error, undefined);
@@ -400,7 +422,7 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
   it("keeps tool-result value keys stable for a limit-failed child", async () => {
     // Plan 108 T5: the child result now carries `attribution`; none of it may leak into the
     // model-visible value projections, which stay explicit key lists.
-    const failing = (): Agent => {
+    const failing = async (): Promise<Agent> => {
       let generated = 0;
       const provider: AIProvider = {
         id: "mock",
@@ -409,15 +431,15 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
           yield providerToolCall({ type: "tool_call", id: `c${generated}`, name: "noop", arguments: {} });
         },
       };
-      return createAgent({
+      return await createAgent({
         model: { provider: "mock", model: "test" },
         provider,
-        tools: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }],
+        tools: { add: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }] },
       });
     };
     const supervisor = createSupervisor({
       ownership,
-      children: { research: { limits: { maxToolCalls: 1 }, createAgent: failing }, ok: { createAgent: () => doneAgent() } },
+      children: { research: { limits: { maxToolCalls: 1 }, createAgent: failing }, ok: { createAgent: async () => await doneAgent() } },
     });
     const spawn = createSpawnAgentTool({ supervisor });
     const wait = createWaitAgentTool({ supervisor });

@@ -188,6 +188,12 @@ function isArchivedDoc(relative: string): boolean {
   return relative.startsWith("_evidence/") || relative.startsWith("history/");
 }
 
+// docs/next/ holds staged 1.0 kernel pages: not indexed, not link-checked until the publish
+// phase promotes them into /docs (create-plan/references/prism-wiki.md).
+function isStagedDoc(relative: string): boolean {
+  return relative.startsWith("next/");
+}
+
 function freezeCorpus(): string {
   const roots = [
     "docs/migration.md",
@@ -265,7 +271,7 @@ describe("docs", () => {
     const files = [
       "README.md",
       "examples/README.md",
-      ...markdownFiles("docs").filter((f) => !f.startsWith("docs/history/")),
+      ...markdownFiles("docs").filter((f) => !f.startsWith("docs/history/") && !f.startsWith("docs/next/")),
       ...markdownFiles("packages"),
     ];
     for (const file of files) {
@@ -355,22 +361,31 @@ describe("docs", () => {
       // archived evidence (docs/_evidence/) and history (docs/history/) are
       // tarball-excluded / off hot-path and linked as one archive entry each
       // (plan 015 Task 2, plan 068 Task 2)
-      if (["index.md", "api-page-template.md"].includes(relative) || isArchivedDoc(relative)) continue;
+      if (["index.md", "api-page-template.md"].includes(relative) || isArchivedDoc(relative) || isStagedDoc(relative)) continue;
       const escaped = relative.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const links = index.match(new RegExp(`\\(${escaped}(?:#[^)]+)?\\)`, "g")) ?? [];
       assert.equal(links.length, 1, `${page} must have exactly one docs/index.md navigation link`);
     }
   });
 
+  it("docs_next_is_not_packed_and_not_indexed", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { files: string[] };
+    assert.ok(pkg.files.includes("!docs/next"), "package.json files must exclude docs/next");
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.equal(index.includes("next/hooks.md"), false, "docs/index.md must not link staged docs/next pages");
+  });
+
   it("archived history/ and _evidence/ prefixes skip one-link indexing", () => {
     assert.equal(isArchivedDoc("history/migration-0.0.md"), true);
     assert.equal(isArchivedDoc("_evidence/foo.md"), true);
     assert.equal(isArchivedDoc("rag.md"), false);
+    assert.equal(isStagedDoc("next/hooks.md"), true);
+    assert.equal(isStagedDoc("rag.md"), false);
   });
 
   // B5 (plan 028 Task 7): docs permission table must match the wire emitter
   // (permission-elicit.ts optionId/kind pairs), not decision.ts's internal
-  // RunDecision.outcome keys — no third naming may remain in the docs.
+  // Decision.outcome keys — no third naming may remain in the docs.
   it("permission outcome docs match the wire emitter (optionId → SDK kind)", () => {
     const emitter = readFileSync("packages/ag-ui/src/acp/agent/permission-elicit.ts", "utf8");
     const pairs = [...emitter.matchAll(/optionId: "([^"]+)"[^}]*?kind: "([^"]+)"/g)].map((m) => [m[1], m[2]] as const);
@@ -1702,7 +1717,6 @@ describe("docs", () => {
       "fanOutNode",
       "joinNode",
       "conditionalNode",
-      "ArtifactValidator",
       "../examples/crew-hierarchy.ts",
     ]) {
       assert.ok(page.includes(token), `docs/multi-agent-patterns.md missing "${token}"`);
@@ -2022,17 +2036,9 @@ describe("docs", () => {
     const rootExports = readFileSync("src/index.ts", "utf8");
     const documentedExports = [
       ["docs/configuration-and-manifests.md", "mergeConfigLayers"],
-      ["docs/configuration-and-manifests.md", "definePrismManifest"],
-      ["docs/configuration-and-manifests.md", "parsePrismManifest"],
       ["docs/resource-loading.md", "loadBinaryResource"],
       ["docs/resource-loading.md", "loadTextResource"],
       ["docs/resource-loading.md", "loadJsonResource"],
-      ["docs/resource-loading.md", "loadManifestResource"],
-      ["docs/contribution-registries.md", "createContributionRegistry"],
-      ["docs/contribution-registries.md", "createContributionRegistries"],
-      ["docs/extensions.md", "createExtensionKernel"],
-      ["docs/extensions.md", "createExtensionEventBus"],
-      ["docs/middleware-hooks.md", "createMiddlewareRegistry"],
       ["docs/tools.md", "createToolRegistry"],
       ["docs/tools.md", "filterTools"],
       ["docs/tools.md", "dispatchToolCall"],
@@ -2042,15 +2048,12 @@ describe("docs", () => {
       ["docs/input-and-prompt-assembly.md", "createDefaultInputBuilder"],
       ["docs/input-and-prompt-assembly.md", "assembleProviderInput"],
       ["docs/input-and-prompt-assembly.md", "renderPromptTemplate"],
-      ["docs/context-and-skills.md", "resolveContextProviders"],
       ["docs/context-and-skills.md", "createSkillRegistry"],
       ["docs/context-and-skills.md", "resolveActiveSkills"],
       ["docs/agent-session-runtime.md", "createAgent"],
-      ["docs/agent-session-runtime.md", "createAgentSession"],
       ["docs/session-stores.md", "createSessionEntry"],
       ["docs/session-stores.md", "createMemorySessionStore"],
       ["docs/session-stores.md", "rebuildSessionContext"],
-      ["docs/compaction-and-retry.md", "createDefaultCompactionStrategy"],
       ["docs/compaction-and-retry.md", "createDefaultRetryPolicy"],
     ] as const;
 
@@ -2076,16 +2079,9 @@ describe("docs", () => {
     const registries = readFileSync("docs/contribution-registries.md", "utf8");
     const extensions = readFileSync("docs/extensions.md", "utf8");
     const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
-    const middleware = readFileSync("docs/middleware-hooks.md", "utf8");
     const provider = readFileSync("docs/provider-layer.md", "utf8");
 
-    for (const exportName of [
-      "createDefaultCompactionStrategy",
-      "isCompactionEntryData",
-      "createDefaultRetryPolicy",
-      "isTransientErrorInfo",
-      "waitForRetry",
-    ]) {
+    for (const exportName of ["isCompactionEntryData", "createDefaultRetryPolicy", "isTransientErrorInfo", "waitForRetry"]) {
       assert.match(rootExports, new RegExp(`\\b${exportName}\\b`), `src/index.ts does not export ${exportName}`);
       assert.ok(compactionRetry.includes(exportName), `docs/compaction-and-retry.md does not document ${exportName}`);
     }
@@ -2098,7 +2094,6 @@ describe("docs", () => {
       "RunOptions.compaction",
       "AgentConfig.retry",
       "RunOptions.retry",
-      "RetryMiddlewarePayload",
       "provider request messages/content",
       "credential resolvers",
       "Raw session entries are never deleted",
@@ -2110,7 +2105,6 @@ describe("docs", () => {
     assert.ok(registries.includes("retryPolicies"));
     assert.ok(extensions.includes("registerRetryPolicy"));
     assert.ok(manifests.includes("retryPolicy"));
-    assert.ok(middleware.includes("invokes `retry`"));
     assert.ok(provider.includes("ErrorInfo.code"));
   });
 
@@ -2196,21 +2190,15 @@ describe("docs", () => {
       "providerSource",
       "createProviderResolver()",
       "createMiddlewareRegistry()",
-      "resolveContextProviders()",
       "createSkillRegistry()",
       "resolveActiveSkills()",
       "createDefaultInputBuilder()",
-      "createDefaultPromptBuilder()",
-      "resolveInstructionInjectors()",
-      "singleShotLoop",
-      "generateValidateReviseLoop()",
       "createDefaultCompactionStrategy()",
       "createDefaultRetryPolicy()",
       "SessionStore",
       "createMemorySessionStore()",
       "provider resolution happens once per run",
       "middleware runs only for documented hook call sites when a registry is supplied",
-      "Instruction injectors can add instructions and context blocks only",
       "They grant no tools, skills, permissions, validators, credentials, resource access, or provider options",
       "Customization cannot grant tools or permissions unless the host explicitly activates tools and permission policies",
       "Prism adds no hidden global middleware, background workers, watchers, package scans, provider calls, resource loads, tool execution, or credential resolution unless the host wires that operation",
@@ -2646,7 +2634,6 @@ describe("docs", () => {
       assert.ok(docs.includes(`\`${spec}\``), `docs/release-and-install.md missing export specifier ${spec}`);
     }
     assert.ok(docs.includes("createAgent({ model, provider })"), "release docs must use object-shaped createAgent config");
-    assert.ok(docs.includes("createAgentSession({ agent })"), "release docs must use object-shaped createAgentSession config");
     assert.ok(!docs.includes("createAgentSession(agent,"), "release docs still show obsolete positional createAgentSession API");
   });
 
@@ -2711,7 +2698,7 @@ describe("docs", () => {
       "prompt",
       "abort",
       "compact",
-      "cloneSession",
+      "forkSession",
       "No built-in app tools",
       "No full TUI",
     ]) {
@@ -2889,11 +2876,6 @@ describe("docs", () => {
         "@arnilo/prism/testing/tool-conformance",
         ["assertToolDispatchConforms", "assertToolBlocked", "unknown_tool", "permission_denied", "validation_failed"],
       ],
-      [
-        "docs/extension-conformance.md",
-        "@arnilo/prism/testing/extension-conformance",
-        ["assertExtensionConforms", "extension_error", "inert"],
-      ],
     ];
     const index = readFileSync("docs/index.md", "utf8");
     for (const [page, subpath, phrases] of pages) {
@@ -2943,37 +2925,13 @@ describe("docs", () => {
     }
   });
 
-  it("docs_middleware_hooks_match_runtime_supported_hooks", () => {
+  it("middleware_hooks_page_is_released_0_12_prose_only", () => {
+    // `docs/middleware-hooks.md` is released 0.12 documentation. The middleware registry left in
+    // plan 145 Task 5, so the page is kept verbatim and no longer pinned against the runtime.
     const rootExports = readFileSync("src/index.ts", "utf8");
-    const middlewareTs = readFileSync("src/middleware.ts", "utf8");
-    const docs = readFileSync("docs/middleware-hooks.md", "utf8");
-    const supported = [
-      "beforeProviderTurn",
-      "provider_request",
-      "input_assembly",
-      "prompt_build",
-      "context",
-      "tool_call",
-      "tool_result",
-      "retry",
-      "compaction_request",
-      "compaction",
-      "session_start",
-      "session_shutdown",
-    ];
-
-    assert.match(rootExports, /\bMiddlewareHookName\b/, "src/index.ts does not export MiddlewareHookName");
-    for (const hook of supported) {
-      assert.ok(middlewareTs.includes(`"${hook}"`), `src/middleware.ts missing hook ${hook}`);
-      assert.ok(docs.includes(hook), `docs/middleware-hooks.md missing hook ${hook}`);
-    }
-    assert.ok(!middlewareTs.includes('"provider_response"'), "src/middleware.ts still contains removed provider_response hook");
-    assert.ok(
-      docs.includes("There is no `provider_response` hook"),
-      "docs/middleware-hooks.md does not state provider_response is removed",
-    );
+    assert.doesNotMatch(rootExports, /\bMiddlewareHookName\b/, "the middleware registry must stay retired");
+    assert.doesNotMatch(rootExports, /\bcreateMiddlewareRegistry\b/, "the middleware registry must stay retired");
   });
-
   it("docs_manifest_kinds_include_current_provider_primitives", () => {
     const rootExports = readFileSync("src/index.ts", "utf8");
     const manifests = readFileSync("docs/configuration-and-manifests.md", "utf8");
@@ -3070,6 +3028,7 @@ describe("docs", () => {
       .join("\n");
     for (const phrase of [
       "tool_call_delta",
+      // These released pages still document the 0.12 event names.
       "turn_started",
       "turn_finished",
       "limits.maxToolRounds",
@@ -3083,7 +3042,7 @@ describe("docs", () => {
 
     const tests = [
       "src/__tests__/agents.test.ts",
-      "src/__tests__/agent-loops.test.ts",
+      "src/__tests__/loop-dispatch.test.ts",
       "src/__tests__/docs.test.ts",
       "packages/memory/src/compaction/llm/__tests__/strategy.test.ts",
       "packages/memory/src/compaction/observational-memory/__tests__/runtime.test.ts",
@@ -3093,7 +3052,6 @@ describe("docs", () => {
       .join("\n");
     for (const name of [
       "runtime_reconstructs_tool_call_delta_executes_persists_and_replays",
-      "emits turn events and pushes first input to history once",
       "provider_timeout_retry_knobs_are_deprecated_with_runtime_migration",
       "llm_compaction_strategy_maps_max_output_tokens_to_request_model",
       "runtime_rejects_legacy_store_option_and_wrong_append_owner",
@@ -3240,7 +3198,7 @@ describe("docs", () => {
     const builders = readFileSync("examples/custom-builders.ts", "utf8");
     const store = readFileSync("examples/custom-session-store.ts", "utf8");
     const tsc = readFileSync("examples/custom-tools-skills-context.ts", "utf8");
-    const ext = readFileSync("examples/extension-package.ts", "utf8");
+    const ext = readFileSync("examples/define-package.ts", "utf8");
 
     // README lists each new example.
     for (const file of [
@@ -3248,22 +3206,20 @@ describe("docs", () => {
       "custom-builders.ts",
       "custom-session-store.ts",
       "custom-tools-skills-context.ts",
-      "extension-package.ts",
+      "define-package.ts",
     ]) {
       assert.ok(readme.includes(file), `examples/README.md missing ${file}`);
     }
 
     // Minimal embed + event streaming via concurrent subscribe/run.
     assert.ok(minimal.includes("createAgent("), "minimal-host-app missing createAgent");
-    assert.ok(minimal.includes("createAgentSession("), "minimal-host-app missing createAgentSession");
+    assert.ok(minimal.includes("agent.session("), "minimal-host-app missing agent.session()");
     assert.ok(minimal.includes("Promise.all"), "minimal-host-app missing concurrent Promise.all drain+run");
     assert.ok(minimal.includes("session.subscribe()"), "minimal-host-app missing event streaming");
 
-    // Custom input + prompt builders.
-    assert.ok(builders.includes("inputBuilder:"), "custom-builders missing inputBuilder");
-    assert.ok(builders.includes("promptBuilder:"), "custom-builders missing promptBuilder");
-    assert.ok(builders.includes("InputBuilder"), "custom-builders missing InputBuilder type");
-    assert.ok(builders.includes("PromptBuilder"), "custom-builders missing PromptBuilder type");
+    // Host prompt composition + run.input rewrite, both on the hook bus.
+    assert.ok(builders.includes('"context.build"'), "custom-builders missing a context.build hook");
+    assert.ok(builders.includes('hooks.on("run.input"'), "custom-builders missing a run.input hook");
 
     // Custom session store seam.
     assert.ok(store.includes("SessionStore"), "custom-session-store missing SessionStore");
@@ -3274,15 +3230,11 @@ describe("docs", () => {
     // Custom tools + skills + context in one agent, with a tool-call loop.
     assert.ok(tsc.includes("createToolRegistry"), "custom-tools-skills-context missing createToolRegistry");
     assert.ok(tsc.includes("skills:"), "custom-tools-skills-context missing skills");
-    assert.ok(tsc.includes("context:"), "custom-tools-skills-context missing context");
+    assert.ok(tsc.includes("registerContextSources"), "custom-tools-skills-context missing registerContextSources");
     assert.ok(tsc.includes("providerToolCall"), "custom-tools-skills-context missing tool-call loop");
 
-    // Extension package registers tool + skill + context via the kernel.
-    assert.ok(ext.includes("createExtensionKernel"), "extension-package missing createExtensionKernel");
-    assert.ok(ext.includes("registerTool"), "extension-package missing registerTool");
-    assert.ok(ext.includes("registerSkill"), "extension-package missing registerSkill");
-    assert.ok(ext.includes("registerContextProvider"), "extension-package missing registerContextProvider");
-    assert.ok(ext.includes("kernel.registries.tools.list()"), "extension-package missing registry-driven agent build");
+    assert.ok(ext.includes("definePackage"), "define-package missing definePackage");
+    assert.ok(ext.includes("packages:"), "define-package missing a packages list");
 
     // No filesystem/shell/browser coding-tool usage in any new example.
     const combined = `${minimal}\n${builders}\n${store}\n${tsc}\n${ext}`;
@@ -3331,15 +3283,15 @@ describe("docs", () => {
     assert.ok(providerDoc.includes("examples/neuralwatt-agent-run.ts"), "NeuralWatt docs do not link the example");
     assert.ok(readme.includes("neuralwatt-agent-run.ts"), "examples/README.md does not list NeuralWatt agent example");
     for (const phrase of [
-      "createNeuralWattProviderPackage",
+      "neuralwattPackage",
       "neuralWattEventsWithTelemetry",
       "reasoning_effort",
       "thinking_token_budget",
       "enable_thinking",
       "preserve_thinking",
       "clear_thinking",
-      "tool_execution_started",
-      "tool_execution_finished",
+      "tool.started",
+      "tool.completed",
       "cached_tokens",
       "cacheReadTokens",
       "energyKwh",
@@ -3491,7 +3443,6 @@ describe("docs", () => {
         "examples/custom-builders.ts",
         "examples/custom-session-store.ts",
         "examples/custom-tools-skills-context.ts",
-        "examples/extension-package.ts",
         "examples/workflow-research-and-review.ts",
         "examples/workflow-parallel-research.ts",
         "examples/workflow-tool-approval.ts",
@@ -3503,6 +3454,11 @@ describe("docs", () => {
         "examples/workflow-distributed-coordinator.ts",
         "examples/ag-ui-a2ui.ts",
         "examples/durable-loops-and-approvals.ts",
+        "examples/custom-loop.ts",
+        "examples/define-package.ts",
+        "examples/session.ts",
+        "examples/approval.ts",
+        "examples/host-hooks.ts",
       ];
       const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
       for (const file of demos) {
@@ -3520,6 +3476,24 @@ describe("docs", () => {
             tools: ["mcp:slack:list_channels", "mcp:slack:get_channel", "mcp:slack:search_messages", "mcp:slack:post_message"],
           });
         }
+        if (file === "examples/approval.ts") {
+          const approval = JSON.parse(out) as {
+            inline: { status: string; executed: string[] };
+            suspended: { status: string; executedWhileSuspended: number };
+            resumed: { executed: string[]; events: string[] };
+          };
+          assert.equal(approval.inline.status, "completed");
+          assert.equal(approval.suspended.status, "suspended");
+          assert.equal(approval.suspended.executedWhileSuspended, 0);
+          assert.deepEqual(approval.resumed.executed, ["tmp/scratch.txt"]);
+          assert.equal(approval.resumed.events.at(-1), "run.completed");
+        }
+        if (file === "examples/host-hooks.ts") {
+          const hooks = JSON.parse(out) as { stopReason: string; executed: string[]; tools: string[] };
+          assert.equal(hooks.stopReason, "hook_stop");
+          assert.deepEqual(hooks.executed, ["read_file"], "the network call was denied");
+          assert.deepEqual(hooks.tools, ["fetch_url", "read_file"], "the disabled tool is gone");
+        }
         if (file === "examples/open-connector-sidecar.ts") {
           assert.deepEqual(JSON.parse(out), {
             tools: ["mcp:oc:search_actions", "mcp:oc:get_action_guide", "mcp:oc:execute_action"],
@@ -3531,6 +3505,21 @@ describe("docs", () => {
       }
     } finally {
       for (const file of emitted) rmSync(join(examplesDir, file), { force: true });
+    }
+  });
+
+  it("phase_3_examples_import_only_prism_and_testing", () => {
+    for (const file of ["examples/session.ts", "examples/approval.ts", "examples/host-hooks.ts"]) {
+      const source = readFileSync(file, "utf8");
+      const specifiers = [...source.matchAll(/^\s*(?:import|export)\b[^;]*?\bfrom\s+["']([^"']+)["']/gm)].map((match) => match[1]);
+      assert.ok(specifiers.length > 0, `${file} must import from the package`);
+      for (const specifier of specifiers) {
+        assert.ok(
+          specifier === "@arnilo/prism" || specifier === "@arnilo/prism/testing",
+          `${file} imports ${specifier}; Phase 3 examples use only @arnilo/prism and @arnilo/prism/testing`,
+        );
+      }
+      assert.ok(!/\bimport\(/.test(source), `${file} must not use a dynamic import`);
     }
   });
 
@@ -3663,8 +3652,6 @@ describe("docs", () => {
       "declarative `AgentDefinition.tools`",
       "PermissionPolicy",
       "Skills do not grant tool access",
-      "Per-turn tool narrowing",
-      "toolNarrowing",
       "allowHiddenToolCalls",
       "restrictive-only",
       "tool_narrowing_clamped",
@@ -3760,44 +3747,14 @@ describe("docs", () => {
     const page = readFileSync("docs/agent-loops.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
     const runtime = readFileSync("docs/agent-session-runtime.md", "utf8");
-    const contracts = readFileSync("docs/public-contracts.md", "utf8");
-    const barrel = readFileSync("src/index.ts", "utf8");
 
-    // required headings covered by the apiPages loop; assert key content here.
+    // Required headings covered by the apiPages loop; the released page still documents the
+    // 0.12 loop contract for hosts still on it. Pin rows tying the page to exports removed in
+    // 1.0 are dropped (plan 144 Task 4c).
     assert.ok(index.includes("agent-loops.md"), "docs/index.md does not link agent-loops.md");
     assert.ok(runtime.includes("agent-loops.md"), "docs/agent-session-runtime.md does not cross-reference agent-loops.md");
-    for (const name of ["singleShotLoop", "generateValidateReviseLoop", "resolveLoop"]) {
-      assert.ok(new RegExp(`\\b${name}\\b`).test(barrel), `src/index.ts does not export ${name}`);
-      assert.ok(page.includes(name), `docs/agent-loops.md missing ${name}`);
-    }
-    assert.ok(barrel.includes("isAgentLoopOptions"), "src/index.ts does not export isAgentLoopOptions");
-    for (const phrase of [
-      "AgentLoopStrategy",
-      "AgentLoopOptions",
-      "LoopContext",
-      "ProviderTurnResult",
-      "ArtifactValidation",
-      "ArtifactContext",
-      "ArtifactParser",
-      "ArtifactValidator",
-      "ArtifactRepairer",
-      "RunOptions.loop",
-      "AgentConfig.loop",
-      "generate-validate-revise",
-      "maxRevisions",
-      "never instantiates",
-    ]) {
+    for (const phrase of ["ProviderTurnResult", "ArtifactValidation", "never instantiates"]) {
       assert.ok(page.includes(phrase), `docs/agent-loops.md missing ${phrase}`);
-    }
-    for (const phrase of [
-      "AgentLoopStrategy",
-      "AgentLoopOptions",
-      "LoopContext",
-      "ProviderTurnResult",
-      "ArtifactValidation",
-      "ArtifactValidator",
-    ]) {
-      assert.ok(contracts.includes(phrase), `docs/public-contracts.md missing ${phrase}`);
     }
   });
 
@@ -3818,8 +3775,6 @@ describe("docs", () => {
       "redactAgentEvent",
       "recoverable",
       "budget exhausted",
-      "singleShotLoop",
-      "generateValidateReviseLoop",
     ]) {
       assert.ok(page.includes(phrase), `docs/agent-events.md missing ${phrase}`);
     }
@@ -3829,19 +3784,7 @@ describe("docs", () => {
   it("structured_output_docs_cover_parser_validator_repairer", () => {
     const page = readFileSync("docs/structured-output.md", "utf8");
     const index = readFileSync("docs/index.md", "utf8");
-    for (const phrase of [
-      "ArtifactParser",
-      "ArtifactValidator",
-      "ArtifactRepairer",
-      "ArtifactValidation",
-      "ArtifactContext",
-      "ArtifactParseResult",
-      "never instantiates",
-      "generate-validate-revise",
-      "maxRevisions",
-      "redactAgentEvent",
-      "createSecretRedactor",
-    ]) {
+    for (const phrase of ["ArtifactValidation", "never instantiates", "redactAgentEvent", "createSecretRedactor"]) {
       assert.ok(page.includes(phrase), `docs/structured-output.md missing ${phrase}`);
     }
     // ponytail: boundary guard — page states the host-domain-free lock (not absence of the
@@ -3855,23 +3798,10 @@ describe("docs", () => {
     // Phase 30 Task 9 enforcement: the docs page is present, linked from the index,
     // and carries the required prism-wiki API page headings (enforced by the apiPages
     // loop above — membership is the gate). This assertion pins index linkage + content.
+    // The page stays linked for 0.12 readers; its prose describes the retired injector contract
+    // and is deliberately no longer pinned (plan 145 Task 4 re-expressed it as `context.build`).
     const index = readFileSync("docs/index.md", "utf8");
-    const page = readFileSync("docs/instruction-injection.md", "utf8");
     assert.ok(index.includes("(instruction-injection.md)"), "docs/index.md does not link instruction-injection.md");
-    for (const phrase of [
-      "InstructionInjector",
-      "InstructionContribution",
-      "InstructionContext",
-      "registerInstructionInjector",
-      "resolveInstructionInjectors",
-      "first_turn",
-      "every_turn",
-      "on_input",
-      "AgentConfig.instructionInjectors",
-      "RunOptions.instructionInjectors",
-    ]) {
-      assert.ok(page.includes(phrase), `docs/instruction-injection.md missing ${phrase}`);
-    }
   });
 
   it("database_persistence_docs_cover_phase_34_schema_indexes_retention_migrations_and_nosql", () => {
@@ -4847,5 +4777,101 @@ describe("docs", () => {
     ]) {
       assert.ok(readFileSync(file, "utf8").includes(token), `${file} missing ACP pointer`);
     }
+  });
+
+  // plan 143 Phase 0: PRODUCT.md is the unshipped `@arnilo/prism` 1.0 target offer.
+  // Pin the banner, the heading order, the package/API phrases, and the principles so a
+  // later phase cannot quietly ship the target as current, and so no withdrawn
+  // 0.2.0-offer token creeps back in.
+  it("offer reset: PRODUCT.md", () => {
+    assert.ok(existsSync("PRODUCT.md"), "PRODUCT.md missing");
+    const offer = readFileSync("PRODUCT.md", "utf8");
+    const banner = offer.slice(0, offer.indexOf("\n## "));
+    for (const phrase of ["`@arnilo/prism` 1.0", "Nothing here is shipped yet", "(docs/index.md)", "(roadmap.md)"]) {
+      assert.ok(banner.includes(phrase), `PRODUCT.md banner missing ${phrase}`);
+    }
+    const headings = ["## What Prism is", "## How it works", "## Example", "## Writing a package", "## Native packages", "## Principles"];
+    const headingLines = [...offer.matchAll(/^## .+$/gm)].map((m) => m[0]);
+    let cursor = -1;
+    for (const heading of headings) {
+      const at = headingLines.indexOf(heading);
+      assert.ok(at > cursor, `PRODUCT.md missing heading ${heading}`);
+      cursor = at;
+    }
+    for (const phrase of [
+      "createAgent",
+      "definePackage",
+      "loadManifest",
+      ".prism/packages.json",
+      "prism add",
+      "agent.inspect()",
+      "host: { ui",
+      "The kernel knows no package names",
+      "Installed means active",
+      "Replacing the loop does not bypass the safety gates",
+      "Fail closed",
+      "Secrets stay at the edge",
+      "Packages are trusted code",
+    ]) {
+      assert.ok(offer.includes(phrase), `PRODUCT.md missing ${phrase}`);
+    }
+    assert.ok(!/Phase \d/.test(offer), "PRODUCT.md must not carry a Phase number");
+    assert.ok(!offer.includes("plans/"), "PRODUCT.md must not link plan files");
+    assert.ok(!offer.includes("sk-"), "PRODUCT.md must not contain a secret literal");
+    for (const token of ["@arnilo/prism-agent-sdk", "defineAgent", "tools.use", "local-operator", "agent.serve", "SDK 0.2.0"]) {
+      assert.ok(!offer.includes(token), `PRODUCT.md must not present withdrawn ${token}`);
+    }
+    for (const match of offer.matchAll(/bun add @arnilo\/\S+/g)) {
+      assert.equal(match[0], "bun add @arnilo/prism", `PRODUCT.md has an unexpected install line ${match[0]}`);
+    }
+    for (const match of offer.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const href = match[1]!.split("#")[0]!;
+      if (!href || /^(?:https?:|mailto:)/.test(href)) continue;
+      assert.ok(existsSync(normalize(join(dirname("PRODUCT.md"), href))), `PRODUCT.md has broken local link ${href}`);
+    }
+  });
+
+  it("offer reset: README pointer", () => {
+    const readme = readFileSync("README.md", "utf8");
+    for (const phrase of [
+      "(PRODUCT.md)",
+      "(roadmap.md)",
+      "not shipped",
+      "`@arnilo/prism` 1.0",
+      'from "@arnilo/prism"',
+      "Install the package that owns each capability",
+      "prism init",
+    ]) {
+      assert.ok(readme.includes(phrase), `README.md missing ${phrase}`);
+    }
+    for (const token of [
+      "SDK 0.2.0",
+      "definePackage",
+      "host.ui",
+      "prism add",
+      "agent.inspect()",
+      "agent.serve",
+      "local-operator",
+      "tools.use",
+      "agent.session()",
+    ]) {
+      assert.ok(!readme.includes(token), `README.md must not present unshipped ${token}`);
+    }
+    assert.ok(!/\bloadManifest\b/.test(readme), "README.md must not mention loadManifest");
+  });
+
+  it("offer reset: released pages stay released", () => {
+    for (const file of markdownFiles("docs").filter((f) => !/^docs\/(history|_evidence|next)\//.test(f))) {
+      const text = readFileSync(file, "utf8");
+      assert.ok(!/\bdefinePackage\b/.test(text), `${file} documents unshipped definePackage`);
+      assert.ok(!/\bloadManifest\b/.test(text), `${file} documents unshipped loadManifest`);
+    }
+    const agentSdkPage = readFileSync("docs/agent-sdk.md", "utf8");
+    for (const token of ["local-operator", "agent.serve", "tools.use"]) {
+      assert.ok(!agentSdkPage.includes(token), `docs/agent-sdk.md must not absorb unshipped ${token}`);
+    }
+    const index = readFileSync("docs/index.md", "utf8");
+    assert.ok(index.includes("every plane optional or replaceable"), "docs/index.md missing the released SDK summary");
+    assert.ok(!index.includes("PRODUCT.md"), "docs/index.md must not link the unshipped offer");
   });
 });

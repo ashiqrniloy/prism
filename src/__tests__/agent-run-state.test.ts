@@ -4,8 +4,8 @@ import { agentFingerprint, parseAgentRunState, type StoredAgentRunState, saveAge
 import {
   AGENT_RUN_STATE_SCHEMA_VERSION,
   AgentDecisionError,
-  AgentRunError,
   AgentRunStateError,
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -19,6 +19,7 @@ import {
   resumeAgentRun,
   resumeAgentRunStream,
   toolCallContent,
+  SubscriberOverflowError,
 } from "../index.js";
 
 describe("durable agent runs", () => {
@@ -26,10 +27,11 @@ describe("durable agent runs", () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "durable-demo",
       model: { provider: "mock", model: "demo" },
-      store,
+      slots: { store },
       provider: (() => {
         let turn = 0;
         return {
@@ -46,24 +48,26 @@ describe("durable agent runs", () => {
           },
         };
       })(),
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: () => {
-            calls += 1;
-            return { toolCallId: "call-1", name: "write", value: "done" };
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: () => {
+              calls += 1;
+              return { toolCallId: "call-1", name: "write", value: "done" };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const first = await agent.createSession({ id: "durable-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const first = await (await agent.session({ id: "durable-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
 
     assert.equal(first.status, "suspended");
     assert.equal(calls, 0);
-    assert.equal(first.interruption?.toolCallId, "call-1");
+    assert.equal(first.runState?.interruption?.toolCallId, "call-1");
 
     const result = await resumeAgentRun(
       agent,
@@ -75,7 +79,7 @@ describe("durable agent runs", () => {
       { checkpoints, definitionRevision: "1" },
     );
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.text, "finished");
     assert.equal(calls, 1);
     await assert.rejects(
@@ -95,15 +99,14 @@ describe("durable agent runs", () => {
 
   it("never retries an ambiguous dispatched tool", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "ambiguous-durable-demo",
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-3", "write", {}) }, providerDone()]),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-3", name: "write" }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-3", name: "write" }) }] },
     });
-    const suspended = await agent
-      .createSession()
-      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const suspended = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
     const loaded = await loadAgentRunState(checkpoints, { runId: suspended.runId });
     await checkpoints.saveCheckpoint({
       namespace: "prism.agent-run",
@@ -132,9 +135,10 @@ describe("durable agent runs", () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "stream-durable-demo",
-      store,
+      slots: { store },
       model: { provider: "mock", model: "demo" },
       provider: (() => {
         let turn = 0;
@@ -152,10 +156,10 @@ describe("durable agent runs", () => {
           },
         };
       })(),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-stream", name: "write", value: ++calls }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-stream", name: "write", value: ++calls }) }] },
     });
-    const suspended = await agent.createSession({ id: "stream-durable-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "stream-durable-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const events = [];
     for await (const event of resumeAgentRunStream(
@@ -170,16 +174,16 @@ describe("durable agent runs", () => {
       events.push(event);
 
     assert.equal(calls, 1);
-    assert.deepEqual(events.map((event) => event.type).slice(0, 2), ["agent_started", "agent_resumed"]);
+    assert.deepEqual(events.map((event) => event.type).slice(0, 2), ["decision.resolved", "run.started"]);
     assert.equal(
-      events.some((event) => event.type === "tool_execution_started"),
+      events.some((event) => event.type === "tool.started"),
       true,
     );
     assert.equal(
-      events.some((event) => event.type === "message_delta"),
+      events.some((event) => event.type === "message.delta"),
       true,
     );
-    assert.equal(events.at(-1)?.type, "agent_finished");
+    assert.equal(events.at(-1)?.type, "run.completed");
     assert.equal(
       events.every((event) => !("runId" in event) || event.runId === suspended.runId),
       true,
@@ -190,9 +194,10 @@ describe("durable agent runs", () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "sideways-demo",
-      store,
+      slots: { store },
       model: { provider: "mock", model: "demo" },
       provider: (() => {
         let turn = 0;
@@ -210,10 +215,10 @@ describe("durable agent runs", () => {
           },
         };
       })(),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-sideways", name: "write", value: ++calls }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-sideways", name: "write", value: ++calls }) }] },
     });
-    const suspended = await agent.createSession({ id: "sideways-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "sideways-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const ref = { runId: suspended.runId, sessionId: suspended.sessionId };
     const options = { checkpoints, definitionRevision: "1", maxQueuedEvents: 64, overflow: "close" as const };
@@ -243,15 +248,14 @@ describe("durable agent runs", () => {
   it("streams denial without provider or tool execution", async () => {
     const checkpoints = createMemoryCheckpointStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "stream-deny-demo",
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-deny", "write", {}) }, providerDone()]),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-deny", name: "write", value: ++calls }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-deny", name: "write", value: ++calls }) }] },
     });
-    const suspended = await agent
-      .createSession()
-      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const suspended = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
     const events = [];
     for await (const event of resumeAgentRunStream(
       agent,
@@ -267,7 +271,7 @@ describe("durable agent runs", () => {
     assert.equal(calls, 0);
     assert.deepEqual(
       events.map((event) => event.type),
-      ["agent_denied"],
+      ["decision.resolved"],
     );
   });
 
@@ -275,9 +279,10 @@ describe("durable agent runs", () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "stream-bounds-demo",
-      store,
+      slots: { store },
       model: { provider: "mock", model: "demo" },
       provider: (() => {
         let turn = 0;
@@ -296,11 +301,9 @@ describe("durable agent runs", () => {
           },
         };
       })(),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-bounds", name: "write", value: ++calls }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-bounds", name: "write", value: ++calls }) }] },
     });
-    const suspended = await agent
-      .createSession()
-      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const suspended = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
     const aborted = new AbortController();
     aborted.abort(new Error("disconnect"));
     const rejected = resumeAgentRunStream(
@@ -324,32 +327,38 @@ describe("durable agent runs", () => {
       },
       { checkpoints, definitionRevision: "1", maxQueuedEvents: 1, overflow: "close" },
     )[Symbol.asyncIterator]();
-    assert.equal((await stream.next()).value?.type, "event_subscriber_overflow");
-    assert.equal((await stream.next()).done, true);
+    // The default `close` policy fails the iterator loudly instead of synthesizing a marker event.
+    await assert.rejects(
+      () => stream.next(),
+      (error: unknown) => error instanceof SubscriberOverflowError,
+    );
     assert.equal(calls, 1);
   });
 
   it("redacts checkpointed pending tool arguments and denial never executes", async () => {
     const checkpoints = createMemoryCheckpointStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "redacted-durable-demo",
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-2", "write", { token: "secret" }) }, providerDone()]),
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: () => {
-            calls += 1;
-            return { toolCallId: "call-2", name: "write" };
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: () => {
+              calls += 1;
+              return { toolCallId: "call-2", name: "write" };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const result = await agent.createSession({ id: "redacted-session" }).run("secret", {
+    const result = await (await agent.session({ id: "redacted-session", create: true })).run("secret", {
       redactor: createSecretRedactor(["secret"]),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const loaded = await loadAgentRunState(checkpoints, { runId: result.runId });
     assert.equal(JSON.stringify(loaded.state).includes("secret"), false);
@@ -363,7 +372,8 @@ describe("durable agent runs", () => {
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(denied.status, "denied");
+    assert.equal(denied.status, "stopped");
+    assert.equal(denied.stopReason, "denied");
     assert.equal(calls, 0);
   });
 
@@ -410,98 +420,31 @@ describe("durable agent runs", () => {
     assert.throws(() => parseAgentRunState({ ...state, pad: "x".repeat(1100 * 1024) }), AgentRunStateError);
   });
 
-  it("treats resume as approval for input-stage interrupt guardrails", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    const agent = createAgent({
-      id: "interrupt-resume-demo",
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("approved output"), providerDone()]),
-      // Always interrupts: if resume did not count as approval, the resumed run would dead-end.
-      guardrails: {
-        input: [{ name: "approval", stage: "input", evaluate: () => ({ action: "interrupt" as const, reason: "needs approval" }) }],
-      },
-    });
-    const session = agent.createSession();
-    const suspended = await session.run("go", { runState: { checkpoints, definitionRevision: "1" } });
-    assert.equal(suspended.status, "suspended");
-    assert.equal(suspended.interruption?.kind, "input_guardrail");
-
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: suspended.runId, sessionId: suspended.sessionId },
-      { decision: "approve", expectedVersion: suspended.runState!.version! },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "succeeded");
-    assert.equal(resumed.text, "approved output");
-  });
-
-  it("still fails a resumed durable run when an input guardrail blocks", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    let evaluations = 0;
-    const agent = createAgent({
-      id: "interrupt-then-block-demo",
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("never reached"), providerDone()]),
-      guardrails: {
-        input: [
-          {
-            name: "flip",
-            stage: "input",
-            evaluate: () => {
-              evaluations += 1;
-              // First pass (fresh run): interrupt → suspend. Resume re-evaluation: block → fail.
-              return evaluations === 1 ? { action: "interrupt" as const } : { action: "block" as const, reason: "denied on re-check" };
-            },
-          },
-        ],
-      },
-    });
-    const session = agent.createSession();
-    const suspended = await session.run("go", { runState: { checkpoints, definitionRevision: "1" } });
-    assert.equal(suspended.status, "suspended");
-
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          { runId: suspended.runId, sessionId: suspended.sessionId },
-          { decision: "approve", expectedVersion: suspended.runState!.version! },
-          { checkpoints, definitionRevision: "1" },
-        ),
-      (error) => {
-        assert.ok(error instanceof AgentRunError);
-        assert.ok(error.cause instanceof GuardrailError);
-        return true;
-      },
-    );
-  });
-
-  it("fingerprint changes with instructions, system prompt, and skills", () => {
-    const base = () =>
-      createAgent({
+  it("fingerprint changes with instructions, system prompt, and skills", async () => {
+    const base = async () =>
+      await createAgent({
         id: "fp-demo",
         model: { provider: "mock", model: "demo" },
         instructions: "be terse",
-        skills: [{ name: "review", instructions: "review the code" }],
+        skills: { add: [{ name: "review", instructions: "review the code" }] },
       });
 
-    const stable = agentFingerprint(base(), "1");
-    assert.equal(agentFingerprint(base(), "1"), stable, "identical config must hash identically");
-    assert.notEqual(agentFingerprint(base(), "2"), stable, "revision bump must change the fingerprint");
+    const stable = agentFingerprint(await base(), "1");
+    assert.equal(agentFingerprint(await base(), "1"), stable, "identical config must hash identically");
+    assert.notEqual(agentFingerprint(await base(), "2"), stable, "revision bump must change the fingerprint");
 
     assert.notEqual(
-      agentFingerprint(createAgent({ id: "fp-demo", model: { provider: "mock", model: "demo" }, instructions: "be verbose" }), "1"),
+      agentFingerprint(await createAgent({ id: "fp-demo", model: { provider: "mock", model: "demo" }, instructions: "be verbose" }), "1"),
       stable,
       "instructions change must change the fingerprint",
     );
     assert.notEqual(
       agentFingerprint(
-        createAgent({
+        await createAgent({
           id: "fp-demo",
           model: { provider: "mock", model: "demo" },
           instructions: "be terse",
-          skills: [{ name: "review", instructions: "review the code harder" }],
+          skills: { add: [{ name: "review", instructions: "review the code harder" }] },
         }),
         "1",
       ),
@@ -510,11 +453,11 @@ describe("durable agent runs", () => {
     );
     assert.notEqual(
       agentFingerprint(
-        createAgent({
+        await createAgent({
           id: "fp-demo",
           model: { provider: "mock", model: "demo" },
           instructions: "be terse",
-          skills: [{ name: "review", instructions: "review the code" }],
+          skills: { add: [{ name: "review", instructions: "review the code" }] },
           systemPrompt: { id: "sp", text: "extra prompt layer" },
         }),
         "1",
@@ -524,7 +467,7 @@ describe("durable agent runs", () => {
     );
   });
 
-  it("sessionState (plan 015 Task 4): absent parses, round-trips, malformed fails closed", () => {
+  it("sessionState (plan 015 Task 4): absent parses, round-trips, malformed fails closed", async () => {
     const base = (): StoredAgentRunState => ({
       schemaVersion: AGENT_RUN_STATE_SCHEMA_VERSION,
       agentId: "session-state-demo",
@@ -550,15 +493,15 @@ describe("durable agent runs", () => {
       deadlineAt: new Date().toISOString(),
     });
     // 0.1.2-shaped checkpoints have no sessionState key and must keep parsing.
-    const legacy = parseAgentRunState(base());
+    const legacy = parseAgentRunState(await base());
     assert.equal(legacy.sessionState, undefined);
     // No-wall runs (0.5.4+): deadlineAt is optional; old snapshots with a deadline still parse.
-    const noWall = parseAgentRunState({ ...base(), deadlineAt: undefined });
+    const noWall = parseAgentRunState({ ...(await base()), deadlineAt: undefined });
     assert.equal(noWall.deadlineAt, undefined);
     // Round-trip with names.
-    const withNames = parseAgentRunState({ ...base(), sessionState: { loadedSkillNames: ["brief", "review"] } });
+    const withNames = parseAgentRunState({ ...(await base()), sessionState: { loadedSkillNames: ["brief", "review"] } });
     assert.deepEqual(withNames.sessionState?.loadedSkillNames, ["brief", "review"]);
-    assert.deepEqual(parseAgentRunState({ ...base(), sessionState: {} }).sessionState, {});
+    assert.deepEqual(parseAgentRunState({ ...(await base()), sessionState: {} }).sessionState, {});
     // Malformed blocks fail closed with AgentRunStateError.
     for (const bad of [
       { loadedSkillNames: "brief" },
@@ -568,7 +511,7 @@ describe("durable agent runs", () => {
       { loadedSkillNames: ["ok", undefined] },
       "brief",
     ]) {
-      assert.throws(() => parseAgentRunState({ ...base(), sessionState: bad as never }), AgentRunStateError);
+      await assert.rejects(async () => parseAgentRunState({ ...(await base()), sessionState: bad as never }), AgentRunStateError);
     }
   });
 

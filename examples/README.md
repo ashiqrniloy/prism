@@ -51,7 +51,7 @@ node examples/minimal-host-app.ts
 node examples/custom-builders.ts
 node examples/custom-session-store.ts
 node examples/custom-tools-skills-context.ts
-node examples/extension-package.ts
+node examples/define-package.ts
 node examples/evals.ts
 node examples/evaluation-gate.ts
 node examples/execution-timeline.ts
@@ -89,6 +89,11 @@ node examples/coding-tools-capability-gaps.ts
 node examples/phase9-coding-intelligence.ts
 node examples/agent-durable-approval.ts
 node examples/durable-loops-and-approvals.ts
+node examples/custom-loop.ts
+node examples/define-package.ts
+node examples/session.ts
+node examples/approval.ts
+node examples/host-hooks.ts
 node examples/durable-investigation.ts
 node examples/ag-ui-server.ts
 node examples/ag-ui-a2ui.ts
@@ -108,9 +113,9 @@ Each demo prints a single JSON line with its result.
 
 ## Files
 
-- `agent-sdk-coding.ts` — **demo**: `@arnilo/prism-agent-sdk` assembly with `codingPreset`, mock provider, and session execution.
+- `agent-sdk-coding.ts` — **demo**: the frozen `@arnilo/prism-agent-sdk` assembly with `codingPreset`, mock provider, and session execution. Kept as the reference for how Prism Code assembles until Phase 12; new hosts import `@arnilo/prism` only.
 - `prism-code-headless.ts` — **demo**: `@arnilo/prism-code` headless run with the mock provider, assembled tool inventory, and web mode.
-- `sdk-basics.ts` — createAgent / createAgentSession / mock provider.
+- `sdk-basics.ts` — createAgent / agent.session() / mock provider.
 - `secure-agent.ts` — opt-in fail-closed agent composition with validation, trust/permission, redaction, limits, ownership, and durable approval.
 - `enterprise-identity.ts` — **demo**: verified `AgentIdentity`, `narrowIdentity`, and propagation guards (network-free).
 - `enterprise-policy-audit.ts` — **demo**: `@arnilo/prism-core/governance/policy` evaluate → append → cursor export with fake identity.
@@ -129,7 +134,12 @@ Each demo prints a single JSON line with its result.
 - `docker-process-session.ts` — **demo**: long-running process management inside a Docker sandbox with durable recovery, attested reconnect, and fail-closed isolation.
 - `hosted-sandbox.ts` — **demo**: fake E2B client through `createE2BSandbox` / `connectE2BSandbox` (filesystem-only pause, no auto-resume; network-free).
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
+- `define-package.ts` — **demo**: two `definePackage` packages on one agent with no host wiring — a `tool.call` deny, an observer, a status note, a config schema with an `env:` secret ref, a per-session `when` tool, a command, `package_state` session state kept across a fork and a reopen, a tracked background task, then `agent.inspect()` (which shows the ref, never the value) and `dispose()` (network-free).
 - `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
+- `session.ts` — **demo** (Phase 3): `agent.session()`, a streamed run, the `RunResult` status and the messages it appended, then the same session reopened by id through the `store` slot and listed through `agent.sessions` (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
+- `approval.ts` — **demo** (Phase 3): a tool gated by a host `tool.call` hook returning `{ ask }`, resolved inline by a scripted `HostUi`, then with no UI: the run suspends (`status: "suspended"`, `pending`) and a new agent over the same store finishes it with `agent.session({ id })` and `session.resume(decisions)` (network-free).
+- `host-hooks.ts` — **demo** (Phase 3): host hooks as an inline package — a `tool.call` deny on `network` effects, a `turn.before` budget stop, a `disable` of one tool — and `agent.inspect().hooks` (network-free).
+- `custom-loop.ts` — **demo**: plan-then-act `LoopStrategy` through `slots.loop` with a host `tool.call` gate denying a `network` tool, the denial reaching the model as a tool result (network-free).
 - `durable-investigation.ts` — **demo**: `checkpointPolicy: "every-turn"` turn checkpoints, simulated worker death, and `decision: "continue"` crash recovery with no tool re-dispatch (network-free).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
 - `ag-ui-a2ui.ts` — opt-in A2UI painting middleware: tool-result `a2ui_operations` → `a2ui-surface` ACTIVITY_SNAPSHOT.
@@ -160,10 +170,10 @@ Each demo prints a single JSON line with its result.
 - `connected-slack-mcp.ts` — **demo**: network-free connected-app Slack MCP wrap with read/write effect classification and an exact allowlist.
 - `open-connector-sidecar.ts` — **demo**: network-free Open Connector sidecar admission — loopback `streamable-http` transport, exact `allowTools`, unclassified `execute_action`, and a denied `select` (recipe in [`open-connector-sidecar/`](open-connector-sidecar/README.md)).
 - `minimal-host-app.ts` — **demo**: canonical minimal host embed; stream events while a prompt runs via concurrent `Promise.all([drain, session.run])`.
-- `custom-builders.ts` — **demo**: replace the default InputBuilder and PromptBuilder to control input wrapping and final message ordering.
-- `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and pass it to `createAgentSession`; observe the entry kinds the runtime appends.
+- `custom-builders.ts` — **demo**: compose host context through a `context.build` hook and rewrite assembled input through a `run.input` hook.
+- `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and assign it as the `store` slot; observe the entry kinds the runtime appends.
 - `custom-tools-skills-context.ts` — **demo**: host-owned tool + skill + context provider in one agent, with a tool-call loop (no filesystem/shell/browser coding tools).
-- `extension-package.ts` — **demo**: bundle a tool, skill, and context provider into one `Extension`, load it through the kernel, and build an agent from the inert registries.
+- `define-package.ts` — **demo**: two packages on one agent. Listing a package is the wiring.
 - `provider-deepseek.ts` — **demo**: register DeepSeek via the extension kernel (fake key, no network).
 - `provider-xai.ts` — **demo**: register xAI Grok + api_key/oauth auth methods (fake key).
 - `provider-xai-oauth.ts` — **demo**: SuperGrok device-code login with mocked `fetch`.
@@ -180,15 +190,13 @@ Each demo prints a single JSON line with its result.
 - `attention-compiler.ts` — **demo**: opt-in attention compiler — an under-ratio assembly identical to a compiler-off one, then a stub plus the `attention_compiled` report once the request crosses the ratio (network-free).
 - `attention-budget-axes.ts` — **demo**: budget-capped long run — a 1M window under a 500k run input budget for 24 turns, where the window ratio is unreachable and the cumulative `run_input_ratio` axis opens the fold gate on spend (network-free).
 - `neuralwatt-agent-run.ts` — **demo**: NeuralWatt agent run with tools, reasoning controls, streamed usage cache tokens, and mocked energy/cost telemetry.
-- `tool-narrowing-planes.ts` — **demo**: plane-switched `toolNarrowing` (knowledge/metric/scenario/objects) on one continuing session; `metadata.tools` count + `idsHash` (network-free).
+- `tool-narrowing-planes.ts` — **demo**: plane-switched tool narrowing (knowledge/metric/scenario/objects) on one continuing session via a `context.build` handler plus a `tool.call` gate; `metadata.tools` count + `idsHash` (network-free).
 - `tools.ts` — host-owned tool registry: allow/deny filter + dispatch.
 - `context.ts` — ordered context-provider pipeline.
 - `skills.ts` — skill registry + progressive disclosure activation.
 - `skills-progressive-disclosure.ts` — **demo**: many-skill catalog under budget + `load_skill` body load (network-free).
 - `caveman-ponytail.ts` — **demo**: host-owned persona extensions built from a `SKILL.md` directory (`loadSkillDirectory`), progressive catalog, injector mode slices, session-entry mode persistence, `load_skill` (network-free).
-- `hooks-json.ts` — **demo**: Claude/Codex-shaped `hooks.json` compiled onto public seams — `SessionStart` context injection, `PreToolUse` `additionalContext`/deny (a `.env` write is blocked), hash-pinned trust, and the local `hooks-audit-command.mjs` fixture spawned with no shell (network-free).
-- `extensions.ts` — extension kernel + event bus.
-- `manifests.ts` — data-only Prism manifest: define + parse.
+- `hooks-json.ts` — **demo**: `@arnilo/prism-hooks-json` loads a Claude/Codex `hooks.json`. `SessionStart` is `session.opened`. `PreToolUse` denies a `.env` write. Commands are hash-pinned. The fixture spawns with no shell (network-free).
 - `config-settings.ts` — layered config merge + settings providers.
 - `system-prompts.ts` — layered system-prompt composition; disabling layers.
 - `system-project-prompts.ts` — **demo**: auto-load `AGENTS.md`/`SYSTEM.md` via
@@ -207,9 +215,6 @@ Each demo prints a single JSON line with its result.
 - `shared-work-scope.ts` — **demo**: one shared work scope across sessions — owner-branch grants, bound contributions from two sessions, the attached context provider + exact-id recall reading the merged per-branch ledger, a private child scope staying hidden, and revocation taking effect on the next read (network-free).
 - `memory-fabric.ts` — **demo**: typed notes (fact/procedure/working) over the existing stores, in-place folding + supersession, `attach(session)` gating the `memory.*` tools and the linker, and the `memory-fabric` context provider registered for `AgentDefinition.context` (network-free).
 - `scoped-memory.ts` — **demo**: `createScopedMemoryPolicy` scope guard, facts-block overflow, fake-provider review to candidates, recall floor/budget, promotion, GC approve, and git audit mirror (network-free).
-- `host-artifact-loop.ts` — **demo**: third-party host mixing first-party
-  and own providers/tools/skills, `AGENTS.md`/`SYSTEM.md` system prompts, and the
-  `generate-validate-revise` artifact loop with host-owned schema validation.
 - `external-app-db-backed.ts` — **demo**: end-to-end external app with a DB-backed
   adapter reference mock (`SessionStore` + `RunLedger` + `ProductionPersistenceStore`
   reads), `assertSessionStoreConforms(..., { exerciseReadBranchPath: true })`,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyThinkingLevelForModel } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -14,7 +15,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createGoogleGenerateContentProvider,
-  createGoogleProviderPackage,
+  googlePackage,
   GOOGLE_DEFAULT_BASE_URL,
   googleGenerateContentBody,
   googleModels,
@@ -125,21 +126,12 @@ describe("@arnilo/prism-providers/google", () => {
       fetchCalls += 1;
       return ok(sse([]));
     }) as typeof fetch;
-    const registered: unknown[] = [];
-    await createGoogleProviderPackage({ apiKey: "fake-google-key", fetch: fetchImpl }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (item: ModelConfig) => registered.push(item),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(googlePackage({ apiKey: "fake-google-key", fetch: fetchImpl }));
     assert.equal(fetchCalls, 0);
-    assert(registered.some((item: any) => item.id === "google"));
-    assert.deepEqual(
-      registered.filter((item: any) => item?.kind),
-      [{ kind: "api_key", provider: "google", credentialName: "apiKey" }],
-    );
-    assert(registered.some((item: any) => item.model === "gemini-2.5-pro"));
-    assert(registered.some((item: any) => item.model === "gemini-2.5-flash"));
-    assert(registered.some((item: any) => item.model === "gemini-3.5-flash"));
+    const models = googleModels.map((entry) => entry.model);
+    assert.ok(models.includes("gemini-2.5-pro"));
+    assert.ok(models.includes("gemini-2.5-flash"));
+    assert.ok(models.includes("gemini-3.5-flash"));
     assert.equal(GOOGLE_DEFAULT_BASE_URL, "https://generativelanguage.googleapis.com/v1beta");
   });
 

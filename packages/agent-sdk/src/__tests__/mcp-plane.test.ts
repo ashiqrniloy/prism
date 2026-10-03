@@ -211,9 +211,9 @@ describe("mcp plane", () => {
       },
     });
 
-    const registry = app.agent.config.tools as ToolRegistry;
+    const toolList = app.agent.config.tools?.add ?? [];
     assert.deepStrictEqual(
-      registry.list().map((tool) => tool.name),
+      toolList.map((tool) => tool.name),
       ["first_tool"],
     );
 
@@ -225,7 +225,7 @@ describe("mcp plane", () => {
     );
     assert.deepStrictEqual(app.mcp.getServerTools("missing"), []);
     assert.deepStrictEqual(
-      registry.list().map((tool) => tool.name),
+      toolList.map((tool) => tool.name),
       ["second_tool"],
     );
     assert.strictEqual(closes, 1);
@@ -249,19 +249,19 @@ describe("mcp plane", () => {
       },
     });
 
-    const registry = app.agent.config.tools as ToolRegistry;
+    const toolList = app.agent.config.tools?.add ?? [];
     assert.deepStrictEqual(
       app.mcp.status.map((status) => status.state),
       ["failed"],
     );
-    assert.strictEqual(registry.list().length, 0);
+    assert.strictEqual(toolList.length, 0);
     assert.deepStrictEqual(app.connectedMcpServerIds, []);
 
     healthy = true;
     const status = await app.mcp.reconnect("remote");
     assert.equal(status.state, "connected");
     assert.deepStrictEqual(
-      registry.list().map((tool) => tool.name),
+      toolList.map((tool) => tool.name),
       ["remote_tool"],
     );
 

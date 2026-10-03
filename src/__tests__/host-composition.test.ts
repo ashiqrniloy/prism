@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { AgentIdentity } from "../identity.js";
 import {
+  askEveryTool,
   assertHostCompositionReadiness,
   createAgent,
   createMemoryCheckpointStore,
   createMockProvider,
   createSecretRedactor,
   createSecureAgent,
-  createStaticPermissionPolicy,
   createStaticTrustPolicy,
   HostCompositionError,
   type HostCompositionOptions,
@@ -22,14 +22,13 @@ const mockValidator: ToolArgumentValidator = {
   validate: () => ({ ok: true }),
 };
 
-function validPersonalAgent(options: { redactorCanary?: string } = {}) {
+async function validPersonalAgent(options: { redactorCanary?: string } = {}) {
   const redactor = createSecretRedactor(options.redactorCanary ? [options.redactorCanary] : ["test-secret"]);
-  return createSecureAgent({
+  return await createSecureAgent({
     id: "personal-agent",
     definitionRevision: "1",
     ownership: { userId: "alice" },
     redactor,
-    permission: createStaticPermissionPolicy(true),
     trust: createStaticTrustPolicy(true),
     toolArgumentValidator: mockValidator,
     limits: { maxToolRounds: 5 },
@@ -47,7 +46,7 @@ function validPersonalAgent(options: { redactorCanary?: string } = {}) {
   });
 }
 
-function validBusinessAgent(options: { tenantId?: string; redactorCanary?: string } = {}) {
+async function validBusinessAgent(options: { tenantId?: string; redactorCanary?: string } = {}) {
   const tenantId = options.tenantId ?? "tenant-acme";
   const redactor = createSecretRedactor(options.redactorCanary ? [options.redactorCanary] : ["corp-secret"]);
   const identity: AgentIdentity = {
@@ -59,13 +58,12 @@ function validBusinessAgent(options: { tenantId?: string; redactorCanary?: strin
     issuedAt: "2026-09-01T00:00:00.000Z",
   };
 
-  return createSecureAgent({
+  return await createSecureAgent({
     id: "business-worker",
     definitionRevision: "1",
     ownership: { tenantId, userId: "worker-1" },
     identity,
     redactor,
-    permission: createStaticPermissionPolicy(true),
     trust: createStaticTrustPolicy(true),
     toolArgumentValidator: mockValidator,
     limits: { maxToolRounds: 5 },
@@ -84,8 +82,8 @@ function validBusinessAgent(options: { tenantId?: string; redactorCanary?: strin
 }
 
 describe("host composition inspection and readiness (plan 073 Task 5)", () => {
-  it("inspects personal composition and reports effective tools, ownership, and non-durable memory store", () => {
-    const agent = validPersonalAgent();
+  it("inspects personal composition and reports effective tools, ownership, and non-durable memory store", async () => {
+    const agent = await validPersonalAgent();
     const report = inspectHostComposition({
       profile: "personal",
       agent,
@@ -110,8 +108,8 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     assert.deepEqual(report.readiness.errors, []);
   });
 
-  it("inspects business composition and validates durable storage, tenant ownership, and verified identity", () => {
-    const agent = validBusinessAgent({ tenantId: "tenant-globex" });
+  it("inspects business composition and validates durable storage, tenant ownership, and verified identity", async () => {
+    const agent = await validBusinessAgent({ tenantId: "tenant-globex" });
     const durableStore = { kind: "postgres", durable: true };
 
     const report = inspectHostComposition({
@@ -133,7 +131,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     assert.deepEqual(report.readiness.errors, []);
   });
 
-  it("reports connected-app identifiers without transport configuration", () => {
+  it("reports connected-app identifiers without transport configuration", async () => {
     const token = "HOST_ONLY_CONNECTED_APP_TOKEN";
     const connectedApps = {
       appIds: ["slack"],
@@ -143,7 +141,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     } satisfies NonNullable<HostCompositionOptions["connectedApps"]>;
     const report = inspectHostComposition({
       profile: "personal",
-      agent: validPersonalAgent(),
+      agent: await validPersonalAgent(),
       store: createMemoryCheckpointStore(),
       connectedApps,
     });
@@ -152,7 +150,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     assert.equal(JSON.stringify(report).includes(token), false);
   });
 
-  it("requires verified identity for business connected apps", () => {
+  it("requires verified identity for business connected apps", async () => {
     const identities: readonly (AgentIdentity | undefined)[] = [
       undefined,
       {
@@ -168,13 +166,13 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     for (const identity of identities) {
       const options = {
         profile: "business" as const,
-        agent: createAgent({
+        agent: await createAgent({
           model: { provider: "mock", model: "m" },
           provider: createMockProvider([providerDone()]),
           redactor: createSecretRedactor([]),
           ownership: { tenantId: "tenant-acme", userId: "worker-1" },
           ...(identity === undefined ? {} : { identity }),
-          permission: createStaticPermissionPolicy(true),
+          hooks: askEveryTool(),
           trust: createStaticTrustPolicy(true),
           validator: () => undefined,
         }),
@@ -205,12 +203,12 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("wrong owner: personal composition rejects missing userId", () => {
-    assert.throws(
-      () => {
+  it("wrong owner: personal composition rejects missing userId", async () => {
+    await assert.rejects(
+      async () => {
         assertHostCompositionReadiness({
           profile: "personal",
-          agent: createAgent({
+          agent: await createAgent({
             model: { provider: "mock", model: "m" },
             provider: createMockProvider([providerDone()]),
             redactor: createSecretRedactor([]),
@@ -222,12 +220,12 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("wrong owner: business composition rejects missing tenantId", () => {
-    assert.throws(
-      () => {
+  it("wrong owner: business composition rejects missing tenantId", async () => {
+    await assert.rejects(
+      async () => {
         assertHostCompositionReadiness({
           profile: "business",
-          agent: createAgent({
+          agent: await createAgent({
             model: { provider: "mock", model: "m" },
             provider: createMockProvider([providerDone()]),
             redactor: createSecretRedactor([]),
@@ -240,21 +238,14 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("wrong owner: business composition rejects identity mismatch with tenant ownership", () => {
+  it("wrong owner: business composition rejects identity mismatch with tenant ownership", async () => {
     const redactor = createSecretRedactor([]);
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "m" },
       provider: createMockProvider([providerDone()]),
       redactor,
       ownership: { tenantId: "tenant-A" },
-      identity: {
-        tenantId: "tenant-B-DIFFERENT",
-        principal: { kind: "service", id: "svc-1" },
-        scopes: ["run"],
-        verified: true,
-        issuedAt: "2026-09-01T00:00:00.000Z",
-      },
-      permission: createStaticPermissionPolicy(true),
+      hooks: askEveryTool(),
       trust: createStaticTrustPolicy(true),
       validator: () => undefined,
     });
@@ -264,6 +255,13 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
         assertHostCompositionReadiness({
           profile: "business",
           agent,
+          identity: {
+            tenantId: "tenant-B-DIFFERENT",
+            principal: { kind: "service", id: "svc-1" },
+            scopes: ["run"],
+            verified: true,
+            issuedAt: "2026-09-01T00:00:00.000Z",
+          },
           store: { kind: "postgres", durable: true },
         });
       },
@@ -271,8 +269,8 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("memory-only business store: business composition rejects in-memory store", () => {
-    const agent = validBusinessAgent();
+  it("memory-only business store: business composition rejects in-memory store", async () => {
+    const agent = await validBusinessAgent();
     assert.throws(
       () => {
         assertHostCompositionReadiness({
@@ -285,8 +283,8 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("missing redactor rejects readiness", () => {
-    const agent = createAgent({
+  it("missing redactor rejects readiness", async () => {
+    const agent = await createAgent({
       model: { provider: "mock", model: "m" },
       provider: createMockProvider([providerDone()]),
       ownership: { userId: "alice" },
@@ -320,8 +318,8 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("mixed sandbox workspace rejects readiness", () => {
-    const agent = validPersonalAgent();
+  it("mixed sandbox workspace rejects readiness", async () => {
+    const agent = await validPersonalAgent();
     assert.throws(
       () => {
         assertHostCompositionReadiness({
@@ -335,8 +333,8 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("unsupported governance rejects readiness", () => {
-    const agent = validBusinessAgent();
+  it("unsupported governance rejects readiness", async () => {
+    const agent = await validBusinessAgent();
     assert.throws(
       () => {
         assertHostCompositionReadiness({
@@ -350,7 +348,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     );
   });
 
-  it("inspect performs zero network calls", () => {
+  it("inspect performs zero network calls", async () => {
     // Verify inspection runs synchronously without touching global fetch or network
     const g = globalThis as Record<string, unknown>;
     const originalFetch = g.fetch;
@@ -361,7 +359,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     };
 
     try {
-      const agent = validPersonalAgent();
+      const agent = await validPersonalAgent();
       const report = inspectHostComposition({
         profile: "personal",
         agent,
@@ -377,9 +375,9 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     }
   });
 
-  it("secret canaries are absent from inspection output", () => {
+  it("secret canaries are absent from inspection output", async () => {
     const canary = "SECRET_CANARY_VALUE_XYZ_98765";
-    const agent = validPersonalAgent({ redactorCanary: canary });
+    const agent = await validPersonalAgent({ redactorCanary: canary });
 
     const report = inspectHostComposition({
       profile: "personal",

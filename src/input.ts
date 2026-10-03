@@ -1,4 +1,5 @@
 import { type AttentionFoldLedger, type AttentionStickyFrontier, compileAttention, createAttentionCompiler } from "./attention-compiler.js";
+import { deferSkillCatalog } from "./skills-catalog.js";
 import { assertMessagesSupportModelCapabilities } from "./content.js";
 import { applyContextBudget, CONTEXT_BUDGET_REPORT_METADATA_KEY, type ContextBudget, type ContextBudgetReport } from "./context-budget.js";
 import type {
@@ -7,18 +8,12 @@ import type {
   AttentionReport,
   ContentBlock,
   ContextBlock,
-  ContextProvider,
-  ContextResolutionContext,
   InputAssemblyLayout,
   InputBuildContext,
-  InputBuilder,
-  InstructionInjector,
   JsonObject,
   JsonValue,
   Message,
   ModelConfig,
-  PromptBuilder,
-  PromptBuildRequest,
   ProviderRequest,
   ProviderRequestOptions,
   ResourceLoader,
@@ -26,11 +21,8 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "./contracts.js";
-import { runInstructionInjectors } from "./instruction-injection.js";
-import type { MiddlewareRegistry } from "./middleware.js";
 import { applyDefaultProviderRequestOptions } from "./provider-request-policy.js";
 import type { SecretRedactor } from "./redaction.js";
-import { redactMessage } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
 import {
   capSkillCatalog,
@@ -40,7 +32,6 @@ import {
   type LoadedSkillSet,
   type SkillsDisclosure,
 } from "./skill-disclosure.js";
-import { composeSystemPrompt } from "./system-prompts.js";
 import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
 import { selectDisclosedTools, type ToolsDisclosure, type ToolsSearchOptions } from "./tool-search.js";
 
@@ -78,26 +69,12 @@ export interface DefaultInputBuildContext extends InputBuildContext {
   readonly resourceUris?: readonly string[];
   readonly resourceLoader?: ResourceLoader;
   readonly toolResults?: readonly ToolResult[];
-  readonly middleware?: MiddlewareRegistry;
-  // ponytail: exposed so a custom InputBuilder can opt to run injectors (runInstructionInjectors).
-  readonly instructionInjectors?: readonly InstructionInjector[];
   readonly turn?: number;
 }
 
-export interface DefaultInputBuilder extends InputBuilder {
+export interface DefaultInputBuilder {
+  readonly name: string;
   build(input: AgentInput, context?: DefaultInputBuildContext): Promise<readonly Message[]>;
-}
-
-export interface ResolveContextOptions extends Omit<ContextResolutionContext, "messages"> {
-  readonly messages: readonly Message[];
-  readonly providers?: readonly ContextProvider[];
-  readonly middleware?: MiddlewareRegistry;
-  // ponytail: injector-produced blocks appended after provider blocks, before middleware.
-  readonly injectedBlocks?: readonly ContextBlock[];
-}
-
-export interface DefaultPromptBuilder extends PromptBuilder {
-  build(request: PromptBuildRequest): Promise<readonly Message[]>;
 }
 
 export interface PromptTemplateOptions {
@@ -108,12 +85,11 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   readonly model: ModelConfig;
   readonly redactor?: SecretRedactor;
   readonly input: AgentInput;
-  readonly inputBuilder?: InputBuilder;
-  readonly contextProviders?: readonly ContextProvider[];
-  readonly promptBuilder?: PromptBuilder;
   readonly skills?: readonly Skill[];
   readonly skillsDisclosure?: SkillsDisclosure;
   readonly loadedSkills?: LoadedSkillSet;
+  /** @internal Session runs render the catalog through `kernel:context.build`. */
+  readonly deferSkillsCatalog?: boolean;
   /** Run-owned append-only segments. Omit outside a session to retain existing assembly exactly. */
   readonly tailSegments?: Map<string, Message>;
   readonly tools?: readonly ToolDefinition[];
@@ -138,7 +114,7 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   /** Per-session folded bodies; omit to re-summarize every folded row on every turn. */
   readonly attentionFold?: AttentionFoldLedger;
   /** Called once per *mutated* turn with the report, so a host can emit telemetry: under-ratio
-   *  turns never call it, and it runs before `input_assembly` middleware. */
+   *  turns never call it, and it runs before the `context.build` hook. */
   readonly onAttentionReport?: (report: AttentionReport) => void;
   /** Run input tokens already charged this run; feeds the `run_input_ratio` axis projection
    *  (default 0). The run budget itself rides the resolved `AttentionCompiler` handle. */
@@ -150,41 +126,28 @@ export function createDefaultInputBuilder(): DefaultInputBuilder {
     name: "default-input",
     async build(input, context = {}) {
       const groups = await buildDefaultInputMessageGroups(input, context);
-      // `input_assembly` middleware is applied by assembleProviderInput after build(),
-      // never here: builders must not be a security seam.
+      // The default builder is not a security seam: `assembleProviderInput` owns what
+      // happens after it returns, so a host cannot slip unassembled messages past it.
       return flattenInputGroups(groups, context.inputLayout ?? "cache_aware");
     },
   };
 }
 
-export async function resolveContextProviders(options: ResolveContextOptions): Promise<readonly ContextBlock[]> {
-  const blocks: ContextBlock[] = [];
-  for (const provider of options.providers ?? []) {
-    throwIfAborted(options.signal);
-    blocks.push(
-      ...(await provider.resolve({
-        sessionId: options.sessionId,
-        runId: options.runId,
-        messages: options.messages,
-        metadata: options.metadata,
-        signal: options.signal,
-      })),
-    );
-  }
-  // ponytail: injector blocks after host+skill provider blocks (split by origin if per-block ordering matters).
-  if (options.injectedBlocks) blocks.push(...options.injectedBlocks);
-  return options.middleware ? options.middleware.run("context", blocks) : blocks;
-}
-
-export function createDefaultPromptBuilder(): DefaultPromptBuilder {
-  return {
-    name: "default-prompt",
-    async build(request) {
-      // Tool-capable models receive schemas via request.tools; the text list only serves
-      // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
-      const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
-      const context = contextMessages(request.context);
-      const skills = buildSkillMessages(
+/**
+ * The kernel's own `context.build`-point contribution (roadmap §2.4 "Replaces: skills catalog"):
+ * skills, tool declarations, and context blocks are folded into the provider view here, once per
+ * turn, ahead of the dynamic transcript. Module-private since `PromptBuilder` is retired (plan 145
+ * Task 4) — a host that wants a different composition registers a `context.build` handler, which
+ * runs after this and so composes on top of it rather than replacing the skills catalog.
+ */
+function buildProviderMessages(request: PromptComposition): readonly Message[] {
+  // Tool-capable models receive schemas via request.tools; the text list only serves
+  // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
+  const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
+  const context = contextMessages(request.context);
+  const skills = request.deferSkillsCatalog
+    ? []
+    : buildSkillMessages(
         request.skills,
         request.tailSkillBodies
           ? {
@@ -197,19 +160,31 @@ export function createDefaultPromptBuilder(): DefaultPromptBuilder {
               demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
             },
       );
-      const declarations = toolMessages(tools);
-      if ((request.inputLayout ?? "cache_aware") === "legacy") {
-        return [...context, ...skills, ...declarations, ...request.messages];
-      }
+  const declarations = toolMessages(tools);
+  if ((request.inputLayout ?? "cache_aware") === "legacy") {
+    return [...context, ...skills, ...declarations, ...request.messages];
+  }
 
-      // Default input assembly keeps stable instruction messages at the front. Keep that
-      // boundary ahead of dynamic context/skills; legacy retains the old whole-prompt order.
-      const firstNonSystem = request.messages.findIndex((message) => message.role !== "system");
-      const stable = firstNonSystem < 0 ? request.messages : request.messages.slice(0, firstNonSystem);
-      const dynamic = firstNonSystem < 0 ? [] : request.messages.slice(firstNonSystem);
-      return [...stable, ...context, ...skills, ...declarations, ...dynamic];
-    },
-  };
+  // Default input assembly keeps stable instruction messages at the front. Keep that
+  // boundary ahead of dynamic context/skills; legacy retains the old whole-prompt order.
+  const firstNonSystem = request.messages.findIndex((message) => message.role !== "system");
+  const stable = firstNonSystem < 0 ? request.messages : request.messages.slice(0, firstNonSystem);
+  const dynamic = firstNonSystem < 0 ? [] : request.messages.slice(firstNonSystem);
+  return [...stable, ...context, ...skills, ...declarations, ...dynamic];
+}
+
+interface PromptComposition {
+  readonly deferSkillsCatalog?: boolean;
+  readonly messages: readonly Message[];
+  readonly inputLayout?: InputAssemblyLayout;
+  readonly context?: readonly ContextBlock[];
+  readonly skills?: readonly Skill[];
+  readonly skillsDisclosure?: SkillsDisclosure;
+  readonly loadedSkills?: LoadedSkillSet;
+  readonly tailSkillBodies?: boolean;
+  readonly demotedSkillBodies?: readonly string[];
+  readonly tools?: readonly ToolDefinition[];
+  readonly model?: ModelConfig;
 }
 
 export function renderPromptTemplate(template: string, variables: JsonObject, options: PromptTemplateOptions = {}): string {
@@ -229,9 +204,6 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     metadata: options.metadata,
     signal: options.signal,
   };
-  // ponytail: Phase 30 — run injectors once per turn inside the assembler so when/predicate/turn
-  // filter against loop-local turn. Instructions layer via composeSystemPrompt (no parallel prompt
-  // code); contextBlocks merge via resolveContextProviders (middleware still runs).
   const turn = options.turn ?? 1;
   const foldContext = {
     sessionId: options.sessionId ?? "",
@@ -246,32 +218,18 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     options.toolResultFold && options.toolResults?.length
       ? await foldToolResults(options.toolResults, options.toolResultFold, foldContext)
       : options.toolResults;
-  const injectorContribs = options.instructionInjectors?.length
-    ? runInstructionInjectors(options.instructionInjectors, {
-        sessionId: options.sessionId ?? "",
-        runId: options.runId ?? "",
-        turn,
-        // Runtime history is already redacted; input is redacted here before injector code sees it.
-        input: inputMessages(options.input).map((message) => redactMessage(message, options.redactor)),
-        history: foldedHistory,
-        metadata: options.metadata ?? {},
-        signal: options.signal ?? new AbortController().signal,
-      })
-    : ({ instructions: [], contextBlocks: [] } as const);
-  const systemInstructions = injectorContribs.instructions.length
-    ? composeSystemPrompt(injectorContribs.instructions, { base: options.systemInstructions })
-    : options.systemInstructions;
   const buildContext: DefaultInputBuildContext = {
     ...options,
     ...baseContext,
-    systemInstructions,
     history: foldedHistory,
     toolResults: foldedToolResults,
   };
   const layout = buildContext.inputLayout ?? "cache_aware";
 
   let messages: readonly Message[];
-  let context: readonly ContextBlock[];
+  // No host provider contributes blocks any more (plan 145 Task 4): a `context.build` handler
+  // appends its own. The list stays because the budget/compiler stages measure and trim it.
+  let context: readonly ContextBlock[] | undefined;
   let skills = options.skills;
   let tools = options.tools;
   if (options.toolsDisclosure === "search" && tools?.length) {
@@ -289,13 +247,6 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     // Same default-groups path as the budget branch: the compiler needs the assembled groups
     // (and the provider context blocks) to measure one cost for the whole request.
     const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
-    context = await resolveContextProviders({
-      providers: options.contextProviders,
-      messages: flattenInputGroups(groups, layout),
-      injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
-      middleware: options.middleware,
-      ...baseContext,
-    });
     const compiled = await compileAttention({
       compiler: resolveAttentionCompiler(options.attentionCompiler, options.model),
       groups,
@@ -314,18 +265,9 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     });
     if (compiled.mutated) options.onAttentionReport?.(compiled.report);
     messages = flattenInputGroups(compiled.groups, layout);
-    if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
   } else if (options.contextBudget) {
     // ponytail: budget path always uses default groups so eviction kinds stay deterministic;
-    // custom inputBuilder still honored when contextBudget is absent.
     const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
-    context = await resolveContextProviders({
-      providers: options.contextProviders,
-      messages: flattenInputGroups(groups, layout),
-      injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
-      middleware: options.middleware,
-      ...baseContext,
-    });
     const applied = applyContextBudget({
       groups,
       context,
@@ -337,24 +279,13 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
       loadedSkills: options.loadedSkills,
     });
     messages = flattenInputGroups(applied.groups, layout);
-    if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
     context = applied.context;
     skills = applied.skills;
     tools = applied.tools;
     demotedSkillBodies = applied.demotedSkillBodies;
     if (options.contextBudget.reportOmissions) budgetReport = applied.report;
   } else {
-    const inputBuilder = options.inputBuilder ?? createDefaultInputBuilder();
-    messages = await inputBuilder.build(options.input, buildContext);
-    // Runtime-owned: input_assembly middleware always runs, regardless of which builder is installed.
-    if (buildContext.middleware) messages = await buildContext.middleware.run("input_assembly", messages);
-    context = await resolveContextProviders({
-      providers: options.contextProviders,
-      messages,
-      injectedBlocks: injectorContribs.contextBlocks.length ? injectorContribs.contextBlocks : undefined,
-      middleware: options.middleware,
-      ...baseContext,
-    });
+    messages = await createDefaultInputBuilder().build(options.input, buildContext);
   }
 
   const tailSegments = options.tailSegments;
@@ -366,40 +297,24 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     messages = [...messages, ...tailMessages(tailSegments, activeTailSegments)];
   }
 
-  const promptBuilder = options.promptBuilder ?? createDefaultPromptBuilder();
-  const promptRequest = options.middleware
-    ? await options.middleware.run("prompt_build", {
-        messages,
-        inputLayout: layout,
-        context,
-        skills,
-        skillsDisclosure: options.skillsDisclosure,
-        loadedSkills: options.loadedSkills,
-        tailSkillBodies,
-        demotedSkillBodies,
-        tools,
-        metadata: options.metadata,
-        signal: options.signal,
-      })
-    : {
-        messages,
-        inputLayout: layout,
-        context,
-        skills,
-        skillsDisclosure: options.skillsDisclosure,
-        loadedSkills: options.loadedSkills,
-        tailSkillBodies,
-        demotedSkillBodies,
-        tools,
-        metadata: options.metadata,
-        signal: options.signal,
-      };
-  const providerMessages = await promptBuilder.build({ ...promptRequest, inputLayout: layout, tools, model: options.model });
+  const providerMessages = buildProviderMessages({
+    messages,
+    inputLayout: layout,
+    deferSkillsCatalog: options.deferSkillsCatalog,
+    context,
+    skills,
+    skillsDisclosure: options.skillsDisclosure,
+    loadedSkills: options.loadedSkills,
+    tailSkillBodies,
+    demotedSkillBodies,
+    tools,
+    model: options.model,
+  });
   assertMessagesSupportModelCapabilities(options.model, providerMessages);
 
   const metadata = budgetReport ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport } : options.metadata;
 
-  return applyDefaultProviderRequestOptions(
+  const request = applyDefaultProviderRequestOptions(
     {
       model: options.model,
       messages: providerMessages,
@@ -411,6 +326,14 @@ export async function assembleProviderInput(options: AssembleProviderInputOption
     },
     { sessionId: options.sessionId },
   );
+  if (options.deferSkillsCatalog) {
+    deferSkillCatalog(request, skills ?? [], {
+      disclosure: tailSkillBodies ? "progressive" : options.skillsDisclosure,
+      loaded: tailSkillBodies ? undefined : options.loadedSkills,
+      demotedBodies: demotedSkillBodies?.length ? new Set(demotedSkillBodies) : undefined,
+    });
+  }
+  return request;
 }
 
 /** A resolved handle is reused as-is; raw options are validated for this call only. */
@@ -565,7 +488,7 @@ function textMessage(role: Message["role"], text: string, metadata?: Readonly<Re
   return { role, content: [{ type: "text", text }], metadata };
 }
 
-function contextMessages(context: readonly ContextBlock[] | undefined): Message[] {
+export function contextMessages(context: readonly ContextBlock[] | undefined): Message[] {
   return (context ?? []).map((block) =>
     textMessage("system", `${block.title ? `${block.title}:\n` : "Context:\n"}${blockText(block)}`, block.metadata),
   );
@@ -673,10 +596,6 @@ function sortJson(value: JsonValue): JsonValue {
       .sort()
       .map((key) => [key, sortJson(value[key]!)]),
   );
-}
-
-function throwIfAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) throw new Error("Context resolution aborted");
 }
 
 function attachmentMetadata(attachment?: InputAttachment): Readonly<Record<string, unknown>> | undefined {

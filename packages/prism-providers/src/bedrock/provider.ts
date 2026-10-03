@@ -1,8 +1,9 @@
-import type { AIProvider, ModelConfig, ProviderRequest, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, trimTrailingSlashes } from "@arnilo/prism";
+import type { AIProvider, ModelConfig, PackageInstance, ProviderRequest } from "@arnilo/prism";
+import { providerError, trimTrailingSlashes } from "@arnilo/prism";
 import { httpStatusError, readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
+import { vendorPackage } from "../shared/package.js";
 import { bedrockConverseBody, bedrockConverseResponseEvents, bedrockConverseStreamEvents } from "./converse.js";
 import { type AwsCredentials, signAwsRequest } from "./sigv4.js";
 
@@ -191,39 +192,13 @@ function assertRouteCapabilities(request: ProviderRequest, stream: boolean): voi
   }
 }
 
-export function createBedrockProviderPackage(options: BedrockProviderPackageOptions): ProviderPackage {
-  const endpoint = bedrockRuntimeEndpoint(options.region, options.endpoint);
+export function bedrockPackage(options: BedrockProviderPackageOptions): PackageInstance {
+  bedrockRuntimeEndpoint(options.region, options.endpoint);
   const api: BedrockRoute = options.api ?? "compatible";
   const id = options.id ?? "bedrock";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/bedrock",
-    description: "Amazon Bedrock enterprise provider for Prism.",
-    docs: { links: ["docs/providers/bedrock.md"] },
-    metadata: { route: api, ...(api === "converse" ? { stream: options.stream ?? true } : {}) },
-    setup(providerApi) {
-      providerApi.registerProvider(
-        api === "converse" ? createBedrockConverseProvider({ ...options, id }) : createBedrockProvider({ ...options, id }),
-      );
-      for (const model of options.models ?? []) {
-        providerApi.registerModel({ ...model, provider: id });
-      }
-      providerApi.registerAuthMethod({
-        kind: "api_key",
-        provider: id,
-        credentialName: "credential",
-        metadata: {
-          region: options.region,
-          endpoint,
-          route: api,
-          ...(api === "converse" ? { stream: options.stream ?? true } : {}),
-          note:
-            api === "converse"
-              ? "Host supplies IAM/IRSA credentials; package signs native bedrock-runtime Converse requests."
-              : "Host supplies IAM/IRSA credentials; package signs bedrock-runtime requests.",
-        },
-      });
-    },
-  });
+  return vendorPackage("@arnilo/prism-providers.bedrock", "Amazon Bedrock enterprise provider for Prism.", () => [
+    api === "converse" ? createBedrockConverseProvider({ ...options, id }) : createBedrockProvider({ ...options, id }),
+  ]);
 }
 
 export { type AwsCredentials, signAwsRequest } from "./sigv4.js";

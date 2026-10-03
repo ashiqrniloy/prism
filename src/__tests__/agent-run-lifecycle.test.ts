@@ -19,15 +19,17 @@ import {
   toolCallContent,
   validateLoadedSkillBodies,
 } from "../index.js";
+import { kernelEvents } from "./kernel-event-helpers.js";
 
 describe("agent run lifecycle", () => {
   it("streams an authorized durable approval through the shared core path", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
       id: "lifecycle-stream-demo",
-      store,
+      slots: { store },
       model: { provider: "mock", model: "demo" },
       provider: (() => {
         let turn = 0;
@@ -45,10 +47,10 @@ describe("agent run lifecycle", () => {
           },
         };
       })(),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-lifecycle", name: "write", value: ++calls }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-lifecycle", name: "write", value: ++calls }) }] },
     });
-    const suspended = await agent.createSession({ id: "lifecycle-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "lifecycle-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const lifecycle = createAgentRunLifecycle({
       checkpoints,
@@ -70,20 +72,21 @@ describe("agent run lifecycle", () => {
 
     assert.equal(calls, 1);
     assert.equal(
-      events.some((event) => event.type === "agent_resumed"),
+      events.some((event) => event.type === "run.started" && event.resumed === true),
       true,
     );
-    assert.equal(events.at(-1)?.type, "agent_finished");
+    assert.equal(events.at(-1)?.type, "run.completed");
   });
 
   it("suspends and resumes a no-wall durable run (omitted deadlineAt)", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
       id: "lifecycle-no-wall-demo",
       model: { provider: "mock", model: "demo" },
-      store,
+      slots: { store },
       provider: (() => {
         let turn = 0;
         return {
@@ -100,10 +103,10 @@ describe("agent run lifecycle", () => {
           },
         };
       })(),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-no-wall", name: "write", value: ++calls }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-no-wall", name: "write", value: ++calls }) }] },
     });
-    const suspended = await agent.createSession({ id: "no-wall-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "no-wall-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
       limits: { maxWallTimeMs: null },
     });
     const loaded = await loadAgentRunState(checkpoints, { runId: suspended.runId });
@@ -121,7 +124,7 @@ describe("agent run lifecycle", () => {
     ))
       events.push(event);
     assert.equal(calls, 1);
-    assert.equal(events.at(-1)?.type, "agent_finished");
+    assert.equal(events.at(-1)?.type, "run.completed");
   });
 
   it("opt-in includeSkillBodies: exact skill instructions ride the checkpoint and render on resume (plan 018 Task 6)", async () => {
@@ -130,10 +133,11 @@ describe("agent run lifecycle", () => {
       readonly messages: ReadonlyArray<{ readonly content: ReadonlyArray<{ readonly text?: string; readonly type: string }> }>;
     }> = [];
     const registry = createSkillRegistry([{ name: "brief", description: "Answer briefly.", instructions: "Be very brief." }]);
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
       id: "persist-bodies-demo",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate(request: { messages: (typeof requests)[number]["messages"] }) {
@@ -157,20 +161,20 @@ describe("agent run lifecycle", () => {
           yield providerDone();
         },
       },
-      skills: registry,
-      activateAllSkills: true,
-      tools: [
-        createLoadSkillTool({ registry }),
-        { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
-      ],
+      skills: { add: registry.list() },
+      tools: {
+        add: [
+          createLoadSkillTool({ registry }),
+          { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
+        ],
+      },
     });
-    const session = agent.createSession({ id: "persist-bodies-session" });
+    const session = await agent.session({ id: "persist-bodies-session", create: true });
     await session.run("go");
     const suspended = await session.run("go", {
       runState: {
         checkpoints,
         definitionRevision: "1",
-        interruptBeforeTool: true,
         persistSessionState: true,
         includeSkillBodies: true,
       },
@@ -197,7 +201,7 @@ describe("agent run lifecycle", () => {
     )) {
       events.push(event);
     }
-    assert.equal(events.at(-1)?.type, "agent_finished");
+    assert.equal(events.at(-1)?.type, "run.completed");
     assert.equal(requests.length, 4, "resumed run produced the final provider turn");
 
     // Second suspension to resume WITH bodies.
@@ -205,7 +209,6 @@ describe("agent run lifecycle", () => {
       runState: {
         checkpoints,
         definitionRevision: "1",
-        interruptBeforeTool: true,
         persistSessionState: true,
         includeSkillBodies: true,
       },
@@ -219,7 +222,7 @@ describe("agent run lifecycle", () => {
     )) {
       events2.push(event);
     }
-    assert.equal(events2.at(-1)?.type, "agent_finished");
+    assert.equal(events2.at(-1)?.type, "run.completed");
     const resumedTurn = requests.at(-1)!;
     const resumedText = resumedTurn.messages
       .flatMap((m) => m.content)
@@ -237,10 +240,11 @@ describe("agent run lifecycle", () => {
     const checkpoints = createMemoryCheckpointStore();
     const registry = createSkillRegistry([{ name: "brief", instructions: "Be very brief." }]);
     let turns = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
       id: "persist-bodies-off",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -261,17 +265,18 @@ describe("agent run lifecycle", () => {
           yield providerDone();
         },
       },
-      skills: registry,
-      activateAllSkills: true,
-      tools: [
-        createLoadSkillTool({ registry }),
-        { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
-      ],
+      skills: { add: registry.list() },
+      tools: {
+        add: [
+          createLoadSkillTool({ registry }),
+          { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
+        ],
+      },
     });
-    const session = agent.createSession({ id: "persist-bodies-off" });
+    const session = await agent.session({ id: "persist-bodies-off", create: true });
     await session.run("go");
     const suspended = await session.run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: true },
+      runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
     });
     const record = await checkpoints.loadCheckpoint({ namespace: "prism.agent-run", key: suspended.runId });
     const sessionState = (record!.value as { sessionState: Record<string, unknown> }).sessionState;
@@ -422,10 +427,11 @@ describe("agent run lifecycle", () => {
       readonly messages: ReadonlyArray<{ readonly content: ReadonlyArray<{ readonly text?: string; readonly type: string }> }>;
     }> = [];
     const registry = createSkillRegistry([{ name: "brief", description: "Answer briefly.", instructions: "Be very brief." }]);
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
       id: "persist-session-demo",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate(request: { messages: (typeof requests)[number]["messages"] }) {
@@ -449,17 +455,18 @@ describe("agent run lifecycle", () => {
           yield providerDone();
         },
       },
-      skills: registry,
-      activateAllSkills: true,
-      tools: [
-        createLoadSkillTool({ registry }),
-        { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
-      ],
+      skills: { add: registry.list() },
+      tools: {
+        add: [
+          createLoadSkillTool({ registry }),
+          { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
+        ],
+      },
     });
-    const session = agent.createSession({ id: "persist-session" });
+    const session = await agent.session({ id: "persist-session", create: true });
     await session.run("go");
     const suspended = await session.run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: true },
+      runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
     });
     const record = await checkpoints.loadCheckpoint({ namespace: "prism.agent-run", key: suspended.runId });
     assert.deepEqual(
@@ -480,7 +487,7 @@ describe("agent run lifecycle", () => {
     )) {
       events.push(event);
     }
-    assert.equal(events.at(-1)?.type, "agent_finished");
+    assert.equal(events.at(-1)?.type, "run.completed");
     assert.equal(requests.length, 4, "resumed run produced the final provider turn");
     const resumedTurn = requests[3]!;
     const resumedText = resumedTurn.messages
@@ -518,26 +525,29 @@ describe("agent run lifecycle", () => {
           yield providerDone();
         },
       };
-      const agentFor = (triggerRatio: number, compactRatio: number) =>
-        createAgent({
+      const agentFor = async (triggerRatio: number, compactRatio: number) =>
+        await createAgent({
+          hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
           id: "persist-attention-demo",
-          store,
+          slots: { store },
           model: { provider: "mock", model: "demo" },
           provider,
           attentionCompiler: { maxInputTokens: 2_000, triggerRatio, compactRatio, keepLast: 0 },
-          tools: [
-            {
-              name: "echo",
-              parameters: {},
-              execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: payload }),
-            },
-            { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
-          ],
+          tools: {
+            add: [
+              {
+                name: "echo",
+                parameters: {},
+                execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: payload }),
+              },
+              { name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) },
+            ],
+          },
         });
-      const session = agentFor(0.2, 0.25).createSession({ id: `persist-attention-${persist}` });
+      const session = await (await agentFor(0.2, 0.25)).session({ id: `persist-attention-${persist}`, create: true });
       await session.run("go");
       const suspended = await session.run("go", {
-        runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: persist },
+        runState: { checkpoints, definitionRevision: "1", persistSessionState: persist },
       });
       const record = await checkpoints.loadCheckpoint({ namespace: "prism.agent-run", key: suspended.runId });
       assert.ok(record, "durable suspension must write a checkpoint");
@@ -548,7 +558,7 @@ describe("agent run lifecycle", () => {
 
       const lifecycle = createAgentRunLifecycle({
         checkpoints,
-        resolveAgent: () => ({ agent: agentFor(0.99, 0.995), definitionRevision: "1" }),
+        resolveAgent: async () => ({ agent: await agentFor(0.99, 0.995), definitionRevision: "1" }),
       });
       const events = [];
       for await (const event of lifecycle.resumeStream(
@@ -559,12 +569,12 @@ describe("agent run lifecycle", () => {
         events.push(event);
       }
       const stubbed = requests.slice(3).some((request) => JSON.stringify(request.messages).includes("omitted "));
-      const reports = events.filter((event) => event.type === "attention_compiled");
+      const reports = kernelEvents<{ used: number; triggerRatio: number; inputCap: number }>(events, "attention.compiled");
       return { events, sessionState, stubbed, reports };
     };
 
     const persisted = await suspendAndResume(true);
-    assert.equal(persisted.events.at(-1)?.type, "agent_finished");
+    assert.equal(persisted.events.at(-1)?.type, "run.completed");
     const sticky = persisted.sessionState?.attentionSticky;
     assert.ok(sticky, "checkpoint carries the sticky frontier");
     assert.equal(sticky.toolCallIds.length, 1, "checkpoint carries the stubbed call id");
@@ -579,7 +589,7 @@ describe("agent run lifecycle", () => {
     }
 
     const notPersisted = await suspendAndResume(false);
-    assert.equal(notPersisted.events.at(-1)?.type, "agent_finished");
+    assert.equal(notPersisted.events.at(-1)?.type, "run.completed");
     assert.equal(notPersisted.sessionState, undefined, "no session state block without the opt-in");
     assert.equal(notPersisted.stubbed, false, "without persistSessionState the resume re-decides under the relaxed gate");
     assert.equal(notPersisted.reports.length, 0);
@@ -587,10 +597,11 @@ describe("agent run lifecycle", () => {
 
   it("persistSessionState off keeps the checkpoint at the 0.1.2 shape (plan 015 Task 4)", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "write" ? { ask: "Approval required" } : undefined)),
       id: "persist-session-off",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -598,10 +609,10 @@ describe("agent run lifecycle", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) }] },
     });
-    const suspended = await agent.createSession({ id: "persist-session-off" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "persist-session-off", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const record = await checkpoints.loadCheckpoint({ namespace: "prism.agent-run", key: suspended.runId });
     assert.equal("sessionState" in (record!.value as object), false, "no sessionState key with the opt-in off");

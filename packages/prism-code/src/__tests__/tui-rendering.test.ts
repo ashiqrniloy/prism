@@ -66,7 +66,7 @@ async function waitForFrameText(env: TestRendererSetup, pattern: RegExp, timeout
 
 function editStartedEvent(): AgentEvent {
   return {
-    type: "tool_execution_started",
+    type: "tool.started",
     sessionId: "s",
     runId: "r",
     call: {
@@ -149,7 +149,8 @@ describe("rich TUI rendering", () => {
 
       // Finishing replaces the proposal with the applied patch and reports duration plus output.
       const finished: AgentEvent = {
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "s",
         runId: "r",
         result: { toolCallId: "call_1", name: "edit", value: "applied", metadata: { patch: entry.patch } },
@@ -181,13 +182,14 @@ describe("rich TUI rendering", () => {
     assert.match(collapsedOutputText(long), /more lines \(Ctrl\+O to expand\)/);
 
     const started: AgentEvent = {
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s",
       runId: "r",
       call: { type: "tool_call", id: "call_1", name: "shell", arguments: { command: "seq 50000" } },
     };
     const withoutCard = apply(createInitialTuiState(), {
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: { toolCallId: "missing", name: "shell", value: "ignored" },
@@ -196,7 +198,8 @@ describe("rich TUI rendering", () => {
     assert.equal(withoutCard.entries.length, 0);
 
     const bounded = apply(apply(createInitialTuiState(), started), {
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
       result: {
@@ -212,7 +215,7 @@ describe("rich TUI rendering", () => {
 
     // Oversized proposals are dropped whole: a truncated patch cannot be parsed by the diff renderer.
     const hugeWrite: AgentEvent = {
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s",
       runId: "r",
       call: { type: "tool_call", id: "call_2", name: "write", arguments: { path: "big.txt", content: "x".repeat(128 * 1024) } },
@@ -221,7 +224,7 @@ describe("rich TUI rendering", () => {
 
     // Control sequences never reach a rendered patch.
     const sneaky: AgentEvent = {
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s",
       runId: "r",
       call: {

@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // CLI public surface is the `prism` bin (print/json/rpc), an adapter over the
-// AgentSession API. Uses the built-in `mock` provider — network-free.
+// Session API. Uses the built-in `mock` provider — network-free.
 const bin = join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "cli.js");
 
 export function demo() {

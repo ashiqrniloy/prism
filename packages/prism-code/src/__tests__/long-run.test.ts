@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type AgentEvent,
-  type AgentSession,
+  type Session,
   type AIProvider,
   type CompactionEntryData,
   type ModelConfig,
@@ -82,7 +82,7 @@ function multiTurnMockProvider(options: { readonly rounds?: number } = {}): { pr
   };
 }
 
-function collectSessionEvents(session: AgentSession): { readonly events: AgentEvent[]; readonly done: Promise<void> } {
+function collectSessionEvents(session: Session): { readonly events: AgentEvent[]; readonly done: Promise<void> } {
   const events: AgentEvent[] = [];
   const done = (async () => {
     for await (const event of session.subscribe()) {
@@ -102,10 +102,10 @@ describe("Prism Code context management and long runs", () => {
       assert.notEqual(compaction, false);
       if (compaction === false) return;
 
-      assert.equal(compaction.keepRecentEntries, PRISM_CODE_DEFAULT_KEEP_RECENT_ENTRIES);
+      assert.equal(compaction.options.keepRecentEntries, PRISM_CODE_DEFAULT_KEEP_RECENT_ENTRIES);
       assert.deepEqual(compaction.trigger, { type: "input_ratio", ratio: PRISM_CODE_DEFAULT_COMPACTION_RATIO });
-      assert.ok(compaction.strategy);
-      assert.equal(compaction.strategy.name, "coding");
+      assert.ok(compaction.compactor);
+      assert.equal(compaction.compactor.name, "coding");
     });
 
     it("resolves observational-memory (OM) compaction strategy", () => {
@@ -113,8 +113,8 @@ describe("Prism Code context management and long runs", () => {
       assert.notEqual(compaction, false);
       if (compaction === false) return;
 
-      assert.ok(compaction.strategy);
-      assert.equal(compaction.strategy.name, "observational-memory");
+      assert.ok(compaction.compactor);
+      assert.equal(compaction.compactor.name, "observational-memory");
     });
 
     it("resolves each_turn trigger", () => {
@@ -170,8 +170,8 @@ describe("Prism Code context management and long runs", () => {
       assert.notEqual(compaction, false);
       if (compaction === false) return;
 
-      assert.equal(compaction.keepRecentEntries, 4);
-      assert.equal(compaction.maxSummaryChars, 2_000);
+      assert.equal(compaction.options.keepRecentEntries, 4);
+      assert.equal(compaction.options.maxSummaryChars, 2_000);
       assert.deepEqual(compaction.trigger, { type: "input_ratio", ratio: 0.65 });
     });
 
@@ -193,10 +193,8 @@ describe("Prism Code context management and long runs", () => {
         );
         assert.notEqual(compaction, false);
         if (compaction === false) throw new Error("compaction disabled");
-        const strategy = compaction.strategy;
-        assert.ok(strategy, "the resolver must return a strategy");
-        if (!strategy) throw new Error("no strategy");
-        const result = await strategy.compact({ sessionId: "s1", entries, trigger: "auto" });
+        assert.ok(compaction.compactor, "the resolver must return a compactor");
+        const result = await compaction.compactor.compact({ sessionId: "s1", entries, trigger: "auto" });
         const data = result.entries?.find((entry) => entry.kind === "compaction")?.data as CompactionEntryData | undefined;
         return data?.keepEntryIds ?? [];
       };
@@ -255,13 +253,11 @@ describe("Prism Code context management and long runs", () => {
         },
       ];
 
-      const strategy = compaction.strategy;
-      assert.ok(strategy, "the resolver must return a strategy");
-      if (!strategy) return;
-      const result = await strategy.compact({ sessionId: "s1", entries, trigger: "auto" });
-      const data = result.entries?.find((entry) => entry.kind === "compaction")?.data as CompactionEntryData | undefined;
-      assert.ok(data, "the strategy must return a compaction entry with data");
-      // The plan turn (call + result) is appended to the strategy's own kept entries.
+      assert.ok(compaction.compactor, "the resolver must return a compactor");
+      const result = await compaction.compactor.compact({ sessionId: "s1", entries, trigger: "auto" });
+      const data = result.entries?.find((entry: SessionEntry) => entry.kind === "compaction")?.data as CompactionEntryData | undefined;
+      assert.ok(data, "the compactor must return a compaction entry with data");
+      // The plan turn (call + result) is appended to the compactor's own kept entries.
       assert.deepEqual(data?.keepEntryIds, ["e3", "e1", "e2"]);
     });
   });
@@ -344,7 +340,7 @@ describe("Prism Code context management and long runs", () => {
       const next = tuiReducer(initial, {
         type: "session_event",
         event: {
-          type: "compaction_finished",
+          type: "compaction.completed",
           sessionId: "test-session",
           summary: "Summary of compaction",
           entriesCompacted: 7,
@@ -363,7 +359,7 @@ describe("Prism Code context management and long runs", () => {
       const withCount = tuiReducer(initial, {
         type: "session_event",
         event: {
-          type: "compaction_finished",
+          type: "compaction.completed",
           sessionId: "test-session",
           summary: "",
           entriesCompacted: 7,
@@ -378,7 +374,7 @@ describe("Prism Code context management and long runs", () => {
       const withoutCount = tuiReducer(initial, {
         type: "session_event",
         event: {
-          type: "compaction_finished",
+          type: "compaction.completed",
           sessionId: "test-session",
           summary: "",
         },
@@ -395,7 +391,7 @@ describe("Prism Code context management and long runs", () => {
       const next = tuiReducer(initial, {
         type: "session_event",
         event: {
-          type: "compaction_failed",
+          type: "compaction.completed",
           sessionId: "test-session",
           error: {
             name: "CompactionError",
@@ -429,11 +425,11 @@ describe("Prism Code context management and long runs", () => {
         };
 
         const definition = await assembleAppAgent(config, provider);
-        const session = definition.createSession();
+        const session = definition.session();
         ((session as any).agent.config.tools as any).register(workTool);
 
-        const { events, done } = collectSessionEvents(session);
-        const result = await session.run("Run multi-turn coding task");
+        const { events, done } = collectSessionEvents(await session);
+        const result = await (await session).run("Run multi-turn coding task");
         await done;
 
         assert.equal(result.status, "succeeded");
@@ -441,15 +437,15 @@ describe("Prism Code context management and long runs", () => {
         assert.equal(mainRequests.length, 2, "Ran exactly 2 agent turns");
 
         // Verify compaction_finished event was emitted
-        const finished = events.find((e) => e.type === "compaction_finished");
+        const finished = events.find((e) => e.type === "compaction.completed");
         assert.ok(finished, "compaction_finished event emitted");
-        if (finished && finished.type === "compaction_finished") {
+        if (finished && finished.type === "compaction.completed") {
           assert.ok(typeof finished.entriesCompacted === "number");
           assert.ok(finished.entriesCompacted > 0);
         }
 
         // Verify entries in session store contain compaction entry
-        const entries = await session.entries();
+        const entries = await (await session).entries();
         const compactionEntry = entries.find((e) => e.kind === "compaction");
         assert.ok(compactionEntry, "Compaction record persisted in session entries");
       } finally {
@@ -473,15 +469,15 @@ describe("Prism Code context management and long runs", () => {
         };
 
         const definition = await assembleAppAgent(config, provider);
-        const session = definition.createSession();
+        const session = definition.session();
         ((session as any).agent.config.tools as any).register(workTool);
 
-        const { events, done } = collectSessionEvents(session);
-        const result = await session.run("Run OM multi-turn task");
+        const { events, done } = collectSessionEvents(await session);
+        const result = await (await session).run("Run OM multi-turn task");
         await done;
 
         assert.equal(result.status, "succeeded");
-        const finished = events.find((e) => e.type === "compaction_finished");
+        const finished = events.find((e) => e.type === "compaction.completed");
         assert.ok(finished, "compaction_finished event emitted with OM strategy");
       } finally {
         await rm(tempDir, { recursive: true, force: true });
@@ -500,15 +496,15 @@ describe("Prism Code context management and long runs", () => {
         };
 
         const definition = await assembleAppAgent(config, provider);
-        const session = definition.createSession();
+        const session = definition.session();
         ((session as any).agent.config.tools as any).register(workTool);
 
-        const { events, done } = collectSessionEvents(session);
-        const result = await session.run("Run without compaction");
+        const { events, done } = collectSessionEvents(await session);
+        const result = await (await session).run("Run without compaction");
         await done;
 
         assert.equal(result.status, "succeeded");
-        const finished = events.find((e) => e.type === "compaction_finished");
+        const finished = events.find((e) => e.type === "compaction.completed");
         assert.equal(finished, undefined, "No compaction when compaction: false");
       } finally {
         await rm(tempDir, { recursive: true, force: true });

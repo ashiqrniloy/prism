@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { openCodeGoModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createOpenCodeGoProvider } from "./provider.js";
 
 export interface OpenCodeGoProviderPackageOptions {
@@ -10,17 +10,10 @@ export interface OpenCodeGoProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions = {}): ProviderPackage {
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/opencode-go",
-    description: "OpenCode Go provider package for Prism.",
-    docs: { links: ["docs/providers/opencode-go.md"] },
-    setup(api) {
-      api.registerProvider(createOpenCodeGoProvider(options));
-      for (const model of options.models ?? openCodeGoModels) api.registerModel(model);
-      api.registerAuthMethod({ kind: "api_key", provider: "opencode-go", credentialName: "apiKey" });
-    },
-  });
+export function opencodeGoPackage(options: OpenCodeGoProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.opencode-go", "OpenCode Go provider package for Prism.", () => [
+    createOpenCodeGoProvider(options),
+  ]);
 }
 
 export { anthropicMessagesBody, anthropicMessagesEvents } from "../shared/anthropic-messages.js";

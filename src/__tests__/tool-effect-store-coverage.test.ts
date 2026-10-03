@@ -1,13 +1,13 @@
 // Plan 025 Task 5 — focused behavior regressions for the tool-effect-store conformance
 // helper's weak branches (src/testing/tool-effect-store-conformance.ts, 38.89% branch
 // coverage). The existing happy-path test covers the conformant memory store; this adds
-// the options-defaults branches (explicit identity/ownership/key) and the violation
+// the options-defaults branches (explicit ownership/key) and the violation
 // throws (a store that misbehaves must be caught). Behavior-backed: each test asserts the
 // helper throws the named violation, not a call count.
 
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { type AgentIdentity, createMemoryToolEffectStore, type ToolEffectRecord, type ToolEffectStore } from "../index.js";
+import { createMemoryToolEffectStore, type ToolEffectRecord, type ToolEffectStore } from "../index.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 
 // A minimal conformant record for the broken begin() override.
@@ -34,18 +34,9 @@ function wrap(real: ToolEffectStore, overrides: Partial<ToolEffectStore>): ToolE
   return { ...real, ...overrides } as ToolEffectStore;
 }
 
-const identity: AgentIdentity = {
-  tenantId: "tenant-x",
-  principal: { kind: "service", id: "conformance-x" },
-  scopes: ["tools:execute"],
-  issuedAt: "2026-01-01T00:00:00.000Z",
-  verified: true,
-};
-
-test("assertToolEffectStoreConforms honors explicit identity/ownership/key options", async () => {
+test("assertToolEffectStoreConforms honors explicit ownership/key options", async () => {
   // Passing explicit options exercises the options.?? left-side branches (vs the defaults).
   await assertToolEffectStoreConforms(() => createMemoryToolEffectStore(), {
-    identity,
     ownership: { tenantId: "tenant-x" },
     key: "prism:tool-effect:v1:custom",
   });

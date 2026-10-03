@@ -6,7 +6,7 @@ const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 /** Compile-checked A2UI painting demo for `@arnilo/prism-ag-ui`. */
 export async function demo() {
   let turn = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "mock" },
     provider: {
       id: "mock",
@@ -19,33 +19,35 @@ export async function demo() {
         yield providerDone();
       },
     },
-    tools: [
-      {
-        name: "paint",
-        parameters: { type: "object" },
-        execute: () => ({
-          toolCallId: "paint-1",
+    tools: {
+      add: [
+        {
           name: "paint",
-          value: {
-            a2ui_operations: [
-              { version: "v0.9", createSurface: { surfaceId: "demo" } },
-              {
-                version: "v0.9",
-                updateComponents: {
-                  surfaceId: "demo",
-                  components: [{ id: "root", component: "Text", text: "Hello A2UI" }],
+          parameters: { type: "object" },
+          execute: () => ({
+            toolCallId: "paint-1",
+            name: "paint",
+            value: {
+              a2ui_operations: [
+                { version: "v0.9", createSurface: { surfaceId: "demo" } },
+                {
+                  version: "v0.9",
+                  updateComponents: {
+                    surfaceId: "demo",
+                    components: [{ id: "root", component: "Text", text: "Hello A2UI" }],
+                  },
                 },
-              },
-            ],
-          },
-        }),
-      },
-    ],
+              ],
+            },
+          }),
+        },
+      ],
+    },
   });
 
   const handle = createAgUiHandler({
     authorize: () => ({ ownership: { userId: "demo" } }),
-    sessionFactory: () => agent.createSession({ id: "ag-ui-a2ui" }),
+    sessionFactory: () => agent.session({ id: "ag-ui-a2ui", create: true }),
     a2ui: { catalogId, mode: "fixed-schema" },
     input: {
       project: ({ a2uiActions }) => ({

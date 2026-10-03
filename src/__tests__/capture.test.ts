@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { createProviderCapture } from "../capture.js";
 import type { AgentEvent, Message, ProviderRequest } from "../index.js";
-import { createMiddlewareRegistry } from "../index.js";
-
 const SECRETS = ["sk-super-secret", "hunter2"];
 
 function request(overrides: Partial<ProviderRequest> = {}): ProviderRequest {
@@ -19,7 +17,7 @@ function request(overrides: Partial<ProviderRequest> = {}): ProviderRequest {
 
 function turnFinished(overrides: Record<string, unknown> = {}): AgentEvent {
   return {
-    type: "provider_turn_finished",
+    type: "turn.completed",
     sessionId: "s1",
     runId: "r1",
     turn: 1,
@@ -30,12 +28,10 @@ function turnFinished(overrides: Record<string, unknown> = {}): AgentEvent {
 }
 
 describe("createProviderCapture", () => {
-  it("captures requests through the provider_request middleware hook and passes them through untouched", async () => {
+  it("captures requests through the model.request hook and passes them through untouched", () => {
     const capture = createProviderCapture({ secrets: SECRETS });
-    const registry = createMiddlewareRegistry();
-    registry.use("provider_request", capture.middleware());
     const original = request();
-    const out = await registry.run("provider_request", original);
+    const out = capture.transform()(original);
     assert.equal(out, original); // observation-only: same reference flows through
     const events = capture.events();
     assert.equal(events.length, 1);
@@ -46,29 +42,24 @@ describe("createProviderCapture", () => {
     assert.equal(events[0]!.redaction, "secrets");
   });
 
-  it("drops message content by default and never captures options/headers", async () => {
+  it("drops message content by default and never captures options/headers", () => {
     const capture = createProviderCapture({
       secrets: SECRETS,
       policy: {},
     });
-    const registry = createMiddlewareRegistry();
-    registry.use("provider_request", capture.middleware());
-    await registry.run("provider_request", request({ options: { headers: { authorization: "Bearer sk-super-secret" } } }));
+    capture.transform()(request({ options: { headers: { authorization: "Bearer sk-super-secret" } } }));
     const entry = capture.events()[0]!;
     assert.equal(entry.content, undefined);
     assert.ok(!JSON.stringify(entry).includes("sk-super-secret"));
     assert.ok(!("options" in entry));
   });
 
-  it("retains content when the host opts in (redact: none) but still redacts secrets for replay safety", async () => {
+  it("retains content when the host opts in (redact: none) but still redacts secrets for replay safety", () => {
     const capture = createProviderCapture({
       secrets: SECRETS,
       policy: { redact: "none" },
     });
-    const registry = createMiddlewareRegistry();
-    registry.use("provider_request", capture.middleware());
-    await registry.run(
-      "provider_request",
+    capture.transform()(
       request({
         messages: [{ role: "user", content: [{ type: "text", text: "key is sk-super-secret" }] }] as unknown as readonly Message[],
       }),
@@ -79,11 +70,9 @@ describe("createProviderCapture", () => {
     assert.ok(!serialized.includes("sk-super-secret")); // secrets still redacted
   });
 
-  it("redact: all keeps structure only", async () => {
+  it("redact: all keeps structure only", () => {
     const capture = createProviderCapture({ secrets: SECRETS, policy: { redact: "all" } });
-    const registry = createMiddlewareRegistry();
-    registry.use("provider_request", capture.middleware());
-    await registry.run("provider_request", request({ tools: [{ name: "search", description: "", inputSchema: {} }] as never }));
+    capture.transform()(request({ tools: [{ name: "search", description: "", inputSchema: {} }] as never }));
     const entry = capture.events()[0]!;
     assert.deepEqual(entry.toolNames, ["search"]);
     assert.equal(entry.content, undefined);
@@ -91,7 +80,7 @@ describe("createProviderCapture", () => {
 
   it("records response entries from provider_turn_finished events with usage and redacted errors", () => {
     const capture = createProviderCapture({ secrets: SECRETS });
-    capture.observeEvent({ type: "provider_turn_started" } as AgentEvent); // ignored
+    capture.observeEvent({ type: "turn.started" } as AgentEvent); // ignored
     capture.observeEvent(turnFinished());
     capture.observeEvent(turnFinished({ error: { message: "boom sk-super-secret", type: "provider_error" } }));
     const events = capture.events();
@@ -104,12 +93,10 @@ describe("createProviderCapture", () => {
     assert.ok(!JSON.stringify(events[1]!.error).includes("sk-super-secret")); // core already redacted; capture never widens it
   });
 
-  it("evicts oldest entries at the buffer cap", async () => {
+  it("evicts oldest entries at the buffer cap", () => {
     const capture = createProviderCapture({ secrets: SECRETS, policy: { maxEvents: 3 } });
-    const registry = createMiddlewareRegistry();
-    registry.use("provider_request", capture.middleware());
     for (let round = 0; round < 5; round += 1) {
-      await registry.run("provider_request", request());
+      capture.transform()(request());
       capture.observeEvent(turnFinished({ turn: round }));
     }
     assert.equal(capture.events().length, 3);

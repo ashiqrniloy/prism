@@ -12,7 +12,6 @@ import type {
   UsageRecord,
 } from "../index.js";
 import {
-  AgentRunError,
   createAgent,
   createMockProvider,
   createSecretRedactor,
@@ -23,6 +22,7 @@ import {
   providerToolCall,
   redactRunLedgerRecord,
 } from "../index.js";
+import { failedRun } from "./run-result-helpers.js";
 
 type InMemoryLedger = {
   runs: Extract<RunLedgerRecord, { status?: string }>[];
@@ -98,9 +98,9 @@ describe("RunLedger contract and redaction", () => {
       id: "event_1",
       sessionId: "s1",
       runId: "run_1",
-      type: "agent_started",
+      type: "run.started",
       timestamp: "2024-01-01T00:00:00Z",
-      event: { type: "agent_started", sessionId: "s1", runId: "run_1" },
+      event: { type: "run.started", sessionId: "s1", runId: "run_1" },
       redacted: true,
       tenantId: "t1",
     };
@@ -145,10 +145,10 @@ describe("RunLedger contract and redaction", () => {
     assert.equal(JSON.stringify(redactedUsage).includes("secret-token"), false);
   });
 
-  it("createAgent accepts runLedger/ownership/idempotencyKey without throwing", () => {
+  it("createAgent accepts runLedger/ownership/idempotencyKey without throwing", async () => {
     const { ledger } = createMemoryLedger();
 
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       runLedger: ledger,
       ownership: { tenantId: "t1" },
@@ -163,14 +163,14 @@ describe("RunLedger contract and redaction", () => {
 describe("RunLedger runtime wiring", () => {
   it("appends run lifecycle records on a simple run", async () => {
     const { ledger, runs, events } = createMemoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
       runLedger: ledger,
       ownership: { tenantId: "tenant_1", accountId: "account_1" },
       idempotencyKey: "agent-key",
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     await session.run("hi", { idempotencyKey: "run-key" });
 
@@ -188,8 +188,8 @@ describe("RunLedger runtime wiring", () => {
     assert.equal(start?.accountId, "account_1");
     assert.equal(finish?.error, undefined);
     assert.equal(finish?.abortReason, undefined);
-    assert.ok(events.some((e) => e.type === "agent_started"));
-    assert.ok(events.some((e) => e.type === "agent_finished"));
+    assert.ok(events.some((e) => e.type === "run.started"));
+    assert.ok(events.some((e) => e.type === "run.completed"));
   });
 
   it("appends tool-call records for started, finished, and blocked states", async () => {
@@ -201,16 +201,16 @@ describe("RunLedger runtime wiring", () => {
         return { toolCallId: "call_1", name: "echo", value: args.text };
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([
         providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }),
         providerDone(),
       ]),
-      tools: createToolRegistry([echoTool]),
+      tools: { add: [echoTool] },
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "s2" });
+    const session = await agent.session({ id: "s2", create: true });
 
     await session.run("use echo");
 
@@ -233,17 +233,17 @@ describe("RunLedger runtime wiring", () => {
         return { toolCallId: "call_1", name: "echo", value: "ok" };
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([
         providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }),
         providerDone(),
       ]),
-      tools: createToolRegistry([echoTool]),
+      tools: { add: [echoTool] },
       runLedger: ledger,
       validator: (_tool, args) => (args.text === "hi" ? "blocked by test validator" : undefined),
     });
-    const session = agent.createSession({ id: "s3" });
+    const session = await agent.session({ id: "s3", create: true });
 
     await session.run("use echo");
 
@@ -257,7 +257,7 @@ describe("RunLedger runtime wiring", () => {
   it("persists cache fields per provider turn and aggregate run total", async () => {
     const { ledger, usage } = createMemoryLedger();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -272,10 +272,10 @@ describe("RunLedger runtime wiring", () => {
           );
         },
       },
-      tools: createToolRegistry([{ name: "echo", execute: () => ({ toolCallId: "call_1", name: "echo" }) }]),
+      tools: { add: [{ name: "echo", execute: () => ({ toolCallId: "call_1", name: "echo" }) }] },
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "s4" });
+    const session = await agent.session({ id: "s4", create: true });
 
     await session.run("count tokens", { limits: { maxToolRounds: 1 } });
 
@@ -306,17 +306,17 @@ describe("RunLedger runtime wiring", () => {
         return { toolCallId: "call_1", name: "echo", value: args.text };
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([
         providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: secret } }),
         providerDone(),
       ]),
-      tools: createToolRegistry([echoTool]),
+      tools: { add: [echoTool] },
       runLedger: ledger,
       redactor: createSecretRedactor([secret]),
     });
-    const session = agent.createSession({ id: "s5" });
+    const session = await agent.session({ id: "s5", create: true });
 
     await session.run("use echo");
 
@@ -332,12 +332,12 @@ describe("RunLedger runtime wiring", () => {
     // (agent_started ... message_started ... message_finished ... agent_finished),
     // scoped to the run id, and no message_started/message_finished is double-written.
     const { ledger, events } = createMemoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("one message"), providerDone()]),
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "s-once" });
+    const session = await agent.session({ id: "s-once", create: true });
 
     const live: AgentEvent[] = [];
     const sub = session.subscribe();
@@ -346,24 +346,23 @@ describe("RunLedger runtime wiring", () => {
     })();
     await session.run("say one thing");
     await collecting;
-    const runId = live.find((e) => e.type === "agent_started")!.runId;
+    const runId = live.find((e) => e.type === "run.started")!.runId;
 
     const runEvents = events.filter((e) => e.runId === runId);
     assert.ok(runEvents.length > 0, "ledger events scoped to the run id");
     assert.equal(events.filter((e) => e.runId === runId).length, runEvents.length, "no run id leakage");
-    assert.equal(runEvents.filter((e) => e.type === "message_started").length, 1, "message_started written exactly once");
-    assert.equal(runEvents.filter((e) => e.type === "message_finished").length, 1, "message_finished written exactly once");
-    // Timeline order: agent_started precedes message_started precedes message_finished precedes agent_finished.
+    assert.equal(runEvents.filter((e) => e.type === "message.completed").length, 1, "message.completed written exactly once");
+    // Timeline order: run.started precedes message.completed precedes run.completed. `message.delta`
+    // opens a message, so there is no separate message-start event to order against.
     const idx = (type: string) => runEvents.findIndex((e) => e.type === type);
-    assert.ok(idx("agent_started") < idx("message_started"), "agent_started before message_started");
-    assert.ok(idx("message_started") < idx("message_finished"), "message_started before message_finished");
-    assert.ok(idx("message_finished") < idx("agent_finished"), "message_finished before agent_finished");
+    assert.ok(idx("run.started") < idx("message.completed"), "run.started before message.completed");
+    assert.ok(idx("message.completed") < idx("run.completed"), "message.completed before run.completed");
   });
 
   it("records aborted status and reason when run is aborted", async () => {
     const { ledger, runs, events } = createMemoryLedger();
     const controller = new AbortController();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -375,20 +374,20 @@ describe("RunLedger runtime wiring", () => {
       },
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "s6" });
+    const session = await agent.session({ id: "s6", create: true });
 
-    await assert.rejects(session.run("abort me", { signal: controller.signal }));
+    await failedRun(session.run("abort me", { signal: controller.signal }), undefined, "aborted");
 
     const finish = runs.find((r) => r.status !== "running");
     assert.equal(finish?.status, "aborted");
     assert.equal(finish?.abortReason, "user-cancelled");
-    assert.ok(events.some((e) => e.type === "error"));
+    assert.ok(events.some((e) => e.type === "run.failed"));
   });
 
   it("records typed, redacted provider quota failures on the result and terminal ledger row", async () => {
     const secret = "provider-quota-secret";
     const { ledger, runs } = createMemoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -399,12 +398,11 @@ describe("RunLedger runtime wiring", () => {
       runLedger: ledger,
       redactor: createSecretRedactor([secret]),
     });
-    const session = agent.createSession({ id: "s7" });
+    const session = await agent.session({ id: "s7", create: true });
 
-    await assert.rejects(
-      session.run("fail me"),
-      (error: unknown) => error instanceof AgentRunError && error.result.error?.failureClass === "quota",
-    );
+    const failed = await session.run("fail me");
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.error?.failureClass, "quota");
 
     const finish = runs.find((r) => r.status !== "running");
     assert.equal(finish?.status, "failed");
@@ -423,7 +421,7 @@ describe("RunLedger runtime wiring", () => {
         active += 1;
         maxActive = Math.max(maxActive, active);
         await new Promise((resolve) => setTimeout(resolve, 0));
-        if (record.event.type === "message_delta" && record.event.content.type === "text") {
+        if (record.event.type === "message.delta" && record.event.content.type === "text") {
           seen.push(record.event.content.text);
         }
         active -= 1;
@@ -431,13 +429,13 @@ describe("RunLedger runtime wiring", () => {
       },
     };
     const deltas = Array.from({ length: 50 }, (_, index) => providerTextDelta(`chunk-${index}`));
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([...deltas, providerDone()]),
       runLedger: ledger,
     });
 
-    await agent.createSession({ id: "s-ledger-serial" }).run("stream many chunks");
+    await (await agent.session({ id: "s-ledger-serial", create: true })).run("stream many chunks");
 
     assert.equal(maxActive, 1);
     assert.ok(memory.events.length >= 50, "expected streamed events in ledger");
@@ -452,19 +450,19 @@ describe("RunLedger runtime wiring", () => {
     const ledger: RunLedger = {
       ...memory.ledger,
       appendEvent: async (record) => {
-        if (record.event.type === "message_delta") {
+        if (record.event.type === "message.delta") {
           throw new Error("ledger write failed");
         }
         return memory.ledger.appendEvent(record);
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("chunk-0"), providerDone()]),
       runLedger: ledger,
     });
 
-    await assert.rejects(agent.createSession({ id: "s-ledger-fail" }).run("stream and fail"), /ledger write failed/);
+    await failedRun((await agent.session({ id: "s-ledger-fail", create: true })).run("stream and fail"), /ledger write failed/);
   });
 });
 
@@ -473,12 +471,12 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
 
   it("copies the promptVersion ref onto start and finish run records", async () => {
     const { ledger, runs } = createMemoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "s-prompt" });
+    const session = await agent.session({ id: "s-prompt", create: true });
 
     await session.run("hi", { promptVersion: validRef });
 
@@ -489,13 +487,13 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
 
   it("leaves promptVersion absent when the host does not supply it", async () => {
     const { ledger, runs } = createMemoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
       runLedger: ledger,
     });
 
-    await agent.createSession({ id: "s-plain" }).run("hi");
+    await (await agent.session({ id: "s-plain", create: true })).run("hi");
 
     assert.equal(runs.length, 2);
     assert.ok(
@@ -506,12 +504,12 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
 
   it("rejects malformed promptVersion refs fail-closed before the run starts", async () => {
     const { ledger, runs } = createMemoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "s-invalid" });
+    const session = await agent.session({ id: "s-invalid", create: true });
 
     await assert.rejects(
       session.run("hi", { promptVersion: { name: "support-agent", version: 7, hash: "sha256:ABCD" } }),

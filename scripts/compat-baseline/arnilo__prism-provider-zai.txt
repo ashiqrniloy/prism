@@ -1,6 +1,6 @@
 ZAI_DEFAULT_BASE_URL	export declare const ZAI_DEFAULT_BASE_URL = "https://api.z.ai/api/paas/v4"
 createZaiProvider	export declare function createZaiProvider(options?: ZaiProviderOptions): AIProvider
-createZaiProviderPackage	export declare function createZaiProviderPackage(options?: ZaiProviderPackageOptions): ProviderPackage
+zaiPackage	export declare function zaiPackage(options?: ZaiProviderPackageOptions): PackageInstance
 defineZaiModel	export declare function defineZaiModel(config: ZaiModelConfig): ModelConfig
 listZaiModels	export declare function listZaiModels(options?: ListZaiModelsOptions): Promise<ModelConfig[]>
 mapZaiModel	export declare function mapZaiModel(entry: ZaiModelEntry, options?:

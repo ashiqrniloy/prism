@@ -1,5 +1,5 @@
 import type { ExecutionPolicy, ToolEffectKey, ToolEffectStore, ToolEffectTransition } from "@arnilo/prism";
-import { assertExecutionAllowed } from "@arnilo/prism";
+import { assertExecutionAllowed, assertIdentityMatchesOwnership } from "@arnilo/prism";
 import { sha256Hex } from "../artifacts.js";
 import type { BoundGitRunner } from "../git-exec.js";
 import { createBoundGitRunner } from "../git-exec.js";
@@ -213,7 +213,7 @@ function toForgeCheck(record: Record<string, unknown>): ForgeCheck {
 }
 
 interface MutationContext {
-  readonly identity: ToolEffectKey["identity"];
+  readonly identity: import("@arnilo/prism").AgentIdentity;
   readonly ownership: ToolEffectKey["ownership"];
   readonly sessionId: string;
   readonly runId: string;
@@ -248,6 +248,7 @@ export function createGitHubForge(options: CreateGitHubForgeOptions): ForgeOpera
     if (identity.tenantId !== ownership.tenantId) {
       throw new ForgeError("ERR_PRISM_FORGE_OWNERSHIP", "identity and ownership tenants must match");
     }
+    assertIdentityMatchesOwnership(identity, ownership);
     return { identity, ownership, sessionId: options.sessionId, runId: options.runId, store };
   }
 
@@ -289,7 +290,6 @@ export function createGitHubForge(options: CreateGitHubForgeOptions): ForgeOpera
     const argumentsHash = hashJson(args);
     const key = `prism:forge:v1:${hashJson({ tenant: ctx.ownership.tenantId, session: ctx.sessionId, run: ctx.runId, toolName, argumentsHash })}`;
     const base: ToolEffectKey = {
-      identity: ctx.identity,
       ownership: ctx.ownership,
       key,
       sessionId: ctx.sessionId,

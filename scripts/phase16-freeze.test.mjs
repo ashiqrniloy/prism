@@ -337,12 +337,12 @@ test("BARREL INTENT (Tasks 1-2 landed): src/contracts.ts and src/agents.ts are b
     "agents.ts re-exports the resume functions from agent-run-lifecycle",
   );
   assert.ok(!/^export (interface|class|const|enum|function)/m.test(agents), "agents.ts has no inline declarations");
-  assert.ok(!/^export function createAgent\(/m.test(agents), "agents.ts no longer declares createAgent inline");
+  assert.ok(!/^export (async )?function createAgent\(/m.test(agents), "agents.ts no longer declares createAgent inline");
   assert.ok(!/^class RuntimeAgentSession\b/m.test(agents), "RuntimeAgentSession moved out of agents.ts");
   assert.ok(agents.split("\n").length < 40, "agents.ts is a small barrel (< 40 lines)");
   // the split modules hold the moved declarations
   assert.ok(/^export class RuntimeAgentSession\b/m.test(session), "RuntimeAgentSession moved to agent-session.ts");
-  assert.ok(/^export function createAgent\(/m.test(session), "createAgent moved to agent-session.ts");
+  assert.ok(/^export async function createAgent\(/m.test(session), "createAgent moved to agent-session.ts");
   assert.ok(/^export function pendingDecisionsOf\(/m.test(approval), "approval helpers moved to agent-approval.ts");
   assert.ok(/^export function toolElicitationRequest\(/m.test(dispatch), "tool-dispatch helpers moved to agent-tool-dispatch.ts");
   assert.ok(/^export async function resumeAgentRun\(/m.test(lifecycle), "resumeAgentRun moved to agent-run-lifecycle.ts");

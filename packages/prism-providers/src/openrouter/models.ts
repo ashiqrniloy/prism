@@ -63,7 +63,7 @@ interface OpenRouterModelsResponse {
 
 /**
  * Caller-gated OpenRouter model discovery via official `GET /api/v1/models`.
- * Never invoked by `createOpenRouterProviderPackage` — hosts call this and pass
+ * Never invoked by `openrouterPackage` — hosts call this and pass
  * filtered results via `models:` (app-controlled registration remains the default).
  * Auth is optional for the public catalog; when supplied, Authorization is forwarded.
  * @see https://openrouter.ai/docs/api/api-reference/models/get-models

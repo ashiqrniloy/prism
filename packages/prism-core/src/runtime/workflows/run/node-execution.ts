@@ -1,7 +1,7 @@
 /** node-execution (0.2.5 plan 025 Task 1 split). Moved verbatim from run.ts; public surface unchanged behind the barrel. */
 
 import { randomUUID } from "node:crypto";
-import type { AgentSession, Message, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
+import type { Session, Message, ToolDefinition, ToolExecutionContext } from "@arnilo/prism";
 import { assertExecutionAllowed, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
 import { WorkflowAbortError, WorkflowCheckpointError, WorkflowLoopLimitError, WorkflowRuntimeError } from "../errors.js";
 import {
@@ -35,7 +35,7 @@ export async function runNode(
   options: RunWorkflowOptions,
   bus: WorkflowEventBus,
   emit: (event: WorkflowEventInput) => void,
-  activeSessions: Map<string, AgentSession>,
+  activeSessions: Map<string, Session>,
 ): Promise<void> {
   const node = state.workflow.nodes[nodeId]!;
   const nodeState = state.nodes.get(nodeId)!;
@@ -379,7 +379,7 @@ async function executeNode(
   state: SchedulerState,
   options: RunWorkflowOptions,
   bus: WorkflowEventBus,
-  activeSessions: Map<string, AgentSession>,
+  activeSessions: Map<string, Session>,
   onLoopIterationStart?: (iteration: number, iterationId: string) => void,
   onLoopIteration?: (iteration: number, iterationId: string, output: unknown, done: boolean) => Promise<void>,
 ): Promise<{
@@ -526,7 +526,6 @@ async function executeNode(
         call: { type: "tool_call", id: toolContext.toolCallId, name: tool.name, arguments: args },
         registry: createToolRegistry([tool]),
         context: toolContext,
-        guardrails: options.guardrails,
         redactor: options.redactor,
         ledger: options.runLedger,
         ownership: options.ownership,
@@ -622,7 +621,7 @@ async function executeNode(
           signal: ctx.signal,
           limits: options.limits,
           ownership: options.ownership,
-          identity: options.identity,
+          principal: options.identity?.principal,
           redactor: options.redactor,
           runLedger: options.runLedger,
           metadata: {

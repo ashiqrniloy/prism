@@ -1,12 +1,6 @@
-import {
-  type AgentIdentity,
-  type AIProvider,
-  assertIdentityActive,
-  type ModelConfig,
-  type ProviderRequest,
-  type ProviderRequestPolicy,
-} from "@arnilo/prism";
+import { type AgentIdentity, type AIProvider, assertIdentityActive, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
 import { ModelRouterError } from "./errors.js";
+import type { ModelRouterRequestTransform } from "./types.js";
 import { createGovernedProvider } from "./invocation.js";
 import { DEFAULT_CIRCUIT_COOLDOWN_MS, DEFAULT_CIRCUIT_FAILURE_THRESHOLD, resolveModelRouterLimits } from "./limits.js";
 import { createMemoryModelRouterStateStore } from "./state.js";
@@ -173,21 +167,18 @@ function stripOpenRouterRouting(model: ModelConfig): ModelConfig {
   return { ...model, compat: Object.keys(rest).length > 0 ? rest : undefined };
 }
 
-function createOpenRouterGatePolicy(allow: boolean): ProviderRequestPolicy {
-  return {
-    name: allow ? "model-router:openrouter-routing-allow" : "model-router:openrouter-routing-deny",
-    async apply({ request }): Promise<ProviderRequest> {
-      if (allow) return request;
-      const model = stripOpenRouterRouting(request.model);
-      const compat = request.options?.compat;
-      if (!compat || compat.openRouterRouting === undefined) return model === request.model ? request : { ...request, model };
-      const { openRouterRouting: _drop, ...restCompat } = compat;
-      return {
-        ...request,
-        model,
-        options: { ...request.options, compat: Object.keys(restCompat).length > 0 ? restCompat : undefined },
-      };
-    },
+function createOpenRouterGateTransform(allow: boolean): ModelRouterRequestTransform {
+  return (request: ProviderRequest) => {
+    if (allow) return request;
+    const model = stripOpenRouterRouting(request.model);
+    const compat = request.options?.compat;
+    if (!compat || compat.openRouterRouting === undefined) return model === request.model ? request : { ...request, model };
+    const { openRouterRouting: _drop, ...restCompat } = compat;
+    return {
+      ...request,
+      model,
+      options: { ...request.options, compat: Object.keys(restCompat).length > 0 ? restCompat : undefined },
+    };
   };
 }
 
@@ -202,7 +193,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
   const budgetReservationTtlMs = resolveReservationTtl(options.budgets?.reservationTtlMs);
   const stateStore = options.stateStore ?? createMemoryModelRouterStateStore();
   const externalState = options.stateStore !== undefined;
-  const openRouterPolicy = createOpenRouterGatePolicy(options.allowOpenRouterRouting === true);
+  const openRouterPolicy = createOpenRouterGateTransform(options.allowOpenRouterRouting === true);
   assertSelectionPolicy(options.selection);
 
   if (!Number.isSafeInteger(failureThreshold) || failureThreshold < 1 || failureThreshold > MAX_STATE_INTEGER) {
@@ -496,7 +487,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
           ...(reservation
             ? { budgetReservation: { reservationId: reservation.reservationId, fencingToken: reservation.fencingToken } }
             : {}),
-          providerRequestPolicy: openRouterPolicy,
+          modelRequestTransform: openRouterPolicy,
         };
       } catch (error) {
         await releaseReservation(reservation);
@@ -649,7 +640,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
         router,
       });
     },
-    createOpenRouterRoutingPolicy() {
+    createOpenRouterRoutingTransform() {
       return openRouterPolicy;
     },
   };

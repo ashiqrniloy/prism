@@ -58,28 +58,27 @@ export async function forward<Authorization extends AcpAuthorization>(
       // Retryable provider-turn failures never reach here: they surface as
       // provider_turn_finished-with-error and the run may recover; a fatal run ends
       // with a terminal `error` event (session.ts run() catch path).
-      if (event.type === "error") {
+      if (event.type === "run.failed") {
         const message = options.redactor?.redact(event.error.message) ?? event.error.message;
         // The code is prefixed so clients can distinguish run failures over the wire
         // (the SDK surfaces handler throws as -32603 with the message in data.details).
         throw new AcpError("ERR_PRISM_ACP_RUN", `ERR_PRISM_ACP_RUN: ${truncateBytes(message, 8 * 1024)}`);
       }
-      if (event.type === "agent_denied") {
+      if (event.type === "decision.resolved") {
         announce({
           runId: event.runId,
           sessionId: event.sessionId,
           status: "terminal",
-          version: event.version,
           updatedAt: new Date().toISOString(),
         });
         continue;
       }
-      if (event.type === "agent_finished") {
-        finishReason = event.finishReason;
+      if (event.type === "run.completed") {
+        finishReason = event.stopReason;
         announce({ runId: event.runId, sessionId: event.sessionId, status: "terminal", updatedAt: new Date().toISOString() });
         continue;
       }
-      if (event.type !== "agent_suspended") continue;
+      if (event.type !== "run.suspended") continue;
       announce({
         runId: event.runId,
         sessionId: event.sessionId,

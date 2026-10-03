@@ -5,7 +5,6 @@ import {
   assembleProviderInput,
   CONTEXT_BUDGET_REPORT_METADATA_KEY,
   ContextBudgetError,
-  type ContextProvider,
   createLoadedSkillSet,
   estimateTextTokens,
   getContextBudgetReport,
@@ -96,12 +95,6 @@ describe("context budget", () => {
   it("evicts history/tool results before context and skills", async () => {
     const history: Message[] = [assistant("old-a", "h1"), user("old-b", "h2")];
     const skills: Skill[] = [{ name: "skill-a", instructions: "skill body" }];
-    const contextProviders: ContextProvider[] = [
-      {
-        name: "ctx",
-        resolve: () => [{ id: "ctx-1", title: "Ctx", content: "context body" }],
-      },
-    ];
     const oversizedHistory = "x".repeat(400); // 100 tokens
     history[0] = assistant(oversizedHistory, "h1");
 
@@ -112,7 +105,6 @@ describe("context budget", () => {
       history,
       skills,
       skillsDisclosure: "eager",
-      contextProviders,
       toolResults: [{ toolCallId: "call_1", name: "lookup", value: { ok: true } }],
       contextBudget: {
         // Fit instructions + input + skill + context; force tool/history out.
@@ -120,7 +112,6 @@ describe("context budget", () => {
           estimateTextTokens("System instruction:\nBe brief.") +
           estimateTextTokens("current question") +
           estimateTextTokens("Skill skill-a:\nskill body") +
-          estimateTextTokens("Ctx:\ncontext body") +
           20,
         reportOmissions: true,
       },
@@ -132,7 +123,6 @@ describe("context budget", () => {
     assert.ok(report.omitted.some((row) => row.kind === "tool_results"));
     assert.ok(report.omitted.some((row) => row.kind === "history"));
     assert.ok(!report.omitted.some((row) => row.kind === "skills"));
-    assert.ok(!report.omitted.some((row) => row.kind === "context"));
     assert.ok(
       request.messages.some((message) => message.content.some((part) => part.type === "text" && part.text.includes("current question"))),
     );

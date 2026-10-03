@@ -35,3 +35,4 @@ dist-bin/
 /.claude/
 /laya-amd-setup.md
 /163-prism-feature-request.md
+.types/

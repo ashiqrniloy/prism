@@ -19,7 +19,7 @@ const { values } = parseArgs({
 
 let agent: AgentApp;
 try {
-  agent = createSpawnableAgent({ config: loadConfig(values.config ?? "prism-acp-agent.json") });
+  agent = await createSpawnableAgent({ config: loadConfig(values.config ?? "prism-acp-agent.json") });
 } catch (error) {
   console.error(`prism-acp-agent: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

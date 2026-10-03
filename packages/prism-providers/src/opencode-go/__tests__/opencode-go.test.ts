@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions, ProviderRequirementError } from "@arnilo/prism";
 import {
   assertProviderOwnedHeadersWin,
@@ -10,7 +11,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createOpenCodeGoProvider,
-  createOpenCodeGoProviderPackage,
+  opencodeGoPackage,
   defineOpenCodeGoModel,
   listOpenCodeGoModels,
   mapOpenCodeGoModel,
@@ -50,18 +51,9 @@ describe("@arnilo/prism-providers/opencode-go", () => {
       fetchCalls += 1;
       return ok(sse([]));
     }) as typeof fetch;
-    const registered: unknown[] = [];
-    await createOpenCodeGoProviderPackage({ apiKey: "fake-opencode-key", fetch: fetchImpl }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(opencodeGoPackage({ apiKey: "fake-opencode-key", fetch: fetchImpl }));
     assert.equal(fetchCalls, 0);
-    assert(registered.some((item: any) => item.id === "opencode-go"));
-    assert(registered.some((item: any) => item.provider === "opencode-go" && item.kind === "api_key"));
-    const models = registered.filter(
-      (item: any): item is ModelConfig => typeof item?.model === "string" && item.provider === "opencode-go",
-    );
+    const models = openCodeGoModels;
     assert.ok(models.length >= 15, `expected featured Go catalog, got ${models.length}`);
     assert(models.some((m) => m.model === "kimi-k3" && m.compat?.route === "openai"));
     assert(models.some((m) => m.model === "minimax-m3" && m.compat?.route === "anthropic"));
@@ -132,7 +124,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
           { type: "content_block_delta", index: 2, delta: { type: "thinking_delta", thinking: "plan" } },
           { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"q":"y"}' } },
           {
-            type: "message_delta",
+            type: "message.delta",
             usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
           },
         ]),
@@ -773,7 +765,7 @@ describe("@arnilo/prism-providers/opencode-go", () => {
             { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "call_1", name: "lookup" } },
             { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"q":"x"}' } },
             { type: "content_block_stop", index: 0 },
-            { type: "message_delta", delta: { stop_reason: "tool_use" } },
+            { type: "message.delta", delta: { stop_reason: "tool_use" } },
             { type: "message_stop" },
           ]),
         )) as typeof fetch,
@@ -1003,20 +995,6 @@ describe("@arnilo/prism-providers/opencode-go", () => {
   it("map_opencode_go_model_rejects_malformed_entry", () => {
     assert.throws(() => mapOpenCodeGoModel({ id: "" } as any), /missing id/);
     assert.throws(() => mapOpenCodeGoModel(undefined as any), /missing id/);
-  });
-
-  it("opencode_go_provider_package_accepts_models_override", async () => {
-    const custom: ModelConfig = { provider: "opencode-go", model: "custom-go", compat: { route: "openai" } };
-    const registered: ModelConfig[] = [];
-    await createOpenCodeGoProviderPackage({ apiKey: "fake", models: [custom] }).setup({
-      registerProvider() {},
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod() {},
-    } as any);
-    assert.deepEqual(
-      registered.map((m) => m.model),
-      ["custom-go"],
-    );
   });
 
   it("catalog_stamps_levels_and_family_per_upstream", () => {

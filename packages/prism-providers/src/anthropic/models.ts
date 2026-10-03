@@ -136,7 +136,7 @@ export function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig 
 
 /**
  * Caller-gated Claude model discovery via official `GET /v1/models`.
- * Never invoked by `createAnthropicProviderPackage` — hosts call this and pass
+ * Never invoked by `anthropicPackage` — hosts call this and pass
  * results via `models:` (or register themselves).
  * @see https://docs.anthropic.com/en/api/models-list
  */

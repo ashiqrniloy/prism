@@ -9,7 +9,6 @@ import type {
   ToolEffectTransition,
   ToolResult,
 } from "./contracts.js";
-import { assertIdentityActive, assertIdentityMatchesOwnership } from "./identity.js";
 
 export type ToolEffectErrorCode =
   | "ERR_PRISM_TOOL_EFFECT_REQUIRED"
@@ -52,11 +51,11 @@ export function toolEffectArgumentsHash(argumentsValue: JsonObject): string {
 
 /** Derives the only core-authoritative key. Callers never supply this from model input. */
 export function deriveToolEffectKey(input: Omit<ToolEffectKey, "key" | "signal">): string {
+  validateOwnership(input.ownership);
   const value = canonicalToolEffectJson({
     tenantId: input.ownership.tenantId,
     accountId: input.ownership.accountId ?? null,
     userId: input.ownership.userId ?? null,
-    principalId: input.identity.principal.id,
     sessionId: input.sessionId,
     runId: input.runId,
     toolCallId: input.toolCallId,
@@ -82,10 +81,10 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
     return expired;
   }
 
-  function save(record: ToolEffectRecord, identity: ToolEffectKey["identity"]): ToolEffectRecord {
+  function save(record: ToolEffectRecord, ownership: OwnershipScope): ToolEffectRecord {
     const frozen = freezeRecord(record);
     assertRecordSize(frozen);
-    records.set(recordKey({ identity, key: frozen.key }), frozen);
+    records.set(recordKey({ ownership, key: frozen.key }), frozen);
     return frozen;
   }
 
@@ -102,12 +101,12 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
       if (!existing)
         return {
           outcome: "acquired",
-          record: save(claim(input, 1, timestamp, ttl), input.identity),
+          record: save(claim(input, 1, timestamp, ttl), input.ownership),
         };
       if (existing.status === "failed_retryable" && existing.attempt < attempts) {
         return {
           outcome: "acquired",
-          record: save(claim(input, existing.attempt + 1, timestamp, ttl, existing), input.identity),
+          record: save(claim(input, existing.attempt + 1, timestamp, ttl, existing), input.ownership),
         };
       }
       return { outcome: "existing", record: existing };
@@ -122,7 +121,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
           version: record.version + 1,
           updatedAt: timestamp(now()),
         },
-        input.identity,
+        input.ownership,
       );
     },
 
@@ -139,7 +138,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
           ...(resultRef === undefined ? {} : { resultRef }),
           updatedAt: timestamp(now()),
         },
-        input.identity,
+        input.ownership,
       );
     },
 
@@ -153,7 +152,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
           failure: validateFailure(input.failure),
           updatedAt: timestamp(now()),
         },
-        input.identity,
+        input.ownership,
       );
     },
 
@@ -167,7 +166,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
           ...(input.failure === undefined ? {} : { failure: validateFailure(input.failure) }),
           updatedAt: timestamp(now()),
         },
-        input.identity,
+        input.ownership,
       );
     },
 
@@ -186,7 +185,7 @@ export function createMemoryToolEffectStore(options: { readonly now?: () => numb
           ...(input.failure === undefined ? {} : { failure: validateFailure(input.failure) }),
           updatedAt: timestamp(now()),
         },
-        input.identity,
+        input.ownership,
       );
     },
 
@@ -269,15 +268,7 @@ function withoutClaim(record: ToolEffectRecord): Omit<ToolEffectRecord, "claimTo
 }
 
 function validateKey(input: ToolEffectKey): void {
-  assertIdentityActive(input.identity);
   validateOwnership(input.ownership);
-  assertIdentityMatchesOwnership(input.identity, input.ownership);
-  if (
-    input.ownership.tenantId !== input.identity.tenantId ||
-    input.ownership.accountId !== input.identity.accountId ||
-    input.ownership.userId !== input.identity.userId
-  )
-    throw conflict();
   validateText(input.key, MAX_EFFECT_KEY_BYTES, "effect key");
   validateText(input.sessionId, MAX_IDENTIFIER_BYTES, "session id");
   validateText(input.runId, MAX_IDENTIFIER_BYTES, "run id");
@@ -287,7 +278,8 @@ function validateKey(input: ToolEffectKey): void {
 }
 
 function validateOwnership(ownership: OwnershipScope): void {
-  if (!ownership.tenantId?.trim()) throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_CONFLICT", "tool effect ownership is required");
+  if (!ownership || typeof ownership.tenantId !== "string" || !ownership.tenantId.trim())
+    throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_CONFLICT", "tool effect ownership is required");
   for (const value of [ownership.tenantId, ownership.accountId, ownership.userId]) {
     if (value !== undefined) validateText(value, MAX_IDENTIFIER_BYTES, "ownership");
   }
@@ -366,14 +358,8 @@ function sameOwnership(left: OwnershipScope, right: OwnershipScope): boolean {
   return left.tenantId === right.tenantId && left.accountId === right.accountId && left.userId === right.userId;
 }
 
-function recordKey(input: Pick<ToolEffectKey, "identity" | "key">): string {
-  return JSON.stringify([
-    input.identity.tenantId,
-    input.identity.accountId ?? "",
-    input.identity.userId ?? "",
-    input.identity.principal.id,
-    input.key,
-  ]);
+function recordKey(input: Pick<ToolEffectKey, "ownership" | "key">): string {
+  return JSON.stringify([input.ownership.tenantId, input.ownership.accountId ?? "", input.ownership.userId ?? "", input.key]);
 }
 
 function isTerminal(status: ToolEffectStatus): boolean {

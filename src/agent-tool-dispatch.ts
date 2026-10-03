@@ -2,18 +2,17 @@
 import type { StoredAgentRunState } from "./agent-run-state.js";
 import {
   Agent,
-  AgentConfig,
   AgentDecisionError,
   HARD_MAX_ELICITATION_BYTES,
   JsonObject,
   MAX_DECISION_REASON_BYTES,
   MAX_ELICITATION_BYTES,
   PendingDecision,
-  ProviderRequestPolicy,
   ToolDefinition,
   ToolExecutionContext,
   ToolRegistry,
 } from "./contracts.js";
+import { agentToolList, packagesAffectTools } from "./agent-session/runtime-registry.js";
 import { createToolRegistry } from "./tools.js";
 
 export function toolElicitationRequest(
@@ -70,7 +69,7 @@ export async function validateElicitationPayload(
   }
   // Tool-declared answer-shape validation, re-derived from the current registry (never persisted).
   const call = state.pendingCalls?.find((entry) => entry.call.id === target.toolCallId)?.call;
-  const tool = call ? activeTools(agent.config.tools).registry.get(call.name) : undefined;
+  const tool = call ? activeTools(agent).registry.get(call.name) : undefined;
   const elicitation = tool?.elicitation;
   const validate =
     elicitation && call
@@ -102,16 +101,11 @@ function safeToolElicitationValidate(
   }
 }
 
-export function activeTools(tools: AgentConfig["tools"]): { registry: ToolRegistry; tools: readonly ToolDefinition[] } {
-  if (!tools) return { registry: createToolRegistry(), tools: [] };
-  if ("list" in tools) return { registry: tools, tools: tools.list() };
-  const registry = createToolRegistry(tools);
-  return { registry, tools };
-}
-
-export function policyList(
-  policies: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined,
-): readonly ProviderRequestPolicy[] {
-  if (!policies) return [];
-  return "apply" in policies ? [policies] : policies;
+export function activeTools(agent: Agent): { registry: ToolRegistry; tools: readonly ToolDefinition[] } {
+  if (!packagesAffectTools(agent)) {
+    const tools = agent.config.tools?.add ?? [];
+    return { registry: createToolRegistry(tools), tools };
+  }
+  const merged = agentToolList(agent);
+  return { registry: createToolRegistry(merged), tools: merged };
 }

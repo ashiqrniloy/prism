@@ -1,9 +1,8 @@
 import type {
   AgentEvent,
-  AgentSession,
+  Session,
   ExecutionAction,
   ExecutionPolicy,
-  Guardrails,
   JsonObject,
   OwnershipScope,
   RunLedger,
@@ -117,7 +116,7 @@ export interface AgentNodeDefinition extends WorkflowNodeBase {
   readonly kind: "agent";
   readonly agent: string;
   readonly input?: (ctx: WorkflowNodeContext) => unknown | Promise<unknown>;
-  readonly output?: (ctx: WorkflowNodeContext & { readonly session: AgentSession }) => unknown | Promise<unknown>;
+  readonly output?: (ctx: WorkflowNodeContext & { readonly session: Session }) => unknown | Promise<unknown>;
 }
 
 export interface FunctionNodeDefinition extends WorkflowNodeBase {
@@ -518,7 +517,7 @@ export interface WorkflowEventMergeOptions {
 export interface WorkflowEventBus {
   emit(event: WorkflowEventInput): void;
   subscribe(): AsyncIterable<WorkflowEvent>;
-  observeAgentNode(input: { readonly nodeId: string; readonly session: AgentSession }): () => void;
+  observeAgentNode(input: { readonly nodeId: string; readonly session: Session }): () => void;
   close(): void;
   readonly sequence: number;
 }
@@ -557,7 +556,7 @@ export type WorkflowCheckpointRestoreHook = import("@arnilo/prism").CheckpointRe
 export interface RunWorkflowOptions {
   readonly concurrency?: number;
   readonly checkpoints?: WorkflowCheckpointAdapter;
-  readonly agentFactory?: (agentName: string) => AgentSession | Promise<AgentSession>;
+  readonly agentFactory?: (agentName: string) => Session | Promise<Session>;
   readonly tools?: Readonly<Record<string, ToolDefinition>> | ((name: string) => ToolDefinition | undefined);
   readonly runLedger?: RunLedger;
   readonly ownership?: OwnershipScope;
@@ -566,8 +565,6 @@ export interface RunWorkflowOptions {
   readonly redactor?: SecretRedactor;
   /** Passed to every agent node; child agent config can only be narrowed. */
   readonly limits?: RunLimits;
-  /** Tool-node stages are evaluated by core dispatch, never adapter-local code. */
-  readonly guardrails?: Guardrails;
   readonly signal?: AbortSignal;
   readonly onEvent?: (event: WorkflowEvent) => void;
   readonly eventBus?: WorkflowEventBus;

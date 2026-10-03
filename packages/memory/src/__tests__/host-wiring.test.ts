@@ -151,8 +151,12 @@ describe("host wiring: one propagation, four layers", () => {
     const note = await fabric.remember({ kind: "file", content: "Payroll approvals need finance sign-off.", path: sourceId });
 
     const sessionStore = createMemorySessionStore();
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([]), store: sessionStore });
-    const session = agent.createSession({ id: "s1" });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([]),
+      slots: { store: sessionStore },
+    });
+    const session = await agent.session({ id: "s1", create: true });
     await seedObservation(session, sessionStore, "e1", summaryObservation);
     await seedObservation(session, sessionStore, "e2", unrelatedObservation);
 

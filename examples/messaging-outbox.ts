@@ -79,11 +79,11 @@ export async function demo(): Promise<Record<string, unknown>> {
   const persistence = createSqlitePersistence({ filename: ":memory:" });
   try {
     const erp = createPostgresErpMessaging({ pool });
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "outbox-agent",
       model: { provider: "mock", model: "offline" },
       provider: createMockProvider([providerTextDelta(REPLY_TEXT), providerDone()]),
-      store: persistence,
+      slots: { store: persistence },
       runLedger: persistence,
     });
     const runtime = createMessagingRuntime({

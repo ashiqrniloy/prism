@@ -1,14 +1,13 @@
 import {
   type AgentEvent,
-  type ContextProvider,
   createAgent,
-  createAgentSession,
   createMockProvider,
   createToolRegistry,
   providerDone,
   providerTextDelta,
   providerToolCall,
   providerUsage,
+  registerContextSources,
   type Skill,
   type ToolDefinition,
   type ToolResult,
@@ -44,9 +43,10 @@ const summarizeSkill: Skill = {
   toolNames: ["notes/save"],
 };
 
-const workspaceContext: ContextProvider = {
+// Host context as a `context.build` source (roadmap §2.4).
+const workspaceContext = {
   name: "workspace",
-  resolve: () => [{ title: "Workspace note", content: "Prism ships an extensible agent SDK." }],
+  contextBlocks: [{ title: "Workspace note", content: "Prism ships an extensible agent SDK." }],
 };
 
 export async function demo(): Promise<{
@@ -54,7 +54,7 @@ export async function demo(): Promise<{
   textDeltas: readonly string[];
   eventTypes: readonly string[];
 }> {
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([
       providerToolCall({ type: "tool_call", id: "tc1", name: "notes/save", arguments: { text: "extensible SDK" } }),
@@ -63,12 +63,12 @@ export async function demo(): Promise<{
       providerDone(),
     ]),
     instructions: "You are a concise assistant.",
-    tools: createToolRegistry([saveNoteTool]),
-    skills: [summarizeSkill],
-    context: [workspaceContext],
+    tools: { add: [saveNoteTool] },
+    skills: { add: [summarizeSkill] },
+    hooks: (hooks) => registerContextSources(hooks, [workspaceContext]),
   });
 
-  const session = createAgentSession({ agent });
+  const session = await agent.session();
 
   const toolCallNames: string[] = [];
   const textDeltas: string[] = [];
@@ -76,11 +76,11 @@ export async function demo(): Promise<{
   async function drain(): Promise<void> {
     for await (const event of session.subscribe() as AsyncIterable<AgentEvent>) {
       eventTypes.push(event.type);
-      if (event.type === "tool_execution_started") toolCallNames.push(event.call.name);
-      if (event.type === "message_delta" && event.content.type === "text") textDeltas.push(event.content.text);
+      if (event.type === "tool.started") toolCallNames.push(event.call.name);
+      if (event.type === "message.delta" && event.content.type === "text") textDeltas.push(event.content.text);
     }
   }
-  await Promise.all([drain(), session.run("Summarize and save.", { activeSkills: ["summarize-skill"] })]);
+  await Promise.all([drain(), session.run("Summarize and save.")]);
 
   return { toolCallNames, textDeltas, eventTypes };
 }

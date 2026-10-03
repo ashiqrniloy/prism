@@ -1,6 +1,6 @@
-import type { AgentSession, CommandDrivers, ModelConfig, RunOptions, SessionEntry, SessionStore, ToolRegistry } from "@arnilo/prism";
-import type { AgentSdkDefinition } from "@arnilo/prism-agent-sdk";
-import type { AskUserDecisionAnswer, AskUserDecisionRequest, TodoContinuationStopHook } from "@arnilo/prism-coding-tools/agent";
+import type { Session, CommandDrivers, ModelConfig, RunOptions, SessionEntry, SessionStore, ToolRegistry } from "@arnilo/prism";
+import type { Agent } from "@arnilo/prism-agent-sdk";
+import type { AskUserDecisionAnswer, AskUserDecisionRequest, TodoContinuationHandler } from "@arnilo/prism-coding-tools/agent";
 import type { CodingApprovalRequest } from "@arnilo/prism-coding-tools/security";
 import { BoxRenderable, type CliRenderer, createCliRenderer, type PasteEvent, type SyntaxStyle } from "@opentui/core";
 import type { PrismCodeApprovalController } from "../approval.js";
@@ -16,7 +16,13 @@ import {
   type ProviderCache,
   validateThinkingLevel,
 } from "../providers.js";
-import { deriveSessionTitle, ensureDurableSessionRecord, resolveSessionStore, setSessionTitle } from "../sessions.js";
+import {
+  configuredSessionStore,
+  deriveSessionTitle,
+  ensureDurableSessionRecord,
+  resolveSessionStore,
+  setSessionTitle,
+} from "../sessions.js";
 import type { WebToolResolution } from "../web.js";
 import type { WikiContributions } from "../wiki.js";
 import { type CommandContext, executeResumeSessionCommand, handleSlashCommand, type McpSessionControl } from "./commands.js";
@@ -48,7 +54,7 @@ export type { UiFooterStatus, UiStreamEntry } from "./reducer.js";
 export { createInitialTuiState, tuiReducer } from "./reducer.js";
 
 export interface CodeUi {
-  start(definition: AgentSdkDefinition): Promise<void>;
+  start(definition: Agent): Promise<void>;
   close(): Promise<void>;
   promptApproval(request: CodingApprovalRequest): Promise<ApprovalDecision>;
   readonly isDestroyed: boolean;
@@ -95,8 +101,8 @@ export class PrismCodeTui implements CodeUi {
   /** Single active model + effort; every run derives its options from this value. */
   private selection: ActiveSelection;
   private state: TuiState;
-  private definition?: AgentSdkDefinition;
-  private session?: ReturnType<AgentSdkDefinition["createSession"]>;
+  private definition?: Agent;
+  private session?: Awaited<ReturnType<Agent["session"]>>;
   private todoComponent?: TodoPanelComponent;
   private store?: SessionStore;
   private container?: BoxRenderable;
@@ -289,14 +295,14 @@ export class PrismCodeTui implements CodeUi {
     }
   }
 
-  async start(definition: AgentSdkDefinition): Promise<void> {
+  async start(definition: Agent): Promise<void> {
     this.definition = definition;
-    this.store = this.options.store ?? definition.agent.config.store ?? resolveSessionStore(this.config);
+    this.store = this.options.store ?? configuredSessionStore(definition.agent) ?? resolveSessionStore(this.config);
 
     // Surface the todo no-progress stop as a system note (plan 137 Task 7).
-    const todoStopHook = (definition as unknown as { todoStopHook?: TodoContinuationStopHook }).todoStopHook;
-    if (todoStopHook) {
-      todoStopHook.onNoProgressStop = () => this.notify("Stopped: no progress on open todos");
+    const todoContinuation = (definition as unknown as { todoContinuation?: TodoContinuationHandler }).todoContinuation;
+    if (todoContinuation) {
+      todoContinuation.onNoProgressStop = () => this.notify("Stopped: no progress on open todos");
     }
 
     // One provider cache per process: reuse the one the definition was assembled with.
@@ -319,15 +325,16 @@ export class PrismCodeTui implements CodeUi {
     this.appendSetupNotes([...(this.options.setupNotes ?? []), ...(webResolution?.notes ?? [])]);
 
     // Create agent session
-    this.session = definition.createSession({
+    this.session = await definition.session({
       id: this.options.sessionId,
       metadata: {
         workspaceRoot: this.config.cwd,
         userId: this.config.userId ?? "local",
       },
+      create: true,
     });
 
-    await ensureDurableSessionRecord(this.store, this.session.id, this.config.cwd, {
+    await ensureDurableSessionRecord(this.store!, this.session.id, this.config.cwd, {
       userId: this.config.userId,
     });
 
@@ -497,7 +504,7 @@ export class PrismCodeTui implements CodeUi {
    */
   syncContextMeter(): void {
     if (!this.session) return;
-    let meter: ReturnType<AgentSession["contextMeter"]>;
+    let meter: ReturnType<Session["contextMeter"]>;
     try {
       meter = this.session.contextMeter();
     } catch {
@@ -583,7 +590,7 @@ export class PrismCodeTui implements CodeUi {
     return this.secretInputComponent.show(label);
   }
 
-  private async switchSession(newSession: AgentSession, initialEntries?: readonly SessionEntry[]): Promise<void> {
+  private async switchSession(newSession: Session, initialEntries?: readonly SessionEntry[]): Promise<void> {
     this.session = newSession;
     this.currentAbortController = undefined;
 
@@ -626,7 +633,7 @@ export class PrismCodeTui implements CodeUi {
 
     void (async () => {
       try {
-        for await (const event of session.subscribe({ acrossRuns: true })) {
+        for await (const event of (await session).subscribe({ acrossRuns: true })) {
           if (this.isDestroyed || this.session !== session) break;
           const previousEntries = this.state.entries;
           const previousFooter = this.state.footer;
@@ -640,7 +647,7 @@ export class PrismCodeTui implements CodeUi {
           }
           this.todoComponent?.update(this.state.todos);
           // Reported usage and manual compaction both move the next-request context reading.
-          if (event.type === "provider_turn_finished" || (event.type === "compaction_finished" && event.runId === undefined)) {
+          if (event.type === "turn.completed" || (event.type === "compaction.completed" && event.runId === undefined)) {
             this.syncContextMeter();
           }
           if (previousFooter !== this.state.footer && this.statusComponent) {
@@ -659,9 +666,9 @@ export class PrismCodeTui implements CodeUi {
         if (!this.session) throw new Error("No active session");
         await this.ensureProvider();
         const session = this.omCoordinator
-          ? await this.omCoordinator.getActiveSession(this.session, this.currentModel, this.store)
+          ? await this.omCoordinator.getActiveSession(await this.session, this.currentModel, this.store)
           : this.session;
-        return session.run(input, selectionRunOptions(this.selection, this.providerCache, options ?? {}));
+        return (await session).run(input, selectionRunOptions(this.selection, this.providerCache, options ?? {}));
       },
       startWorkflow: async () => {
         throw new Error("workflow drivers are not supported in Prism Code");
@@ -675,7 +682,11 @@ export class PrismCodeTui implements CodeUi {
   /** Builds the slash-command context once, shared by prompt submission and `--resume`. */
   private async buildCommandContext(): Promise<CommandContext | undefined> {
     if (!this.pickerComponent || !this.streamComponent || !this.statusComponent) return undefined;
-    const store = this.store ?? this.options.store ?? this.definition?.agent.config.store ?? resolveSessionStore(this.config);
+    const store =
+      this.store ??
+      this.options.store ??
+      (this.definition ? configuredSessionStore(this.definition.agent) : undefined) ??
+      resolveSessionStore(this.config);
     return {
       state: this.state,
       picker: this.pickerComponent,
@@ -787,16 +798,10 @@ export class PrismCodeTui implements CodeUi {
       const runOpts: RunOptions = selectionRunOptions(this.selection, this.providerCache, {
         signal: this.currentAbortController.signal,
       });
-      // Wiki guidance (and any other host injectors) rides the same run options as the CLI.
-      const wikiContributions = (this.definition as any).wikiContributions as WikiContributions | undefined;
-      const finalRunOpts =
-        wikiContributions && wikiContributions.instructionInjectors.length > 0
-          ? { ...runOpts, instructionInjectors: wikiContributions.instructionInjectors }
-          : runOpts;
       const sessionToRun = this.omCoordinator
-        ? await this.omCoordinator.getActiveSession(this.session, this.currentModel, this.store)
+        ? await this.omCoordinator.getActiveSession(await this.session, this.currentModel, this.store)
         : this.session;
-      const run = sessionToRun.run(attachmentInput.input, finalRunOpts);
+      const run = (await sessionToRun).run(attachmentInput.input, runOpts);
       this.activeRun = run;
       await run;
     } catch (error) {
@@ -1154,7 +1159,7 @@ export class PrismCodeTui implements CodeUi {
   }
 
   /**
-   * The proposal diff for the tool awaiting approval. The runtime emits `tool_execution_started`
+   * The proposal diff for the tool awaiting approval. The runtime emits `tool.started`
    * (with full arguments) before it awaits the approval policy, so the matching running card is
    * normally already in TUI state; a miss just means the prompt renders without a diff.
    */

@@ -1,11 +1,10 @@
-import type { ContextProvider } from "@arnilo/prism";
 import { MemoryValidationError } from "../errors.js";
 import { assertNotAborted } from "../util.js";
 import type { MemoryFabricObservationSource } from "./types.js";
 import type { MemoryFabricSettings } from "./workers.js";
 
 /**
- * The minimum the fabric needs from a session: its id. An `AgentSession` satisfies it, and so
+ * The minimum the fabric needs from a session: its id. An `Session` satisfies it, and so
  * does a test double — the fabric never runs the session, it gates on it.
  */
 export interface MemoryFabricAttachableSession {
@@ -20,7 +19,10 @@ export interface MemoryFabricAttachOptions {
 export interface AttachedMemoryFabricSession<S extends MemoryFabricAttachableSession = MemoryFabricAttachableSession> {
   readonly session: S;
   /** The context seam for this fabric: the same blocks `createMemory` resolves. */
-  readonly contextProvider: ContextProvider;
+  readonly contextBuild: (
+    draft: import("@arnilo/prism").ContextDraft,
+    context: import("@arnilo/prism").HookContext,
+  ) => Promise<import("@arnilo/prism").ContextDraft | undefined>;
   /** Create-time settings this fabric resolved (workers, thresholds, caps). */
   readonly settings: MemoryFabricSettings;
   /** Removes the session from the gate; safe to call twice. */
@@ -31,7 +33,7 @@ export interface MemoryFabricAttachDeps {
   /** Live gate: sessions in this set may drive tools and enable the workers. */
   readonly attachedSessions: Set<string>;
   readonly settings: MemoryFabricSettings;
-  readonly contextProvider: ContextProvider;
+  readonly contextBuild: AttachedMemoryFabricSession["contextBuild"];
   readonly observational?: MemoryFabricObservationSource;
 }
 
@@ -79,6 +81,6 @@ export function createFabricAttach(
     };
     if (signal !== undefined) signal.addEventListener("abort", detach, { once: true });
     deps.attachedSessions.add(session.id);
-    return { session, contextProvider: deps.contextProvider, settings: deps.settings, detach };
+    return { session, contextBuild: deps.contextBuild, settings: deps.settings, detach };
   };
 }

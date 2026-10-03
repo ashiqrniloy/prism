@@ -111,10 +111,10 @@ describe("plan 079 Telegram adapter", () => {
     const checkpoints = createMemoryCheckpointStore();
     const leases = createMemoryLeaseStore();
     const adapter = createTelegramAdapter(pollingOptions(responseForPoll([message(1, "hello Prism")], outgoing), { checkpoints, leases }));
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "telegram-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -505,11 +505,11 @@ describe("plan 080 Telegram draft streaming", () => {
     };
   }
 
-  function streamingAgent(): ReturnType<typeof createAgent> {
-    return createAgent({
+  async function streamingAgent(): ReturnType<typeof createAgent> {
+    return await createAgent({
       id: "draft-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -781,10 +781,10 @@ describe("plan 080 bounded attachments and voice", () => {
         },
       }),
     );
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "telegram-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {

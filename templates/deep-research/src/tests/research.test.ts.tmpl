@@ -7,11 +7,11 @@ import { createResearchWorkflow, executeResearch } from "../workflow.js";
 
 describe("deep-research template", () => {
   it("generates research plans with structured query breakdowns", async () => {
-    const planner = createPlannerAgent();
-    const session = planner.createSession({ id: "test-plan" });
+    const planner = await createPlannerAgent();
+    const session = await planner.session();
     const result = await session.run("Prism architecture");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.ok(result.text.length > 0);
     const plan = JSON.parse(result.text);
     assert.ok(Array.isArray(plan.queries));
@@ -104,11 +104,11 @@ describe("deep-research template", () => {
   });
 
   it("default createAppAgent boots and exposes search tools", async () => {
-    const appAgent = createAppAgent();
-    const session = appAgent.createSession({ id: "app-test" });
+    const appAgent = await createAppAgent();
+    const session = await appAgent.session();
     const result = await session.run("Hello");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.match(result.text, /Deep Research Agent ready/);
   });
 });

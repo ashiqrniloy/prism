@@ -2,14 +2,13 @@ import { isJsonObject } from "./config.js";
 import type {
   AgentEvent,
   ErrorInfo,
-  GuardrailRecord,
-  Guardrails,
   JsonObject,
   OwnershipScope,
   RunLedger,
   ToolCallContent,
   ToolCallRecord,
   ToolCallStatus,
+  ToolCapabilityKind,
   ToolDefinition,
   ToolEffectDeclaration,
   ToolEffectKey,
@@ -19,14 +18,12 @@ import type {
   ToolRegistry,
   ToolResult,
 } from "./contracts.js";
-import { GuardrailError, guardrailRefusalText, runGuardrails } from "./guardrails.js";
-import { assertIdentityActive, assertIdentityMatchesOwnership, ownershipFromIdentity } from "./identity.js";
+import { GuardrailError } from "./guardrails.js";
 import { createId } from "./ids.js";
-import type { MiddlewareRegistry } from "./middleware.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
 import type { RunLimitTracker } from "./run-limits.js";
-import { assertPermission, assertTrusted, type PermissionPolicy, type TrustPolicy } from "./security.js";
+import { assertTrusted, type TrustPolicy } from "./security.js";
 import { deriveToolEffectKey, ToolEffectError, toolEffectArgumentsHash } from "./tool-effects.js";
 
 export interface ToolFilter {
@@ -84,28 +81,71 @@ export interface DispatchToolCallOptions {
   readonly registry: ToolRegistry;
   readonly context: ToolExecutionContext;
   readonly filter?: ToolFilterInput;
-  readonly middleware?: MiddlewareRegistry;
   readonly validate?: ToolValidator;
   /** Adapter-specific policy check immediately before the tool side effect. */
   readonly beforeExecute?: (call: ToolCallContent, tool: ToolDefinition, context: ToolExecutionContext) => void | Promise<void>;
   readonly emit?: (event: AgentEvent) => void | Promise<void>;
   readonly secrets?: readonly (string | undefined)[];
-  readonly permission?: PermissionPolicy;
   readonly trust?: TrustPolicy;
   readonly redactor?: SecretRedactor;
   readonly ledger?: RunLedger;
   /** Optional shared recovery store. Only declared optional/required effects use it. */
   readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
-  /** Host-verified identity; asserted active before tool side effects when present. */
-  readonly identity?: import("./identity.js").AgentIdentity;
-  /** Tool stages run after middleware normalization and before side effects/exposure. */
-  readonly guardrails?: Guardrails;
+  /** Opaque host principal, passed through unchanged. */
+  readonly principal?: import("./identity.js").Principal;
   /** Shared run tracker; direct hosts may supply one for their call scope. */
   readonly limitTracker?: RunLimitTracker;
 }
 
 export interface ToolRegistryOptions extends DuplicateRegistrationOptions {}
+
+/** Every capability kind, used as the fail-closed default for a tool that declares no `effects`. */
+const ALL_TOOL_CAPABILITY_KINDS: readonly ToolCapabilityKind[] = Object.freeze([
+  "read",
+  "write",
+  "execute",
+  "network",
+  "external",
+] as const);
+
+const TOOL_CAPABILITY_KIND_SET: ReadonlySet<string> = new Set(ALL_TOOL_CAPABILITY_KINDS);
+
+export class ToolDefinitionError extends Error {
+  constructor(
+    readonly code: "ERR_PRISM_TOOL_EFFECTS",
+    message: string,
+  ) {
+    super(message);
+    this.name = "ToolDefinitionError";
+  }
+}
+
+function assertToolEffects(tool: ToolDefinition): void {
+  const effects = tool.effects;
+  if (effects === undefined) return;
+  if (!Array.isArray(effects)) {
+    throw new ToolDefinitionError("ERR_PRISM_TOOL_EFFECTS", `Tool ${tool.name} effects must be an array of capability kinds`);
+  }
+  const seen = new Set<string>();
+  for (const kind of effects) {
+    if (typeof kind !== "string" || !TOOL_CAPABILITY_KIND_SET.has(kind)) {
+      throw new ToolDefinitionError("ERR_PRISM_TOOL_EFFECTS", `Tool ${tool.name} has unknown capability kind ${JSON.stringify(kind)}`);
+    }
+    if (seen.has(kind)) {
+      throw new ToolDefinitionError("ERR_PRISM_TOOL_EFFECTS", `Tool ${tool.name} repeats capability kind ${kind}`);
+    }
+    seen.add(kind);
+  }
+}
+
+/**
+ * Capabilities reported to `tool.call` hooks. A tool with no `effects` resolves to all kinds, so a
+ * missing annotation never widens what an effects-based policy allows.
+ */
+export function resolveToolEffects(tool: ToolDefinition): readonly ToolCapabilityKind[] {
+  return tool.effects ?? ALL_TOOL_CAPABILITY_KINDS;
+}
 
 export function createToolRegistry(tools: readonly ToolDefinition[] = [], options: ToolRegistryOptions = {}): ToolRegistry {
   const byName = new Map<string, ToolDefinition>();
@@ -113,6 +153,7 @@ export function createToolRegistry(tools: readonly ToolDefinition[] = [], option
   const registry: ToolRegistry = {
     register(tool) {
       assertCanRegister(byName, tool.name, "tool", tool.name, options.duplicate);
+      assertToolEffects(tool);
       byName.set(tool.name, tool);
     },
     get(name) {
@@ -172,7 +213,7 @@ export function clampTurnToolNames(
   listed: readonly ToolDefinition[],
   requested: readonly string[],
 ): { readonly tools: readonly ToolDefinition[]; readonly dropped: readonly string[] } {
-  const names = assertRunToolNames(requested, "toolNarrowing");
+  const names = assertRunToolNames(requested, "RunOptions.tools");
   const grant = new Set(listed.map((tool) => tool.name));
   const dropped = names.filter((name) => !grant.has(name));
   const allow = names.filter((name) => grant.has(name));
@@ -210,33 +251,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   const secrets = options.secrets ?? [];
   const startedAt = new Date().toISOString();
   options.limitTracker?.charge("maxToolCalls");
-  const mediatedCall = await (options.middleware?.run<ToolCallContent>("tool_call", options.call) ?? options.call);
-  const inputGuards = await runGuardrails({
-    stage: "tool_input",
-    guardrails: options.guardrails,
-    value: mediatedCall,
-    context: {
-      sessionId: options.context.sessionId,
-      runId: options.context.runId,
-      toolCallId: mediatedCall.id,
-      toolName: mediatedCall.name,
-      metadata: options.context.metadata ?? {},
-      signal: options.context.signal,
-    },
-    redactor: options.redactor,
-    emit: options.emit,
-  });
-  if (inputGuards.terminal) {
-    if (inputGuards.terminal.action !== "block") throw new GuardrailError(inputGuards.terminal);
-    return blocked(
-      mediatedCall,
-      options.context,
-      "guardrail_blocked",
-      { message: guardrailBlockMessage(inputGuards.terminal) },
-      options,
-      startedAt,
-    );
-  }
+  const mediatedCall = options.call;
   const tool = options.registry.get(mediatedCall.name);
   const postcheck = await checkCall(mediatedCall, options, startedAt);
   if (postcheck) return postcheck;
@@ -245,11 +260,11 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   let context: ToolExecutionContext = {
     ...baseContext,
     toolCallId: mediatedCall.id,
-    identity: options.identity ?? options.context.identity,
+    principal: options.principal ?? options.context.principal,
     progress: async (progress, metadata) => {
       await options.context.progress?.(progress, metadata);
       await options.emit?.({
-        type: "tool_execution_progress",
+        type: "tool.progress",
         sessionId: options.context.sessionId,
         runId: options.context.runId,
         toolCallId: mediatedCall.id,
@@ -266,20 +281,10 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   };
 
   try {
-    if (context.identity) {
-      assertIdentityActive(context.identity);
-      assertIdentityMatchesOwnership(context.identity, options.ownership);
-    }
     await assertTrusted(options.trust, {
       kind: "tool",
       target: mediatedCall.name,
       capability: "execute",
-      metadata: options.context.metadata,
-    });
-    await assertPermission(options.permission, {
-      kind: "tool",
-      action: "execute",
-      target: mediatedCall.name,
       metadata: options.context.metadata,
     });
   } catch (error) {
@@ -311,7 +316,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
   let completedResult: ToolResult | undefined;
   let dispatchAttempted = false;
   try {
-    await options.emit?.({ type: "tool_execution_started", sessionId: context.sessionId, runId: context.runId, call: mediatedCall });
+    await options.emit?.({ type: "tool.started", sessionId: context.sessionId, runId: context.runId, call: mediatedCall });
     await appendToolCallRecord(options, "started", mediatedCall, startedAt, {});
     if (effect) {
       dispatchAttempted = true;
@@ -320,34 +325,7 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
       effect.dispatched = true;
     }
     const raw = await tool!.execute(mediatedCall.arguments, context);
-    const mediatedResult = await (options.middleware?.run<ToolResult>("tool_result", raw) ?? raw);
-    const outputGuards = await runGuardrails({
-      stage: "tool_output",
-      guardrails: options.guardrails,
-      value: mediatedResult,
-      context: {
-        sessionId: context.sessionId,
-        runId: context.runId,
-        toolCallId: mediatedCall.id,
-        toolName: mediatedCall.name,
-        metadata: context.metadata ?? {},
-        signal: context.signal,
-      },
-      redactor: options.redactor,
-      emit: options.emit,
-    });
-    if (outputGuards.terminal) {
-      if (outputGuards.terminal.action !== "block") throw new GuardrailError(outputGuards.terminal);
-      if (effect) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
-      return blocked(
-        mediatedCall,
-        context,
-        "guardrail_blocked",
-        { message: guardrailBlockMessage(outputGuards.terminal) },
-        options,
-        startedAt,
-      );
-    }
+    const mediatedResult = raw;
     if (effect && mediatedResult.error) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
     const result = options.redactor?.redact(mediatedResult) ?? mediatedResult;
     if (effect) {
@@ -364,11 +342,14 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     const finishedAt = new Date().toISOString();
     const metadata = toolExecutionMetadata(startedAt, "finished");
     await options.emit?.({
-      type: "tool_execution_finished",
+      type: "tool.completed",
       sessionId: context.sessionId,
       runId: context.runId,
+      toolCallId: mediatedCall.id,
+      name: mediatedCall.name,
       result: completedResult,
       metadata,
+      status: "finished",
     });
     await appendToolCallRecord(options, "finished", mediatedCall, startedAt, { finishedAt, result: completedResult });
     return completedResult;
@@ -388,12 +369,15 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     const finishedAt = new Date().toISOString();
     const metadata = toolExecutionMetadata(startedAt, "error");
     await options.emit?.({
-      type: "tool_execution_error",
+      type: "tool.completed",
       sessionId: context.sessionId,
       runId: context.runId,
-      call: mediatedCall,
-      error: info,
+      toolCallId: mediatedCall.id,
+      name: mediatedCall.name,
+      result,
       metadata,
+      status: "error",
+      error: info,
     });
     await appendToolCallRecord(options, "error", mediatedCall, startedAt, { finishedAt, result });
     return result;
@@ -419,15 +403,13 @@ async function prepareToolEffect(
   context: ToolExecutionContext,
   options: DispatchToolCallOptions,
 ): Promise<PreparedToolEffect> {
-  const identity = context.identity;
+  const ownership = options.ownership;
   const declaration = resolveToolEffectDeclaration(tool, call.arguments, context);
   if (!declaration || declaration.kind === "none" || declaration.idempotency === "none") return { context };
-  if (!identity && declaration.idempotency === "unsupported") return { context };
-  if (!identity) throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_CONFLICT", "verified identity is required for a durable tool effect");
-  const ownership = ownershipFromIdentity(identity);
+  if (!ownership && declaration.idempotency === "unsupported") return { context };
+  if (!ownership) throw new ToolEffectError("ERR_PRISM_TOOL_EFFECT_CONFLICT", "ownership is required for a durable tool effect");
   const argumentsHash = toolEffectArgumentsHash(call.arguments);
   const base = {
-    identity,
     ownership,
     sessionId: context.sessionId,
     runId: context.runId,
@@ -553,7 +535,17 @@ async function finishUnknownEffect(
   const finishedAt = new Date().toISOString();
   const metadata = toolExecutionMetadata(startedAt, "error");
   try {
-    await options.emit?.({ type: "tool_execution_error", sessionId: context.sessionId, runId: context.runId, call, error, metadata });
+    await options.emit?.({
+      type: "tool.completed",
+      sessionId: context.sessionId,
+      runId: context.runId,
+      toolCallId: call.id,
+      name: call.name,
+      result,
+      metadata,
+      status: "error",
+      error,
+    });
     await appendToolCallRecord(options, "error", call, startedAt, { finishedAt, result });
   } catch {
     // The effect is already ambiguous; exposure/ledger failures cannot make it safe to retry.
@@ -572,16 +564,6 @@ function isSuspended(error: unknown): boolean {
 
 function isLoopStateError(error: unknown): boolean {
   return typeof (error as { code?: unknown })?.code === "string" && (error as { code: string }).code.startsWith("ERR_PRISM_LOOP_");
-}
-
-/**
- * Plan 104 T3/T4: the model-visible refusal line for a terminal guardrail decision. `guardrailRefusalText`
- * names a compiled pack rule (bounded, redacted); any other guardrail keeps the neutral stage text.
- */
-function guardrailBlockMessage(record: GuardrailRecord): string {
-  return (
-    guardrailRefusalText(record) ?? (record.stage === "tool_output" ? "Tool result blocked by guardrail" : "Tool call blocked by guardrail")
-  );
 }
 
 function isDelegationSuspended(error: unknown): boolean {
@@ -609,18 +591,20 @@ async function blocked(
   startedAt: string,
 ): Promise<ToolResult> {
   const metadata = toolExecutionMetadata(startedAt, "blocked");
+  const finishedAt = new Date().toISOString();
+  const result = { toolCallId: call.id, name: call.name, error };
   await options.emit?.({
-    type: "tool_execution_blocked",
+    type: "tool.completed",
     sessionId: context.sessionId,
     runId: context.runId,
     toolCallId: call.id,
     name: call.name,
+    result,
+    metadata,
+    status: "blocked",
     reason,
     error,
-    metadata,
   });
-  const finishedAt = new Date().toISOString();
-  const result = { toolCallId: call.id, name: call.name, error };
   await appendToolCallRecord(options, "blocked", call, startedAt, { reason, finishedAt, result });
   return result;
 }

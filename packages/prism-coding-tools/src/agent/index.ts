@@ -384,8 +384,8 @@ export { createWorktreeChildFactory } from "./spawn-worktree.js";
 export type { ObserveSupervisorLifecycleOptions } from "./supervisor-lifecycle.js";
 export { observeSupervisorLifecycle } from "./supervisor-lifecycle.js";
 export type {
-  TodoContinuationStopHook,
-  TodoContinuationStopHookOptions,
+  TodoContinuationHandler,
+  TodoContinuationHandlerOptions,
   TodoItem,
   TodoListMetadata,
   TodoNoProgressStopInfo,
@@ -393,7 +393,7 @@ export type {
   TodoWriteToolOptions,
 } from "./todo.js";
 export {
-  createTodoContinuationStopHook,
+  registerTodoContinuation,
   createTodoWriteTool,
   DEFAULT_MAX_TODO_CONTENT_BYTES,
   DEFAULT_MAX_TODO_ID_BYTES,

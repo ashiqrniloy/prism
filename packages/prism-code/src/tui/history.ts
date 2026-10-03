@@ -32,7 +32,7 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
   if (entry.kind === "compaction") {
     actions.push(
       sessionEvent({
-        type: "compaction_finished",
+        type: "compaction.completed",
         sessionId,
         runId,
         summary: entry.summary ?? "",
@@ -61,9 +61,12 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
       };
       actions.push(
         sessionEvent({
-          type: "tool_execution_finished",
+          type: "tool.completed",
           sessionId,
           runId,
+          toolCallId: block.toolCallId,
+          name: block.name,
+          status: block.error ? "error" : "finished",
           result,
           metadata: { durationMs: 0, status: block.error ? "error" : "finished" },
         }),
@@ -75,23 +78,17 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
   if (message.role !== "assistant") return actions;
 
   let textOpen = false;
+  // The reducer opens a message on the first delta, so replaying history needs no start action;
+  // `textOpen` still guards against emitting an empty leading delta per block.
   const openText = () => {
     if (textOpen) return;
-    actions.push(
-      sessionEvent({
-        type: "message_started",
-        sessionId,
-        runId,
-        message: { role: "assistant", content: [] },
-      }),
-    );
     textOpen = true;
   };
   const closeText = () => {
     if (!textOpen) return;
     actions.push(
       sessionEvent({
-        type: "message_finished",
+        type: "message.completed",
         sessionId,
         runId,
         message: { role: "assistant", content: [] },
@@ -103,14 +100,14 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
   for (const block of message.content) {
     if (block.type === "text") {
       openText();
-      actions.push(sessionEvent({ type: "message_delta", sessionId, runId, content: block }));
+      actions.push(sessionEvent({ type: "message.delta", sessionId, runId, content: block }));
     } else if (block.type === "thinking") {
       closeText();
-      actions.push(sessionEvent({ type: "message_delta", sessionId, runId, content: block }));
+      actions.push(sessionEvent({ type: "message.delta", sessionId, runId, content: block }));
       // Close the thinking entry immediately so the next text/tool block starts fresh.
       actions.push(
         sessionEvent({
-          type: "message_finished",
+          type: "message.completed",
           sessionId,
           runId,
           message: { role: "assistant", content: [] },
@@ -118,7 +115,7 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
       );
     } else if (block.type === "tool_call") {
       closeText();
-      actions.push(sessionEvent({ type: "tool_execution_started", sessionId, runId, call: block }));
+      actions.push(sessionEvent({ type: "tool.started", sessionId, runId, call: block }));
     } else if (block.type === "tool_result") {
       closeText();
       const result: ToolResult = {
@@ -129,9 +126,12 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
       };
       actions.push(
         sessionEvent({
-          type: "tool_execution_finished",
+          type: "tool.completed",
           sessionId,
           runId,
+          toolCallId: block.toolCallId,
+          name: block.name,
+          status: block.error ? "error" : "finished",
           result,
           metadata: { durationMs: 0, status: block.error ? "error" : "finished" },
         }),
@@ -141,7 +141,7 @@ export function sessionEntryToUiActions(entry: SessionEntry): TuiAction[] {
       openText();
       actions.push(
         sessionEvent({
-          type: "message_delta",
+          type: "message.delta",
           sessionId,
           runId,
           content: { type: "text", text: `[${block.type}]` },

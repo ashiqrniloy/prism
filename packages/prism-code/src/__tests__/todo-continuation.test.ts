@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type AgentEvent,
-  type AgentSession,
+  type Session,
   type AIProvider,
   type Message,
   type ModelConfig,
@@ -17,7 +17,7 @@ import {
   type ToolResult,
   toolCallContent,
 } from "@arnilo/prism";
-import { createTodoWriteTool, type TodoContinuationStopHook, type TodoItem } from "@arnilo/prism-coding-tools/agent";
+import { createTodoWriteTool, type TodoContinuationHandler, type TodoItem } from "@arnilo/prism-coding-tools/agent";
 import { type PrismCodeConfig, validatePrismCodeConfigLayer } from "../config.js";
 import { assembleAppAgent } from "../headless.js";
 import { resolveContinueOnOpenTodos } from "../limits.js";
@@ -73,7 +73,7 @@ function scriptedProvider(
   };
 }
 
-async function collectSessionEvents(session: AgentSession): Promise<{ readonly events: AgentEvent[]; readonly done: Promise<void> }> {
+async function collectSessionEvents(session: Session): Promise<{ readonly events: AgentEvent[]; readonly done: Promise<void> }> {
   const events: AgentEvent[] = [];
   const done = (async () => {
     for await (const event of session.subscribe()) {
@@ -137,9 +137,9 @@ describe("Prism Code task-completion continuation", () => {
       const names = (definition.agent.config.tools as ToolRegistry).list().map((tool) => tool.name);
       assert.equal(names.includes("todo_write"), true);
 
-      const session = definition.createSession();
-      const { done } = await collectSessionEvents(session);
-      const result = await session.run("Do the task");
+      const session = definition.session();
+      const { done } = await collectSessionEvents(await session);
+      const result = await (await session).run("Do the task");
       await done;
 
       assert.equal(result.status, "succeeded");
@@ -170,14 +170,14 @@ describe("Prism Code task-completion continuation", () => {
       const config: PrismCodeConfig = { cwd, model: testModel, tools: { planes: { coding: false } }, compaction: false };
       const definition = await assembleAppAgent(config, provider);
 
-      const hook = (definition as unknown as { todoStopHook?: TodoContinuationStopHook }).todoStopHook;
+      const hook = (definition as unknown as { todoContinuation?: TodoContinuationHandler }).todoContinuation;
       assert.ok(hook);
       const notes: string[] = [];
       if (hook) hook.onNoProgressStop = () => notes.push("Stopped: no progress on open todos");
 
-      const session = definition.createSession();
-      const { done } = await collectSessionEvents(session);
-      const result = await session.run("Do the task");
+      const session = definition.session();
+      const { done } = await collectSessionEvents(await session);
+      const result = await (await session).run("Do the task");
       await done;
 
       assert.equal(result.status, "succeeded");
@@ -197,13 +197,13 @@ describe("Prism Code task-completion continuation", () => {
         compaction: false,
       };
       const definition = await assembleAppAgent(config, provider);
-      assert.equal((definition as unknown as { todoStopHook?: unknown }).todoStopHook, undefined);
+      assert.equal((definition as unknown as { todoContinuation?: unknown }).todoContinuation, undefined);
       const names = (definition.agent.config.tools as ToolRegistry).list().map((tool) => tool.name);
       assert.equal(names.includes("todo_write"), false);
 
-      const session = definition.createSession();
-      const { done } = await collectSessionEvents(session);
-      const result = await session.run("Do the task");
+      const session = definition.session();
+      const { done } = await collectSessionEvents(await session);
+      const result = await (await session).run("Do the task");
       await done;
 
       assert.equal(result.status, "succeeded");
@@ -220,11 +220,11 @@ describe("Prism Code task-completion continuation", () => {
       );
       const config: PrismCodeConfig = { cwd, model: testModel, tools: { planes: { coding: false } }, compaction: false };
       const definition = await assembleAppAgent(config, provider);
-      const session = definition.createSession();
-      const { done } = await collectSessionEvents(session);
+      const session = definition.session();
+      const { done } = await collectSessionEvents(await session);
       let abortedStatus: string | undefined;
       try {
-        const result = await session.run("Do the task", { signal: controller.signal });
+        const result = await (await session).run("Do the task", { signal: controller.signal });
         abortedStatus = result.status;
       } catch (error) {
         abortedStatus = (error as { result?: { status?: string } }).result?.status;
@@ -250,14 +250,14 @@ describe("Prism Code task-completion continuation", () => {
       ]);
       const config: PrismCodeConfig = { cwd, model: testModel, tools: { planes: { coding: false } }, compaction: false };
       const definition = await assembleAppAgent(config, provider);
-      const session = definition.createSession();
-      const { done } = await collectSessionEvents(session);
+      const session = definition.session();
+      const { done } = await collectSessionEvents(await session);
 
-      const first = await session.run("Do the task");
+      const first = await (await session).run("Do the task");
       assert.equal(first.status, "succeeded");
       assert.equal(mainRequests(requests).length, 4);
 
-      const second = await session.run("Continue the task");
+      const second = await (await session).run("Continue the task");
       await done;
       assert.equal(second.status, "succeeded");
       assert.equal(second.text, "All done.");
@@ -275,7 +275,8 @@ describe("Prism Code task-completion continuation", () => {
     const withTodos = tuiReducer(createInitialTuiState(), {
       type: "session_event",
       event: {
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "s",
         runId: "call_1",
         result: { ...result, toolCallId: "call_1", name: "todo_write" },
@@ -288,7 +289,8 @@ describe("Prism Code task-completion continuation", () => {
     const afterCompleted = tuiReducer(withTodos, {
       type: "session_event",
       event: {
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "s",
         runId: "call_2",
         result: {

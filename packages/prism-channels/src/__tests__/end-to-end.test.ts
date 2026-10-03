@@ -92,15 +92,15 @@ function hangingProvider(calls: { count: number }): AIProvider {
   };
 }
 
-function agentWith(provider: AIProvider, persistence: ReturnType<typeof createSqlitePersistence>): Agent {
-  return createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, provider, store: persistence });
+async function agentWith(provider: AIProvider, persistence: ReturnType<typeof createSqlitePersistence>): Promise<Agent> {
+  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, provider, slots: { store: persistence } });
 }
 
 function host(persistence: ReturnType<typeof createSqlitePersistence>, provider: AIProvider, rest: Partial<MessagingRuntimeOptions> = {}) {
   const delivered: ChannelReply[] = [];
   const runtime = createMessagingRuntime({
     authorize: () => authorization(),
-    resolveAgent: () => agentWith(provider, persistence),
+    resolveAgent: async () => await agentWith(provider, persistence),
     deliver: (reply) => {
       delivered.push(reply);
       return { delivered: true };

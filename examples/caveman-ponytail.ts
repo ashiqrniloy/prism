@@ -2,16 +2,18 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assembleProviderInput,
-  type CommandDefinition,
-  createExtensionKernel,
+  createAgent,
   createLoadedSkillSet,
   createLoadSkillTool,
   createMemorySessionStore,
+  createMockProvider,
   createSessionEntry,
   createSkillRegistry,
   createToolRegistry,
+  definePackage,
   dispatchToolCall,
-  type Extension,
+  type ProviderRequest,
+  providerDone,
   resolveActiveSkills,
   type Skill,
   toolCallContent,
@@ -49,68 +51,65 @@ interface PersonaOptions {
  * session entries, and injects the upstream SKILL.md body every turn while the
  * mode is not `off`.
  */
-function createPersonaExtension(options: PersonaOptions): Extension {
+function personaPackage(options: PersonaOptions) {
   const bodies = new Map(options.skills.map((skill) => [skill.name, skill.instructions ?? ""] as const));
   let mode = "off";
-
-  const restore = async () => {
-    const entries = await options.store.list(sessionId);
-    for (const entry of entries) {
-      const data = entry.kind === "custom" ? (entry.data as { type?: unknown; mode?: unknown }) : undefined;
-      if (data?.type === options.stateType && typeof data.mode === "string") mode = data.mode;
-    }
-  };
-
-  return {
-    name: `host-${options.name}`,
-    async setup(api) {
-      await restore();
-
-      for (const skill of options.skills) api.registerSkill(skill);
-
-      const command: CommandDefinition = {
+  return definePackage({
+    name: `@example/${options.name}`,
+    version: "1.0.0",
+    requires: { prism: "^0.12.1 || ^0.13.0-0" },
+    async setup(prism) {
+      const entries = await options.store.list(sessionId);
+      for (const entry of entries) {
+        const data = entry.kind === "custom" ? (entry.data as { type?: unknown; mode?: unknown }) : undefined;
+        if (data?.type === options.stateType && typeof data.mode === "string") mode = data.mode;
+      }
+      for (const skill of options.skills) prism.skills.register(skill);
+      prism.commands.register({
         name: options.name,
         description: `Set the ${options.name} persona mode`,
-        async execute(args, context) {
-          const next = typeof args.mode === "string" ? args.mode : "full";
-          mode = next;
-          if (context.sessionId) {
-            const entries = await options.store.list(context.sessionId);
-            const parentId = entries.at(-1)?.id;
-            await options.store.append(
-              createSessionEntry({
-                sessionId: context.sessionId,
-                parentId,
-                kind: "custom",
-                data: { type: options.stateType, mode: next },
-              }),
-              { expectedParentId: parentId },
-            );
-          }
-          return { name: options.name, value: { mode: next } };
-        },
-      };
-      api.registerCommand(command);
-
-      api.registerInstructionInjector({
-        name: `${options.name}-mode`,
-        description: `Inject the active ${options.name} mode slice from the upstream SKILL.md body.`,
-        apply() {
-          if (mode === "off") return { when: "every_turn" };
-          const body = bodies.get(options.name) ?? "";
-          return { when: "every_turn", instructions: `${options.name.toUpperCase()} MODE ACTIVE (${mode})\n\n${body}` };
+        args: { type: "object", properties: { mode: { type: "string" } }, additionalProperties: false },
+        async run(args) {
+          mode = typeof args.mode === "string" ? args.mode : "full";
+          const listed = await options.store.list(sessionId);
+          const parentId = listed.at(-1)?.id;
+          await options.store.append(
+            createSessionEntry({
+              sessionId,
+              parentId,
+              kind: "custom",
+              data: { type: options.stateType, mode },
+            }),
+            { expectedParentId: parentId },
+          );
+          return { mode };
         },
       });
+      prism.hooks.on(
+        "context.build",
+        (draft) => {
+          if (mode === "off") return undefined;
+          const body = bodies.get(options.name) ?? "";
+          const text = `${options.name.toUpperCase()} MODE ACTIVE (${mode})\n\n${body}`;
+          const boundary = draft.messages.findIndex((message) => message.role !== "system");
+          const at = boundary === -1 ? draft.messages.length : boundary;
+          return {
+            ...draft,
+            messages: [
+              ...draft.messages.slice(0, at),
+              { id: `${options.name}-mode:${at}`, role: "system", content: [{ type: "text", text }] },
+              ...draft.messages.slice(at),
+            ],
+          };
+        },
+        { id: `${options.name}-mode` },
+      );
     },
-  };
+  })();
 }
 
-function assertInert(condition: boolean) {
-  if (!condition) throw new Error("expected inert registries before kernel.load");
-}
-
-// Host-owned persona extensions: public APIs only, upstream skills loaded from disk,
-// progressive catalog, load_skill, mode injector + session-entry persistence (network-free).
+// Host-owned persona packages: upstream skills loaded from disk, progressive catalog,
+// load_skill, mode injector + session-entry persistence (network-free).
 export async function demo() {
   const store = createMemorySessionStore();
   const skills = await loadSkillDirectory(skillsDir);
@@ -120,59 +119,36 @@ export async function demo() {
     return skill;
   });
 
-  const kernelBefore = createExtensionKernel({ errorPolicy: "throw" });
-  assertInert(kernelBefore.registries.skills.list().length === 0);
-
-  const kernel = createExtensionKernel({ errorPolicy: "throw" });
-  await kernel.load([
-    createPersonaExtension({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }),
-    createPersonaExtension({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }),
-  ]);
-
-  const registry = createSkillRegistry(kernel.registries.skills.list());
+  const registry = createSkillRegistry([ponytailSkill, cavemanSkill, auditSkill]);
   const loaded = createLoadedSkillSet();
   const loadSkill = createLoadSkillTool({ registry, loaded });
   const toolRegistry = createToolRegistry([loadSkill]);
   const activeNames = ["ponytail", "caveman", "ponytail-audit"];
-
   const activeSkills = resolveActiveSkills({ registry, names: activeNames });
 
-  await kernel.registries.commands.get("ponytail")!.execute({ mode: "lite" }, { sessionId });
-  await kernel.registries.commands.get("caveman")!.execute({ mode: "full" }, { sessionId });
-
-  const catalogRequest = await assembleProviderInput({
+  const captured: ProviderRequest[] = [];
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    input: "Pick skills",
-    skills: activeSkills,
-    skillsDisclosure: "progressive",
-    loadedSkills: loaded,
-    turn: 1,
-    sessionId,
-    runId: "r1",
-    metadata: {},
-    signal: new AbortController().signal,
+    provider: createMockProvider([providerDone()], { onRequest: (request) => captured.push(request) }),
+    packages: [
+      personaPackage({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }),
+      personaPackage({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }),
+    ],
   });
-  const catalogText = messageText(catalogRequest);
+  await agent.commands.run("ponytail", { mode: "lite" });
+  await agent.commands.run("caveman", { mode: "full" });
+  const session = await agent.session({ id: sessionId, create: true });
+
+  await session.run("Pick skills");
+  const catalogText = messageText(captured[0]!);
+  // Progressive disclosure: every active skill appears as a one-line catalog entry, and the
+  // bodies only reach the transcript once the skill is loaded (or as the persona mode slice).
+  const catalogLines = catalogText.split("\n").filter((line) => /^Skill /.test(line));
   const catalogOnly =
-    catalogText.includes("Skill ponytail:") &&
-    catalogText.includes("Skill caveman:") &&
-    !catalogText.includes(PONYTAIL_BODY_MARKER) &&
-    !catalogText.includes(AUDIT_BODY_MARKER);
+    catalogLines.length === 3 &&
+    ["ponytail", "caveman", "ponytail-audit"].every((name) => catalogLines.some((line) => line.startsWith(`Skill ${name}:`)));
 
-  const injectorRequest = await assembleProviderInput({
-    model: { provider: "mock", model: "demo" },
-    input: "Pick skills",
-    skills: activeSkills,
-    skillsDisclosure: "progressive",
-    loadedSkills: loaded,
-    instructionInjectors: kernel.registries.instructionInjectors.list(),
-    turn: 1,
-    sessionId,
-    runId: "r1",
-    metadata: {},
-    signal: new AbortController().signal,
-  });
-  const injectorText = messageText(injectorRequest);
+  const injectorText = catalogText;
   const injectorSliceWithoutBody = injectorText.includes("PONYTAIL MODE ACTIVE") && !injectorText.includes(AUDIT_BODY_MARKER);
 
   await dispatchToolCall({
@@ -190,20 +166,16 @@ export async function demo() {
     },
   });
 
-  const loadedRequest = await assembleProviderInput({
-    model: { provider: "mock", model: "demo" },
-    input: "Audit",
-    skills: activeSkills,
-    skillsDisclosure: "progressive",
-    loadedSkills: loaded,
-    instructionInjectors: kernel.registries.instructionInjectors.list(),
-    turn: 2,
-    sessionId,
-    runId: "r1",
-    metadata: {},
-    signal: new AbortController().signal,
-  });
-  const loadedText = messageText(loadedRequest);
+  // The skill body lands once `load_skill` has marked it loaded in the shared set.
+  const loadedText = messageText(
+    await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Audit",
+      skills: activeSkills,
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+    }),
+  );
   const auditBodyLoaded = loadedText.includes(AUDIT_BODY_MARKER);
 
   const entries = await store.list(sessionId);
@@ -211,7 +183,7 @@ export async function demo() {
 
   return {
     skillCount: skills.length,
-    extensionsLoaded: kernel.registries.skills.list().length > 0,
+    extensionsLoaded: agent.inspect().skills.length > 0,
     catalogOnly,
     injectorSliceWithoutBody,
     auditBodyLoaded,

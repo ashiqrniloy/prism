@@ -1,24 +1,22 @@
 import {
-  type Agent,
+  type Agent as RuntimeAgent,
   type AgentConfig,
-  type AgentIdentity,
-  type AgentLoopOptions,
-  type AgentLoopStrategy,
-  type AgentSession,
+  type Principal,
+  type Session,
   type AgentSessionConfig,
   type AIProvider,
   type CommandDefinition,
   type CompactionOptions,
   type ContextBudget,
-  type ContextProvider,
+  type ContextSource,
   createAgent,
-  createContributionRegistry,
   createToolRegistry,
   type DuplicateRegistrationOptions,
-  type Guardrails,
-  type MiddlewareRegistry,
+  type Compactor,
+  type LoopStrategy,
   type ModelConfig,
   type OwnershipScope,
+  type PackageInput,
   type PermissionPolicy,
   type ProviderResolver,
   type RunLimits,
@@ -26,7 +24,9 @@ import {
   type ToolDefinition,
   type ToolResultFoldOptions,
   type TrustPolicy,
+  registerContextSources,
 } from "@arnilo/prism";
+import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
 import { AgentSdkConfigError } from "./errors.js";
 import { assembleHooksPlane, type HooksPlaneConfig } from "./planes/hooks.js";
 import { assembleInstructionsPlane, type InstructionsPlaneConfig } from "./planes/instructions.js";
@@ -51,6 +51,21 @@ export interface AgentSdkConfig extends ResolveToolPlaneOptions {
   /** Optional nested tools configuration. Overrides or augments top-level tool plane fields. */
   readonly tools?: ResolveToolPlaneOptions;
   /**
+   * Programmatic `context.build` sources, applied after the hooks-plane / instructions-plane
+   * contributions. Replaces the retired `context` (ContextProvider) and `instructionInjectors`
+   * fields; each source's text reaches the provider view once per turn.
+   */
+  readonly contextSources?: readonly ContextSource[];
+  /**
+   * Host hook registrations, applied after the hooks/instructions planes. Replaces the retired
+   * `stopHooks` and `context` fields: the returned handler for `run.end` gates, `turn.before`
+   * policies, and dynamic `context.build` projections all install here. The registrar is the
+   * agent's own per-agent bus, so registrations share its lifetime and its ordering.
+   */
+  readonly registerHooks?: (hooks: import("@arnilo/prism").HookRegistrar) => void;
+  /** Kernel packages loaded by `createAgent`. Host tool/skill/command lists must not repeat what these register. */
+  readonly packages?: readonly PackageInput[];
+  /**
    * Root directory of the project / workspace.
    * Used as the default root for skills discovery and AGENTS.md auto-load.
    */
@@ -68,22 +83,22 @@ export interface AgentSdkConfig extends ResolveToolPlaneOptions {
   readonly hooks?: HooksPlaneConfig;
   /** MCP plane configuration (servers to connect eagerly). */
   readonly mcp?: McpPlaneConfig;
-  /** Session store (defaults to in-memory store in Prism runtime). */
-  readonly store?: SessionStore;
-  /** Agent loop strategy or loop options (e.g. singleShotLoop). */
-  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
-  /** Middleware registry. */
-  readonly middleware?: MiddlewareRegistry;
+  /**
+   * Session store. Omitted or `"memory"` uses the runtime's in-memory default.
+   * `{ type: "jsonl", path }` builds the JSONL file store; a raw `SessionStore`
+   * passes through untouched. Any other shape fails closed (sqlite is a later phase).
+   */
+  readonly store?: SessionStore | "memory" | { readonly type: "jsonl"; readonly path: string };
+  /** Agent loop strategy. Defaults to the kernel loop. */
+  readonly loop?: LoopStrategy;
+  /** Compactor for the `compaction` slot. Defaults to the kernel compactor. */
+  readonly compactor?: Compactor;
   /** Permission / execution policy. */
   readonly policy?: PermissionPolicy;
-  /** Context providers. */
-  readonly context?: readonly ContextProvider[];
-  /** Guardrails. */
-  readonly guardrails?: Guardrails;
   /** Ownership scope. */
   readonly ownership?: OwnershipScope;
-  /** Enterprise identity. */
-  readonly identity?: AgentIdentity;
+  /** Opaque optional host principal; packages own verification. */
+  readonly principal?: Principal;
   /** Run limits. */
   readonly limits?: RunLimits;
   /** Optional agent identifier. */
@@ -92,7 +107,7 @@ export interface AgentSdkConfig extends ResolveToolPlaneOptions {
   readonly name?: string;
   /** Host-supplied commands for host-only dispatch (not model-visible tools). */
   readonly commands?: readonly CommandDefinition[];
-  /** Optional compaction configuration / strategy. */
+  /** Optional compaction sizing and threshold knobs. The implementation is the `compaction` slot. */
   readonly compaction?: false | CompactionOptions;
   /** Optional tool result folding options. */
   readonly toolResultFold?: ToolResultFoldOptions;
@@ -117,9 +132,9 @@ export interface AgentSdkMcpPlane {
   close(): Promise<void>;
 }
 
-export interface AgentSdkDefinition {
-  /** The assembled Prism Agent. */
-  readonly agent: Agent;
+export interface Agent {
+  /** The assembled Prism Agent (runtime escape hatch). */
+  readonly agent: RuntimeAgent;
   /** Server IDs of successfully connected MCP bridges (live view). */
   readonly connectedMcpServerIds: readonly string[];
   /** Live MCP plane status and reconnect/close controls. */
@@ -127,10 +142,10 @@ export interface AgentSdkDefinition {
   /** Registered host-only commands. */
   readonly commands: readonly CommandDefinition[];
   /**
-   * Creates an AgentSession bound to the assembled agent.
+   * Creates an Session bound to the assembled agent.
    * Throws `AgentSdkConfigError` if the agent definition has already been disposed.
    */
-  createSession(options?: AgentSessionConfig): AgentSession;
+  session(options?: AgentSessionConfig): Promise<Session>;
   /**
    * Closes all active MCP bridges and releases resources.
    * Idempotent: safe to call multiple times.
@@ -142,16 +157,22 @@ export interface AgentSdkDefinition {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mergeGuardrails(a?: Guardrails, b?: Guardrails): Guardrails | undefined {
-  if (!a) return b;
-  if (!b) return a;
-  return {
-    input: [...(a.input ?? []), ...(b.input ?? [])],
-    output: [...(a.output ?? []), ...(b.output ?? [])],
-    toolInput: [...(a.toolInput ?? []), ...(b.toolInput ?? [])],
-    toolOutput: [...(a.toolOutput ?? []), ...(b.toolOutput ?? [])],
-    maxConcurrency: b.maxConcurrency ?? a.maxConcurrency,
-  };
+/**
+ * Resolves the store shorthand. `"memory"`/omitted map to the runtime default (undefined);
+ * only `{ type: "jsonl", path }` is built here. Unknown shapes fail closed.
+ */
+function resolveStore(store: AgentSdkConfig["store"]): SessionStore | undefined {
+  if (store === undefined || store === "memory") return undefined;
+  if (typeof store === "string") {
+    throw new AgentSdkConfigError(`Unknown store: "${store}" (expected "memory", { type: "jsonl", path }, or a SessionStore)`);
+  }
+  if ("type" in store) {
+    if (store.type === "jsonl" && typeof store.path === "string" && store.path.length > 0) {
+      return createJsonlSessionStore(store.path);
+    }
+    throw new AgentSdkConfigError(`Unknown store type: ${JSON.stringify((store as { type?: unknown }).type)} (only "jsonl" is supported)`);
+  }
+  return store;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,9 +186,9 @@ function mergeGuardrails(a?: Guardrails, b?: Guardrails): Guardrails | undefined
  * hooks, and session stores. Every capability plane is optional and replaceable.
  *
  * @param config Agent configuration specifying model, provider, planes, and policies.
- * @returns An `AgentSdkDefinition` with the assembled agent, session factory, and disposal.
+ * @returns An `Agent` with the assembled runtime, session factory, and disposal.
  */
-export async function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefinition> {
+export async function defineAgent(config: AgentSdkConfig): Promise<Agent> {
   if (!config || typeof config !== "object") {
     throw new AgentSdkConfigError("Configuration object is required");
   }
@@ -179,6 +200,9 @@ export async function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefin
   if (!config.provider && !config.providerSource) {
     throw new AgentSdkConfigError("Missing required config: provider or providerSource");
   }
+
+  if ("identity" in config) throw new AgentSdkConfigError("Unknown config field: identity (use principal)");
+  const store = resolveStore(config.store);
 
   const workspaceRoot = config.workspaceRoot ?? config.skills?.workspaceRoot;
   const trust = config.trust ?? config.skills?.trust;
@@ -231,17 +255,11 @@ export async function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefin
   const toolRegistry = createToolRegistry(allTools, {
     duplicate: duplicatePolicy,
   });
+  // Live view the kernel reads each run: `reconnect` swaps entries in place so the agent sees them.
+  const toolList: ToolDefinition[] = [...toolRegistry.list()];
 
   // 6. Host Commands (host-only dispatch, not model-visible tools)
-  const commandRegistry = createContributionRegistry<CommandDefinition>({
-    label: "command",
-    duplicate: config.duplicate ?? "error",
-  });
-  if (config.commands) {
-    for (const cmd of config.commands) {
-      commandRegistry.register(cmd.name, cmd);
-    }
-  }
+  const commands = dedupeCommands(config.commands ?? [], config.duplicate ?? "error");
 
   // 7. Assembled Agent Configuration
   const agentConfig: AgentConfig = {
@@ -250,30 +268,44 @@ export async function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefin
     model: config.model,
     provider: config.provider,
     providerSource: config.providerSource,
-    tools: toolRegistry,
+    tools: { add: toolList },
     instructions: instructionsPlane.instructionsText,
     systemPrompt: instructionsPlane.systemPromptLayers.length > 0 ? instructionsPlane.systemPromptLayers : undefined,
-    skills: skillsPlane.skills,
-    activateAllSkills: skillsPlane.activateAllSkills ? true : undefined,
-    skillsDisclosure: config.skills?.disclosure,
-    store: config.store,
-    loop: config.loop,
+    // The kernel registers the `load_skill` bridge itself when disclosure is progressive.
+    skills: {
+      add: skillsPlane.activateAllSkills === false ? [] : (skillsPlane.skills?.list() ?? []),
+      disclosure: config.skills?.disclosure,
+    },
+    slots: {
+      ...(store ? { store } : {}),
+      ...(config.loop ? { loop: config.loop } : {}),
+      ...(config.compactor ? { compaction: config.compactor } : {}),
+    },
     compaction: config.compaction,
     toolResultFold: config.toolResultFold,
     contextBudget: config.contextBudget,
-    middleware: hooksPlane.middleware ?? config.middleware,
-    guardrails: mergeGuardrails(hooksPlane.guardrails, config.guardrails),
-    stopHooks: hooksPlane.stopHooks,
-    instructionInjectors: hooksPlane.instructionInjectors,
-    permission: config.policy,
-    context: config.context,
+    // Roadmap §2.4: hooks.json contributes `tool.call`/`tool.result` hooks, and
+    // `AgentSdkConfig.policy` is a `tool.call` gate (no `AgentConfig.permission`).
+    hooks: (hooks: import("@arnilo/prism").HookRegistrar) => {
+      registerContextSources(hooks, config.contextSources ?? []);
+      config.registerHooks?.(hooks);
+      if (config.policy) {
+        hooks.on("tool.call", async (payload) => {
+          const decision = await config.policy!.check({ kind: "tool", action: "execute", target: payload.name, metadata: {} });
+          return decision.allowed ? undefined : { deny: decision.reason ?? `Denied by policy: ${payload.name}` };
+        });
+      }
+    },
     ownership: config.ownership,
-    identity: config.identity,
+    principal: config.principal,
     limits: config.limits,
     trust,
+    ...(config.packages || hooksPlane.package
+      ? { packages: [...(config.packages ?? []), ...(hooksPlane.package ? [hooksPlane.package] : [])] }
+      : {}),
   };
 
-  const agent = createAgent(agentConfig);
+  const agent = await createAgent(agentConfig);
 
   let disposed = false;
 
@@ -294,16 +326,17 @@ export async function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefin
         const tools = mcpPlane.getServerTools(serverId);
         for (const tool of tools) toolRegistry.register(tool);
         mcpToolsByServer.set(serverId, tools);
+        toolList.splice(0, toolList.length, ...toolRegistry.list());
         return status;
       },
       close: () => mcpPlane.close(),
     },
-    commands: commandRegistry.list(),
-    createSession(sessionConfig: AgentSessionConfig = {}): AgentSession {
+    commands,
+    async session(sessionConfig: AgentSessionConfig = {}): Promise<Session> {
       if (disposed) {
         throw new AgentSdkConfigError("Cannot create session: agent has been disposed");
       }
-      return agent.createSession(sessionConfig);
+      return await agent.session(sessionConfig);
     },
     async dispose(): Promise<void> {
       if (disposed) return;
@@ -311,4 +344,18 @@ export async function defineAgent(config: AgentSdkConfig): Promise<AgentSdkDefin
       await mcpPlane.close();
     },
   };
+}
+
+function dedupeCommands(
+  commands: readonly CommandDefinition[],
+  duplicate: DuplicateRegistrationOptions["duplicate"],
+): readonly CommandDefinition[] {
+  const seen = new Map<string, CommandDefinition>();
+  for (const command of commands) {
+    if (seen.has(command.name) && duplicate === "error") {
+      throw new AgentSdkConfigError(`Duplicate command: ${command.name}`);
+    }
+    seen.set(command.name, command);
+  }
+  return [...seen.values()];
 }

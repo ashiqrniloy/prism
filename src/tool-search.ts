@@ -227,6 +227,7 @@ export function createSearchToolsTool(state: ToolSearchState, queryByteCap = DEF
   return {
     name: SEARCH_TOOLS_TOOL_NAME,
     description: `Search available tools by relevance. Returns up to k tool names with short descriptions and marks them active so their full definitions appear on the next turn. Try queries made of tool keywords.`,
+    effects: ["read"],
     parameters: {
       type: "object",
       properties: { query: { type: "string" }, k: { type: "integer", minimum: 1 } },

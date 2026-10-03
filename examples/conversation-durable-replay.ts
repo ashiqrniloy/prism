@@ -16,7 +16,7 @@ import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
 export async function demo(): Promise<Record<string, unknown>> {
   const ownership: OwnershipScope = { tenantId: "tenant-a", userId: "user-1" };
   const persistence = createSqlitePersistence({ filename: ":memory:" });
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "offline" },
     provider: createMockProvider([
       providerTextDelta("Saved to your durable thread."),
@@ -24,13 +24,13 @@ export async function demo(): Promise<Record<string, unknown>> {
       providerDone(),
     ]),
     redactor: createSecretRedactor(["super-secret"]),
-    store: persistence,
+    slots: { store: persistence },
     runLedger: persistence,
   });
 
   const conversations = createConversationService(persistence, {
     redactor: createSecretRedactor(["super-secret"]),
-    sessionFactory: ({ thread, leafId }) => agent.createSession({ id: thread.id, ...(leafId === undefined ? {} : { leafId }) }),
+    sessionFactory: ({ thread, leafId }) => agent.session({ id: thread.id, create: true, ...(leafId === undefined ? {} : { leafId }) }),
   });
 
   const thread = await conversations.create({ ownership, title: "Release follow-up" });

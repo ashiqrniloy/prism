@@ -115,7 +115,7 @@ mapMcpContentToBlocks	export declare function mapMcpContentToBlocks(content: rea
 mapMcpToolsToDefinitions	export declare function mapMcpToolsToDefinitions(remoteTools: readonly ListedMcpTool[], context:
 mcpCallError	export declare function mcpCallError(message: string, code?: string): ErrorInfo
 mcpElicitationDecision	export declare function mcpElicitationDecision(approvalId: string, params: unknown, options?: McpElicitationDecisionOptions): PendingDecision
-mcpElicitationResultFromDecision	export declare function mcpElicitationResultFromDecision(decision: RunDecision, options?:
+mcpElicitationResultFromDecision	export declare function mcpElicitationResultFromDecision(decision: Decision, options?:
 measureBoundedJson	export declare function measureBoundedJson(value: unknown, bounds: JsonBounds): JsonMeasurement
 normalizeHostname	export { boundResponse, defaultResolver, isLoopbackAddress, normalizeHostname, raceAbort, requestPinned, resolvePinnedAddress, } from "@arnilo/prism"
 normalizeProtectedResource	export declare function normalizeProtectedResource(input: McpProtectedResource): NormalizedProtectedResource

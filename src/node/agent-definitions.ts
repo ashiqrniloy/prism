@@ -5,7 +5,6 @@ import type {
   Agent,
   AgentDefinition,
   AgentDefinitionResolutionContext,
-  ContextProvider,
   DiscoveredContribution,
   ProviderResolver,
   Skill,
@@ -13,7 +12,6 @@ import type {
   ToolDefinition,
 } from "../contracts.js";
 import { parseSkillFile, splitFrontmatter } from "../contribution-parsing.js";
-import type { ManifestContributionDeclaration } from "../manifests.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission, isTrusted } from "../security.js";
 import { createSkillRegistry } from "../skills.js";
@@ -29,8 +27,6 @@ export interface ResolveAgentBundleOptions {
   readonly workspaceRoot?: string;
   /** Repo-level contributions from {@link discoverContributions}. */
   readonly repoContributions?: readonly DiscoveredContribution[];
-  /** Host registries (models, providers, context providers). */
-  readonly registries?: AgentDefinitionResolutionContext["registries"];
   /** Provider resolver override. */
   readonly providerSource?: ProviderResolver;
   /** Tool scope override. */
@@ -59,7 +55,6 @@ export interface AgentBundleScopeFlags {
   readonly repoSkills?: boolean;
   readonly globalTools?: boolean;
   readonly agentTools?: boolean;
-  readonly repoTools?: boolean;
 }
 
 const defaultInclude: Required<AgentBundleScopeFlags> = {
@@ -71,7 +66,6 @@ const defaultInclude: Required<AgentBundleScopeFlags> = {
   repoSkills: true,
   globalTools: true,
   agentTools: true,
-  repoTools: true,
 };
 
 /** Lightweight envelope describing an app-config agent bundle discovered on disk. */
@@ -219,17 +213,12 @@ export async function resolveAgentBundle(bundle: AgentBundle, options: ResolveAg
     model: getString(front, "model"),
     tools: getStringList(front, "tools"),
     skills: getStringList(front, "skills"),
-    context: getStringList(front, "context"),
     instructions: getString(front, "instructions"),
     ...(systemPrompts.length > 0 ? { systemPrompt: systemPrompts } : {}),
     metadata: collectMetadata(front),
   };
 
-  // ponytail: SKILL.md context names are resolved against the host context-provider registry.
-  resolveSkillContexts(skills, options.registries?.contextProviders);
-
   return resolveAgentDefinition(def, {
-    registries: options.registries,
     providerSource: options.providerSource,
     tools: tools.length > 0 ? tools : options.tools,
     skillsRegistry: skills.length > 0 ? createSkillRegistry(skills) : options.skillsRegistry,
@@ -271,15 +260,6 @@ function buildToolSources(
   }
   if (include.agentTools) {
     out.push({ scope: "agent", tools: bundle.agentTools.map((path) => toolDescriptorFromPath(path)) });
-  }
-  if (include.repoTools && options.repoContributions) {
-    const tools = options.repoContributions
-      .filter(
-        (c): c is DiscoveredContribution & { kind: "tool"; declaration: ManifestContributionDeclaration } =>
-          c.kind === "tool" && c.declaration !== undefined,
-      )
-      .map((c) => toolDescriptorFromDeclaration(c.declaration));
-    out.push({ scope: "repo", tools });
   }
   return out;
 }
@@ -382,10 +362,6 @@ function toolDescriptorFromPath(path: string): ToolDefinition {
   return toolDescriptor(name);
 }
 
-function toolDescriptorFromDeclaration(declaration: ManifestContributionDeclaration): ToolDefinition {
-  return toolDescriptor(declaration.name);
-}
-
 function toolDescriptor(name: string): ToolDefinition {
   return {
     name,
@@ -393,15 +369,6 @@ function toolDescriptor(name: string): ToolDefinition {
       throw new Error(`Discovered tool ${name} requires host execution`);
     },
   };
-}
-
-function resolveSkillContexts(skills: readonly Skill[], contextProviders: { resolve(name: string): ContextProvider } | undefined): void {
-  if (!contextProviders) return;
-  for (const skill of skills) {
-    const names = skill.metadata?.context;
-    if (!Array.isArray(names)) continue;
-    (skill as { context?: ContextProvider[] }).context = names.map((name) => contextProviders.resolve(String(name)));
-  }
 }
 
 function collectMetadata(front: ReadonlyMap<string, unknown>): Record<string, unknown> | undefined {

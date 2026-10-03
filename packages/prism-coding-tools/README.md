@@ -9,7 +9,7 @@ Unified coding agent tools, security sandboxing, OpenAPI tools, Linux desktop in
 - `@arnilo/prism-coding-tools/openapi`: OpenAPI 3.x tool generator and executor with SSRF protection and parameter validation.
 - `@arnilo/prism-coding-tools/computer-use-linux`: Linux desktop observation and targeting tool bridge.
 - `@arnilo/prism-coding-tools/dev`: Loopback-only developer inspector, event timeline visualizer, and local replay server.
-- `@arnilo/prism-coding-tools/impeccable`: Impeccable high-precision frontend engineering persona extension.
+- `@arnilo/prism-coding-tools/impeccable`: Impeccable persona package. `impeccable({ upstreamPath })` in `createAgent({ packages })`. A missing checkout fails setup closed.
 
 ## CLI
 

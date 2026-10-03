@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
 import { createAgent } from "../agent-session/create-agent.js";
-import type { AgentSession, Message, PromptBuildRequest, ProviderRequest, Skill } from "../contracts.js";
-import { createMiddlewareRegistry, type MiddlewareRegistry } from "../middleware.js";
+import type { HookRegistrar } from "../hooks/index.js";
+import type { Session, Message, ProviderRequest, Skill } from "../contracts.js";
 import { providerDone, toolCallContent } from "../provider-events.js";
 import { createLoadSkillTool } from "../skill-load.js";
 import { createSkillRegistry } from "../skills.js";
+import { withContextBlocks } from "../context-build.js";
 import {
   type PrefixStabilityConformanceOptions,
   runPrefixStabilityConformance,
@@ -31,7 +32,10 @@ function host(overrides: Partial<Host> = {}): Host {
   return {
     model: { provider: "mock", model: "demo", capabilities: { tools: true } },
     instructions: `Stable rules. ${"Keep the prefix byte-stable. ".repeat(120)}`,
-    context: [{ name: "project", resolve: () => [{ title: "Project", content: "Stable project context." }] }],
+    hooks: (hooks) =>
+      hooks.on("context.build", (draft) => withContextBlocks(draft, [{ title: "Project", content: "Stable project context." }]), {
+        id: "project",
+      }),
     ...overrides,
   };
 }
@@ -78,7 +82,7 @@ describe("prefix stability conformance", () => {
 
   it("gates on the cacheable prefix when asked, so an eager body-heavy host passes there and fails the default", async () => {
     const eagerBody = "Eager tail body: keep it byte-stable. ".repeat(40);
-    const eagerHost = host({ instructions: "Stable rules.", skillsDisclosure: "eager" });
+    const eagerHost = host({ instructions: "Stable rules." });
     const eagerSkills: [Skill, Skill] = [
       { name: "alpha", description: "Alpha catalog entry", instructions: eagerBody },
       { name: "beta", description: "Beta catalog entry", instructions: eagerBody },
@@ -86,6 +90,7 @@ describe("prefix stability conformance", () => {
 
     const dipped = await runPrefixStabilityConformance({
       host: eagerHost,
+      skillsDisclosure: "eager" as const,
       skills: eagerSkills,
       allowedResets: 3,
     });
@@ -101,6 +106,7 @@ describe("prefix stability conformance", () => {
 
     const result = await runPrefixStabilityConformance({
       host: eagerHost,
+      skillsDisclosure: "eager" as const,
       skills: eagerSkills,
       assertOn: "cacheablePrefix",
     });
@@ -108,18 +114,22 @@ describe("prefix stability conformance", () => {
     assert.ok(result.minContinuity < 0.95, `expected the eager tail to break the provider prefix, got ${result.minContinuity}`);
 
     await assert.rejects(
-      () => runPrefixStabilityConformance({ host: eagerHost, skills: eagerSkills }),
-      /request 1 → 2 kept .*of the previous provider prefix/,
+      () => runPrefixStabilityConformance({ host: eagerHost, skillsDisclosure: "eager", skills: eagerSkills }),
+      /request \d+ → \d+ kept .*of the previous provider prefix/,
     );
   });
 
   it("classifies cloned tail messages by serialized equality", async () => {
     const cloning = host({
-      promptBuilder: {
-        name: "clone-each",
-        build: (request: PromptBuildRequest) =>
-          request.messages.map((message) => ({ ...message, content: message.content.map((block) => ({ ...block })) })),
-      },
+      hooks: (hooks) =>
+        hooks.on(
+          "context.build",
+          (draft) => ({
+            ...draft,
+            messages: draft.messages.map((message) => ({ ...message, content: message.content.map((block) => ({ ...block })) })),
+          }),
+          { id: "clone-each" },
+        ),
     });
 
     const result = await runPrefixStabilityConformance({ host: cloning, skills: [firstSkill, secondSkill] });
@@ -134,15 +144,20 @@ describe("prefix stability conformance", () => {
     // One merged message: the tail objects never reach the captured request, so both metrics are
     // the same measurement of the merged text.
     const merged = host({
-      promptBuilder: {
-        name: "merged",
-        build: (request: PromptBuildRequest) => [
-          {
-            role: "user" as const,
-            content: [{ type: "text" as const, text: request.messages.map((message) => JSON.stringify(message)).join("\n") }],
-          },
-        ],
-      },
+      hooks: (hooks) =>
+        hooks.on(
+          "context.build",
+          (draft) => ({
+            ...draft,
+            messages: [
+              {
+                role: "user" as const,
+                content: [{ type: "text" as const, text: draft.messages.map((message) => JSON.stringify(message)).join("\n") }],
+              },
+            ],
+          }),
+          { id: "merged" },
+        ),
     });
 
     const result = await runPrefixStabilityConformance({ host: merged, skills: [firstSkill, secondSkill] });
@@ -153,19 +168,25 @@ describe("prefix stability conformance", () => {
   it("rejects a host that recomposes a leading context block per request", async () => {
     let turn = 0;
     const volatile = host({
-      context: [{ name: "volatile", resolve: () => [{ title: "Project", content: `recomposed-${(turn += 1)}` }] }],
+      hooks: (hooks) =>
+        hooks.on("context.build", (draft) => withContextBlocks(draft, [{ title: "Project", content: `recomposed-${(turn += 1)}` }]), {
+          id: "volatile",
+        }),
     });
 
     await assert.rejects(
       () => runPrefixStabilityConformance({ host: volatile, skills: [firstSkill, secondSkill] }),
-      /request 1 → 2 kept .*of the previous provider prefix/,
+      /request \d+ → \d+ kept .*of the previous provider prefix/,
     );
   });
 
   it("lowers both fractions for a volatile context provider, so the cacheable metric masks no regression", async () => {
     let turn = 0;
     const volatile = host({
-      context: [{ name: "volatile", resolve: () => [{ title: "Project", content: `recomposed-${(turn += 1)}` }] }],
+      hooks: (hooks) =>
+        hooks.on("context.build", (draft) => withContextBlocks(draft, [{ title: "Project", content: `recomposed-${(turn += 1)}` }]), {
+          id: "volatile",
+        }),
     });
 
     const result = await runPrefixStabilityConformance({
@@ -179,19 +200,23 @@ describe("prefix stability conformance", () => {
 
     await assert.rejects(
       () => runPrefixStabilityConformance({ host: volatile, skills: [firstSkill, secondSkill], assertOn: "cacheablePrefix" }),
-      /request 1 → 2 kept .*of the previous cacheable prefix \(tail segments excluded\)/,
+      /request \d+ → \d+ kept .*of the previous cacheable prefix \(tail segments excluded\)/,
     );
   });
 
-  it("rejects a host whose prompt builder never renders loaded bodies", async () => {
+  it("rejects a host whose context.build handler drops the loaded skill bodies", async () => {
     const dropping = host({
-      promptBuilder: {
-        name: "catalog-only",
-        build: (request: PromptBuildRequest) =>
-          request.messages.filter(
-            (message) => !message.content.some((block) => block.type === "text" && block.text.includes("Alpha body")),
-          ),
-      },
+      hooks: (hooks) =>
+        hooks.on(
+          "context.build",
+          (draft) => ({
+            ...draft,
+            messages: draft.messages.filter(
+              (message) => !message.content.some((block) => block.type === "text" && block.text.includes("Alpha body")),
+            ),
+          }),
+          { id: "catalog-only" },
+        ),
     });
 
     await assert.rejects(
@@ -266,15 +291,17 @@ describe("prefix stability conformance", () => {
       let assembly = 0;
       return {
         ...foldingHost(),
-        context: [
-          {
-            name: "rewritten",
-            resolve: () => {
+        hooks: (hooks) =>
+          hooks.on(
+            "context.build",
+            (draft) => {
               assembly += 1;
-              return [{ title: "Project", content: assembly >= 4 ? "rewritten after the fold" : "Stable project context." }];
+              return withContextBlocks(draft, [
+                { title: "Project", content: assembly >= 4 ? "rewritten after the fold" : "Stable project context." },
+              ]);
             },
-          },
-        ],
+            { id: "rewritten" },
+          ),
       };
     };
 
@@ -304,15 +331,15 @@ function text(role: Message["role"], value: string): Message {
 }
 
 /** Same fixture the runner installs, so a scored capture can be compared to a runner result. */
-async function captureFixture(hostConfig: Host, skills: readonly [Skill, Skill]) {
+async function captureFixture(hostConfig: Host, skills: readonly [Skill, Skill], disclosure?: "eager" | "progressive") {
   const requests: ProviderRequest[] = [];
   const registry = createSkillRegistry([...skills]);
-  const hostTools = hostConfig.tools && "list" in hostConfig.tools ? hostConfig.tools.list() : (hostConfig.tools ?? []);
+  const hostTools = hostConfig.tools?.add ?? [];
   let call = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     ...hostConfig,
-    skills: registry,
-    tools: [...hostTools, createLoadSkillTool({ registry })],
+    skills: { add: registry.list(), disclosure },
+    tools: { add: [...hostTools, createLoadSkillTool({ registry })] },
     provider: {
       id: "prefix-stability-fixture",
       async *generate(request) {
@@ -328,7 +355,7 @@ async function captureFixture(hostConfig: Host, skills: readonly [Skill, Skill])
       },
     },
   });
-  const session = agent.createSession() as AgentSession & { readonly tailSegments: ReadonlyMap<string, Message> };
+  const session = (await agent.session()) as Session & { readonly tailSegments: ReadonlyMap<string, Message> };
   const runOptions = { activeSkills: [skills[0].name, skills[1].name], limits: { maxToolRounds: 1 } } as const;
   await session.run("Prefix stability turn one", runOptions);
   await session.run("Prefix stability turn two", runOptions);
@@ -372,7 +399,7 @@ describe("scorePrefixStability", () => {
       { name: "alpha", description: "Alpha catalog entry", instructions: eagerBody },
       { name: "beta", description: "Beta catalog entry", instructions: eagerBody },
     ];
-    const captured = await captureFixture(host({ instructions: "Stable rules.", skillsDisclosure: "eager" }), eagerSkills);
+    const captured = await captureFixture(host({ instructions: "Stable rules." }), eagerSkills, "eager");
     const sample = scorePrefixStability(captured.requests);
 
     assert.equal(sample.cacheableContinuity, sample.minContinuity);
@@ -415,9 +442,9 @@ const BULK_TOOL_NAME = "prefix_stability_bulk";
 const BULK_FOLD_FLOOR = 2_500;
 
 /** Folds the bulk tool result only: `thinkingKeepTurns: 1` leaves stage 1 nothing to strip. */
-function bulkFoldingHost(middleware: MiddlewareRegistry): Host {
+function bulkFoldingHost(overrides: Partial<Host> = {}): Host {
   return host({
-    middleware,
+    ...overrides,
     attentionCompiler: {
       maxInputTokens: 4_000,
       thinkingKeepTurns: 1,
@@ -428,14 +455,15 @@ function bulkFoldingHost(middleware: MiddlewareRegistry): Host {
 }
 
 /** Captures the runner's own wire requests through the existing `provider_request` hook. */
-function captureRequests(): { middleware: MiddlewareRegistry; captured: ProviderRequest[] } {
+function captureRequests(): { hooks: (registrar: HookRegistrar) => void; captured: ProviderRequest[] } {
   const captured: ProviderRequest[] = [];
-  const middleware = createMiddlewareRegistry();
-  middleware.use<ProviderRequest>("provider_request", (request) => {
-    captured.push(request);
-    return request;
-  });
-  return { middleware, captured };
+  const hooks = (registrar: HookRegistrar) => {
+    registrar.on("model.request", (request) => {
+      captured.push(request);
+      return undefined;
+    });
+  };
+  return { hooks, captured };
 }
 
 function toolResultMessage(request: ProviderRequest, toolCallId: string): Message | undefined {
@@ -463,9 +491,9 @@ function thinkingTexts(request: ProviderRequest): readonly string[] {
 
 describe("tool-result fold fixture (plan 110 Task 4)", () => {
   it("stubs the bulk result at the reset and leaves the sibling confirmation byte-identical", async () => {
-    const { middleware, captured } = captureRequests();
+    const { hooks, captured } = captureRequests();
     const result = await runPrefixStabilityConformance({
-      host: bulkFoldingHost(middleware),
+      host: bulkFoldingHost({ hooks }),
       skills: [firstSkill, secondSkill],
       allowedResets: 1,
       foldableToolResultBytes: 8_192,
@@ -494,9 +522,9 @@ describe("tool-result fold fixture (plan 110 Task 4)", () => {
   });
 
   it("isolates the tool-result stage: every pre-fold message survives except the stubbed row, thinking included", async () => {
-    const { middleware, captured } = captureRequests();
+    const { hooks, captured } = captureRequests();
     await runPrefixStabilityConformance({
-      host: bulkFoldingHost(middleware),
+      host: bulkFoldingHost({ hooks }),
       skills: [firstSkill, secondSkill],
       allowedResets: 1,
       foldableToolResultBytes: 8_192,
@@ -531,10 +559,11 @@ describe("tool-result fold fixture (plan 110 Task 4)", () => {
 
   it("cannot pass by accident: no option, or a payload the stub would enlarge, breaks no pair", async () => {
     const expected = /allowedResets is 1 but only 0 pair\(s\) broke below the minimum/;
+    const { hooks } = captureRequests();
     await assert.rejects(
       () =>
         runPrefixStabilityConformance({
-          host: bulkFoldingHost(createMiddlewareRegistry()),
+          host: bulkFoldingHost({ hooks }),
           skills: [firstSkill, secondSkill],
           allowedResets: 1,
         }),
@@ -543,7 +572,7 @@ describe("tool-result fold fixture (plan 110 Task 4)", () => {
     await assert.rejects(
       () =>
         runPrefixStabilityConformance({
-          host: bulkFoldingHost(createMiddlewareRegistry()),
+          host: bulkFoldingHost({ hooks }),
           skills: [firstSkill, secondSkill],
           allowedResets: 1,
           foldableToolResultBytes: 8,
@@ -553,8 +582,8 @@ describe("tool-result fold fixture (plan 110 Task 4)", () => {
   });
 
   it("keeps the default capture unchanged: four requests, no bulk tool, no bulk call", async () => {
-    const { middleware, captured } = captureRequests();
-    const result = await runPrefixStabilityConformance({ host: host({ middleware }), skills: [firstSkill, secondSkill] });
+    const { hooks, captured } = captureRequests();
+    const result = await runPrefixStabilityConformance({ host: host({ hooks }), skills: [firstSkill, secondSkill] });
 
     assert.equal(result.requests, 4);
     assert.deepEqual(result.resets, []);
@@ -568,10 +597,11 @@ describe("tool-result fold fixture (plan 110 Task 4)", () => {
   });
 
   it("rejects a non-positive foldableToolResultBytes before running anything", async () => {
+    const { hooks } = captureRequests();
     await assert.rejects(
       () =>
         runPrefixStabilityConformance({
-          host: bulkFoldingHost(createMiddlewareRegistry()),
+          host: bulkFoldingHost({ hooks }),
           skills: [firstSkill, secondSkill],
           foldableToolResultBytes: 0,
         }),

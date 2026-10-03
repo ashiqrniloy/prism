@@ -104,7 +104,7 @@
         "sessionId": "s",
         "timestamp": "2026-01-01T00:00:00.000Z",
         "kind": "event",
-        "event": { "type": "agent_started", "sessionId": "s", "runId": "r" }
+        "event": { "type": "run.started", "sessionId": "s", "runId": "r" }
       },
       "memoryLlm": 13,
       "memoryOm": 36

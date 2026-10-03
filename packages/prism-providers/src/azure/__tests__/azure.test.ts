@@ -2,12 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
 import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
-import {
-  AZURE_OPENAI_DEFAULT_API_VERSION,
-  azureChatCompletionsUrl,
-  createAzureOpenAIProvider,
-  createAzureOpenAIProviderPackage,
-} from "../index.js";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
+import { AZURE_OPENAI_DEFAULT_API_VERSION, azureChatCompletionsUrl, createAzureOpenAIProvider, azurePackage } from "../index.js";
 
 async function collect(provider: ReturnType<typeof createAzureOpenAIProvider>, overrides?: Record<string, unknown>) {
   const events = [];
@@ -83,7 +79,7 @@ describe("@arnilo/prism-providers/azure", () => {
 
   it("setup stays inert with zero fetch and zero credential resolution", async () => {
     const calls: unknown[] = [];
-    const pkg = createAzureOpenAIProviderPackage({
+    const pkg = azurePackage({
       endpoint: "https://demo.openai.azure.com",
       deployment: "d1",
       credential: () => {
@@ -96,11 +92,7 @@ describe("@arnilo/prism-providers/azure", () => {
         throw new Error("should not fetch");
       }) as typeof fetch,
     });
-    await pkg.setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as any);
+    await loadProviderPackage(pkg);
     assertNoFetches(calls);
   });
 
@@ -153,13 +145,13 @@ describe("@arnilo/prism-providers/azure", () => {
   });
 
   it("package factory registers provider without runtime deps", () => {
-    const pkg = createAzureOpenAIProviderPackage({
+    const pkg = azurePackage({
       endpoint: "https://demo.openai.azure.com",
       deployment: "d1",
       credential: () => "t",
       models: [{ provider: "azure", model: "gpt-4o" }],
     });
-    assert.equal(pkg.name, "@arnilo/prism-providers/azure");
+    assert.equal(pkg.definition.name, "@arnilo/prism-providers.azure");
     assert.equal(
       azureChatCompletionsUrl({
         endpoint: "https://demo.openai.azure.com",

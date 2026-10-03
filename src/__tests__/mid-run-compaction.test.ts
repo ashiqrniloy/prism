@@ -2,14 +2,18 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import {
   type AgentEvent,
-  type AgentSession,
+  type Session,
   type AIProvider,
+  type CompactionTrigger,
   createAgent,
+  type HookRegistrar,
   type ModelConfig,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
   providerToolCall,
+  resolveInputCap,
+  resolveShouldCompact,
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
@@ -58,7 +62,7 @@ function multiTurnProvider(options: { readonly rounds?: number; readonly toolCal
   };
 }
 
-function collectEvents(session: AgentSession): { readonly events: AgentEvent[]; readonly done: Promise<void> } {
+function collectEvents(session: Session): { readonly events: AgentEvent[]; readonly done: Promise<void> } {
   const events: AgentEvent[] = [];
   const done = (async () => {
     for await (const event of session.subscribe()) {
@@ -68,31 +72,52 @@ function collectEvents(session: AgentSession): { readonly events: AgentEvent[]; 
   return { events, done };
 }
 
+/** A `CompactionTrigger` as the `compaction.when` handler that owns the decision. */
+function whenTrigger(trigger: CompactionTrigger, sessionModel: ModelConfig = cappedModel): (hooks: HookRegistrar) => void {
+  return (hooks) =>
+    hooks.on(
+      "compaction.when",
+      async (payload, context) => {
+        const compact = await resolveShouldCompact(
+          { trigger },
+          {
+            sessionId: payload.sessionId,
+            entryCount: payload.entryCount,
+            ...(payload.turn === undefined ? {} : { turn: payload.turn }),
+            estimateInputTokens: () => payload.estimatedTokens ?? 0,
+            resolveInputCapTokens: () => resolveInputCap(undefined, sessionModel),
+            signal: context.signal,
+          },
+        );
+        return compact ? { compact: true } : undefined;
+      },
+      { id: "compaction-trigger" },
+    );
+}
+
 describe("Between-turn auto-compaction (mid-run)", () => {
   it("compacts between turns with each_turn trigger", async () => {
     const { provider, requests } = multiTurnProvider({ rounds: 2 });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: cappedModel,
       provider,
-      tools: [workTool],
-      compaction: {
-        trigger: { type: "each_turn" },
-        keepRecentEntries: 2,
-      },
+      tools: { add: [workTool] },
+      compaction: { keepRecentEntries: 2 },
+      hooks: whenTrigger({ type: "each_turn" }),
     });
 
-    const session = agent.createSession({ id: "s-each-turn" });
+    const session = await agent.session({ id: "s-each-turn", create: true });
     const { events, done } = collectEvents(session);
 
     const result = await session.run("Initial instruction to start multi-turn");
     await done;
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(requests.length, 2, "provider had 2 turns");
 
     // Check compaction event was emitted
-    const finishedEvent = events.find((e) => e.type === "compaction_finished");
+    const finishedEvent = events.find((e) => e.type === "compaction.completed");
     assert.ok(finishedEvent, "compaction_finished event must be emitted");
-    if (finishedEvent && finishedEvent.type === "compaction_finished") {
+    if (finishedEvent && finishedEvent.type === "compaction.completed") {
       assert.ok(typeof finishedEvent.entriesCompacted === "number");
       assert.ok(finishedEvent.entriesCompacted > 0, "entriesCompacted should be positive");
     }
@@ -115,68 +140,64 @@ describe("Between-turn auto-compaction (mid-run)", () => {
 
   it("compacts between turns when threshold_tokens is crossed", async () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: cappedModel,
       provider,
-      tools: [workTool],
-      compaction: {
-        // Very low token threshold so turn 1 tool result pushes it over
-        trigger: { type: "threshold_tokens", tokens: 50 },
-        keepRecentEntries: 2,
-      },
+      tools: { add: [workTool] },
+      compaction: { keepRecentEntries: 2 },
+      // Very low token threshold so turn 1 tool result pushes it over
+      hooks: whenTrigger({ type: "threshold_tokens", tokens: 50 }, cappedModel),
     });
 
-    const session = agent.createSession({ id: "s-threshold-tokens" });
+    const session = await agent.session({ id: "s-threshold-tokens", create: true });
     const { events, done } = collectEvents(session);
 
     const result = await session.run("Start run with threshold tokens");
     await done;
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
 
-    const finishedEvent = events.find((e) => e.type === "compaction_finished");
+    const finishedEvent = events.find((e) => e.type === "compaction.completed");
     assert.ok(finishedEvent, "compaction_finished must be emitted for threshold_tokens");
   });
 
   it("compacts between turns when input_ratio is crossed", async () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: cappedModel,
       provider,
-      tools: [workTool],
-      compaction: {
-        // Set low ratio so turn 1 tool result crosses it
-        trigger: { type: "input_ratio", ratio: 0.05 },
-        keepRecentEntries: 2,
-      },
+      tools: { add: [workTool] },
+      compaction: { keepRecentEntries: 2 },
+      // Set low ratio so turn 1 tool result crosses it
+      hooks: whenTrigger({ type: "input_ratio", ratio: 0.05 }, cappedModel),
     });
 
-    const session = agent.createSession({ id: "s-input-ratio" });
+    const session = await agent.session({ id: "s-input-ratio", create: true });
     const { events, done } = collectEvents(session);
 
     const result = await session.run("Start run with low ratio");
     await done;
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
 
-    const finishedEvent = events.find((e) => e.type === "compaction_finished");
+    const finishedEvent = events.find((e) => e.type === "compaction.completed");
     assert.ok(finishedEvent, "compaction_finished must be emitted for input_ratio");
   });
 
   it("never splits a tool call from its tool result during compaction", async () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: cappedModel,
       provider,
-      tools: [workTool],
+      tools: { add: [workTool] },
       compaction: {
-        trigger: { type: "each_turn" },
         // keepRecentEntries = 1 would naively keep only the tool result and drop the assistant tool call
         keepRecentEntries: 1,
       },
+      hooks: whenTrigger({ type: "each_turn" }),
     });
 
-    const session = agent.createSession({ id: "s-no-split" });
+    const session = await agent.session({ id: "s-no-split", create: true });
     const result = await session.run("Start tool test");
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
 
     // Verify in history that the kept recent entries include the assistant tool call before the tool result
     const entries = await session.entries();
@@ -203,50 +224,49 @@ describe("Between-turn auto-compaction (mid-run)", () => {
       },
     };
 
-    const agent = createAgent({
+    const agent = await createAgent({
       model: cappedModel,
       provider,
-      tools: [workTool],
-      compaction: {
-        strategy: failingStrategy,
-        trigger: { type: "each_turn" },
-      },
+      tools: { add: [workTool] },
+      // The compactor is the `compaction` slot (roadmap §2.5); `compaction` only sizes it.
+      slots: { compaction: failingStrategy },
+      hooks: whenTrigger({ type: "each_turn" }),
     });
 
-    const session = agent.createSession({ id: "s-failure-fallback" });
+    const session = await agent.session({ id: "s-failure-fallback", create: true });
     const { events, done } = collectEvents(session);
 
     // The run should NOT crash; it should fall back to continuing uncompacted
     const result = await session.run("Start run with failing compaction");
     await done;
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.ok(result.text?.includes("Final response"), "Run completed successfully despite compaction failure");
 
-    // Verify compaction_failed event was emitted
-    const failedEvent = events.find((e) => e.type === "compaction_failed");
-    assert.ok(failedEvent, "compaction_failed event must be emitted");
-    if (failedEvent && failedEvent.type === "compaction_failed") {
-      assert.ok(failedEvent.error.message.includes("429"));
+    // Verify the compaction failure was emitted on compaction.completed
+    const failedEvent = events.find((e) => e.type === "compaction.completed");
+    assert.ok(failedEvent, "a compaction.completed event must be emitted");
+    if (failedEvent && failedEvent.type === "compaction.completed") {
+      assert.ok(failedEvent.error?.message.includes("429"));
     }
   });
 
   it("does not compact mid-run when no compaction trigger is configured", async () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: cappedModel,
       provider,
-      tools: [workTool],
+      tools: { add: [workTool] },
       // No compaction configured
     });
 
-    const session = agent.createSession({ id: "s-no-compaction" });
+    const session = await agent.session({ id: "s-no-compaction", create: true });
     const { events, done } = collectEvents(session);
 
     const result = await session.run("Start run without compaction");
     await done;
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
 
-    const finishedEvent = events.find((e) => e.type === "compaction_finished");
+    const finishedEvent = events.find((e) => e.type === "compaction.completed");
     assert.equal(finishedEvent, undefined, "No compaction should occur without trigger");
   });
 });

@@ -1,8 +1,6 @@
 import { assertJsonObject } from "./config.js";
 import type {
   AgentConfig,
-  AgentLoopOptions,
-  AgentLoopStrategy,
   ModelCapabilities,
   ModelConfig,
   ProviderRequest,
@@ -69,23 +67,11 @@ export function assertStructuredOutputRequestSupported(model: ModelConfig, optio
   }
 }
 
-function isGenerateValidateReviseLoopOptions(
-  loop: AgentLoopStrategy | AgentLoopOptions | undefined,
-): loop is Extract<AgentLoopOptions, { strategy: "generate-validate-revise" }> {
-  return typeof loop === "object" && loop !== null && "strategy" in loop && loop.strategy === "generate-validate-revise";
-}
-
 export function resolveRunProviderOptions(
-  runOptions: Pick<RunOptions, "providerOptions" | "loop">,
-  config: Pick<AgentConfig, "providerOptions" | "loop">,
+  runOptions: Pick<RunOptions, "providerOptions">,
+  config: Pick<AgentConfig, "providerOptions">,
 ): ProviderRequestOptions | undefined {
-  const merged = mergeProviderRequestOptions(config.providerOptions, runOptions.providerOptions);
-  const loop = runOptions.loop ?? config.loop;
-  if (!isGenerateValidateReviseLoopOptions(loop)) return merged;
-  if (loop.structuredOutputMode === "artifact-loop" || !loop.structuredOutput) return merged;
-  return mergeProviderRequestOptions(merged, {
-    structuredOutput: validateStructuredOutputOptions(loop.structuredOutput),
-  });
+  return mergeProviderRequestOptions(config.providerOptions, runOptions.providerOptions);
 }
 
 /** Strip native schema so a tool-eligible turn can call tools freely. */

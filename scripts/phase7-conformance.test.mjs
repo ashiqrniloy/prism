@@ -41,9 +41,9 @@ function event(id, sessionId, runId) {
     ...ownership,
     sessionId,
     runId,
-    type: "turn_started",
+    type: "turn.started",
     timestamp: "2026-08-04T00:00:00.000Z",
-    event: { type: "turn_started", sessionId, runId, turn: 1 },
+    event: { type: "turn.started", sessionId, runId, turn: 1 },
     redacted: true,
   };
 }

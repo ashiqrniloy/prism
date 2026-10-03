@@ -68,7 +68,7 @@ export function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig {
 
 /**
  * Caller-gated OpenAI model discovery via official `GET /models`.
- * Never invoked by `createOpenAIProviderPackage` — hosts call this and pass
+ * Never invoked by `openaiPackage` — hosts call this and pass
  * results via `models:` (or register themselves).
  * @see https://developers.openai.com/api/reference/resources/models/methods/list
  */

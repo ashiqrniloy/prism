@@ -1,12 +1,19 @@
-import { createExtensionKernel } from "@arnilo/prism";
-import { createDeepSeekProviderPackage } from "@arnilo/prism-providers/deepseek";
+import { createAgent } from "@arnilo/prism";
+import { deepseekModels, deepseekPackage } from "@arnilo/prism-providers/deepseek";
 
 export async function demo() {
-  const kernel = createExtensionKernel({ errorPolicy: "throw" });
-  await kernel.load([createDeepSeekProviderPackage({ apiKey: () => "fake-deepseek-key" })]);
-  const provider = kernel.registries.providers.get("deepseek");
-  const models = kernel.registries.models.list().filter((model) => model.provider === "deepseek");
-  return { provider: provider?.id, models: models.map((model) => model.model) };
+  const agent = await createAgent({
+    model: { provider: "deepseek", model: deepseekModels[0]!.model },
+    packages: [deepseekPackage({ apiKey: () => "fake-deepseek-key" })],
+  });
+  try {
+    return {
+      package: agent.inspect().packages[0]?.name,
+      models: deepseekModels.map((model) => model.model),
+    };
+  } finally {
+    await agent.dispose();
+  }
 }
 
 export async function main() {

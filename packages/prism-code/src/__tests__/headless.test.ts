@@ -86,9 +86,9 @@ describe("headless runner", () => {
         eventTypes.push(parsed.event.type);
       }
 
-      assert.ok(eventTypes.includes("turn_started"), "Expected turn_started event");
-      assert.ok(eventTypes.includes("message_delta"), "Expected message_delta event");
-      assert.ok(eventTypes.includes("turn_finished"), "Expected turn_finished event");
+      assert.ok(eventTypes.includes("turn.started"), "Expected turn_started event");
+      assert.ok(eventTypes.includes("message.delta"), "Expected message_delta event");
+      assert.ok(eventTypes.includes("turn.completed"), "Expected turn_finished event");
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
@@ -305,11 +305,11 @@ describe("headless runner", () => {
       );
 
       assert.ok(definition.agent);
-      const session = definition.createSession();
+      const session = definition.session();
       assert.ok(session);
 
-      const result = await session.run("Testing assembleAppAgent");
-      assert.strictEqual(result.status, "succeeded");
+      const result = await (await session).run("Testing assembleAppAgent");
+      assert.strictEqual(result.status, "completed");
       assert.strictEqual(result.text, "Assembled agent text");
 
       await definition.dispose();
@@ -357,7 +357,7 @@ describe("headless runner", () => {
 
     const sse = [
       'event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Auto-detected reply"}}\n\n',
-      'event: message_delta\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":1,"output_tokens":1}}\n\n',
+      'event: message_delta\ndata: {"type":"message.delta","delta":{"stop_reason":"end_turn"},"usage":{"input_tokens":1,"output_tokens":1}}\n\n',
       'event: message_stop\ndata: {"type":"message_stop"}\n\n',
     ].join("");
     const preload = join(root, "preload.ts");
@@ -408,7 +408,7 @@ describe("headless runner", () => {
       assert.ok(jsonLines.length > 0);
       const firstEvent = JSON.parse(jsonLines[0]);
       assert.strictEqual(firstEvent.type, "event");
-      assert.strictEqual(firstEvent.event.type, "agent_started");
+      assert.strictEqual(firstEvent.event.type, "run.started");
 
       // Missing prompt
       const missingPromptResult = spawnSync(process.execPath, [binPath, "--mode", "print", "--provider", "mock"], {

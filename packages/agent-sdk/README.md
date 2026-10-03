@@ -1,5 +1,11 @@
 # @arnilo/prism-agent-sdk
 
+> **Frozen.** This package receives no new features. `@arnilo/prism` is the one import for hosts and package
+> authors (`createAgent`, `definePackage`, `Session`, `HostUi`, and the rest of the host surface), and tool,
+> skill, instruction, MCP and hook assembly are packages. The SDK stays in the workspace only because Prism
+> Code still assembles through `defineAgent` until Phase 12; it keeps compiling against the kernel, and its npm
+> deprecation follows in Phase 11. Do not start new work on it.
+
 Systematically assemble a configurable agentic runtime from Prism seams.
 
 The SDK packages tool planes, skills discovery, instructions/`AGENTS.md`, MCP client bridges,
@@ -27,12 +33,18 @@ const app = await defineAgent(
 );
 
 // Create a session and run a prompt
-const session = app.createSession();
+const session = await app.session();
 const result = await session.run("Review the repository structure");
 
 // Clean up resources (closes all connected MCP server bridges)
 await app.dispose();
 ```
+
+## Principal
+
+`defineAgent({ model, provider, principal? })` accepts an optional opaque `Principal`.
+It forwards that object unchanged; it never creates an identity profile or verifies one.
+Governance belongs to packages. The retired `identity` config field is rejected.
 
 ## Features
 
@@ -40,7 +52,7 @@ await app.dispose();
 - **Skills Discovery**: Discovers skills from `.agents/skills` with fail-closed path-trust checks.
 - **Instructions Plane**: Auto-loads `AGENTS.md` and custom system prompt layers.
 - **MCP Client Bridges**: Eagerly connects STDIO and SSE/HTTP MCP servers with fail-closed allow-rule validation and disposal tracking.
-- **Hooks Integration**: Compiles declarative `hooks.json` onto middleware, guardrail, injector, and stop-hook seams.
+- **Hooks Integration**: Compiles declarative `hooks.json` onto the `context.build`, `run.input`, `tool.call`, `tool.result`, and `run.end` seams.
 - **Presets**: Ready-to-use configurations (`codingPreset`, `barePreset`) that merge cleanly with host overrides.
 - **JSON Configuration**: Parse and validate configuration objects or JSON files with comprehensive key-path validation.
 - **Host Commands**: Register host-only commands (`commands`) distinct from model-visible tools, with fail-closed duplicate rejection.

@@ -1,4 +1,4 @@
-import type { ContextProvider, JsonObject, SessionEntry, ToolDefinition } from "@arnilo/prism";
+import type { JsonObject, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import type { MemoryWorkerLimitOptions } from "../compaction/observational-memory/limits.js";
 import type { RecallBranchPageResult, RecallPageDetail, RecallPageDirection } from "../compaction/observational-memory/recall.js";
 import { isMemoryId } from "../compaction/observational-memory/types.js";
@@ -263,7 +263,7 @@ export interface MemoryFabric {
     options?: MemoryFabricAttachOptions,
   ) => AttachedMemoryFabricSession<S>;
   /** Context seam: the blocks `createMemory` resolves, tagged `working-memory` / `semantic-memory`. */
-  readonly createContextProvider: (options?: MemoryContextProviderOptions) => ContextProvider;
+  readonly registerContextBuild: (hooks: import("@arnilo/prism").HookRegistrar, options?: MemoryContextProviderOptions) => void;
   /** Fresh inert definitions each call; nothing is registered globally and nothing runs until the host adds them. */
   readonly tools: (options?: MemoryFabricToolsOptions) => readonly ToolDefinition[];
 }

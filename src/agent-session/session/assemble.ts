@@ -2,64 +2,177 @@
 
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import { AgentRunSuspended } from "../../agent-approval.js";
-import { resolveLoop, resolveToolConcurrency } from "../../agent-loops.js";
-import { validateRunStateOptions } from "../../agent-run-state.js";
+import { agentFingerprint, validateRunStateOptions } from "../../agent-run-state.js";
 import { activeTools } from "../../agent-tool-dispatch.js";
 import { resolveRunAttentionCompiler } from "../../attention-compiler.js";
 import type {
   AgentFinishReason,
-  AgentRunResult,
+  AgentRunStatus,
+  RunResult,
   AttentionReport,
   ErrorInfo,
-  LoopContext,
+  JsonObject,
+  JsonValue,
   Message,
   PromptVersionRef,
   ResolvedRunLimits,
   RunOptions,
   RunRecord,
-  StopHook,
-  StopHookContext,
-  TurnBoundaryContext,
-  TurnPolicyOptions,
+  ToolDefinition,
   Usage,
 } from "../../contracts.js";
-import { AgentLoopStateError, AgentRunError, AgentRunStateError } from "../../contracts.js";
-import { assertGuardrailsAllowed, runGuardrails } from "../../guardrails.js";
-import { identityTelemetryAttributes, ownershipFromIdentity, resolveRunIdentity } from "../../identity.js";
+import { AgentLoopStateError, AgentRunStateError } from "../../contracts.js";
+import { HookError } from "../../hooks/errors.js";
 import type { AgentInput } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
+import type { AskRequest, AskResolution, LoopStrategy, RunTurnOptions } from "../../loop/index.js";
+import { createRunController } from "../../loop/index.js";
+import { applyDefaultProviderRequestOptions } from "../../provider-request-policy.js";
 import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
 import { describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
 import { createSessionEntry } from "../../session-stores.js";
-import { resolveSkillsDisclosure } from "../../skill-disclosure.js";
-import { applyRestoredSkillBodies } from "../../skill-load.js";
+import { applyRestoredSkillBodies, createLoadSkillTool } from "../../skill-load.js";
+import { createSkillRegistry } from "../../skills.js";
 import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "../../structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../../system-prompts.js";
 import { resolveToolResultFold } from "../../tool-result-fold.js";
 import { createSearchToolsTool, createToolSearchState, resolveToolsDisclosure } from "../../tool-search.js";
-import { clampTurnToolNames, createToolRegistry, selectRunTools } from "../../tools.js";
-import {
-  bridgeAbort,
-  createUsageAccumulator,
-  inputToMessages,
-  isDurableLoop,
-  isSteerSoftInterrupt,
-  mergeGuardrails,
-  throwIfAborted,
-} from "../helpers.js";
+import { clampTurnToolNames, createToolRegistry, resolveToolEffects, selectRunTools } from "../../tools.js";
+import { bridgeAbort, createUsageAccumulator, inputToMessages, isDurableLoop, isSteerSoftInterrupt, throwIfAborted } from "../helpers.js";
+import { assignedLoop, tryAgentRuntime } from "../runtime-registry.js";
 import { checkpointDurableFold, checkpointDurableTurn, cleanupRun, persistDurable, persistSucceeded, suspendDurable } from "./persist.js";
-import { generateWithRetry, recordProviderUsage, resolveDeterministicTurn } from "./provider-round.js";
+import { generateWithRetry, recordProviderUsage } from "./provider-round.js";
 import {
   bindChargeToolRound,
   bindDispatchToolCall,
+  matchStickyDecision,
   replayDurableNestedAndPending,
   runLoopUntilSettled,
+  stageAskDecisions,
   suspendGatedRound,
 } from "./tool-round.js";
-import type { RoundContext, RunStopInfo, SessionHost } from "./types.js";
+import type { RoundContext, SessionHost } from "./types.js";
 
 const PROMPT_VERSION_MAX_NAME_BYTES = 256;
 const PROMPT_VERSION_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/;
+/** Capabilities reported to `tool.call` for a tool the registry does not know (fail closed). */
+const ALL_TOOL_CAPABILITY_KINDS = [
+  "read",
+  "write",
+  "execute",
+  "network",
+  "external",
+] as const satisfies readonly import("../../contracts.js").ToolCapabilityKind[];
+
+/** Bound for the redacted argument preview in a `host.ui` confirm detail. */
+const ASK_PREVIEW_MAX_CHARS = 1024;
+
+/** Redacted, bounded argument preview for a `host.ui` confirm detail. Never the raw arguments. */
+function askArgumentPreview(session: SessionHost, args: JsonObject): string {
+  const redacted = session.activeRedactor?.redact(args) ?? args;
+  let text: string;
+  try {
+    text = JSON.stringify(redacted);
+  } catch {
+    text = "[unserializable arguments]";
+  }
+  return text.length > ASK_PREVIEW_MAX_CHARS ? `${text.slice(0, ASK_PREVIEW_MAX_CHARS)}\u2026` : text;
+}
+
+/**
+ * Resolve a `tool.call` `{ ask }` (roadmap §2.4). An attached `HostUi` answers a `confirm` inline:
+ * `answered: true` executes the call, `answered: false` and `dismissed` refuse it, and an absent,
+ * `unavailable`, or non-interactive run suspends it. A loop cannot bypass this: the controller's
+ * `tool.call` gate calls here.
+ */
+async function resolveAskDecisions(ctx: RoundContext, requests: readonly AskRequest[]): Promise<ReadonlyMap<string, AskResolution>> {
+  const resolutions = new Map<string, AskResolution>();
+  // A sticky decision from an earlier approval in this run short-circuits the ask without
+  // re-prompting; `tool.call` still fired, so a host gate cannot be bypassed.
+  const unresolved: AskRequest[] = [];
+  for (const request of requests) {
+    const sticky = matchStickyDecision(ctx.session, request.call, ctx.registry);
+    if (sticky?.outcome === "allow_for_run") {
+      resolutions.set(request.call.id, { kind: "allow" });
+    } else if (sticky?.outcome === "reject_for_run") {
+      resolutions.set(request.call.id, { kind: "deny", reason: sticky.reason ?? "Rejected for this run" });
+    } else {
+      unresolved.push(request);
+    }
+  }
+  if (unresolved.length === 0) return resolutions;
+  const ui = ctx.session.agent.config.host?.ui;
+  const interactive = ctx.options.interactive ?? true;
+  const toSuspend: AskRequest[] = [];
+  const inlineResolved: { readonly toolCallId: string; readonly outcome: "allow" | "deny" }[] = [];
+  for (const request of unresolved) {
+    if (!ui || !interactive) {
+      toSuspend.push(request);
+      continue;
+    }
+    const { call, reason } = request;
+    const response = await ui.request({
+      kind: "confirm",
+      title: `Approve tool "${call.name}"`,
+      detail: `${reason}\n${askArgumentPreview(ctx.session, call.arguments)}`,
+      sessionId: ctx.session.id,
+    });
+    if (response.status === "answered") {
+      resolutions.set(call.id, response.value ? { kind: "allow" } : { kind: "deny", reason: `Denied by host: ${reason}` });
+      inlineResolved.push({ toolCallId: call.id, outcome: response.value ? "allow" : "deny" });
+    } else if (response.status === "dismissed") {
+      resolutions.set(call.id, { kind: "deny", reason: `Dismissed by host: ${reason}` });
+      inlineResolved.push({ toolCallId: call.id, outcome: "deny" });
+    } else {
+      toSuspend.push(request);
+    }
+  }
+  if (inlineResolved.length > 0) {
+    ctx.session.emit({ type: "decision.resolved", sessionId: ctx.session.id, runId: ctx.runId, decisions: inlineResolved, via: "inline" });
+  }
+  if (toSuspend.length > 0) {
+    // Stage for suspension; the round's allowed calls still run first and the run suspends at the
+    // next turn boundary / loop end (`suspendGatedRound`).
+    for (const { call } of toSuspend) resolutions.set(call.id, { kind: "suspend" });
+    stageAskDecisions(ctx, toSuspend);
+  }
+  return resolutions;
+}
+
+/** Internal seams the run loop is assembled from (private to the kernel). */
+type LoopInternals = {
+  readonly sessionId: string;
+  readonly runId: string;
+  readonly metadata: Readonly<Record<string, unknown>>;
+  readonly signal: AbortSignal;
+  readonly history: Message[];
+  readonly input: AgentInput;
+  readonly inputMessages: readonly Message[];
+  readonly maxToolRounds: number;
+  readonly restoredLoopState?: JsonValue;
+  assemble(
+    nextInput: AgentInput,
+    toolResults: readonly import("../../contracts.js").ToolResult[] | undefined,
+    turn: number | undefined,
+    runOptions?: RunTurnOptions,
+  ): Promise<import("../../contracts.js").ProviderRequest>;
+  chargeToolRound(calls: readonly import("../../contracts.js").ToolCallContent[]): void | Promise<void>;
+  generate(
+    request: import("../../contracts.js").ProviderRequest,
+    requestSecrets?: readonly (string | undefined)[],
+  ): Promise<import("../../contracts.js").ProviderTurnResult>;
+  isToolCallExclusive(call: import("../../contracts.js").ToolCallContent): boolean;
+  dispatchToolCall(call: import("../../contracts.js").ToolCallContent): Promise<import("../../contracts.js").ToolResult>;
+  ask(
+    requests: readonly import("../../loop/index.js").AskRequest[],
+  ): Promise<ReadonlyMap<string, import("../../loop/index.js").AskResolution>>;
+  appendMessage(message: Message): Promise<void>;
+  hasPendingSteers(): boolean;
+  applyPendingSteers(): Promise<boolean>;
+  emit(event: import("../../contracts.js").AgentEvent): void;
+  /** The loop's turn counter advanced; the provider attempt emits the catalog's `turn.started`. */
+  onTurnStart?(turn: number): void;
+};
 /** Cap on the host stop detail that reaches the result, ledger, and timeline (plan 084 Task 2). */
 const TURN_STOP_DETAIL_MAX_BYTES = 256;
 
@@ -74,196 +187,25 @@ function lastAssistantText(history: readonly Message[]): string | undefined {
 }
 
 /**
- * `RunOptions.turnPolicy` stopped the run at a turn boundary (plan 084 Task 2). Internal control
- * signal: it unwinds any loop shape and `executeRun` turns it into a clean terminal success with
- * `stopReason: "host_policy"` — never a run error.
+ * Redact and bound a `turn.before` stop reason. A `turn.before` handler returning a stop is a
+ * host decision that ends the run cleanly, so its reason rides `stopDetail` on the result — it is
+ * still host text, so it is redacted and byte-capped exactly like the retired turn policy's was.
+ * A missing or non-string reason is a bus invariant violation, not host input: fall back to a
+ * constant rather than failing the run over cosmetics.
  */
-class AgentRunStopped extends Error {
-  constructor() {
-    super("Agent run stopped by host turn policy");
-    this.name = "AgentRunStopped";
-  }
-}
-
-/** Host turn-policy misuse: a throwing or malformed callback fails the run closed. */
-class TurnPolicyError extends Error {
-  readonly code = "ERR_PRISM_TURN_POLICY";
-  constructor(message: string, options?: { readonly cause?: unknown }) {
-    super(message, options);
-    this.name = "TurnPolicyError";
-  }
-}
-
-/** Stop-hook misuse: a throwing or malformed hook fails the run closed (plan 106 R1). */
-class StopHookError extends Error {
-  readonly code = "ERR_PRISM_STOP_HOOK";
-  constructor(message: string, options?: { readonly cause?: unknown }) {
-    super(message, options);
-    this.name = "StopHookError";
-  }
-}
-
-/** Validate the merged stop-hook list once per run, before any provider turn (plan 106 R1). */
-function assertStopHooks(hooks: readonly StopHook[]): void {
-  for (const hook of hooks) {
-    if (
-      typeof hook !== "object" ||
-      hook === null ||
-      typeof hook.name !== "string" ||
-      hook.name.length === 0 ||
-      typeof hook.decide !== "function"
-    ) {
-      throw new TypeError("stopHooks entries must be StopHook objects with a non-empty name and a decide function");
-    }
-  }
-}
-
-/**
- * Run stop hooks in order at a natural loop end (plan 106 R1). The first `continue` wins; every
- * `stop` (or no hook continuing) leaves the run finished. Hook context is metadata plus the live
- * transcript — tool arguments, prompts, and results are never reshaped by core.
- */
-async function evaluateStopHooks(
-  ctx: RoundContext,
-  stopHookActive: boolean,
-): Promise<{ readonly reason: string; readonly steer?: string | Message } | undefined> {
-  const context: StopHookContext = {
-    sessionId: ctx.session.id,
-    runId: ctx.runId,
-    turn: ctx.limits.snapshot().turns,
-    history: ctx.loopCtx.history,
-    metadata: ctx.metadata,
-    signal: ctx.controller.signal,
-    stopHookActive,
-  };
-  for (const hook of ctx.stopHooks) {
-    let decision: unknown;
-    try {
-      decision = await hook.decide(context);
-    } catch (error) {
-      throw new StopHookError(`Stop hook "${hook.name}" threw`, { cause: error });
-    }
-    if (decision === null || typeof decision !== "object") {
-      throw new StopHookError(`Stop hook "${hook.name}" must return a StopHookDecision`);
-    }
-    const action = (decision as { action?: unknown }).action;
-    if (action === "stop") continue;
-    if (action !== "continue") {
-      throw new StopHookError(`Stop hook "${hook.name}" decision action must be "stop" or "continue"`);
-    }
-    const reason = (decision as { reason?: unknown }).reason;
-    if (typeof reason !== "string" || reason.length === 0) {
-      throw new StopHookError(`Stop hook "${hook.name}" continue decision requires a non-empty reason string`);
-    }
-    const steer = (decision as { steer?: unknown }).steer;
-    if (!isStopHookSteer(steer)) {
-      throw new StopHookError(`Stop hook "${hook.name}" steer must be a string or Message`);
-    }
-    return steer === undefined ? { reason } : { reason, steer };
-  }
-  return undefined;
-}
-
-function isStopHookSteer(value: unknown): value is string | Message | undefined {
-  if (value === undefined || typeof value === "string") return true;
-  if (typeof value !== "object" || value === null) return false;
-  const message = value as Message;
-  return typeof message.role === "string" && Array.isArray(message.content);
-}
-
-/**
- * Queue a continuation through the host steer path (plan 106 R1): same redaction, same 8-message /
- * 64 KiB caps, and the same input-guardrail re-check when the loop drains it. A queue failure fails
- * the run closed — the hook asked for something the run cannot deliver.
- */
-function queueStopHookContinuation(ctx: RoundContext, decision: { readonly reason: string; readonly steer?: string | Message }): void {
-  const messages: Message[] = [{ role: "user", content: [{ type: "text", text: decision.reason }] }];
-  if (decision.steer !== undefined) {
-    messages.push(
-      typeof decision.steer === "string" ? { role: "user", content: [{ type: "text", text: decision.steer }] } : decision.steer,
-    );
-  }
-  try {
-    ctx.session.steer(messages);
-  } catch (error) {
-    throw new StopHookError("Stop hook continuation could not be queued", { cause: error });
-  }
-}
-
-/** The generate-validate-revise loop promises a validated artifact; a bare return is a failure. */
-function assertArtifactOutcome(ctx: RoundContext): void {
-  if (ctx.loop.name === "generate-validate-revise" && !ctx.artifactFinished) {
-    throw Object.assign(new Error(ctx.artifactFailedInfo?.message ?? "artifact loop ended without a validated artifact"), {
-      name: "ArtifactFailed",
-      code: ctx.artifactFailedInfo?.code ?? "artifact_failed",
-    });
-  }
-}
-
-/** Validate `RunOptions.turnPolicy` once, before any provider turn (plan 084 Task 2). */
-function assertTurnPolicy(policy: TurnPolicyOptions | undefined, resolvedLimits: ResolvedRunLimits): void {
-  if (policy === undefined) return;
-  if (typeof policy !== "object" || policy === null) throw new TypeError("RunOptions.turnPolicy must be an object");
-  if (policy.stop !== undefined && typeof policy.stop !== "function") {
-    throw new TypeError("RunOptions.turnPolicy.stop must be a function");
-  }
-  const maxTurns = policy.maxTurns;
-  if (maxTurns === undefined) return;
-  if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) {
-    throw new TypeError("RunOptions.turnPolicy.maxTurns must be a positive safe integer");
-  }
-  // Same narrowing law as `limits`: a run overlay may tighten the agent's cap, never widen it.
-  const configured = resolvedLimits.maxTurns;
-  if (configured !== null && maxTurns > configured) {
-    throw new TypeError(`RunOptions.turnPolicy.maxTurns (${maxTurns}) cannot widen limits.maxTurns (${configured})`);
-  }
-}
-
-/** Redact and bound a host stop reason; anything unusable fails the run closed. */
-function boundedStopDetail(session: SessionHost, reason: unknown): string {
-  if (typeof reason !== "string" || reason.length === 0) {
-    throw new TurnPolicyError("RunOptions.turnPolicy.stop must return a non-empty reason string");
-  }
+function boundedHookStopDetail(session: SessionHost, reason: unknown): string {
+  if (typeof reason !== "string" || reason.length === 0) return "stopped by a turn.before hook";
   const redacted = session.redact(reason);
-  if (Buffer.byteLength(redacted, "utf8") > TURN_STOP_DETAIL_MAX_BYTES) {
-    throw new TurnPolicyError(`RunOptions.turnPolicy.stop reason must be at most ${TURN_STOP_DETAIL_MAX_BYTES} UTF-8 bytes`);
+  if (Buffer.byteLength(redacted, "utf8") <= TURN_STOP_DETAIL_MAX_BYTES) return redacted;
+  let bytes = 0;
+  let end = 0;
+  for (const char of redacted) {
+    const size = Buffer.byteLength(char, "utf8");
+    if (bytes + size > TURN_STOP_DETAIL_MAX_BYTES) break;
+    bytes += size;
+    end += char.length;
   }
-  return redacted;
-}
-
-/**
- * Evaluate the host turn policy at the current provider-turn boundary (plan 084 Task 2). Returns
- * the stop to record, or `undefined` to run the turn. Omitted policy → nothing is read or called.
- */
-function evaluateTurnStop(ctx: RoundContext): RunStopInfo | undefined {
-  const policy = ctx.options.turnPolicy;
-  if (!policy) return undefined;
-  const turn = Math.max(1, ctx.session.activeLoopTurn);
-  const turns = turn - 1;
-  if (policy.maxTurns !== undefined && turns >= policy.maxTurns) return { reason: "turn_limit", detail: "maxTurns" };
-  if (!policy.stop) return undefined;
-  const context: TurnBoundaryContext = {
-    sessionId: ctx.session.id,
-    runId: ctx.runId,
-    turn,
-    turns,
-    toolCalls: ctx.toolCalls,
-    ...(ctx.runUsage.value() ? { usage: ctx.runUsage.value() } : {}),
-    metadata: ctx.metadata,
-  };
-  let decision: unknown;
-  try {
-    decision = policy.stop(context);
-  } catch (error) {
-    throw new TurnPolicyError("RunOptions.turnPolicy.stop threw", { cause: error });
-  }
-  if (decision === null || typeof decision !== "object" || typeof (decision as { then?: unknown }).then === "function") {
-    throw new TurnPolicyError("RunOptions.turnPolicy.stop must synchronously return a TurnStopDecision");
-  }
-  const action = (decision as { action?: unknown }).action;
-  if (action === "continue") return undefined;
-  if (action !== "stop") throw new TurnPolicyError('RunOptions.turnPolicy.stop decision action must be "continue" or "stop"');
-  return { reason: "host_policy", detail: boundedStopDetail(ctx.session, (decision as { reason?: unknown }).reason) };
+  return redacted.slice(0, end);
 }
 
 function assertPromptVersionRef(ref: PromptVersionRef | undefined): PromptVersionRef | undefined {
@@ -295,25 +237,17 @@ async function assembleRoundContext(params: {
   metadata: Readonly<Record<string, unknown>>;
   limits: RunLimitTracker;
   runUsage: RoundContext["runUsage"];
-  stopHooks: readonly StopHook[];
 }): Promise<RoundContext> {
-  const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage, stopHooks } =
-    params;
+  const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage } = params;
   session.resolveRunProvider(options);
   throwIfAborted(controller.signal);
-  session.emit({ type: "agent_started", sessionId: session.id, runId });
-  if (resumed)
-    session.emit({
-      type: "agent_resumed",
-      sessionId: session.id,
-      runId,
-      version: resumed.version,
-      ...(resumed.restore ? { restore: resumed.restore } : {}),
-    });
-  // Plan 106 R2: first run start of this session opens it. Awaited after the two emits above so the
-  // run's synchronous announce burst stays intact; middleware error policy owns failures.
-  await session.openSession(runId);
-
+  session.emit({
+    type: "run.started",
+    sessionId: session.id,
+    runId,
+    ...(resumed ? { resumed: true } : {}),
+    ...(resumed?.restore ? { restore: resumed.restore } : {}),
+  });
   const startRecord: RunRecord = {
     id: runId,
     sessionId: session.id,
@@ -329,12 +263,11 @@ async function assembleRoundContext(params: {
   await session.activeLedger?.appendRun(redactRunLedgerRecord(startRecord, session.activeRedactor));
 
   await session.rebuildHistory();
-  const { tools: listed } = activeTools(session.agent.config.tools);
-  const selected = selectRunTools(listed, options.toolNames, resumed?.state?.toolNames);
+  const { tools: listed } = activeTools(session.agent);
+  const selected = selectRunTools(listed, options.tools?.only, resumed?.state?.toolNames);
   session.activeToolNames = selected.grant;
   // Run-local snapshot: concurrent runs and MCP refresh must not mutate this registry.
   const activeToolList = selected.tools;
-  const baseRegistry = createToolRegistry(activeToolList);
   const toolsDisclosure = resolveToolsDisclosure(options.toolsDisclosure, session.agent.config.toolsDisclosure);
   const toolSearch =
     toolsDisclosure === "search" && activeToolList.length > 0
@@ -347,9 +280,17 @@ async function assembleRoundContext(params: {
         }
       : undefined;
   const searchTool = toolSearch ? createSearchToolsTool(toolSearch.state) : undefined;
-  const registry = searchTool ? createToolRegistry([...activeToolList, searchTool]) : baseRegistry;
-  const tools = searchTool ? [...activeToolList, searchTool] : activeToolList;
-  const activeSkills = session.resolveRunSkills(options, tools);
+  const narrowedTools = searchTool ? [...activeToolList, searchTool] : activeToolList;
+  const activeSkills = session.resolveRunSkills(narrowedTools);
+  // Progressive disclosure registers the `load_skill` bridge; eager renders every body up front.
+  const disclosure = session.agent.config.skills?.disclosure ?? "progressive";
+  const loadSkill =
+    activeSkills.length > 0 && disclosure === "progressive"
+      ? createLoadSkillTool({ registry: createSkillRegistry(activeSkills) })
+      : undefined;
+  const tools = loadSkill ? [...narrowedTools, loadSkill] : narrowedTools;
+  // `duplicate: "error"` fails closed when a host tool already owns `load_skill`/`search_tools`.
+  const registry = createToolRegistry(tools, { duplicate: "error" });
   session.activeRunSkills = activeSkills;
   session.tailSegments.clear();
   if (options.model && JSON.stringify(options.model) !== JSON.stringify(session.agent.config.model)) {
@@ -364,24 +305,12 @@ async function assembleRoundContext(params: {
       }),
     );
   }
-  const inputMessages = inputToMessages(input).map((message) => session.redact(message));
-  const inputGuardrails = await runGuardrails({
-    stage: "input",
-    guardrails: session.activeGuardrails,
-    value: inputMessages,
-    context: { sessionId: session.id, runId, metadata, signal: controller.signal },
-    redactor: session.activeRedactor,
-    emit: (event) => session.emit(event),
-  });
-  const approvedByResume = resumed !== undefined && inputGuardrails.terminal?.action === "interrupt" && session.activeDurable !== undefined;
-  if (inputGuardrails.terminal?.action === "interrupt" && session.activeDurable && !approvedByResume) {
-    const interruption = { kind: "input_guardrail" as const, reason: inputGuardrails.terminal.reason ?? "Input requires approval" };
-    throw new AgentRunSuspended(
-      await suspendDurable(session, { runId, model, limits, interruption, messages: inputMessages }),
-      interruption,
-    );
-  }
-  if (inputGuardrails.terminal && !approvedByResume) assertGuardrailsAllowed(inputGuardrails);
+  const inputMessages = [
+    ...(await session.hooks().transform(
+      "run.input",
+      inputToMessages(input).map((message) => session.redact(message)),
+    )),
+  ];
   for (const message of inputMessages) await session.appendMessage(message, runId);
   await session.autoCompact(runId, options, controller.signal, inputMessages);
   // Disabled cap (`null`) maps to +Infinity so loop comparisons never trip (`n >= null` would be true).
@@ -389,7 +318,6 @@ async function assembleRoundContext(params: {
   const systemInstructions = composeSystemPrompt(mergeSystemPromptConfig(session.agent.config.systemPrompt, options.systemPrompt), {
     base: session.agent.config.instructions,
   });
-  const contextProviders = [...(session.agent.config.context ?? []), ...activeSkills.flatMap((skill) => skill.context ?? [])];
   const providerOptions = resolveRunProviderOptions(options, session.agent.config);
   assertStructuredOutputRequestSupported(options.model ?? session.agent.config.model, providerOptions);
   const validate = options.validate ?? session.agent.config.validator;
@@ -422,25 +350,25 @@ async function assembleRoundContext(params: {
     ? (report: AttentionReport) => {
         if (report.newFoldedBodies > 0) foldCheckpointPending = true;
         session.emit({
-          type: "attention_compiled",
+          type: "package.event",
           sessionId: session.id,
           runId,
-          used: report.used,
-          usedAfter: report.usedAfter,
-          inputCap: report.inputCap,
-          triggerRatio: report.triggerRatio,
-          droppedThinkingTurns: report.droppedThinkingTurns,
-          stubbedToolResults: report.stubbedToolResults,
-          stubbedBytes: report.stubbedBytes,
-          truncated: report.truncated,
+          package: "kernel",
+          name: "attention.compiled",
+          data: {
+            used: report.used,
+            usedAfter: report.usedAfter,
+            inputCap: report.inputCap,
+            triggerRatio: report.triggerRatio,
+            droppedThinkingTurns: report.droppedThinkingTurns,
+            stubbedToolResults: report.stubbedToolResults,
+            stubbedBytes: report.stubbedBytes,
+            truncated: report.truncated,
+          },
         });
       }
     : undefined;
-  const instructionInjectors = options.instructionInjectors ?? session.agent.config.instructionInjectors ?? [];
   const inputLayout = options.inputLayout ?? session.agent.config.inputLayout;
-  const loop = resolveLoop(options, session.agent.config);
-  session.activeLoop = loop;
-  const toolConcurrency = resolveToolConcurrency(options, session.agent.config);
   session.activeLoopTurn = 1;
 
   const ctx = {
@@ -459,30 +387,25 @@ async function assembleRoundContext(params: {
     inputMessages,
     maxToolRounds,
     systemInstructions,
-    contextProviders,
     providerOptions,
     validate,
-    instructionInjectors,
     inputLayout,
-    loop,
-    toolConcurrency,
+    loop: undefined as unknown as LoopStrategy,
+    runController: undefined as unknown as import("../../loop/index.js").RunController,
+    dispatchToolCall: undefined as unknown as RoundContext["dispatchToolCall"],
     toolsDisclosure,
     assembledTurn: false,
-    artifactFinished: false,
-    artifactFailedInfo: undefined as RoundContext["artifactFailedInfo"],
     toolCalls: 0,
     toolResults: [],
-    stopHooks,
     runUsage,
-    loopCtx: undefined as unknown as LoopContext,
   } as RoundContext;
-
-  const toolNarrowing = options.toolNarrowing ?? session.agent.config.toolNarrowing;
-  let narrowedForTurn: { turn: number; tools: typeof tools } | undefined;
 
   session.activeLoopHistory = session.history;
 
-  const loopCtx: LoopContext = {
+  const dispatchBound = bindDispatchToolCall(ctx);
+  ctx.dispatchToolCall = dispatchBound;
+
+  const loopInternals: LoopInternals = {
     sessionId: session.id,
     runId,
     metadata,
@@ -491,40 +414,38 @@ async function assembleRoundContext(params: {
     input,
     inputMessages,
     maxToolRounds,
-    toolConcurrency,
     restoredLoopState: resumed?.state?.loopState?.snapshot,
-    assemble: async (nextInput, toolResults, turn) => {
+    assemble: async (nextInput, toolResults, turn, runOptions) => {
       limits.charge("maxTurns");
       const turnIndex = turn ?? 1;
       if (turnIndex > 1) {
         await session.autoCompactTurn(runId, options, controller.signal, turnIndex);
       }
       let turnTools = tools;
-      if (toolNarrowing) {
-        if (typeof toolNarrowing !== "function") throw new TypeError("toolNarrowing must be a function");
-        if (narrowedForTurn?.turn === turnIndex) {
-          turnTools = narrowedForTurn.tools;
-        } else {
-          const assistant = lastAssistantText(session.history);
-          const requested = await toolNarrowing({
-            turn: turnIndex,
-            toolIds: tools.map((tool) => tool.name),
-            ...(assistant !== undefined ? { lastAssistantText: assistant } : {}),
+      // Package tools hidden by their `when` predicate for this session: not advertised and not
+      // callable (`dispatchFilter` allows only `turnAllow`), unless `allowHiddenToolCalls` is set.
+      const hidden = hiddenPackageTools(session, tools);
+      if (hidden) {
+        turnTools = tools.filter((tool) => !hidden.has(tool.name));
+        ctx.turnAllow = hidden.size > 0 ? turnTools.map((tool) => tool.name) : undefined;
+      }
+      const requestedTools = runOptions?.tools;
+      if (requestedTools === false) {
+        turnTools = [];
+        ctx.turnAllow = [];
+      } else if (Array.isArray(requestedTools)) {
+        const clamped = clampTurnToolNames(turnTools, requestedTools);
+        if (clamped.dropped.length > 0) {
+          session.emit({
+            type: "package.event",
+            sessionId: session.id,
+            runId,
+            package: "kernel",
+            name: "tools.clamped",
+            data: { turn: turnIndex, dropped: clamped.dropped } as unknown as JsonValue,
           });
-          if (!Array.isArray(requested)) throw new TypeError("toolNarrowing must return a string array");
-          const clamped = clampTurnToolNames(tools, requested);
-          if (clamped.dropped.length > 0) {
-            session.emit({
-              type: "tool_narrowing_clamped",
-              sessionId: session.id,
-              runId,
-              turn: turnIndex,
-              dropped: clamped.dropped,
-            });
-          }
-          turnTools = clamped.tools;
-          narrowedForTurn = { turn: turnIndex, tools: turnTools };
         }
+        turnTools = clamped.tools;
         ctx.turnAllow = turnTools.map((tool) => tool.name);
       }
       const request = await assembleProviderInput({
@@ -534,14 +455,11 @@ async function assembleRoundContext(params: {
         summaries: (await session.snapshot()).summaries,
         toolResults: toolResults ?? [],
         turn,
-        instructionInjectors,
         inputLayout,
-        systemInstructions,
-        inputBuilder: session.agent.config.inputBuilder,
-        promptBuilder: session.agent.config.promptBuilder,
-        contextProviders,
+        systemInstructions: runOptions?.system ?? systemInstructions,
         skills: session.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, session.restoredSkillBodies) : activeSkills,
-        skillsDisclosure: resolveSkillsDisclosure(options.skillsDisclosure, session.agent.config.skillsDisclosure),
+        skillsDisclosure: session.agent.config.skills?.disclosure,
+        deferSkillsCatalog: true,
         toolsDisclosure,
         toolsSearch: session.agent.config.toolsSearch,
         activatedTools: session.activatedTools,
@@ -562,11 +480,9 @@ async function assembleRoundContext(params: {
         tailSegments: session.tailSegments,
         tools: turnTools,
         resourceLoader: session.agent.config.resourceLoader,
-        permission: session.agent.config.permission,
         trust: session.agent.config.trust,
         providerOptions,
         redactor: session.activeRedactor,
-        middleware: session.agent.config.middleware,
         sessionId: session.id,
         runId,
         metadata,
@@ -583,48 +499,36 @@ async function assembleRoundContext(params: {
       return request;
     },
     chargeToolRound: bindChargeToolRound(ctx),
-    generate: async (request) => {
+    generate: async (request, requestSecrets) => {
       await suspendGatedRound(ctx);
       if (!ctx.assembledTurn) limits.charge("maxTurns");
       ctx.assembledTurn = false;
-      // Host turn policy (plan 084 Task 2): evaluated at the same turn boundary as the
-      // crash-recovery checkpoint below, before any provider work. Throwing unwinds any loop
-      // shape; `executeRun` converts it into a clean terminal success with `stopReason`.
-      const stop = evaluateTurnStop(ctx);
-      if (stop) {
-        ctx.runStop = stop;
-        ctx.loopCtx.finishReason = stop.reason;
-        throw new AgentRunStopped();
-      }
-      // Crash-recovery boundary (plan 084 Task 1): after the previous turn's tool results are in
+      // `turn.before` decided this turn in `RunController.turn`, before assembly, so a host stop
+      // never reaches here. Crash-recovery boundary (plan 084 Task 1): after the previous turn's
+      // tool results are in
       // the store and before this provider request. No-op unless `checkpointPolicy: "every-turn"`.
       if (session.activeDurable?.options.checkpointPolicy === "every-turn") {
         await checkpointDurableTurn(session, { runId, model, limits });
       }
-      // Deterministic no-model turn (plan 096): host middleware answers at the provider boundary,
-      // before any provider-round work. No answer → provider path unchanged.
-      const deterministic = await resolveDeterministicTurn(
-        session,
-        request,
-        runId,
-        session.activeLoopTurn,
-        controller.signal,
-        ctx.toolResults,
-      );
-      if (deterministic) return deterministic;
-      const policyResult = await session.applyProviderRequestPolicies(request, runId, options, metadata, controller.signal);
-      const middlewareRequest =
-        (await session.agent.config.middleware?.run("provider_request", policyResult.request)) ?? policyResult.request;
+      // `model.request` transforms already ran in the controller; redaction is last so a transform
+      // cannot un-redact. A `model.call` handler answers without a provider request by skipping `next`.
+      // Fill-if-missing sessionId / cacheKey / cache defaults and the portable thinking intent, then
+      // redact: both run after `model.request`, so a transform can neither skip them nor un-redact.
+      const stamped = applyDefaultProviderRequestOptions(request, {
+        sessionId: session.id,
+        thinkingLevel: options.thinkingLevel ?? session.agent.config.thinkingLevel,
+      });
+      const redactedRequest = session.redactProviderRequest(stamped);
       try {
         return await generateWithRetry(
           session,
-          session.redactProviderRequest(middlewareRequest),
+          redactedRequest,
           runId,
           options,
           controller.signal,
-          policyResult.secrets,
+          requestSecrets ?? [],
           session.activeLoopTurn,
-          (turnUsage, turn, attempt) => recordProviderUsage(ctx, turnUsage, turn, attempt, middlewareRequest),
+          (turnUsage, turn, attempt) => recordProviderUsage(ctx, turnUsage, turn, attempt, redactedRequest),
           ctx.toolResults,
         );
       } catch (error) {
@@ -635,66 +539,77 @@ async function assembleRoundContext(params: {
       }
     },
     isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
-    dispatchToolCall: bindDispatchToolCall(ctx),
+    dispatchToolCall: dispatchBound,
+    ask: (requests) => resolveAskDecisions(ctx, requests),
     appendMessage: (message) => session.appendMessage(message, runId),
     hasPendingSteers: () => session.pendingSteers.length > 0,
     applyPendingSteers: () => session.applyPendingSteers(runId, metadata, controller.signal),
-    emit: (event) => {
-      if (event.type === "turn_started") session.activeLoopTurn = event.turn;
-      if (event.type === "artifact_finished") ctx.artifactFinished = true;
-      if (event.type === "artifact_failed") {
-        const first = event.result.errors?.[0];
-        const reason = event.result.metadata?.reason;
-        ctx.artifactFailedInfo = {
-          message: first?.message ?? "artifact failed",
-          code: typeof reason === "string" || typeof reason === "number" ? reason : "artifact_failed",
-        };
-      }
-      session.emit(event);
+    onTurnStart: (turn) => {
+      session.activeLoopTurn = turn;
     },
+    emit: (event) => session.emit(event),
   };
-  ctx.loopCtx = loopCtx;
+  ctx.loop = session.slots().resolve("loop", session.agent.config.slots?.loop);
+  session.activeLoop = ctx.loop;
+  ctx.runController = createRunController({
+    ...loopInternals,
+    session: session as unknown as import("../../contracts.js").Session,
+    limits,
+    hooks: session.hooks(),
+    maxContinuations: limits.limits.maxContinuations,
+    assemble: (nextInput, turn, runOptions) => loopInternals.assemble(nextInput, undefined, turn, runOptions),
+    effectsFor: (call) => {
+      const tool = registry.get(call.name);
+      return tool ? resolveToolEffects(tool) : ALL_TOOL_CAPABILITY_KINDS;
+    },
+    queueContinuation: (continuation) => {
+      const messages: Message[] = [{ role: "user", content: [{ type: "text", text: continuation.reason }] }];
+      if (continuation.steer !== undefined) {
+        messages.push(
+          typeof continuation.steer === "string"
+            ? { role: "user", content: [{ type: "text", text: continuation.steer }] }
+            : continuation.steer,
+        );
+      }
+      try {
+        // Same path a host steer takes: same redaction and the same 8-message / 64 KiB caps.
+        session.steer(messages);
+      } catch (error) {
+        throw new HookError("run.end continuation could not be queued", { owner: "kernel", hook: "run.end" });
+      }
+    },
+    setFinishReason: (reason, detail) => {
+      ctx.loopFinishReason = reason;
+      ctx.loopStopDetail = detail === undefined ? undefined : boundedHookStopDetail(session, detail);
+    },
+    finishReason: () => ctx.loopFinishReason,
+    usage: () => runUsage.value(),
+  });
   return ctx;
 }
 
 /**
- * Run the loop to settlement, then apply stop hooks at the natural loop end (plan 106 R1). Each
- * `continue` queues its reason through the steer path and re-enters the loop with a continuation
- * context whose `input`/`inputMessages` are empty — the continuation message is already in
- * `history`, and replaying run-start input would duplicate it. A loop ceiling, a host turn-policy
- * stop, or an artifact failure is not a natural end: hooks never run there, and a continuation leg
- * that hits a ceiling ends the run instead of asking again. `limits.maxStopContinuations`
- * (default 3; `0` observes only; `null` uncapped) bounds continuations as a clean `hook_limit` stop.
+ * Package tools whose `when` predicate hides them from this session this turn, or `undefined` when no
+ * package tool has a predicate. A predicate that throws or answers falsy hides the tool (fail closed).
  */
-async function runLoopWithStopHooks(ctx: RoundContext): Promise<Usage | undefined> {
-  let usage = await runLoopUntilSettled(ctx);
-  assertArtifactOutcome(ctx);
-  // Zero overhead when nothing is configured: no wrapper state, no reads.
-  if (ctx.stopHooks.length === 0) return usage;
-  const cap = ctx.limits.limits.maxStopContinuations;
-  let continuations = 0;
-  let stopHookActive = false;
-  for (;;) {
-    if (ctx.runStop !== undefined || ctx.loopCtx.finishReason !== undefined) return usage;
-    const decision = await evaluateStopHooks(ctx, stopHookActive);
-    if (!decision) return usage;
-    if (cap !== null && continuations >= cap) {
-      ctx.loopCtx.finishReason = "hook_limit";
-      return usage;
-    }
-    continuations += 1;
-    stopHookActive = true;
-    queueStopHookContinuation(ctx, decision);
-    const continuationCtx: LoopContext = { ...ctx.loopCtx, input: [], inputMessages: [], continuation: true };
+function hiddenPackageTools(session: SessionHost, tools: readonly ToolDefinition[]): Set<string> | undefined {
+  const entries = tryAgentRuntime(session.agent)
+    ?.packages.tools()
+    .filter((entry) => entry.when);
+  if (!entries?.length) return undefined;
+  const present = new Set(tools.map((tool) => tool.name));
+  const hidden = new Set<string>();
+  for (const { owner, tool, when } of entries) {
+    if (!present.has(tool.name)) continue;
+    let visible = false;
     try {
-      usage = await runLoopUntilSettled({ ...ctx, loopCtx: continuationCtx });
-    } finally {
-      // The loops set `finishReason` on the context they receive; carry it back so the ceiling
-      // survives onto the result, the finish record, and `persistSucceeded`.
-      if (continuationCtx.finishReason !== undefined) ctx.loopCtx.finishReason = continuationCtx.finishReason;
+      visible = Boolean(when?.(session.sessionContextFor(owner)));
+    } catch {
+      visible = false;
     }
-    assertArtifactOutcome(ctx);
+    if (!visible) hidden.add(tool.name);
   }
+  return hidden;
 }
 
 export async function executeRun(
@@ -703,7 +618,7 @@ export async function executeRun(
   options: RunOptions,
   runId: string,
   resumed?: ActiveDurableRun,
-): Promise<AgentRunResult> {
+): Promise<RunResult> {
   const legacyMaxToolRounds = (options as { maxToolRounds?: unknown }).maxToolRounds;
   if (legacyMaxToolRounds !== undefined) {
     throw new TypeError("RunOptions.maxToolRounds was removed in 0.1.5; use RunOptions.limits.maxToolRounds instead");
@@ -721,28 +636,30 @@ export async function executeRun(
   }
   const requestedLimits = options.limits;
   const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits);
-  assertTurnPolicy(options.turnPolicy, resolvedLimits);
-  const stopHooks = [...(session.agent.config.stopHooks ?? []), ...(options.stopHooks ?? [])];
-  assertStopHooks(stopHooks);
-  const durableOptions = options.runState ?? session.agent.config.runState;
+  const durableOptions = options.runState ?? session.agent.config.runState ?? resumed?.options;
   if (session.agent.config.runState && options.runState && session.agent.config.runState !== options.runState) {
     throw new AgentRunStateError("RunOptions cannot replace agent durable run-state configuration");
   }
   if (durableOptions) {
     validateRunStateOptions(durableOptions);
-    if (options.model || options.guardrails || options.loop || options.effectStore)
-      throw new AgentRunStateError("Durable runs require model, guardrails, loop, and effect store on AgentConfig for fingerprinting");
-    const configuredLoop = session.agent.config.loop;
+    if (options.model || options.effectStore)
+      throw new AgentRunStateError("Durable runs require model, loop, and effect store on AgentConfig for fingerprinting");
+    const configuredLoop = assignedLoop(session.agent);
     if (configuredLoop && !isDurableLoop(configuredLoop)) {
       throw new AgentLoopStateError(
         "ERR_PRISM_LOOP_NOT_DURABLE",
-        "Custom AgentLoopStrategy on a durable run requires snapshot and restore hooks",
+        "Custom LoopStrategy on a durable run requires snapshot and restore hooks",
       );
+    }
+    // Fingerprint drift fails closed on a store-slot resume too (`session.resume` bypasses
+    // `prepareAgentRunResume`). Covers the hook-id set, tools, model, and definition revision.
+    if (resumed?.state && resumed.state.fingerprint !== agentFingerprint(session.agent, resumed.state.definitionRevision)) {
+      throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
     }
   }
   if (session.activeRun) {
     const error = new Error("Agent session already has an active run");
-    session.emit({ type: "error", sessionId: session.id, runId, error: errorToErrorInfo(error) });
+    session.emit({ type: "run.failed", sessionId: session.id, runId, error: errorToErrorInfo(error) });
     throw error;
   }
 
@@ -753,28 +670,26 @@ export async function executeRun(
   session.pendingSteers = [];
   session.pendingSteerBytes = 0;
   session.pendingSoftInterrupt = false;
-  session.activeRedactor = options.redactor ?? session.agent.config.redactor;
+  session.activeRunMessages = [];
+  session.activeRedactor = session.runRedactor(options.redactor ?? session.agent.config.redactor);
   session.activeLedger = options.runLedger ?? session.agent.config.runLedger;
   session.activeEffectStore = options.effectStore ?? session.agent.config.effectStore;
   session.activeOwnership = options.ownership ?? session.agent.config.ownership;
-  session.activeIdentity = resolveRunIdentity(options.identity, session.agent.config.identity, session.activeOwnership);
-  if (session.activeIdentity && !session.activeOwnership) session.activeOwnership = ownershipFromIdentity(session.activeIdentity);
+  session.activePrincipal = options.principal ?? session.agent.config.principal;
   session.activeIdempotencyKey = options.idempotencyKey ?? session.agent.config.idempotencyKey;
   session.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
-  // Plan 104 T3: an `ask` rule is gated at charge time when the run can suspend; a run that cannot
-  // suspend enforces the same rule as a plain block, so it joins the ordinary stage guardrails.
-  const packGuardrails = session.activeDurable ? session.packGuardrails : mergeGuardrails(session.packGuardrails, session.packAskBlocks);
-  session.activeGuardrails = mergeGuardrails(mergeGuardrails(session.agent.config.guardrails, packGuardrails), options.guardrails);
+  // Plan 104 T3: pack `deny`/`tripwire`/`ask` rules run as the session's `tool.call` hook, so
   // Plan 086 T3: reset here, so a suspension before the compiler is resolved (input guardrail)
   // cannot inherit the previous run's durable-folding flag. `assembleRoundContext` sets it true.
   session.attentionDurable = false;
   session.activeGatedRound = undefined;
+  session.packAskRecords = undefined;
   if (resumed) session.invalidateSnapshot();
 
   const model = options.model ?? session.agent.config.model;
   const startedAt = new Date().toISOString();
   let runError: ErrorInfo | undefined;
-  let runStatus: AgentRunResult["status"] = "succeeded";
+  let runStatus: AgentRunStatus = "succeeded";
   // Set only on the clean-success path; the finish ledger record carries them (plan 084 Task 2).
   let stopReason: AgentFinishReason | undefined;
   let stopDetail: string | undefined;
@@ -784,13 +699,13 @@ export async function executeRun(
     ...session.agent.config.metadata,
     ...session.metadata,
     ...options.metadata,
-    ...(session.activeIdentity ? identityTelemetryAttributes(session.activeIdentity) : {}),
   };
   session.activeMetadata = metadata;
   session.activePromptVersion = promptVersion;
   const limits = new RunLimitTracker(resolvedLimits, {
     onExceeded: (breach) => {
-      session.emit({ type: "run_limit_exceeded", sessionId: session.id, runId, breach });
+      // No event here: the run's single `run.failed` (with `limit` and `attribution`) is emitted by
+      // the catch below, so a limit death never produces two outcome records.
       controller.abort(new RunLimitError(breach));
     },
     snapshot: resumed?.state?.counters,
@@ -817,7 +732,6 @@ export async function executeRun(
       metadata,
       limits,
       runUsage,
-      stopHooks,
     });
 
     await replayDurableNestedAndPending(ctx);
@@ -832,21 +746,16 @@ export async function executeRun(
       }
       ctx.loop.restore?.(resumedLoopState.snapshot);
     }
-    const loopUsage = await runLoopWithStopHooks(ctx).catch((error: unknown) => {
-      // Host turn-policy stop (plan 084 Task 2): the loop was unwound on purpose at a turn
-      // boundary. Not an error — the run settles cleanly and stays resumable.
-      if (error instanceof AgentRunStopped) return undefined;
-      throw error;
-    });
-    stopReason = ctx.runStop?.reason ?? ctx.loopCtx.finishReason;
-    stopDetail = ctx.runStop?.detail;
+    const loopUsage = await runLoopUntilSettled(ctx);
+    stopReason = ctx.loopFinishReason;
+    stopDetail = ctx.loopStopDetail;
     usage = runUsage.value() ?? loopUsage;
     return await persistSucceeded(ctx, loopUsage);
   } catch (error) {
     if (error instanceof AgentRunSuspended) {
       runStatus = "suspended";
       const version = error.state.version!;
-      session.emit({ type: "agent_suspended", sessionId: session.id, runId, interruption: error.interruption, version });
+      session.emit({ type: "run.suspended", sessionId: session.id, runId, interruption: error.interruption, version });
       return session.buildRunResult({ runId, status: "suspended", runState: error.state, interruption: error.interruption });
     }
     runError = errorToErrorInfo(error);
@@ -855,10 +764,25 @@ export async function executeRun(
     const exhaustion = breach ? describeBudgetExhaustion(limits, breach, session.activeRecentToolCalls ?? []) : undefined;
     // Terminal attribution before the terminal `error`/finish records, so a subscriber that stops
     // at the first terminal event still sees why the run died (plan 087 T2).
-    if (exhaustion) {
-      session.emit({ type: "budget_exhausted", sessionId: session.id, runId, ...exhaustion });
-    }
-    session.emit({ type: "error", sessionId: session.id, runId, error: runError });
+    // One terminal record: `run.failed` carries the redacted error plus, when a ceiling ended the
+    // run, the breached limit and the plan-087/108 attribution (the former `run_limit_exceeded` and
+    // `budget_exhausted`). Subscribers that stop at the first terminal event still see why it died.
+    session.emit({
+      type: "run.failed",
+      sessionId: session.id,
+      runId,
+      error: runError,
+      ...(breach ? { limit: breach } : {}),
+      ...(exhaustion
+        ? {
+            attribution: {
+              consumed: exhaustion.consumed,
+              closestOtherAxes: exhaustion.closestOtherAxes,
+              recentToolCalls: exhaustion.recentToolCalls,
+            },
+          }
+        : {}),
+    });
     runStatus = breach ? "failed" : controller.signal.aborted ? "aborted" : "failed";
     const runState = session.activeDurable?.state
       ? await persistDurable(session, {
@@ -885,7 +809,7 @@ export async function executeRun(
       abortReason: !breach && controller.signal.aborted ? String(controller.signal.reason) : undefined,
       runState,
     });
-    throw new AgentRunError(result, { cause: error });
+    return result;
   } finally {
     await cleanupRun({ session, controller, cleanupSignal, runId, model, startedAt, runStatus, runError, stopReason, stopDetail });
   }

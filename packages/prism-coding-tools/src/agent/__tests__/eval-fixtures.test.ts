@@ -11,7 +11,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentRunResult, ToolExecutionContext, ToolResult } from "@arnilo/prism";
+import type { RunResult, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import {
   assertEvaluationThreshold,
   defineDataset,
@@ -45,14 +45,15 @@ function textOf(r: ToolResult): string {
   return block && block.type === "text" ? block.text : "";
 }
 
-function resultOf(itemId: string, observed: Readonly<Record<string, unknown>>): AgentRunResult {
+function resultOf(itemId: string, observed: Readonly<Record<string, unknown>>): RunResult {
   const text = JSON.stringify(observed);
   return {
     sessionId: "eval-s",
     runId: `eval-${itemId}`,
-    status: "succeeded",
+    status: "completed",
     text,
     content: [{ type: "text", text }],
+    messages: [],
   };
 }
 

@@ -3,8 +3,8 @@ import type { PersistenceLifecycleStore, RetentionPolicy } from "@arnilo/prism";
 import {
   type AgentEventRecord,
   type AgentIdentity,
-  type AgentRunResult,
-  type AgentSession,
+  type RunResult,
+  type Session,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
   CONVERSATION_METADATA_KEY,
@@ -128,7 +128,7 @@ export interface ConversationSessionFactoryInput {
 
 export interface CreateConversationServiceOptions {
   /** Binds an agent session to the thread (host owns agent, store, and leaf checkout). */
-  readonly sessionFactory: (input: ConversationSessionFactoryInput) => AgentSession | Promise<AgentSession>;
+  readonly sessionFactory: (input: ConversationSessionFactoryInput) => Session | Promise<Session>;
   /** Required: replay/export only serve redacted ledger rows, and `continue` runs with this redactor. */
   readonly redactor: SecretRedactor;
   readonly runOptions?: Omit<RunOptions, "ownership" | "identity" | "signal" | "redactor" | "idempotencyKey">;
@@ -196,7 +196,7 @@ export interface ConversationService {
   create(input: ConversationCreateInput): Promise<import("@arnilo/prism").ConversationThread>;
   list(input: ConversationListInput): Promise<PersistencePage<import("@arnilo/prism").ConversationThread>>;
   get(input: ConversationRefInput): Promise<import("@arnilo/prism").ConversationThread>;
-  continue(input: ConversationContinueInput): Promise<AgentRunResult>;
+  continue(input: ConversationContinueInput): Promise<RunResult>;
   branch(input: ConversationBranchInput): Promise<import("@arnilo/prism").ConversationThread>;
   archive(input: ConversationRefInput): Promise<import("@arnilo/prism").ConversationThread>;
   export(input: ConversationExportInput): Promise<ConversationExportPage>;

@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { type ClientContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
+import type { AgentRunLifecycle, Session } from "@arnilo/prism";
 import {
   type AcpConfigOptionsSeam,
   AcpError,
@@ -21,8 +21,8 @@ import {
 } from "../acp/index.js";
 
 const authorization = { ownership: { userId: "user-1" } };
-const stream = { async *stream() {} } as unknown as AgentSession;
-const session = (id: string) => ({ session: { ...stream, id } }) as unknown as { session: AgentSession };
+const stream = { async *stream() {} } as unknown as Session;
+const session = (id: string) => ({ session: { ...stream, id } }) as unknown as { session: Session };
 
 function makeAgent(overrides: Partial<CreatePrismAcpAgentOptions> = {}): {
   app: ReturnType<typeof createPrismAcpAgent>;

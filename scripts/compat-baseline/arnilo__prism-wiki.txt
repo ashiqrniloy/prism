@@ -15,7 +15,6 @@ WikiCompiler	export declare class WikiCompiler
 WikiLinter	export declare class WikiLinter
 computeSourceDelta	export declare function computeSourceDelta(manifest: WikiManifest, currentFiles: Map<string, string>): SourceDelta
 createEmptyManifest	export declare function createEmptyManifest(wikiRoot: string, rawRoots?: readonly string[], profile?: WikiProfileType): WikiManifest
-createWikiExtension	export declare function createWikiExtension(options?: WikiExtensionOptions): Extension
 createWikiInitCommand	export declare function createWikiInitCommand(options?: WikiExtensionOptions): CommandDefinition
 createWikiLintCommand	export declare function createWikiLintCommand(options?: WikiExtensionOptions): CommandDefinition
 createWikiReadPageTool	export declare function createWikiReadPageTool(options?: WikiExtensionOptions): ToolDefinition
@@ -54,6 +53,7 @@ scanRawFiles	export declare function scanRawFiles(workspaceRoot: string, rawRoot
 sourcesFromEntity	export declare function sourcesFromEntity(workspaceRoot: string, entity: WikiEntityMetadata): OkfSource[]
 updateManifestWithEntities	export declare function updateManifestWithEntities(manifest: WikiManifest, updatedEntities: readonly WikiEntityMetadata[], newFileHashes: Map<string, string>): WikiManifest
 validateAnchor	export declare function validateAnchor(anchor: WikiSourceAnchor, currentFileContent?: string):
+wiki	export declare function wiki(options?: WikiExtensionOptions): import("@arnilo/prism").PackageInstance
 wikiActor	export declare function wikiActor(): string
 wikiDate	export declare function wikiDate(iso?: string): string
 wikiMaintainerSkill	export declare const wikiMaintainerSkill: Skill

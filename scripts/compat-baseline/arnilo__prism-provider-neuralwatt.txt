@@ -1,6 +1,6 @@
 classifyNeuralWattError	export declare function classifyNeuralWattError(input: NeuralWattErrorInput): NeuralWattRetryDecision
 createNeuralWattProvider	export declare function createNeuralWattProvider(options?: NeuralWattProviderOptions): AIProvider
-createNeuralWattProviderPackage	export declare function createNeuralWattProviderPackage(options?: NeuralWattProviderPackageOptions): ProviderPackage
+neuralwattPackage	export declare function neuralwattPackage(options?: NeuralWattProviderPackageOptions): PackageInstance
 defineNeuralWattModel	export declare function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig
 getNeuralWattQuota	export declare function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota>
 listNeuralWattModels	export declare function listNeuralWattModels(options?: ListNeuralWattModelsOptions): Promise<ModelConfig[]>

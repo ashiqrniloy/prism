@@ -96,10 +96,10 @@
   },
   "treeShake": {
     "measured": "2026-09-02",
-    "agentsJsBytes": 982,
+    "agentsJsBytes": 943,
     "contractsJsBytes": 418,
-    "distJsCount": 88,
-    "distDtsCount": 88,
+    "distJsCount": 93,
+    "distDtsCount": 93,
     "reachableFromAgentsJs": 27,
     "reachableFromContractsJs": 4,
     "agentsJsShrunk": true,

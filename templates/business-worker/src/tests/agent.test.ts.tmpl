@@ -7,14 +7,14 @@ import { createAppAgent, createWorkerDraftStore } from "../agent.js";
 
 describe("business worker template", () => {
   it("creates agent and processes task with tenant context", async () => {
-    const agent = createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
-    const session = agent.createSession({ id: "test-biz-session" });
+    const agent = await createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
+    const session = await agent.session();
     const result = await session.run("Run tenant task");
     assert.ok(result.text.includes("Business worker ready"));
   });
 
-  it("fails business readiness if memory-only store is configured", () => {
-    const agent = createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
+  it("fails business readiness if memory-only store is configured", async () => {
+    const agent = await createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
     assert.throws(
       () => {
         assertHostCompositionReadiness({
@@ -27,8 +27,8 @@ describe("business worker template", () => {
     );
   });
 
-  it("passes business readiness with durable store and isolated workspace", () => {
-    const agent = createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
+  it("passes business readiness with durable store and isolated workspace", async () => {
+    const agent = await createAppAgent({ tenantId: "tenant-enterprise", userId: "worker-test" });
     const report = inspectHostComposition({
       profile: "business",
       agent,

@@ -1,15 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { AgentEvent, ToolArgumentValidator, ToolCallContent, ToolDefinition, ToolRegistry, ToolResult } from "../index.js";
-import {
-  createContributionRegistries,
-  createExtensionKernel,
-  createMiddlewareRegistry,
-  createToolParameterValidator,
-  createToolRegistry,
-  dispatchToolCall,
-  filterTools,
-} from "../index.js";
+import { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "../index.js";
 
 function tool(name: string, parameters?: ToolDefinition["parameters"]): ToolDefinition {
   return {
@@ -97,7 +89,7 @@ const context = { sessionId: "s1", runId: "r1", toolCallId: "call_1" };
 const call: ToolCallContent = { type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } };
 
 describe("tool contribution integration", () => {
-  it("extension registered tool is not executed without host dispatch", async () => {
+  it("a tool is not executed until the host registry includes it", async () => {
     let called = false;
     const contributed = {
       ...tool("echo"),
@@ -106,27 +98,15 @@ describe("tool contribution integration", () => {
         return { toolCallId: "call_1", name: "echo" };
       },
     };
-    const kernel = createExtensionKernel();
-
-    await kernel.load([
-      {
-        name: "tools",
-        setup: (api) => {
-          api.registerTool(contributed);
-        },
-      },
-    ]);
     const result = await dispatchToolCall({ call, registry: createToolRegistry(), context });
 
-    assert.equal(kernel.registries.tools.resolve("echo"), contributed);
+    assert.equal(contributed.name, "echo");
     assert.equal(result.error?.message, "Unknown tool: echo");
     assert.equal(called, false);
   });
 
   it("contributed tool can be registered into host tool registry", async () => {
-    const registries = createContributionRegistries();
-    registries.tools.register("echo", tool("echo"));
-    const registry = createToolRegistry([registries.tools.resolve("echo")]);
+    const registry = createToolRegistry([tool("echo")]);
 
     const result = await dispatchToolCall({ call, registry, context, filter: { allow: ["echo"] } });
 
@@ -134,36 +114,6 @@ describe("tool contribution integration", () => {
     assert.deepEqual(result.value, { text: "hi" });
   });
 
-  it("extension middleware cannot bypass host tool filter", async () => {
-    let called = false;
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "mw",
-        setup: (api) => {
-          api.use<ToolCallContent>("tool_call", (value) => ({ ...value, name: "denied" }));
-        },
-      },
-    ]);
-    const registry = createToolRegistry([
-      tool("echo"),
-      {
-        ...tool("denied"),
-        execute: () => {
-          called = true;
-          return { toolCallId: "call_1", name: "denied" };
-        },
-      },
-    ]);
-
-    const result = await dispatchToolCall({ call, registry, context, filter: { deny: ["denied"] }, middleware: kernel.middleware });
-
-    assert.equal(result.error?.message, "Tool denied: denied");
-    assert.equal(called, false);
-  });
-});
-
-describe("tool dispatch", () => {
   it("fails closed for unknown tools without execute", async () => {
     const events: AgentEvent[] = [];
     const result = await dispatchToolCall({
@@ -176,28 +126,7 @@ describe("tool dispatch", () => {
     });
 
     assert.equal(result.error?.message, "Unknown tool: echo");
-    assert.equal(events[0]?.type, "tool_execution_blocked");
-  });
-
-  it("checks denied tools after middleware", async () => {
-    let called = false;
-    const middleware = createMiddlewareRegistry();
-    middleware.use<ToolCallContent>("tool_call", (value) => ({ ...value, name: "denied" }));
-    const registry = createToolRegistry([
-      tool("echo"),
-      {
-        ...tool("denied"),
-        execute: () => {
-          called = true;
-          return { toolCallId: "call_1", name: "denied" };
-        },
-      },
-    ]);
-
-    const result = await dispatchToolCall({ call, registry, context, filter: { deny: ["denied"] }, middleware });
-
-    assert.equal(result.error?.message, "Tool denied: denied");
-    assert.equal(called, false);
+    assert.equal(events[0]?.type, "tool.completed");
   });
 
   it("rejects non-object args before validation or execute", async () => {
@@ -274,30 +203,8 @@ describe("tool dispatch", () => {
 
     assert.match(result.error?.message ?? "", /\/text: required/);
     assert.equal(called, false);
-    assert.equal(events[0]?.type, "tool_execution_blocked");
-    if (events[0]?.type === "tool_execution_blocked") assert.equal(events[0].reason, "validation_failed");
-  });
-
-  it("runs tool call and result middleware in order", async () => {
-    const steps: string[] = [];
-    const middleware = createMiddlewareRegistry();
-    middleware.use<ToolCallContent>("tool_call", async (value, next) => {
-      steps.push("call:1");
-      return next({ ...value, arguments: { text: "changed" } });
-    });
-    middleware.use<ToolResult>("tool_result", (value) => {
-      steps.push("result:1");
-      return { ...value, metadata: { ok: true } };
-    });
-    const registry = createToolRegistry([
-      { ...tool("echo"), execute: (args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo", value: args }) },
-    ]);
-
-    const result = await dispatchToolCall({ call, registry, context, middleware });
-
-    assert.deepEqual(steps, ["call:1", "result:1"]);
-    assert.deepEqual(result.value, { text: "changed" });
-    assert.deepEqual(result.metadata, { ok: true });
+    assert.equal(events[0]?.type, "tool.completed");
+    if (events[0]?.type === "tool.completed") assert.equal(events[0].reason, "validation_failed");
   });
 
   it("emits started progress finished error and blocked events", async () => {
@@ -346,15 +253,8 @@ describe("tool dispatch", () => {
 
     assert.deepEqual(
       events.map((event) => event.type),
-      [
-        "tool_execution_started",
-        "tool_execution_progress",
-        "tool_execution_finished",
-        "tool_execution_started",
-        "tool_execution_error",
-        "tool_execution_blocked",
-      ],
+      ["tool.started", "tool.progress", "tool.completed", "tool.started", "tool.completed", "tool.completed"],
     );
-    assert.equal(events[4]?.type === "tool_execution_error" ? events[4].error.message : "", "bad [REDACTED]");
+    assert.equal(events[4]?.type === "tool.completed" ? events[4].error?.message : "", "bad [REDACTED]");
   });
 });

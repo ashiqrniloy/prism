@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, JsonObject, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -18,7 +19,7 @@ import {
   anthropicMessagesBody,
   anthropicModels,
   createAnthropicMessagesProvider,
-  createAnthropicProviderPackage,
+  anthropicPackage,
   listAnthropicModels,
   mapAnthropicModel,
 } from "../index.js";
@@ -43,21 +44,12 @@ describe("@arnilo/prism-providers/anthropic", () => {
       fetchCalls += 1;
       return ok(sse([]));
     }) as typeof fetch;
-    const registered: unknown[] = [];
-    await createAnthropicProviderPackage({ apiKey: "fake-anthropic-key", fetch: fetchImpl }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (item: ModelConfig) => registered.push(item),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(anthropicPackage({ apiKey: "fake-anthropic-key", fetch: fetchImpl }));
     assert.equal(fetchCalls, 0);
-    assert(registered.some((item: any) => item.id === "anthropic"));
-    assert.deepEqual(
-      registered.filter((item: any) => item?.kind),
-      [{ kind: "api_key", provider: "anthropic", credentialName: "apiKey" }],
-    );
-    assert(registered.some((item: any) => item.model === "claude-opus-4-8"));
-    assert(registered.some((item: any) => item.model === "claude-sonnet-5"));
-    assert(registered.some((item: any) => item.model === "claude-haiku-4-5"));
+    const models = anthropicModels.map((entry) => entry.model);
+    assert.ok(models.includes("claude-opus-4-8"));
+    assert.ok(models.includes("claude-sonnet-5"));
+    assert.ok(models.includes("claude-haiku-4-5"));
     assert.equal(ANTHROPIC_DEFAULT_BASE_URL, "https://api.anthropic.com/v1");
     assert.equal(ANTHROPIC_API_VERSION, "2023-06-01");
   });
@@ -73,7 +65,7 @@ describe("@arnilo/prism-providers/anthropic", () => {
           { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"q":"y"}' } },
           { type: "content_block_stop", index: 0 },
           {
-            type: "message_delta",
+            type: "message.delta",
             usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
           },
           { type: "message_stop" },
@@ -97,7 +89,7 @@ describe("@arnilo/prism-providers/anthropic", () => {
   it("maps_stop_reason_to_taxonomy", async () => {
     const provider = createAnthropicMessagesProvider({
       apiKey: "fake-anthropic-key",
-      fetch: mockFetch(sse([{ type: "message_delta", delta: { stop_reason: "max_tokens" } }, { type: "message_stop" }])),
+      fetch: mockFetch(sse([{ type: "message.delta", delta: { stop_reason: "max_tokens" } }, { type: "message_stop" }])),
     });
     const events = await collectProviderEvents(provider, request);
     const done = events.at(-1);

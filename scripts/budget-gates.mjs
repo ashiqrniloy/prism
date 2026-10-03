@@ -173,10 +173,16 @@ export function measureExportCounts(cwd = process.cwd()) {
   const packagesDir = join(cwd, "packages");
   for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const manifest = join(packagesDir, entry.name, "package.json");
-    if (!existsSync(manifest)) continue;
-    const name = JSON.parse(readFileSync(manifest, "utf8")).name;
-    counts[name] = countDirExports(join(packagesDir, entry.name, "src"));
+    const direct = join(packagesDir, entry.name, "package.json");
+    const dirs = existsSync(direct)
+      ? [join(packagesDir, entry.name)]
+      : readdirSync(join(packagesDir, entry.name), { withFileTypes: true })
+          .filter((child) => child.isDirectory() && existsSync(join(packagesDir, entry.name, child.name, "package.json")))
+          .map((child) => join(packagesDir, entry.name, child.name));
+    for (const dir of dirs) {
+      const name = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name;
+      counts[name] = countDirExports(join(dir, "src"));
+    }
   }
   return counts;
 }

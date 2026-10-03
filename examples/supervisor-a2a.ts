@@ -2,8 +2,8 @@ import { createAgent, createMockProvider, providerDone, providerTextDelta } from
 import { type A2AAgentCard, createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
 
 const ownership = { tenantId: "example", userId: "operator" };
-const child = () =>
-  createAgent({
+const child = async () =>
+  await createAgent({
     model: { provider: "mock", model: "research" },
     provider: createMockProvider([providerTextDelta("verified"), providerDone()]),
   });
@@ -21,7 +21,11 @@ const card: A2AAgentCard = {
   defaultOutputModes: ["text/plain"],
   skills: [{ id: "research", name: "Research", description: "Checks sources", tags: ["research"] }],
 };
-const handler = createA2AHandler({ card, exposure: { sessionFactory: () => child().createSession() }, authorize: () => ({ ownership }) });
+const handler = createA2AHandler({
+  card,
+  exposure: { sessionFactory: async () => await (await child()).session() },
+  authorize: () => ({ ownership }),
+});
 const client = createA2AClient({
   endpoint,
   allowedOrigins: ["https://agent.example"],

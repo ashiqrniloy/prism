@@ -433,7 +433,14 @@ export interface Memory {
   exportMemory(options: ExportMemoryOptions): Promise<MemoryExportResult>;
   /** Re-embeds one bounded page; return `nextCursor` to resume. */
   rebuildIndex(options?: RebuildIndexOptions): Promise<RebuildIndexResult>;
-  createContextProvider(options?: MemoryContextProviderOptions): import("@arnilo/prism").ContextProvider;
+  /** Project working + semantic memory into one `context.build` draft (roadmap §2.4). */
+  contextBlocks(
+    draft: import("@arnilo/prism").ContextDraft,
+    context: import("@arnilo/prism").HookContext,
+    options?: MemoryContextProviderOptions,
+  ): Promise<import("@arnilo/prism").ContextDraft | undefined>;
+  /** Register {@link Memory.contextBlocks} on a bus as one named `context.build` handler. */
+  registerContextBuild(hooks: import("@arnilo/prism").HookRegistrar, options?: MemoryContextProviderOptions): void;
   createWorkingMemoryProcessor(options: WorkingMemoryProcessorOptions): {
     process(messages: readonly Message[], options?: { readonly signal?: AbortSignal }): Promise<WorkingMemoryRecord | undefined>;
   };

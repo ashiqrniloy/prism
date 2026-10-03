@@ -18,7 +18,7 @@ const dataset = defineDataset({
   ],
 });
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider: createMockProvider([providerTextDelta("Prism is an agent harness [1]."), providerDone()]),
 });
@@ -36,7 +36,7 @@ const report = await runExperiment({
 
 console.log("experiment", report.experimentId, report.aggregate);
 
-const liveResult = await agent.createSession().run("Follow up with [2]");
+const liveResult = await (await agent.session()).run("Follow up with [2]");
 void scoreRunLive(liveResult, {
   scorers: [scorer],
   store,

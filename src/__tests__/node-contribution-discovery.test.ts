@@ -52,7 +52,6 @@ describe("discoverContributions", () => {
 
     assert.equal(found.length, 1);
     assert.equal(found[0].kind, "tool");
-    assert.equal(found[0].declaration?.kind, "tool");
     assert.equal(found[0].declaration?.module, "@scope/my-tool");
     assert.equal(found[0].declaration?.exportName, "default");
     assert.deepEqual(found[0].declaration?.metadata, { x: 1 });

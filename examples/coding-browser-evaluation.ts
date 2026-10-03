@@ -51,11 +51,12 @@ try {
       result: {
         sessionId: "ex",
         runId: "readonly-no-shell",
-        status: "succeeded",
+        status: "completed",
         text: JSON.stringify({
           pass: tools.some((t) => t.name === "read") && !tools.some((t) => t.name === "shell"),
         }),
         content: [],
+        messages: [],
       },
       scorers: [scorer],
       item: dataset.items[0],
@@ -71,9 +72,10 @@ try {
       result: {
         sessionId: "ex",
         runId: "browser-default-deny",
-        status: "succeeded",
+        status: "completed",
         text: JSON.stringify({ pass: privateDenied && fileDenied }),
         content: [],
+        messages: [],
       },
       scorers: [scorer],
       item: dataset.items[1],
@@ -93,9 +95,10 @@ try {
       result: {
         sessionId: "ex",
         runId: "no-css-targets",
-        status: "succeeded",
+        status: "completed",
         text: JSON.stringify({ pass: selectorRejected }),
         content: [],
+        messages: [],
       },
       scorers: [scorer],
       item: dataset.items[2],
@@ -116,7 +119,7 @@ try {
       metadata: { invariant: true },
     }),
   });
-  const mock = createAgent({
+  const mock = await createAgent({
     model: { provider: "mock", model: "offline" },
     provider: {
       id: "oracle-mock",

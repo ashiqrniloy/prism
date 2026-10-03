@@ -4,14 +4,15 @@ import type {
   JsonObject,
   Message,
   SessionEntry,
-  StopHook,
-  StopHookContext,
-  StopHookDecision,
+  HookContext,
+  HookRegistrar,
+  RunEndDecision,
+  RunEndPayload,
   ToolDefinition,
   ToolResult,
 } from "@arnilo/prism";
 import {
-  createTodoContinuationStopHook,
+  registerTodoContinuation,
   createTodoWriteTool,
   DEFAULT_MAX_TODO_NO_PROGRESS,
   formatTodoList,
@@ -27,17 +28,34 @@ import {
 
 const todoItem = (id: string, status: TodoItem["status"], content = `work ${id}`): TodoItem => ({ id, content, status });
 
-// The production tool and hook are synchronous; the contract allows a Promise.
+// The production tool and handler are synchronous; the contract allows a Promise.
 function executeTool(tool: ToolDefinition, args: Record<string, unknown>): ToolResult {
   return tool.execute(args as JsonObject, { sessionId: "s", runId: "r", toolCallId: "call_1" }) as ToolResult;
 }
 
-function decide(hook: StopHook, context: StopHookContext): StopHookDecision {
-  return hook.decide(context) as StopHookDecision;
+/**
+ * Build the handler the way a host does — through the factory, onto a registrar we can inspect —
+ * then drive the installed `run.end` handler as the kernel would.
+ */
+function handler(options?: Parameters<typeof registerTodoContinuation>[1]) {
+  let decide: ((payload: RunEndPayload, context: HookContext) => RunEndDecision | undefined) | undefined;
+  let name: string | undefined;
+  const returned = registerTodoContinuation(
+    {
+      on: (hookName: string, registered: unknown, hookOptions?: { id?: string }) => {
+        assert.equal(hookName, "run.end");
+        name = hookOptions?.id;
+        decide = registered as typeof decide;
+      },
+    } as unknown as HookRegistrar,
+    options,
+  );
+  assert.ok(decide, "registerTodoContinuation installed a run.end handler");
+  return { decide, returned, name: () => name };
 }
 
-function steerText(decision: StopHookDecision): string {
-  return decision.action === "continue" && typeof decision.steer === "string" ? decision.steer : "";
+function steerText(decision: RunEndDecision | undefined): string {
+  return typeof decision?.continue.steer === "string" ? decision.continue.steer : "";
 }
 
 function todoResultMessage(todos: readonly TodoItem[], options?: { readonly toolCallId?: string; readonly error?: string }): Message {
@@ -63,17 +81,19 @@ function otherToolResultMessage(name = "read"): Message {
   };
 }
 
-function hookContext(history: readonly Message[], overrides?: Partial<StopHookContext>): StopHookContext {
+function hookContext(history: readonly Message[], overrides?: { signal?: AbortSignal }): HookContext {
   return {
     sessionId: "session_1",
     runId: "run_1",
-    turn: 1,
-    history,
-    metadata: {},
     signal: new AbortController().signal,
-    stopHookActive: false,
+    emit: () => undefined,
+    reject: () => ({ __prismHookRejection: "rejected" }),
     ...overrides,
   };
+}
+
+function endPayload(history: readonly Message[], overrides?: Partial<RunEndPayload>): RunEndPayload {
+  return { sessionId: "session_1", runId: "run_1", history, turn: 1, continuations: 0, ...overrides };
 }
 
 test("createTodoWriteTool returns the rendered list and structured metadata", () => {
@@ -120,74 +140,73 @@ test("latestTodoList reads the latest successful result and skips failures", () 
 });
 
 test("stop hook stops when no list exists or every item is closed", () => {
-  const hook = createTodoContinuationStopHook();
-  assert.deepEqual(decide(hook, hookContext([])), { action: "stop" });
-  assert.deepEqual(decide(hook, hookContext([todoResultMessage([todoItem("1", "completed"), todoItem("2", "cancelled")])])), {
-    action: "stop",
-  });
+  const { decide } = handler();
+  assert.equal(decide(endPayload([]), hookContext([])), undefined);
+  assert.equal(
+    decide(endPayload([todoResultMessage([todoItem("1", "completed"), todoItem("2", "cancelled")])]), hookContext([])),
+    undefined,
+  );
 });
 
 test("stop hook continues on open items with a steer listing them", () => {
-  const hook = createTodoContinuationStopHook();
-  const decision = decide(hook, hookContext([todoResultMessage([todoItem("1", "pending"), todoItem("2", "in_progress")])]));
-  assert.equal(decision.action, "continue");
-  if (decision.action !== "continue") return;
+  const { decide } = handler();
+  const decision = decide(endPayload([todoResultMessage([todoItem("1", "pending"), todoItem("2", "in_progress")])]), hookContext([]));
+  assert.ok(decision?.continue);
   assert.match(steerText(decision), /\[pending\] 1: work 1/);
   assert.match(steerText(decision), /\[in_progress\] 2: work 2/);
   assert.match(steerText(decision), /mark them completed\/cancelled/);
 });
 
 test("stop hook stops after maxNoProgress continuations without tool or todo progress", () => {
-  const hook = createTodoContinuationStopHook();
+  const registered = handler();
+  const { decide } = registered;
   const list = todoResultMessage([todoItem("1", "pending")]);
   const stops: number[] = [];
-  hook.onNoProgressStop = (info) => stops.push(info.noProgress);
+  registered.returned.onNoProgressStop = (info) => stops.push(info.noProgress);
 
-  assert.equal(decide(hook, hookContext([list])).action, "continue");
-  assert.equal(decide(hook, hookContext([list])).action, "continue"); // no progress #1
-  const final = decide(hook, hookContext([list])); // no progress #2 -> stop
-  assert.deepEqual(final, { action: "stop" });
+  assert.ok(decide(endPayload([list]), hookContext([]))?.continue);
+  assert.ok(decide(endPayload([list]), hookContext([]))?.continue); // no progress #1
+  assert.equal(decide(endPayload([list]), hookContext([])), undefined); // no progress #2 -> stop
   assert.deepEqual(stops, [DEFAULT_MAX_TODO_NO_PROGRESS]);
 });
 
 test("maxNoProgress: 1 stops on the first no-progress continuation", () => {
-  const hook = createTodoContinuationStopHook({ maxNoProgress: 1 });
+  const { decide } = handler({ maxNoProgress: 1 });
   const list = todoResultMessage([todoItem("1", "pending")]);
-  assert.equal(decide(hook, hookContext([list])).action, "continue");
-  assert.deepEqual(decide(hook, hookContext([list])), { action: "stop" });
+  assert.ok(decide(endPayload([list]), hookContext([]))?.continue);
+  assert.equal(decide(endPayload([list]), hookContext([])), undefined);
 });
 
 test("stop hook treats a new tool result or list change as progress", () => {
-  const hook = createTodoContinuationStopHook({ maxNoProgress: 1 });
+  const { decide } = handler({ maxNoProgress: 1 });
   const list = todoResultMessage([todoItem("1", "pending")]);
-  assert.equal(decide(hook, hookContext([list])).action, "continue");
+  assert.ok(decide(endPayload([list]), hookContext([]))?.continue);
 
   // New tool call -> progress -> continue (counter resets, no stop).
-  assert.equal(decide(hook, hookContext([list, otherToolResultMessage()])).action, "continue");
+  assert.ok(decide(endPayload([list, otherToolResultMessage()]), hookContext([]))?.continue);
   // List change -> progress -> continue.
   const changed = todoResultMessage([todoItem("1", "in_progress")], { toolCallId: "call_todo_2" });
-  assert.equal(decide(hook, hookContext([list, otherToolResultMessage(), changed])).action, "continue");
+  assert.ok(decide(endPayload([list, otherToolResultMessage(), changed]), hookContext([]))?.continue);
   // No progress since the changed list -> stop (maxNoProgress: 1).
-  assert.deepEqual(decide(hook, hookContext([list, otherToolResultMessage(), changed])), { action: "stop" });
+  assert.equal(decide(endPayload([list, otherToolResultMessage(), changed]), hookContext([])), undefined);
 });
 
 test("stop hook never continues an aborted run", () => {
-  const hook = createTodoContinuationStopHook();
+  const { decide } = handler();
   const controller = new AbortController();
   controller.abort();
-  const decision = decide(hook, hookContext([todoResultMessage([todoItem("1", "pending")])], { signal: controller.signal }));
-  assert.deepEqual(decision, { action: "stop" });
+  const decision = decide(endPayload([todoResultMessage([todoItem("1", "pending")])]), hookContext([], { signal: controller.signal }));
+  assert.equal(decision, undefined);
 });
 
 test("stop hook validates options and bounds the steer", () => {
-  assert.throws(() => createTodoContinuationStopHook({ maxNoProgress: 0 }), /maxNoProgress/);
-  const hook = createTodoContinuationStopHook({ maxNoProgress: 5, maxSteerItems: 1, maxSteerBytes: 64 });
+  assert.throws(() => handler({ maxNoProgress: 0 }), /maxNoProgress/);
+  const { decide } = handler({ maxNoProgress: 5, maxSteerItems: 1, maxSteerBytes: 64 });
   const decision = decide(
-    hook,
-    hookContext([todoResultMessage([todoItem("1", "pending"), todoItem("2", "pending"), todoItem("3", "pending")])]),
+    endPayload([todoResultMessage([todoItem("1", "pending"), todoItem("2", "pending"), todoItem("3", "pending")])]),
+    hookContext([]),
   );
-  assert.equal(decision.action, "continue");
-  if (decision.action !== "continue") return;
+  assert.ok(decision?.continue);
   assert.match(steerText(decision), /and 2 more/);
   assert.equal(Buffer.byteLength(steerText(decision), "utf8") <= 64, true);
 });

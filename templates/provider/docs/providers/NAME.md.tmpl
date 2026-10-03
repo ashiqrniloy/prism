@@ -27,13 +27,13 @@ Standard `ProviderEvent` stream: `content_delta`, `done` (with usage), or
 ## Request/response example
 
 ```ts
-import { createResolver } from "@arnilo/prism";
-import { create__PROVIDER_PASCAL__ProviderPackage } from "__PACKAGE_NAME__";
+import { createAgent } from "@arnilo/prism";
+import { __PROVIDER_ID__Package } from "__PACKAGE_NAME__";
 
-const resolver = createResolver();
-resolver.registerProviderPackage(
-  create__PROVIDER_PASCAL__ProviderPackage({ apiKey: () => process.env.__ENV_KEY__ }),
-);
+const agent = await createAgent({
+  model: { provider: "__PROVIDER_ID__", model: "__MODEL_ID__" },
+  packages: [__PROVIDER_ID__Package({ apiKey: () => process.env.__ENV_KEY__ })],
+});
 ```
 
 ## Implementation example

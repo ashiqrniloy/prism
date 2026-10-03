@@ -152,7 +152,7 @@ describe("createAgUiHandler co-work context", () => {
 
   it("threads thread/artifact/identity context and appends redacted co-work events after the run", async () => {
     let seenContext: unknown;
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -164,7 +164,7 @@ describe("createAgUiHandler co-work context", () => {
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "session-1" }),
+      sessionFactory: async () => await agent.session({ id: "session-1", create: true }),
       redactor: createSecretRedactor(["sekret"]),
       coWorkContext: (input) => {
         seenContext = { threadId: input.threadId, artifactId: "art-1", identity: "user:user-1" };
@@ -188,7 +188,7 @@ describe("createAgUiHandler co-work context", () => {
   });
 
   it("emits no co-work events when the source yields only malformed entries", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -200,7 +200,7 @@ describe("createAgUiHandler co-work context", () => {
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
-      sessionFactory: () => agent.createSession({ id: "session-1" }),
+      sessionFactory: async () => await agent.session({ id: "session-1", create: true }),
       coWork: { page: async () => ({ events: [{ kind: "bogus" } as unknown as CoWorkEvent] }) },
     });
     const output = await parse(await handler(request(body())));

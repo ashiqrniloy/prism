@@ -59,7 +59,7 @@ test("emitter drops unknown (deferred) kinds and oversized events without throwi
   const { events, emitter } = collect();
   // Deferred kinds must be dropped at runtime: check_started/finished, task_*,
   // compaction_* (scripts/phase10-freeze-manifest.json deferredEvents).
-  for (const type of ["check_started", "check_finished", "task_created", "task_completed", "compaction_started", "compaction_finished"]) {
+  for (const type of ["check_started", "check_finished", "task_created", "task_completed", "compaction.started", "compaction.completed"]) {
     assert.equal(emitter.emit({ type } as CodingLifecycleEvent), false, type);
   }
   assert.equal(

@@ -10,6 +10,7 @@
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
 import {
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -74,10 +75,11 @@ async function measureDecisionApply() {
   const samples = [];
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "bench-decision",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: parallelProvider(PENDING),
       tools: [
         {
@@ -87,10 +89,10 @@ async function measureDecisionApply() {
         },
       ],
     });
-    const first = await agent.createSession({ id: `d-${n}` }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const first = await (await agent.session({ id: `d-${n}`, create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
-    const decisions = first.interruption.pendingDecisions.map((d) => ({
+    const decisions = first.pending.map((d) => ({
       approvalId: d.approvalId,
       outcome: "allow_once",
     }));
@@ -113,10 +115,11 @@ async function measureStickyMatch() {
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
     const checkpoints = createMemoryCheckpointStore();
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "bench-sticky",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -143,8 +146,8 @@ async function measureStickyMatch() {
         },
       ],
     });
-    const first = await agent.createSession({ id: `s-${n}` }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const first = await (await agent.session({ id: `s-${n}`, create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const start = performance.now();
     await resumeAgentRun(
@@ -152,7 +155,7 @@ async function measureStickyMatch() {
       { runId: first.runId, sessionId: first.sessionId },
       {
         expectedVersion: first.runState.version,
-        decisions: [{ approvalId: first.interruption.pendingDecisions[0].approvalId, outcome: "allow_for_run" }],
+        decisions: [{ approvalId: first.pending[0].approvalId, outcome: "allow_for_run" }],
       },
       { checkpoints, definitionRevision: "1" },
     );
@@ -168,23 +171,25 @@ async function measureSnapshot() {
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
     const checkpoints = createMemoryCheckpointStore();
     let turns = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "bench-snap",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: parallelProvider(1),
-      loop: {
-        name: "fat",
-        revision: "1",
-        snapshot: () => ({ blob, turns }),
-        restore: (s) => {
-          turns = s.turns;
-        },
-        async run(ctx) {
-          turns += 1;
-          const { calls } = await ctx.generate(await ctx.assemble([]));
-          await ctx.chargeToolRound?.(calls);
-          for (const call of calls) await ctx.dispatchToolCall(call);
+      slots: {
+        loop: {
+          name: "fat",
+          revision: "1",
+          snapshot: () => ({ blob, turns }),
+          restore: (s) => {
+            turns = s.turns;
+          },
+          async run(run) {
+            turns += 1;
+            const turn = await run.turn();
+            if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
+          },
         },
       },
       tools: [
@@ -196,11 +201,10 @@ async function measureSnapshot() {
       ],
     });
     const start = performance.now();
-    const first = await agent.createSession({ id: `snap-${n}` }).run("go", {
+    const first = await (await agent.session({ id: `snap-${n}`, create: true })).run("go", {
       runState: {
         checkpoints,
         definitionRevision: "1",
-        interruptBeforeTool: true,
         maxStateBytes: HARD_MAX_AGENT_RUN_STATE_BYTES,
       },
     });
@@ -209,7 +213,7 @@ async function measureSnapshot() {
       { runId: first.runId, sessionId: first.sessionId },
       {
         expectedVersion: first.runState.version,
-        decisions: first.interruption.pendingDecisions.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })),
+        decisions: first.pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })),
       },
       { checkpoints, definitionRevision: "1" },
     );
@@ -236,7 +240,8 @@ async function measureA2uiPaint() {
     const mapper = createAgUiEventMapper({ a2ui: { catalogId, mode: "fixed-schema" } });
     const start = performance.now();
     await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: `r-${n}`,
       result: { toolCallId: `t-${n}`, name: "paint", value: { a2ui_operations: ops } },

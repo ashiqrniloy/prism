@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { afterEach, describe, it } from "bun:test";
 import {
+  askEveryTool,
   type CommandDefinition,
   createAgent,
   createAgentRunLifecycle,
@@ -117,14 +118,15 @@ describe("Prism MCP server", () => {
   it("registers durable agent lifecycle tools only when explicitly selected", async () => {
     const checkpoints = createMemoryCheckpointStore();
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "support",
       model: { provider: "mock", model: "offline" },
       provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-1", "write", {}) }, providerDone()]),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
+      runState: { checkpoints, definitionRevision: "1" },
     });
-    const suspended = await agent.createSession().run("go", { ownership: { tenantId: "tenant-1", userId: "user-1" } });
+    const suspended = await (await agent.session()).run("go", { ownership: { tenantId: "tenant-1", userId: "user-1" } });
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
     const item = await fixture({
       agentRuns: { support: { lifecycle } },

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   CheckpointRestoreError,
+  askEveryTool,
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
@@ -14,10 +15,11 @@ import {
 } from "../index.js";
 
 /** Suspends on the first tool call, then finishes on resume (same harness as agent-run-lifecycle.test.ts). */
-function createSuspendingAgent(id: string) {
-  return createAgent({
+async function createSuspendingAgent(id: string) {
+  return await createAgent({
+    hooks: askEveryTool(),
     id,
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     provider: (() => {
       let turn = 0;
@@ -35,17 +37,17 @@ function createSuspendingAgent(id: string) {
         },
       };
     })(),
-    tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-restore", name: "write", value: 1 }) }],
+    tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-restore", name: "write", value: 1 }) }] },
   });
 }
 
 /** Session suspended mid-run with a pinned sidecar map, ready to resume. */
 async function suspend(id: string, checkpointMetadata: Record<string, string> = { gitCommit: "commit-1" }) {
   const checkpoints = createMemoryCheckpointStore();
-  const agent = createSuspendingAgent(id);
+  const agent = await createSuspendingAgent(id);
   const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
-  const run = await agent.createSession({ id: `${id}-session` }).run("go", {
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, checkpointMetadata },
+  const run = await (await agent.session({ id: `${id}-session`, create: true })).run("go", {
+    runState: { checkpoints, definitionRevision: "1", checkpointMetadata },
   });
   assert.equal(run.status, "suspended");
   const ref = { runId: run.runId, sessionId: run.sessionId };
@@ -86,8 +88,8 @@ describe("checkpoint restore hooks", () => {
     assert.equal(context.version, status.version);
     assert.deepEqual(context.metadata, { gitCommit: "commit-1" });
 
-    const resumed = events.find((event) => event.type === "agent_resumed");
-    assert.ok(resumed && resumed.type === "agent_resumed");
+    const resumed = events.find((event) => event.type === "run.started" && event.resumed === true);
+    assert.ok(resumed && resumed.type === "run.started" && resumed.resumed === true);
     assert.deepEqual(
       resumed.restore?.hooks.map((entry) => entry.hook),
       ["restoreGit", "restoreDocs"],
@@ -193,7 +195,8 @@ describe("checkpoint restore hooks", () => {
         ],
       },
     );
-    assert.equal(result.status, "denied");
+    assert.equal(result.status, "stopped");
+    assert.equal(result.stopReason, "denied");
     assert.equal(deniedHooks, 0);
 
     const plain = await suspend("restore-none");
@@ -206,14 +209,14 @@ describe("checkpoint restore hooks", () => {
       },
     ))
       events.push(event);
-    const resumed = events.find((event) => event.type === "agent_resumed");
-    assert.ok(resumed && resumed.type === "agent_resumed");
+    const resumed = events.find((event) => event.type === "run.started" && event.resumed === true);
+    assert.ok(resumed && resumed.type === "run.started" && resumed.resumed === true);
     assert.equal(resumed.restore, undefined);
   });
 
   it("fails closed on a hook that rejects without a timeout, keeping lifecycle-registered hooks ordered first", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createSuspendingAgent("restore-lifecycle-hooks");
+    const agent = await createSuspendingAgent("restore-lifecycle-hooks");
     const order: string[] = [];
     const lifecycle = createAgentRunLifecycle({
       checkpoints,
@@ -224,8 +227,8 @@ describe("checkpoint restore hooks", () => {
         },
       ],
     });
-    const run = await agent.createSession({ id: "restore-lifecycle-hooks-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const run = await (await agent.session({ id: "restore-lifecycle-hooks-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const ref = { runId: run.runId, sessionId: run.sessionId };
     const status = await lifecycle.status(ref, { agentId: "restore-lifecycle-hooks" });
@@ -510,7 +513,7 @@ describe("checkpoint restore hooks", () => {
         ],
       },
     );
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.deepEqual(calls, ["docs", "git", "workspace"]);
   });
 });

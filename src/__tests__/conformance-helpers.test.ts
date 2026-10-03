@@ -1,18 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
-import type {
-  AgentEventRecord,
-  Extension,
-  RunRecord,
-  SessionEntry,
-  SessionStore,
-  ToolCallRecord,
-  ToolDefinition,
-  UsageRecord,
-} from "../index.js";
+import type { AgentEventRecord, RunRecord, SessionEntry, SessionStore, ToolCallRecord, ToolDefinition, UsageRecord } from "../index.js";
 import {
-  createDefaultCompactionStrategy,
+  createDefaultCompactor,
   createMemoryAgentEventSource,
   createMemorySessionStore,
   createMemoryToolEffectStore,
@@ -21,8 +12,7 @@ import {
   SessionAppendConflictError,
 } from "../index.js";
 import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";
-import { assertCompactionStrategyConforms } from "../testing/compaction-conformance.js";
-import { assertExtensionConforms } from "../testing/extension-conformance.js";
+import { assertCompactorConforms } from "../testing/compaction-conformance.js";
 import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
 import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
 import { assertToolBlocked, assertToolDisclosureConforms, assertToolDispatchConforms } from "../testing/tool-conformance.js";
@@ -30,7 +20,7 @@ import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conf
 
 void describe("session-store conformance helper", () => {
   it("conforms against the core memory store", async () => {
-    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseReadBranchPath: true });
+    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseReadBranchPath: true, exerciseSessionIndex: true });
   });
 
   it("conforms against a custom store that implements readBranchPath", async () => {
@@ -142,8 +132,8 @@ function createMemoryLedger() {
 
 void describe("compaction conformance helper", () => {
   it("conforms against the default strategy with secret redaction", async () => {
-    const strategy = createDefaultCompactionStrategy({ keepRecentEntries: 1, secrets: ["secret-value"] });
-    const { summary } = await assertCompactionStrategyConforms(strategy, { secrets: ["secret-value"] });
+    const strategy = createDefaultCompactor({ keepRecentEntries: 1, secrets: ["secret-value"] });
+    const { summary } = await assertCompactorConforms(strategy, { secrets: ["secret-value"] });
     assert.ok(summary.length > 0);
     assert.equal(summary.includes("secret-value"), false);
   });
@@ -153,15 +143,12 @@ void describe("compaction conformance helper", () => {
       name: "leaking",
       compact: () => ({ summary: "leaked secret-value" }),
     };
-    await assert.rejects(
-      () => assertCompactionStrategyConforms(leaking, { secrets: ["secret-value"] }),
-      /leaked a secret into the summary/,
-    );
+    await assert.rejects(() => assertCompactorConforms(leaking, { secrets: ["secret-value"] }), /leaked a secret into the summary/);
   });
 
   it("rejects a strategy that returns an empty summary", async () => {
     const empty = { name: "empty", compact: () => ({ summary: "" }) };
-    await assert.rejects(() => assertCompactionStrategyConforms(empty), /non-empty string summary/);
+    await assert.rejects(() => assertCompactorConforms(empty), /non-empty string summary/);
   });
 
   it("testing/compaction-conformance subpath is exported", () => {
@@ -198,7 +185,7 @@ void describe("tool conformance helper", () => {
           { call: { type: "tool_call", id: "c", name: "echo", arguments: {} }, registry: createToolRegistry([echo]) },
           "unknown_tool",
         ),
-      /no blocked event was emitted/,
+      /none was emitted/,
     );
   });
 
@@ -266,37 +253,6 @@ void describe("tool disclosure conformance helper (plan 041)", () => {
         }),
       /leaked a configured secret/,
     );
-  });
-});
-
-void describe("extension conformance helper", () => {
-  it("conforms against an extension that registers an inert skill", async () => {
-    const extension: Extension = {
-      name: "demo",
-      setup(api) {
-        api.registerSkill({ name: "brief", instructions: "Be brief." });
-      },
-    };
-    const kernel = await assertExtensionConforms(extension);
-    assert.equal(kernel.registries.skills.get("brief")?.name, "brief");
-  });
-
-  it("redacts a secret-bearing setup error event under the default policy", async () => {
-    const ok: Extension = { name: "ok", setup: () => undefined };
-    // The helper injects its own failing extension that throws a secret-bearing
-    // error; the kernel must redact it in the extension_error event.
-    const kernel = await assertExtensionConforms(ok, { secrets: ["token-123"] });
-    assert.ok(kernel.registries.skills.get("brief") === undefined || true);
-  });
-
-  it("rethrows a failing setup under expectThrow", async () => {
-    const ok: Extension = { name: "ok", setup: () => undefined };
-    await assertExtensionConforms(ok, { expectThrow: true });
-  });
-
-  it("testing/extension-conformance subpath is exported", () => {
-    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    assert.ok(pkg.exports["./testing/extension-conformance"]);
   });
 });
 

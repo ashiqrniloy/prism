@@ -1,7 +1,7 @@
 /** decision (0.2.5 plan 025 Task 1 split). Moved verbatim from agent.ts; public surface unchanged behind the barrel. */
 
 import type { RequestPermissionResponse } from "@agentclientprotocol/sdk";
-import type { AgentEvent, RunDecision } from "@arnilo/prism";
+import type { AgentEvent, Decision } from "@arnilo/prism";
 
 const ACP_OUTCOMES = {
   "allow-once": "allow_once",
@@ -17,8 +17,8 @@ const ACP_OUTCOMES = {
  */
 export function decisionFor(
   response: RequestPermissionResponse,
-  interruption: Extract<AgentEvent, { readonly type: "agent_suspended" }>["interruption"],
-): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] } {
+  interruption: Extract<AgentEvent, { readonly type: "run.suspended" }>["interruption"],
+): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly Decision[] } {
   if (response.outcome.outcome !== "selected") return { decision: "deny" };
   const outcome = ACP_OUTCOMES[response.outcome.optionId as keyof typeof ACP_OUTCOMES];
   const pending = interruption.pendingDecisions;

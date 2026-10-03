@@ -35,7 +35,7 @@ export interface SystemPromptFilesOptions {
  *
  *  ponytail: two `readFile` calls max, no `readdir`, no scan, no `import()`. Root-level
  *  singletons don't fit `discoverContributions`' named-subdir scanner, so this is a
- *  sibling loader mirroring `src/node/instruction-injectors.ts`'s per-concern adapter shape. */
+ *  sibling loader mirroring `src/node/instruction-sources.ts`'s per-concern adapter shape. */
 export async function loadSystemPromptFiles(options: SystemPromptFilesOptions): Promise<readonly SystemPromptContribution[]> {
   const agentsPath = options.agentsMdPath ?? (options.workspaceRoot !== undefined ? join(options.workspaceRoot, "AGENTS.md") : undefined);
   const systemPath =

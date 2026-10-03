@@ -8,16 +8,40 @@ import {
   resolveCheckpointMetadata,
   saveAgentRunState,
 } from "../../agent-run-state.js";
-import type { AgentRunResult, AgentRunState, ErrorInfo, Message, ModelConfig, NestedRunRef, Usage, UsageRecord } from "../../contracts.js";
-import { AgentRunStateError } from "../../contracts.js";
+import type {
+  AgentRunStatus,
+  RunResult,
+  AgentRunState,
+  ErrorInfo,
+  Message,
+  ModelConfig,
+  NestedRunRef,
+  Usage,
+  UsageRecord,
+} from "../../contracts.js";
+import { AgentLoopStateError, AgentRunStateError } from "../../contracts.js";
+import { createMemoryCheckpointStore } from "../../checkpoints.js";
+import { createSuspendedRunEntry } from "../../suspended-run.js";
 import { redactRunLedgerRecord } from "../../redaction.js";
 import { isFlushableRunLedger } from "../../run-ledger.js";
 import type { RunLimitTracker } from "../../run-limits.js";
 import { snapshotLoadedSkillBodies } from "../../skill-load.js";
-import { randomId } from "../helpers.js";
+import { isDurableLoop, randomId } from "../helpers.js";
+import { isSessionScopedHookId } from "../runtime-registry.js";
 import type { RoundContext, SessionHost } from "./types.js";
 
+/** Definition revision of a suspension that had no host `runState`; the fingerprint binds to it on resume. */
+export const KERNEL_SUSPENSION_REVISION = "kernel-suspension";
+
 export async function persistDurable(session: SessionHost, state: StoredAgentRunState): Promise<AgentRunState> {
+  return (await persistDurableRaw(session, state)).publicValue;
+}
+
+/** Like {@link persistDurable}, but also returns the bounded stored state (for the store entry). */
+export async function persistDurableRaw(
+  session: SessionHost,
+  state: StoredAgentRunState,
+): Promise<{ readonly state: StoredAgentRunState; readonly publicValue: AgentRunState }> {
   const durable = session.activeDurable;
   if (!durable) throw new AgentRunStateError("Durable run state is not configured");
   const withGrant = session.activeToolNames !== undefined ? { ...state, toolNames: session.activeToolNames } : state;
@@ -66,7 +90,7 @@ export async function persistDurable(session: SessionHost, state: StoredAgentRun
   });
   durable.state = saved.state;
   durable.version = saved.record.version;
-  return publicState(saved.state);
+  return { state: saved.state, publicValue: publicState(saved.state) };
 }
 
 export async function suspendDurable(
@@ -83,9 +107,23 @@ export async function suspendDurable(
     readonly nestedRuns?: readonly NestedRunRef[];
   },
 ): Promise<AgentRunState> {
-  const durable = session.activeDurable;
-  if (!durable) throw new AgentRunStateError("Durable interruption is not configured");
   const loop = session.activeLoop;
+  // Suspension needs no host checkpoint store: the `suspended_run` entry below is the durable anchor.
+  // A run with no `runState` gets a private in-memory checkpoint for the bounded, versioned state, and a
+  // custom loop must be snapshot/restore capable to suspend (a durable run already enforces that at start).
+  if (!session.activeDurable) {
+    if (loop && !isDurableLoop(loop)) {
+      throw new AgentLoopStateError(
+        "ERR_PRISM_LOOP_NOT_DURABLE",
+        "Custom LoopStrategy on a suspendable run requires snapshot and restore hooks",
+      );
+    }
+    session.activeDurable = {
+      options: { checkpoints: createMemoryCheckpointStore(), definitionRevision: KERNEL_SUSPENSION_REVISION, persistSessionState: true },
+      version: 0,
+    };
+  }
+  const durable = session.activeDurable;
   const loopState = loop?.snapshot ? boundedLoopSnapshot(loop.name, loop.revision ?? "1", loop.snapshot()) : undefined;
   const state =
     durable.state ??
@@ -103,9 +141,9 @@ export async function suspendDurable(
       messages: input.messages,
       pending: input.pending,
       pendingCalls: input.pendingCalls,
-      interruptBeforeTool: durable.options.interruptBeforeTool,
+      fallbackAgentId: "agent",
     });
-  return persistDurable(session, {
+  const saved = await persistDurableRaw(session, {
     ...state,
     leafId: session.currentLeafId,
     status: "suspended",
@@ -117,6 +155,24 @@ export async function suspendDurable(
     ...(loopState ? { loopState } : {}),
     counters: input.limits.snapshot(),
   });
+  // Store-slot anchor (roadmap §2.4 ask path): one self-contained entry so a new process over the
+  // same session store can find and resume the suspension without reading the checkpoint.
+  await session.appendEntry(
+    createSuspendedRunEntry({
+      id: randomId("entry"),
+      sessionId: session.id,
+      parentId: session.currentLeafId,
+      runId: input.runId,
+      loop: { name: loop?.name ?? "default", revision: loop?.revision ?? "1", ...(loopState ? { snapshot: loopState.snapshot } : {}) },
+      hookIds: session
+        .hooks()
+        .registrations()
+        .filter((registration) => !isSessionScopedHookId(registration.id))
+        .map((registration) => registration.id),
+      state: saved.state,
+    }),
+  );
+  return saved.publicValue;
 }
 
 /**
@@ -170,7 +226,6 @@ async function writeRunningCheckpoint(
       counters: input.limits.snapshot(),
       deadlineAt: input.limits.deadlineAt,
       status: "running",
-      interruptBeforeTool: durable.options.interruptBeforeTool,
     });
   await persistDurable(session, {
     ...state,
@@ -187,9 +242,8 @@ async function writeRunningCheckpoint(
   });
 }
 
-export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | undefined): Promise<AgentRunResult> {
+export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | undefined): Promise<RunResult> {
   const { session, runId, runUsage } = ctx;
-  const stop = ctx.runStop;
   const usage = runUsage.value() ?? loopUsage;
   if (usage && session.activeLedger) {
     const usageRecord: UsageRecord = {
@@ -204,10 +258,10 @@ export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | und
     await session.activeLedger.appendUsage(redactRunLedgerRecord(usageRecord, session.activeRedactor));
   }
   await session.drainLedger();
-  // Plan 084 Task 2 / plan 106 R1: a clean run-end stop keeps the frontier and marks the state
-  // continuable — a host turn-policy stop (`host_policy`) or a stop-hook continuation cap
-  // (`hook_limit`). Every other succeeded state drops its loop state and is final.
-  const continuableStop = stop ? ("host_policy" as const) : ctx.loopCtx.finishReason === "hook_limit" ? ("hook_limit" as const) : undefined;
+  // A clean run-end stop keeps the frontier and marks the state continuable — a `turn.before`
+  // stop (`hook_stop`) or a `run.end` continuation cap (`hook_limit`). Every other succeeded
+  // state drops its loop state and is final.
+  const continuableStop = ctx.loopFinishReason === "hook_stop" || ctx.loopFinishReason === "hook_limit" ? ctx.loopFinishReason : undefined;
   const runState = session.activeDurable?.state
     ? await persistDurable(session, {
         ...session.activeDurable.state,
@@ -222,21 +276,22 @@ export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | und
       })
     : undefined;
   session.emit({
-    type: "agent_finished",
+    type: "run.completed",
     sessionId: session.id,
     runId,
+    status: ctx.loopFinishReason ? "stopped" : "completed",
     usage,
-    ...(ctx.loopCtx.finishReason ? { finishReason: ctx.loopCtx.finishReason } : {}),
-    ...(stop?.detail ? { stopDetail: stop.detail } : {}),
+    ...(ctx.loopFinishReason ? { stopReason: ctx.loopFinishReason } : {}),
+    ...(ctx.loopStopDetail ? { stopDetail: ctx.loopStopDetail } : {}),
   });
-  const stopReason = ctx.runStop?.reason ?? ctx.loopCtx.finishReason;
+  const stopReason = ctx.loopFinishReason;
   return session.buildRunResult({
     runId,
     status: "succeeded",
     usage,
     runState,
     ...(stopReason ? { stopReason } : {}),
-    ...(stop?.detail ? { stopDetail: stop.detail } : {}),
+    ...(ctx.loopStopDetail ? { stopDetail: ctx.loopStopDetail } : {}),
   });
 }
 
@@ -247,7 +302,7 @@ export async function cleanupRun(input: {
   runId: string;
   model: ModelConfig;
   startedAt: string;
-  runStatus: AgentRunResult["status"];
+  runStatus: AgentRunStatus;
   runError: ErrorInfo | undefined;
   /** Clean stop taxonomy for the finish record; only written for a succeeded run (plan 084 Task 2). */
   stopReason?: import("../../contracts.js").AgentFinishReason;
@@ -291,9 +346,8 @@ export async function cleanupRun(input: {
     session.activeLedger = undefined;
     session.activeEffectStore = undefined;
     session.activeOwnership = undefined;
-    session.activeIdentity = undefined;
+    session.activePrincipal = undefined;
     session.activeIdempotencyKey = undefined;
-    session.activeGuardrails = undefined;
     session.activeMetadata = undefined;
     session.activePromptVersion = undefined;
     session.activeLimits?.dispose();

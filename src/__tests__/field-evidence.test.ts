@@ -10,12 +10,15 @@ import {
   type FieldEvidenceRecord,
   type JsonObject,
   type JsonValue,
+  guardrailRefusalText,
   providerDone,
   providerTextDelta,
   providerToolCall,
-  runGuardrails,
+  runGuardrailList,
   type ToolDefinition,
+  type GuardrailRecord,
 } from "../index.js";
+import { kernelEvents } from "./kernel-event-helpers.js";
 
 const PROPOSAL = "synapta:proposal";
 const INVOICE = "tool:invoice_fetch";
@@ -41,9 +44,9 @@ async function evaluate(
   args: JsonObject,
   toolName = PROPOSAL,
 ): Promise<{ readonly action: string; readonly reason?: string; readonly metadata?: Readonly<Record<string, unknown>> }> {
-  const result = await runGuardrails({
+  const result = await runGuardrailList({
     stage: "tool_input",
-    guardrails: { toolInput: [guard] },
+    guards: [guard],
     value: { type: "tool_call", id: "call_1", name: toolName, arguments: args },
     context: { sessionId: "session", runId: "run", toolName, metadata: {} },
   });
@@ -202,13 +205,33 @@ describe("field evidence guardrail", () => {
       required: ["amount"],
       evidence: evidence([{ source: INVOICE, path: "invoice.total", value: 1250, revision: 7 }]),
     });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: createToolRegistry([proposal]),
-      guardrails: { toolInput: [guardrail] },
+      tools: { add: [proposal] },
+      // Roadmap §2.4: a host tool guardrail is a `tool.call` hook that returns a decision.
+      hooks: (hooks) =>
+        hooks.on("tool.call", async (payload, context) => {
+          const result = await runGuardrailList({
+            stage: "tool_input",
+            guards: [guardrail],
+            value: { type: "tool_call", id: payload.callId, name: payload.name, arguments: payload.args },
+            context: {
+              sessionId: payload.sessionId,
+              runId: payload.runId,
+              toolCallId: payload.callId,
+              toolName: payload.name,
+              metadata: {},
+              signal: context.signal,
+            },
+            emit: (event) => context.emit(event),
+          });
+          const terminal = result.terminal;
+          if (!terminal) return undefined;
+          return { deny: guardrailRefusalText(terminal) ?? "Blocked by guardrail" };
+        }),
     });
-    const session = agent.createSession();
+    const session = await agent.session();
     const events: AgentEvent[] = [];
     const subscription = session.subscribe();
     const consume = (async () => {
@@ -217,10 +240,10 @@ describe("field evidence guardrail", () => {
     const result = await session.run("propose the total");
     await consume;
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(executions, 0, "a rejected provenance claim must never reach the tool");
-    const decision = events.find((event) => event.type === "guardrail_decision");
-    assert.ok(decision && decision.type === "guardrail_decision");
+    const decision = kernelEvents<{ record: GuardrailRecord }>(events, "guardrail.decision")[0];
+    assert.ok(decision);
     assert.equal(decision.record.action, "block");
     assert.deepEqual(decision.record.metadata, { field: "amount", violation: "value_mismatch" });
   });

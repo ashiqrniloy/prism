@@ -1,5 +1,6 @@
 import {
   type AgentRunRef,
+  askEveryTool,
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
@@ -17,7 +18,7 @@ export async function demo() {
   const executed: string[] = [];
   let turn = 0;
 
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "approvals-agent",
     model: { provider: "mock", model: "mock" },
     provider: {
@@ -35,18 +36,21 @@ export async function demo() {
         yield providerDone();
       },
     },
-    store: sessionStore,
-    tools: [
-      {
-        name: "publish_draft",
-        parameters: {},
-        execute: (args: JsonObject, context: { toolCallId: string }) => {
-          executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-          return { toolCallId: context.toolCallId, name: "publish_draft", value: "published" };
+    slots: { store: sessionStore },
+    hooks: askEveryTool(),
+    tools: {
+      add: [
+        {
+          name: "publish_draft",
+          parameters: {},
+          execute: (args: JsonObject, context: { toolCallId: string }) => {
+            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+            return { toolCallId: context.toolCallId, name: "publish_draft", value: "published" };
+          },
         },
-      },
-    ],
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      ],
+    },
+    runState: { checkpoints, definitionRevision: "1" },
   });
 
   const lifecycle = createAgentRunLifecycle({
@@ -64,7 +68,7 @@ export async function demo() {
     onSuspended: ({ run }) => {
       suspended = run.ref;
     },
-    sessionFactory: () => agent.createSession({ id: "approval-session" }),
+    sessionFactory: () => agent.session({ id: "approval-session", create: true }),
   });
 
   // 1. Initial run: agent requests tool call and suspends at durable checkpoint

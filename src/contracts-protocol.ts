@@ -1,8 +1,6 @@
 import type { CacheUsageReport } from "./cache-helpers.js";
 import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
 import type {
-  AgentLoopOptions,
-  AgentLoopStrategy,
   ArtifactValidation,
   BudgetAxisUsage,
   BudgetConsumedCounters,
@@ -10,14 +8,12 @@ import type {
   ContentBlock,
   ErrorInfo,
   GuardrailRecord,
-  Guardrails,
-  InstructionInjector,
   JsonObject,
+  JsonValue,
   Message,
   ModelConfig,
   OwnershipScope,
   ProviderRequestOptions,
-  ProviderRequestPolicy,
   ProviderResolver,
   ProviderStopReason,
   RetryOptions,
@@ -25,17 +21,16 @@ import type {
   RunLimitName,
   RunLimits,
   Skill,
-  StopHook,
   SubscriberOverflowPolicy,
   SystemPromptConfig,
   ToolCallAuthority,
   ToolCallContent,
   ToolCallSummary,
   TurnBudgets,
-  TurnPolicyOptions,
   Usage,
 } from "./contracts-core.js";
-import type { AgentRunInterruption, AgentRunStateOptions } from "./contracts-run-state.js";
+import type { AgentRunInterruption, AgentRunStateOptions, PendingDecision } from "./contracts-run-state.js";
+import type { BudgetExhaustionAttribution } from "./run-limits.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { ToolValidator } from "./tools.js";
 
@@ -91,37 +86,34 @@ export interface RunOptions {
   readonly providerOptions?: ProviderRequestOptions;
   /** Portable thinking intent for this run. Overrides `AgentConfig.thinkingLevel`. */
   readonly thinkingLevel?: string;
-  readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /**
+   * Whether this run may ask the host a question (roadmap §2.4). Defaults to `true` when the agent
+   * has a `HostUi`. `false` makes every `host.ui` request answer `unavailable` and an `ask` suspend
+   * the run without a prompt, so an ACP/AG-UI host can hold a queued decision it cannot yet show.
+   */
+  readonly interactive?: boolean;
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
   /** Optional durable recovery store. Per-run value overrides this agent default. */
   readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
-  /** Host-verified identity; when set, must project onto `ownership` without widening. */
-  readonly identity?: import("./identity.js").AgentIdentity;
+  /** Opaque host principal; overrides the agent default without kernel verification. */
+  readonly principal?: import("./identity.js").Principal;
   readonly idempotencyKey?: string;
   readonly validate?: ToolValidator;
-  readonly activeSkills?: readonly string[];
-  readonly skills?: readonly Skill[];
-  /** Migration opt-in: activate every skill in a configured `SkillRegistry` when `activeSkills` / `skills` are unset. */
-  readonly activateAllSkills?: true;
-  /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
-  readonly skillsDisclosure?: import("./skill-disclosure.js").SkillsDisclosure;
   /**
    * Optional per-run allow-list of registered tool names. Omitted → every registered tool (legacy).
    * Empty → no tools this run. Unknown names fail closed. Cannot widen the agent registry or a
    * checkpointed grant; resume intersects this list with current authority.
    */
-  readonly toolNames?: readonly string[];
+  readonly tools?: { readonly only?: readonly string[] };
   /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
   readonly toolsDisclosure?: import("./tool-search.js").ToolsDisclosure;
-  /** Per-turn restrictive allow-list over the run grant. Overrides `AgentConfig.toolNarrowing`. */
-  readonly toolNarrowing?: import("./contracts-core/agent.js").ToolNarrowing;
-  /** Opt-in: tools hidden this turn stay callable by name (default off). Overrides agent config. */
+  /** Opt-in: tools hidden by `RunOptions.tools` stay callable by name (default off). Overrides agent config. */
   readonly allowHiddenToolCalls?: true;
   readonly toolsSearch?: import("./tool-search.js").ToolsSearchOptions;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
@@ -131,22 +123,11 @@ export interface RunOptions {
    *  (gate ratios up, `keepLast`/`thinkingKeepTurns` down, `excludeTools` extended). Enabling
    *  the compiler where the agent config left it off throws before the first provider turn. */
   readonly attentionCompiler?: import("./contracts-core/attention.js").AttentionCompilerSetting;
-  readonly instructionInjectors?: readonly InstructionInjector[];
   readonly inputLayout?: InputAssemblyLayout;
-  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
-  /** Appended to agent-level guardrails for this run. */
-  readonly guardrails?: Guardrails;
   /** Opt-in durable interruption/checkpointing. */
   readonly runState?: AgentRunStateOptions;
   /** Prompt provenance: copied verbatim onto this run's start and finish ledger records. */
   readonly promptVersion?: PromptVersionRef;
-  /**
-   * Host turn policy (plan 084 Task 2): a clean turn cap and/or a synchronous stop callback
-   * evaluated before every provider request. Omitted → no callback runs.
-   */
-  readonly turnPolicy?: TurnPolicyOptions;
-  /** Appended to agent-level stop hooks for this run (plan 106 R1). */
-  readonly stopHooks?: readonly StopHook[];
 }
 
 export interface ProviderTurnMetadata {
@@ -158,9 +139,9 @@ export interface ProviderTurnMetadata {
   readonly httpStatus?: number;
   readonly rateLimitRemaining?: number;
   readonly rateLimitResetMs?: number;
-  /** Why the provider turn stopped (plan 087 T1); present on `provider_turn_finished` only. */
+  /** Why the provider turn stopped (plan 087 T1); present on `turn.completed` only. */
   readonly stopReason?: ProviderStopReason;
-  /** Effective budget state at turn end (plan 087 T1); present on `provider_turn_finished` only. */
+  /** Effective budget state at turn end (plan 087 T1); present on `turn.completed` only. */
   readonly budgets?: TurnBudgets;
   /** Provider-reported cache usage and derived hit rate; absent when cache usage is unknown. */
   readonly cache?: CacheUsageReport;
@@ -189,11 +170,11 @@ export interface DelegatedAgentStepUsage {
   readonly totalTokens?: number;
 }
 
-/** Safe delegated timeline metadata. Raw arguments, results, paths, URIs, and event bodies are not fields. */
-export interface DelegatedAgentStep {
-  readonly type: "delegated_agent_step";
-  readonly sessionId: string;
-  readonly runId: string;
+/**
+ * Safe delegated timeline metadata, carried as the `data` of a `package.event` named `agent.step`.
+ * Raw arguments, results, paths, URIs, and event bodies are not fields.
+ */
+export interface DelegatedAgentStepData {
   readonly adapterId: string;
   readonly externalConversationId: string;
   readonly stepIndex: number;
@@ -209,8 +190,8 @@ export interface DelegatedAgentStep {
   };
 }
 
-/** Why a run stopped cleanly. `host_policy` is a `RunOptions.turnPolicy` stop, `hook_limit` a stop-hook continuation cap; the rest are loop ceilings (F4). */
-export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "host_policy" | "hook_limit";
+/** Why a run stopped cleanly. `hook_stop` is a `turn.before` stop and `hook_limit` a `run.end` continuation cap; the rest are loop ceilings (F4). */
+export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "hook_limit" | "hook_stop" | "denied";
 
 /**
  * Origin of an agent event forwarded from a delegated child (supervisor child-event passthrough).
@@ -224,77 +205,93 @@ export interface ChildEventOrigin {
 }
 
 /** Payload union of every agent event; the exported `AgentEvent` adds the optional child origin tag. */
-type AgentEventPayload =
-  | { readonly type: "agent_started"; readonly sessionId: string; readonly runId: string }
+/**
+ * The frozen event catalog (roadmap §2.3). Every member is also an observe hook of the same
+ * name (`src/hooks/catalog.ts`), and no other name is legal: `OBSERVE_HOOKS` is keyed by this
+ * union, so adding a member fails to compile until it is listed there too.
+ *
+ * A folded event carries the fields of everything it replaced. `run.completed` distinguishes a
+ * natural end from a clean stop; `tool.completed` carries the call's status; `turn.completed`
+ * carries usage. Folds keep one event per occurrence, so a run's event count never grows.
+ */
+export type AgentEventPayload =
+  // --- run ---------------------------------------------------------------------------------
   | {
-      readonly type: "agent_finished";
+      readonly type: "run.started";
       readonly sessionId: string;
       readonly runId: string;
-      readonly usage?: Usage;
-      /** Why the loop stopped, when a limit/ceiling, a host turn policy, or a stop-hook continuation cap ended the run cleanly (F4). Absent = natural end. */
-      readonly finishReason?: AgentFinishReason;
-      /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). Present only with `finishReason: "host_policy"`. */
-      readonly stopDetail?: string;
-    }
-  | {
-      readonly type: "agent_suspended";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly interruption: AgentRunInterruption;
-      readonly version: number;
-    }
-  | {
-      readonly type: "agent_resumed";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly version: number;
+      /** A durable resume of a suspended run, rather than a fresh run. */
+      readonly resumed?: boolean;
       /** Plan 094 Task 3: audit of the external-state restore hooks that ran before this claim. */
       readonly restore?: CheckpointRestoreAudit;
     }
   | {
-      readonly type: "agent_denied";
+      readonly type: "run.completed";
+      readonly sessionId: string;
+      readonly runId: string;
+      /** `completed` is a natural end; `stopped` is a clean stop the `stopReason` names. */
+      readonly status: "completed" | "stopped";
+      readonly usage?: Usage;
+      /** Why the loop stopped, when a limit/ceiling, a `turn.before` stop, or a `run.end` continuation cap ended the run cleanly (F4). */
+      readonly stopReason?: AgentFinishReason;
+      /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). Present only with `stopReason: "hook_stop"`. */
+      readonly stopDetail?: string;
+    }
+  | {
+      /**
+       * A run that ended in failure. `error` is redacted. When a configured ceiling ended the run
+       * this carries `limit` and `attribution` (the former `run_limit_exceeded` and `budget_exhausted`).
+       * `sessionId`/`runId` are optional because a pre-run failure has no run yet.
+       */
+      readonly type: "run.failed";
+      readonly sessionId?: string;
+      readonly runId?: string;
+      readonly error: ErrorInfo;
+      /** Present when the run hit a configured resource ceiling. */
+      readonly limit?: RunLimitBreach;
+      /** Present with `limit`: which axis fired, counters at exhaustion, and hashes of recent tool calls (plan 087 T2). */
+      readonly attribution?: BudgetExhaustionAttribution;
+    }
+  | {
+      readonly type: "run.suspended";
       readonly sessionId: string;
       readonly runId: string;
       readonly interruption: AgentRunInterruption;
       readonly version: number;
     }
-  | { readonly type: "turn_started"; readonly sessionId: string; readonly runId: string; readonly turn: number }
-  | { readonly type: "turn_finished"; readonly sessionId: string; readonly runId: string; readonly turn: number }
+  // --- turn --------------------------------------------------------------------------------
   | {
       /**
-       * Host middleware completed this turn without a provider request (plan 096). No `usage` field:
-       * a deterministic turn has no provider cost, so accounting must never zero-fill one.
+       * One provider attempt began: `metadata` carries the provider, model, and attempt number.
+       * A retry re-opens the turn with `attempt` and `retry` set (the former `retry_scheduled`).
        */
-      readonly type: "deterministic_turn";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly turn: number;
-      /** Answering middleware id (provenance); ids only, never free host code. */
-      readonly middleware: string;
-    }
-  | {
-      readonly type: "provider_turn_started";
+      readonly type: "turn.started";
       readonly sessionId: string;
       readonly runId: string;
       readonly turn: number;
       readonly metadata: ProviderTurnMetadata;
+      readonly attempt?: number;
+      /** Set when this attempt follows a retry decision. `error` is redacted. */
+      readonly retry?: { readonly delayMs: number; readonly error: ErrorInfo };
     }
   | {
-      readonly type: "provider_turn_finished";
+      /** The attempt settled: `metadata` carries latency, stop reason, budgets, and cache. */
+      readonly type: "turn.completed";
       readonly sessionId: string;
       readonly runId: string;
       readonly turn: number;
       readonly metadata: ProviderTurnMetadata;
       readonly usage?: Usage;
+      /** Redacted; present when the attempt failed (the former `provider_turn_finished` error case). */
       readonly error?: ErrorInfo;
     }
-  | { readonly type: "message_started"; readonly sessionId: string; readonly runId: string; readonly message: Message }
-  | { readonly type: "message_delta"; readonly sessionId: string; readonly runId: string; readonly content: ContentBlock }
-  | { readonly type: "message_finished"; readonly sessionId: string; readonly runId: string; readonly message: Message }
-  | DelegatedAgentStep
-  | { readonly type: "tool_execution_started"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent }
+  // --- message -----------------------------------------------------------------------------
+  | { readonly type: "message.delta"; readonly sessionId: string; readonly runId: string; readonly content: ContentBlock }
+  | { readonly type: "message.completed"; readonly sessionId: string; readonly runId: string; readonly message: Message }
+  // --- tool --------------------------------------------------------------------------------
+  | { readonly type: "tool.started"; readonly sessionId: string; readonly runId: string; readonly call: ToolCallContent }
   | {
-      readonly type: "tool_execution_progress";
+      readonly type: "tool.progress";
       readonly sessionId: string;
       readonly runId: string;
       readonly toolCallId: string;
@@ -303,152 +300,136 @@ type AgentEventPayload =
       readonly metadata?: Readonly<Record<string, unknown>>;
     }
   | {
-      readonly type: "tool_execution_finished";
+      /**
+       * A tool call settled. `status` is the call's `ToolExecutionMetadata.status`, so the former
+       * `tool_execution_error` (`error`) and `tool_execution_blocked` (`blocked` + `reason`) are the
+       * same event with a different status. `error`/`reason` stay redacted exactly as before.
+       */
+      readonly type: "tool.completed";
       readonly sessionId: string;
       readonly runId: string;
+      /** The settled call's id; falls back to `result.toolCallId` when a producer omits it. */
+      readonly toolCallId?: string;
+      /** The settled call's tool name; falls back to `result.name`. */
+      readonly name?: string;
       readonly result: ToolResult;
       readonly metadata: ToolExecutionMetadata;
+      readonly status: ToolCallStatus;
+      /** Redacted; present when `status` is `"error"` (a throwing tool) or `"blocked"`. */
+      readonly error?: ErrorInfo;
+      /** Redacted; present when `status` is `"blocked"` — why the call never ran. */
+      readonly reason?: string;
     }
+  // --- decision ----------------------------------------------------------------------------
   | {
-      readonly type: "tool_execution_error";
+      /**
+       * One or more `ask` decisions were staged for suspension. Carries the redacted
+       * {@link PendingDecision} records only — never raw tool arguments.
+       */
+      readonly type: "decision.pending";
       readonly sessionId: string;
       readonly runId: string;
-      readonly call: ToolCallContent;
-      readonly error: ErrorInfo;
-      readonly metadata: ToolExecutionMetadata;
+      readonly decisions: readonly PendingDecision[];
     }
   | {
-      readonly type: "tool_execution_blocked";
+      /**
+       * A staged decision batch settled: inline by a host answer, or later by `resume(decisions)`.
+       * One entry per settled decision — the tool call id and the outcome, never the arguments.
+       */
+      readonly type: "decision.resolved";
       readonly sessionId: string;
       readonly runId: string;
-      readonly toolCallId: string;
-      readonly name: string;
-      readonly reason: string;
-      readonly error: ErrorInfo;
-      readonly metadata: ToolExecutionMetadata;
+      readonly decisions: readonly { readonly toolCallId: string; readonly outcome: "allow" | "deny" }[];
+      readonly via: "inline" | "resume";
     }
+  // --- compaction --------------------------------------------------------------------------
+  | { readonly type: "compaction.started"; readonly sessionId: string; readonly runId?: string }
   | {
-      /** Host `toolNarrowing` asked for names outside the run grant; those names were dropped. */
-      readonly type: "tool_narrowing_clamped";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly turn: number;
-      readonly dropped: readonly string[];
-    }
-  | {
-      readonly type: "guardrail_decision";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly toolCallId?: string;
-      readonly toolName?: string;
-      readonly record: GuardrailRecord;
-    }
-  | { readonly type: "run_limit_exceeded"; readonly sessionId: string; readonly runId: string; readonly breach: RunLimitBreach }
-  | {
-      /** Terminal attribution for a run that died on a run limit (plan 087 T2): which axis fired,
-       *  counters at exhaustion, how close the other axes were, and hashes of recent tool calls. */
-      readonly type: "budget_exhausted";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly limit: RunLimitName;
-      readonly consumed: BudgetConsumedCounters;
-      readonly closestOtherAxes: readonly BudgetAxisUsage[];
-      readonly recentToolCalls: readonly ToolCallSummary[];
-    }
-  | { readonly type: "queue_updated"; readonly sessionId: string; readonly runId: string; readonly size: number }
-  | {
-      /** A steered message was dropped by a terminal input guardrail; the run continues without it. */
-      readonly type: "steer_rejected";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly message: Message;
-      readonly record: GuardrailRecord;
-    }
-  | {
-      readonly type: "event_subscriber_overflow";
+      readonly type: "compaction.completed";
       readonly sessionId: string;
       readonly runId?: string;
-      readonly droppedEvents: number;
-      readonly maxQueuedEvents: number;
-      readonly overflow: SubscriberOverflowPolicy;
-    }
-  | { readonly type: "compaction_started"; readonly sessionId: string; readonly runId?: string }
-  | {
-      readonly type: "compaction_finished";
-      readonly sessionId: string;
-      readonly runId?: string;
-      readonly summary: string;
+      readonly summary?: string;
       readonly entriesCompacted?: number;
+      /** Redacted; present when compaction failed (the former `compaction_failed`). */
+      readonly error?: ErrorInfo;
     }
+  // --- hook / package ----------------------------------------------------------------------
   | {
-      readonly type: "compaction_failed";
+      readonly type: "hook.error";
       readonly sessionId: string;
-      readonly runId?: string;
+      readonly runId: string;
+      /** Hook that threw (catalog name), e.g. `run.input` or an observe event name. */
+      readonly hook: string;
+      /** Owning package/host set by the kernel; never chosen by a handler. */
+      readonly owner: string;
       readonly error: ErrorInfo;
     }
   | {
-      /** One attention-compiler mutation (plan 074 R15/T6): measured counts only, never message text. */
-      readonly type: "attention_compiled";
-      readonly sessionId: string;
-      readonly runId?: string;
-      readonly used: number;
-      /** Estimated tokens of the same request after this turn's mutation. */
-      readonly usedAfter: number;
-      readonly inputCap: number;
-      readonly triggerRatio: number;
-      readonly droppedThinkingTurns: number;
-      readonly stubbedToolResults: number;
-      /** Payload bytes the tool stubs took out of this request. */
-      readonly stubbedBytes: number;
-      readonly truncated: boolean;
-    }
-  | {
-      readonly type: "retry_scheduled";
+      readonly type: "package.event";
       readonly sessionId: string;
       readonly runId: string;
-      readonly attempt: number;
-      readonly delayMs: number;
-      readonly error: ErrorInfo;
+      /** Registered package that emitted the event. Kernel modules use `"kernel"`. */
+      readonly package: string;
+      /** Package-defined event name, e.g. `om.status` or `guardrail.decision`. */
+      readonly name: string;
+      readonly data?: JsonValue;
     }
-  | { readonly type: "error"; readonly sessionId?: string; readonly runId?: string; readonly error: ErrorInfo }
+  /**
+   * Session lifecycle (roadmap §2.3). Not run-scoped, so `runId` is empty. Delivered to hooks only, so
+   * an existing session stream is unchanged. `session.opened` fires once the session's package state has
+   * hydrated: before its first run, command, or `close()`.
+   */
   | {
-      readonly type: "artifact_validation_started";
+      readonly type: "session.opened";
       readonly sessionId: string;
       readonly runId: string;
-      readonly turn: number;
-      readonly attempt: number;
+      /** The branch already held entries when the session was opened (a reopened or forked session). */
+      readonly restored: boolean;
     }
   | {
-      readonly type: "artifact_validation_finished";
+      readonly type: "session.closed";
       readonly sessionId: string;
       readonly runId: string;
-      readonly turn: number;
-      readonly attempt: number;
-      readonly result: ArtifactValidation;
+      readonly reason?: string;
+    }
+  /** A package's `status.note`. Agent-scoped (`sessionId` and `runId` are empty) and redacted. */
+  | {
+      readonly type: "package.status";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly package: string;
+      readonly level: "info" | "warn";
+      readonly message: string;
+      readonly at: string;
+    }
+  /** A `SessionContext.background` task started. `package` is set when a loaded package started it. */
+  | {
+      readonly type: "background.started";
+      readonly sessionId: string;
+      readonly runId: string;
+      readonly package?: string;
+      readonly name: string;
+      readonly taskId: string;
     }
   | {
-      readonly type: "artifact_revision_started";
+      readonly type: "background.completed";
       readonly sessionId: string;
       readonly runId: string;
-      readonly turn: number;
-      readonly attempt: number;
-      readonly failure: ArtifactValidation;
+      readonly package?: string;
+      readonly name: string;
+      readonly taskId: string;
+      readonly durationMs: number;
     }
+  /** `reason: "aborted"` means `close()` gave up on the task and carries no error. `error` is redacted. */
   | {
-      readonly type: "artifact_finished";
+      readonly type: "background.failed";
       readonly sessionId: string;
       readonly runId: string;
-      readonly turn: number;
-      readonly attempt: number;
-      readonly result: ArtifactValidation;
-    }
-  | {
-      readonly type: "artifact_failed";
-      readonly sessionId: string;
-      readonly runId: string;
-      readonly turn: number;
-      readonly attempt: number;
-      readonly result: ArtifactValidation;
+      readonly package?: string;
+      readonly name: string;
+      readonly taskId: string;
+      readonly reason: "error" | "aborted";
+      readonly error?: ErrorInfo;
     };
 
 /**
@@ -459,6 +440,13 @@ type AgentEventPayload =
 export type AgentEvent = AgentEventPayload & { readonly child?: ChildEventOrigin };
 
 export type ToolEffectKind = "none" | "local_mutation" | "external_mutation";
+
+/**
+ * Capability annotation for a tool, reported to `tool.call` hooks. Independent of the recovery
+ * `effect` declaration: `ToolEffectKind` classifies a call's side effects, `ToolCapabilityKind`
+ * states what a tool is allowed to reach. A tool with no `effects` is reported as all kinds.
+ */
+export type ToolCapabilityKind = "read" | "write" | "execute" | "network" | "external";
 
 export type ToolEffectIdempotency = "none" | "optional" | "required" | "tool_managed" | "unsupported";
 
@@ -498,6 +486,11 @@ export interface ToolDefinition {
   readonly exclusive?: boolean;
   /** Optional side-effect declaration. Omitted tools retain legacy unmanaged dispatch. */
   readonly effect?: ToolEffectDeclaration | ToolEffectClassifier;
+  /**
+   * Capabilities this tool may reach, reported to `tool.call` hooks. Omitted tools are reported as
+   * all kinds (fail closed). Independent of `effect`, which classifies recovery behavior.
+   */
+  readonly effects?: readonly ToolCapabilityKind[];
   /** Optional elicitation contract for durable gating; return undefined to fall back to plain tool approval. */
   readonly elicitation?: (args: JsonObject, context: ToolExecutionContext) => ToolElicitationRequest | undefined;
   execute(args: JsonObject, context: ToolExecutionContext): Promise<ToolResult> | ToolResult;
@@ -518,10 +511,12 @@ export interface ToolExecutionContext {
   readonly toolCallId: string;
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
-  /** Host-verified identity for this tool invocation, when enterprise identity is active. */
-  readonly identity?: import("./identity.js").AgentIdentity;
+  /** Opaque host principal, passed through unchanged. */
+  readonly principal?: import("./identity.js").Principal;
   /** Core-derived stable effect key. Never accept a model-supplied key as authority. */
   readonly idempotencyKey?: string;
+  /** The session as the executing tool's owner sees it (`when` predicates and package tools). */
+  readonly session?: import("./session-context.js").SessionContext;
   progress?(progress?: unknown, metadata?: Readonly<Record<string, unknown>>): void | Promise<void>;
 }
 
@@ -556,7 +551,6 @@ export interface ToolEffectRecord extends OwnershipScope {
 }
 
 export interface ToolEffectKey {
-  readonly identity: import("./identity.js").AgentIdentity;
   readonly ownership: OwnershipScope;
   readonly key: string;
   readonly sessionId: string;
@@ -622,9 +616,9 @@ export interface RunRecord extends OwnershipScope {
   readonly startedAt: string;
   readonly finishedAt?: string;
   readonly abortReason?: string;
-  /** Present when the loop stopped on a ceiling or host policy instead of a natural end. */
+  /** Present when the loop stopped on a ceiling or a `turn.before` stop instead of a natural end. */
   readonly stopReason?: AgentFinishReason;
-  /** Host stop detail from `TurnPolicyOptions.stop` (≤256 bytes, redacted). */
+  /** Why the `turn.before` hook stopped the run (≤256 bytes, redacted). */
   readonly stopDetail?: string;
   readonly error?: ErrorInfo;
   readonly metadata?: Readonly<Record<string, unknown>>;

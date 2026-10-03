@@ -9,8 +9,8 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
   const source = await factory();
   const ownership = { tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
   const input = { ownership, sessionId: "session-a", runId: "run-a" };
-  const first = event("event-a", "agent_started", input);
-  const second = event("event-b", "turn_started", input, "2026-01-01T00:00:01.000Z");
+  const first = event("event-a", "run.started", input);
+  const second = event("event-b", "turn.started", input, "2026-01-01T00:00:01.000Z");
 
   const storedFirst = await source.append(first);
   const storedSecond = await source.append(second);
@@ -28,30 +28,26 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
 
   const iterator = source.subscribe({ ...input, after: secondPage.items[0]!.cursor })[Symbol.asyncIterator]();
   const pending = iterator.next();
-  const third = await source.append(event("event-c", "turn_started", input, "2026-01-01T00:00:02.000Z"));
+  const third = await source.append(event("event-c", "turn.started", input, "2026-01-01T00:00:02.000Z"));
   equal((await pending).value?.record.id, third.id, "replay/live handoff dropped an event");
   await iterator.return?.();
 
-  const terminal = await source.append(event("event-d", "agent_finished", input, "2026-01-01T00:00:03.000Z"));
+  const terminal = await source.append(event("event-d", "run.completed", input, "2026-01-01T00:00:03.000Z"));
   const final = await source.page({ ...input, after: secondPage.items[0]!.cursor, limit: 10 });
   equal(final.items.at(-1)?.record.id, terminal.id, "terminal page must include its terminal event");
   equal(final.terminal, true, "terminal event must close only after prior events are delivered");
 
-  // A limit death delivers its attribution before the run's outcome: the breach and budget records
-  // are not terminal, the `error` that follows them is.
+  // A limit death is one terminal `run.failed` that already carries the breach and its attribution
+  // (the former `run_limit_exceeded` + `budget_exhausted` + `error` triple).
   const breached = { ...input, runId: "run-limit" };
-  await source.append(event("event-limit-before", "turn_started", breached, "2026-01-01T00:00:04.000Z"));
+  await source.append(event("event-limit-before", "turn.started", breached, "2026-01-01T00:00:04.000Z"));
   const beforeLimitItem = (await source.page({ ...breached, limit: 1 })).items[0];
   if (!beforeLimitItem) throw new Error("limit-death precondition missing");
   const beforeLimit = beforeLimitItem.cursor;
-  await source.append(event("event-limit", "run_limit_exceeded", breached, "2026-01-01T00:00:05.000Z"));
-  await source.append(event("event-attr", "budget_exhausted", breached, "2026-01-01T00:00:06.000Z"));
-  const breachPage = await source.page({ ...breached, after: beforeLimit, limit: 10 });
-  equal(breachPage.items.length, 2, "the breach and its attribution must page together");
-  equal(breachPage.terminal, false, "a limit breach must not close the stream; the run's error follows");
-  await source.append(event("event-limit-error", "error", breached, "2026-01-01T00:00:07.000Z"));
+  await source.append(event("event-limit", "run.failed", breached, "2026-01-01T00:00:05.000Z"));
   const deadPage = await source.page({ ...breached, after: beforeLimit, limit: 10 });
-  equal(deadPage.terminal, true, "the error after a limit breach closes the stream");
+  equal(deadPage.items.length, 1, "a limit death must page as one record");
+  equal(deadPage.terminal, true, "a limit death is the run's terminal record");
   const death = source.subscribe(breached)[Symbol.asyncIterator]();
   const delivered: string[] = [];
   for (;;) {
@@ -59,18 +55,14 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
     if (next.done) break;
     delivered.push(next.value.record.type);
   }
-  equal(
-    delivered.join(","),
-    "turn_started,run_limit_exceeded,budget_exhausted,error",
-    "a subscriber must read the breach and its attribution before the stream ends",
-  );
+  equal(delivered.join(","), "turn.started,run.failed", "a subscriber must read the limit death as one terminal record");
 
   await rejects(
     () => source.page({ ...input, ownership: { ...ownership, tenantId: "tenant-b" }, after: page.nextCursor }),
     "foreign cursor must fail closed",
   );
   await rejects(
-    () => source.append({ ...event("event-unredacted", "turn_started", input), redacted: false }),
+    () => source.append({ ...event("event-unredacted", "turn.started", input), redacted: false }),
     "unredacted append must fail",
   );
   await rejects(() => source.page({ ...input, limit: 0 }), "invalid page limit must fail");
@@ -78,7 +70,7 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
 
 function event(
   id: string,
-  type: "agent_started" | "agent_finished" | "turn_started" | "run_limit_exceeded" | "budget_exhausted" | "error",
+  type: "run.started" | "run.completed" | "turn.started" | "run.failed",
   input: {
     readonly ownership: { readonly tenantId: string; readonly accountId: string; readonly userId: string };
     readonly sessionId: string;
@@ -88,22 +80,23 @@ function event(
 ): AgentEventRecord {
   const scoped = { sessionId: input.sessionId, runId: input.runId };
   const event =
-    type === "turn_started"
-      ? { type, ...scoped, turn: 1 }
-      : type === "run_limit_exceeded"
-        ? { type, ...scoped, breach: { limit: "maxTurns" as const, maximum: 1, observed: 2 } }
-        : type === "budget_exhausted"
-          ? {
-              type,
-              ...scoped,
-              limit: "maxTurns" as const,
+    type === "turn.started"
+      ? { type, ...scoped, turn: 1, metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } } }
+      : type === "run.failed"
+        ? {
+            type,
+            ...scoped,
+            error: { message: "run limit exceeded" },
+            limit: { limit: "maxTurns" as const, maximum: 1, observed: 2 },
+            attribution: {
               consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
               closestOtherAxes: [],
               recentToolCalls: [],
-            }
-          : type === "error"
-            ? { type, ...scoped, error: { message: "run limit exceeded" } }
-            : { type, ...scoped };
+            },
+          }
+        : type === "run.completed"
+          ? { type, ...scoped, status: "completed" as const }
+          : { type, ...scoped };
   return { id, ...input.ownership, sessionId: input.sessionId, runId: input.runId, type, timestamp, event, redacted: true };
 }
 

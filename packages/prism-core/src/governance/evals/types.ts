@@ -1,6 +1,6 @@
 import type {
   AgentEventRecord,
-  AgentRunResult,
+  RunResult,
   ErrorInfo,
   OwnershipScope,
   PersistencePage,
@@ -21,7 +21,7 @@ export interface ScoreResult {
 
 /** Input passed to a scorer. Scorers receive results only — no credentials, tools, or workspace. */
 export interface ScorerInput<TInput = unknown, TExpected = unknown> {
-  readonly result: AgentRunResult;
+  readonly result: RunResult;
   readonly item?: DatasetItem<TInput, TExpected>;
   readonly expected?: TExpected;
   readonly signal?: AbortSignal;
@@ -110,7 +110,7 @@ export interface DefineDatasetInput<TInput = unknown, TExpected = unknown> {
 }
 
 export interface ScoreRunOptions<TInput = unknown, TExpected = unknown> {
-  readonly result: AgentRunResult;
+  readonly result: RunResult;
   readonly scorers: readonly Scorer<TInput, TExpected>[];
   /** Fraction of runs to score in `[0, 1]`. Defaults to `1`. */
   readonly sampleRate?: number;
@@ -148,7 +148,7 @@ export interface LiveScoreOptions<TInput = unknown, TExpected = unknown> extends
 
 export interface ExperimentItemResult<TInput = unknown, TExpected = unknown> {
   readonly item: DatasetItem<TInput, TExpected>;
-  readonly result?: AgentRunResult;
+  readonly result?: RunResult;
   readonly evaluations: readonly EvaluationRecord[];
   readonly error?: ErrorInfo;
 }
@@ -199,7 +199,7 @@ export interface EvaluationTrace {
 }
 
 export interface EvaluationTarget {
-  readonly result: AgentRunResult;
+  readonly result: RunResult;
   readonly trace?: EvaluationTrace;
   readonly timeline?: ExecutionTimeline;
 }
@@ -242,8 +242,8 @@ export interface PairwiseScoreResult {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 export interface PairwiseScorerInput<TInput = unknown, TExpected = unknown> {
-  readonly left: { readonly name: string; readonly result: AgentRunResult };
-  readonly right: { readonly name: string; readonly result: AgentRunResult };
+  readonly left: { readonly name: string; readonly result: RunResult };
+  readonly right: { readonly name: string; readonly result: RunResult };
   readonly item: DatasetItem<TInput, TExpected>;
   readonly signal?: AbortSignal;
 }
@@ -254,7 +254,7 @@ export interface PairwiseScorer<TInput = unknown, TExpected = unknown> {
 export type ComparisonCandidate<TInput = unknown, TExpected = unknown> = (
   item: DatasetItem<TInput, TExpected>,
   signal?: AbortSignal,
-) => Promise<AgentRunResult>;
+) => Promise<RunResult>;
 export interface ComparisonRecord {
   readonly itemId: string;
   readonly scorerId: string;
@@ -333,7 +333,7 @@ export interface RunExperimentOptions<TInput = unknown, TExpected = unknown> {
   /** Optional callback to resolve host-trusted environment snapshot per item. */
   readonly toEnvironment?: (
     item: DatasetItem<TInput, TExpected>,
-    result?: AgentRunResult,
+    result?: RunResult,
     timeline?: ExecutionTimeline,
   ) => unknown | Promise<unknown>;
   /** Repeated trials count. Defaults to 1, hard cap 16. */

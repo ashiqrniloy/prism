@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { JsonObject } from "@arnilo/prism";
+import type { HookRegistrar, JsonObject } from "@arnilo/prism";
 import { createMemoryId, isMemoryId } from "../compaction/observational-memory/ids.js";
 import { foldObservationalMemoryLedger } from "../compaction/observational-memory/ledger.js";
 import { foldWorkScopeMap, type WorkBindRef, type WorkScopeId, type WorkScopeMap } from "../compaction/observational-memory/scopes.js";
@@ -7,11 +7,11 @@ import { MemoryValidationError } from "../errors.js";
 import { HARD_TOP_K_CAP } from "../limits.js";
 import { RECALL_OVERSAMPLE } from "../scoring.js";
 import type { MemoryConsentInput, MemoryContextProviderOptions, RecallScoringOptions } from "../types.js";
-import { createFabricAttach } from "./attach.js";
+import { createFabricAttach, type AttachedMemoryFabricSession } from "./attach.js";
 import { assertFabricBlockLabel, fabricBlockId, setFabricBlock, tombstoneFabricBlock } from "./blocks.js";
 import { mergeNoteMetadata, planMemoryConsolidation } from "./consolidate.js";
 import { mergeNoteLinks, resolveNoteLinks } from "./links.js";
-import { createMemoryFabricContextProvider } from "./provider.js";
+import { DEFAULT_MEMORY_FABRIC_PROVIDER_NAME, registerMemoryFabricContext } from "./provider.js";
 import { createFabricRecall, type FabricCandidate } from "./recall.js";
 import { createFabricConversationSearch } from "./search.js";
 import { createMemoryFabricTools } from "./tools.js";
@@ -140,7 +140,9 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
   const settings = resolveMemoryFabricSettings(options);
   /** Sessions authorized to drive this fabric's tools and workers; an unwired fabric exposes none. */
   const attachedSessions = new Set<string>();
-  const contextProvider = createMemoryFabricContextProvider(memory);
+  const registerFabricContext = (hooks: HookRegistrar) => registerMemoryFabricContext(hooks, memory);
+  const contextBuild: AttachedMemoryFabricSession["contextBuild"] = (draft, context) =>
+    memory.contextBlocks(draft, context, { name: DEFAULT_MEMORY_FABRIC_PROVIDER_NAME });
 
   async function rememberEpisode(input: MemoryFabricRememberInput): Promise<MemoryNote> {
     if (observational === undefined) {
@@ -454,10 +456,11 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     attach: createFabricAttach({
       attachedSessions,
       settings,
-      contextProvider,
+      contextBuild,
       ...(options.observational === undefined ? {} : { observational: options.observational }),
     }),
-    createContextProvider: (providerOptions?: MemoryContextProviderOptions) => createMemoryFabricContextProvider(memory, providerOptions),
+    registerContextBuild: (hooks: HookRegistrar, providerOptions?: MemoryContextProviderOptions) =>
+      registerMemoryFabricContext(hooks, memory, providerOptions),
     tools: createMemoryFabricTools({
       memory,
       remember,

@@ -41,12 +41,12 @@ function memoryWorkerProvider(store: SessionStore, sessionId: string): AIProvide
 // Four-layer observational memory: attach → turn → projection/recall → branch page.
 export async function demo() {
   const store = createMemorySessionStore();
-  const agent = createAgent({
+  const agent = await createAgent({
     model,
     provider: createMockProvider([providerTextDelta("ack"), providerDone()]),
-    store,
+    slots: { store },
   });
-  const baseSession = agent.createSession({ id: "s1" });
+  const baseSession = await agent.session({ id: "s1", create: true });
   const om = createObservationalMemory({
     observation: { provider: memoryWorkerProvider(store, "s1"), model: workerModel },
     context: { recentMessages: 4, compactAfterTokens: 999_999 },

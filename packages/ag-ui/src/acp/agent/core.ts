@@ -34,10 +34,12 @@ const STOP_REASON: Readonly<Record<AgentFinishReason, StopReason>> = {
   turn_limit: "max_turn_requests",
   token_limit: "max_tokens",
   refusal: "refusal",
-  // A host turn-policy stop is a clean terminal turn from the client's perspective.
-  host_policy: "end_turn",
-  // Same for a stop-hook continuation cap: the run ended cleanly, the agent just stopped talking.
+  // A `turn.before` hook stop is a clean terminal turn from the client's perspective.
+  hook_stop: "end_turn",
+  // Same for a `run.end` continuation cap: the run ended cleanly, the agent just stopped talking.
   hook_limit: "end_turn",
+  // A denied resume ends the run without running the gated call: the agent declined to continue.
+  denied: "refusal",
 };
 
 function stopReasonFor(finishReason: AgentFinishReason | undefined, aborted: boolean): StopReason {

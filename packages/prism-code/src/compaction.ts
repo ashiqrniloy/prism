@@ -1,18 +1,20 @@
 import {
   type CompactionEntryData,
   type CompactionOptions,
-  type CompactionStrategy,
   type CompactionTrigger,
+  type Compactor,
   type ContextBudget,
   capToolResultSummary,
+  type HookRegistrar,
   isCompactionEntryData,
   type ModelConfig,
   resolveInputCap,
+  resolveShouldCompact,
   type ToolResultFoldOptions,
 } from "@arnilo/prism";
 import { todoPinnedEntryIds } from "@arnilo/prism-coding-tools/agent";
-import { createCodingCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
-import { createObservationalMemoryCompactionStrategy } from "@arnilo/prism-memory/compaction/observational-memory";
+import { createCodingCompactor } from "@arnilo/prism-memory/compaction/llm";
+import { createObservationalMemoryCompactor } from "@arnilo/prism-memory/compaction/observational-memory";
 import type { PrismCodeCompactionConfig } from "./config.js";
 import type { ProviderCache } from "./providers.js";
 
@@ -23,6 +25,8 @@ export const PRISM_CODE_DEFAULT_KEEP_RECENT_TOKENS = 20_000;
 const PRISM_CODE_DEFAULT_CONTEXT_WINDOW = 32_000;
 /** Fallback trigger budget for a model whose input cap cannot be resolved. */
 export const PRISM_CODE_DEFAULT_COMPACTION_TOKENS = 20_000;
+/** Fallback trigger for `threshold_entries`; matches the kernel's default auto-trigger threshold. */
+export const PRISM_CODE_DEFAULT_COMPACTION_ENTRIES = 50;
 
 /** Same helper the core `input_ratio` trigger resolves its cap with; a throw here means unusable limits. */
 function canResolveInputCap(model: ModelConfig): boolean {
@@ -42,11 +46,11 @@ function canResolveInputCap(model: ModelConfig): boolean {
  * open items. Entries are re-pinned on every compaction, so one plan written once at the start of
  * a long run survives any number of cuts.
  */
-function keepLatestTodoTurn(strategy: CompactionStrategy): CompactionStrategy {
+function keepLatestTodoTurn(compactor: Compactor): Compactor {
   return {
-    ...strategy,
+    ...compactor,
     async compact(context) {
-      const result = await strategy.compact(context);
+      const result = await compactor.compact(context);
       const pinned = todoPinnedEntryIds(context.entries);
       if (pinned.length === 0) return result;
       const source = result.entries?.find((entry) => entry.kind === "compaction");
@@ -63,9 +67,26 @@ export const PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096;
 export const PRISM_CODE_DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512;
 
 /**
- * Resolves compaction options for Prism Code.
+ * Prism Code's resolved compaction: the sizing knobs, the `compaction` slot implementation, and the
+ * `compaction.when` gate this config asks for. Roadmap §2.5: the implementation is the slot, the
+ * auto trigger is the hook, and `CompactionOptions` only sizes them.
+ */
+export interface PrismCodeCompactionResolution {
+  /** `AgentConfig.compaction`: sizing and threshold knobs only. */
+  readonly options: CompactionOptions;
+  /** `AgentConfig.slots.compaction`. */
+  readonly compactor: Compactor;
+  /** The auto trigger this config resolves; {@link registerTrigger} wires it to `compaction.when`. */
+  readonly trigger: CompactionTrigger;
+  /** Registers {@link trigger} as a `compaction.when` handler. */
+  readonly registerTrigger: (hooks: HookRegistrar) => void;
+}
+
+/**
+ * Resolves compaction for Prism Code. Returns `false` when the config disables it entirely.
+ *
  * Supports:
- * - Coding (LLM-based) and OM (Observational Memory-based) strategies.
+ * - Coding (LLM-based) and OM (Observational Memory-based) compactors.
  * - Auto-compaction triggers: `input_ratio` (default 0.8), `each_turn`, `threshold_tokens`, `threshold_entries`.
  * - Explicit disabling via `compaction: false`.
  */
@@ -73,25 +94,25 @@ export function resolvePrismCodeCompaction(
   config: PrismCodeCompactionConfig | undefined,
   sessionModel: ModelConfig,
   cache: ProviderCache,
-): false | CompactionOptions {
+): false | PrismCodeCompactionResolution {
   if (config === false) return false;
   const cfg = config ?? {};
   const strategyKind = cfg.strategy ?? "coding";
   const keepRecentEntries = cfg.keepRecentEntries ?? PRISM_CODE_DEFAULT_KEEP_RECENT_ENTRIES;
-  // The LLM strategies keep a token budget, not an entry count. Deriving it from the window keeps
+  // The LLM compactors keep a token budget, not an entry count. Deriving it from the window keeps
   // the keep budget below the compact trigger, so compaction always has entries to summarize
-  // (a window smaller than the strategy default would otherwise turn every compaction into a no-op).
+  // (a window smaller than the compactor default would otherwise turn every compaction into a no-op).
   // A host may ask for a tighter (or larger) budget; the half-window cap still applies.
   const contextWindow = sessionModel.limits?.contextWindow ?? PRISM_CODE_DEFAULT_CONTEXT_WINDOW;
   const requestedKeepRecentTokens = cfg.keepRecentTokens ?? PRISM_CODE_DEFAULT_KEEP_RECENT_TOKENS;
   const keepRecentTokens = Math.max(0, Math.min(requestedKeepRecentTokens, Math.floor(contextWindow * 0.5)));
 
-  const strategy = keepLatestTodoTurn(
+  const compactor = keepLatestTodoTurn(
     strategyKind === "om" || strategyKind === "observational-memory"
-      ? createObservationalMemoryCompactionStrategy({
+      ? createObservationalMemoryCompactor({
           keepRecentEntries,
         })
-      : createCodingCompactionStrategy({
+      : createCodingCompactor({
           summaryProvider: async () => cache.get(sessionModel) ?? (await cache.prime(sessionModel)),
           model: sessionModel,
           keepRecentTokens,
@@ -102,11 +123,11 @@ export function resolvePrismCodeCompaction(
   if (cfg.trigger === "each_turn") {
     trigger = { type: "each_turn" };
   } else if (cfg.trigger === "threshold_tokens" || cfg.tokens !== undefined) {
-    trigger = { type: "threshold_tokens", tokens: cfg.tokens ?? 20_000 };
+    trigger = { type: "threshold_tokens", tokens: cfg.tokens ?? PRISM_CODE_DEFAULT_COMPACTION_TOKENS };
   } else if (cfg.trigger === "threshold_entries" || cfg.entries !== undefined) {
-    trigger = { type: "threshold_entries", entries: cfg.entries ?? 50 };
+    trigger = { type: "threshold_entries", entries: cfg.entries ?? PRISM_CODE_DEFAULT_COMPACTION_ENTRIES };
   } else if (cfg.trigger === "input_ratio" || cfg.ratio !== undefined) {
-    // Explicit ratio: the core trigger fails loudly when the model declares no window (host config error).
+    // Explicit ratio: the gate fails loudly when the model declares no window (host config error).
     trigger = { type: "input_ratio", ratio: cfg.ratio ?? PRISM_CODE_DEFAULT_COMPACTION_RATIO };
   } else if (canResolveInputCap(sessionModel)) {
     trigger = { type: "input_ratio", ratio: PRISM_CODE_DEFAULT_COMPACTION_RATIO };
@@ -117,10 +138,32 @@ export function resolvePrismCodeCompaction(
   }
 
   return {
-    strategy,
+    options: {
+      keepRecentEntries,
+      ...(cfg.maxSummaryChars ? { maxSummaryChars: cfg.maxSummaryChars } : {}),
+    },
+    compactor,
     trigger,
-    keepRecentEntries,
-    ...(cfg.maxSummaryChars ? { maxSummaryChars: cfg.maxSummaryChars } : {}),
+    registerTrigger: (hooks) => {
+      hooks.on(
+        "compaction.when",
+        async (payload, context) => {
+          const compact = await resolveShouldCompact(
+            { trigger },
+            {
+              sessionId: payload.sessionId,
+              entryCount: payload.entryCount,
+              ...(payload.turn === undefined ? {} : { turn: payload.turn }),
+              estimateInputTokens: () => payload.estimatedTokens ?? 0,
+              resolveInputCapTokens: () => resolveInputCap(undefined, sessionModel),
+              signal: context.signal,
+            },
+          );
+          return compact ? { compact: true } : undefined;
+        },
+        { id: "compaction-trigger" },
+      );
+    },
   };
 }
 

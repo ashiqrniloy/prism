@@ -28,7 +28,7 @@ const packages = [
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
-  { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
+  { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
 ];
 
 let consumer, run, hostRun;

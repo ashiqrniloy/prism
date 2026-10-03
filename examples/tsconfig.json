@@ -132,8 +132,8 @@
       "@arnilo/prism-providers/zai": [
         "./packages/provider-zai/src/index.ts"
       ],
-      "@arnilo/prism-hooks": [
-        "./packages/hooks/src/index.ts"
+      "@arnilo/prism-hooks-json": [
+        "./packages/integrations/hooks-json/src/index.ts"
       ],
       "@arnilo/prism-agent-sdk": [
         "./packages/agent-sdk/src/index.ts"

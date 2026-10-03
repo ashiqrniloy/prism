@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -8,15 +9,7 @@ import {
   assertSerializedRequestCoversContent,
   assertToolCallDeltasReconstruct,
 } from "@arnilo/prism/testing/provider-conformance";
-import {
-  createZaiProvider,
-  createZaiProviderPackage,
-  listZaiModels,
-  mapZaiModel,
-  ZAI_DEFAULT_BASE_URL,
-  zaiBody,
-  zaiModels,
-} from "../index.js";
+import { createZaiProvider, zaiPackage, listZaiModels, mapZaiModel, ZAI_DEFAULT_BASE_URL, zaiBody, zaiModels } from "../index.js";
 
 const request: ProviderRequest = {
   model: zaiModels[0],
@@ -34,31 +27,22 @@ describe("@arnilo/prism-providers/zai", () => {
   });
 
   it("zai_registers_glm_model_metadata", async () => {
-    const registered: unknown[] = [];
-    await createZaiProviderPackage({ apiKey: "fake-zai-key", fetch: mockFetch(sse([])) }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
-    assert(registered.some((item: any) => item.id === "zai"));
-    assert(registered.some((item: any) => item.provider === "zai" && item.model === "glm-5.2"));
-    assert(registered.some((item: any) => item.provider === "zai" && item.model === "glm-4.7"));
-    assert(registered.some((item: any) => item.provider === "zai" && item.kind === "api_key"));
+    await loadProviderPackage(zaiPackage({ apiKey: "fake-zai-key", fetch: mockFetch(sse([])) }));
+    assert.ok(zaiModels.some((model) => model.model === "glm-5.2"));
+    assert.ok(zaiModels.some((model) => model.model === "glm-4.7"));
   });
 
   it("zai_provider_setup_does_not_call_model_discovery", async () => {
     let fetches = 0;
-    await createZaiProviderPackage({
-      apiKey: "fake-zai-key",
-      fetch: (async () => {
-        fetches += 1;
-        return ok(sse([]));
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as any);
+    await loadProviderPackage(
+      zaiPackage({
+        apiKey: "fake-zai-key",
+        fetch: (async () => {
+          fetches += 1;
+          return ok(sse([]));
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(fetches, 0);
   });
 

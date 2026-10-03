@@ -34,8 +34,15 @@ The required `@arnilo/prism` peer is the only dependency. The `/ai-sdk` adapter 
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { createOpenAIResponsesProvider, openAIModels } from "@arnilo/prism-providers/openai";
+import { anthropicModels, anthropicPackage } from "@arnilo/prism-providers/anthropic";
+
+const agent = await createAgent({
+  model: anthropicModels[0],
+  packages: [anthropicPackage({ apiKey: () => process.env.ANTHROPIC_API_KEY })],
+});
 ```
+
+The package registers its provider. Model lists stay module exports (`anthropicModels`, …). Package names are dotted (`@arnilo/prism-providers.anthropic`) because a second slash is not a valid npm name. Credentials stay factory arguments, never config.
 
 Every subpath is side-effect-free: setup never fetches, scans env, reads credential stores, or activates a provider. See [docs/provider-packages.md](https://github.com/ashiqrniloy/prism/blob/main/docs/provider-packages.md) and [docs/migrate-to-0.4.md](https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.4.md#providers) for the old-package import map.
 

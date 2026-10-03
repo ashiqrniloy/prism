@@ -1,33 +1,51 @@
-# Release — versions, exports, freeze tests, workflows, packaging
+# Release — exports, baselines, package truth, changelog, publish
 
-Lockstep version bumps, export-surface gates, freeze tests, GitHub Actions
-release pipeline, package truth. Read for version-bump/tag/CHANGELOG tasks.
+Export-surface gates, compat baselines, package-truth generation, packaging and tarball rules, the changelog, versioning (lockstep plus independent), and the 1.0 publish.
 
-## Docs and files
+## Target
 
-- [release-and-install.md](../../../../docs/release-and-install.md): package graph, install rules, publication pipeline.
-- [migrate-to-0.5.md](../../../../docs/migrate-to-0.5.md): 0.4 → 0.5 cuts and rollback.
-- [CHANGELOG.md](../../../../CHANGELOG.md: per-version deltas (root; packages keep their own).
-- [history/README.md](../../../../docs/history/README.md): frozen migration/handoff archives — traceability only.
+- [roadmap.md](../../../../roadmap.md) Part 3 (version targets), Phase 11 (kernel freeze and 1.0), §1.4 (Bun-native: TypeScript source published, no build step).
+- **One publish, not one per phase.** `@arnilo/prism` 1.0.0 and the native packages ship together in Phase 11. After that, each package is versioned independently.
+- **Deprecations happen at Phase 11 only.** `@arnilo/prism-agent-sdk` and the 0.12 family packages are deprecated on npm then, not earlier.
+- **Changelog:** every phase records user-visible changes under `## [Unreleased]` in `CHANGELOG.md` as they land. The Phase 11 changelog and migration note from 0.12 is assembled from those entries.
+
+## Every task that touches public surface
+
+- **Moved, renamed, or removed export:**
+  - Run `node scripts/release.mjs gate --update-baseline` in the same task, which rewrites `scripts/compat-baseline/<pkg>.txt`.
+  - Paste the diff into the task note, with removals attributed to this plan or inherited.
+  - Then run `node scripts/release.mjs gate` and confirm it exits 0.
+  - The root-export freeze in `src/__tests__/public-export-contract.test.ts` (`root export surface is frozen`) is updated deliberately in the same task.
+- **New or removed package:**
+  - Update the root `workspaces` and the `build` script's package list.
+  - Regenerate package truth with `node scripts/package-truth.mjs --emit-docs`.
+  - Update the `packaging.test.ts` package list and add the baseline file.
+  - Decide lockstep vs independent in `scripts/independent-packages.json`.
+- **Retired error or name:** grep `src/ packages/ apps/ scripts/ examples/ docs/` (excluding `dist/`, `plans/`, `docs/history/`, `docs/_evidence/`).
+
+## Today (0.12.1 mechanics)
+
+- Gates: `bun run release:gate` runs ranges, compat (the `.d.ts` diff against `scripts/compat-baseline/`), and a tarball deny-list check. `bun run sdk:ready` is the full local gate (typecheck, lint, format:check, test, coverage, pack dry-run, release gate).
+- Versioning: a lockstep `v*` cut for the family packages. Independent lines (`@arnilo/prism-agent-sdk`, `@arnilo/prism-code`) ship from their own `@arnilo/<name>@<version>` tag. The version literal gate (`scripts/version-literal-gate.test.mjs`) derives every version claim from the root manifest.
+- Publishing: tag push → `.github/workflows/release.yml` → a verify job, then publish via npm on the release host (OIDC provenance). Contributors use Bun only.
+- Packaging today builds to `dist/` with `.d.ts`, and `public-export-contract.test.ts` / `packaging.test.ts` assert that. The first plan that creates a TypeScript-source native package (roadmap Phase 2) owns changing those gates for the new layout.
+- Docs: [release-and-install.md](../../../../docs/release-and-install.md) ("Release checklist" is the self-maintaining gate table: extend the matching row when you add a package, example, or API page), [testing.md](../../../../docs/testing.md), [contributing.md](../../../../docs/contributing.md).
 
 ## Graft queries
 
-- `graft ask "release publish lockstep topological order" --source`
-- `graft grep "HARD_RUN_LIMITS"`
+- `graft ask "release gate compat baseline diff allow-break" --source`
+- `graft ask "independent packages lockstep cut publish order" --source`
+- `graft grep "workspacePackageCounts"`
 
 ## Tests and gates
 
-- `src/__tests__/packaging.test.ts`, `release.test.ts`, `public-export-contract.test.ts`, `install-smoke.test.ts`
-- `scripts/phase54-package-map.test.mjs`, `scripts/truth-current.test.mjs`, `scripts/packaging-current.test.mjs`
-- Version bumps: bump ALL 10 package.json files + internal `@arnilo/*` ranges, then sweep stale `0\.5\.x` literals in test freeze asserts (`rg -l '0\.5\.3'`), update `src/index.ts` `export const version`, regenerate `scripts/compat-baseline/` + `node scripts/phase54-package-map.mjs` + `node scripts/package-truth.mjs --emit-docs`.
+- `src/__tests__/packaging.test.ts`, `release.test.ts`, `public-export-contract.test.ts`, `install-smoke.test.ts`, `docs.test.ts`
+- `scripts/release-gate.test.mjs`, `scripts/truth-current.test.mjs`, `scripts/packaging-current.test.mjs`, `scripts/version-literal-gate.test.mjs`, `scripts/workflow-liveness.test.mjs`
 
-## Don't do
+## Rules
 
-- Don't commit `scripts/release-evidence.json` (gitignored, regenerated per run).
-- Don't commit secrets — `scripts/live.env` is local-only; secret-scan fails locally with it present by design.
-- Don't remove or widen freeze-test literals to make a release pass — update them to the new true values via the edit tool (sed mangles regex literals).
-- Don't run provider package tests from repo root — `cd` into the workspace first (cwd-relative paths).
-
-## Pipeline
-
-Tag push `vX.Y.Z` → `.github/workflows/release.yml`: verify job (format/lint/build/test/gates) → publish job (`npm run release:publish -- --lockstep --version <v> --resume`, OIDC provenance). Format failures (`biome`) and stale generated docs are the two most common verify blockers — run `npx biome check --write` and the regen commands locally before pushing.
+- Never commit `scripts/release-evidence.json` (it is regenerated each run) or `scripts/live.env` (local secrets; the secret scan fails on it by design).
+- Never widen or delete freeze-test literals to make a gate pass. Update them to the new true values with the edit tool; sed mangles regex literals.
+- Never use `--allow-break` without a migration note naming the target version.
+- Run workspace package tests from the workspace directory; their paths are cwd-relative.
+- Before pushing, run `bun run format` / `biome check --write` and the regeneration commands. Formatting and stale generated docs are the most common verify blockers.

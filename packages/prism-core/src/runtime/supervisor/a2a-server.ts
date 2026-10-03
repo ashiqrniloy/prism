@@ -1,4 +1,4 @@
-import { type AgentRunResult, assertIdentityActive, assertIdentityMatchesOwnership } from "@arnilo/prism";
+import { type RunResult, assertIdentityActive, assertIdentityMatchesOwnership } from "@arnilo/prism";
 import { createA2AAgentCard } from "./a2a-card.js";
 import {
   bounded,
@@ -361,15 +361,19 @@ async function* oneEvent(task: A2ATask): AsyncGenerator<A2ATaskEvent> {
 async function* runEvents(
   taskId: string,
   contextId: string,
-  run: () => Promise<AgentRunResult>,
+  run: () => Promise<RunResult>,
   options: CreateA2AHandlerOptions,
 ): AsyncGenerator<A2ATaskEvent> {
   yield { eventId: "1", task: { id: taskId, contextId, status: { state: "TASK_STATE_WORKING", timestamp: new Date().toISOString() } } };
   yield { eventId: "2", task: toTask(taskId, contextId, await run(), options) };
 }
-function toTask(taskId: string, contextId: string, result: AgentRunResult, options: CreateA2AHandlerOptions): A2ATask {
+function toTask(taskId: string, contextId: string, result: RunResult, options: CreateA2AHandlerOptions): A2ATask {
   const state =
-    result.status === "succeeded" ? "TASK_STATE_COMPLETED" : result.status === "aborted" ? "TASK_STATE_CANCELED" : "TASK_STATE_FAILED";
+    result.status === "completed" || result.status === "stopped"
+      ? "TASK_STATE_COMPLETED"
+      : result.status === "aborted"
+        ? "TASK_STATE_CANCELED"
+        : "TASK_STATE_FAILED";
   const text = options.redactor?.redact(result.text) ?? result.text;
   return {
     id: taskId,

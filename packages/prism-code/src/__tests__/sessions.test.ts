@@ -1,3 +1,4 @@
+import { createCodingCompactor } from "@arnilo/prism-memory/compaction/llm";
 import { afterEach, beforeEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { execSync, spawn } from "node:child_process";
@@ -149,14 +150,14 @@ describe("Repo-Scoped Sessions & Compaction", () => {
       providerDone(),
     ]);
 
-    const agent = createAgent({
+    const agent = await createAgent({
       provider,
-      store,
+      slots: { store },
       model: { provider: "mock", model: "default" },
     });
 
     // 1. Fresh session is initially empty
-    const session1 = agent.createSession({ id: "resume-test-sess" });
+    const session1 = await agent.session({ id: "resume-test-sess", create: true });
     const initialEntries = await session1.entries();
     assert.equal(initialEntries.length, 0, "New session must be empty");
 
@@ -170,17 +171,14 @@ describe("Repo-Scoped Sessions & Compaction", () => {
 
     // 2. Simulate process recreation: recreate agent and store connection from scratch
     const recreatedStore = createSqlitePersistence({ filename: dbPath });
-    const recreatedAgent = createAgent({
+    const recreatedAgent = await createAgent({
       provider,
-      store: recreatedStore,
+      slots: { store: recreatedStore },
       model: { provider: "mock", model: "default" },
     });
 
     // Resume session with stored leafId
-    const resumedSession = recreatedAgent.createSession({
-      id: "resume-test-sess",
-      leafId: leaf1,
-    });
+    const resumedSession = await recreatedAgent.session({ id: "resume-test-sess", leafId: leaf1, create: true });
 
     const resumedEntries = await resumedSession.entries();
     assert.equal(resumedEntries.length, entriesAfterRun1.length, "Resumed session must restore previous entries");
@@ -199,30 +197,30 @@ describe("Repo-Scoped Sessions & Compaction", () => {
 
     const normalProvider = createMockProvider([providerTextDelta("Assistant response 1"), providerDone()]);
 
-    const agent = createAgent({
+    // Provider that fails during summarization
+    const failingProvider = createMockProvider([providerError(new Error("Simulated LLM rate limit or timeout"))]);
+
+    // Roadmap §2.5: `/compact` runs the agent's `compaction` slot compactor.
+    const agent = await createAgent({
       provider: normalProvider,
-      store,
       model: { provider: "mock", model: "default" },
+      slots: {
+        store,
+        compaction: createCodingCompactor({ provider: failingProvider, model: { provider: "mock", model: "default" } }),
+      },
     });
 
-    const session = agent.createSession({ id: "compaction-fail-sess" });
+    const session = await agent.session({ id: "compaction-fail-sess", create: true });
     const run = await session.run("Initial instruction to start transcript");
     const leafBefore = run.leafId;
 
     const rawEntriesBefore = await session.entries();
     assert.ok(rawEntriesBefore.length >= 2, "Session should have user and assistant entries");
 
-    // Provider that fails during summarization
-    const failingProvider = createMockProvider([providerError(new Error("Simulated LLM rate limit or timeout"))]);
-
     // Calling compactSession must fail
     await assert.rejects(
       async () => {
-        await compactSession({
-          session,
-          provider: failingProvider,
-          model: { provider: "mock", model: "default" },
-        });
+        await compactSession({ session });
       },
       (err: Error) => {
         return err.message.includes("Summarization failed") || err.message.includes("Simulated LLM rate limit");
@@ -247,23 +245,25 @@ describe("Repo-Scoped Sessions & Compaction", () => {
       providerDone(),
     ]);
 
-    const agent = createAgent({
+    const agent = await createAgent({
       provider: workingProvider,
-      store,
       model: { provider: "mock", model: "default" },
+      slots: {
+        store,
+        compaction: createCodingCompactor({
+          provider: workingProvider,
+          model: { provider: "mock", model: "default" },
+          customInstructions: "Prioritize tests and handoff blockers.",
+        }),
+      },
     });
 
-    const session = agent.createSession({ id: "compaction-success-sess" });
+    const session = await agent.session({ id: "compaction-success-sess", create: true });
     const run = await session.run("Please refactor tools");
     const leafBefore = run.leafId;
 
     // Perform compaction
-    const result = await compactSession({
-      session,
-      provider: workingProvider,
-      model: { provider: "mock", model: "default" },
-      customInstructions: "Prioritize tests and handoff blockers.",
-    });
+    const result = await compactSession({ session });
 
     assert.ok(result.summary.includes(summaryText));
     assert.ok(result.entries !== undefined && result.entries.length > 0);

@@ -131,7 +131,7 @@ export function routeForOpenCodeGoModel(modelId: string): OpenCodeGoRoute {
 
 /**
  * Caller-gated OpenCode Go model discovery via official `GET /models`.
- * Never invoked by `createOpenCodeGoProviderPackage` — hosts call this and pass
+ * Never invoked by `opencodeGoPackage` — hosts call this and pass
  * results via `models:` (or register themselves). Payload is sparse; route /
  * limits / cache kind are inferred from the official Go docs endpoint table.
  * @see https://opencode.ai/docs/go/

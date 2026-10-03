@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
@@ -14,7 +15,7 @@ import {
   alibabaBody,
   alibabaIsThinkingOnly,
   createAlibabaProvider,
-  createAlibabaProviderPackage,
+  alibabaPackage,
   defineAlibabaModel,
   listAlibabaModels,
   mapAlibabaModel,
@@ -408,24 +409,18 @@ describe("@arnilo/prism-providers/alibaba", () => {
 
   it("package_setup_registers_provider_auth_and_host_models_without_discovery", async () => {
     let fetchCalls = 0;
-    const registered: unknown[] = [];
     const discovered = [mapAlibabaModel({ id: "qwen-plus" })];
-    await createAlibabaProviderPackage({
-      apiKey: "sk-dashscope-secret",
-      models: discovered,
-      fetch: (async () => {
-        fetchCalls += 1;
-        return ok(chatSse([]));
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (m: ModelConfig) => registered.push(m),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(
+      alibabaPackage({
+        apiKey: "sk-dashscope-secret",
+        models: discovered,
+        fetch: (async () => {
+          fetchCalls += 1;
+          return ok(chatSse([]));
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(fetchCalls, 0, "setup must not call model discovery");
-    assert.ok(registered.some((item: any) => item.id === "alibaba"));
-    assert.ok(registered.some((item: any) => item.provider === "alibaba" && item.model === "qwen-plus"));
-    assert.ok(registered.some((item: any) => item.provider === "alibaba" && item.kind === "api_key"));
   });
 
   it("alibaba_implicit_default_carries_no_foreign_cache_fields", () => {

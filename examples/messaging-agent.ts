@@ -15,11 +15,11 @@ const identity: AgentIdentity = {
 export async function demo(): Promise<Record<string, unknown>> {
   const persistence = createSqlitePersistence({ filename: ":memory:" });
   try {
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "channel-agent",
       model: { provider: "mock", model: "offline" },
       provider: createMockProvider([providerTextDelta("Host example reply."), providerDone()]),
-      store: persistence,
+      slots: { store: persistence },
       runLedger: persistence,
     });
     const delivered: string[] = [];

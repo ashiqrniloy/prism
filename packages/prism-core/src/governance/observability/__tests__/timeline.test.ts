@@ -28,29 +28,27 @@ function agentEvent(type: string, extra: Record<string, unknown> = {}): AgentEve
 
 test("agent run with 2 turns 1 tool: order and parentIds correct, default no args", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("provider_turn_started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
-    agentEvent("tool_execution_started", { call: { id: "tc-1", name: "search", arguments: { q: "hello" } } }),
-    agentEvent("tool_execution_finished", {
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("tool.started", { call: { id: "tc-1", name: "search", arguments: { q: "hello" } } }),
+    agentEvent("tool.completed", {
       result: { toolCallId: "tc-1", name: "search", value: "result-value" },
       metadata: { durationMs: 100, status: "finished" },
     }),
-    agentEvent("provider_turn_finished", {
+    agentEvent("turn.completed", {
       turn: 1,
       metadata: { providerId: "mock", model: "gpt-4", attempt: 1 },
       usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
     }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("turn_started", { turn: 2 }),
-    agentEvent("provider_turn_started", { turn: 2, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
-    agentEvent("provider_turn_finished", {
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("turn.started", { turn: 2, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("turn.completed", {
       turn: 2,
       metadata: { providerId: "mock", model: "gpt-4", attempt: 1 },
       usage: { inputTokens: 20, outputTokens: 10, totalTokens: 30 },
     }),
-    agentEvent("turn_finished", { turn: 2 }),
-    agentEvent("agent_finished", { usage: { inputTokens: 30, outputTokens: 15, totalTokens: 45 } }),
+    agentEvent("turn.completed", { turn: 2, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed", usage: { inputTokens: 30, outputTokens: 15, totalTokens: 45 } }),
   ];
 
   const timeline = projectAgentTimeline(events);
@@ -98,17 +96,17 @@ test("redacted_io includes tool args with secrets redacted", () => {
   const redactor = createSecretRedactor([secret]);
 
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("tool_execution_started", {
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("tool.started", {
       call: { id: "tc-1", name: "api_call", arguments: { key: secret, query: "safe" } },
     }),
-    agentEvent("tool_execution_finished", {
+    agentEvent("tool.completed", {
       result: { toolCallId: "tc-1", name: "api_call", value: { data: `response with ${secret} inside` } },
       metadata: { durationMs: 50, status: "finished" },
     }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
   ];
 
   const timeline = projectAgentTimeline(events, { content: "redacted_io", redactor });
@@ -128,12 +126,11 @@ test("redacted_io includes tool args with secrets redacted", () => {
 
 test("persistence trace fold matches live fold for same events (order + kinds + names)", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("provider_turn_started", { turn: 1, metadata: { providerId: "p", model: "m", attempt: 1 } }),
-    agentEvent("provider_turn_finished", { turn: 1, metadata: { providerId: "p", model: "m", attempt: 1 } }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "p", model: "m", attempt: 1 } }),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "p", model: "m", attempt: 1 } }),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
   ];
 
   // Live fold.
@@ -258,11 +255,11 @@ test("workflow: 2-node DAG, checkpoint outputs appear only with checkpoint + red
 // ─── Test 5: Bounds — 1,001st step fails closed ─────────────────────────────
 
 test("1001st step fails closed with ERR_PRISM_TIMELINE_BOUNDS", () => {
-  const events: AgentEvent[] = [agentEvent("agent_started")];
+  const events: AgentEvent[] = [agentEvent("run.started")];
   // Generate 1,000 more tool start events (total 1,001 steps including the run step).
   for (let i = 0; i < 1_000; i++) {
     events.push(
-      agentEvent("tool_execution_started", {
+      agentEvent("tool.started", {
         call: { id: `tc-${i}`, name: `tool-${i}`, arguments: {} },
       }),
     );
@@ -283,15 +280,15 @@ test("1001st step fails closed with ERR_PRISM_TIMELINE_BOUNDS", () => {
 
 test("incremental folder snapshot matches one-shot projectAgentTimeline", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("tool_execution_started", { call: { id: "tc-1", name: "read_file", arguments: { path: "/tmp/a" } } }),
-    agentEvent("tool_execution_finished", {
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("tool.started", { call: { id: "tc-1", name: "read_file", arguments: { path: "/tmp/a" } } }),
+    agentEvent("tool.completed", {
       result: { toolCallId: "tc-1", name: "read_file", value: "contents" },
       metadata: { durationMs: 10, status: "finished" },
     }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
   ];
 
   // One-shot.
@@ -317,9 +314,9 @@ test("incremental folder snapshot matches one-shot projectAgentTimeline", () => 
 
 test("unknown event types are ignored, not thrown", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
+    agentEvent("run.started"),
     { type: "future_unknown_event", sessionId: sid, runId: rid } as unknown as AgentEvent,
-    agentEvent("agent_finished"),
+    agentEvent("run.completed", { status: "completed" }),
   ];
 
   // Must not throw.
@@ -354,34 +351,37 @@ test("workflow timeline folder matches one-shot project", () => {
 });
 
 test("traceId is forwarded to timeline", () => {
-  const events: AgentEvent[] = [agentEvent("agent_started"), agentEvent("agent_finished")];
+  const events: AgentEvent[] = [agentEvent("run.started"), agentEvent("run.completed", { status: "completed" })];
   const timeline = projectAgentTimeline(events, { traceId: "abc-123" });
   assert.equal(timeline.traceId, "abc-123");
 });
 
 test("attention_compiled folds into an attention step with measured counts", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("provider_turn_started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
-    agentEvent("attention_compiled", {
-      used: 12_000,
-      usedAfter: 9_000,
-      inputCap: 15_000,
-      triggerRatio: 0.75,
-      droppedThinkingTurns: 0,
-      stubbedToolResults: 4,
-      stubbedBytes: 48_000,
-      truncated: true,
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("package.event", {
+      package: "kernel",
+      name: "attention.compiled",
+      data: {
+        used: 12_000,
+        usedAfter: 9_000,
+        inputCap: 15_000,
+        triggerRatio: 0.75,
+        droppedThinkingTurns: 0,
+        stubbedToolResults: 4,
+        stubbedBytes: 48_000,
+        truncated: true,
+      },
     }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
   ];
   const timeline = projectAgentTimeline(events);
   const step = timeline.steps.find((s) => s.kind === "attention");
 
   assert.ok(step, "attention step must exist");
-  assert.equal(step.name, "attention_compiled");
+  assert.equal(step.name, "attention.compiled");
   assert.equal(step.status, "succeeded");
   assert.deepEqual(step.metadata, {
     used: 12_000,
@@ -398,20 +398,24 @@ test("attention_compiled folds into an attention step with measured counts", () 
 
 test("guardrail decision creates a step", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("guardrail_decision", {
-      toolCallId: "tc-1",
-      toolName: "delete_account",
-      record: {
-        guardrail: "pack:destructive-commands/no-recursive-force-delete",
-        stage: "pre_execution",
-        action: "deny",
-        reason: "Recursive force delete is not allowed",
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("package.event", {
+      package: "kernel",
+      name: "guardrail.decision",
+      data: {
+        toolCallId: "tc-1",
+        toolName: "delete_account",
+        record: {
+          guardrail: "pack:destructive-commands/no-recursive-force-delete",
+          stage: "pre_execution",
+          action: "deny",
+          reason: "Recursive force delete is not allowed",
+        },
       },
     }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
   ];
   const timeline = projectAgentTimeline(events);
   const guardStep = timeline.steps.find((s) => s.kind === "guardrail");
@@ -425,22 +429,26 @@ test("guardrail decision creates a step", () => {
 
 test("delegation event creates a step", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
     {
-      type: "delegated_agent_step",
+      type: "package.event",
       sessionId: sid,
       runId: rid,
-      adapterId: "claude-adapter",
-      externalConversationId: "ext-1",
-      stepIndex: 0,
-      state: "done",
-      kind: "assistant",
-      durationMs: 500,
-      usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+      package: "kernel",
+      name: "agent.step",
+      data: {
+        adapterId: "claude-adapter",
+        externalConversationId: "ext-1",
+        stepIndex: 0,
+        state: "done",
+        kind: "assistant",
+        durationMs: 500,
+        usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+      },
     } satisfies AgentEvent,
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
   ];
   const timeline = projectAgentTimeline(events);
   const delStep = timeline.steps.find((s) => s.kind === "delegation");
@@ -462,17 +470,17 @@ test("maxSteps validation rejects invalid values", () => {
 
 test("host turn-policy stop lands on the timeline as stopReason plus bounded detail", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished", { finishReason: "host_policy", stopDetail: "l1-first-plan-paint" }),
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed", stopReason: "host_policy", stopDetail: "l1-first-plan-paint" }),
   ];
   const timeline = projectAgentTimeline(events);
   assert.equal(timeline.status, "finished:host_policy");
   assert.equal(timeline.stopReason, "host_policy");
   assert.equal(timeline.stopDetail, "l1-first-plan-paint");
   // A natural end carries neither field, so existing projections stay byte-identical.
-  const natural = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_finished")]);
+  const natural = projectAgentTimeline([agentEvent("run.started"), agentEvent("run.completed", { status: "completed" })]);
   assert.equal(natural.status, "succeeded");
   assert.equal(natural.stopReason, undefined);
   assert.equal(natural.stopDetail, undefined);
@@ -484,19 +492,17 @@ const STOP_REASONS = ["end_turn", "tool_calls", "max_output_tokens", "content_fi
 
 function providerTurn(turn: number, attempt: number, stopReason: string): AgentEvent[] {
   return [
-    agentEvent("provider_turn_started", { turn, metadata: { providerId: "mock", model: "m", attempt } }),
-    agentEvent("provider_turn_finished", { turn, metadata: { providerId: "mock", model: "m", attempt, stopReason } }),
+    agentEvent("turn.started", { turn, metadata: { providerId: "mock", model: "m", attempt } }),
+    agentEvent("turn.completed", { turn, metadata: { providerId: "mock", model: "m", attempt, stopReason } }),
   ];
 }
 
 test("every taxonomy stop reason badges its turn and provider step", () => {
   for (const stopReason of STOP_REASONS) {
     const timeline = projectAgentTimeline([
-      agentEvent("agent_started"),
-      agentEvent("turn_started", { turn: 1 }),
+      agentEvent("run.started"),
       ...providerTurn(1, 1, stopReason),
-      agentEvent("turn_finished", { turn: 1 }),
-      agentEvent("agent_finished"),
+      agentEvent("run.completed", { status: "completed" }),
     ]);
 
     assert.equal(timeline.turns?.length, 1, `${stopReason}: one turn projected`);
@@ -509,12 +515,10 @@ test("every taxonomy stop reason badges its turn and provider step", () => {
 
 test("a retried turn counts both attempts and badges the last stop reason", () => {
   const timeline = projectAgentTimeline([
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
+    agentEvent("run.started"),
     ...providerTurn(1, 1, "provider_error"),
     ...providerTurn(1, 2, "end_turn"),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
+    agentEvent("run.completed", { status: "completed" }),
   ]);
 
   assert.equal(timeline.turns?.[0]?.providerAttempts, 2);
@@ -532,32 +536,29 @@ test("projects weighted cache hit rates and recorded budgets without zero fills"
     maxTurns: 40,
   };
   const timeline = projectAgentTimeline([
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("provider_turn_started", { turn: 1, metadata: { providerId: "mock", model: "m", attempt: 1 } }),
-    agentEvent("provider_turn_finished", {
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "m", attempt: 1 } }),
+    agentEvent("turn.completed", {
       turn: 1,
       metadata: { providerId: "mock", model: "m", attempt: 1, budgets },
       usage: { inputTokens: 100, cacheReadTokens: 80, cacheWriteTokens: 20 },
     }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("turn_started", { turn: 2 }),
-    agentEvent("provider_turn_started", { turn: 2, metadata: { providerId: "mock", model: "m", attempt: 1 } }),
-    agentEvent("provider_turn_finished", {
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("turn.started", { turn: 2, metadata: { providerId: "mock", model: "m", attempt: 1 } }),
+    agentEvent("turn.completed", {
       turn: 2,
       metadata: { providerId: "mock", model: "m", attempt: 1 },
       usage: { inputTokens: 300, cacheReadTokens: 60 },
     }),
-    agentEvent("turn_finished", { turn: 2 }),
-    agentEvent("turn_started", { turn: 3 }),
-    agentEvent("provider_turn_started", { turn: 3, metadata: { providerId: "mock", model: "m", attempt: 1 } }),
-    agentEvent("provider_turn_finished", {
+    agentEvent("turn.completed", { turn: 2, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("turn.started", { turn: 3, metadata: { providerId: "mock", model: "m", attempt: 1 } }),
+    agentEvent("turn.completed", {
       turn: 3,
       metadata: { providerId: "mock", model: "m", attempt: 1 },
       usage: { inputTokens: 200 },
     }),
-    agentEvent("turn_finished", { turn: 3 }),
-    agentEvent("agent_finished", { usage: { inputTokens: 600, cacheReadTokens: 140, cacheWriteTokens: 20 } }),
+    agentEvent("turn.completed", { turn: 3, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.completed", { status: "completed", usage: { inputTokens: 600, cacheReadTokens: 140, cacheWriteTokens: 20 } }),
   ]);
 
   assert.equal(timeline.turns?.[0]?.cacheHitRate, 0.8);
@@ -570,24 +571,26 @@ test("projects weighted cache hit rates and recorded budgets without zero fills"
 
 test("maxTurns death projects the terminal attribution block and its summary line", () => {
   const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
     ...providerTurn(1, 1, "tool_calls"),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("turn_started", { turn: 2 }),
+    agentEvent("turn.completed", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("turn.started", { turn: 2, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
     ...providerTurn(2, 1, "end_turn"),
-    agentEvent("turn_finished", { turn: 2 }),
-    agentEvent("run_limit_exceeded", { breach: { limit: "maxTurns", maximum: 2, observed: 3 } }),
-    agentEvent("budget_exhausted", {
-      limit: "maxTurns",
-      consumed: { turns: 3, inputTokens: 1_200, providerAttempts: 3, requestBytes: 4_096 },
-      closestOtherAxes: [
-        { axis: "maxToolCalls", usedRatio: 0.625 },
-        { axis: "maxInputTokens", usedRatio: 0.4 },
-      ],
-      recentToolCalls: [{ id: "tc-9", name: "searchCodebase", argHash: "sha256:abc" }],
+    agentEvent("turn.completed", { turn: 2, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.failed", { error: { message: "limit" }, limit: { limit: "maxTurns", maximum: 2, observed: 3 } }),
+    agentEvent("run.failed", {
+      error: { message: "maxTurns" },
+      limit: { limit: "maxTurns", maximum: 2, observed: 3 },
+      attribution: {
+        consumed: { turns: 3, inputTokens: 1_200, providerAttempts: 3, requestBytes: 4_096 },
+        closestOtherAxes: [
+          { axis: "maxToolCalls", usedRatio: 0.625 },
+          { axis: "maxInputTokens", usedRatio: 0.4 },
+        ],
+        recentToolCalls: [{ id: "tc-9", name: "searchCodebase", argHash: "sha256:abc" }],
+      },
     }),
-    agentEvent("error", { error: { code: "run_limit_exceeded", message: "maxTurns" } }),
   ];
 
   const trace: EvaluationTrace = {
@@ -634,45 +637,10 @@ test("maxTurns death projects the terminal attribution block and its summary lin
   assert.equal(summarizeTimeline(timeline).exhaustion, "maxTurns exhausted (3/2); closest: maxToolCalls 0.625, maxInputTokens 0.4");
 
   // A run that ended any other way carries neither field, so existing projections stay unchanged.
-  const natural = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_finished")]);
+  const natural = projectAgentTimeline([agentEvent("run.started"), agentEvent("run.completed", { status: "completed" })]);
   assert.equal(natural.turns, undefined);
   assert.equal(natural.exhaustion, undefined);
   assert.equal(summarizeTimeline(natural).exhaustion, undefined);
-});
-
-// ─── Plan 096: deterministic (no-model) turns fold to their own kind ──────────
-
-test("deterministic_turn folds to a deterministic step with provenance and no usage", () => {
-  const events: AgentEvent[] = [
-    agentEvent("agent_started"),
-    agentEvent("turn_started", { turn: 1 }),
-    agentEvent("deterministic_turn", { turn: 1, middleware: "desk" }),
-    agentEvent("turn_finished", { turn: 1 }),
-    agentEvent("agent_finished"),
-  ];
-
-  const timeline = projectAgentTimeline(events);
-
-  assert.deepStrictEqual(
-    timeline.steps.map((step) => step.kind),
-    ["run", "turn", "deterministic"],
-  );
-  const turn = timeline.steps[1]!;
-  const deterministic = timeline.steps[2]!;
-  assert.equal(deterministic.parentId, turn.id);
-  assert.equal(deterministic.name, "desk");
-  assert.deepStrictEqual(deterministic.metadata, { turn: 1, middleware: "desk" });
-  assert.equal(deterministic.usage, undefined, "a deterministic step must never carry usage");
-  assert.deepStrictEqual(
-    timeline.turns?.map(({ turn: n, providerAttempts, cacheHitRate }) => [n, providerAttempts, cacheHitRate]),
-    [[1, 0, undefined]],
-  );
-
-  // Plan 096 Task 2: the summary splits the answered turn from model turns.
-  const summary = summarizeTimeline(timeline);
-  assert.equal(summary.turnCount, 1);
-  assert.deepStrictEqual(summary.turns, { model: 0, deterministic: 1 });
-  assert.equal(summary.providerAttempts, 0);
 });
 
 // ─── Restore audit projection (plan 109 Task 3) ──────────────────────────────
@@ -686,7 +654,7 @@ const restoreAudit = {
 };
 
 test("agent resume projects the restore audit under every content policy", () => {
-  const events: AgentEvent[] = [agentEvent("agent_started"), agentEvent("agent_resumed", { version: 2, restore: restoreAudit })];
+  const events: AgentEvent[] = [agentEvent("run.started", { resumed: true, restore: restoreAudit })];
   const timeline = projectAgentTimeline(events, { content: "metadata" });
 
   assert.equal(timeline.status, "running");
@@ -701,10 +669,10 @@ test("agent resume projects the restore audit under every content policy", () =>
   assert.equal(timeline.restore?.durationMs, 15);
 
   // A resume with no hooks and a run that never resumed both omit the field.
-  const noHooks = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_resumed", { version: 2 })]);
+  const noHooks = projectAgentTimeline([agentEvent("run.started", { resumed: true })]);
   assert.equal(noHooks.restore, undefined);
   assert.equal(Object.hasOwn(noHooks, "restore"), false, "absent audit must not project as {}");
-  const neverResumed = projectAgentTimeline([agentEvent("agent_started"), agentEvent("agent_finished")]);
+  const neverResumed = projectAgentTimeline([agentEvent("run.started"), agentEvent("run.completed", { status: "completed" })]);
   assert.equal(neverResumed.restore, undefined);
 });
 

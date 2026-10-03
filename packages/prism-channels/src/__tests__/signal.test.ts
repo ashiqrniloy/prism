@@ -144,10 +144,10 @@ describe("plan 079 Signal adapter", () => {
     const socket = new FakeSignalSocket();
     const adapterOptions = options(socket);
     const adapter = createSignalAdapter(adapterOptions);
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "signal-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {

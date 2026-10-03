@@ -200,7 +200,7 @@ export function summarizeTimeline(timeline: ExecutionTimeline): TimelineSummary 
       errorCount++;
     }
 
-    if (step.metadata?.suspended === true || step.metadata?.interruption !== undefined || step.name === "agent_suspended") {
+    if (step.metadata?.suspended === true || step.metadata?.interruption !== undefined || step.name === "run.suspended") {
       suspended = true;
     }
   }

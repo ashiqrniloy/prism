@@ -285,21 +285,22 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       const definition = await assembleAppAgent(
         {
           cwd: repoRoot,
+          store: { type: "memory" },
           tools: { planes: { coding: false } },
         },
         mockProvider,
       );
 
-      // Verify load_skill tool is registered by default
-      const tools = definition.agent.config.tools as any;
-      const loadSkillTool = tools.resolve("load_skill");
-      assert.ok(loadSkillTool, "load_skill tool should be registered by default");
-
-      const session = definition.createSession({ id: "test-prog-session" });
+      // Verify load_skill tool is registered by default (the kernel adds it at assembly time)
+      const session = definition.session({ id: "test-prog-session", create: true });
 
       // Turn 1
-      await session.run("First prompt");
+      await (await session).run("First prompt");
       assert.strictEqual(recordedRequests.length, 1);
+      assert.ok(
+        recordedRequests[0]?.tools?.some((t) => t.name === "load_skill"),
+        "load_skill tool should be registered by default",
+      );
       const turn1Messages = recordedRequests[0]?.messages ?? [];
 
       // Turn 1 must contain the catalog entry
@@ -314,25 +315,27 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       );
       assert.strictEqual(hasBodyTurn1, false, "Turn 1 must not contain the skill body");
 
-      // Load the skill using load_skill tool
+      // Load the skill using the kernel's load_skill tool from turn 1
+      const loadSkillTool = recordedRequests[0]?.tools?.find((t) => t.name === "load_skill");
+      assert.ok(loadSkillTool, "load_skill tool should be registered by default");
       const toolContext: any = {
         toolCallId: "call_1",
         metadata: {
           loadedSkills: (session as any).loadedSkills,
-          activeTools: tools.list(),
+          activeTools: recordedRequests[0]?.tools ?? [],
           activeSkillNames: ["linter"],
         },
       };
       const loadResult = await loadSkillTool.execute({ name: "linter" }, toolContext);
       assert.strictEqual(loadResult.name, "load_skill");
-      assert.strictEqual(loadResult.value?.ok, true);
+      assert.strictEqual((loadResult.value as any)?.ok, true);
       // Tool output must contain the skill directory
       const skillDir = join(repoRoot, ".agents", "agent", "skills", "linter");
       const loadText = typeof (loadResult.value as any)?.text === "string" ? (loadResult.value as any).text : "";
       assert.ok(loadText.includes(`Skill directory: ${skillDir}`), "Tool output must include the skill directory");
 
       // Turn 2
-      await session.run("Second prompt");
+      await (await session).run("Second prompt");
       assert.strictEqual(recordedRequests.length, 2);
       const turn2Messages = recordedRequests[1]?.messages ?? [];
 
@@ -371,6 +374,7 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
         {
           cwd: repoRoot,
           skills: { disclosure: "eager" },
+          store: { type: "memory" },
           tools: { planes: { coding: false } },
         },
         mockProvider,
@@ -386,8 +390,8 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       }
       assert.strictEqual(toolFound, false, "load_skill tool should not be registered in eager mode");
 
-      const session = definition.createSession({ id: "test-eager-session" });
-      await session.run("Hello eager");
+      const session = definition.session({ id: "test-eager-session", create: true });
+      await (await session).run("Hello eager");
 
       assert.strictEqual(recordedRequests.length, 1);
       const turn1Messages = recordedRequests[0]?.messages ?? [];
@@ -425,7 +429,7 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
         mockProvider,
       );
 
-      const session1 = definition.createSession({ id: "resumed-session-1" });
+      const session1 = await definition.session({ id: "resumed-session-1", create: true });
       // Preload skill via restoreLoadedSkills
       session1.restoreLoadedSkills?.(["tester"]);
 
@@ -441,7 +445,7 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       assert.deepStrictEqual(session1.getLoadedSkillNames?.(), ["tester"]);
 
       // Re-create / resume session with same id
-      const session2 = definition.createSession({ id: "resumed-session-1" });
+      const session2 = await definition.session({ id: session1.id });
       // When restored from checkpoint or explicitly resumed:
       session2.restoreLoadedSkills?.(session1.getLoadedSkillNames?.() ?? []);
 

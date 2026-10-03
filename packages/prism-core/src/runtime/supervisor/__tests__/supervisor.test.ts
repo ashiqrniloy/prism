@@ -17,8 +17,8 @@ import {
 import { createSupervisor, SupervisorDeniedError, SupervisorError, SupervisorLimitError, type SupervisorEvent } from "../index.js";
 
 const ownership = { tenantId: "tenant", userId: "user" };
-const doneAgent = (text = "child", tokens = 2): Agent =>
-  createAgent({
+const doneAgent = async (text = "child", tokens = 2): Promise<Agent> =>
+  await createAgent({
     model: { provider: "mock", model: "test" },
     provider: createMockProvider([providerTextDelta(text), providerUsage({ totalTokens: tokens }), providerDone()]),
   });
@@ -32,9 +32,9 @@ describe("createSupervisor", () => {
       ownership,
       children: {
         research: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             scopes.push(context.resourceId, context.threadId);
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -75,7 +75,7 @@ describe("createSupervisor", () => {
     };
     const denied = createSupervisor({
       ownership,
-      children: { child: { createAgent: () => doneAgent() } },
+      children: { child: { createAgent: async () => await doneAgent() } },
       hooks: { before: () => ({ allowed: false, reason: "review denied" }) },
     });
     await assert.rejects(denied.delegate({ childId: "child", input: "x" }), /review denied/);
@@ -84,7 +84,11 @@ describe("createSupervisor", () => {
     const narrowed = createSupervisor({
       ownership,
       permission: { check: () => ({ allowed: false, reason: "parent denied" }) },
-      children: { child: { createAgent: () => createAgent({ model: { provider: "mock", model: "test" }, provider, tools: [tool] }) } },
+      children: {
+        child: {
+          createAgent: async () => await createAgent({ model: { provider: "mock", model: "test" }, provider, tools: { add: [tool] } }),
+        },
+      },
       hooks: { before: () => ({ input: "modified", permission: { check: () => ({ allowed: true }) } }) },
     });
     await narrowed.delegate({ childId: "child", input: "original" });
@@ -113,27 +117,30 @@ describe("createSupervisor", () => {
       effectStore,
       children: {
         child: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             childIdentity = context.identity?.principal.id ?? "";
             assert.strictEqual(context.effectStore, effectStore);
-            return createAgent({
+            return await createAgent({
               model: { provider: "mock", model: "test" },
               provider: createMockProvider([
                 providerToolCall({ type: "tool_call", id: "effect-1", name: "mutate", arguments: {} }),
                 providerDone(),
               ]),
-              tools: [
-                {
-                  name: "mutate",
-                  effect: { kind: "external_mutation", idempotency: "required" },
-                  execute: (_args, execution) => {
-                    seenKey = execution.idempotencyKey ?? "";
-                    effectSessionId = execution.sessionId;
-                    effectRunId = execution.runId;
-                    return { toolCallId: execution.toolCallId, name: "mutate", value: "done" };
+              tools: {
+                add: [
+                  {
+                    name: "mutate",
+                    effect: { kind: "external_mutation", idempotency: "required" },
+                    execute: (_args, execution) => {
+                      assert.strictEqual(execution.principal, identity.principal);
+                      seenKey = execution.idempotencyKey ?? "";
+                      effectSessionId = execution.sessionId;
+                      effectRunId = execution.runId;
+                      return { toolCallId: execution.toolCallId, name: "mutate", value: "done" };
+                    },
                   },
-                },
-              ],
+                ],
+              },
             });
           },
         },
@@ -154,13 +161,13 @@ describe("createSupervisor", () => {
         cycle: {
           createAgent: async (context) => {
             await context.delegate({ childId: "cycle", input: "again" });
-            return doneAgent();
+            return await doneAgent();
           },
         },
         slow: {
           createAgent: async () => {
             await new Promise((resolve) => setTimeout(resolve, 30));
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -179,9 +186,9 @@ describe("createSupervisor", () => {
       limits: { maxActiveChildren: 2 },
       children: {
         child: {
-          createAgent: () => {
+          createAgent: async () => {
             created += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -203,9 +210,9 @@ describe("createSupervisor", () => {
       hooks: { before: () => ({ limits: { maxActiveChildren: 2 } }) },
       children: {
         child: {
-          createAgent: () => {
+          createAgent: async () => {
             hookCreated += 1;
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -225,13 +232,13 @@ describe("createSupervisor", () => {
     const completed = createSupervisor({
       ownership,
       limits: { maxQueuedEvents: 1 },
-      children: { child: { createAgent: () => doneAgent("async") } },
+      children: { child: { createAgent: async () => await doneAgent("async") } },
     });
     const firstHandle = await completed.delegateAsync({ childId: "child", input: "x" });
     const first = await completed.wait(firstHandle.delegationId);
     const repeated = await completed.wait(firstHandle.delegationId);
-    assert.equal(first.status, "succeeded");
-    assert.equal(repeated.status, "succeeded");
+    assert.equal(first.status, "completed");
+    assert.equal(repeated.status, "completed");
     assert.equal(first.text, "async");
     const secondHandle = await completed.delegateAsync({ childId: "child", input: "y" });
     await completed.wait(secondHandle.delegationId);
@@ -284,7 +291,7 @@ describe("createSupervisor", () => {
     const oversized = createSupervisor({
       ownership,
       limits: { maxMessageBytes: 4 },
-      children: { child: { createAgent: () => doneAgent() } },
+      children: { child: { createAgent: async () => await doneAgent() } },
     });
     await assert.rejects(oversized.delegate({ childId: "child", input: "12345" }), SupervisorLimitError);
 
@@ -295,7 +302,7 @@ describe("createSupervisor", () => {
         child: {
           createAgent: async () => {
             await new Promise(() => undefined);
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -303,7 +310,11 @@ describe("createSupervisor", () => {
     await assert.rejects(timeout.delegate({ childId: "child", input: "x" }), /timeout/);
     assert.equal(timeout.activeChildren, 0);
 
-    const tokens = createSupervisor({ ownership, limits: { maxTokens: 1 }, children: { child: { createAgent: () => doneAgent("x", 2) } } });
+    const tokens = createSupervisor({
+      ownership,
+      limits: { maxTokens: 1 },
+      children: { child: { createAgent: async () => await doneAgent("x", 2) } },
+    });
     await assert.rejects(tokens.delegate({ childId: "child", input: "x" }), /token limit/);
 
     let calls = 0;
@@ -314,14 +325,14 @@ describe("createSupervisor", () => {
         return { toolCallId: context.toolCallId, name, content: [] };
       },
     }));
-    const toolAgent = createAgent({
+    const toolAgent = await createAgent({
       model: { provider: "mock", model: "test" },
       provider: createMockProvider([
         providerToolCall({ type: "tool_call", id: "1", name: "one", arguments: {} }),
         providerToolCall({ type: "tool_call", id: "2", name: "two", arguments: {} }),
         providerDone(),
       ]),
-      tools,
+      tools: { add: tools },
     });
     const bounded = createSupervisor({ ownership, limits: { maxToolCalls: 1 }, children: { child: { createAgent: () => toolAgent } } });
     await assert.rejects(bounded.delegate({ childId: "child", input: "x" }), /tool-call limit/);
@@ -338,7 +349,7 @@ describe("createSupervisor", () => {
         child: {
           createAgent: async ({ signal }) => {
             await new Promise<void>((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
-            return doneAgent();
+            return await doneAgent();
           },
         },
       },
@@ -359,7 +370,7 @@ describe("createSupervisor", () => {
   // returning a session (or any non-Agent) must fail with an actionable error at
   // delegate() time, not a cryptic "reading 'permission'" TypeError.
   it("rejects a child factory returning a non-Agent with an actionable error", async () => {
-    const session = doneAgent().createSession({ id: "s" });
+    const session = await (await doneAgent()).session({ id: "s", create: true });
     const sessionFactory = createSupervisor({
       ownership,
       children: { writer: { createAgent: () => session as unknown as Agent } },
@@ -400,7 +411,7 @@ describe("createSupervisor", () => {
   it("does not project child events onto the supervisor stream by default", async () => {
     const supervisor = createSupervisor({
       ownership,
-      children: { child: { createAgent: () => doneAgent() } },
+      children: { child: { createAgent: async () => await doneAgent() } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await supervisor.delegate({ childId: "child", input: "x" });
@@ -418,7 +429,7 @@ describe("createSupervisor", () => {
     const supervisor = createSupervisor({
       ownership,
       childEvents: true,
-      children: { research: { createAgent: () => doneAgent() } },
+      children: { research: { createAgent: async () => await doneAgent() } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await supervisor.delegate({ childId: "research", input: "x" });
@@ -437,14 +448,14 @@ describe("createSupervisor", () => {
     }
     assert.equal(received[0]?.type, "delegation_started");
     const childEvents = received.filter((event) => event.type === "delegation_child_event");
-    assert.ok(childEvents.some((event) => event.childEventType === "agent_started"));
-    assert.ok(childEvents.some((event) => event.childEventType === "agent_finished"));
+    assert.ok(childEvents.some((event) => event.childEventType === "run.started"));
+    assert.ok(childEvents.some((event) => event.childEventType === "run.completed"));
     assert.equal(
       childEvents.every((event) => event.childId === "research" && event.depth === 1),
       true,
     );
     assert.equal(
-      childEvents.some((event) => event.childEventType === "message_delta" || event.childEventType === "message_started"),
+      childEvents.some((event) => event.childEventType === "message.delta"),
       false,
     );
     assert.equal(received.at(-1)?.type, "delegation_finished");
@@ -468,11 +479,11 @@ describe("createSupervisor", () => {
       redactor: createSecretRedactor(["canary"]),
       children: {
         child: {
-          createAgent: () =>
-            createAgent({
+          createAgent: async () =>
+            await createAgent({
               model: { provider: "mock", model: "test" },
               provider,
-              tools: [tool],
+              tools: { add: [tool] },
             }),
         },
       },
@@ -501,7 +512,7 @@ describe("createSupervisor", () => {
       ownership,
       childEvents: true,
       limits: { maxChildEventsPerDelegation: 1 },
-      children: { child: { createAgent: () => doneAgent() } },
+      children: { child: { createAgent: async () => await doneAgent() } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await supervisor.delegate({ childId: "child", input: "x" });
@@ -527,8 +538,8 @@ describe("child lifetime and report policy", () => {
     execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }),
   };
 
-  const gatedAgent = (gate: Promise<void>): Agent =>
-    createAgent({
+  const gatedAgent = async (gate: Promise<void>): Promise<Agent> =>
+    await createAgent({
       model: { provider: "mock", model: "test" },
       provider: {
         id: "mock",
@@ -541,7 +552,7 @@ describe("child lifetime and report policy", () => {
     });
 
   /** One provider call per child turn; the first `turns - 1` calls request `callsPerTurn` tools. */
-  const toolTurnAgent = (turns: number, callsPerTurn = 1): Agent => {
+  const toolTurnAgent = async (turns: number, callsPerTurn = 1): Promise<Agent> => {
     let generated = 0;
     const provider: AIProvider = {
       id: "mock",
@@ -555,7 +566,7 @@ describe("child lifetime and report policy", () => {
         yield providerDone();
       },
     };
-    return createAgent({ model: { provider: "mock", model: "test" }, provider, tools: [noopTool] });
+    return await createAgent({ model: { provider: "mock", model: "test" }, provider, tools: { add: [noopTool] } });
   };
 
   it("keeps session-lifetime children running after the caller signal aborts", async () => {
@@ -565,7 +576,7 @@ describe("child lifetime and report policy", () => {
     });
     const supervisor = createSupervisor({
       ownership,
-      children: { watch: { policy: { lifetime: "session" }, createAgent: () => gatedAgent(gate) } },
+      children: { watch: { policy: { lifetime: "session" }, createAgent: async () => await gatedAgent(gate) } },
     });
     const caller = new AbortController();
     const handle = await supervisor.delegateAsync({ childId: "watch", input: "go", lifetime: "session", signal: caller.signal });
@@ -583,7 +594,7 @@ describe("child lifetime and report policy", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const supervisor = createSupervisor({ ownership, children: { watch: { createAgent: () => gatedAgent(gate) } } });
+    const supervisor = createSupervisor({ ownership, children: { watch: { createAgent: async () => await gatedAgent(gate) } } });
     const caller = new AbortController();
     const handle = await supervisor.delegateAsync({ childId: "watch", input: "go", signal: caller.signal });
     caller.abort(new Error("parent turn ended"));
@@ -598,7 +609,7 @@ describe("child lifetime and report policy", () => {
     const supervisor = createSupervisor({
       ownership,
       signal: session.signal,
-      children: { watch: { policy: { lifetime: "session" }, createAgent: () => gatedAgent(gate) } },
+      children: { watch: { policy: { lifetime: "session" }, createAgent: async () => await gatedAgent(gate) } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     const handle = await supervisor.delegateAsync({ childId: "watch", input: "go", lifetime: "session" });
@@ -612,12 +623,12 @@ describe("child lifetime and report policy", () => {
   });
 
   it("denies session lifetime the host child policy does not enable", async () => {
-    const supervisor = createSupervisor({ ownership, children: { child: { createAgent: () => doneAgent() } } });
+    const supervisor = createSupervisor({ ownership, children: { child: { createAgent: async () => await doneAgent() } } });
     await assert.rejects(supervisor.delegateAsync({ childId: "child", input: "x", lifetime: "session" }), /session lifetime/);
     await assert.rejects(supervisor.delegate({ childId: "child", input: "x", lifetime: "session" }), /session lifetime/);
     const session = createSupervisor({
       ownership,
-      children: { child: { policy: { lifetime: "session" }, createAgent: () => doneAgent() } },
+      children: { child: { policy: { lifetime: "session" }, createAgent: async () => await doneAgent() } },
     });
     await assert.rejects(session.delegate({ childId: "child", input: "x", lifetime: "session" }), /delegateAsync/);
     // The host flag is a capability, not a default: an omitted lifetime still runs as a task child.
@@ -627,7 +638,7 @@ describe("child lifetime and report policy", () => {
   it("emits child_milestone at the requested turn cadence", async () => {
     const supervisor = createSupervisor({
       ownership,
-      children: { child: { policy: { report: "stream" }, createAgent: () => toolTurnAgent(4) } },
+      children: { child: { policy: { report: "stream" }, createAgent: async () => await toolTurnAgent(4) } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await supervisor.delegate({ childId: "child", input: "x", report: "milestones", milestone: { everyTurns: 2 } });
@@ -643,7 +654,9 @@ describe("child lifetime and report policy", () => {
     // Host cadence is a chattiness ceiling: a chattier request is clamped up to it.
     const hostCadence = createSupervisor({
       ownership,
-      children: { child: { policy: { report: "milestones", milestone: { everyTurns: 3 } }, createAgent: () => toolTurnAgent(4) } },
+      children: {
+        child: { policy: { report: "milestones", milestone: { everyTurns: 3 } }, createAgent: async () => await toolTurnAgent(4) },
+      },
     });
     const clamped = hostCadence.subscribe()[Symbol.asyncIterator]();
     await hostCadence.delegate({ childId: "child", input: "x", milestone: { everyTurns: 1 } });
@@ -661,8 +674,8 @@ describe("child lifetime and report policy", () => {
       ownership,
       children: {
         child: {
-          policy: { report: "milestones", milestone: { predicate: (event) => event.type === "tool_execution_finished" } },
-          createAgent: () => toolTurnAgent(4),
+          policy: { report: "milestones", milestone: { predicate: (event) => event.type === "tool.completed" } },
+          createAgent: async () => await toolTurnAgent(4),
         },
       },
     });
@@ -685,7 +698,7 @@ describe("child lifetime and report policy", () => {
         ownership,
         childEvents: true,
         limits: { maxChildEventsPerSecond: 1 },
-        children: { child: { createAgent: () => toolTurnAgent(4) } },
+        children: { child: { createAgent: async () => await toolTurnAgent(4) } },
       });
       const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
       await supervisor.delegate({ childId: "child", input: "x" });
@@ -706,7 +719,7 @@ describe("child lifetime and report policy", () => {
   });
 
   it("enforces a spawn budget share and attributes the limit that fired", async () => {
-    const supervisor = createSupervisor({ ownership, children: { child: { createAgent: () => toolTurnAgent(12, 5) } } });
+    const supervisor = createSupervisor({ ownership, children: { child: { createAgent: async () => await toolTurnAgent(12, 5) } } });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await assert.rejects(supervisor.delegate({ childId: "child", input: "x", budgetShare: 0.25 }), /limit/i);
     const received: SupervisorEvent[] = [];
@@ -726,7 +739,7 @@ describe("child lifetime and report policy", () => {
   it("clamps requested report/share to the host child policy ceiling", async () => {
     const supervisor = createSupervisor({
       ownership,
-      children: { child: { policy: { report: "on-complete", budgetShare: 0.25 }, createAgent: () => toolTurnAgent(12, 5) } },
+      children: { child: { policy: { report: "on-complete", budgetShare: 0.25 }, createAgent: async () => await toolTurnAgent(12, 5) } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await assert.rejects(supervisor.delegate({ childId: "child", input: "x", report: "stream", budgetShare: 0.9 }), /limit/i);
@@ -754,7 +767,7 @@ describe("child event passthrough", () => {
     execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }),
   };
 
-  const toolTurnAgent = (turns: number): Agent => {
+  const toolTurnAgent = async (turns: number): Promise<Agent> => {
     let generated = 0;
     const provider: AIProvider = {
       id: "mock",
@@ -766,7 +779,7 @@ describe("child event passthrough", () => {
         yield providerDone();
       },
     };
-    return createAgent({ model: { provider: "mock", model: "test" }, provider, tools: [noopTool] });
+    return await createAgent({ model: { provider: "mock", model: "test" }, provider, tools: { add: [noopTool] } });
   };
 
   it("routes the exact tagged projection to the sink and forwards per-turn provider/tool events", async () => {
@@ -775,7 +788,7 @@ describe("child event passthrough", () => {
       ownership,
       childEvents: true,
       childEventSink: (event) => void sink.push(event),
-      children: { child: { createAgent: () => toolTurnAgent(2) } },
+      children: { child: { createAgent: async () => await toolTurnAgent(2) } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await supervisor.delegate({ childId: "child", input: "x" });
@@ -790,18 +803,14 @@ describe("child event passthrough", () => {
     // The sink sees exactly the events published on the supervisor stream, in the same order.
     assert.deepEqual(sink, published);
     const types = sink.map((event) => event.type);
-    assert.ok(types.includes("agent_started"));
-    assert.ok(types.includes("turn_started"));
-    assert.ok(types.includes("provider_turn_started"));
-    assert.ok(types.includes("tool_execution_finished"));
-    assert.equal(
-      types.includes("message_delta") || types.includes("message_started"),
-      false,
-      "per-token/message events never pass through",
-    );
+    assert.ok(types.includes("run.started"));
+    assert.ok(types.includes("turn.started"));
+    assert.ok(types.includes("turn.started"));
+    assert.ok(types.includes("tool.completed"));
+    assert.equal(types.includes("message.delta"), false, "per-token/message events never pass through");
     assert.deepEqual(
       sink
-        .filter((event): event is Extract<AgentEvent, { type: "turn_started" }> => event.type === "turn_started")
+        .filter((event): event is Extract<AgentEvent, { type: "turn.started" }> => event.type === "turn.started")
         .map((event) => event.turn),
       [1, 2],
       "per-turn ordering is deterministic across relay",
@@ -819,7 +828,7 @@ describe("child event passthrough", () => {
     const supervisor = createSupervisor({
       ownership,
       childEventSink: (event) => void sink.push(event),
-      children: { child: { createAgent: () => doneAgent() } },
+      children: { child: { createAgent: async () => await doneAgent() } },
     });
     await supervisor.delegate({ childId: "child", input: "x" });
     assert.deepEqual(sink, []);
@@ -841,18 +850,20 @@ describe("child event passthrough", () => {
       redactor: createSecretRedactor(["canary"]),
       children: {
         child: {
-          createAgent: () =>
-            createAgent({
+          createAgent: async () =>
+            await createAgent({
               model: { provider: "mock", model: "test" },
               provider,
-              tools: [{ name: "write", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }) }],
+              tools: {
+                add: [{ name: "write", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }) }],
+              },
             }),
         },
       },
     });
     await supervisor.delegate({ childId: "child", input: "x" });
     assert.ok(
-      sink.some((event) => event.type === "tool_execution_started"),
+      sink.some((event) => event.type === "tool.started"),
       "sink must have received the tool event",
     );
     assert.equal(JSON.stringify(sink).includes("canary"), false, "secret reached the sink");
@@ -866,7 +877,7 @@ describe("child event passthrough", () => {
       childEventSink: (event) => void sink.push(event),
       children: {
         lead: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
@@ -875,10 +886,10 @@ describe("child event passthrough", () => {
                 yield providerDone();
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
-        writer: { createAgent: () => doneAgent("nested") },
+        writer: { createAgent: async () => await doneAgent("nested") },
       },
     });
     await supervisor.delegate({ childId: "lead", input: "x" });
@@ -894,17 +905,17 @@ describe("child event passthrough", () => {
 });
 
 describe("cascade and recovery telemetry", () => {
-  const hangingAgent = (): Agent => {
+  const hangingAgent = async (): Promise<Agent> => {
     const provider: AIProvider = {
       id: "mock",
       async *generate() {
         await new Promise(() => undefined);
       },
     };
-    return createAgent({ model: { provider: "mock", model: "test" }, provider });
+    return await createAgent({ model: { provider: "mock", model: "test" }, provider });
   };
 
-  const toolTurnAgent = (): Agent => {
+  const toolTurnAgent = async (): Promise<Agent> => {
     let generated = 0;
     const provider: AIProvider = {
       id: "mock",
@@ -914,10 +925,10 @@ describe("cascade and recovery telemetry", () => {
         yield providerDone();
       },
     };
-    return createAgent({
+    return await createAgent({
       model: { provider: "mock", model: "test" },
       provider,
-      tools: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }],
+      tools: { add: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }] },
     });
   };
 
@@ -936,7 +947,7 @@ describe("cascade and recovery telemetry", () => {
     let runs = 0;
     const supervisor = createSupervisor({
       ownership,
-      children: { worker: { createAgent: () => (runs++ === 0 ? toolTurnAgent() : doneAgent("recovered")) } },
+      children: { worker: { createAgent: async () => (runs++ === 0 ? await toolTurnAgent() : await doneAgent("recovered")) } },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
     await assert.rejects(supervisor.delegate({ childId: "worker", input: "first", limits: { maxToolCalls: 1 } }), /limit/i);
@@ -971,7 +982,7 @@ describe("cascade and recovery telemetry", () => {
   });
 
   it("carries the child result on a limit error, and none on a supervisor-level ceiling", async () => {
-    const supervisor = createSupervisor({ ownership, children: { worker: { createAgent: () => toolTurnAgent() } } });
+    const supervisor = createSupervisor({ ownership, children: { worker: { createAgent: async () => await toolTurnAgent() } } });
     const limitError = await supervisor
       .delegate({ childId: "worker", input: "first", limits: { maxToolCalls: 1 } })
       .catch((thrown: unknown) => thrown);
@@ -993,11 +1004,16 @@ describe("cascade and recovery telemetry", () => {
   });
 
   it("summary({ reset: true }) opens a new counting window, and retries count only inside it", async () => {
-    const script = [() => toolTurnAgent(), () => doneAgent("recovered"), () => toolTurnAgent(), () => doneAgent("recovered")];
+    const script = [
+      async () => await toolTurnAgent(),
+      async () => await doneAgent("recovered"),
+      async () => await toolTurnAgent(),
+      async () => await doneAgent("recovered"),
+    ];
     let runs = 0;
     const supervisor = createSupervisor({
       ownership,
-      children: { worker: { createAgent: () => script[runs++]?.() ?? doneAgent("recovered") } },
+      children: { worker: { createAgent: async () => script[runs++]?.() ?? (await doneAgent("recovered")) } },
     });
     // A reset before any delegation is a fresh window: every row zeroed and idle.
     assert.deepEqual(supervisor.summary({ reset: true }).children, [
@@ -1037,7 +1053,7 @@ describe("cascade and recovery telemetry", () => {
       signal: controller.signal,
       children: {
         lead: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
@@ -1046,13 +1062,13 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("lead exploded after the reset");
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
         writer: {
-          createAgent: () => {
+          createAgent: async () => {
             writers += 1;
-            return hangingAgent();
+            return await hangingAgent();
           },
         },
       },
@@ -1082,17 +1098,17 @@ describe("cascade and recovery telemetry", () => {
       redactor: createSecretRedactor(["canary"]),
       children: {
         broken: {
-          createAgent: () => {
+          createAgent: async () => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
                 throw new Error("provider exploded with canary");
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
-        idle: { createAgent: () => hangingAgent() },
+        idle: { createAgent: async () => await hangingAgent() },
       },
     });
     const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
@@ -1125,7 +1141,7 @@ describe("cascade and recovery telemetry", () => {
       signal: controller.signal,
       children: {
         lead: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
@@ -1133,11 +1149,11 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("lead exploded");
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
-        writer: { createAgent: () => hangingAgent() },
-        other: { createAgent: () => hangingAgent() },
+        writer: { createAgent: async () => await hangingAgent() },
+        other: { createAgent: async () => await hangingAgent() },
       },
     });
     await supervisor.delegateAsync({ childId: "other", input: "unrelated" });
@@ -1160,7 +1176,7 @@ describe("cascade and recovery telemetry", () => {
       limits: { maxActiveChildren: 8 },
       children: {
         lead: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const attempt = (leads += 1);
             const provider: AIProvider = {
               id: "mock",
@@ -1173,16 +1189,16 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("second lead exploded");
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
         writer: {
-          createAgent: () => {
+          createAgent: async () => {
             writers += 1;
-            return hangingAgent();
+            return await hangingAgent();
           },
         },
-        other: { createAgent: () => hangingAgent() },
+        other: { createAgent: async () => await hangingAgent() },
       },
     });
     await supervisor.delegateAsync({ childId: "lead", input: "stay" });
@@ -1207,7 +1223,7 @@ describe("cascade and recovery telemetry", () => {
       signal: controller.signal,
       children: {
         lead: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
@@ -1217,11 +1233,11 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("lead exploded");
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
         mid: {
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
@@ -1229,16 +1245,16 @@ describe("cascade and recovery telemetry", () => {
                 await new Promise(() => undefined);
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
         writer: {
-          createAgent: () => {
+          createAgent: async () => {
             writerStarts += 1;
-            return hangingAgent();
+            return await hangingAgent();
           },
         },
-        researcher: { createAgent: () => doneAgent() },
+        researcher: { createAgent: async () => await doneAgent() },
       },
     });
     await assert.rejects(supervisor.delegate({ childId: "lead", input: "x" }));
@@ -1259,7 +1275,7 @@ describe("cascade and recovery telemetry", () => {
       children: {
         watch: {
           policy: { lifetime: "session" },
-          createAgent: (context) => {
+          createAgent: async (context) => {
             const provider: AIProvider = {
               id: "mock",
               async *generate() {
@@ -1267,10 +1283,10 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("watch exploded");
               },
             };
-            return createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
           },
         },
-        writer: { createAgent: () => hangingAgent() },
+        writer: { createAgent: async () => await hangingAgent() },
       },
     });
     const handle = await supervisor.delegateAsync({ childId: "watch", input: "go", lifetime: "session" });

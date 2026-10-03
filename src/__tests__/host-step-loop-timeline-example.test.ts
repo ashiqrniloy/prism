@@ -64,7 +64,7 @@ test("eight steps all present with budgets and stop reasons", () => {
     assert.equal(record.host.step, index + 1);
     assert.equal(record.host.stepId, `step-${String(index + 1).padStart(2, "0")}`);
     assert.equal(record.prism.sessionId, "host-step-loop-session");
-    assert.equal(record.prism.status, "succeeded");
+    assert.equal(record.prism.status, "completed");
     assert.equal(record.timeline.runId, record.prism.runId);
     assert.equal(record.timeline.sessionId, record.prism.sessionId);
     runIds.add(record.prism.runId);

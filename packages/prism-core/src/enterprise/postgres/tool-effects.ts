@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ToolEffectKey, ToolEffectRecord, ToolEffectStatus, ToolEffectStore, ToolEffectTransition, ToolResult } from "@arnilo/prism";
-import { assertIdentityActive, assertIdentityMatchesOwnership, ToolEffectError } from "@arnilo/prism";
+import { ToolEffectError } from "@arnilo/prism";
 import type { Pool } from "pg";
 import { decodeBoundedJson, encodeBoundedJson } from "./codecs.js";
 import { EnterprisePostgresError } from "./errors.js";
@@ -66,6 +66,13 @@ export function createPostgresToolEffectStore(pool: Pool, schema: string): ToolE
       const claimTtlMs = claimTtl(input.claimTtlMs);
       const maxAttempts = maxAttemptsValue(input.maxAttempts);
       try {
+        // Old identity-scoped claims must be reconciled, never silently replayed under a new key.
+        const legacy = await pool.query(
+          `SELECT 1 FROM ${table} WHERE tenant_id = $1 AND account_key = $2 AND user_key = $3
+             AND principal_id <> $4 AND session_id = $5 AND run_id = $6 AND tool_call_id = $7 LIMIT 1`,
+          [...ownerParams(context.owner), context.principalId, context.sessionId, context.runId, context.toolCallId],
+        );
+        if (legacy.rows.length) throw conflict();
         const inserted = await insertClaim(pool, table, context, claimTtlMs);
         if (inserted) return { outcome: "acquired" as const, record: inserted };
 
@@ -250,7 +257,7 @@ export async function cleanupExpiredPostgresToolEffects(
      FROM candidates
      WHERE row.ctid = candidates.ctid
      RETURNING 1`,
-    cleanupParams(owner),
+    cleanupParams({ ...owner, principalId: "" }),
   );
   const remaining = owner.limit - rowCount(transitioned);
   if (remaining <= 0) return { transitioned: rowCount(transitioned), removed: 0 };
@@ -266,7 +273,7 @@ export async function cleanupExpiredPostgresToolEffects(
      DELETE FROM ${table} AS row USING candidates
      WHERE row.ctid = candidates.ctid
      RETURNING 1`,
-    cleanupParams({ ...owner, limit: remaining }),
+    cleanupParams({ ...owner, principalId: "", limit: remaining }),
   );
   return { transitioned: rowCount(transitioned), removed: rowCount(removed) };
 }
@@ -326,19 +333,11 @@ async function readRecord(pool: Pool, table: string, context: EffectContext): Pr
 
 function effectContext(input: ToolEffectKey): EffectContext {
   input.signal?.throwIfAborted();
-  assertIdentityActive(input.identity);
   const owner = effectOwner(input.ownership);
-  assertIdentityMatchesOwnership(input.identity, input.ownership);
-  if (
-    input.identity.tenantId !== owner.tenantId ||
-    input.identity.accountId !== owner.accountId ||
-    input.identity.userId !== owner.userId
-  ) {
-    throw conflict();
-  }
   return {
     owner,
-    principalId: inputText(input.identity.principal.id, "effect principal", MAX_IDENTIFIER_BYTES),
+    // ponytail: keep the SQL column until Phase 6. Empty cannot match a valid legacy principal id.
+    principalId: "",
     key: inputText(input.key, "effect key", MAX_KEY_BYTES),
     sessionId: inputText(input.sessionId, "session id", MAX_IDENTIFIER_BYTES),
     runId: inputText(input.runId, "run id", MAX_IDENTIFIER_BYTES),
@@ -383,7 +382,7 @@ function rowToRecord(row: Record<string, unknown>, context: EffectContext): Tool
   const tenantId = requiredText(row.tenant_id, "effect tenant");
   const accountId = normalizedOwner(row.account_key, "effect account");
   const userId = normalizedOwner(row.user_key, "effect user");
-  const principalId = requiredText(row.principal_id, "effect principal", MAX_IDENTIFIER_BYTES);
+  const principalId = row.principal_id;
   if (
     tenantId !== context.owner.tenantId ||
     accountId !== context.owner.accountId ||

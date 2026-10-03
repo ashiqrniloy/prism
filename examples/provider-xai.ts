@@ -1,19 +1,19 @@
-import { createExtensionKernel } from "@arnilo/prism";
-import { createXaiProviderPackage } from "@arnilo/prism-providers/xai";
+import { createAgent } from "@arnilo/prism";
+import { xaiModels, xaiPackage } from "@arnilo/prism-providers/xai";
 
 export async function demo() {
-  const kernel = createExtensionKernel({ errorPolicy: "throw" });
-  await kernel.load([createXaiProviderPackage({ apiKey: () => "fake-xai-key" })]);
-  const provider = kernel.registries.providers.get("xai");
-  const auth = kernel.registries.authMethods.list().filter((method) => method.provider === "xai");
-  return {
-    provider: provider?.id,
-    auth: auth.map((method) => method.kind),
-    models: kernel.registries.models
-      .list()
-      .filter((model) => model.provider === "xai")
-      .map((model) => model.model),
-  };
+  const agent = await createAgent({
+    model: { provider: "xai", model: xaiModels[0]!.model },
+    packages: [xaiPackage({ apiKey: () => "fake-xai-key" })],
+  });
+  try {
+    return {
+      package: agent.inspect().packages[0]?.name,
+      models: xaiModels.map((model) => model.model),
+    };
+  } finally {
+    await agent.dispose();
+  }
 }
 
 export async function main() {

@@ -6,42 +6,44 @@ import {
   createAgent,
   createClaimGroundingGuardrail,
   createMockProvider,
-  type GuardrailContext,
-  GuardrailError,
+  type HookContext,
+  type Message,
   providerDone,
   providerTextDelta,
   type RunLedger,
-  runGuardrails,
   type ToolResult,
+  type GuardrailRecord,
 } from "../index.js";
+import { kernelEvents } from "./kernel-event-helpers.js";
+import { failedRun } from "./run-result-helpers.js";
 
-function outputContext(text: string, toolResults: readonly ToolResult[] = []): GuardrailContext<"output"> {
+function assistantMessage(text: string): Message {
+  return { id: "m1", role: "assistant", content: [{ type: "text", text }] };
+}
+
+function hookContext(): HookContext {
   return {
-    stage: "output",
-    value: { content: [{ type: "text", text }], calls: [], started: true },
     sessionId: "session",
     runId: "run",
-    metadata: {},
-    signal: new AbortController().signal,
-    toolResults,
+    emit: () => {},
+    reject: (reason) => ({ __prismHookRejection: reason }) as never,
   };
 }
 
-async function evaluate(
-  text: string,
-  guard = createClaimGroundingGuardrail({ requireEvidenceForNumbers: true }),
-  toolResults: readonly ToolResult[] = [],
-) {
-  return runGuardrails({
-    stage: "output",
-    guardrails: { output: [guard] },
-    value: outputContext(text, toolResults).value,
-    context: outputContext(text, toolResults),
-  });
+/** Run the `model.response` gate directly; a rejection carries the reason it failed with. */
+function evaluate(text: string, guard: ReturnType<typeof createClaimGroundingGuardrail>, toolResults: readonly ToolResult[] = []) {
+  const emitted: AgentEventRecord[] = [];
+  const rejection = guard(assistantMessage(text), {
+    ...hookContext(),
+    emit: (event) => emitted.push({ type: event.type, event } as AgentEventRecord),
+  } as HookContext);
+  return { rejection, emitted };
 }
 
-describe("claim grounding guardrail", () => {
-  it("matches same-run tool results and blocks an uncited claim with its bounded span", async () => {
+const TOOL_RESULTS: readonly ToolResult[] = [{ toolCallId: "sum", name: "sum", value: 4320.5 }];
+
+describe("claim grounding model.response gate", () => {
+  it("matches same-run tool results and blocks an uncited claim", async () => {
     let turns = 0;
     const provider: AIProvider = {
       id: "mock",
@@ -55,63 +57,58 @@ describe("claim grounding guardrail", () => {
         yield providerDone();
       },
     };
-    const grounding = createClaimGroundingGuardrail({ requireEvidenceForNumbers: true });
-    const agent = createAgent({
+    let latest: readonly ToolResult[] = [];
+    const grounding = createClaimGroundingGuardrail({
+      requireEvidenceForNumbers: true,
+      toolResults: () => latest,
+    });
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider,
-      tools: [{ name: "sum", execute: () => ({ toolCallId: "sum", name: "sum", value: 4320.5 }) }],
-      guardrails: { output: [grounding] },
+      tools: {
+        add: [
+          {
+            name: "sum",
+            execute: (_args, call) => {
+              latest = [{ toolCallId: call.toolCallId, name: "sum", value: 4320.5 }];
+              return { toolCallId: call.toolCallId, name: "sum", value: 4320.5 };
+            },
+          },
+        ],
+      },
+      hooks: (hooks) => hooks.on("model.response", grounding),
     });
-    assert.equal((await agent.createSession().run("calculate")).text, "Total is 4,320.50.");
+    assert.equal((await (await agent.session()).run("calculate")).text, "Total is 4,320.50.");
 
-    const blocked = createAgent({
+    latest = [];
+    const blocked = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Total is 4,320.50."), providerDone()]),
-      guardrails: { output: [grounding] },
+      hooks: (hooks) => hooks.on("model.response", grounding),
     });
-    await assert.rejects(
-      () => blocked.createSession().run("calculate"),
-      (error: unknown) => {
-        const cause = error instanceof Error ? error.cause : undefined;
-        return (
-          cause instanceof GuardrailError &&
-          cause.record.reason === "claim_ungrounded" &&
-          cause.record.metadata?.claim === "4,320.50" &&
-          typeof cause.record.metadata?.start === "number" &&
-          typeof cause.record.metadata?.end === "number" &&
-          !JSON.stringify(cause.record.metadata).includes("Total is")
-        );
-      },
-    );
+    await failedRun((await blocked.session()).run("calculate"), /claim_ungrounded/);
   });
 
-  it("accepts an immediately cited host-governed figure", async () => {
-    const result = await evaluate(
-      "Revenue is 999 [evidence:metric:revenue-q2].",
-      createClaimGroundingGuardrail({
-        requireEvidenceForNumbers: true,
-        evidenceSources: () => [{ value: 4320.5, ref: "metric:revenue-q2" }],
-      }),
-    );
-    assert.equal(result.terminal, undefined);
+  it("accepts an immediately cited host-governed figure", () => {
+    const guard = createClaimGroundingGuardrail({
+      requireEvidenceForNumbers: true,
+      evidenceSources: () => [{ value: 4320.5, ref: "metric:revenue-q2" }],
+    });
+    const { rejection } = evaluate("Revenue is 999 [evidence:metric:revenue-q2].", guard);
+    assert.equal(rejection, undefined);
   });
 
-  it("accepts rounded quantities only when requested", async () => {
-    const toolResults = [{ toolCallId: "sum", name: "sum", value: 4320.5 }];
-    assert.equal((await evaluate("Total is ~4.3k.", undefined, toolResults)).terminal?.reason, "claim_ungrounded");
-    assert.equal(
-      (
-        await evaluate(
-          "Total is ~4.3k.",
-          createClaimGroundingGuardrail({ requireEvidenceForNumbers: true, tolerance: "rounded" }),
-          toolResults,
-        )
-      ).terminal,
-      undefined,
-    );
+  it("accepts rounded quantities only when requested", () => {
+    assert.ok(evaluate("Total is ~4.3k.", createClaimGroundingGuardrail({ requireEvidenceForNumbers: true }), TOOL_RESULTS).rejection);
+    const rounded = createClaimGroundingGuardrail({
+      requireEvidenceForNumbers: true,
+      tolerance: "rounded",
+      toolResults: () => TOOL_RESULTS,
+    });
+    assert.equal(evaluate("Total is ~4.3k.", rounded).rejection, undefined);
   });
 
-  it("flags without blocking and persists the violation through the standard guardrail event", async () => {
+  it("flags without blocking through the standard guardrail event", async () => {
     const events: AgentEventRecord[] = [];
     const ledger: RunLedger = {
       appendRun: async () => {},
@@ -121,34 +118,36 @@ describe("claim grounding guardrail", () => {
       appendToolCall: async () => {},
       appendUsage: async () => {},
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("Total is 9."), providerDone()]),
-      guardrails: { output: [createClaimGroundingGuardrail({ requireEvidenceForNumbers: true, onViolation: "flag" })] },
+      hooks: (hooks) => hooks.on("model.response", createClaimGroundingGuardrail({ requireEvidenceForNumbers: true, onViolation: "flag" })),
     });
-    assert.equal((await agent.createSession().run("calculate", { runLedger: ledger })).text, "Total is 9.");
-    const event = events.find((record) => record.type === "guardrail_decision");
-    assert.equal(event?.event.type, "guardrail_decision");
-    if (event?.event.type !== "guardrail_decision") throw new Error("missing flag event");
-    assert.deepEqual(event.event.record, {
-      guardrail: "claim-grounding",
-      stage: "output",
-      action: "allow",
-      reason: "claim_ungrounded",
-      metadata: { violation: true, claim: "9", contentIndex: 0, start: 9, end: 10 },
-    });
+    assert.equal((await (await agent.session()).run("calculate", { runLedger: ledger })).text, "Total is 9.");
+    const event = kernelEvents<{ record: GuardrailRecord }>(
+      events.map((record) => record.event),
+      "guardrail.decision",
+    )[0];
+    if (!event) throw new Error("missing flag event");
+    assert.equal(event.record.guardrail, "claim-grounding");
+    assert.equal(event.record.reason, "claim_ungrounded");
+    assert.deepEqual(event.record.metadata, { violation: true, claim: "9", contentIndex: 0, start: 9, end: 10 });
   });
 
   it("scans a 100 KiB message inside the 2 ms budget", () => {
-    const guard = createClaimGroundingGuardrail({ requireEvidenceForNumbers: true });
-    const context = outputContext(`${"x".repeat(100 * 1024)} 4320.50`, [{ toolCallId: "sum", name: "sum", value: 4320.5 }]);
-    guard.evaluate(context);
+    const guard = createClaimGroundingGuardrail({
+      requireEvidenceForNumbers: true,
+      toolResults: () => TOOL_RESULTS,
+    });
+    const message = assistantMessage(`${"x".repeat(100 * 1024)} 4320.50`);
+    const context = hookContext();
+    guard(message, context);
     const samples: number[] = [];
     for (let index = 0; index < 21; index += 1) {
       const started = performance.now();
-      const decision = guard.evaluate(context);
+      const rejection = guard(message, context);
       samples.push(performance.now() - started);
-      assert.equal(decision instanceof Promise, false);
+      assert.equal(rejection instanceof Promise, false);
     }
     samples.sort((left, right) => left - right);
     const median = samples[10] ?? Number.POSITIVE_INFINITY;

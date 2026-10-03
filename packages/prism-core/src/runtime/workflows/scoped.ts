@@ -137,7 +137,7 @@ export function withNodeScope<TNode extends WorkflowNodeDefinition>(scopeKey: st
         ...(ag.input ? { input: (ctx: WorkflowNodeContext) => ag.input?.(createScopedContext(ctx, scopeKey)) } : {}),
         ...(ag.output
           ? {
-              output: (ctx: WorkflowNodeContext & { readonly session: import("@arnilo/prism").AgentSession }) => {
+              output: (ctx: WorkflowNodeContext & { readonly session: import("@arnilo/prism").Session }) => {
                 const scopedCtx = createScopedContext(ctx, scopeKey);
                 return ag.output?.(Object.assign(scopedCtx, { session: ctx.session }));
               },

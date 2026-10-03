@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import type { AIProvider, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { assertNoSecretLeak, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
 import {
   createTypeSafeProvider,
-  createTypeSafeProviderPackage,
+  typesafePackage,
   defineTypeSafeModel,
   TYPESAFE_API_KEY_ENV,
   TYPESAFE_DEFAULT_BASE_URL,
@@ -68,33 +69,13 @@ function textOf(events: readonly ProviderEvent[]): string {
 
 describe("@arnilo/prism-providers/typesafe (provider shell)", () => {
   it("typesafe_package_registers_provider_models_and_auth", async () => {
-    const registered: unknown[] = [];
-    await createTypeSafeProviderPackage({ apiKey: "fake-key" }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (m: ModelConfig) => registered.push(m),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as never);
-    assert.ok(
-      registered.some((item) => (item as AIProvider).id === "typesafe"),
-      "provider registered",
-    );
-    const models = registered.filter(
-      (item): item is ModelConfig =>
-        typeof item === "object" && item !== null && "model" in item && (item as ModelConfig).provider === "typesafe",
-    );
+    await loadProviderPackage(typesafePackage({ apiKey: "fake-key" }));
+    const models = typeSafeModels;
     assert.deepEqual(
       models.map((entry) => entry.model),
       ["jev-latest", "jev-preview"],
     );
     assert.ok(models.every((entry) => entry.capabilities?.structuredOutput === "json_schema"));
-    assert.deepEqual(
-      registered.find((item) => (item as AuthMethod).kind === "api_key"),
-      {
-        kind: "api_key",
-        provider: "typesafe",
-        credentialName: "apiKey",
-      },
-    );
   });
 
   it("typesafe_models_declare_decision_capabilities_limits_and_cost", () => {

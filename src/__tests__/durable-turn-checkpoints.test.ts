@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEvent, AgentRunStateOptions, AgentSession, CheckpointStore, ProviderRequest } from "../contracts.js";
+import type { AgentEvent, AgentRunStateOptions, Session, CheckpointStore, ProviderRequest } from "../contracts.js";
 import {
   AgentRunStateError,
   createAgent,
+  askEveryTool,
   createMemoryCheckpointStore,
   createMemorySessionStore,
   loadAgentRunState,
@@ -38,8 +39,8 @@ function toolResultMessages(request: ProviderRequest, toolCallId: string): numbe
   ).length;
 }
 
-/** Runs a session while collecting its events, returning the run id from `agent_started`. */
-async function runCapturingId(session: AgentSession, input: string, runState: AgentRunStateOptions) {
+/** Runs a session while collecting its events, returning the run id from `run.started`. */
+async function runCapturingId(session: Session, input: string, runState: AgentRunStateOptions) {
   const events: AgentEvent[] = [];
   const subscription = session.subscribe();
   const pump = (async () => {
@@ -51,14 +52,14 @@ async function runCapturingId(session: AgentSession, input: string, runState: Ag
     (error: unknown) => ({ result: undefined, error }),
   );
   await pump;
-  const runId = events.find((event) => event.type === "agent_started")?.runId;
+  const runId = events.find((event) => event.type === "run.started")?.runId;
   assert.ok(runId, "run id captured from agent_started");
   return { runId, ...outcome };
 }
 
 /** Agent whose first turn calls one tool and whose second turn crashes once (closing the store
  *  gate first, so post-crash writes are lost exactly as they are in a real process death). */
-function crashOnceAgent(options: {
+async function crashOnceAgent(options: {
   readonly toolName: string;
   readonly toolCallId: string;
   readonly requests: ProviderRequest[];
@@ -67,9 +68,9 @@ function crashOnceAgent(options: {
   let turn = 0;
   let crashed = false;
   let executions = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "crash-recovery",
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     provider: {
       id: "mock",
@@ -90,16 +91,18 @@ function crashOnceAgent(options: {
         yield providerDone();
       },
     },
-    tools: [
-      {
-        name: options.toolName,
-        parameters: {},
-        execute: () => {
-          executions += 1;
-          return { toolCallId: options.toolCallId, name: options.toolName, value: "persisted" };
+    tools: {
+      add: [
+        {
+          name: options.toolName,
+          parameters: {},
+          execute: () => {
+            executions += 1;
+            return { toolCallId: options.toolCallId, name: options.toolName, value: "persisted" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
   return { agent, executions: () => executions };
 }
@@ -109,8 +112,8 @@ describe("turn-boundary crash-recovery checkpoints", () => {
     const memory = createMemoryCheckpointStore();
     const { store: checkpoints, gate } = crashableCheckpoints(memory);
     const requests: ProviderRequest[] = [];
-    const { agent, executions } = crashOnceAgent({ toolName: "digest", toolCallId: "call-1", requests, gate });
-    const session = agent.createSession({ id: "crash-session" });
+    const { agent, executions } = await crashOnceAgent({ toolName: "digest", toolCallId: "call-1", requests, gate });
+    const session = await agent.session({ id: "crash-session", create: true });
 
     const crashed = await runCapturingId(session, "investigate", {
       checkpoints,
@@ -136,9 +139,9 @@ describe("turn-boundary crash-recovery checkpoints", () => {
       resumedEvents.push(event);
     }
 
-    assert.equal(resumedEvents.filter((event) => event.type === "agent_resumed").length, 1);
+    assert.equal(resumedEvents.filter((event) => event.type === "run.started" && event.resumed === true).length, 1);
     assert.equal(executions(), 1, "no tool re-dispatch on continue");
-    assert.equal(resumedEvents.filter((event) => event.type === "tool_execution_started").length, 0);
+    assert.equal(resumedEvents.filter((event) => event.type === "tool.started").length, 0);
     const finished = await loadAgentRunState(checkpoints, { runId: crashed.runId });
     assert.equal(finished.state.status, "succeeded");
     assert.equal(finished.state.checkpointPolicy, "every-turn");
@@ -154,9 +157,10 @@ describe("turn-boundary crash-recovery checkpoints", () => {
     const checkpoints = createMemoryCheckpointStore();
     let turn = 0;
     let executions = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "continue-vs-approval",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -171,19 +175,21 @@ describe("turn-boundary crash-recovery checkpoints", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "gated",
-          parameters: {},
-          execute: () => {
-            executions += 1;
-            return { toolCallId: "gate-1", name: "gated", value: "done" };
+      tools: {
+        add: [
+          {
+            name: "gated",
+            parameters: {},
+            execute: () => {
+              executions += 1;
+              return { toolCallId: "gate-1", name: "gated", value: "done" };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const suspended = await agent.createSession({ id: "approval-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, checkpointPolicy: "every-turn" },
+    const suspended = await (await agent.session({ id: "approval-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1", checkpointPolicy: "every-turn" },
     });
     assert.equal(suspended.status, "suspended");
     const suspendedState = suspended.runState;
@@ -212,7 +218,7 @@ describe("turn-boundary crash-recovery checkpoints", () => {
       { decision: "approve", expectedVersion: version },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(approved.status, "succeeded");
+    assert.equal(approved.status, "completed");
     assert.equal(executions, 1);
   });
 
@@ -228,8 +234,8 @@ describe("turn-boundary crash-recovery checkpoints", () => {
       },
     };
     const requests: ProviderRequest[] = [];
-    const { agent } = crashOnceAgent({ toolName: "digest", toolCallId: "call-1", requests, gate });
-    const session = agent.createSession({ id: "guards-session" });
+    const { agent } = await crashOnceAgent({ toolName: "digest", toolCallId: "call-1", requests, gate });
+    const session = await agent.session({ id: "guards-session", create: true });
     const crashed = await runCapturingId(session, "go", {
       checkpoints: counting,
       definitionRevision: "1",
@@ -276,9 +282,9 @@ describe("turn-boundary crash-recovery checkpoints", () => {
       },
     };
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "default-policy",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -293,12 +299,12 @@ describe("turn-boundary crash-recovery checkpoints", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }],
+      tools: { add: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }] },
     });
-    const result = await agent
-      .createSession({ id: "default-session" })
-      .run("go", { runState: { checkpoints: counting, definitionRevision: "1" } });
-    assert.equal(result.status, "succeeded");
+    const result = await (await agent.session({ id: "default-session", create: true })).run("go", {
+      runState: { checkpoints: counting, definitionRevision: "1" },
+    });
+    assert.equal(result.status, "completed");
     assert.equal(writes, 0, "default policy leaves the checkpoint store untouched on a clean run");
   });
 });

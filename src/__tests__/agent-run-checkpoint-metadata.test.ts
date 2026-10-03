@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   boundCheckpointMetadata,
+  askEveryTool,
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
@@ -16,10 +17,11 @@ import {
 } from "../index.js";
 
 /** Suspends on the first tool call, then finishes on resume (same harness as agent-run-lifecycle.test.ts). */
-function createSuspendingAgent(id: string) {
-  return createAgent({
+async function createSuspendingAgent(id: string) {
+  return await createAgent({
+    hooks: askEveryTool(),
     id,
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     provider: (() => {
       let turn = 0;
@@ -37,7 +39,7 @@ function createSuspendingAgent(id: string) {
         },
       };
     })(),
-    tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-metadata", name: "write", value: 1 }) }],
+    tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-metadata", name: "write", value: 1 }) }] },
   });
 }
 
@@ -59,14 +61,13 @@ describe("agent checkpoint sidecar metadata", () => {
 
   it("pins metadata on the record, preserves it across resume, and serves it from status", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createSuspendingAgent("checkpoint-metadata-demo");
+    const agent = await createSuspendingAgent("checkpoint-metadata-demo");
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
     let head = "commit-1";
-    const suspended = await agent.createSession({ id: "checkpoint-metadata-session" }).run("go", {
+    const suspended = await (await agent.session({ id: "checkpoint-metadata-session", create: true })).run("go", {
       runState: {
         checkpoints,
         definitionRevision: "1",
-        interruptBeforeTool: true,
         // Provider is resolved per write: the map tracks the host's live state.
         checkpointMetadata: () => ({ gitCommit: head, docVersion: "v12" }),
       },
@@ -100,10 +101,10 @@ describe("agent checkpoint sidecar metadata", () => {
 
   it("leaves records without metadata readable (legacy shape)", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createSuspendingAgent("checkpoint-metadata-legacy");
+    const agent = await createSuspendingAgent("checkpoint-metadata-legacy");
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
-    const suspended = await agent.createSession({ id: "checkpoint-metadata-legacy-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "checkpoint-metadata-legacy-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const status = await lifecycle.status(
       { runId: suspended.runId, sessionId: suspended.sessionId },

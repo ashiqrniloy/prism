@@ -16,7 +16,7 @@ import {
   resolveSessionSearchQuery,
   SESSION_SEARCH_UNSUPPORTED_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
-  type SessionIndex,
+  type SessionSearchIndex,
   type SessionSearchHit,
   type SessionSearchKind,
   type SessionSearchQuery,
@@ -27,7 +27,7 @@ import { createJsonlSessionStore } from "../node/session-store-jsonl.js";
 import { createMemorySessionStore, createSessionEntry } from "../session-stores.js";
 import { assertSessionStoreConforms } from "../testing/session-store-conformance.js";
 
-describe("SessionIndex contracts", () => {
+describe("SessionSearchIndex contracts", () => {
   it("resolveSessionSearchQuery applies defaults and rejects invalid limits/queries", () => {
     const resolved = resolveSessionSearchQuery({});
     assert.equal(resolved.limit, DEFAULT_SESSION_SEARCH_LIMIT);
@@ -42,9 +42,9 @@ describe("SessionIndex contracts", () => {
     assert.throws(() => resolveSessionSearchQuery({ cursor: "c".repeat(HARD_MAX_SESSION_SEARCH_QUERY_BYTES) }), TypeError);
   });
 
-  it("exports SessionIndex seam and optional SessionStore.searchSessions", async () => {
+  it("exports SessionSearchIndex seam and optional SessionStore.searchSessions", async () => {
     const hits: SessionSearchHit[] = [{ sessionId: "s1", leafId: "leaf-1", label: "auth" }];
-    const index: SessionIndex = {
+    const index: SessionSearchIndex = {
       async search(query) {
         const q = resolveSessionSearchQuery(query);
         return { items: hits.filter((hit) => !q.label || hit.label === q.label).slice(0, q.limit) };

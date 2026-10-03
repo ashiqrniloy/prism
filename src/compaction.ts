@@ -1,15 +1,16 @@
-import type { CompactionEntryData, CompactionStrategy, ContentBlock, Message, SessionEntry } from "./contracts.js";
+import type { CompactionEntryData, ContentBlock, Message, SessionEntry } from "./contracts.js";
+import type { Compactor } from "./slots/types.js";
 import { redactSecrets } from "./redaction.js";
 import { createSessionEntry } from "./session-stores.js";
 
-export interface DefaultCompactionStrategyOptions {
+export interface DefaultCompactorOptions {
   readonly name?: string;
   readonly keepRecentEntries?: number;
   readonly maxSummaryChars?: number;
   readonly secrets?: readonly (string | undefined)[];
 }
 
-export function createDefaultCompactionStrategy(options: DefaultCompactionStrategyOptions = {}): CompactionStrategy {
+export function createDefaultCompactor(options: DefaultCompactorOptions = {}): Compactor {
   const name = options.name ?? "default-compaction";
   return {
     name,

@@ -382,7 +382,7 @@ test("selectMcpServers gates http/sse by origin and path-segment subtree and std
 });
 
 test("createSpawnableAgent serves initialize/new/prompt/close over the SDK", async () => {
-  const agent = createSpawnableAgent({
+  const agent = await createSpawnableAgent({
     config: parseConfig(JSON.stringify({ userId: "local", cwd: process.cwd(), model: { provider: "mock", model: "mock" } }), process.cwd()),
   });
   await client().connectWith(agent, async (connection) => {
@@ -409,7 +409,7 @@ test("createSpawnableAgent routes advertised fs coding tools to client buffers",
     const diskPath = join(dir, "buffer.txt");
     writeFileSync(diskPath, "disk");
     const writes: Array<{ path: string; content: string }> = [];
-    const agent = createSpawnableAgent({
+    const agent = await createSpawnableAgent({
       config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, sessionStore: { type: "memory" } }), dir),
       provider: writeProvider(),
     });
@@ -446,7 +446,7 @@ test("createSpawnableAgent routes advertised fs coding tools to client buffers",
 test("createSpawnableAgent keeps disk coding tools when fs is not advertised", async () => {
   const dir = mkdtempSync(join(tmpdir(), "acp-agent-disk-"));
   try {
-    const agent = createSpawnableAgent({
+    const agent = await createSpawnableAgent({
       config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, sessionStore: { type: "memory" } }), dir),
       provider: writeProvider(),
     });
@@ -471,7 +471,7 @@ test("createSpawnableAgent keeps disk coding tools when fs is not advertised", a
 });
 
 test("createSpawnableAgent works with the sqlite store", async () => {
-  const agent = createSpawnableAgent({
+  const agent = await createSpawnableAgent({
     config: parseConfig(
       JSON.stringify({
         userId: "local",
@@ -578,7 +578,7 @@ test("refused and cancelled permission outcomes never run the tool", async () =>
     try {
       const writes: string[] = [];
       const permissions: string[] = [];
-      const agent = createSpawnableAgent({
+      const agent = await createSpawnableAgent({
         config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, sessionStore: { type: "memory" } }), dir),
         provider: writeProvider(),
       });
@@ -669,7 +669,7 @@ test("recording provider sees exact requested model", async () => {
   };
   const dir = mkdtempSync(join(tmpdir(), "acp-agent-recording-"));
   try {
-    const agent = createSpawnableAgent({
+    const agent = await createSpawnableAgent({
       config: parseConfig(
         JSON.stringify({
           userId: "local",
@@ -698,7 +698,7 @@ test("recording provider sees exact requested model", async () => {
 test("explicit mock mode stays completely offline and needs no credentials", async () => {
   const dir = mkdtempSync(join(tmpdir(), "acp-agent-mock-"));
   try {
-    const agent = createSpawnableAgent({
+    const agent = await createSpawnableAgent({
       config: parseConfig(
         JSON.stringify({
           userId: "local",
@@ -723,31 +723,31 @@ test("explicit mock mode stays completely offline and needs no credentials", asy
   }
 });
 
-test("unknown and mismatched provider fail before startup", () => {
+test("unknown and mismatched provider fail before startup", async () => {
   const dir = mkdtempSync(join(tmpdir(), "acp-agent-unknown-"));
   try {
     // Missing model without provider fails
-    assert.throws(
-      () =>
-        createSpawnableAgent({
+    await assert.rejects(
+      async () =>
+        await createSpawnableAgent({
           config: parseConfig(JSON.stringify({ userId: "local", cwd: dir }), dir),
         }),
       (err: unknown) => err instanceof ConfigError && /model configuration is required/.test(err.message),
     );
 
     // Unknown provider in config fails
-    assert.throws(
-      () =>
-        createSpawnableAgent({
+    await assert.rejects(
+      async () =>
+        await createSpawnableAgent({
           config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, model: { provider: "unsupported-llm", model: "v1" } }), dir),
         }),
       (err: unknown) => err instanceof ConfigError && /unknown provider "unsupported-llm"/.test(err.message),
     );
 
     // Injected provider mismatches config model
-    assert.throws(
-      () =>
-        createSpawnableAgent({
+    await assert.rejects(
+      async () =>
+        await createSpawnableAgent({
           config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, model: { provider: "openai", model: "gpt-4o" } }), dir),
           provider: {
             id: "anthropic",
@@ -760,9 +760,9 @@ test("unknown and mismatched provider fail before startup", () => {
     );
 
     // Model option override mismatches injected provider
-    assert.throws(
-      () =>
-        createSpawnableAgent({
+    await assert.rejects(
+      async () =>
+        await createSpawnableAgent({
           config: parseConfig(JSON.stringify({ userId: "local", cwd: dir }), dir),
           provider: {
             id: "anthropic",
@@ -779,22 +779,22 @@ test("unknown and mismatched provider fail before startup", () => {
   }
 });
 
-test("missing credentialRef or unresolvable credential fails before startup", () => {
+test("missing credentialRef or unresolvable credential fails before startup", async () => {
   const dir = mkdtempSync(join(tmpdir(), "acp-agent-cred-"));
   try {
     // Real provider without credentialRef fails
-    assert.throws(
-      () =>
-        createSpawnableAgent({
+    await assert.rejects(
+      async () =>
+        await createSpawnableAgent({
           config: parseConfig(JSON.stringify({ userId: "local", cwd: dir, model: { provider: "openai", model: "gpt-4o" } }), dir),
         }),
       (err: unknown) => err instanceof ConfigError && /requires credentialRef in config/.test(err.message),
     );
 
     // Unresolvable credentialRef fails
-    assert.throws(
-      () =>
-        createSpawnableAgent({
+    await assert.rejects(
+      async () =>
+        await createSpawnableAgent({
           config: parseConfig(
             JSON.stringify({
               userId: "local",
@@ -838,7 +838,7 @@ test("credential value never enters config, identity, events, or persistence", a
         yield providerDone();
       },
     };
-    const agent = createSpawnableAgent({
+    const agent = await createSpawnableAgent({
       config,
       provider: testProvider,
       credentialResolver: (ref) => (ref === "TEST_SECRET_REF" ? canary : undefined),
@@ -905,7 +905,7 @@ test("two sessions with editor FS preserve the selected model and provider indep
       },
     };
 
-    const agent = createSpawnableAgent({
+    const agent = await createSpawnableAgent({
       config: parseConfig(
         JSON.stringify({
           userId: "local",
@@ -981,7 +981,7 @@ test("approval/restart reconstruction restores session agents across restart wit
     );
 
     let capturedSessionId: string | undefined;
-    const agent1 = createSpawnableAgent({ config, provider: writeProvider("mock") });
+    const agent1 = await createSpawnableAgent({ config, provider: writeProvider("mock") });
     const acpClient1 = client({ name: "client-1" })
       .onRequest(methods.client.fs.readTextFile, () => ({ content: "disk" }))
       .onRequest(methods.client.fs.writeTextFile, () => ({}))
@@ -1006,7 +1006,7 @@ test("approval/restart reconstruction restores session agents across restart wit
     assert.ok(capturedSessionId);
 
     // Process 2: simulates process restart with same sqlite database and config
-    const agent2 = createSpawnableAgent({ config });
+    const agent2 = await createSpawnableAgent({ config });
     const sessionAgentId = `prism-acp-agent:${capturedSessionId}`;
     const lifecycle = (
       agent2 as unknown as {

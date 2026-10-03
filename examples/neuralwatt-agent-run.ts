@@ -1,13 +1,6 @@
+import { type AgentEvent, createAgent, type JsonObject, type ToolDefinition } from "@arnilo/prism";
 import {
-  type AgentEvent,
-  createAgent,
-  createAgentSession,
-  createExtensionKernel,
-  type JsonObject,
-  type ToolDefinition,
-} from "@arnilo/prism";
-import {
-  createNeuralWattProviderPackage,
+  neuralwattPackage,
   defineNeuralWattModel,
   type NeuralWattCostTelemetry,
   type NeuralWattEnergyTelemetry,
@@ -91,13 +84,10 @@ async function telemetry() {
 
 export async function demo() {
   requestBodies.length = 0;
-  const kernel = createExtensionKernel();
-  await kernel.load([createNeuralWattProviderPackage({ apiKey: () => "fake-neuralwatt-key", fetch: mockFetch, models: [model] })]);
-
-  const agent = createAgent({
-    model: kernel.registries.models.resolve("neuralwatt", model.model),
-    provider: kernel.registries.providers.resolve("neuralwatt"),
-    tools: [lookup],
+  const agent = await createAgent({
+    model,
+    packages: [neuralwattPackage({ apiKey: () => "fake-neuralwatt-key", fetch: mockFetch })],
+    tools: { add: [lookup] },
     providerOptions: {
       compat: {
         reasoning_effort: "medium",
@@ -110,23 +100,23 @@ export async function demo() {
     },
   });
 
-  const session = createAgentSession({ agent, id: "neuralwatt-demo" });
+  const session = await agent.session();
   const eventsPromise = collect(session.subscribe());
   await session.run("Use a tool, then answer with cache-aware usage.", { inputLayout: "cache_aware", limits: { maxToolRounds: 1 } });
   const events = await eventsPromise;
-  const finished = [...events].reverse().find((event) => event.type === "agent_finished");
+  const finished = [...events].reverse().find((event) => event.type === "run.completed");
   const { energy, cost } = await telemetry();
 
   return {
     eventTypes: events.map((event) => event.type),
-    toolCalls: events.filter((event) => event.type === "tool_execution_started").length,
-    toolResults: events.filter((event) => event.type === "tool_execution_finished").length,
+    toolCalls: events.filter((event) => event.type === "tool.started").length,
+    toolResults: events.filter((event) => event.type === "tool.completed").length,
     reasoningEffort: requestBodies[0]?.reasoning_effort,
     thinkingTokenBudget: requestBodies[0]?.thinking_token_budget,
     enableThinking: (requestBodies[0]?.chat_template_kwargs as JsonObject | undefined)?.enable_thinking,
     preserveThinking: (requestBodies[0]?.chat_template_kwargs as JsonObject | undefined)?.preserve_thinking,
     clearThinking: (requestBodies[0]?.chat_template_kwargs as JsonObject | undefined)?.clear_thinking,
-    cacheReadTokens: finished?.type === "agent_finished" ? finished.usage?.cacheReadTokens : undefined,
+    cacheReadTokens: finished?.type === "run.completed" ? finished.usage?.cacheReadTokens : undefined,
     energyKwh: energy?.energy_kwh,
     costUsd: cost?.request_cost_usd,
     cacheSavingsUsd: cost?.cache_savings_usd,

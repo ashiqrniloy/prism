@@ -247,15 +247,10 @@ describe("memory fabric notes", () => {
   it("starts nothing on create and stays out of the root entrypoint", async () => {
     const { memory, vectors, working } = makeMemory();
     const fabric = createMemoryFabric({ memory });
-    assert.deepEqual(Object.keys(fabric).sort(), [
-      "attach",
-      "createContextProvider",
-      "forget",
-      "recall",
-      "remember",
-      "searchConversation",
-      "tools",
-    ]);
+    assert.deepEqual(
+      Object.keys(fabric).sort(),
+      ["attach", "forget", "recall", "registerContextBuild", "remember", "searchConversation", "tools"].sort(),
+    );
     assert.equal((await vectors.getByThread(scope)).length, 0);
     assert.equal(await working.get(scope), undefined);
     const root = (await import("../../index.js")) as Record<string, unknown>;

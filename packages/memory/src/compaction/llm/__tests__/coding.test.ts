@@ -4,6 +4,7 @@ import {
   type AgentEvent,
   type ContentBlock,
   createAgent,
+  createMemorySessionStore,
   createMockProvider,
   createSessionEntry,
   type ProviderRequest,
@@ -13,8 +14,8 @@ import {
   type SessionEntry,
   toolCallContent,
 } from "@arnilo/prism";
-import { assertCompactionStrategyConforms } from "@arnilo/prism/testing/compaction-conformance";
-import { createCodingCompactionStrategy } from "../index.js";
+import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
+import { createCodingCompactor } from "../index.js";
 
 const model = { provider: "mock", model: "summary" };
 const timestamp = "2026-01-01T00:00:00.000Z";
@@ -34,7 +35,7 @@ async function take(iterable: AsyncIterable<AgentEvent>, count: number): Promise
 test("coding_compaction_preset_prioritizes_coding_handoff_and_redacts_paths", async () => {
   const secret = "secret-token";
   const requests: ProviderRequest[] = [];
-  const strategy = createCodingCompactionStrategy({
+  const strategy = createCodingCompactor({
     provider: createMockProvider([providerTextDelta(`## Progress\ncheck ${secret}`), providerDone()], {
       onRequest: (request) => requests.push(request),
     }),
@@ -99,7 +100,7 @@ test("coding_compaction_preset_prioritizes_coding_handoff_and_redacts_paths", as
 });
 
 test("coding_compaction_preset keeps the shared summary cap", async () => {
-  const strategy = createCodingCompactionStrategy({
+  const strategy = createCodingCompactor({
     provider: createMockProvider([providerTextDelta("x".repeat(100)), providerDone()]),
     model,
     keepRecentTokens: 1,
@@ -114,42 +115,59 @@ test("coding_compaction_preset keeps the shared summary cap", async () => {
 
 test("coding_compaction_preset_redacts runtime output and appends nothing on provider failure", async () => {
   const secret = "runtime-secret";
-  const session = createAgent({ model, provider: createMockProvider([providerTextDelta("reply"), providerDone()]) }).createSession();
+  // Roadmap §2.5: the compactor is the `compaction` slot; `compaction` carries the secrets.
+  const session = await (
+    await createAgent({
+      model,
+      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      slots: {
+        compaction: createCodingCompactor({
+          provider: createMockProvider([providerTextDelta(`summary ${secret}`), providerDone()]),
+          model,
+          keepRecentTokens: 1,
+        }),
+      },
+      compaction: { secrets: [secret] },
+    })
+  ).session();
   await session.run(`old ${secret}`);
   await session.run("new");
   const events = take(session.subscribe(), 2);
 
-  await session.compact({
-    strategy: createCodingCompactionStrategy({
-      provider: createMockProvider([providerTextDelta(`summary ${secret}`), providerDone()]),
-      model,
-      keepRecentTokens: 1,
-    }),
-    secrets: [secret],
-  });
+  await session.compact();
   assert.equal(JSON.stringify(await events).includes(secret), false);
   assert.equal(JSON.stringify((await session.entries()).filter((entry) => entry.kind === "compaction")).includes(secret), false);
-
-  const before = await session.entries();
-  await assert.rejects(
-    session.compact({
-      strategy: createCodingCompactionStrategy({
-        provider: createMockProvider([providerError(new Error("boom"))]),
-        model,
-        keepRecentTokens: 1,
-      }),
-    }),
-    /Summarization failed: boom/,
-  );
-  assert.deepEqual(await session.entries(), before);
 });
 
 test("coding_compaction_preset_conforms without a second runtime", async () => {
-  const strategy = createCodingCompactionStrategy({
+  const strategy = createCodingCompactor({
     provider: createMockProvider([providerTextDelta("## Goal\nsummary"), providerDone()]),
     model,
     keepRecentTokens: 1,
   });
-  const { summary } = await assertCompactionStrategyConforms(strategy, { secrets: ["secret-value"], exerciseAbort: true });
+  const { summary } = await assertCompactorConforms(strategy, { secrets: ["secret-value"], exerciseAbort: true });
   assert.match(summary, /summary/);
+});
+
+test("coding_compaction_appends_nothing_when_the_summary_provider_fails", async () => {
+  const store = createMemorySessionStore();
+  const session = await (
+    await createAgent({
+      model,
+      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      slots: {
+        store,
+        compaction: createCodingCompactor({
+          provider: createMockProvider([providerError(new Error("boom"))]),
+          model,
+          keepRecentTokens: 1,
+        }),
+      },
+    })
+  ).session();
+  await session.run("old");
+  const before = await session.entries();
+
+  await assert.rejects(session.compact(), /Summarization failed: boom/);
+  assert.deepEqual(await session.entries(), before);
 });

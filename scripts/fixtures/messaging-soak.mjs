@@ -111,11 +111,11 @@ let deliveredCount = 0;
 const persistence = createSqlitePersistence({ filename: join(dir, "soak.sqlite") });
 
 try {
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "soak-agent",
     model: { provider: "mock", model: "soak" },
     provider,
-    store: persistence,
+    slots: { store: persistence },
     runLedger: persistence,
   });
   const runtime = createMessagingRuntime({

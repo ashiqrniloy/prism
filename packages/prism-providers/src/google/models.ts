@@ -104,7 +104,7 @@ export function googleThinkingBudgetRange(modelId: string): readonly [number, nu
 
 /**
  * Caller-gated Gemini model discovery via official `GET /v1beta/models`.
- * Never invoked by `createGoogleProviderPackage` — hosts call this and pass
+ * Never invoked by `googlePackage` — hosts call this and pass
  * results via `models:` (or register themselves).
  * @see https://ai.google.dev/api/models
  */

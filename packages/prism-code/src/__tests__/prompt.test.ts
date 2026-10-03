@@ -125,8 +125,8 @@ describe("coding agent prompt and instructions layering", () => {
         mock,
       );
 
-      const session = definition.createSession();
-      await session.run("hello agent");
+      const session = definition.session();
+      await (await session).run("hello agent");
 
       assert.equal(captured.length, 1);
       const req = captured[0];
@@ -192,8 +192,8 @@ describe("coding agent prompt and instructions layering", () => {
         mock,
       );
 
-      const session = definition.createSession();
-      await session.run("hello agent");
+      const session = definition.session();
+      await (await session).run("hello agent");
 
       assert.equal(captured.length, 1);
       const req = captured[0];
@@ -245,8 +245,8 @@ describe("coding agent prompt and instructions layering", () => {
         mock,
       );
 
-      const session = definition.createSession();
-      await session.run("hello agent");
+      const session = definition.session();
+      await (await session).run("hello agent");
 
       assert.equal(captured.length, 1);
       const req = captured[0];
@@ -293,8 +293,8 @@ describe("coding agent prompt and instructions layering", () => {
         mock,
       );
 
-      const session = definition.createSession();
-      await session.run("hello agent");
+      const session = definition.session();
+      await (await session).run("hello agent");
 
       assert.equal(captured.length, 1);
       const req = captured[0];
@@ -338,8 +338,8 @@ describe("coding agent prompt and instructions layering", () => {
         },
         mock,
       );
-      const s1 = def1.createSession();
-      await s1.run("run 1");
+      const s1 = def1.session();
+      await (await s1).run("run 1");
 
       // Switch branch to beta
       await writeFile(join(repoRoot, ".git", "HEAD"), "ref: refs/heads/feature/beta\n");
@@ -352,8 +352,8 @@ describe("coding agent prompt and instructions layering", () => {
         },
         mock,
       );
-      const s2 = def2.createSession();
-      await s2.run("run 2");
+      const s2 = def2.session();
+      await (await s2).run("run 2");
 
       assert.equal(captured.length, 2);
       const req1 = captured[0];
@@ -429,8 +429,8 @@ describe("coding agent prompt and instructions layering", () => {
         untrustedPolicy,
       );
 
-      const session = definition.createSession();
-      await session.run("hello");
+      const session = definition.session();
+      await (await session).run("hello");
 
       assert.equal(captured.length, 1);
       const req = captured[0];

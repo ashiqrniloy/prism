@@ -5,13 +5,12 @@ import type {
   AgentDefinition,
   AgentDefinitionResolutionContext,
   AIProvider,
-  ContextProvider,
   Skill,
   SkillRegistry,
   ToolDefinition,
   ToolRegistry,
 } from "../index.js";
-import { createAgent, createContributionRegistries, createSkillRegistry, createToolRegistry, resolveAgentDefinition } from "../index.js";
+import { createAgent, createSkillRegistry, createToolRegistry, resolveAgentDefinition } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
@@ -34,36 +33,24 @@ const reverseTool: ToolDefinition = {
   },
 };
 
-const demoContext: ContextProvider = {
-  name: "demo-context",
-  resolve() {
-    return [{ title: "Demo", content: "context block" }];
-  },
-};
-
 const briefSkill: Skill = { name: "brief" };
 
 const schemaSkill: Skill = {
   name: "schema",
   toolNames: ["echo"],
-  context: [
-    {
-      name: "schema-context",
-      resolve() {
-        return [{ title: "Schema", content: "schema context" }];
-      },
-    },
-  ],
 };
 
-function toolNames(tools: ToolRegistry | readonly ToolDefinition[] | undefined): string[] {
+function toolNames(tools: { readonly add?: readonly ToolDefinition[] } | ToolRegistry | readonly ToolDefinition[] | undefined): string[] {
   if (!tools) return [];
-  return "list" in tools ? tools.list().map((t) => t.name) : tools.map((t) => t.name);
+  if ("add" in tools && tools.add) return tools.add.map((t) => t.name);
+  return "list" in tools ? tools.list().map((t) => t.name) : (tools as readonly ToolDefinition[]).map((t) => t.name);
 }
 
-function skillNames(skills: { list(): readonly Skill[] } | readonly Skill[] | undefined): string[] {
+function skillNames(skills: { readonly add?: readonly Skill[]; list?(): readonly Skill[] } | readonly Skill[] | undefined): string[] {
   if (!skills) return [];
-  return "list" in skills ? skills.list().map((s) => s.name) : skills.map((s) => s.name);
+  if ("add" in skills && skills.add) return skills.add.map((s) => s.name);
+  if ("list" in skills && typeof skills.list === "function") return skills.list().map((s) => s.name);
+  return (skills as readonly Skill[]).map((s) => s.name);
 }
 
 async function resolve(def: AgentDefinition, context: AgentDefinitionResolutionContext): Promise<Agent> {
@@ -73,34 +60,26 @@ async function resolve(def: AgentDefinition, context: AgentDefinitionResolutionC
 
 describe("resolveAgentDefinition", () => {
   it("declarative resolution produces a runnable agent", async () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
-    registries.tools.register(echoTool.name, echoTool);
-    registries.skills.register(briefSkill.name, briefSkill);
-    registries.contextProviders.register(demoContext.name, demoContext);
-
     const def: AgentDefinition = {
       name: "declarative",
       model: "mock/demo",
       tools: ["echo"],
       skills: ["brief"],
-      context: ["demo-context"],
       instructions: "Be helpful.",
     };
 
-    const agent = await resolve(def, { registries });
+    const agent = await resolve(def, {
+      providerSource: () => provider,
+      tools: [echoTool],
+      skillsRegistry: createSkillRegistry([briefSkill]),
+    });
     assert.equal(agent.config.model.provider, "mock");
     assert.equal(agent.config.model.model, "demo");
-    assert.equal(agent.config.provider?.id, "mock");
+    assert.equal(agent.config.providerSource?.({ provider: "mock", model: "demo" })?.id, "mock");
     assert.equal(agent.config.instructions, "Be helpful.");
     assert.deepEqual(toolNames(agent.config.tools), ["echo"]);
-    assert.deepEqual(
-      agent.config.context?.map((c) => c.name),
-      ["demo-context"],
-    );
 
-    const session = agent.createSession();
+    const session = await agent.session();
     const events: unknown[] = [];
     const subscription = session.subscribe();
     const consume = (async () => {
@@ -108,20 +87,16 @@ describe("resolveAgentDefinition", () => {
     })();
     await session.run("hi");
     await consume;
-    assert.ok(events.some((e) => (e as { type: string }).type === "agent_started"));
+    assert.ok(events.some((e) => (e as { type: string }).type === "run.started"));
   });
 
-  it("resolves model by id from registries.models", async () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "registered" });
-
+  it("resolves a provider/model string without a registry", async () => {
     const def: AgentDefinition = {
       name: "model-by-id",
       model: "mock/registered",
     };
 
-    const agent = await resolve(def, { registries });
+    const agent = await resolve(def, { providerSource: () => provider });
     assert.equal(agent.config.model.model, "registered");
   });
 
@@ -136,7 +111,7 @@ describe("resolveAgentDefinition", () => {
   });
 
   it("create() escape hatch returns custom agent and applies overrides", async () => {
-    const customAgent = createAgent({
+    const customAgent = await createAgent({
       model: { provider: "custom", model: "v1" },
       provider,
     });
@@ -163,7 +138,7 @@ describe("resolveAgentDefinition", () => {
       name: "async-custom",
       model: "mock/demo",
       async create() {
-        return createAgent({ model: { provider: "custom", model: "v1" }, provider });
+        return await createAgent({ model: { provider: "custom", model: "v1" }, provider });
       },
     };
 
@@ -175,12 +150,6 @@ describe("resolveAgentDefinition", () => {
   });
 
   it("overrides swap model and drop tool", async () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
-    registries.tools.register(echoTool.name, echoTool);
-    registries.tools.register(reverseTool.name, reverseTool);
-
     const def: AgentDefinition = {
       name: "override-test",
       model: "mock/demo",
@@ -188,10 +157,11 @@ describe("resolveAgentDefinition", () => {
     };
 
     const agent = await resolve(def, {
-      registries,
+      providerSource: () => provider,
+      tools: [echoTool, reverseTool],
       overrides: {
         model: { provider: "mock", model: "override" },
-        tools: [echoTool],
+        tools: { add: [echoTool] },
       },
     });
     assert.equal(agent.config.model.model, "override");
@@ -208,13 +178,12 @@ describe("resolveAgentDefinition", () => {
   // selection) instead of throwing. Explicit def.model keeps driving registry
   // resolution; overrides may still replace model post-resolution like any
   // other config field (see "overrides swap model" above).
-  it("missing def.model resolves from overrides.model", () => {
+  it("missing def.model resolves from overrides.model", async () => {
     const def: AgentDefinition = { name: "override-model", instructions: "Be brief." };
-    const resolved = resolveAgentDefinition(def, {
+    const resolved = await resolveAgentDefinition(def, {
       overrides: { model: { provider: "mock", model: "demo" } },
       providerSource: () => provider,
     });
-    assert.ok(!(resolved instanceof Promise));
     assert.equal(resolved.config.model.provider, "mock");
     assert.equal(resolved.config.model.model, "demo");
   });
@@ -225,43 +194,24 @@ describe("resolveAgentDefinition", () => {
   });
 
   it("unknown model id throws", () => {
-    const registries = createContributionRegistries();
-    const def: AgentDefinition = { name: "unknown-model", model: "mock/missing" };
-    assert.throws(() => resolveAgentDefinition(def, { registries }), /Unknown model: mock\/missing/);
+    const def: AgentDefinition = { name: "unknown-model", model: "missing" };
+    assert.throws(() => resolveAgentDefinition(def, {}), /Unknown model: missing/);
   });
 
   it("unknown tool name throws", () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
     const def: AgentDefinition = { name: "unknown-tool", model: "mock/demo", tools: ["missing"] };
-    assert.throws(() => resolveAgentDefinition(def, { registries }), /Unknown tool: missing/);
+    assert.throws(() => resolveAgentDefinition(def, { providerSource: () => provider, tools: [echoTool] }), /Unknown tool: missing/);
   });
 
   it("unknown skill name throws", () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
-    registries.tools.register(echoTool.name, echoTool);
     const def: AgentDefinition = { name: "unknown-skill", model: "mock/demo", skills: ["missing"] };
-    assert.throws(() => resolveAgentDefinition(def, { registries }), /Unknown skill: missing/);
-  });
-
-  it("unknown context provider name throws", () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
-    const def: AgentDefinition = { name: "unknown-context", model: "mock/demo", context: ["missing"] };
-    assert.throws(() => resolveAgentDefinition(def, { registries }), /Unknown context provider: missing/);
+    assert.throws(
+      () => resolveAgentDefinition(def, { providerSource: () => provider, skillsRegistry: createSkillRegistry([briefSkill]) }),
+      /Unknown skill: missing/,
+    );
   });
 
   it("skill toolNames enforcement fails when demanded tool is not active", () => {
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
-    registries.tools.register(reverseTool.name, reverseTool);
-    registries.skills.register(schemaSkill.name, schemaSkill);
-
     const def: AgentDefinition = {
       name: "skill-toolnames",
       model: "mock/demo",
@@ -269,15 +219,19 @@ describe("resolveAgentDefinition", () => {
       skills: ["schema"],
     };
 
-    assert.throws(() => resolveAgentDefinition(def, { registries }), /Skill schema requires inactive tool: echo/);
+    assert.throws(
+      () =>
+        resolveAgentDefinition(def, {
+          providerSource: () => provider,
+          tools: [reverseTool],
+          skillsRegistry: createSkillRegistry([schemaSkill]),
+        }),
+      /Skill schema requires inactive tool: echo/,
+    );
   });
 
   it("host tool registry limits scope for declarative tool names", async () => {
     const hostTools = createToolRegistry([echoTool]);
-    const registries = createContributionRegistries();
-    registries.providers.register(provider);
-    registries.models.register({ provider: "mock", model: "demo" });
-    registries.tools.register(reverseTool.name, reverseTool);
 
     const def: AgentDefinition = {
       name: "host-tool-scope",
@@ -285,9 +239,9 @@ describe("resolveAgentDefinition", () => {
       tools: ["reverse"],
     };
 
-    assert.throws(() => resolveAgentDefinition(def, { registries, tools: hostTools }), /Unknown tool: reverse/);
+    assert.throws(() => resolveAgentDefinition(def, { providerSource: () => provider, tools: hostTools }), /Unknown tool: reverse/);
 
-    const allowed = await resolve(def, { registries, tools: createToolRegistry([reverseTool]) });
+    const allowed = await resolve(def, { providerSource: () => provider, tools: createToolRegistry([reverseTool]) });
     assert.deepEqual(toolNames(allowed.config.tools), ["reverse"]);
   });
 

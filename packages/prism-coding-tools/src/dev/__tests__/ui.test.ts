@@ -13,7 +13,7 @@ import { applyAgentEvent, createRunView, type RunView, visibleItems } from "../u
 
 describe("inspector UI assets (plan 040 Task 3)", () => {
   it("serves the page, the module, and same-origin config with a strict CSP", async () => {
-    const agent = createAgent({ id: "ui-agent", model: { provider: "mock", model: "offline" } });
+    const agent = await createAgent({ id: "ui-agent", model: { provider: "mock", model: "offline" } });
     const inspector = createPrismDevInspector({ agent, port: 0 });
     await inspector.listen();
     try {
@@ -60,10 +60,10 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
 
   it("merges text deltas into one assistant item and thinking separately", () => {
     const run = view();
-    applyAgentEvent(run, { type: "agent_started", sessionId: "s", runId: "r" });
-    applyAgentEvent(run, { type: "message_delta", sessionId: "s", runId: "r", content: { type: "text", text: "hel" } });
-    applyAgentEvent(run, { type: "message_delta", sessionId: "s", runId: "r", content: { type: "text", text: "lo" } });
-    applyAgentEvent(run, { type: "message_delta", sessionId: "s", runId: "r", content: { type: "thinking", text: "hmm" } });
+    applyAgentEvent(run, { type: "run.started", sessionId: "s", runId: "r" });
+    applyAgentEvent(run, { type: "message.delta", sessionId: "s", runId: "r", content: { type: "text", text: "hel" } });
+    applyAgentEvent(run, { type: "message.delta", sessionId: "s", runId: "r", content: { type: "text", text: "lo" } });
+    applyAgentEvent(run, { type: "message.delta", sessionId: "s", runId: "r", content: { type: "thinking", text: "hmm" } });
     const messages = run.items.filter((item) => item.kind === "message");
     assert.deepEqual(
       messages.map((item) => (item.kind === "message" ? `${item.label}:${item.text}` : "")),
@@ -75,15 +75,18 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
   it("tracks a tool call through start → finish with redacted args/result as-is", () => {
     const run = view();
     const call = toolCallContent("call-1", "write", { secret: "redacted-<b>" });
-    applyAgentEvent(run, { type: "tool_execution_started", sessionId: "s", runId: "r", call });
+    applyAgentEvent(run, { type: "tool.started", sessionId: "s", runId: "r", call });
     let item = run.items.find((candidate) => candidate.kind === "tool");
     assert.ok(item && item.kind === "tool");
     assert.equal(item.status, "running");
     assert.equal(item.name, "write");
     applyAgentEvent(run, {
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s",
       runId: "r",
+      toolCallId: "call-1",
+      name: "write",
       result: { toolCallId: "call-1", name: "write", value: { ok: 1 } },
       metadata: { durationMs: 3, status: "finished" },
     });
@@ -97,10 +100,13 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
   it("marks tool errors and blocks on the matching call", () => {
     const run = view();
     applyAgentEvent(run, {
-      type: "tool_execution_error",
+      type: "tool.completed",
+      status: "error",
       sessionId: "s",
       runId: "r",
-      call: toolCallContent("call-9", "boom", {}),
+      toolCallId: "call-9",
+      name: "boom",
+      result: { toolCallId: "call-9", name: "boom", error: { message: "exploded" } },
       error: { message: "exploded" },
       metadata: { durationMs: 1, status: "error" },
     });
@@ -109,12 +115,14 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
 
     const blocked = view();
     applyAgentEvent(blocked, {
-      type: "tool_execution_blocked",
+      type: "tool.completed",
+      status: "blocked",
       sessionId: "s",
       runId: "r",
       toolCallId: "call-2",
       name: "rm",
       reason: "guardrail",
+      result: { toolCallId: "call-2", name: "rm", error: { message: "blocked" } },
       error: { message: "blocked" },
       metadata: { durationMs: 0, status: "blocked" },
     });
@@ -124,10 +132,10 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
 
   it("sums per-run usage across provider turns and the terminal event", () => {
     const run = view();
-    applyAgentEvent(run, { type: "agent_started", sessionId: "s", runId: "r" });
+    applyAgentEvent(run, { type: "run.started", sessionId: "s", runId: "r" });
     for (const usage of [{ totalTokens: 10 }, { totalTokens: 15, inputTokens: 4, outputTokens: 11 }]) {
       applyAgentEvent(run, {
-        type: "provider_turn_finished",
+        type: "turn.completed",
         sessionId: "s",
         runId: "r",
         turn: 1,
@@ -135,7 +143,7 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
         usage,
       });
     }
-    applyAgentEvent(run, { type: "agent_finished", sessionId: "s", runId: "r", usage: { totalTokens: 5, cost: 0.01 } });
+    applyAgentEvent(run, { type: "run.completed", sessionId: "s", runId: "r", status: "completed", usage: { totalTokens: 5, cost: 0.01 } });
     assert.deepEqual(run.usage, { inputTokens: 4, outputTokens: 11, totalTokens: 30, cost: 0.01 });
     assert.equal(run.status, "finished");
   });
@@ -143,7 +151,7 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
   it("renders pending decisions on suspension and clears them on resume/deny", () => {
     const run = view();
     applyAgentEvent(run, {
-      type: "agent_suspended",
+      type: "run.suspended",
       sessionId: "s",
       runId: "r",
       interruption: {
@@ -164,7 +172,7 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
     // Legacy single-approval state: decision derived from the interruption.
     const legacy = view();
     applyAgentEvent(legacy, {
-      type: "agent_suspended",
+      type: "run.suspended",
       sessionId: "s",
       runId: "r",
       interruption: { kind: "tool_approval", reason: "needs approval", toolCallId: "call-7", toolName: "rm" },
@@ -172,24 +180,24 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
     });
     assert.deepEqual(legacy.decisions, [{ approvalId: "call-7", toolCallId: "call-7", toolName: "rm", reason: "needs approval" }]);
 
-    applyAgentEvent(run, { type: "agent_resumed", sessionId: "s", runId: "r", version: 3 });
+    applyAgentEvent(run, { type: "run.started", sessionId: "s", runId: "r", resumed: true });
     assert.equal(run.status, "running");
     assert.deepEqual(run.decisions, []);
 
-    const denied = view();
-    applyAgentEvent(denied, {
-      type: "agent_denied",
+    const resolved = view();
+    applyAgentEvent(resolved, {
+      type: "decision.resolved",
       sessionId: "s",
       runId: "r",
-      interruption: { kind: "tool_approval", reason: "denied" },
-      version: 4,
+      decisions: [{ toolCallId: "call-7", outcome: "deny" }],
+      via: "inline",
     });
-    assert.equal(denied.status, "denied");
+    assert.deepEqual(resolved.decisions, []);
   });
 
   it("surfaces fatal run errors", () => {
     const run = view();
-    applyAgentEvent(run, { type: "error", sessionId: "s", runId: "r", error: { message: "provider down" } });
+    applyAgentEvent(run, { type: "run.failed", sessionId: "s", runId: "r", error: { message: "provider down" } });
     assert.equal(run.status, "failed");
     assert.ok(run.items.some((item) => item.kind === "note" && item.text.includes("provider down")));
   });
@@ -197,7 +205,7 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
   it("shows finished assistant text when the run never streamed deltas", () => {
     const run = view();
     applyAgentEvent(run, {
-      type: "message_finished",
+      type: "message.completed",
       sessionId: "s",
       runId: "r",
       message: { role: "assistant", content: [{ type: "text", text: "final answer" }] },
@@ -205,9 +213,9 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
     assert.deepEqual(run.items, [{ kind: "message", label: "assistant", text: "final answer" }]);
     // With deltas already streamed, the finished copy is redundant.
     const streamed = view();
-    applyAgentEvent(streamed, { type: "message_delta", sessionId: "s", runId: "r", content: { type: "text", text: "final answer" } });
+    applyAgentEvent(streamed, { type: "message.delta", sessionId: "s", runId: "r", content: { type: "text", text: "final answer" } });
     applyAgentEvent(streamed, {
-      type: "message_finished",
+      type: "message.completed",
       sessionId: "s",
       runId: "r",
       message: { role: "assistant", content: [{ type: "text", text: "final answer" }] },
@@ -220,12 +228,12 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
     const started = performance.now();
     for (let index = 0; index < 1200; index += 1) {
       applyAgentEvent(run, {
-        type: "event_subscriber_overflow",
+        type: "package.event",
         sessionId: "s",
         runId: "r",
-        droppedEvents: index,
-        maxQueuedEvents: 64,
-        overflow: "drop_oldest",
+        package: "kernel",
+        name: "probe",
+        data: { index },
       });
     }
     const foldMs = performance.now() - started;
@@ -239,25 +247,28 @@ describe("event → timeline projection (plan 040 Task 3)", () => {
   it("renders unknown event types as visible notes instead of dropping them", () => {
     const run = view();
     applyAgentEvent(run, {
-      type: "artifact_finished",
+      type: "package.event",
       sessionId: "s",
       runId: "r",
-      turn: 1,
-      attempt: 0,
-      result: { artifactId: "a", status: "ok" } as never,
+      package: "vendor",
+      name: "unknown.thing",
+      data: { a: 1 },
     });
-    assert.ok(run.items.some((item) => item.kind === "note" && item.text === "artifact_finished"));
+    assert.ok(run.items.some((item) => item.kind === "note" && item.text === "vendor/unknown.thing"));
   });
 
   it("tolerates malformed fixture payloads (no throw, status untouched)", () => {
     const run = view();
     applyAgentEvent(run, {
-      type: "tool_execution_error",
+      type: "tool.completed",
+      status: "error",
       sessionId: "s",
       runId: "r",
+      toolCallId: "",
+      name: "",
       error: {},
       metadata: { durationMs: 0, status: "error" },
-    } as AgentEvent);
+    } as unknown as AgentEvent);
     const note = run.items.find((candidate) => candidate.kind === "note");
     assert.ok(note && note.kind === "note" && note.level === "error");
   });

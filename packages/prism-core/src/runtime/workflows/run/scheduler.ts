@@ -1,5 +1,5 @@
 /** scheduler (0.2.5 plan 025 Task 1 split). Moved verbatim from run.ts; public surface unchanged behind the barrel. */
-import type { AgentSession } from "@arnilo/prism";
+import type { Session } from "@arnilo/prism";
 import { registerActiveWorkflowRun, unregisterActiveWorkflowRun } from "../active-runs.js";
 import { WorkflowAbortError, WorkflowLoopLimitError, WorkflowRuntimeError, WorkflowSuperstepLimitError } from "../errors.js";
 import { createWorkflowEventBus } from "../events.js";
@@ -71,7 +71,7 @@ async function executeSchedulerBody(state: SchedulerState, options: RunWorkflowO
   };
 
   let fatalError: unknown;
-  const activeSessions = new Map<string, AgentSession>();
+  const activeSessions = new Map<string, Session>();
   let settle: (() => void) | undefined;
   let pendingKick = false;
   const kick = () => {

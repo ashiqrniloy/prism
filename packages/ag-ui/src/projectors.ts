@@ -15,7 +15,7 @@ export interface AgUiStateStore {
 export interface CreateMessagesFromSessionProjectionOptions {
   /**
    * Host-owned authorized AG-UI transcript. May be async — e.g. `async () => (await session.entries()).map(entryToAgUiMessage)`.
-   * Prefer this for full session history. Absent → accumulate from `message_finished` events in the live stream.
+   * Prefer this for full session history. Absent → accumulate from `message.completed` events in the live stream.
    */
   readonly getMessages?: () => readonly AgUiMessage[] | Promise<readonly AgUiMessage[]>;
   readonly redact?: (message: AgUiMessage) => AgUiMessage | undefined;
@@ -59,7 +59,7 @@ export function createMessagesFromSessionProjection(options: CreateMessagesFromS
   return {
     async messages(event) {
       if (options.getMessages) {
-        if (event.type !== "agent_started" && event.type !== "message_finished" && event.type !== "agent_finished") {
+        if (event.type !== "run.started" && event.type !== "message.completed" && event.type !== "run.completed") {
           return undefined;
         }
         try {
@@ -68,7 +68,7 @@ export function createMessagesFromSessionProjection(options: CreateMessagesFromS
           return undefined;
         }
       }
-      if (event.type === "message_finished") {
+      if (event.type === "message.completed") {
         const converted = prismMessageToAgUi(event.message);
         if (converted) accumulated.push(converted);
         return project(accumulated);
@@ -79,7 +79,7 @@ export function createMessagesFromSessionProjection(options: CreateMessagesFromS
 }
 
 /**
- * Opt-in state projector. `STATE_SNAPSHOT` on `agent_started`; RFC 6902 `STATE_DELTA`
+ * Opt-in state projector. `STATE_SNAPSHOT` on `run.started`; RFC 6902 `STATE_DELTA`
  * (add/replace/remove) when `store.get()` changes. Optional `subscribe` only marks dirty —
  * Prism starts no background watcher.
  */
@@ -95,7 +95,7 @@ export function createStateFromStoreProjection(store: AgUiStateStore, options: C
 
   return {
     stateSnapshot(event) {
-      if (event.type !== "agent_started" || snapped) return undefined;
+      if (event.type !== "run.started" || snapped) return undefined;
       try {
         const value = store.get();
         if (!withinBytes(value, maxBytes)) return undefined;
@@ -126,7 +126,7 @@ export function createStateFromStoreProjection(store: AgUiStateStore, options: C
 }
 
 /**
- * Opt-in activity projector for `tool_execution_progress`. First progress per tool call →
+ * Opt-in activity projector for `tool.progress`. First progress per tool call →
  * snapshot; later updates → delta. Missing/malformed payloads drop closed.
  */
 export function createActivityFromToolProgressProjection(options: CreateActivityFromToolProgressProjectionOptions = {}): AgUiProjection {
@@ -135,7 +135,7 @@ export function createActivityFromToolProgressProjection(options: CreateActivity
 
   return {
     activity(event: AgentEvent) {
-      if (event.type !== "tool_execution_progress") return undefined;
+      if (event.type !== "tool.progress") return undefined;
       if (event.progress === undefined && event.metadata === undefined) return undefined;
       const messageId = `tool-progress-${event.toolCallId}`;
       const content: Record<string, unknown> = {

@@ -9,7 +9,7 @@ XAI_DEFAULT_TOKEN_URL	export declare const XAI_DEFAULT_TOKEN_URL = "https://auth
 XAI_REFRESH_SKEW_MS	export declare const XAI_REFRESH_SKEW_MS: number
 createXaiOAuthProvider	export declare function createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
 createXaiProvider	export declare function createXaiProvider(options?: XaiProviderOptions): AIProvider
-createXaiProviderPackage	export declare function createXaiProviderPackage(options?: XaiProviderPackageOptions): ProviderPackage
+xaiPackage	export declare function xaiPackage(options?: XaiProviderPackageOptions): PackageInstance
 defineXaiModel	export declare function defineXaiModel(config: XaiModelConfig): ModelConfig
 listXaiModels	export declare function listXaiModels(options?: ListXaiModelsOptions): Promise<ModelConfig[]>
 mapXaiModel	export declare function mapXaiModel(entry: XaiModelEntry, options?:

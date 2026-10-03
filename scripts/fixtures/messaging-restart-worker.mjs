@@ -30,7 +30,7 @@ const identity = {
 };
 
 const persistence = createSqlitePersistence({ filename: input.filename });
-const agent = createAgent({
+const agent = await createAgent({
   id: "channel-agent",
   model: { provider: "mock", model: "demo" },
   provider: {
@@ -46,7 +46,7 @@ const agent = createAgent({
       throw new Error("aborted while the process was dying");
     },
   },
-  store: persistence,
+  slots: { store: persistence },
   runLedger: persistence,
 });
 const runtime = createMessagingRuntime({

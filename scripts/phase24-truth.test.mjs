@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { computePackageTruth, expandWorkspaceDirs, readManifest, workspacePackageCounts } from "./package-truth.mjs";
 
@@ -207,7 +207,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   // Plan 140 Task 1: the terminal app is self-sufficient on a global install.
   const app = pkgs.find((p) => p.name === "@arnilo/prism-code");
   if (app) {
-    for (const dep of ["@arnilo/prism", "@arnilo/prism-providers", "@arnilo/prism-hooks"]) {
+    for (const dep of ["@arnilo/prism", "@arnilo/prism-providers", "@arnilo/prism-hooks-json"]) {
       assertCorePin(dep, app.dependencies?.[dep], t.root.version, "@arnilo/prism-code");
     }
     assert.equal(app.peerDependencies, undefined, "@arnilo/prism-code declares no peers");
@@ -224,7 +224,9 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     // devDependency on the root so the workspace resolves the peer locally
     // (session-store-codecs is the one package with no devDependencies at all)
     if (p.name !== "@arnilo/prism-session-store-codecs") {
-      assert.equal(p.devDependencies?.["@arnilo/prism"], "file:../..", `${p.name} must devDepend on the root`);
+      const dev = p.devDependencies?.["@arnilo/prism"];
+      assert.equal(dev?.startsWith("file:"), true, `${p.name} must devDepend on the root`);
+      assert.equal(resolve(p.dir, dev.slice("file:".length)), ROOT, `${p.name} file: devDependency must point at the repo root`);
     }
   }
   if (hasCodingToolsPackage) {
@@ -232,7 +234,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
     assert.deepEqual(secondPeers, {
       "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui", "@arnilo/prism-providers"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
-      "@arnilo/prism-agent-sdk": ["@arnilo/prism-coding-tools", "@arnilo/prism-hooks", "@arnilo/prism-mcp"],
+      "@arnilo/prism-agent-sdk": ["@arnilo/prism-coding-tools", "@arnilo/prism-hooks-json", "@arnilo/prism-mcp"],
       "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
       "@arnilo/prism-web-tools": ["@arnilo/prism-mcp"],
     });

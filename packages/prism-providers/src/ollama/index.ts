@@ -1,4 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createOllamaProvider, type OllamaProviderOptions } from "./provider.js";
 
 export interface OllamaProviderPackageOptions extends OllamaProviderOptions {
@@ -11,29 +12,17 @@ export interface OllamaProviderPackageOptions extends OllamaProviderOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createOllamaProviderPackage(options: OllamaProviderPackageOptions = {}): ProviderPackage {
+export function ollamaPackage(options: OllamaProviderPackageOptions = {}): PackageInstance {
   const providerId = options.id ?? "ollama";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/ollama",
-    description: "Ollama Cloud / local provider package for Prism (OpenAI-compatible).",
-    docs: { links: ["docs/providers/ollama.md"] },
-    setup(api) {
-      api.registerProvider(
-        createOllamaProvider({
-          id: providerId,
-          apiKey: options.apiKey,
-          fetch: options.fetch,
-          baseUrl: options.baseUrl,
-          preset: options.preset,
-        }),
-      );
-      for (const model of options.models ?? []) {
-        api.registerModel({ ...model, provider: providerId });
-      }
-      // Cloud uses an ollama.com API key; local `ollama serve` is typically unauthenticated.
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+  return vendorPackage("@arnilo/prism-providers.ollama", "Ollama Cloud / local provider package for Prism (OpenAI-compatible).", () => [
+    createOllamaProvider({
+      id: providerId,
+      apiKey: options.apiKey,
+      fetch: options.fetch,
+      baseUrl: options.baseUrl,
+      preset: options.preset,
+    }),
+  ]);
 }
 
 export {

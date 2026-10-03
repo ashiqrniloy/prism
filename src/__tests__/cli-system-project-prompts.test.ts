@@ -6,7 +6,7 @@ import { Readable, Writable } from "node:stream";
 import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
-import type { AgentSession, ProviderRequest, RunOptions, SystemPromptContribution } from "../contracts.js";
+import type { Session, ProviderRequest, RunOptions, SystemPromptContribution } from "../contracts.js";
 import { createAgent, createMockProvider } from "../index.js";
 import { createSecretRedactor } from "../redaction.js";
 
@@ -35,20 +35,22 @@ async function makeRoot(prefix: string): Promise<string> {
 function capturingSession(
   captured: ProviderRequest[],
   extra: { redactor?: ReturnType<typeof createSecretRedactor> } = {},
-): (options: CliOptions) => AgentSession {
-  return (options) => {
+): (options: CliOptions) => Promise<Session> {
+  return async (options) => {
     const provider = createMockProvider([{ type: "done" }], {
       onRequest: (req) => {
         captured.push(req);
       },
     });
-    return createAgent({
-      model: { provider: "mock", model: "m" },
-      provider,
-      instructions: options.system,
-      ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),
-      ...(extra.redactor ? { redactor: extra.redactor } : {}),
-    }).createSession();
+    return (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider,
+        instructions: options.system,
+        ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),
+        ...(extra.redactor ? { redactor: extra.redactor } : {}),
+      })
+    ).session();
   };
 }
 
@@ -198,12 +200,14 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
         captured.push(req);
       },
     });
-    const session = createAgent({
-      model: { provider: "mock", model: "m" },
-      provider,
-      instructions: "BASE",
-      systemPrompt: fileLayers,
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider,
+        instructions: "BASE",
+        systemPrompt: fileLayers,
+      })
+    ).session();
 
     await session.run("Hi", { systemPrompt: [{ id: "run-call", source: "run", mode: "append", text: "RUN" }] });
 
@@ -223,12 +227,14 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
         captured.push(req);
       },
     });
-    const session = createAgent({
-      model: { provider: "mock", model: "m" },
-      provider,
-      instructions: "BASE",
-      systemPrompt: fileLayers,
-    }).createSession();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider,
+        instructions: "BASE",
+        systemPrompt: fileLayers,
+      })
+    ).session();
 
     await session.run("Hi", { systemPrompt: false } as RunOptions);
 

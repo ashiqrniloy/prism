@@ -1,6 +1,6 @@
 export {
   createVertexProvider,
-  createVertexProviderPackage,
+  vertexPackage,
   type VertexProviderOptions,
   type VertexProviderPackageOptions,
   vertexOpenApiBaseUrl,

@@ -1,6 +1,6 @@
 /**
  * Barrel for the agent runtime split at 0.1.4 (compat-preserving internal reorg).
- * The four public exports (createAgent, createAgentSession, resumeAgentRun,
+ * The three public exports (createAgent, resumeAgentRun,
  * resumeAgentRunStream) stay reachable through this barrel; RuntimeAgentSession,
  * EventSubscriber, and the shared helpers live in agent-session.ts; the
  * approval/pending-decision helpers in agent-approval.ts; the tool-dispatch
@@ -14,4 +14,4 @@
  */
 
 export { resumeAgentRun, resumeAgentRunStream } from "./agent-run-lifecycle.js";
-export { createAgent, createAgentSession } from "./agent-session.js";
+export { createAgent } from "./agent-session.js";

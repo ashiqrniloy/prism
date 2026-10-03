@@ -36,6 +36,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import {
+  askEveryTool,
   createAgent,
   createAgentRunLifecycle,
   createMemorySessionStore,
@@ -296,14 +297,15 @@ try {
     ];
     const providerAdapter = await import(pathToFileURL(env.PRISM_CODING_PROVIDER).href);
     const { provider, request } = providerAdapter.createJourneyProvider();
-    prismAgent = createAgent({
+    prismAgent = await createAgent({
+      hooks: askEveryTool(),
       id: "journey-agent",
       model: request.model,
       provider,
-      store: createMemorySessionStore(),
-      runState: { checkpoints: pg.checkpoints, definitionRevision: "journey-1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints: pg.checkpoints, definitionRevision: "journey-1" },
       tools,
-      identity,
+      principal: identity.principal,
       ownership,
       redactor,
       limits: { maxTurns: 12 },
@@ -328,13 +330,13 @@ try {
     const makeApp = () =>
       createPrismAcpAgent({
         authorize: () => ({ ownership }),
-        sessionFactory: () => ({ session: prismAgent.createSession({ id: sessionId }), agentId: "journey-agent" }),
+        sessionFactory: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
         lifecycle: lifecycleApi,
         sessionStore: acpStore,
         sessions: {
-          load: async () => ({ session: prismAgent.createSession({ id: sessionId }), agentId: "journey-agent" }),
+          load: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
           list: async () => [{ sessionId, cwd: worktreePath }],
-          resume: async () => ({ session: prismAgent.createSession({ id: sessionId }), agentId: "journey-agent" }),
+          resume: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
           delete: async () => {},
         },
         recovery: { checkpoints: pg.checkpoints, leases: pg.leases, ownerId: "replica-a" },
@@ -379,7 +381,8 @@ try {
       call: { id: "check-1", name: "coding_check", arguments: { name: "syntax" } },
       registry,
       context: { sessionId: "s-check", runId: "r-check", toolCallId: "check-1", signal: new AbortController().signal, metadata: {} },
-      identity,
+      principal: identity.principal,
+      ownership,
       redactor,
     });
     const text = JSON.stringify(result);
@@ -624,13 +627,13 @@ try {
     });
     const app = createPrismAcpAgent({
       authorize: () => ({ ownership }),
-      sessionFactory: () => ({ session: prismAgent.createSession({ id: sessionId }), agentId: "journey-agent" }),
+      sessionFactory: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
       lifecycle: lifecycleApi,
       sessionStore: acpStore,
       sessions: {
-        load: async () => ({ session: prismAgent.createSession({ id: sessionId }), agentId: "journey-agent" }),
+        load: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
         list: async () => [],
-        resume: async () => ({ session: prismAgent.createSession({ id: sessionId }), agentId: "journey-agent" }),
+        resume: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
         delete: async () => {},
       },
       recovery: { checkpoints: pg.checkpoints, leases: pg.leases, ownerId: "replica-a" },
@@ -763,7 +766,8 @@ try {
       call: { id: "b1", name: "browser_open", arguments: { url } },
       registry,
       context: ctx,
-      identity,
+      principal: identity.principal,
+      ownership,
       redactor,
     });
     assert.match(JSON.stringify(opened), /ok|opened/i);
@@ -775,7 +779,8 @@ try {
         call: { id: "b2", name: "browser_snapshot", arguments: {} },
         registry,
         context: { ...ctx, toolCallId: "b2" },
-        identity,
+        principal: identity.principal,
+        ownership,
         redactor,
       });
       if (JSON.stringify(snapshotted).includes(pageText)) break;
@@ -789,7 +794,8 @@ try {
       call: { id: "b3", name: "browser_close", arguments: {} },
       registry,
       context: { ...ctx, toolCallId: "b3" },
-      identity,
+      principal: identity.principal,
+      ownership,
       redactor,
     });
     await new Promise((resolve) => server.close(() => resolve()));

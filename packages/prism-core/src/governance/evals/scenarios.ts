@@ -1,8 +1,8 @@
 import type {
   Agent,
   AgentConfig,
-  AgentRunResult,
-  AgentSession,
+  RunResult,
+  Session,
   AgentSessionConfig,
   JsonObject,
   Message,
@@ -64,7 +64,7 @@ export function validateReleaseEvalManifest(manifest: EvalManifest): void {
 export interface ScenarioTurn {
   readonly user: string | Message;
   /** Optional assertion verifying intermediate assistant reply. */
-  readonly assertReply?: (text: string, result: AgentRunResult) => void;
+  readonly assertReply?: (text: string, result: RunResult) => void;
 }
 
 export interface RunScenarioOptions {
@@ -84,7 +84,7 @@ export interface RunScenarioOptions {
 export interface ScenarioResult {
   readonly status: "succeeded" | "failed";
   readonly turnsCompleted: number;
-  readonly finalResult?: AgentRunResult;
+  readonly finalResult?: RunResult;
   readonly timeline?: ExecutionTimeline;
   readonly evaluations: readonly EvaluationRecord[];
   readonly error?: ReturnType<typeof toErrorInfo>;
@@ -95,7 +95,7 @@ export const HARD_MAX_SCENARIO_TURNS = 32;
 
 /** Collect session events until `work` settles, then close the subscriber. No timeout drain. */
 export async function collectWhileRunning<T>(
-  session: Pick<AgentSession, "subscribe">,
+  session: Pick<Session, "subscribe">,
   folder: TimelineFolder | undefined,
   work: () => Promise<T>,
 ): Promise<T> {
@@ -127,14 +127,14 @@ export async function collectWhileRunning<T>(
 export async function runScenario(options: RunScenarioOptions): Promise<ScenarioResult> {
   const maxTurns = Math.min(options.maxTurns ?? DEFAULT_MAX_SCENARIO_TURNS, HARD_MAX_SCENARIO_TURNS);
   const turns = options.turns.slice(0, maxTurns);
-  const session = options.agent.createSession(options.sessionConfig);
+  const session = await options.agent.session(options.sessionConfig);
   const shouldProject = options.timeline && options.timeline !== "off";
   const folder: TimelineFolder | undefined = shouldProject
     ? createTimelineFolder({ content: options.timeline, redactor: options.redactor })
     : undefined;
 
   let turnsCompleted = 0;
-  let lastResult: AgentRunResult | undefined;
+  let lastResult: RunResult | undefined;
   let scenarioError: ReturnType<typeof toErrorInfo> | undefined;
 
   try {
@@ -235,27 +235,11 @@ function wrapTool(tool: ToolDefinition, deny: ReadonlySet<string>, unknownEffect
 }
 
 function wrapTools(tools: AgentConfig["tools"], deny: ReadonlySet<string>, unknownEffect: boolean): AgentConfig["tools"] {
-  if (!tools || (!deny.size && !unknownEffect)) return tools;
-  if (Array.isArray(tools)) return tools.map((tool) => wrapTool(tool, deny, unknownEffect));
-  const registry = tools as ToolRegistry;
-  return {
-    register(tool) {
-      registry.register(wrapTool(tool, deny, unknownEffect));
-    },
-    get(name) {
-      const found = registry.get(name);
-      return found ? wrapTool(found, deny, unknownEffect) : undefined;
-    },
-    resolve(name) {
-      return wrapTool(registry.resolve(name), deny, unknownEffect);
-    },
-    list() {
-      return registry.list().map((tool) => wrapTool(tool, deny, unknownEffect));
-    },
-  };
+  if (!tools?.add || (!deny.size && !unknownEffect)) return tools;
+  return { ...tools, add: tools.add.map((tool) => wrapTool(tool, deny, unknownEffect)) };
 }
 
-function failStoreRun(session: AgentSession): AgentSession {
+function failStoreRun(session: Session): Session {
   return new Proxy(session, {
     get(target, prop, receiver) {
       if (prop === "run") {
@@ -274,18 +258,18 @@ function failStoreRun(session: AgentSession): AgentSession {
  * `failStore` fails on `run` (createSession succeeds). `denyTools` skip host execute and
  * return a denied error. `unknownEffect` skips mutating execute and returns unknown — never success.
  */
-export function wrapAgentWithFailureInjection(agent: Agent, injection: FailureInjectionOptions): Agent {
+export async function wrapAgentWithFailureInjection(agent: Agent, injection: FailureInjectionOptions): Promise<Agent> {
   const deny = new Set(injection.denyTools ?? []);
   const config: AgentConfig = {
     ...agent.config,
     tools: wrapTools(agent.config.tools, deny, injection.unknownEffect === true),
   };
-  const base: Agent = agent.config.model ? createAgent(config) : { ...agent, config };
+  const base: Agent = agent.config.model ? await createAgent(config) : { ...agent, config };
   return {
     ...base,
     config,
-    createSession(sessionConfig) {
-      const session = base.createSession(sessionConfig);
+    async session(sessionConfig) {
+      const session = await base.session(sessionConfig);
       return injection.failStore ? failStoreRun(session) : session;
     },
   };

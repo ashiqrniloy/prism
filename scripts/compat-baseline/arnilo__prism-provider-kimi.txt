@@ -1,6 +1,6 @@
 applyKimiAnthropicCacheControl	export declare function applyKimiAnthropicCacheControl(request: ProviderRequest): readonly Message[]
 createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): AIProvider
-createKimiProviderPackage	export declare function createKimiProviderPackage(options?: KimiProviderPackageOptions): ProviderPackage
+kimiPackage	export declare function kimiPackage(options?: KimiProviderPackageOptions): PackageInstance
 createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): AIProvider
 defineKimiModel	export declare function defineKimiModel(config: KimiModelConfig): ModelConfig
 kimiAnthropicBody	export declare function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject>

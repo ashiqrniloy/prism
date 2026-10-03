@@ -74,6 +74,11 @@ export interface ProviderRequest {
 export interface AIProvider {
   readonly id: string;
   generate(request: ProviderRequest): AsyncIterable<ProviderEvent>;
+  /**
+   * Optional model discovery behind `agent.models.list()`. Each model is the existing `ModelConfig` (id =
+   * `model`, context window = `limits`). A provider without it contributes no models of its own.
+   */
+  models?(): Promise<readonly ModelConfig[]>;
 }
 
 /**

@@ -1,17 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createContributionRegistries,
-  resolveContextProviders,
-  type JsonObject,
-  type Message,
-  type ToolDefinition,
-  type ToolExecutionContext,
-  type ToolResult,
-} from "@arnilo/prism";
+import { type JsonObject, type Message, type ToolDefinition, type ToolExecutionContext, type ToolResult } from "@arnilo/prism";
 import { MemoryAbortError, MemoryValidationError } from "../../errors.js";
 import { createHashEmbedder, createMemory, createMemoryVectorStore, createMemoryWorkingStore } from "../../index.js";
-import { createMemoryFabric, DEFAULT_MEMORY_FABRIC_PROVIDER_NAME, parseMemoryNoteMetadata, type MemoryNoteLink } from "../index.js";
+import {
+  createMemoryFabric,
+  DEFAULT_MEMORY_FABRIC_PROVIDER_NAME,
+  parseMemoryNoteMetadata,
+  registerMemoryFabricContext,
+  type MemoryNoteLink,
+} from "../index.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
 const question: readonly Message[] = [{ role: "user", content: [{ type: "text", text: "Where is the office?" }] }];
@@ -135,14 +133,21 @@ describe("memory fabric attach", () => {
     await fabric.remember({ kind: "fact", content: "Office is in Berlin" });
     await fabric.remember({ kind: "working", block: "core", content: "Prefers terse output" });
 
-    const provider = fabric.createContextProvider({ query: "Where is the office?" });
-    assert.equal(provider.name, DEFAULT_MEMORY_FABRIC_PROVIDER_NAME);
+    const hooks: string[] = [];
+    registerMemoryFabricContext(
+      {
+        on: (name: string, _handler: unknown, options?: { id?: string }) => {
+          hooks.push(`${name}#${options?.id ?? ""}`);
+        },
+      } as never,
+      memory as Parameters<typeof registerMemoryFabricContext>[1],
+      { query: "Where is the office?" },
+    );
+    assert.deepEqual(hooks, [`context.build#${DEFAULT_MEMORY_FABRIC_PROVIDER_NAME}`]);
 
-    const registries = createContributionRegistries();
-    registries.contextProviders.register(DEFAULT_MEMORY_FABRIC_PROVIDER_NAME, provider);
-    assert.equal(registries.contextProviders.resolve(DEFAULT_MEMORY_FABRIC_PROVIDER_NAME), provider);
-
-    const blocks = await resolveContextProviders({ providers: [provider], messages: question });
+    const attached = fabric.attach({ id: "om-session" });
+    const draft = await attached.contextBuild({ messages: question }, { sessionId: "om-session", runId: "r" } as never);
+    const blocks = (draft?.context ?? []) as { content: string; metadata?: Record<string, unknown> }[];
     const semantic = blocks.find((block) => block.metadata?.source === "semantic-memory");
     const working = blocks.find((block) => block.metadata?.source === "working-memory");
     assert.ok(String(semantic?.content).includes("Berlin"), "facts inject as semantic memory");

@@ -36,8 +36,8 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
 
 async function sessionWithMessage(text = "hello") {
   const store = createMemorySessionStore();
-  const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-  const session = agent.createSession({ id: "s1" });
+  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const session = await agent.session({ id: "s1", create: true });
   await session.run(text);
   return { session, store };
 }

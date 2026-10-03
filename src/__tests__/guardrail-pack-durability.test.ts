@@ -4,9 +4,10 @@ import {
   AGENT_RUN_STATE_NAMESPACE,
   AgentRunStateError,
   type AgentEvent,
-  type AgentSession,
+  type Session,
   type CheckpointStore,
   type ProviderRequest,
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -18,7 +19,9 @@ import {
   resumeAgentRunStream,
   snapshotRunBundle,
   toolCallContent,
+  type GuardrailRecord,
 } from "../index.js";
+import { kernelEvents } from "./kernel-event-helpers.js";
 
 /** Simulates a host process dying: every checkpoint write after the crash is rejected, so the last
  *  persisted checkpoint stays exactly as the crashed process left it. */
@@ -34,9 +37,9 @@ function crashableCheckpoints(inner: CheckpointStore) {
   return { store, gate };
 }
 
-/** Runs a session while collecting its events, returning the run id from `agent_started` (a crashed
+/** Runs a session while collecting its events, returning the run id from `run.started` (a crashed
  *  run rejects before yielding a result). */
-async function runCapturingId(session: AgentSession, input: string, runState: Parameters<AgentSession["run"]>[1]) {
+async function runCapturingId(session: Session, input: string, runState: Parameters<Session["run"]>[1]) {
   const events: AgentEvent[] = [];
   const subscription = session.subscribe();
   const pump = (async () => {
@@ -48,7 +51,7 @@ async function runCapturingId(session: AgentSession, input: string, runState: Pa
     (error: unknown) => ({ result: undefined, error }),
   );
   await pump;
-  const runId = events.find((event) => event.type === "agent_started")?.runId;
+  const runId = events.find((event) => event.type === "run.started")?.runId;
   assert.ok(runId, "run id captured from agent_started");
   return { runId, ...outcome };
 }
@@ -72,16 +75,19 @@ async function tamperCheckpoint(checkpoints: CheckpointStore, runId: string, mut
 
 /** Rule names of the pack decisions that actually refused something (allow rows are emitted too). */
 const denials = (events: readonly AgentEvent[]): string[] =>
-  events.flatMap((event) => (event.type === "guardrail_decision" && event.record.action !== "allow" ? [event.record.guardrail] : []));
+  kernelEvents<{ record: GuardrailRecord }>(events, "guardrail.decision")
+    .filter((event) => event.record.action !== "allow")
+    .map((event) => event.record.guardrail);
 
 describe("guardrail pack durability (plan 104 Task 2)", () => {
   it("validation-respect state rides the checkpoint and the resumed run still denies the mutation", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const mutations: string[] = [];
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "inspect" ? { ask: "Approval required" } : undefined)),
       id: "pack-durability",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -115,30 +121,32 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "verify_build",
-          parameters: {},
-          execute: () => ({ toolCallId: "call-validate", name: "verify_build", error: { message: "build failed" } }),
-        },
-        { name: "inspect", parameters: {}, execute: () => ({ toolCallId: "call-inspect", name: "inspect", value: "ok" }) },
-        {
-          name: "write",
-          parameters: {},
-          execute: () => {
-            mutations.push("write");
-            return { toolCallId: "call-write", name: "write", value: "written" };
+      tools: {
+        add: [
+          {
+            name: "verify_build",
+            parameters: {},
+            execute: () => ({ toolCallId: "call-validate", name: "verify_build", error: { message: "build failed" } }),
           },
-        },
-      ],
+          { name: "inspect", parameters: {}, execute: () => ({ toolCallId: "call-inspect", name: "inspect", value: "ok" }) },
+          {
+            name: "write",
+            parameters: {},
+            execute: () => {
+              mutations.push("write");
+              return { toolCallId: "call-write", name: "write", value: "written" };
+            },
+          },
+        ],
+      },
     });
     // A non-default `validationTools` proves the options round-trip too: a recompile with registry
     // defaults would not observe `verify_build` and would re-allow the mutation.
     const packs = [{ id: "validation-respect", options: { validationTools: ["verify_build"] } }];
-    const session = agent.createSession({ id: "pack-durability-session", guardrailPacks: packs });
+    const session = await agent.session({ guardrailPacks: packs });
     await session.run("validate");
     const suspended = await session.run("mutate", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: true },
+      runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
     });
     assert.equal(suspended.status, "suspended");
     const loaded = await loadAgentRunState(checkpoints, { runId: suspended.runId });
@@ -153,9 +161,9 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
 
     const events: AgentEvent[] = [];
     const pumps: Promise<void>[] = [];
-    let resumedSession: AgentSession | undefined;
+    let resumedSession: Session | undefined;
     let result = suspended;
-    // The durable run keeps `interruptBeforeTool`, so each gated call takes its own approval: the
+    // The durable run asks before each gated call, so each takes its own approval: the
     // first resume approves the read-only tool, the second reaches the mutation and the pack denies it.
     for (let round = 0; round < 3 && result.status === "suspended"; round += 1) {
       const expectedVersion = result.runState?.version;
@@ -180,11 +188,14 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
       );
     }
     await Promise.all(pumps);
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(mutations, [], "the mutation the suspended run denied stays denied after resume");
     assert.deepEqual(denials(events), ["pack:validation-respect/no-mutation-after-failed-validation"]);
     assert.ok(
-      events.some((event) => event.type === "tool_execution_blocked" && event.reason === "guardrail_blocked"),
+      kernelEvents<{ record: GuardrailRecord }>(events, "guardrail.decision").some(
+        (event) =>
+          event.record.action === "block" && event.record.guardrail === "pack:validation-respect/no-mutation-after-failed-validation",
+      ),
       "the resumed run reports the pack denial",
     );
     const captured = resumedSession;
@@ -208,9 +219,9 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
     let turn = 0;
     let crashed = false;
     let executions = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "pack-crash-recovery",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -231,18 +242,20 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "shell",
-          parameters: {},
-          execute: () => {
-            executions += 1;
-            return { toolCallId: "call-rm", name: "shell", value: { exitCode: 0 } };
+      tools: {
+        add: [
+          {
+            name: "shell",
+            parameters: {},
+            execute: () => {
+              executions += 1;
+              return { toolCallId: "call-rm", name: "shell", value: { exitCode: 0 } };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const session = agent.createSession({ id: "pack-crash-session", guardrailPacks: ["destructive-commands"] });
+    const session = await agent.session({ guardrailPacks: ["destructive-commands"], id: "pack-crash-session", create: true });
     const crashedRun = await runCapturingId(session, "clean up", {
       runState: { checkpoints, definitionRevision: "1", checkpointPolicy: "every-turn", persistSessionState: true },
     });
@@ -257,7 +270,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
     gate.open = true;
 
     const resumed: AgentEvent[] = [];
-    let resumedSession: AgentSession | undefined;
+    let resumedSession: Session | undefined;
     for await (const event of resumeAgentRunStream(
       agent,
       { runId: crashedRun.runId, sessionId: "pack-crash-session" },
@@ -272,10 +285,10 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
     )) {
       resumed.push(event);
     }
-    assert.equal(resumed.at(-1)?.type, "agent_finished");
+    assert.equal(resumed.at(-1)?.type, "run.completed");
     assert.equal(executions, 0, "the resumed run's rm -rf is still blocked");
     assert.ok(
-      resumed.some((event) => event.type === "tool_execution_blocked" && event.reason === "guardrail_blocked"),
+      kernelEvents<{ record: GuardrailRecord }>(resumed, "guardrail.decision").some((event) => event.record.action === "block"),
       "the resumed run reports the pack denial",
     );
     assert.deepEqual(resumedSession?.guardrailPackRefs, [{ id: "destructive-commands", version: 1 }]);
@@ -287,9 +300,10 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
     const suspend = async () => {
       const checkpoints = createMemoryCheckpointStore();
       let turn = 0;
-      const agent = createAgent({
+      const agent = await createAgent({
+        hooks: askEveryTool(),
         id: "pack-fail-closed",
-        store: createMemorySessionStore(),
+        slots: { store: createMemorySessionStore() },
         model: { provider: "mock", model: "demo" },
         provider: {
           id: "mock",
@@ -304,11 +318,11 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
             yield providerDone();
           },
         },
-        tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: true }) }],
+        tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: true }) }] },
       });
-      const session = agent.createSession({ id: "pack-fail-closed-session", guardrailPacks: ["validation-respect"] });
+      const session = await agent.session({ guardrailPacks: ["validation-respect"] });
       const suspended = await session.run("mutate", {
-        runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: true },
+        runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
       });
       return { agent, checkpoints, suspended };
     };
@@ -384,9 +398,10 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
 
   it("keeps the pre-plan-104 checkpoint shape without packs and refuses an over-budget save", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "pack-byte-shape",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -402,25 +417,25 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: true }) }],
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: true }) }] },
     });
 
     // Without `persistSessionState` the checkpoint is byte-identical to a pre-plan-104 one.
-    const defaultSession = agent.createSession({ id: "pack-shape-default", guardrailPacks: ["destructive-commands"] });
+    const defaultSession = await agent.session({ guardrailPacks: ["destructive-commands"] });
     const defaultRun = await defaultSession.run("mutate", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      runState: { checkpoints, definitionRevision: "1" },
     });
-    const defaultState = (await loadAgentRunState(checkpoints, { runId: defaultRun.runId })).state;
+    const defaultState = await (await loadAgentRunState(checkpoints, { runId: defaultRun.runId })).state;
     assert.equal(defaultState.sessionState, undefined, "no opt-in, no session-state block");
 
     // With the opt-in but no packs, the key is absent too; the resume finds no packs and no error.
-    const plainSession = agent.createSession({ id: "pack-shape-plain" });
+    const plainSession = await agent.session({ id: "pack-shape-plain", create: true });
     const plainRun = await plainSession.run("mutate", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: true },
+      runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
     });
-    const plainState = (await loadAgentRunState(checkpoints, { runId: plainRun.runId })).state;
+    const plainState = await (await loadAgentRunState(checkpoints, { runId: plainRun.runId })).state;
     assert.equal(plainState.sessionState?.guardrailPacks, undefined, "no packs, no pack key");
-    let resumedPlain: AgentSession | undefined;
+    let resumedPlain: Session | undefined;
     const plainVersion = plainRun.runState?.version;
     assert.ok(plainVersion !== undefined, "suspended run carries its checkpoint version");
     for await (const _event of resumeAgentRunStream(
@@ -441,22 +456,17 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
     assert.equal(resumedPlain?.guardrailPackRefs, undefined, "a plan-092 checkpoint resumes with no packs");
 
     // A lowered `maxStateBytes` refuses the save instead of truncating the pack block.
-    const budgetSession = agent.createSession({ id: "pack-shape-budget", guardrailPacks: ["validation-respect"] });
-    await assert.rejects(
-      budgetSession.run("mutate", {
-        runState: {
-          checkpoints,
-          definitionRevision: "1",
-          interruptBeforeTool: true,
-          persistSessionState: true,
-          maxStateBytes: 256,
-        },
-      }),
-      (error: unknown) => {
-        assert.match(String((error as Error).message ?? error), /exceeds 256 bytes/, "the over-budget save refuses, never truncates");
-        return true;
+    const budgetSession = await agent.session({ guardrailPacks: ["validation-respect"] });
+    const overBudget = await budgetSession.run("mutate", {
+      runState: {
+        checkpoints,
+        definitionRevision: "1",
+        persistSessionState: true,
+        maxStateBytes: 256,
       },
-    );
+    });
+    assert.equal(overBudget.status, "failed");
+    assert.match(overBudget.error?.message ?? "", /exceeds 256 bytes/, "the over-budget save refuses, never truncates");
     const budgetRecords = await checkpoints.listCheckpoints();
     assert.equal(
       budgetRecords.items.some((record) => record.key === budgetSession.id),
@@ -466,19 +476,16 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
 
     // Inline rule packs are closures and cannot be replayed: persisting refuses loudly instead of
     // writing a row that would restore a different (or no) policy.
-    const inlineSession = agent.createSession({
+    const inlineSession = await agent.session({
       id: "pack-shape-inline",
       guardrailPacks: [{ id: "inline-pack", rules: [{ id: "no-write", tool: "write", deny: () => true }] }],
+      create: true,
     });
-    await assert.rejects(
-      inlineSession.run("mutate", {
-        runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true, persistSessionState: true },
-      }),
-      (error: unknown) => {
-        // The run path wraps the compile error (same shape as the byte-budget refusal above).
-        assert.match(String((error as Error).message ?? error), /rule "no-write" cannot be persisted/);
-        return true;
-      },
-    );
+    const refused = await inlineSession.run("mutate", {
+      runState: { checkpoints, definitionRevision: "1", persistSessionState: true, checkpointPolicy: "every-turn" },
+    });
+    // The run path reports the compile error as a failed result (same shape as the byte-budget refusal above).
+    assert.equal(refused.status, "failed");
+    assert.match(refused.error?.message ?? "", /rule "no-write" cannot be persisted/);
   });
 });

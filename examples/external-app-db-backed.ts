@@ -1,9 +1,7 @@
 import {
   type AgentEvent,
   type AgentEventRecord,
-  type ContextProvider,
   createAgent,
-  createAgentSession,
   createMockProvider,
   createProviderResolver,
   createSecretRedactor,
@@ -13,6 +11,7 @@ import {
   type PersistencePage,
   type ProductionPersistenceStore,
   providerDone,
+  registerContextSources,
   providerTextDelta,
   providerToolCall,
   providerUsage,
@@ -62,18 +61,17 @@ const saveNoteTool: ToolDefinition = {
   },
 };
 
-const summarizeContext: ContextProvider = {
+// Host context as a `context.build` source (roadmap §2.4). A skill's context is no longer a
+// registry lookup: the host composes the sources it wants for the skills it activates.
+const summarizeContext = {
   name: "notes/summary-context",
-  resolve() {
-    return [{ id: "sum-ctx", title: "Summary style", content: "Summaries are one sentence." }];
-  },
+  contextBlocks: [{ id: "sum-ctx", title: "Summary style", content: "Summaries are one sentence." }],
 };
 
 const summarizeSkill: Skill = {
   name: "summarize-skill",
   description: "Activates summary context and the notes/save tool.",
   instructions: "Summarize the request, then save the summary.",
-  context: [summarizeContext],
   toolNames: ["notes/save"], // enforced fail-closed before the first provider turn
 };
 
@@ -254,26 +252,29 @@ export async function demo(): Promise<{
     { id: "mock" },
   );
 
-  const agent = createAgent({
+  const agent = await createAgent({
     model,
     providerSource: createProviderResolver([provider]),
     instructions: "You are a concise assistant.",
-    tools: createToolRegistry([saveNoteTool]),
-    skills: createSkillRegistry([summarizeSkill]),
-    store,
+    tools: { add: [saveNoteTool] },
+    skills: { add: [summarizeSkill] },
+    // A skill no longer carries context providers; the host composes the `context.build`
+    // sources it wants for the skills it activates.
+    hooks: (hooks) => registerContextSources(hooks, [summarizeContext]),
+    slots: { store },
     runLedger: store,
     ownership: { tenantId: "tenant-1", accountId: "acct-1", userId: "user-1" },
     redactor: createSecretRedactor([FAKE_SECRET, FAKE_API_KEY]),
   });
 
-  // Initial session via the createAgentSession seam, sharing the DB-backed store.
-  const session = createAgentSession({ agent, id: "session-1", store });
+  // Initial session through `agent.session()`, sharing the DB-backed store.
+  const session = await agent.session();
 
   // Run 1 — the prompt carries a fake secret that must be redacted before storage.
   const reader1 = collectEvents(session.subscribe());
-  await session.run(`Summarize this. Do not reveal ${FAKE_SECRET}.`, { activeSkills: ["summarize-skill"] });
+  await session.run(`Summarize this. Do not reveal ${FAKE_SECRET}.`);
   const events1 = await reader1;
-  const run1Id = events1.find((e) => e.type === "agent_started")?.runId ?? "";
+  const run1Id = events1.find((e) => e.type === "run.started")?.runId ?? "";
   const branchHandleLeaf = session.leafId; // durable (sessionId, leafId) handle
 
   // Run 2 advances the main branch past run 1.
@@ -281,9 +282,9 @@ export async function demo(): Promise<{
 
   // Branch-handle checkout: rewind to the run-1 leaf, then fork a divergent branch.
   await session.checkout(branchHandleLeaf);
-  const forked = session.fork({ leafId: branchHandleLeaf });
+  const forked = await session.fork({ at: branchHandleLeaf });
   const readerFork = collectEvents(forked.subscribe());
-  await forked.run("Divergent turn on the forked branch.", { activeSkills: ["summarize-skill"] });
+  await forked.run("Divergent turn on the forked branch.");
   const forkEvents = await readerFork;
   const forkLeaf = forked.leafId;
 
@@ -296,8 +297,8 @@ export async function demo(): Promise<{
 
   // Did the fork actually diverge from the main line at the shared leaf?
   // readBranchPath is optional on the contract; this reference store always implements it.
-  const forkBranch = await store.readBranchPath!({ sessionId: session.id, leafId: forkLeaf });
-  const forkDiverged = Boolean(forkLeaf && forkLeaf !== branchHandleLeaf && forkBranch.items.length > 0);
+  const forkBranch = await store.readBranchPath!({ sessionId: forked.id, leafId: forkLeaf });
+  const forkDiverged = Boolean(forked.id !== session.id && forkLeaf && forkLeaf !== branchHandleLeaf && forkBranch.items.length > 0);
 
   // Scan every persisted ledger/entry payload for the raw secrets.
   const allLedgerText = JSON.stringify({
@@ -305,6 +306,7 @@ export async function demo(): Promise<{
     toolCalls: resumedToolCalls.items,
     usage: resumedUsage.items,
     entries: (await store.queryEntries({ sessionId: session.id })).items,
+    forkEntries: (await store.queryEntries({ sessionId: forked.id })).items,
   });
   const secretRedactedFromLedger = !allLedgerText.includes(FAKE_SECRET) && !allLedgerText.includes(FAKE_API_KEY);
   // Credential resolver value must never appear in live events either.

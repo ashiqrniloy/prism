@@ -1,15 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  assembleProviderInput,
-  createContributionRegistries,
-  createDefaultPromptBuilder,
-  createExtensionKernel,
-  createSkillRegistry,
-  resolveActiveSkills,
-  type Skill,
-  type ToolDefinition,
-} from "../index.js";
+import { assembleProviderInput, createSkillRegistry, resolveActiveSkills, type Skill, type ToolDefinition } from "../index.js";
 
 const skill: Skill = {
   name: "brief",
@@ -57,21 +48,10 @@ describe("skill registry and selection", () => {
     assert.throws(() => resolveActiveSkills({ registry, names: ["brief"], tools: [] }), /requires inactive tool: echo/);
   });
 
-  it("extension registered skill is inert until host selects it", async () => {
-    const contributions = createContributionRegistries();
-    const kernel = createExtensionKernel({ registries: contributions });
-    await kernel.load([
-      {
-        name: "skills",
-        setup: (api) => {
-          api.registerSkill(skill);
-        },
-      },
-    ]);
+  it("a skill stays out of the prompt until the host selects it", () => {
     const registry = createSkillRegistry();
-
     assert.deepEqual(registry.list(), []);
-    registry.register(contributions.skills.resolve("brief"));
+    registry.register(skill);
     assert.deepEqual(resolveActiveSkills({ registry, names: ["brief"], tools: [tool] }), [skill]);
   });
 
@@ -82,7 +62,6 @@ describe("skill registry and selection", () => {
     const request = await assembleProviderInput({
       model: { provider: "mock", model: "demo" },
       input: "Hi",
-      promptBuilder: createDefaultPromptBuilder(),
       skills: active,
       tools: [tool],
     });
@@ -102,7 +81,6 @@ describe("skill registry and selection", () => {
     const request = await assembleProviderInput({
       model: { provider: "mock", model: "demo" },
       input: "Hi",
-      promptBuilder: createDefaultPromptBuilder(),
       skills: active,
       tools: [tool],
       skillsDisclosure: "eager",

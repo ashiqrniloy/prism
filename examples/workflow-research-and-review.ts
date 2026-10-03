@@ -1,6 +1,5 @@
 import {
   createAgent,
-  createAgentSession,
   createMockProvider,
   createSecretRedactor,
   createToolRegistry,
@@ -27,18 +26,18 @@ const provider = createMockProvider([
 ]);
 const tools = createToolRegistry();
 
-function makeAgent(_name: string, system: string) {
-  return createAgent({
+async function makeAgent(_name: string, system: string) {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider,
-    tools,
+    tools: { add: tools.list() },
     instructions: system,
   });
 }
 
-const researchAgent = makeAgent("researcher", "You research a topic and return key facts.");
-const writerAgent = makeAgent("writer", "You write a draft based on provided facts.");
-const reviewerAgent = makeAgent("reviewer", "You review a draft for quality. Return approved/fix-needed.");
+const researchAgent = await makeAgent("researcher", "You research a topic and return key facts.");
+const writerAgent = await makeAgent("writer", "You write a draft based on provided facts.");
+const reviewerAgent = await makeAgent("reviewer", "You review a draft for quality. Return approved/fix-needed.");
 
 const researchNode = agentNode({
   agent: "researcher",
@@ -75,10 +74,7 @@ export async function demo() {
     workflow,
     { topic: "React hooks" },
     {
-      agentFactory: (name) =>
-        createAgentSession({
-          agent: name === "researcher" ? researchAgent : name === "writer" ? writerAgent : reviewerAgent,
-        }),
+      agentFactory: (name) => (name === "researcher" ? researchAgent : name === "writer" ? writerAgent : reviewerAgent).session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },

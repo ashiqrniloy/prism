@@ -24,9 +24,10 @@ test("citation integrity scorer is invariant 0 on revoked ACL / forged hash even
   const result = {
     sessionId: "sess-1",
     runId: "run-1",
-    status: "succeeded" as const,
+    status: "completed" as const,
     text: "ok",
     content: [],
+    messages: [],
   };
   const revoked = await integrity.score({
     result,
@@ -49,7 +50,7 @@ test("citation integrity scorer is invariant 0 on revoked ACL / forged hash even
   assert.equal(ok.score, 1);
 
   const report = await runExperiment({
-    agent: createAgent({
+    agent: await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([
         providerTextDelta("ok"),

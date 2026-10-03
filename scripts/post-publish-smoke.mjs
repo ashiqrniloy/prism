@@ -39,7 +39,7 @@ const prismCodeVersion = prismCodeVersionIndex === -1 ? null : argv[prismCodeVer
 if (prismCodeVersionIndex !== -1 && !prismCodeVersion) throw new Error("--prism-code-version requires a value");
 if (prismCodeVersion && !prismCode) throw new Error("--prism-code-version requires --prism-code");
 
-const PACKAGES = ["@arnilo/prism", "@arnilo/prism-memory", "@arnilo/prism-hooks", "@arnilo/prism-work"];
+const PACKAGES = ["@arnilo/prism", "@arnilo/prism-memory", "@arnilo/prism-hooks-json", "@arnilo/prism-work"];
 const resolvedVersion = version ?? JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 const anydocPin = JSON.parse(readFileSync(join(root, "packages/prism-work/package.json"), "utf8")).peerDependencies["@firecrawl/anydoc"];
 const odtFixture = join(root, "packages/prism-work/src/document-extraction/__tests__/fixtures/hello.odt");
@@ -101,24 +101,19 @@ function smokeSource() {
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAgent, forwardAgentEvents, createExtensionKernel, activateKernel, providerTextDelta, providerDone } from "@arnilo/prism";
+import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
 import { createMemory, createHashEmbedder } from "@arnilo/prism-memory";
 import { createMemoryFabric } from "@arnilo/prism-memory/fabric";
 import { createScopedMemoryPolicy } from "@arnilo/prism-memory/scoped";
-import { parseHooksConfig, createHooksExtension } from "@arnilo/prism-hooks";
+import hooksJson, { hookCommandHash } from "@arnilo/prism-hooks-json";
 
 const checks = [];
-checks.push(["root: createAgent + event bridge + kernel", [createAgent, forwardAgentEvents, createExtensionKernel, activateKernel].every((f) => typeof f === "function")]);
+checks.push(["root: createAgent + definePackage", [createAgent, definePackage].every((f) => typeof f === "function")]);
 checks.push(["memory root: createMemory", typeof createMemory === "function"]);
 checks.push(["memory ./fabric subpath", typeof createMemoryFabric === "function"]);
 checks.push(["memory ./scoped subpath", typeof createScopedMemoryPolicy === "function"]);
-checks.push(["hooks adapter exports", typeof parseHooksConfig === "function" && typeof createHooksExtension === "function"]);
-
-const codex = parseHooksConfig({ hooks: { UserPromptSubmit: [{ matcher: "*", hooks: [{ type: "command", command: "true" }] }] } });
-const claude = parseHooksConfig({ UserPromptSubmit: [{ matcher: "*", hooks: [{ type: "command", command: "true" }] }] });
-checks.push(["parseHooksConfig accepts both shapes", Array.isArray(codex.events?.UserPromptSubmit) && Array.isArray(claude.events?.UserPromptSubmit)]);
-const hooks = createHooksExtension(codex);
-checks.push(["createHooksExtension returns extension + guardrails", typeof hooks?.setup === "function" && typeof hooks?.guardrails === "object"]);
+checks.push(["hooks-json default export", typeof hooksJson === "function" && hooksJson.name === "@arnilo/prism-hooks-json"]);
+checks.push(["hooks-json hash helper", typeof hookCommandHash === "function"]);
 
 const scopeRoot = await mkdtemp(join(tmpdir(), "prism-scoped-smoke-"));
 const memory = createMemory({ tenantId: "smoke", resourceId: scopeRoot, threadId: "scoped", embedder: createHashEmbedder({ dimensions: 8 }) });
@@ -132,11 +127,15 @@ checks.push(["scoped write then recall above the floor", !hit.abstained && hit.h
 checks.push(["scoped ledger written", readFileSync(join(scopeRoot, ".memory", "state.json"), "utf8").length > 0]);
 
 const provider = { id: "mock", async *generate() { yield providerTextDelta("ok"); yield providerDone(); } };
-const agent = createAgent({ model: { provider: "mock", model: "smoke" }, provider, stopHooks: [{ name: "smoke", decide: async () => ({ action: "stop" }) }] });
-const session = agent.createSession({ id: "post-publish-smoke" });
+const agent = await createAgent({
+  model: { provider: "mock", model: "smoke" },
+  provider,
+  hooks: (hooks) => hooks.on("run.end", () => undefined, { id: "smoke" }),
+});
+const session = (await agent.session({ id: "post-publish-smoke", create: true }));
 const result = await session.run("hi");
 checks.push(["run with a stop hook settles", typeof result?.status === "string"]);
-checks.push(["AgentSession.close() present", typeof session.close === "function"]);
+checks.push(["Session.close() present", typeof session.close === "function"]);
 await session.close();
 await session.close();
 checks.push(["close() is idempotent", true]);

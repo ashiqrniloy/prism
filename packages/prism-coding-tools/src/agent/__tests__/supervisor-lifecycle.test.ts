@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import type { DelegatedAgentStep } from "@arnilo/prism";
+import type { AgentEvent, DelegatedAgentStepData } from "@arnilo/prism";
 import type { SupervisorEvent, SupervisorRunSummary } from "@arnilo/prism-core/runtime/supervisor";
 import { type CodingLifecycleEvent, createCodingLifecycleEmitter, DEFAULT_LIFECYCLE_MAX_REASON_BYTES } from "../lifecycle.js";
 import { observeSupervisorLifecycle } from "../supervisor-lifecycle.js";
@@ -282,7 +282,7 @@ describe("observeSupervisorLifecycle", () => {
   });
 
   it("keeps the AG-UI delegated_agent_step payload free of the opt-in fields", async () => {
-    const steps: DelegatedAgentStep[] = [];
+    const steps: Extract<AgentEvent, { readonly type: "package.event" }>[] = [];
     observeSupervisorLifecycle(
       source(
         [
@@ -313,8 +313,9 @@ describe("observeSupervisorLifecycle", () => {
       },
     );
     await settles(() => steps.length === 1);
-    assert.deepEqual(steps[0]?.detail, { label: "failed" });
-    assert.equal(steps[0]?.state, "error");
+    const step = steps[0]?.data as unknown as DelegatedAgentStepData;
+    assert.deepEqual(step?.detail, { label: "failed" });
+    assert.equal(step?.state, "error");
     assert.doesNotMatch(JSON.stringify(steps), /failure|recovery|maxToolCalls|turn_limit|attempts|reason/);
   });
 });

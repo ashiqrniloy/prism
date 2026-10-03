@@ -23,6 +23,25 @@ import { createSupervisor, SupervisorLimitError } from "../../packages/prism-cor
 import { agentNode, defineWorkflow, fanOutNode, runWorkflow } from "../../packages/prism-core/dist/runtime/workflows/index.js";
 import { loadBudgets } from "../budget-gates.mjs";
 
+/** Bounded-concurrency loop (the kernel default loop dispatches tools sequentially). */
+function concurrentLoop(concurrency) {
+  return {
+    name: `bench-concurrent-${concurrency}`,
+    revision: "1",
+    async run(run) {
+      for (;;) {
+        const turn = await run.turn();
+        if (turn.stopped) return;
+        if (turn.toolCalls.length > 0) {
+          await run.executeTools(turn.toolCalls, { concurrency });
+          continue;
+        }
+        if (!(await run.end()).continue) return;
+      }
+    },
+  };
+}
+
 export const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);
 export const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 20);
 export const DELAY_MS = Number(process.env.PRISM_BENCH_DELAY_MS ?? 8);
@@ -142,7 +161,8 @@ function drain(session, counters) {
       const next = await iterator.next();
       if (next.done) return;
       counters.delivered += 1;
-      if (next.value?.type === "event_subscriber_overflow") counters.dropped += next.value.droppedEvents ?? 0;
+      // The default close policy now rejects the iterator on overflow instead of synthesizing a marker.
+      if (next.value?.type === "run.failed") counters.dropped += 0;
     }
   })();
   return async () => {
@@ -156,12 +176,12 @@ export async function runIndependentSessions(count, options = {}) {
   const tracker = createTracker();
   const events = { delivered: 0, dropped: 0 };
   const heapBefore = process.memoryUsage().heapUsed;
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider: trackingProvider(tracker, delayMs),
   });
-  const sessions = Array.from({ length: count }, () => agent.createSession({ id: nextId("s") }));
+  const sessions = await Promise.all(Array.from({ length: count }, () => agent.session({ id: nextId("s"), create: true })));
   const stops = sessions.map((session) => drain(session, events));
   const start = performance.now();
   const results = await Promise.all(sessions.map((session) => session.run("go")));
@@ -191,9 +211,9 @@ export async function runSupervisorFanOut(options = {}) {
     limits: { maxActiveChildren: cap, timeoutMs: 5_000 },
     children: {
       child: {
-        createAgent: () => {
+        createAgent: async () => {
           peakChildren = Math.max(peakChildren, supervisor.activeChildren);
-          return createAgent({
+          return await createAgent({
             model: { provider: "mock", model: "demo" },
             provider: trackingProvider(tracker, delayMs),
           });
@@ -232,9 +252,9 @@ export async function runSupervisorSaturation(options = {}) {
     limits: { maxActiveChildren: cap, timeoutMs: 5_000 },
     children: {
       child: {
-        createAgent: () => {
+        createAgent: async () => {
           peakChildren = Math.max(peakChildren, supervisor.activeChildren);
-          return createAgent({
+          return await createAgent({
             model: { provider: "mock", model: "demo" },
             provider: trackingProvider(tracker, delayMs),
           });
@@ -333,11 +353,13 @@ export async function runWorkflowAgentNodes(options = {}) {
   });
   const start = performance.now();
   const result = await runWorkflow(workflow, "go", {
-    agentFactory: (name) =>
-      createAgent({
-        model: { provider: "mock", model: "demo" },
-        provider: trackingProvider(tracker, delayMs),
-      }).createSession({ id: nextId(name) }),
+    agentFactory: async (name) =>
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider: trackingProvider(tracker, delayMs),
+        })
+      ).session({ id: nextId(name), create: true }),
     onEvent: (event) => collected.push(event.type),
   });
   const ms = performance.now() - start;
@@ -362,9 +384,9 @@ export async function runToolConcurrency(options = {}) {
   const toolCount = options.toolCount ?? TOOL_CALLS;
   const tracker = createTracker();
   const heapBefore = process.memoryUsage().heapUsed;
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    loop: { strategy: "single-shot", toolConcurrency },
+    slots: { loop: concurrentLoop(toolConcurrency) },
     provider: toolRoundProvider(toolCount),
     tools: [
       {
@@ -381,13 +403,13 @@ export async function runToolConcurrency(options = {}) {
       },
     ],
   });
-  const session = agent.createSession({ id: nextId("tool") });
+  const session = await agent.session({ id: nextId("tool"), create: true });
   const start = performance.now();
   const result = await session.run("go");
   const ms = performance.now() - start;
   return {
     ms,
-    completions: result.status === "succeeded" ? 1 : 0,
+    completions: result.status === "completed" ? 1 : 0,
     peakActiveProviderCalls: tracker.peak,
     peakActiveTools: tracker.peak,
     activeAfter: tracker.active,
@@ -405,15 +427,15 @@ export async function runAbortStorm(options = {}) {
   const settleDeadlineMs = options.settleDeadlineMs ?? ABORT_SETTLE_MS;
   const tracker = createTracker();
   const heapBefore = process.memoryUsage().heapUsed;
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: trackingProvider(tracker, delayMs),
   });
   const controllers = [];
-  const promises = Array.from({ length: count }, () => {
+  const promises = Array.from({ length: count }, async () => {
     const ac = new AbortController();
     controllers.push(ac);
-    return agent.createSession({ id: nextId("abort") }).run("go", { signal: ac.signal });
+    return (await agent.session({ id: nextId("abort"), create: true })).run("go", { signal: ac.signal });
   });
   await delay(Math.max(1, Math.min(2, delayMs / 4)));
   const abortStart = performance.now();
@@ -478,7 +500,7 @@ export async function runProviderDeltas(options = {}) {
   const delta = providerTextDelta(text);
   const done = providerDone();
   const heapBefore = process.memoryUsage().heapUsed;
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: {
       id: "mock",
@@ -492,10 +514,10 @@ export async function runProviderDeltas(options = {}) {
     },
   });
   const start = performance.now();
-  const result = await agent.createSession({ id: nextId("delta") }).run("go");
+  const result = await (await agent.session({ id: nextId("delta"), create: true })).run("go");
   return {
     ms: performance.now() - start,
-    completions: result.status === "succeeded" ? 1 : 0,
+    completions: result.status === "completed" ? 1 : 0,
     peakActiveProviderCalls: 0,
     activeAfter: 0,
     heapDeltaBytes: process.memoryUsage().heapUsed - heapBefore,

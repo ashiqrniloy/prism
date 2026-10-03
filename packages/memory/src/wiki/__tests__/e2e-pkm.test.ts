@@ -4,8 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
-import { createExtensionKernel } from "@arnilo/prism";
-import { createWikiExtension, initWiki, lintWiki } from "../index.js";
+import { createWikiRecordInsightTool, createWikiSearchTool, initWiki, lintWiki } from "../index.js";
 
 const FIXTURE_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-e2e-pkm-"));
 
@@ -63,17 +62,11 @@ Studying quantum complexity and [[shors-algorithm]]. #journal
     assert.ok(indexContent.includes("Quantum Computing"));
     assert.ok(indexContent.includes("Shor's Algorithm"));
 
-    // 2. Load Extension Kernel and record insight
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      createWikiExtension({
-        workspaceRoot: FIXTURE_DIR,
-        wikiRoot: ".wiki",
-      }),
-    ]);
-
-    const recordInsightTool = kernel.registries.tools.get("wiki_record_insight");
-    assert.ok(recordInsightTool);
+    const recordInsightTool = createWikiRecordInsightTool({
+      workspaceRoot: FIXTURE_DIR,
+      wikiRoot: ".wiki",
+      autoDeploySkills: false,
+    });
 
     const recordRes = await recordInsightTool.execute(
       {
@@ -88,8 +81,11 @@ Studying quantum complexity and [[shors-algorithm]]. #journal
     assert.ok(recordRes.content[0].text.includes("Successfully recorded"));
 
     // 3. Search for recorded insight
-    const searchTool = kernel.registries.tools.get("wiki_search");
-    assert.ok(searchTool);
+    const searchTool = createWikiSearchTool({
+      workspaceRoot: FIXTURE_DIR,
+      wikiRoot: ".wiki",
+      autoDeploySkills: false,
+    });
 
     const searchRes = await searchTool.execute(
       { query: "Grover Search", mode: "search" },

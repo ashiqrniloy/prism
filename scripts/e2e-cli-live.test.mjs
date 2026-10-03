@@ -193,7 +193,7 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, (
     const events1 = lines.map((l) => JSON.parse(l)).filter((p) => p.type === "event" && p.id === 1);
     assert.ok(events1.length > 0, "prompt produced no streamed events");
     assert.ok(
-      events1.some((p) => p.event.type === "message_delta" && p.event.content?.type === "text"),
+      events1.some((p) => p.event.type === "message.delta" && p.event.content?.type === "text"),
       "no text delta streamed",
     );
 

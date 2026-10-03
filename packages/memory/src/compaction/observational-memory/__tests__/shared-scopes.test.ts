@@ -43,10 +43,10 @@ function entry(id: string, data: unknown): SessionEntry {
 
 async function fixture(sessionIds: readonly string[]) {
   const store = createMemorySessionStore();
-  const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-  const sessions = new Map<string, ReturnType<typeof agent.createSession>>();
+  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const sessions = new Map<string, Awaited<ReturnType<typeof agent.session>>>();
   for (const id of sessionIds) {
-    const session = agent.createSession({ id });
+    const session = await agent.session({ id, create: true });
     await session.run(`hello ${id}`);
     sessions.set(id, session);
   }
@@ -263,8 +263,8 @@ describe("observational memory shared work scopes", () => {
 
   it("attached_context_without_shared_scopes_matches_the_local_projection", async () => {
     const store = createMemorySessionStore();
-    const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-    const session = agent.createSession({ id: "s15" });
+    const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+    const session = await agent.session({ id: "s15", create: true });
     await session.run("hello s15");
     const appendEntry = (item: SessionEntry, options?: { expectedParentId?: string }) => store.append(item, options);
     const scopes = createWorkScopeController({ session, appendEntry });
@@ -277,7 +277,7 @@ describe("observational memory shared work scopes", () => {
 
     const attached = createObservationalMemory({}).attach(session, { appendEntry });
     assert.deepEqual(
-      await attached.contextProvider.resolve({ messages: [] }),
+      (await attached.contextBuild({ messages: [] }, { sessionId: session.id, runId: "r" } as never))?.context ?? [],
       buildObservationalMemoryContextBlocks(await session.entries(), { keepRecentEntries: 8 }),
     );
   });

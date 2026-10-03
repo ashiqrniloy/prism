@@ -1,38 +1,44 @@
 /** Contracts-core agent family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 
-import type { InputAssemblyLayout, RunLedger, RunOptions, ToolDefinition, ToolEffectStore, ToolRegistry } from "../contracts-protocol.js";
-import type { AgentRunResult, AgentRunStateOptions, AgentSession } from "../contracts-run-state.js";
-import type { ContributionRegistries } from "../contributions.js";
-import type { MiddlewareRegistry } from "../middleware.js";
+import type {
+  AgentEvent,
+  InputAssemblyLayout,
+  RunLedger,
+  RunOptions,
+  ToolCapabilityKind,
+  ToolDefinition,
+  ToolEffectStore,
+  ToolRegistry,
+} from "../contracts-protocol.js";
+import type { RunResult, AgentRunStateOptions, Session } from "../contracts-run-state.js";
+import type { HostPort } from "../host/types.js";
+import type { HookRegistrar } from "../hooks/types.js";
 import type { SecretRedactor } from "../redaction.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
+import type { SlotAssignments } from "../slots/types.js";
 import type { ToolValidator } from "../tools.js";
 import type { CompactionOptions, RetryOptions } from "./compaction.js";
 import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig } from "./content.js";
-import type { ExtensionAPI, ProviderRequestPolicy, SystemPromptConfig } from "./extensions.js";
+import type { SystemPromptConfig } from "./system-prompt.js";
 import type { GuardrailPackRef } from "./guardrail-packs.js";
-import type { AgentLoopOptions, AgentLoopStrategy, LoopContext, StopHook } from "./loop.js";
-import type { OwnershipScope } from "./persistence.js";
+import type { OwnershipScope, PersistencePage } from "./persistence.js";
 import type { AIProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
 import type { ResourceLoader } from "./resources.js";
-import type { Guardrails, RunLimits } from "./run-limits.js";
-import type { SessionStore } from "./session.js";
+import type { RunLimits } from "./run-limits.js";
+import type { SessionListQuery, SessionSearchHit, SessionSearchQuery, SessionStore, SessionSummary } from "./session.js";
 
 export interface AgentDefinition {
   readonly name: string;
   readonly description?: string;
-  /** Direct model config, or a model id resolved from `registries.models`. */
+  /** Direct model config, or a `provider/model` string. */
   readonly model?: ModelConfig | string;
-  /** Tool names to activate from the active tool registry / `registries.tools`. */
+  /** Tool names to activate from the tool list in scope. */
   readonly tools?: readonly string[];
   /** Skill names resolved through `resolveActiveSkills()`; `toolNames` enforcement applies. */
   readonly skills?: readonly string[];
-  /** Context provider names from `registries.contextProviders`. */
-  readonly context?: readonly string[];
   readonly systemPrompt?: SystemPromptConfig;
   readonly instructions?: string;
-  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Optional escape hatch. When present, overrides declarative resolution. */
   create?(config?: AgentConfig): Promise<Agent> | Agent;
@@ -41,9 +47,8 @@ export interface AgentDefinition {
 }
 
 /** Input to {@link resolveAgentDefinition}. All fields are optional; the host
- *  controls scope by which registries it passes. */
+ *  controls scope by which tools, skills, and provider source it passes. */
 export interface AgentDefinitionResolutionContext {
-  readonly registries?: ContributionRegistries;
   readonly providerSource?: ProviderResolver;
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly skillsRegistry?: SkillRegistry;
@@ -52,19 +57,6 @@ export interface AgentDefinitionResolutionContext {
   readonly overrides?: Partial<AgentConfig>;
 }
 
-/** Per-turn tool menu. Called at `loopCtx.assemble` before each provider request. */
-export interface ToolNarrowingContext {
-  /** 1-based provider turn this assemble precedes. */
-  readonly turn: number;
-  /** Text of the latest assistant message, when any. */
-  readonly lastAssistantText?: string;
-  /** Run-grant tool names (R11 snapshot, including generated `search_tools` when disclosure is search). */
-  readonly toolIds: readonly string[];
-}
-
-/** Host callback: return a subset of `toolIds`. Superset names are clamped; throw fails the turn. */
-export type ToolNarrowing = (ctx: ToolNarrowingContext) => readonly string[] | Promise<readonly string[]>;
-
 export interface AgentConfig {
   readonly id?: string;
   readonly name?: string;
@@ -72,22 +64,20 @@ export interface AgentConfig {
   readonly model: ModelConfig;
   readonly provider?: AIProvider;
   readonly providerSource?: ProviderResolver;
-  readonly tools?: ToolRegistry | readonly ToolDefinition[];
-  readonly context?: readonly ContextProvider[];
-  readonly skills?: SkillRegistry | readonly Skill[];
-  /** Migration opt-in: activate every registry skill by default when run options do not narrow activation. */
-  readonly activateAllSkills?: true;
-  /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
-  readonly skillsDisclosure?: import("../skill-disclosure.js").SkillsDisclosure;
+  readonly tools?: { readonly add?: readonly ToolDefinition[] };
+  readonly skills?: {
+    readonly dirs?: readonly string[];
+    readonly add?: readonly Skill[];
+    /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
+    readonly disclosure?: import("../skill-disclosure.js").SkillsDisclosure;
+  };
   /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
   readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
   readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
-  /** Per-turn restrictive allow-list over the run grant. RunOptions override. */
-  readonly toolNarrowing?: ToolNarrowing;
-  /** Opt-in: tools hidden this turn stay callable by name (default off). */
-  readonly allowHiddenToolCalls?: true;
   /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
   readonly toolResultFold?: import("../tool-result-fold.js").ToolResultFoldOptions;
+  /** Opt-in: tools hidden by a `RunOptions.tools` scoping stay callable by name (default off). */
+  readonly allowHiddenToolCalls?: true;
   /** Opt-in attention compiler (plan 074): `true` for defaults, an object to tune ratios/depth.
    *  Omitted keeps today's request bytes; per-run options may only relax this setting. */
   readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
@@ -110,18 +100,12 @@ export interface AgentConfig {
    * projection — see [Runs and usage](../../docs/runs-and-usage.md).
    */
   readonly contextBudget?: import("../context-budget.js").ContextBudget;
-  readonly inputBuilder?: InputBuilder;
-  readonly promptBuilder?: PromptBuilder;
-  readonly middleware?: MiddlewareRegistry;
   readonly resourceLoader?: ResourceLoader;
-  readonly store?: SessionStore;
-  readonly permission?: PermissionPolicy;
   /** Optional trust check for tool and resource targets. */
   readonly trust?: TrustPolicy;
   readonly providerOptions?: ProviderRequestOptions;
   /** Portable thinking intent. Snapped per model; run value overrides. */
   readonly thinkingLevel?: string;
-  readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
   readonly systemPrompt?: SystemPromptConfig;
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
@@ -130,8 +114,8 @@ export interface AgentConfig {
   /** Optional durable recovery store. */
   readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
-  /** Host-verified identity default for sessions created from this agent. */
-  readonly identity?: import("../identity.js").AgentIdentity;
+  /** Opaque optional host principal. Packages own verification and enforcement. */
+  readonly principal?: import("../identity.js").Principal;
   readonly idempotencyKey?: string;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
@@ -139,12 +123,26 @@ export interface AgentConfig {
   readonly limits?: RunLimits;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly validator?: ToolValidator;
-  readonly instructionInjectors?: readonly InstructionInjector[];
   readonly inputLayout?: InputAssemblyLayout;
-  readonly loop?: AgentLoopStrategy | AgentLoopOptions;
-  readonly guardrails?: Guardrails;
-  /** Run-end stop hooks (plan 106 R1); `RunOptions.stopHooks` appends to this list. */
-  readonly stopHooks?: readonly StopHook[];
+  /** Host hook registrar, called exactly once by `createAgent` under the `host` owner (roadmap §2.4). */
+  readonly hooks?: (hooks: HookRegistrar) => void;
+  /** Direct slot assignments; a direct implementation always wins over a provided slot. */
+  readonly slots?: SlotAssignments;
+  /**
+   * Packages to load, in order, before the agent is built (roadmap §2.6): definitions (defaults) or
+   * instances (`coding({ root })`). A listed package is an active package. `hooks` loads after them.
+   */
+  readonly packages?: readonly import("../packages/api.js").PackageInput[];
+  /** Config per package name, layered over each package's defaults and instance config. Unknown names fail closed. */
+  readonly packageConfig?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  /**
+   * Removes contributions by id after every package has run `setup`, so a package cannot re-add one:
+   * tool and skill names (package or host), command names, and hook registration ids
+   * (`<package>:<hook>[#id]`). An id nothing carries fails the load with `unknown_disable_id`.
+   */
+  readonly disable?: AgentDisable;
+  /** Host capabilities (UI, …). A host without `ui` answers every request `unavailable`. */
+  readonly host?: HostPort;
   /** Opt-in durable interruption/checkpointing default for this agent. */
   readonly runState?: AgentRunStateOptions;
   /** Internal marker set by createSecureAgent(); makes security defaults immutable per run. */
@@ -153,35 +151,137 @@ export interface AgentConfig {
 
 /** Opt-in fail-closed composition over the normal explicit AgentConfig API. */
 export interface SecureAgentOptions
-  extends Omit<
-    AgentConfig,
-    "tools" | "validator" | "redactor" | "permission" | "trust" | "ownership" | "identity" | "limits" | "runState" | "secure"
-  > {
+  extends Omit<AgentConfig, "tools" | "validator" | "redactor" | "trust" | "ownership" | "principal" | "limits" | "runState" | "secure"> {
   readonly id: string;
   readonly tools: readonly ToolDefinition[];
   readonly toolArgumentValidator: import("../tools.js").ToolArgumentValidator;
   readonly redactor: SecretRedactor;
-  readonly permission: PermissionPolicy;
   readonly trust: TrustPolicy;
   readonly ownership: OwnershipScope;
   /** Optional host-verified identity; when set must match `ownership`. */
   readonly identity?: import("../identity.js").AgentIdentity;
   readonly limits: RunLimits;
   readonly definitionRevision: string;
-  readonly runState: Omit<AgentRunStateOptions, "definitionRevision" | "interruptBeforeTool">;
+  readonly runState: Omit<AgentRunStateOptions, "definitionRevision">;
   /** Optional host composition readiness assertions evaluated on creation. */
   readonly composition?: import("../host-composition.js").HostCompositionOptions;
 }
 
-export interface Agent {
-  readonly config: AgentConfig;
-  createSession(config?: AgentSessionConfig): AgentSession;
+export interface AgentDisable {
+  readonly tools?: readonly string[];
+  readonly hooks?: readonly string[];
+  readonly commands?: readonly string[];
+  readonly skills?: readonly string[];
 }
 
-export interface AgentSessionConfig {
+export interface AgentCommandRunOptions {
+  /** The session the command acts on. It reaches `run` as the owning package's `SessionContext`. */
+  readonly session?: Session;
+}
+
+/** The commands loaded packages registered (roadmap §2.3). */
+export interface AgentCommands {
+  list(): readonly import("../packages/api.js").PackageCommandInfo[];
+  /** Validates `args` against the command's schema, then runs it. An unknown name throws `PackageLoadError` `unknown_command`. */
+  run(name: string, args?: JsonObject, options?: AgentCommandRunOptions): Promise<unknown>;
+}
+
+/** One tool the agent exposes, as `agent.tools` lists it. */
+export interface ToolInfo {
+  readonly name: string;
+  readonly description: string;
+  /** What the tool can touch; a classifier-typed effect lists every kind. */
+  readonly effects: readonly ToolCapabilityKind[];
+  /** The registering package, or `host`. */
+  readonly package: string;
+}
+
+/** One skill the agent exposes, as `agent.skills` lists it. */
+export interface SkillInfo {
+  readonly name: string;
+  readonly description: string;
+  /** The registering package, or `host`. */
+  readonly package: string;
+}
+
+/**
+ * `agent.sessions` (roadmap §2.3): list, get, delete and search over the resolved `store` slot's declared
+ * capabilities. Every call applies the agent's `ownership` scope, so a session another scope owns is never
+ * listed, returned, or deleted. A store without the capability a call needs fails closed with
+ * `UnsupportedStoreCapabilityError`; nothing falls back to scanning every session.
+ */
+export interface SessionIndex {
+  /** Needs `SessionStore.listSessions`. Pages through the store's cursor and never loads entries. */
+  list(query?: SessionListQuery): Promise<PersistencePage<SessionSummary>>;
+  /** The summary of one session, or `undefined` when it is absent or outside the agent's scope. */
+  get(id: string): Promise<SessionSummary | undefined>;
+  /** Needs `SessionStore.deleteSession`. Rejects with `SessionNotFoundError` when absent or outside the scope. */
+  delete(id: string): Promise<void>;
+  /** Needs `SessionStore.searchSessions` (the memory and JSONL stores implement it as a capped linear scan). */
+  search(query?: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
+}
+
+/** The provider and model a reference resolves to. */
+export interface ResolvedModel {
+  readonly provider: AIProvider;
+  readonly model: ModelConfig;
+}
+
+/**
+ * `agent.models` (roadmap §2.3). Phase 5 replaces the reference with `ModelRef` and adds provider-side
+ * discovery; the member names stay.
+ */
+export interface ModelIndex {
+  /**
+   * The models the registered providers declare through `AIProvider.models()`, plus the configured model
+   * when no provider declared it. Only the public fields: `parameters`, `compat` and `metadata` can hold
+   * endpoints or headers, so they are dropped, and the agent's redactor masks the rest.
+   */
+  list(): Promise<readonly ModelConfig[]>;
+  /** The provider and model for `ref`. Rejects with `Unknown provider: <id>` when none is registered. */
+  resolve(ref: ModelConfig): ResolvedModel;
+}
+
+export interface Agent {
+  /** `AgentConfig.id`, then `name`, else an id generated for this agent. */
+  readonly id: string;
+  readonly config: AgentConfig;
+  readonly commands: AgentCommands;
+  /** Tools after `disable`: the host's plus every package's. Frozen; empty after `dispose()`. */
+  readonly tools: readonly ToolInfo[];
+  /** Skills after `disable`: the host's plus every package's. Frozen; empty after `dispose()`. */
+  readonly skills: readonly SkillInfo[];
+  readonly sessions: SessionIndex;
+  readonly models: ModelIndex;
+  session(options?: SessionOptions): Promise<Session>;
+  /**
+   * Agent-scoped events across every session until `dispose()`: `package.status`, `background.*`, and
+   * `session.opened` / `session.closed`. Redacted with the agent's redactor. A slow consumer follows
+   * `SubscribeOptions.overflow` and never blocks a run.
+   */
+  subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
+  /**
+   * Disposes loaded packages in reverse load order and removes every hook and slot registration they
+   * made. A throwing `onDispose` is reported as a `hook.error` and does not stop the rest. Idempotent.
+   */
+  dispose(): Promise<void>;
+  /**
+   * What loaded: packages (versions, capabilities, config sources, status), tools, skills, commands,
+   * hooks in execution order, slot owners, `disable` ids, and status notes. A deep-frozen JSON snapshot
+   * built without I/O. Secret config fields show their ref, and the agent's redactor masks the rest.
+   */
+  inspect(): import("../agent/inspect.js").AgentInspection;
+}
+
+export interface SessionOptions {
+  /** Resumes this session through the store slot. An unknown or foreign id rejects with `SessionNotFoundError` unless `create` is set. */
   readonly id?: string;
-  readonly agent?: Agent;
-  readonly store?: SessionStore;
+  /**
+   * With `id`: open a new session under that id when the store holds none, and resume it when it does
+   * (a host that owns the id, such as an AG-UI thread). The ownership scope still applies to a
+   * non-empty branch, so another scope's session is `SessionNotFoundError` either way. Ignored without `id`.
+   */
+  readonly create?: boolean;
   readonly leafId?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
   /**
@@ -199,18 +299,16 @@ export interface AgentSessionConfig {
   readonly snapshotCacheTtlMs?: number;
 }
 
+export type AgentSessionConfig = SessionOptions;
+
 /** Default `session.snapshot()` branch-cache TTL (milliseconds). */
 export const DEFAULT_SNAPSHOT_CACHE_TTL_MS = 1_000;
-/** Upper bound for `AgentSessionConfig.snapshotCacheTtlMs` (milliseconds). */
+/** Upper bound for `SessionOptions.snapshotCacheTtlMs` (milliseconds). */
 export const HARD_MAX_SNAPSHOT_CACHE_TTL_MS = 30_000;
 
-export interface AgentSessionForkOptions {
-  readonly leafId?: string;
-}
-
-export interface AgentSessionCloneOptions {
-  readonly id?: string;
-  readonly leafId?: string;
+export interface SessionForkOptions {
+  /** Entry id to fork at: the new session holds the branch that ends there. Defaults to the current leaf. */
+  readonly at?: string;
 }
 
 export type SubscriberOverflowPolicy = "close" | "drop_oldest" | "drop_newest";
@@ -258,7 +356,7 @@ export interface CommandWorkflowRun {
  *  forwards them. `metadata.trust` labeling is unaffected. */
 export interface CommandDrivers {
   /** Start a session run. */
-  startRun(input: string, options?: RunOptions): Promise<AgentRunResult> | AgentRunResult;
+  startRun(input: string, options?: RunOptions): Promise<RunResult> | RunResult;
   /** Start a run on a host-understood orchestration definition. Returns at
    *  minimum the run id and status; richer host shapes pass through as-is. */
   startWorkflow(definition: object, input: unknown, options?: Readonly<Record<string, unknown>>): Promise<CommandWorkflowRun>;
@@ -282,60 +380,6 @@ export interface ContextBlock {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export interface ContextProvider {
-  readonly name: string;
-  resolve(context: ContextResolutionContext): Promise<readonly ContextBlock[]> | readonly ContextBlock[];
-}
-
-export interface ContextResolutionContext {
-  readonly sessionId?: string;
-  readonly runId?: string;
-  readonly messages: readonly Message[];
-  readonly metadata?: Readonly<Record<string, unknown>>;
-  readonly signal?: AbortSignal;
-}
-
-/** When an {@link InstructionInjector} contributes to the assembled provider input. */
-export type InstructionTiming = "first_turn" | "every_turn" | "on_input";
-
-/** Runtime turn scope handed to an {@link InstructionInjector}. Mirrors {@link LoopContext}
- *  scope using already-redacted input/history so predicates cannot recover secrets. */
-export interface InstructionContext {
-  readonly sessionId: string;
-  readonly runId: string;
-  readonly turn: number;
-  readonly input: readonly Message[];
-  readonly history: readonly Message[];
-  readonly metadata: Readonly<Record<string, unknown>>;
-  readonly signal: AbortSignal;
-}
-
-/** Output of an {@link InstructionInjector}. Only `instructions` and `contextBlocks` are
- *  honored; other fields grant nothing (no tools, skills, or permissions). */
-export interface InstructionContribution {
-  readonly instructions?: string;
-  readonly contextBlocks?: readonly ContextBlock[];
-  readonly when: InstructionTiming;
-  /** Used only when `when === "on_input"`; absent predicate means apply every turn. */
-  readonly predicate?: (ctx: InstructionContext) => boolean;
-}
-
-/** Additive instruction/context contribution that a package registers through
- *  {@link ExtensionAPI.registerInstructionInjector} and the host selects on
- *  {@link AgentConfig.instructionInjectors} / {@link RunOptions.instructionInjectors}.
- *  Inert until selected; cannot grant privileges beyond text/context blocks. */
-export interface InstructionInjector {
-  readonly name: string;
-  readonly description?: string;
-  apply(ctx: InstructionContext): InstructionContribution;
-}
-
-export interface InputBuilder {
-  readonly name: string;
-  build(input: string | Message | readonly Message[], context?: InputBuildContext): Promise<readonly Message[]> | readonly Message[];
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
 export interface InputBuildContext {
   readonly inputLayout?: InputAssemblyLayout;
   readonly sessionId?: string;
@@ -346,42 +390,12 @@ export interface InputBuildContext {
   readonly trust?: TrustPolicy;
 }
 
-export interface PromptBuilder {
-  readonly name: string;
-  build(request: PromptBuildRequest): Promise<readonly Message[]> | readonly Message[];
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-export interface PromptBuildRequest {
-  readonly messages: readonly Message[];
-  /** Input layout selected by the host; the default builder uses cache-aware ordering unless legacy is explicit. */
-  readonly inputLayout?: InputAssemblyLayout;
-  readonly context?: readonly ContextBlock[];
-  readonly skills?: readonly Skill[];
-  readonly skillsDisclosure?: import("../skill-disclosure.js").SkillsDisclosure;
-  readonly loadedSkills?: import("../skill-disclosure.js").LoadedSkillSet;
-  /** Loaded skill bodies already appended to `messages` by the session tail allocator; render catalog entries only. */
-  readonly tailSkillBodies?: boolean;
-  /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
-  readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
-  readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
-  /** Skills demoted to catalog-only by context budget this turn. */
-  readonly demotedSkillBodies?: readonly string[];
-  readonly tools?: readonly ToolDefinition[];
-  /** Model being prompted; lets builders adapt composition to declared capabilities
-   *  (e.g. the default builder omits the `Available tools:` text for tool-capable models). */
-  readonly model?: ModelConfig;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-  readonly signal?: AbortSignal;
-}
-
 export interface Skill {
   readonly name: string;
   readonly description?: string;
   readonly instructions?: string;
   /** Absolute path to the source `SKILL.md` when loaded from disk. */
   readonly path?: string;
-  readonly context?: readonly ContextProvider[];
   readonly toolNames?: readonly string[];
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
@@ -391,8 +405,8 @@ export interface SkillRegistry {
   get(name: string): Skill | undefined;
   resolve(name: string): Skill;
   list(): readonly Skill[];
+  /** Removes a skill by name. Optional for host-supplied registries; returns whether it existed. */
+  unregister?(name: string): boolean;
 }
 
-/** Directory-name spelling for discovered contribution kinds. Maps to a
- *  {@link ManifestContributionDeclaration} kind for non-skill kinds:
- *  `context` → `contextProvider`, `instructions` → `systemPromptContribution`. */
+/** Directory-name spelling for discovered contribution kinds. */

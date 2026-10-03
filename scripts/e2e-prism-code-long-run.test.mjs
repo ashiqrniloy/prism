@@ -8,7 +8,7 @@
  *
  * Asserts:
  *   - 300 `read` tool rounds complete with no run-limit error and a clean final stop;
- *   - at least one mid-run compaction (`compaction_finished`) and no `compaction_failed`;
+ *   - at least one mid-run compaction (`compaction.completed`) and no `compaction_failed`;
  *   - the plan written once at the start survives the cut (pinned entries) and a premature
  *     text-only stop is still continued by the todo stop hook (steer seen by the model);
  *   - `load_skill` loads one skill from each configured layer (config, project, prism home);
@@ -213,7 +213,7 @@ describe("Prism Code offline long run (300 tool rounds)", () => {
       };
 
       const definition = await assembleAppAgent(config, provider, approval.policy);
-      const session = definition.createSession();
+      const session = await definition.session();
       const events = [];
       const eventsDone = (async () => {
         for await (const event of session.subscribe()) events.push(event);
@@ -222,8 +222,8 @@ describe("Prism Code offline long run (300 tool rounds)", () => {
       const result = await session.run("Work through the 300-step plan, keeping the todo list current.");
       await eventsDone;
 
-      const compactions = events.filter((event) => event.type === "compaction_finished");
-      const failures = events.filter((event) => event.type === "compaction_failed");
+      const compactions = events.filter((event) => event.type === "compaction.completed");
+      const failures = events.filter((event) => event.type === "compaction.completed");
 
       // Clean final stop with no run limit: 300 rounds is more than any default cap.
       assert.equal(result.status, "succeeded", `status ${result.status}: ${result.stopDetail ?? ""}`);

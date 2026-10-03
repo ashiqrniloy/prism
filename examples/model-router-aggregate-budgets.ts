@@ -24,7 +24,6 @@
  */
 import {
   type AgentIdentity,
-  AgentRunError,
   type AIProvider,
   createAgent,
   createMemorySessionStore,
@@ -101,13 +100,13 @@ export async function demo(): Promise<Record<string, unknown>> {
       settlements.push(settlement);
     },
   });
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "aggregate-budget-agent",
     model: pinned,
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider: governed,
   });
-  const session = agent.createSession({ id: "aggregate-budget-session" });
+  const session = await agent.session({ id: "aggregate-budget-session", create: true });
 
   const run1 = await session.run("step 1");
 
@@ -157,14 +156,11 @@ export async function demo(): Promise<Record<string, unknown>> {
   });
 
   const run2 = await session.run("step 2");
-  let denied: { readonly status: string; readonly error?: { readonly code?: string | number } };
-  try {
-    const result = await session.run("step 3");
-    denied = { status: result.status };
-  } catch (error) {
-    if (!(error instanceof AgentRunError)) throw error;
-    denied = { status: error.result.status, error: error.result.error };
-  }
+  const deniedRun = await session.run("step 3");
+  const denied: { readonly status: string; readonly error?: { readonly code?: string | number } } = {
+    status: deniedRun.status,
+    ...(deniedRun.error ? { error: deniedRun.error } : {}),
+  };
   const budget = await router.readBudget({ identity, taskId });
 
   // --- Scenario B: missing usage settles as reserved liability, never zero ----------------------
@@ -186,13 +182,13 @@ export async function demo(): Promise<Record<string, unknown>> {
       unknownSettlements.push(settlement);
     },
   });
-  const unknownAgent = createAgent({
+  const unknownAgent = await createAgent({
     id: "aggregate-budget-unknown-agent",
     model: pinned,
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider: unknownGoverned,
   });
-  const unknownRun = await unknownAgent.createSession({ id: "aggregate-budget-unknown-session" }).run("step");
+  const unknownRun = await (await unknownAgent.session({ id: "aggregate-budget-unknown-session", create: true })).run("step");
   const unknownBudget = await unknownRouter.readBudget({ identity, taskId: unknownTaskId });
 
   return {

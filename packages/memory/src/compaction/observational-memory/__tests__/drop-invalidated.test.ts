@@ -12,7 +12,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
-  type AgentSession,
+  type Session,
   type SessionEntry,
   type SessionStore,
   createAgent,
@@ -54,7 +54,7 @@ const observationY = {
 };
 
 /** Seed an observation entry on the session branch (test-local writer; the handler uses the host's appendEntry). */
-async function seed(session: AgentSession, store: SessionStore, entryId: string, observation: object): Promise<void> {
+async function seed(session: Session, store: SessionStore, entryId: string, observation: object): Promise<void> {
   const entry = createSessionEntry({
     id: entryId,
     sessionId: session.id,
@@ -68,8 +68,8 @@ async function seed(session: AgentSession, store: SessionStore, entryId: string,
 
 async function setup() {
   const store = createMemorySessionStore();
-  const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([]), store });
-  const session = agent.createSession({ id: "s1" });
+  const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([]), slots: { store } });
+  const session = await agent.session({ id: "s1", create: true });
   await seed(session, store, "e1", observationX);
   await seed(session, store, "e2", observationY);
   const appends: SessionEntry[] = [];

@@ -50,30 +50,33 @@ function toolOnceProvider(state: { turns: number }): AIProvider {
   };
 }
 
-function makeService(
+async function makeService(
   options: { provider?: AIProvider; limits?: Parameters<typeof createConversationService>[1]["limits"]; onTool?: () => void } = {},
-): { persistence: SqlitePersistence; service: ConversationService } {
+): Promise<{ persistence: SqlitePersistence; service: ConversationService }> {
   const persistence = createSqlitePersistence({ filename: tempDbPath("conv") });
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "offline" },
     provider: options.provider ?? textProvider(),
     redactor: createSecretRedactor([SECRET]),
-    store: persistence,
+    slots: { store: persistence },
     runLedger: persistence,
-    tools: [
-      {
-        name: "note",
-        parameters: {},
-        execute: () => {
-          options.onTool?.();
-          return { toolCallId: "call-1", name: "note", value: "noted" };
+    tools: {
+      add: [
+        {
+          name: "note",
+          parameters: {},
+          execute: () => {
+            options.onTool?.();
+            return { toolCallId: "call-1", name: "note", value: "noted" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
   const service = createConversationService(persistence, {
     redactor: createSecretRedactor([SECRET]),
-    sessionFactory: ({ thread, leafId }) => agent.createSession({ id: thread.id, ...(leafId === undefined ? {} : { leafId }) }),
+    sessionFactory: async ({ thread, leafId }) =>
+      await agent.session({ id: thread.id, create: true, ...(leafId === undefined ? {} : { leafId }) }),
     ...(options.limits === undefined ? {} : { limits: options.limits }),
   });
   return { persistence, service };
@@ -88,7 +91,7 @@ async function lastEntryId(persistence: SqlitePersistence, sessionId: string): P
 
 describe("createConversationService", () => {
   it("creates, lists, and gets ownership-scoped conversation threads", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const one = await service.create({ ownership, title: "first" });
     assert.equal(one.state, "active");
     assert.equal(one.title, "first");
@@ -111,7 +114,7 @@ describe("createConversationService", () => {
   });
 
   it("makes create idempotent for explicit ids and enforces frozen field limits", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const first = await service.create({ ownership, id: "conv-fixed", title: "a", requestId: "req-1" });
     const second = await service.create({ ownership, id: "conv-fixed", title: "b" });
     assert.equal(second.id, "conv-fixed");
@@ -128,7 +131,7 @@ describe("createConversationService", () => {
   });
 
   it("continues threads durably and records request ids on runs", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership, title: "chat" });
     const first = await service.continue({ ownership, threadId: thread.id, message: "first question", requestId: "req-1" });
     assert.equal(first.status, "succeeded");
@@ -153,7 +156,7 @@ describe("createConversationService", () => {
   it("replays bounded redacted events without rerunning completed work", async () => {
     let toolCalls = 0;
     const turns = { turns: 0 };
-    const { persistence, service } = makeService({
+    const { persistence, service } = await makeService({
       provider: toolOnceProvider(turns),
       onTool: () => {
         toolCalls += 1;
@@ -191,7 +194,7 @@ describe("createConversationService", () => {
   });
 
   it("records branches, enforces the active-branch cap, and rejects unknown leaves", async () => {
-    const { persistence, service } = makeService({ limits: { maxActiveBranches: 2 } });
+    const { persistence, service } = await makeService({ limits: { maxActiveBranches: 2 } });
     const thread = await service.create({ ownership });
     await service.continue({ ownership, threadId: thread.id, message: "seed" });
     const leaf = await lastEntryId(persistence, thread.id);
@@ -215,7 +218,7 @@ describe("createConversationService", () => {
   });
 
   it("archives threads and refuses continues on archived threads", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership });
     const archived = await service.archive({ ownership, threadId: thread.id });
     assert.equal(archived.state, "archived");
@@ -228,7 +231,7 @@ describe("createConversationService", () => {
   });
 
   it("exports redacted events with byte caps and resumable cursors", async () => {
-    const { persistence, service } = makeService({ limits: { exportBytes: 1400, replayPageLimit: 2 } });
+    const { persistence, service } = await makeService({ limits: { exportBytes: 1400, replayPageLimit: 2 } });
     const thread = await service.create({ ownership });
     await service.continue({ ownership, threadId: thread.id, message: `one ${SECRET}` });
     await service.continue({ ownership, threadId: thread.id, message: "two" });
@@ -259,7 +262,7 @@ describe("createConversationService", () => {
   });
 
   it("deletes threads through lifecycle and honors legal holds", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership });
     await service.continue({ ownership, threadId: thread.id, message: "to be deleted" });
 
@@ -292,7 +295,7 @@ describe("createConversationHandler", () => {
   }
 
   it("serves conversation routes behind authorization with redacted responses", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const handler = createConversationHandler({
       service,
       authorize: () => ({ ownership }),
@@ -331,7 +334,7 @@ describe("createConversationHandler", () => {
   });
 
   it("fails closed on authorization, unknown threads, and unknown routes", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const denying = createConversationHandler({ service, authorize: () => false });
     assert.equal((await denying(jsonRequest("/prism/conversations", { title: "x" }))).status, 403);
 
@@ -349,7 +352,7 @@ describe("createConversationHandler", () => {
 
 describe("conversation metadata CAS (appendSession version guard)", () => {
   it("duplicate create with the same explicit id never overwrites; concurrent creates settle to one winner", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const first = await service.create({ ownership, id: "conv-cas-create", title: "winner" });
     const second = await service.create({ ownership, id: "conv-cas-create", title: "loser" });
     assert.equal(second.id, first.id);
@@ -370,7 +373,7 @@ describe("conversation metadata CAS (appendSession version guard)", () => {
   });
 
   it("branch+branch at cap: exactly one wins, the loser gets metadata_conflict, no ref is lost", async () => {
-    const { persistence, service } = makeService({ limits: { maxActiveBranches: 1 } });
+    const { persistence, service } = await makeService({ limits: { maxActiveBranches: 1 } });
     const thread = await service.create({ ownership, title: "cap" });
     const [first, second] = await Promise.allSettled([
       service.branch({ ownership, threadId: thread.id, leafId: "leaf-a" }),
@@ -391,7 +394,7 @@ describe("conversation metadata CAS (appendSession version guard)", () => {
   });
 
   it("branch+archive race: one wins, the loser sees metadata_conflict, the thread is never revived", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership, title: "race" });
     const [branch, archive] = await Promise.allSettled([
       service.branch({ ownership, threadId: thread.id, leafId: "leaf-race" }),
@@ -415,7 +418,7 @@ describe("conversation metadata CAS (appendSession version guard)", () => {
   });
 
   it("archive on an archived thread is a no-op returning the thread", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership });
     assert.equal(thread.version, 1);
     const archived = await service.archive({ ownership, threadId: thread.id });
@@ -428,7 +431,7 @@ describe("conversation metadata CAS (appendSession version guard)", () => {
   });
 
   it("delete wins: branch/archive after deletion never resurrect the thread", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership });
     await service.branch({ ownership, threadId: thread.id, leafId: "leaf-del" });
     const deleted = await service.delete({ ownership, threadId: thread.id });
@@ -439,7 +442,7 @@ describe("conversation metadata CAS (appendSession version guard)", () => {
   });
 
   it("cross-ownership CAS writes are rejected before the version guard", async () => {
-    const { persistence, service } = makeService();
+    const { persistence, service } = await makeService();
     const thread = await service.create({ ownership });
     await assert.rejects(() => service.get({ ownership: otherOwnership, threadId: thread.id }), /not found/);
     await assert.rejects(() => service.branch({ ownership: otherOwnership, threadId: thread.id, leafId: "leaf-x" }), /not found/);

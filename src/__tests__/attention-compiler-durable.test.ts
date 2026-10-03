@@ -13,7 +13,7 @@ import type { ContextBudgetMessageGroups } from "../context-budget.js";
 import {
   AgentRunStateError,
   type AgentRunStateOptions,
-  type AgentSession,
+  type Session,
   type CheckpointStore,
   createAgent,
   createMemoryCheckpointStore,
@@ -78,13 +78,13 @@ function crashableCheckpoints(inner: CheckpointStore) {
   return { store, gate };
 }
 
-/** Runs a session while collecting its events, returning the run id from `agent_started`. */
-async function runCapturingId(session: AgentSession, input: string, runState: AgentRunStateOptions) {
+/** Runs a session while collecting its events, returning the run id from `run.started`. */
+async function runCapturingId(session: Session, input: string, runState: AgentRunStateOptions) {
   const subscription = session.subscribe();
   let runId: string | undefined;
   const pump = (async () => {
     for await (const event of subscription) {
-      if (event.type === "agent_started") runId = event.runId;
+      if (event.type === "run.started") runId = event.runId;
     }
   })();
   const settle = session.run(input, { runState });
@@ -101,11 +101,11 @@ async function runCapturingId(session: AgentSession, input: string, runState: Ag
  *  crashes, and whose third (resumed) turn answers. The compiler always folds what it can
  *  (`token_floor` just above the base request), so the specs are about the ledger, not the gate.
  *  No agent-level `toolResultFold`: the projection the ledger caches is the compiler's own. */
-function foldingAgent(input: { readonly requests: ProviderRequest[]; readonly gate: { open: boolean }; readonly durable: boolean }) {
+async function foldingAgent(input: { readonly requests: ProviderRequest[]; readonly gate: { open: boolean }; readonly durable: boolean }) {
   let turn = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "durable-fold",
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     provider: {
       id: "mock",
@@ -125,13 +125,15 @@ function foldingAgent(input: { readonly requests: ProviderRequest[]; readonly ga
         yield providerDone();
       },
     },
-    tools: [
-      {
-        name: "lookup",
-        parameters: {},
-        execute: () => ({ toolCallId: "call-1", name: "lookup", value: PAYLOAD }),
-      },
-    ],
+    tools: {
+      add: [
+        {
+          name: "lookup",
+          parameters: {},
+          execute: () => ({ toolCallId: "call-1", name: "lookup", value: PAYLOAD }),
+        },
+      ],
+    },
     attentionCompiler: {
       maxInputTokens: 300,
       keepLast: 0,
@@ -251,8 +253,8 @@ describe("durable fold checkpoints", () => {
     const memory = createMemoryCheckpointStore();
     const { store: checkpoints, gate } = crashableCheckpoints(memory);
     const requests: ProviderRequest[] = [];
-    const { agent } = foldingAgent({ requests, gate, durable: true });
-    const session = agent.createSession({ id: "durable-fold-session" });
+    const { agent } = await foldingAgent({ requests, gate, durable: true });
+    const session = await agent.session({ id: "durable-fold-session", create: true });
 
     const crashed = await runCapturingId(session, "investigate", { checkpoints, definitionRevision: "1" });
     // The crash closes the store, so the rejected post-crash write can be the run error; either
@@ -279,7 +281,7 @@ describe("durable fold checkpoints", () => {
       { decision: "continue", expectedVersion: before.record.version },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     const resumedRequest = requests.at(-1);
     assert.ok(resumedRequest, "resumed provider request captured");
     assert.equal(
@@ -301,11 +303,11 @@ describe("durable fold checkpoints", () => {
       },
     };
     const requests: ProviderRequest[] = [];
-    const { agent } = foldingAgent({ requests, gate: { open: false }, durable: false });
-    const session = agent.createSession({ id: "ephemeral-fold-session" });
+    const { agent } = await foldingAgent({ requests, gate: { open: false }, durable: false });
+    const session = await agent.session({ id: "ephemeral-fold-session", create: true });
     const result = await session.run("investigate", { runState: { checkpoints: counting, definitionRevision: "1" } });
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.ok(
       /omitted \d+ bytes \(sha256 [0-9a-f]{32}\)/.test(String(toolResultText(requests[1]?.messages ?? [], "call-1"))),
       "the fold still happened in memory",
@@ -315,13 +317,10 @@ describe("durable fold checkpoints", () => {
 
   it("refuses durable folding without a durable run, before any provider turn", async () => {
     const requests: ProviderRequest[] = [];
-    const { agent } = foldingAgent({ requests, gate: { open: false }, durable: true });
-    await assert.rejects(
-      () => agent.createSession({ id: "no-store-session" }).run("investigate"),
-      (error: unknown) =>
-        (error instanceof AgentRunStateError && /requires a durable run/.test(error.message)) ||
-        (error instanceof Error && /requires a durable run/.test(String((error as { cause?: unknown }).cause ?? ""))),
-    );
+    const { agent } = await foldingAgent({ requests, gate: { open: false }, durable: true });
+    const refused = await (await agent.session({ id: "no-store-session", create: true })).run("investigate");
+    assert.equal(refused.status, "failed");
+    assert.match(refused.error?.message ?? "", /requires a durable run/);
     assert.equal(requests.length, 0, "the run fails at start, not on the turn that folds");
   });
 });

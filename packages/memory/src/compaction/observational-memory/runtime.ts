@@ -1,5 +1,5 @@
 import type {
-  AgentSession,
+  Session,
   AIProvider,
   CredentialRequest,
   CredentialValueSource,
@@ -42,7 +42,7 @@ export interface ObservationalMemoryWorkerRuntimeConfig {
 }
 
 export interface ObservationalMemoryRuntimeOptions {
-  readonly session: AgentSession;
+  readonly session: Session;
   readonly appendEntry: (entry: SessionEntry, options?: ObservationalMemoryAppendOptions) => Promise<void>;
   readonly observation?: ObservationalMemoryWorkerRuntimeConfig;
   readonly reflection?: ObservationalMemoryWorkerRuntimeConfig;

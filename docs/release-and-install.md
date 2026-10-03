@@ -23,7 +23,7 @@ Core `@arnilo/prism` ships runtime, CLI, templates, and docs. The current declar
 | `@arnilo/prism-ag-ui` | 0.12.1 | capability — AG-UI/A2A/A2UI adapter |
 | `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
 | `@arnilo/prism-code` | 0.4.1 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
-| `@arnilo/prism-hooks` | 0.12.1 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
+| `@arnilo/prism-hooks-json` | 0.12.1 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
 | `@arnilo/prism-mcp` | 0.12.1 | capability — MCP client/server/OAuth interop |
 | `@arnilo/prism-memory` | 0.12.1 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
 | `@arnilo/prism-web-tools` | 0.12.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
@@ -125,6 +125,7 @@ Run `npm run clean` explicitly after deleting source files or switching branches
 | `@arnilo/prism/providers/openai` | `dist/providers/openai-primitives.{js,d.ts}` |
 | `@arnilo/prism/providers/schema` | `dist/providers/schema.{js,d.ts}` |
 | `@arnilo/prism/providers/media` | `dist/providers/media.{js,d.ts}` |
+| `@arnilo/prism/testing` | `dist/testing/index.{js,d.ts}` |
 | `@arnilo/prism/testing/provider-conformance` | `dist/testing/provider-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/agent-event-source-conformance` | `dist/testing/agent-event-source-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/state-concurrency-conformance` | `dist/testing/state-concurrency-conformance.{js,d.ts}` |
@@ -133,7 +134,6 @@ Run `npm run clean` explicitly after deleting source files or switching branches
 | `@arnilo/prism/testing/prefix-stability-conformance` | `dist/testing/prefix-stability-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/tool-conformance` | `dist/testing/tool-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/tool-effect-store-conformance` | `dist/testing/tool-effect-store-conformance.{js,d.ts}` |
-| `@arnilo/prism/testing/extension-conformance` | `dist/testing/extension-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/persistence-schema` | `dist/testing/persistence-schema.{js,d.ts}` |
 | `@arnilo/prism/testing/run-ledger-conformance` | `dist/testing/run-ledger-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/feedback` | `dist/testing/feedback.{js,d.ts}` |
@@ -142,7 +142,7 @@ Run `npm run clean` explicitly after deleting source files or switching branches
 | `@arnilo/prism/node/trust` | `dist/node/trust.{js,d.ts}` |
 | `@arnilo/prism/node/session-store-jsonl` | `dist/node/session-store-jsonl.{js,d.ts}` |
 | `@arnilo/prism/node/contribution-discovery` | `dist/node/contribution-discovery.{js,d.ts}` |
-| `@arnilo/prism/node/instruction-injectors` | `dist/node/instruction-injectors.{js,d.ts}` |
+| `@arnilo/prism/node/instruction-sources` | `dist/node/instruction-sources.{js,d.ts}` |
 | `@arnilo/prism/node/system-prompts` | `dist/node/system-project-prompts.{js,d.ts}` |
 | `@arnilo/prism/node/agent-definitions` | `dist/node/agent-definitions.{js,d.ts}` |
 
@@ -155,7 +155,7 @@ A packed tarball contains only public compiled output and release files:
 - Code packages ship `README.md`, `LICENSE`, and `CHANGELOG.md`; family/profile packages ship `README.md` and `CHANGELOG.md`.
 - The core tarball additionally ships the full `docs/` directory (the docs hub), `templates/init/`, and the `templates/` gallery (e.g. `deep-research`) used by `prism init`.
 - `dist/cli.js` and the `bin` link in core.
-- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.12.1.tgz`; family packages produce `arnilo-prism-core-0.12.1.tgz`, `arnilo-prism-coding-tools-0.12.1.tgz`, `arnilo-prism-providers-0.12.1.tgz` (all 22 adapters inside), `arnilo-prism-channels-0.12.1.tgz`, `arnilo-prism-memory-0.12.1.tgz`, and `arnilo-prism-web-tools-0.12.1.tgz`; capability packages like `arnilo-prism-hooks-0.12.1.tgz`, `arnilo-prism-mcp-0.12.1.tgz`, and `arnilo-prism-work-0.12.1.tgz` carry their own package version. Independent-package tags carry their own version. The CLI bin name `prism` is unaffected by the package name (`bunx prism` still works; npm allows the bin field to differ from the package name).
+- **Tarball filenames.** npm strips the `@scope/` prefix, so the core package `@arnilo/prism` produces a tarball named `arnilo-prism-0.12.1.tgz`; family packages produce `arnilo-prism-core-0.12.1.tgz`, `arnilo-prism-coding-tools-0.12.1.tgz`, `arnilo-prism-providers-0.12.1.tgz` (all 22 adapters inside), `arnilo-prism-channels-0.12.1.tgz`, `arnilo-prism-memory-0.12.1.tgz`, and `arnilo-prism-web-tools-0.12.1.tgz`; capability packages like `arnilo-prism-hooks-json-0.12.1.tgz`, `arnilo-prism-mcp-0.12.1.tgz`, and `arnilo-prism-work-0.12.1.tgz` carry their own package version. Independent-package tags carry their own version. The CLI bin name `prism` is unaffected by the package name (`bunx prism` still works; npm allows the bin field to differ from the package name).
 
 Excluded from every tarball by `files` negation:
 
@@ -262,7 +262,7 @@ Frozen by Phase 12 Task 0 in `scripts/phase12-freeze-manifest.json` (schema gate
 ## Extension and configuration notes
 
 
-- **Required `@arnilo/prism` peer.** Every workspace code package declares the non-optional caret `@arnilo/prism@^0.12.0` peer in `peerDependencies`; other peers (such as `playwright-core`) may be optional. Install `@arnilo/prism` explicitly alongside the capability package and keep the host lockfile frozen. The one exception is the `@arnilo/prism-code` terminal app: it owns its runtime graph and lists `@arnilo/prism`, `@arnilo/prism-providers`, and `@arnilo/prism-hooks` under `dependencies`, so `bun add -g @arnilo/prism-code` is self-sufficient. The release gate checks every internal range against the current manifest; the former independent-package policy is archived in [release handoffs](history/release-handoffs.md). Workspace-local `file:../..` dev dependencies do not ship as runtime dependencies.
+- **Required `@arnilo/prism` peer.** Every workspace code package declares the non-optional caret `@arnilo/prism@^0.12.0` peer in `peerDependencies`; other peers (such as `playwright-core`) may be optional. Install `@arnilo/prism` explicitly alongside the capability package and keep the host lockfile frozen. The one exception is the `@arnilo/prism-code` terminal app: it owns its runtime graph and lists `@arnilo/prism`, `@arnilo/prism-providers`, and `@arnilo/prism-hooks-json` under `dependencies`, so `bun add -g @arnilo/prism-code` is self-sufficient. The release gate checks every internal range against the current manifest; the former independent-package policy is archived in [release handoffs](history/release-handoffs.md). Workspace-local `file:../..` dev dependencies do not ship as runtime dependencies.
 - **Public access.** Each publishable manifest declares `"publishConfig": { "access": "public" }`; the publisher also passes `--access public` explicitly because scoped packages otherwise default to restricted on first publish.
 - **Shipped vs repository docs.** The npm tarball ships `docs/` pages linked from `docs/index.md` (public API, security, migration, providers, install). It excludes `docs/_evidence/` (per-phase evidence freezes, including `release-0.2.7-evidence.md`), `docs/release-*-evidence.md`, and `docs/api-page-template.md`. Those files remain in git for audit. `dist/__tests__` and `*.map` stay excluded.
 - **Map retention knob.** Source maps are emitted locally but stripped from tarballs by `!dist/**/*.map`. Removing that `files` negation ships maps in releases (larger tarballs, better consumer stack traces).

@@ -1,4 +1,12 @@
-import { type ContextProvider, type JsonObject, type Message, resolveRedactor } from "@arnilo/prism";
+import {
+  type ContextDraft,
+  type HookContext,
+  type HookRegistrar,
+  type JsonObject,
+  type Message,
+  resolveRedactor,
+  withContextBlocks,
+} from "@arnilo/prism";
 import { embedBatched } from "./embedder.js";
 import { MemoryAbortError, MemoryLimitError, MemoryScopeError, MemoryValidationError } from "./errors.js";
 import { DEFAULT_MEMORY_RETENTION_BATCH, estimateTokens, HARD_MEMORY_RETENTION_BATCH_CAP, resolveMemoryLimits } from "./limits.js";
@@ -524,55 +532,64 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     return result;
   }
 
-  function createContextProvider(providerOptions: MemoryContextProviderOptions = {}): ContextProvider {
-    const name = providerOptions.name ?? "prism-memory";
+  /**
+   * Working + semantic memory as a `context.build` handler (roadmap §2.4). The blocks are projected
+   * for this turn's provider view only; the memory store is never touched.
+   */
+  function contextBlocks(
+    draft: ContextDraft,
+    context: HookContext,
+    providerOptions: MemoryContextProviderOptions = {},
+  ): Promise<ContextDraft | undefined> {
     const includeWorking = providerOptions.includeWorking !== false;
     const includeSemantic = providerOptions.includeSemantic !== false;
+    return (async () => {
+      assertNotAborted(context.signal);
+      const blocks: { title?: string; content: string; metadata?: Record<string, unknown> }[] = [];
+      let tokenBudget = limits.maxInjectedTokens;
 
-    return {
-      name,
-      async resolve(context) {
-        assertNotAborted(context.signal);
-        const blocks: { title?: string; content: string; metadata?: Record<string, unknown> }[] = [];
-        let tokenBudget = limits.maxInjectedTokens;
-
-        if (includeWorking) {
-          const rendered = await renderWorking();
-          if (rendered) {
-            const tokens = estimateTokens(rendered);
-            if (tokens <= tokenBudget) {
-              blocks.push({
-                title: "Working memory",
-                content: rendered,
-                metadata: { source: "working-memory" },
-              });
-              tokenBudget -= tokens;
-            }
-          }
-        }
-
-        if (includeSemantic) {
-          const query = resolveQuery(providerOptions, context.messages);
-          if (query) {
-            const recalled = await recall(query, {
-              topK: providerOptions.topK ?? limits.topK,
-              messageRange: providerOptions.messageRange ?? limits.messageRange,
-              signal: context.signal,
+      if (includeWorking) {
+        const rendered = await renderWorking();
+        if (rendered) {
+          const tokens = estimateTokens(rendered);
+          if (tokens <= tokenBudget) {
+            blocks.push({
+              title: "Working memory",
+              content: rendered,
+              metadata: { source: "working-memory" },
             });
-            const semanticText = formatRecall(recalled.hits, recalled.adjacent, tokenBudget);
-            if (semanticText) {
-              blocks.push({
-                title: "Semantic memory",
-                content: semanticText,
-                metadata: { source: "semantic-memory", hitCount: recalled.hits.length },
-              });
-            }
+            tokenBudget -= tokens;
           }
         }
+      }
 
-        return blocks;
-      },
-    };
+      if (includeSemantic) {
+        const query = resolveQuery(providerOptions, draft.messages);
+        if (query) {
+          const recalled = await recall(query, {
+            topK: providerOptions.topK ?? limits.topK,
+            messageRange: providerOptions.messageRange ?? limits.messageRange,
+            signal: context.signal,
+          });
+          const semanticText = formatRecall(recalled.hits, recalled.adjacent, tokenBudget);
+          if (semanticText) {
+            blocks.push({
+              title: "Semantic memory",
+              content: semanticText,
+              metadata: { source: "semantic-memory", hitCount: recalled.hits.length },
+            });
+          }
+        }
+      }
+
+      return withContextBlocks(draft, blocks);
+    })();
+  }
+
+  function registerContextBuild(hooks: HookRegistrar, providerOptions: MemoryContextProviderOptions = {}): void {
+    hooks.on("context.build", (draft, context) => contextBlocks(draft, context, providerOptions), {
+      id: providerOptions.name ?? "prism-memory",
+    });
   }
 
   function createWorkingMemoryProcessor(processorOptions: WorkingMemoryProcessorOptions) {
@@ -606,7 +623,8 @@ export function createMemory(options: CreateMemoryOptions): Memory {
     applyRetention,
     exportMemory,
     rebuildIndex,
-    createContextProvider,
+    contextBlocks,
+    registerContextBuild,
     createWorkingMemoryProcessor,
   };
 }

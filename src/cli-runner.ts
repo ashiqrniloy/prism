@@ -6,33 +6,14 @@ import { pathToFileURL } from "node:url";
 import { runPrismDevSubcommand } from "./cli-dev.js";
 import { type InitRuntime, initUsage, loadProvidersCatalog, runInitCommand } from "./cli-init.js";
 import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
-import type {
-  AgentSession,
-  AIProvider,
-  ContributionFileKind,
-  Extension,
-  InstructionInjector,
-  ModelConfig,
-  RunOptions,
-  Skill,
-  SystemPromptContribution,
-} from "./contracts.js";
-import { createContributionRegistries, registerDiscoveredContributions } from "./contributions.js";
-import {
-  type ActivatedKernelConfig,
-  activateKernel,
-  createAgent,
-  createContributionRegistry,
-  createExtensionKernel,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  resolveInstructionInjectors,
-} from "./index.js";
+import type { Session, AIProvider, ContributionFileKind, ModelConfig, RunOptions, Skill, SystemPromptContribution } from "./contracts.js";
+import { createAgent, createMockProvider, providerDone, providerTextDelta, registerContextSources } from "./index.js";
+import type { PackageInput } from "./packages/api.js";
+import type { ContextSource } from "./context-build.js";
 import type { AgentBundle } from "./node/agent-definitions.js";
 import { discoverAgentBundles } from "./node/agent-definitions.js";
 import { discoverContributions } from "./node/contribution-discovery.js";
-import { registerDiscoveredInstructionInjectors } from "./node/instruction-injectors.js";
+import { loadInstructionSources } from "./node/instruction-sources.js";
 import { loadSystemPromptFiles } from "./node/system-project-prompts.js";
 import { createPathTrustPolicy } from "./node/trust.js";
 import { type RpcSessionFactory, runRpcServer } from "./rpc.js";
@@ -63,21 +44,20 @@ export interface CliOptions {
   /** Runtime-populated (not a parsed flag): skills discovered by `--discover`,
    *  threaded into `createSession` so the bootstrap can build a SkillRegistry. */
   readonly discoveredSkills: readonly Skill[];
-  /** Runtime-populated (not a parsed flag): instruction injectors discovered by
+  /** Runtime-populated (not a parsed flag): instruction sources discovered by
    *  `--discover`, selectable by name via `--instruction` (Task 8). */
-  readonly discoveredInjectors: readonly InstructionInjector[];
+  readonly discoveredInjectors: readonly ContextSource[];
   /** Parsed flag: `--instruction <name>` (repeatable). `false` disables injectors. */
   readonly instructions: readonly string[];
-  /** Parsed flag: `--injector-file <path>` (repeatable); markdown → static injector. */
+  /** Parsed flag: `--injector-file <path>` (repeatable); markdown → static source. */
   readonly injectorFiles: readonly string[];
-  /** Runtime-populated: `--instruction`/`--injector-file` resolved to live injectors. */
-  readonly resolvedInstructionInjectors: readonly InstructionInjector[];
+  /** Runtime-populated: `--instruction`/`--injector-file` resolved to live sources. */
+  readonly resolvedInstructionInjectors: readonly ContextSource[];
   /** Parsed flag: `--extension <specifier>` (repeatable). Loaded via {@link loadCliExtensions}
-   *  into {@link CliOptions.activatedExtensions} before session creation. */
+   *  into {@link CliOptions.packages} before session creation. */
   readonly extensions: readonly string[];
-  /** Runtime-populated (not a parsed flag): activated contributions from `--extension` modules
-   *  (`kernel.load()` → `activateKernel()`). Merged into `createAgent()` by `agentSession`. */
-  readonly activatedExtensions?: ActivatedKernelConfig;
+  /** Runtime-populated: package instances from `--extension` modules. */
+  readonly packages?: readonly PackageInput[];
   /** Parsed flag: `--no-agents-md` / `--no-system-md` skip the corresponding auto-load. */
   readonly noAgentsMd: boolean;
   readonly noSystemMd: boolean;
@@ -93,7 +73,7 @@ export interface CliRuntime {
   readonly stdin: Readable;
   readonly stdout: Writable;
   readonly stderr: Writable;
-  readonly createSession?: (options: CliOptions) => AgentSession | Promise<AgentSession>;
+  readonly createSession?: (options: CliOptions) => Session | Promise<Session>;
   readonly commands?: RpcSessionFactory["commands"];
   /** Workspace root for `--discover`. Defaults to `process.cwd()`. */
   readonly workspaceRoot?: string;
@@ -134,9 +114,9 @@ Options:
   --compact <entries>        Auto-compaction threshold
   --max-tool-rounds <n>      Maximum tool rounds
   --discover                 Enable workspace contribution discovery (opt-in)
-  --discover-kinds <csv>     Kinds to discover (default: skill; skill,tool,context,instructions)
+  --discover-kinds <csv>     Kinds to discover (default: skill; skill,tool,instructions)
   --no-discovery             Disable discovery even if --discover is set
-  --extension <specifier>    Load a trusted extension module (repeatable). Relative paths load
+  --extension <specifier>    Load a trusted package module (repeatable). Relative paths load
                              from the working directory; package names and absolute paths must
                              be listed in PRISM_EXTENSION_ALLOWLIST (comma-separated).
   --agents-config <path>     App config root holding agents/<name>/AGENT.md bundles (opt-in)
@@ -169,7 +149,7 @@ const boolFlags = new Set(["--discover", "--no-discovery", "--no-agents-md", "--
 // Known-but-inert flags: parsed by earlier builds, never wired to any behavior.
 // Rejected loudly (rather than silently ignored) until a CLI-harness plan wires them.
 const unsupportedFlags = new Set(["--config", "--resource", "--tool"]);
-const ALL_KINDS: readonly ContributionFileKind[] = ["skill", "tool", "context", "instructions"];
+const ALL_KINDS: readonly ContributionFileKind[] = ["skill", "tool", "instructions"];
 
 export function parseCliArgs(argv: readonly string[]): CliOptions {
   let mode: CliMode = "print";
@@ -390,12 +370,9 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
         kinds: options.discoverKinds,
         workspaceRoot,
       });
-      const registries = createContributionRegistries();
-      registerDiscoveredContributions(registries, discovered);
-      discoveredSkills = registries.skills.list();
-      // ponytail: Phase 30 — discovered instruction injectors register host-owned (no core auto-import).
-      await registerDiscoveredInstructionInjectors(registries, discovered);
-      discoveredInjectors = registries.instructionInjectors.list();
+      discoveredSkills = discovered.flatMap((entry) => (entry.kind === "skill" && entry.skill ? [entry.skill] : []));
+      // ponytail: Phase 30 — discovered instructions load host-owned (no core auto-import).
+      discoveredInjectors = await loadInstructionSources(discovered);
       options = { ...options, discoveredSkills, discoveredInjectors };
     }
     // ponytail: Phase 34 — --agents-config discovers app-config agent bundles (envelopes only,
@@ -404,8 +381,8 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       discoveredAgents = await discoverAgentBundles({ configRoot: options.agentsConfig, trust });
       options = { ...options, discoveredAgents };
     }
-    // ponytail: Phase 30 — resolve --instruction names against discovered injectors (fail-closed)
-    // and load --injector-file markdown as static injectors. `--instruction false` disables all.
+    // ponytail: Phase 30 — resolve --instruction names against discovered sources (fail-closed)
+    // and load --injector-file markdown as static sources. `--instruction false` disables all.
     const resolvedInstructionInjectors = options.instructions.includes("false")
       ? []
       : await resolveCliInjectors(options.instructions, options.injectorFiles, discoveredInjectors);
@@ -428,12 +405,12 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       });
       options = { ...options, systemPromptLayers: layers };
     }
-    // ponytail: 069 — --extension imports trusted modules only (cwd-contained relative paths,
-    // or allow-listed package/absolute specifiers), then activates their array contributions
-    // into the CLI agent. Throw policy: a broken extension is a usage error, not a silent skip.
+    // ponytail: --extension imports trusted package modules only (cwd-contained relative paths,
+    // or allow-listed package/absolute specifiers) and lists them on createAgent. A broken
+    // module is a usage error, not a silent skip.
     if (options.extensions.length > 0) {
-      const activatedExtensions = await loadCliExtensions(options.extensions);
-      options = { ...options, activatedExtensions };
+      const packages = await loadCliExtensions(options.extensions);
+      options = { ...options, packages };
     }
     const session = await (runtime.createSession ?? defaultCreateSession)(options);
     await runPromptMode(session, options, runtime.stdout, mode);
@@ -450,7 +427,7 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
   }
 }
 
-export async function runPromptMode(session: AgentSession, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void> {
+export async function runPromptMode(session: Session, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void> {
   const events = (async () => {
     for await (const event of session.subscribe()) {
       if (mode === "json")
@@ -458,11 +435,15 @@ export async function runPromptMode(session: AgentSession, options: CliOptions, 
           stdout,
           `${JSON.stringify({ type: "event", sessionId: event.sessionId, runId: "runId" in event ? event.runId : undefined, event })}\n`,
         );
-      else if (event.type === "message_delta" && event.content.type === "text") write(stdout, event.content.text);
+      else if (event.type === "message.delta" && event.content.type === "text") write(stdout, event.content.text);
     }
   })();
-  await session.run(options.prompt ?? "", runOptions(options));
+  const result = await session.run(options.prompt ?? "", runOptions(options));
   await events;
+  // A run that failed or was aborted resolves to its result: surface it as the CLI's error exit.
+  if (result.status === "failed" || result.status === "aborted") {
+    throw new Error(result.error?.message ?? (result.status === "aborted" ? "Agent run aborted" : "Agent run failed"));
+  }
 }
 
 export class CliUsageError extends Error {}
@@ -472,14 +453,14 @@ export class CliUsageError extends Error {}
  *  factory module/export and credential env var, the CLI imports it from the
  *  consumer's node_modules — same catalog `prism init` scaffolds from, so the
  *  CLI and the scaffold never disagree about how a provider is built. */
-async function defaultCreateSession(options: CliOptions): Promise<AgentSession> {
+async function defaultCreateSession(options: CliOptions): Promise<Session> {
   const providerId = options.provider;
   if (!providerId) {
     throw new CliUsageError(
       "No provider configured. Pass --provider <id> (see the init provider catalog, or 'mock') or embed Prism with an explicit provider.",
     );
   }
-  if (providerId === "mock") return mockSession(options);
+  if (providerId === "mock") return await mockSession(options);
   const spec = loadProvidersCatalog().get(providerId);
   if (!spec?.factoryModule || !spec.factoryExport) {
     throw new CliUsageError(
@@ -501,61 +482,59 @@ async function defaultCreateSession(options: CliOptions): Promise<AgentSession> 
   }
   const providerInstance = (factory as (opts: { apiKey: () => string | undefined }) => AIProvider)({ apiKey: () => process.env[envKey] });
   const modelConfig: ModelConfig = { provider: spec.modelProvider, model: options.model ?? spec.modelName };
-  return agentSession({ ...options, providerInstance, modelConfig });
+  return await agentSession({ ...options, providerInstance, modelConfig });
 }
 
-function mockSession(options: CliOptions): AgentSession {
+async function mockSession(options: CliOptions): Promise<Session> {
   const modelConfig: ModelConfig = { provider: "mock", model: options.model ?? "mock" };
-  return agentSession({ ...options, providerInstance: createMockProvider([providerTextDelta("Hello"), providerDone()]), modelConfig });
+  return await agentSession({
+    ...options,
+    providerInstance: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    modelConfig,
+  });
 }
 
-function agentSession(options: Omit<CliOptions, "provider"> & { providerInstance: AIProvider; modelConfig: ModelConfig }): AgentSession {
-  const activated = options.activatedExtensions;
-  const skills = activated ? [...options.discoveredSkills, ...activated.skills] : options.discoveredSkills;
-  return createAgent({
+async function agentSession(
+  options: Omit<CliOptions, "provider"> & { providerInstance: AIProvider; modelConfig: ModelConfig },
+): Promise<Session> {
+  const skills = options.discoveredSkills;
+  const sources = options.resolvedInstructionInjectors;
+  const packages = options.packages;
+  const agent = await createAgent({
     model: options.modelConfig,
     provider: options.providerInstance,
     instructions: options.system,
-    // ponytail: Phase 31 — file layers compose with `instructions` (base) via the existing
-    // composeSystemPrompt pipeline; rank order (user<package<app<run) is enforced inside.
+    ...(sources.length > 0 ? { hooks: (hooks) => registerContextSources(hooks, sources) } : {}),
     ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),
-    // ponytail: discovered/extension skills become selectable via RunOptions.activeSkills (set by runOptions below).
-    ...(skills.length > 0 ? { skills: createSkillRegistry(skills) } : {}),
-    ...(activated ? { tools: activated.tools, context: activated.context, middleware: activated.middleware } : {}),
-  }).createSession({ id: options.session });
+    ...(skills.length > 0 ? { skills: { add: skills } } : {}),
+    ...(packages && packages.length > 0 ? { packages } : {}),
+  });
+  return await agent.session({ id: options.session, create: true });
 }
 
 function runOptions(options: CliOptions): RunOptions {
-  const injectors = [...(options.activatedExtensions?.instructionInjectors ?? []), ...options.resolvedInstructionInjectors];
   return {
     ...(options.maxToolRounds !== undefined ? { limits: { maxToolRounds: options.maxToolRounds } } : {}),
     compaction: options.compact ? { thresholdEntries: options.compact } : undefined,
-    // ponytail: --discover is the explicit opt-in that activates discovered skills.
-    ...(options.discover && !options.noDiscovery && options.discoveredSkills.length > 0
-      ? { activeSkills: options.discoveredSkills.map((s) => s.name) }
-      : {}),
-    ...(injectors.length > 0 ? { instructionInjectors: injectors } : {}),
   };
 }
 
-// ponytail: resolve --instruction names against discovered injectors (fail-closed) and load
-// --injector-file markdown files as static every_turn injectors. Names route through
-// resolveInstructionInjectors so an unknown name throws (caught by runCli's error handler).
+// ponytail: resolve --instruction names against discovered sources (fail-closed) and load
+// --injector-file markdown files as static sources. An unknown name throws (caught by runCli's
+// error handler) rather than silently resolving to nothing.
 async function resolveCliInjectors(
   names: readonly string[],
   files: readonly string[],
-  discovered: readonly InstructionInjector[],
-): Promise<readonly InstructionInjector[]> {
-  const registry = createContributionRegistry<InstructionInjector>({ label: "instruction injector" });
-  for (const inj of discovered) registry.register(inj.name, inj);
-  const byName = names.length ? resolveInstructionInjectors({ registry, names }) : [];
-  const fromFiles: InstructionInjector[] = [];
+  discovered: readonly ContextSource[],
+): Promise<readonly ContextSource[]> {
+  const byName = names.map((name) => {
+    const source = discovered.find((candidate) => candidate.name === name);
+    if (!source) throw new Error(`Unknown instruction injector: ${name}`);
+    return source;
+  });
+  const fromFiles: ContextSource[] = [];
   for (const path of files) {
-    const text = await readFile(path, "utf8");
-    fromFiles.push({
-      name: basename(path).replace(/\.[^.]+$/, ""),
-      apply: () => ({ instructions: text, when: "every_turn" }),
-    });
+    fromFiles.push({ name: basename(path).replace(/\.[^.]+$/, ""), instructions: await readFile(path, "utf8") });
   }
   return [...byName, ...fromFiles];
 }
@@ -566,31 +545,24 @@ function positiveInt(value: string, flag: string): number {
   return parsed;
 }
 
-/** Load `--extension` specifiers into one kernel and activate it. Trust model:
- *  the loaded code is trusted host code (same level as the provider factory
- *  import in `defaultCreateSession`) — the gates decide WHICH code may load,
- *  not sandbox what loaded code does.
- *  - Relative `./`/`../` paths: no allow-list needed, but must `realpath`
- *    contain inside the working directory (symlinks cannot escape).
- *  - Bare package names and absolute paths: exact match in
- *    `PRISM_EXTENSION_ALLOWLIST` (comma-separated), evaluated before `import()`.
- *  Accepted module shapes: `createExtension()` export, a default function, or
- *  a default `{ name, setup }` Extension object. */
-async function loadCliExtensions(specifiers: readonly string[]): Promise<ActivatedKernelConfig> {
+/** Load `--extension` specifiers as package instances. Trust model: the loaded
+ *  code is trusted host code — the gates decide WHICH code may load.
+ *  - Relative `./`/`../` paths: no allow-list, but `realpath` must stay in the cwd.
+ *  - Bare package names and absolute paths: exact match in `PRISM_EXTENSION_ALLOWLIST`.
+ *  Accepted shapes: a `definePackage` definition or instance as `default`, or `createPackage()`. */
+async function loadCliExtensions(specifiers: readonly string[]): Promise<readonly PackageInput[]> {
   const allowList = (process.env.PRISM_EXTENSION_ALLOWLIST ?? "")
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean);
-  const kernel = createExtensionKernel({ errorPolicy: "throw" });
-  const extensions: Extension[] = [];
+  const packages: PackageInput[] = [];
   for (const specifier of specifiers) {
-    extensions.push(await importTrustedExtension(specifier, allowList));
+    packages.push(await importTrustedPackage(specifier, allowList));
   }
-  await kernel.load(extensions);
-  return activateKernel(kernel);
+  return packages;
 }
 
-async function importTrustedExtension(specifier: string, allowList: readonly string[]): Promise<Extension> {
+async function importTrustedPackage(specifier: string, allowList: readonly string[]): Promise<PackageInput> {
   if (specifier.includes("\0")) throw new CliUsageError(`Invalid value for --extension: ${specifier}`);
   const relative = specifier.startsWith("./") || specifier.startsWith("../");
   let moduleSpecifier: string;
@@ -617,26 +589,27 @@ async function importTrustedExtension(specifier: string, allowList: readonly str
   } catch (error) {
     throw new CliUsageError(`--extension "${specifier}" failed to load: ${error instanceof Error ? error.message : String(error)}`);
   }
-  return extensionFromModule(mod, specifier);
+  return packageFromModule(mod, specifier);
 }
 
-function extensionFromModule(mod: unknown, specifier: string): Extension {
+function packageFromModule(mod: unknown, specifier: string): PackageInput {
   const record = mod as Record<string, unknown>;
-  if (typeof record.createExtension === "function") return (record.createExtension as () => Extension)();
-  if (typeof record.default === "function") return (record.default as () => Extension)();
-  if (isExtensionObject(record.default)) return record.default;
-  throw new CliUsageError(
-    `--extension "${specifier}" must export createExtension(), a default function, or a default { name, setup } extension`,
-  );
+  const created = typeof record.createPackage === "function" ? (record.createPackage as () => unknown)() : undefined;
+  for (const candidate of [record.default, created]) {
+    if (isPackageInput(candidate)) return candidate;
+  }
+  throw new CliUsageError(`--extension "${specifier}" must export a definePackage definition or instance (default, or createPackage())`);
 }
 
-function isExtensionObject(value: unknown): value is Extension {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Extension).name === "string" &&
-    typeof (value as Extension).setup === "function"
-  );
+function isPackageInput(value: unknown): value is PackageInput {
+  if (
+    typeof value === "function" &&
+    typeof (value as { setup?: unknown }).setup === "function" &&
+    typeof (value as { version?: unknown }).version === "string"
+  ) {
+    return true;
+  }
+  return typeof value === "object" && value !== null && isPackageInput((value as { definition?: unknown }).definition);
 }
 
 function write(stream: Writable, text: string): void {

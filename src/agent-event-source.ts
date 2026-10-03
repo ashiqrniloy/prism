@@ -506,13 +506,11 @@ function terminalAt(records: readonly DurableAgentEventRecord[], after: Cursor |
 
 /**
  * Terminal-set membership for agent event streams: a run's stream ends on its outcome record.
- *
- * Attribution records — `run_limit_exceeded` and `budget_exhausted` — are delivered *before* that
- * outcome (the `error` that follows a run-limit death), so a page, subscription, or replay must
- * keep reading past them. Every stream-ending site routes through this one predicate.
+ * A run-limit death is a `run.failed` that already carries `limit`/`attribution`, so it *is* the
+ * outcome. Every stream-ending site routes through this one predicate.
  */
 export function isTerminalAgentEventType(type: AgentEvent["type"]): boolean {
-  return type === "agent_finished" || type === "agent_denied" || type === "error";
+  return type === "run.completed" || type === "run.failed";
 }
 
 function sameRecord(existing: DurableAgentEventRecord, input: NormalizedRecord): boolean {

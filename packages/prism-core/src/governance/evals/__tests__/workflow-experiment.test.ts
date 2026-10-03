@@ -83,7 +83,7 @@ test("forEach tool: 3 tools -> 3 records with stepIds; 40 tools + max 32 -> 32 s
   });
 
   const records3 = await scoreRun({
-    result: { sessionId: "s1", runId: "run-3", status: "succeeded", text: "", content: [] },
+    result: { sessionId: "s1", runId: "run-3", status: "completed", text: "", content: [], messages: [] },
     scorers: [stepScorer],
     injectedTimeline: timeline3,
     forEach: "tool",
@@ -114,7 +114,7 @@ test("forEach tool: 3 tools -> 3 records with stepIds; 40 tools + max 32 -> 32 s
   };
 
   const records40 = await scoreRun({
-    result: { sessionId: "s1", runId: "run-40", status: "succeeded", text: "", content: [] },
+    result: { sessionId: "s1", runId: "run-40", status: "completed", text: "", content: [], messages: [] },
     scorers: [stepScorer],
     injectedTimeline: timeline40,
     forEach: "tool",

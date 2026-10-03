@@ -1,12 +1,9 @@
 import {
   type AgentDefinition,
   type AgentEvent,
+  type Session,
   type AIProvider,
-  type ArtifactParser,
-  type ArtifactRepairer,
-  type ArtifactValidator,
   createAgent,
-  createAgentSession,
   createSecretRedactor,
   createToolRegistry,
   type JsonObject,
@@ -33,7 +30,7 @@ import {
 //
 // Demonstrates CrewAI-style hierarchical orchestration using only standard Prism primitives:
 //   1. Manager agent decomposes a high-level goal into typed tasks using structured output
-//      (ArtifactParser / ArtifactValidator / generateValidateReviseLoop).
+//      (schema-parsed and validated in the workflow node before fan-out).
 //   2. fan_out executes role specialists (researcher, writer) concurrently under bounded maxFanOut.
 //   3. join with host reduce aggregates outputs and constructs per-role attribution.
 //   4. conditional node validates the aggregate deliverable and routes to either completion or revision.
@@ -99,44 +96,6 @@ export function parseTaskPlan(text: string): { ok: true; value: TaskPlan } | { o
     return { ok: false, error: error instanceof Error ? error.message : "invalid json" };
   }
 }
-
-/** Schema parser for the artifact loop. */
-export const planParser: ArtifactParser<unknown> = (text) => parseTaskPlan(text);
-
-/** Schema validator enforcing role names and non-empty instructions. */
-export const planValidator: ArtifactValidator<unknown> = (value) => {
-  const plan = value as TaskPlan | undefined;
-  if (!plan || typeof plan !== "object") {
-    return { ok: false, errors: [{ path: "root", message: "plan must be an object" }] };
-  }
-  if (!Array.isArray(plan.tasks) || plan.tasks.length === 0) {
-    return { ok: false, errors: [{ path: "tasks", message: "plan must contain at least one task" }] };
-  }
-  for (let i = 0; i < plan.tasks.length; i++) {
-    const t = plan.tasks[i];
-    if (!t || typeof t !== "object") {
-      return { ok: false, errors: [{ path: `tasks[${i}]`, message: "task must be an object" }] };
-    }
-    if (t.role !== "researcher" && t.role !== "writer") {
-      return { ok: false, errors: [{ path: `tasks[${i}].role`, message: `invalid role: ${String(t.role)}` }] };
-    }
-    if (typeof t.instruction !== "string" || !t.instruction.trim()) {
-      return { ok: false, errors: [{ path: `tasks[${i}].instruction`, message: "instruction is required" }] };
-    }
-  }
-  return { ok: true };
-};
-
-/** Artifact repairer prompting model to correct validation errors. */
-export const planRepairer: ArtifactRepairer<unknown> = (_value, failure) => ({
-  role: "user",
-  content: [
-    {
-      type: "text",
-      text: `Fix task plan issues: ${failure.errors?.map((e) => (e.path ? `${e.path}: ${e.message}` : e.message)).join("; ")}`,
-    },
-  ],
-});
 
 export const managerReviewTool: ToolDefinition = {
   name: "manager/review_plan",
@@ -213,7 +172,7 @@ export const agentDefinitions: Readonly<Record<string, AgentDefinition>> = {
   },
 };
 
-async function drain(session: ReturnType<typeof createAgentSession>): Promise<AgentEvent[]> {
+async function drain(session: Session): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for await (const event of session.subscribe() as AsyncIterable<AgentEvent>) {
     events.push(event);
@@ -226,10 +185,10 @@ export async function verifyNarrowing(): Promise<{
   managerBlocked: string;
 }> {
   const blocked: string[] = [];
-  const trackBlocked = (session: ReturnType<typeof createAgentSession>): Promise<AgentEvent[]> =>
+  const trackBlocked = (session: Session): Promise<AgentEvent[]> =>
     drain(session).then((events) => {
       for (const event of events) {
-        if (event.type === "tool_execution_blocked") {
+        if (event.type === "tool.completed" && event.status === "blocked") {
           blocked.push(`${event.name}:${event.reason}`);
         }
       }
@@ -249,7 +208,7 @@ export async function verifyNarrowing(): Promise<{
     tools: sharedToolRegistry,
     overrides: { provider: specialistIllegalToolProvider },
   });
-  const researcherSession = createAgentSession({ agent: researcherAgent });
+  const researcherSession = await researcherAgent.session();
   await Promise.all([trackBlocked(researcherSession), researcherSession.run("Attempt illegal tool call")]);
 
   // 2. Manager attempts to invoke specialist tool (research/search) directly -> must be blocked
@@ -265,7 +224,7 @@ export async function verifyNarrowing(): Promise<{
     tools: sharedToolRegistry,
     overrides: { provider: managerIllegalToolProvider },
   });
-  const managerSession = createAgentSession({ agent: managerAgent });
+  const managerSession = await managerAgent.session();
   await Promise.all([trackBlocked(managerSession), managerSession.run("Attempt illegal specialist tool call")]);
 
   return {
@@ -321,7 +280,7 @@ const fanOutNodeDef = fanOutNode({
       tools: sharedToolRegistry,
       overrides: { provider: specialistProvider },
     });
-    const session = createAgentSession({ agent });
+    const session = await agent.session();
     const runResult = await session.run(task.instruction);
     const resultText = runResult.text || "Task executed";
 
@@ -444,26 +403,19 @@ export async function demo(): Promise<CrewHierarchyDemoResult> {
     },
   };
 
-  const managerAgent = createAgent({
+  const managerAgent = await createAgent({
     model: { provider: "mock", model: "manager-demo" },
     provider: managerProvider,
-    tools: createToolRegistry([managerReviewTool]),
+    tools: { add: [managerReviewTool] },
     instructions: "Decompose the goal into structured specialist tasks.",
-    loop: {
-      strategy: "generate-validate-revise",
-      parser: planParser,
-      validator: planValidator,
-      repairer: planRepairer,
-      maxRevisions: 3,
-    },
   });
 
   const happyResult = await runWorkflow(
     crewWorkflow,
     { goal: "Prepare executive briefing on customer ACME refund request." },
     {
-      agentFactory: (agentName) => {
-        if (agentName === "manager") return createAgentSession({ agent: managerAgent });
+      agentFactory: async (agentName) => {
+        if (agentName === "manager") return await managerAgent.session();
         throw new Error(`Unexpected agent name: ${agentName}`);
       },
       checkpoints,
@@ -478,8 +430,8 @@ export async function demo(): Promise<CrewHierarchyDemoResult> {
     crewWorkflow,
     { goal: "Prepare executive briefing on customer ACME refund request.", forceValidationFailure: true },
     {
-      agentFactory: (agentName) => {
-        if (agentName === "manager") return createAgentSession({ agent: managerAgent });
+      agentFactory: async (agentName) => {
+        if (agentName === "manager") return await managerAgent.session();
         throw new Error(`Unexpected agent name: ${agentName}`);
       },
       checkpoints,

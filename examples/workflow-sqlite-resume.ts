@@ -1,13 +1,5 @@
 import { unlinkSync } from "node:fs";
-import {
-  createAgent,
-  createAgentSession,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import {
   agentNode,
   createWorkflowCheckpoints,
@@ -32,7 +24,7 @@ const provider = createMockProvider([
   providerDone(),
 ]);
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
 });
@@ -68,7 +60,7 @@ async function runFresh(): Promise<WorkflowRunResult> {
     workflow,
     { input: "hello" },
     {
-      agentFactory: () => createAgentSession({ agent }),
+      agentFactory: () => agent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },
@@ -91,7 +83,7 @@ async function resumeRun(runId: string): Promise<WorkflowRunResult> {
     workflow,
     { runId },
     {
-      agentFactory: () => createAgentSession({ agent }),
+      agentFactory: () => agent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },

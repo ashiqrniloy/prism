@@ -25,6 +25,7 @@ import assert from "node:assert/strict";
 import { writeSync } from "node:fs";
 import { Pool } from "pg";
 import {
+  askEveryTool,
   createAgent,
   createAgentRunLifecycle,
   createToolRegistry,
@@ -73,14 +74,15 @@ const toolDef = {
   },
 };
 
-function makeAgent({ store, effectStore }) {
+async function makeAgent({ store, effectStore }) {
   let turn = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
+    hooks: askEveryTool(),
     id: "restart-agent",
     model: { provider: "mock", model: "demo" },
     store,
     ownership,
-    identity,
+    principal: identity.principal,
     effectStore,
     provider: {
       id: "mock",
@@ -102,17 +104,18 @@ function makeAgent({ store, effectStore }) {
         yield providerDone();
       },
     },
-    loop: {
-      name: "restart",
-      revision: definitionRevision,
-      snapshot: () => ({ turn }),
-      restore: (snapshot) => {
-        turn = snapshot.turn;
-      },
-      async run(ctx) {
-        const { calls } = await ctx.generate(await ctx.assemble([]));
-        await ctx.chargeToolRound?.(calls);
-        for (const call of calls) await ctx.dispatchToolCall(call);
+    slots: {
+      loop: {
+        name: "restart",
+        revision: definitionRevision,
+        snapshot: () => ({ turn }),
+        restore: (snapshot) => {
+          turn = snapshot.turn;
+        },
+        async run(run) {
+          const turnResult = await run.turn();
+          if (turnResult.toolCalls.length > 0) await run.executeTools(turnResult.toolCalls);
+        },
       },
     },
     tools: [toolDef],
@@ -141,19 +144,18 @@ async function open() {
 
 async function runReplicaA() {
   const { persistence, enterprise } = await open();
-  const agent = makeAgent({
+  const agent = await makeAgent({
     store: persistence,
     effectStore: enterprise.toolEffects,
   });
-  const first = await agent.createSession({ id: "restart-s" }).run("go", {
+  const first = await (await agent.session({ id: "restart-s", create: true })).run("go", {
     runState: {
       checkpoints: persistence.checkpoints,
       definitionRevision,
-      interruptBeforeTool: true,
     },
   });
   assert.equal(first.status, "suspended");
-  assert.equal(first.interruption.pendingDecisions.length, 2);
+  assert.equal(first.pending.length, 2);
   // Durable events appended by the host around the run (same wiring as the
   // packed-install journey; deterministic timestamps keep records dedupe-safe).
   for (const call of [
@@ -164,10 +166,10 @@ async function runReplicaA() {
       id: `evt-${call.id}`,
       sessionId: first.sessionId,
       runId: first.runId,
-      type: "tool_execution_started",
+      type: "tool.started",
       timestamp: "2026-08-09T00:00:00.000Z",
       event: {
-        type: "tool_execution_started",
+        type: "tool.started",
         sessionId: first.sessionId,
         runId: first.runId,
         call: toolCallContent(call.id, "write", { path: call.path }),
@@ -182,7 +184,7 @@ async function runReplicaA() {
       sessionId: first.sessionId,
       runId: first.runId,
       version: first.runState.version,
-      approvalIds: first.interruption.pendingDecisions.map((d) => d.approvalId),
+      approvalIds: first.pending.map((d) => d.approvalId),
     })}\n`,
   );
   // Stay alive: the driver SIGKILLs this process to simulate replica A's crash.
@@ -196,7 +198,7 @@ async function resumeReplicaB() {
   const [approvalOne, approvalTwo] = state.approvalIds;
   const t0 = Date.now();
   const { persistence, enterprise } = await open();
-  const agent = makeAgent({
+  const agent = await makeAgent({
     store: persistence,
     effectStore: enterprise.toolEffects,
   });
@@ -268,7 +270,7 @@ async function resumeReplicaB() {
   );
   assert.equal(partial.status, "suspended", "partial batch re-suspends");
   assert.deepEqual(
-    partial.interruption.pendingDecisions.map((d) => d.approvalId),
+    partial.pending.map((d) => d.approvalId),
     [approvalTwo],
     "remaining decision survives the partial batch",
   );
@@ -296,7 +298,7 @@ async function resumeReplicaB() {
     },
     { checkpoints: persistence.checkpoints, definitionRevision, ownership },
   );
-  assert.equal(done.status, "succeeded", "run completes on replica B");
+  assert.equal(done.status, "completed", "run completes on replica B");
   const counters = await pool.query(`SELECT executions FROM "${input.schema}"."phase12_counter" ORDER BY id`);
   assert.deepEqual(
     counters.rows.map((row) => row.executions),
@@ -309,10 +311,10 @@ async function resumeReplicaB() {
     id: "evt-done",
     sessionId: ref.sessionId,
     runId: ref.runId,
-    type: "turn_finished",
+    type: "turn.completed",
     timestamp: "2026-08-09T00:00:01.000Z",
     event: {
-      type: "turn_finished",
+      type: "turn.completed",
       sessionId: ref.sessionId,
       runId: ref.runId,
       turn: 2,
@@ -344,7 +346,6 @@ async function resumeReplicaB() {
   // silently re-applying the side effect.
   const { deriveToolEffectKey, toolEffectArgumentsHash } = await import("../../dist/tool-effects.js");
   const effectBase = {
-    identity,
     ownership,
     sessionId: ref.sessionId,
     runId: ref.runId,
@@ -379,7 +380,8 @@ async function resumeReplicaB() {
       metadata: {},
     },
     effectStore: enterprise.toolEffects,
-    identity,
+    principal: identity.principal,
+    ownership,
   });
   assert.match(
     JSON.stringify(refused),
@@ -414,9 +416,9 @@ async function appendProbe() {
       id: `probe-${process.pid}-${i}`,
       sessionId,
       runId,
-      type: "turn_started",
+      type: "turn.started",
       timestamp: "2026-08-09T00:00:00.000Z",
-      event: { type: "turn_started", sessionId, runId, turn: 1 },
+      event: { type: "turn.started", sessionId, runId, turn: 1 },
       redacted: true,
       ...ownership,
     });
@@ -434,9 +436,9 @@ async function warmProbe() {
     id: "warm-seed",
     sessionId: "probe-s",
     runId: "probe-r",
-    type: "turn_started",
+    type: "turn.started",
     timestamp: "2026-08-09T00:00:00.000Z",
-    event: { type: "turn_started", sessionId: "probe-s", runId: "probe-r", turn: 1 },
+    event: { type: "turn.started", sessionId: "probe-s", runId: "probe-r", turn: 1 },
     redacted: true,
     ...ownership,
   });

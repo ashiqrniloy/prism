@@ -197,3 +197,243 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/140-Prism-Code-Distribution-And-Release.md
 - What: The observational-memory observer declared `record_observation` with a bare `{ type: "object" }` schema, so a weaker model answered in prose and the pass recorded nothing while `/om:status` reported 0. That is fixed, but the general gap is a provider-capability matrix for structured worker output.
 - Why: Every memory worker (observer, reflector, dropper) depends on tool-call compliance; the live matrix only exercises anthropic/openai-class models, so a weaker or unusual provider looks identical to a memory bug.
+
+## Headless and acp-agent keep a synthesized local identity
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/142-Phase-1-One-Import-Runs-An-Agent.md
+- Compromise: Headless and `@arnilo/prism-acp-agent` keep their `config.userId`-based verified identity rather than the SDK literal `identity: "local-operator"`, because `assertIdentityMatchesOwnership` requires `identity.userId === ownership.userId` and the literal's fixed `userId` conflicts with the configured one.
+- Implications: The literal profile is exercised only by `examples/agent-sdk-coding.ts`; a Prism Code host cannot opt into it without losing `config.userId`.
+
+## Registry default duplicate policy silently shadows
+- Section: Compromises Made
+- Priority: P4
+- Source: plans/142-Phase-1-One-Import-Runs-An-Agent.md
+- Compromise: `createToolRegistry`'s default duplicate policy stays `"replace"`. The SDK added an explicit `load_skill` collision check, but every other duplicate registration still silently shadows.
+- Implications: A host tool can overwrite an SDK or plane tool without an error unless that specific collision is checked by hand.
+
+## Retire AgentSdkDefinition from /docs and changelogs when SDK 0.2.0 ships
+- Section: Further Actions
+- Priority: P3
+- Source: plans/142-Phase-1-One-Import-Runs-An-Agent.md
+- What: Update `docs/agent-sdk.md` to the shipped `Agent`/`session()` contract, add the host entry to `docs/index.md`, and leave the historical changelog mentions of `AgentSdkDefinition` as release history.
+- Why: Phase 0 forbids `/docs` API edits while the rename is unshipped; the page still documents the released 0.1.0 `AgentSdkDefinition` return type.
+
+## SDK local-operator profile cannot carry a host user id
+- Section: Further Actions
+- Priority: P3
+- Source: plans/142-Phase-1-One-Import-Runs-An-Agent.md
+- What: Let the `"local-operator"` profile accept a host-supplied user id, or align Prism Code's `config.userId` handling with its `ownership` scope, so a host can use the literal and keep a configured user.
+- Why: The literal hardcodes `userId: "local-operator"`, so any host with an ownership scope must build the identity itself.
+
+## Replace the prose offer-reset pins with a typed check
+- Section: Further Actions
+- Priority: P4
+- Source: plans/143-Phase-0-Reset-The-Offer.md
+- What: When the `@arnilo/prism` 1.0 kernel surface lands, replace the `offer reset: PRODUCT.md` and `offer reset: README pointer` phrase and heading-line pins with a typed or generated check.
+- Why: The pins assert prose, so a wording-only edit that keeps the contract fails them and costs a test edit, while a semantic change that keeps the exact strings passes.
+
+## A `tool.call` deny is scoped to a call, not a run
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- Compromise: A guardrail pack tripwire is now a denied tool call in a run that succeeds, because the hook bus converts a throwing `tool.call` handler into a deny and a deny is scoped to one call.
+- Implications: A caller that asserted a pack tripwire would fail the run (`status === "failed"`, `GuardrailError` `ERR_PRISM_GUARDRAIL_BLOCKED`) now sees a succeeded run with a `hook_denied` tool result. Run-level rejection is only expressible as `ctx.reject` on a transform.
+
+## `deny` beats `ask` at `tool.call`, reversing the 0.12 ordering
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- Compromise: Deny-wins was chosen over 0.12's ask-then-deny ordering so a `tool.call` gate is a security boundary rather than a prompt.
+- Implications: Ask-then-deny scenarios that used to suspend now deny outright. Hosts that relied on suspension as a review checkpoint for a call another rule also denies lose that checkpoint.
+
+## `PermissionPolicy` was kept while `AgentConfig.permission` was retired
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- Compromise: The field and its dispatch use are gone, but the interface stays as the gate type for direct `dispatchToolCall` callers (which have no hook bus and check at `beforeExecute`) and for non-dispatch kernel users like resource loading.
+- Implications: Two ways to express a tool gate now exist — a `tool.call` hook and a `PermissionPolicy` at `beforeExecute` — and a reader may not know which applies without checking whether the caller has a hook bus.
+
+## `CompactionTrigger` and `resolveShouldCompact` were kept out of the `compaction.when` hook
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- Compromise: The four trigger kinds are a reusable policy evaluator with two non-session callers (the observational-memory attach loop and Prism Code's config), so they were kept as a helper a handler composes with. Only the alias `CompactionOptions.trigger` was removed.
+- Implications: Auto-compaction has two layers (hook decision, else the kernel threshold) where one seam was implied, and a reader must know the evaluator is not itself a trigger registration.
+
+## `HOOK_COMBINATION` is internal, not a root export
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- Compromise: The freeze test reads it from `src/hooks/index.ts`; exposing it would have meant a public-surface addition and a compat-baseline update for a rule set that is fully documented in `docs/next/hooks.md`.
+- Implications: A host cannot introspect the combination rules at runtime, only observe them. Phase 2 work that wants to extend the table works against an internal symbol until someone decides to export it.
+
+## Released 0.12 prose for the retired mechanisms was left in place
+- Section: Compromises Made
+- Priority: P3
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- Compromise: `docs/middleware-hooks.md`, `docs/compaction-and-retry.md`, and `docs/instruction-injection.md` still describe the retired API, and the historical CHANGELOG sections still name `stopHooks` and `maxStopContinuations`. Their test pins were dropped rather than rewritten.
+- Implications: A reader arriving at a released docs page finds 0.12 API that no longer exists, with nothing on the page saying so. The released-doc pins that would flag the drift were removed rather than repointed.
+
+## Promote the hook harness into `@arnilo/prism/testing`
+- Section: Further Actions
+- Priority: P1
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Ship `src/__tests__/helpers/hook-harness.ts` as a public testing subpath.
+- Why: It is the standard way to drive a loop and assert which hooks fired, and every Phase 2 test needs it. Until it ships, a native package cannot test against the hook contract without writing a bespoke harness.
+
+## Decide the fate of the five `artifact_*` `AgentEventPayload` variants
+- Section: Further Actions
+- Priority: P2
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Retire `artifact_validation_started`/`_finished`, `artifact_revision_started`, `artifact_finished`, and `artifact_failed`, or keep them as a package-emittable contract.
+- Why: They are the residue of the retired `generate-validate-revise` loop strategy, sit in the frozen catalog as observe hooks, and are only likely to be emitted by a Phase 9 `workflows` package. The current state is neither retired nor usable.
+
+## Make the context budget a `context.build` handler
+- Section: Further Actions
+- Priority: P2
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Re-express `applyContextBudget` as a `context.build` handler that sees handler-added blocks.
+- Why: `context.build` runs after assembly, so blocks a handler adds escape the budget entirely — the budget still trims its own group but nothing feeds it. This is the Phase 8 (`@arnilo/prism-context-engineering`) work the deferral points at.
+
+## Give the run-start `run.input` transform a turn-1 provider path
+- Section: Further Actions
+- Priority: P3
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Either make turn-1 assembly read the messages `run.input` produced, or document the turn-1 boundary in `docs/next/hooks.md`.
+- Why: `run.input` rewrites the messages appended to session history, but turn 1's provider request is assembled from the raw `nextInput`, so a rewrite first reaches the provider on turn 2. A reject is unaffected, so the security-relevant case is already correct.
+
+## Add session-lifecycle hooks if Phase 2 needs them
+- Section: Further Actions
+- Priority: P3
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Add a session-open/session-close seam (an observe hook keyed on a real event, or a named hook) if Phase 2 needs one.
+- Status: Delivered in plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md Task 7 as the `session.opened` / `session.closed` observe hooks. Part B Task 5 (`hooks-json`) moves onto `session.opened` and drops the first-`context.build` piggyback.
+- Why: `session_start` had no observe-hook replacement — `OBSERVE_HOOKS` is keyed on `AgentEventPayload["type"]` and no `session_started` event exists — so the one real user now piggybacks on the first `context.build` of a session. That works, but a Phase 2 that wants to open a session per se has no seam.
+
+## Decide whether `AgentRunState.stopReason` keeps its now-unreachable members
+- Section: Further Actions
+- Priority: P3
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Narrow the persisted `stopReason` union, or record why the retired values stay as vocabulary hosts may still have written.
+- Why: `hook_stop`/`hook_limit` are the only values the kernel writes now. The union is persisted, so it was left intact, but each retired value is a branch a future reader will look for.
+
+## Decide the kernel skills catalog's owner
+- Section: Further Actions
+- Priority: P2
+- Source: plans/145-Phase-1-Part-B-Retire-0-12-Interception-Mechanisms.md
+- What: Move the kernel skills catalog onto a named `kernel:context.build` registration. The owner seam shipped in plan 146 Task 3 (`bus.registrar("kernel")`); the move is deferred to Phase 3, where `skills.disclosure` reshapes the config. `disable.skills` already covers hiding skills.
+- Why: The catalog is contributed during assembly today. Moving it changes where it lands relative to host `context.build` handlers, which shifts the prompt bytes that `src/testing/prefix-stability-conformance.ts` pins, and it depends on run-state `loaded`/demotion sets (`src/skill-disclosure.ts`).
+- Status: Delivered in plans/148-Phase-3-Part-A-Host-Port-Event-Catalog-And-Agent-Config.md Task 5 as `src/skills-catalog.ts` (`kernel:context.build`, listed by `inspect().hooks` and removable via `disable.hooks`). Skills now render ahead of context blocks; `prefix-stability-conformance` gained `skillsDisclosure` and no longer pins byte-identical output.
+
+## Decide whether a failed `requires` check skips an `optional` package
+- Section: Further Actions
+- Priority: P2
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Make the call in the Phase 4 manifest plan: today `optional` covers a `setup` throw only, and `kernel_range`, `missing_package`, and `missing_service` stay fatal.
+- Why: A manifest entry marked `optional: true` is meant to be skippable, and a kernel-range mismatch is the most common reason an optional package cannot load. Until it is decided, such a package fails the whole load.
+
+## Close the `search_tools` gap for `when`-hidden package tools
+- Section: Further Actions
+- Priority: P3
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Narrow the `search_tools` index by the same per-turn `when` filter, or by Phase 3's `tools.disclosure`.
+- Why: The index is built once per run from the run's tool list, which `when` does not narrow, so with `toolsDisclosure: "search"` a hidden tool can still be found by search. `dispatchFilter` still refuses to run it, and no test pins the gap.
+
+## Move the remaining readers of `agent.config.tools` / `skills` onto the merged view
+- Section: Further Actions
+- Priority: P2
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md; narrowed by plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md Task 5
+- What: `agent.tools` / `agent.skills` (frozen `ToolInfo` / `SkillInfo`) are the merged view; `/tools` (`activeToolNames`) and the two `app.agent.config.tools.list()` examples moved onto it. Three readers remain: `packages/prism-code/src/tui/index.ts` `toolRegistry()` (MCP session disable registers and unregisters on a `ToolRegistry`, which `AgentConfig.tools: { add }` no longer is), the `/skills` command's `config.skills?.add` (`inspectSkills` needs `Skill` bodies, and `SkillInfo` has none), and `packages/prism-core/src/governance/evals/scenarios.ts` `wrapTools`, which does not wrap a package tool.
+- Why: `agent.config` stays the host's input, so these 0.12 consumers do not see package tools. `wrapTools` would not wrap a package tool, which weakens failure injection. The first two die with the Prism Code rewrite (Phase 12); `wrapTools` needs a way to wrap a package's tool without loading the package twice.
+
+## Review the serialized `appendEntry` path
+- Section: Further Actions
+- Priority: P3
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Decide whether session-level append serialization stays in `RuntimeAgentSession`, moves into the store contract, or gets a real tip check on `expectedParentId`.
+- Why: Plan 146 Task 7 found that `expectedParentId` only validates existence, so two appends from one tip silently orphan one entry. The fix serializes every append and rebases a tip-appended entry; it touches the central append path for every entry kind.
+
+## Settle when `session.opened` fires and who receives it
+- Section: Further Actions
+- Priority: P3
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Revisit in Phase 3 when `Agent` / `Session` are reshaped: eager versus lazy open, and whether `session.opened`/`session.closed` should also reach subscribers.
+- Why: Today `session.opened` fires lazily (first run, command, `set`, or `close()`) and only when a handler or package state needs the branch, and the two lifecycle events reach hooks only so existing streams are unchanged.
+
+## Rename `Credential` to `Secret` on `credentials.resolve`
+- Section: Further Actions
+- Priority: P3
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Do it in the Phase 5 model-layer plan, with the one baseline change.
+- Why: The roadmap names `Secret`; Part A returns the existing `Credential` and `models.client` is a thin client over today's provider resolution. Phase 5 replaces the internals, not the member names.
+
+## Re-key `agent.inspect().hooks` when the 0.12 observe hook names are renamed
+- Section: Further Actions
+- Priority: P3
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Phase 3 renames the snake_case observe hooks to dotted names; update `inspect()` tests, `docs/next/packages.md`, and `examples/define-package.ts` in that plan, and have Phase 12's `doctor` read field names from `AgentInspection`.
+- Why: `inspect().hooks` is keyed by today's catalog names (`tool_execution_finished`), so a rename changes its output.
+
+## Run the `package_state` store conformance step against Postgres
+- Section: Further Actions
+- Priority: P3
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Run `bun run test:postgres` with a Postgres URL once and record the result in plan 148's or the next store plan's Notes.
+- Why: Task 7 covered the memory store, the kernel JSONL store, and SQLite. The Postgres leg needs a URL and was not run. No DDL changed, since `kind` is plain text.
+
+## Clear the red baseline of `bun run test`
+- Section: Further Actions
+- Priority: P2
+- Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
+- What: Delete stale `dist/__tests__/*.test.js` with no source, then fix or retire the recorded failures: `prism init` (Bun 1.4.2 prints no per-test line in a non-TTY run), `host-composition-compat` (`policy-chain-snapshot`), the agent-sdk peer check, the ACP bin spawn path (`dist/bin/prism-acp-agent.js`), and the field-policy timing benchmark.
+- Why: Plans 144-146 each recorded the same failures and attributed them by cause, without a before/after run. A permanently red suite hides a real regression, and the TUI frame-budget test (`filters 50k paths inside a frame budget`) is timing-flaky as well.
+
+## Move the hosts onto `session.resume` and delete the checkpoint lifecycle
+- Section: Further Actions
+- Priority: P1
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: `resumeAgentRun`, `createAgentRunLifecycle` and `AgentRunRef` are still the resume path of AG-UI `handler.ts`, ACP `recovery.ts`, the server handler, channels `runtime-turn.ts`, the supervisor's nested resume and Prism Code. Move each to `agent.session({ id }).resume(decisions)` over the store slot, then delete the lifecycle.
+- Why: Task 4 shipped `session.resume` on the same internal core but did not move the hosts, so there are still two public resume paths. Belongs with Phase 6 (stores) and Phase 10/12 (hosts).
+
+## Decide how legacy unscoped sessions reopen under an ownership-scoped agent
+- Section: Further Actions
+- Priority: P1
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: `agent.session({ id })` requires every entry on the branch to carry the agent's ownership scope. Sessions written before ownership stamping have none, so they answer `SessionNotFoundError`. Add a migration or an explicit unscoped-read policy.
+- Why: Prism Code scopes its agent to `{ tenantId: "local", userId: "local" }`, so adopting `agent.session` would hide a user's existing sessions.
+
+## Add `listSessions` and `deleteSession` to the durable stores
+- Section: Further Actions
+- Priority: P2
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: Implement both in the JSONL store, `packages/prism-core` SQLite, Postgres and NATS stores, and Prism Code's session store, and run `assertSessionStoreConforms(..., { exerciseSessionIndex: true })` against each.
+- Why: `agent.sessions.list/delete` answer `UnsupportedStoreCapabilityError` on every store except the kernel memory store. Phase 6.
+
+## Close the agent's sessions on `agent.dispose()`
+- Section: Further Actions
+- Priority: P2
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: Keep an agent-owned live-session set (including sessions `fork()` builds inside the session class) and close them in `dispose()`.
+- Why: The roadmap says `dispose()` closes sessions; today it ends subscriptions and packages only.
+
+## Isolate Prism Code's tests from the real home directory
+- Section: Further Actions
+- Priority: P3
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: `packages/prism-code` tests that use the default store write to `<prism home>/sessions/sessions.db`. Add a home override for tests, move the remaining tests off the real path, and clean the stale `test-prog-session` and `test-eager-session` rows.
+- Why: Plan 149 found ~130 stale rows there, which made a strict `agent.session({ id })` fail on ownership.
+
+## Trace the `@arnilo/prism-providers` export count growth
+- Section: Further Actions
+- Priority: P3
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: `scripts/budgets.json` moved from 588 to 590 at plan 149 Task 6 with no attribution.
+- Why: A rebaseline without a cause hides an unintended public export.
+
+## Rewrite the older `scripts/` conformance suites for the Phase 1-3 shapes
+- Section: Further Actions
+- Priority: P3
+- Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
+- What: `scripts/phase8-conformance`, `phase20-security`, `phase40-security`, `obscura-host-conformance` and `phase16-freeze` pass `tools: [...]`, use `askEveryTool`, and read the old durable-resume shapes.
+- Why: They fail on shapes plans 144-148 changed, so their coverage is dark.

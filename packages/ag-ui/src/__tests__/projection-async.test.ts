@@ -6,11 +6,11 @@ import { createAcpEventMapper } from "../acp/index.js";
 import { createAgUiEventMapper } from "../index.js";
 import { composeAgUiProjections, createMessagesFromSessionProjection } from "../projectors.js";
 
-/** entries()-shaped async transcript source (AgentSession.entries() is async). */
+/** entries()-shaped async transcript source (Session.entries() is async). */
 const asyncEntries = (messages: { id: string; role: "user" | "assistant"; text: string }[]) => async () =>
   messages.map((message) => ({ id: message.id, role: message.role, content: message.text }));
 
-const agentStarted = { type: "agent_started" as const, sessionId: "s1", runId: "r1" };
+const agentStarted = { type: "run.started" as const, sessionId: "s1", runId: "r1" };
 
 const snapshotOf = (events: readonly unknown[]) =>
   events.find((event) => (event as { type?: string }).type === EventType.MESSAGES_SNAPSHOT) as { messages: { id: string }[] } | undefined;
@@ -30,7 +30,7 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     entries.push({ id: "a1", role: "assistant", text: "done" });
     const refreshed = snapshotOf(
       await mapper.map({
-        type: "message_finished",
+        type: "message.completed",
         sessionId: "s1",
         runId: "r1",
         message: { id: "a1", role: "assistant", content: [{ type: "text", text: "done" }] },
@@ -52,7 +52,7 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     const started = await mapper.map(agentStarted);
     assert.equal(snapshotOf(started), undefined);
     const later = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s1",
       runId: "r1",
       content: { type: "text", text: "still streaming" },
@@ -72,7 +72,7 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     const mapper = createAgUiEventMapper({ projection: composed });
     const call = toolCallContent("t1", "read", { path: "/x" });
     const events = await mapper.map({
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s1",
       runId: "r1",
       call,
@@ -83,7 +83,7 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     const composedAsyncFirst = composeAgUiProjections(asyncProjection, sync);
     const mapper2 = createAgUiEventMapper({ projection: composedAsyncFirst });
     const events2 = await mapper2.map({
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s1",
       runId: "r1",
       call,
@@ -104,9 +104,9 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     };
     const mapper = createAgUiEventMapper({ projection: slow });
     const call = toolCallContent("t1", "read", { path: "/x" });
-    await mapper.map({ type: "tool_execution_started", sessionId: "s1", runId: "r1", call });
+    await mapper.map({ type: "tool.started", sessionId: "s1", runId: "r1", call });
     const next = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s1",
       runId: "r1",
       content: { type: "text", text: "after" },
@@ -158,7 +158,7 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     });
     const call = toolCallContent("t1", "write_file", { path: "/private/SECRET.txt", contents: "SECRET" });
     const started = await mapper.map({
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s1",
       runId: "r1",
       call,
@@ -167,7 +167,8 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     const contents = started[0]?.content as { content: { text: string } }[] | undefined;
     assert.equal(contents?.[0]?.content.text, "safe write_file");
     const finished = await mapper.map({
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s1",
       runId: "r1",
       result: { toolCallId: "t1", name: "write_file", value: "SECRET" },
@@ -185,13 +186,13 @@ describe("async AgUiProjection hooks (Task 15)", () => {
     });
     const call = toolCallContent("t1", "read", { path: "/x" });
     const events = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s1",
       runId: "r1",
       content: { type: "thinking", text: "SECRET reasoning" },
     });
     assert.ok(events.some((event) => event.type === EventType.REASONING_MESSAGE_CONTENT));
-    const tool = await mapper.map({ type: "tool_execution_started", sessionId: "s1", runId: "r1", call });
+    const tool = await mapper.map({ type: "tool.started", sessionId: "s1", runId: "r1", call });
     assert.equal((tool.find((event) => event.type === EventType.TOOL_CALL_ARGS) as { delta: string }).delta, "args:t1");
   });
 });

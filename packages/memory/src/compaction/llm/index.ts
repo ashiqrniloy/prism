@@ -1,7 +1,6 @@
-export type { CodingCompactionStrategyOptions } from "./coding.js";
-export { createCodingCompactionStrategy } from "./coding.js";
-export type { LlmCompactionExtensionOptions } from "./extension.js";
-export { createLlmCompactionExtension } from "./extension.js";
+export type { CodingCompactorOptions } from "./coding.js";
+export { createCodingCompactor } from "./coding.js";
+export { llmCompaction } from "./extension.js";
 export type { FileOperationDetails } from "./file-ops.js";
 export { collectFileOperations, formatFileOperations } from "./file-ops.js";
 export {
@@ -22,8 +21,8 @@ export {
 } from "./prompts.js";
 export type { SerializeCompactionConversationOptions } from "./serialize.js";
 export { serializeCompactionConversation } from "./serialize.js";
-export type { LlmCompactionStrategyOptions } from "./strategy.js";
-export { createLlmCompactionStrategy } from "./strategy.js";
+export type { LlmCompactorOptions, ProviderRequestTransform } from "./strategy.js";
+export { createLlmCompactor } from "./strategy.js";
 export { estimateEntryTokens, estimateMessageTokens, estimateTextTokens } from "./tokens.js";
 
 export const packageName = "@arnilo/prism-memory/compaction/llm";

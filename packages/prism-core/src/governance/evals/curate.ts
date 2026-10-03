@@ -1,4 +1,5 @@
 import type {
+  AgentEventRecord,
   ContentBlock,
   Message,
   OwnershipScope,
@@ -91,8 +92,8 @@ function textOf(message: Message | undefined): string {
   return (message?.content ?? []).map((block: ContentBlock) => (block.type === "text" ? block.text : "")).join("");
 }
 
-function messageOf(record: { readonly event: { readonly type: string; readonly message?: Message } }): Message | undefined {
-  return record.event.type === "message_started" || record.event.type === "message_finished" ? record.event.message : undefined;
+function messageOf(record: AgentEventRecord): Message | undefined {
+  return record.event.type === "message.completed" ? record.event.message : undefined;
 }
 
 function extractRunIO(trace: EvaluationTrace): { input: Message | undefined; output: string } {

@@ -33,10 +33,10 @@ interface Harness {
 
 /**
  * Root agent with one `delegate` tool wired to supervisor.delegate. Child agents gate a
- * `write` tool behind durable approval (the supervisor sets interruptBeforeTool). Providers
+ * `write` tool behind durable approval (the supervisor registers an ask-every-tool hook). Providers
  * are turn-counted per scope key so rebuilt agents resume deterministically.
  */
-function harness(options?: {
+async function harness(options?: {
   children?: Record<string, { permission?: PermissionPolicy }>;
   /** Root turn plan: a child id delegates to that child, "text" ends the run. */
   rootTurns?: string[];
@@ -54,7 +54,7 @@ function harness(options?: {
   };
   /** Hold the resumed turn open until this resolves (observes a delegation that is live on resume). */
   resumeGate?: Promise<void>;
-}): Harness {
+}): Promise<Harness> {
   const checkpoints = options?.durable?.checkpoints ?? createMemoryCheckpointStore();
   const executed: string[] = [];
   const turns = options?.durable?.turns ?? new Map<string, number>();
@@ -70,11 +70,11 @@ function harness(options?: {
   };
   const childDefs = options?.children ?? { writer: {} };
 
-  const childAgent = (childId: string, scopeKey: string, context: DelegationChildContext): Agent =>
-    createAgent({
+  const childAgent = async (childId: string, scopeKey: string, context: DelegationChildContext): Promise<Agent> =>
+    await createAgent({
       id: `child-${childId}`,
       model: { provider: "mock", model: "test" },
-      store: storeFor(childId),
+      slots: { store: storeFor(childId) },
       provider: {
         id: "mock",
         async *generate() {
@@ -94,16 +94,18 @@ function harness(options?: {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (args: JsonObject, context: { toolCallId: string }) => {
-            executed.push(`${childId}:${context.toolCallId}:${JSON.stringify(args)}`);
-            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (args: JsonObject, context: { toolCallId: string }) => {
+              executed.push(`${childId}:${context.toolCallId}:${JSON.stringify(args)}`);
+              return { toolCallId: context.toolCallId, name: "write", value: "done" };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
 
   const supervisor = createSupervisor({
@@ -119,17 +121,17 @@ function harness(options?: {
         childId,
         {
           permission: def.permission,
-          createAgent: (context) => childAgent(childId, context.resourceId, context),
+          createAgent: async (context) => await childAgent(childId, context.resourceId, context),
         },
       ]),
     ),
   });
 
   const rootPlan = options?.rootTurns ?? [Object.keys(childDefs)[0]!, "text"];
-  const root = createAgent({
+  const root = await createAgent({
     id: "root",
     model: { provider: "mock", model: "test" },
-    store: storeFor("root-session"),
+    slots: { store: storeFor("root-session") },
     provider: {
       id: "mock",
       async *generate() {
@@ -146,16 +148,18 @@ function harness(options?: {
         yield providerDone();
       },
     },
-    tools: [
-      {
-        name: "delegate",
-        parameters: {},
-        execute: async (args: JsonObject, context: { toolCallId: string }) => {
-          const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
-          return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+    tools: {
+      add: [
+        {
+          name: "delegate",
+          parameters: {},
+          execute: async (args: JsonObject, context: { toolCallId: string }) => {
+            const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
+            return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
   return { supervisor, root, checkpoints, executed };
 }
@@ -180,9 +184,9 @@ async function pullUntil(iterator: AsyncIterator<SupervisorEvent>, until: (event
 
 /** Suspend the root on one child approval, then resume it with `outcome`. */
 async function suspendThenResume(h: Harness, sessionId: string, outcome: "allow_once" | "reject_once" = "allow_once") {
-  const first = await h.root.createSession({ id: sessionId }).run("go", { runState: ROOT_RUN_STATE(h) });
+  const first = await (await h.root.session({ id: sessionId, create: true })).run("go", { runState: ROOT_RUN_STATE(h) });
   assert.equal(first.status, "suspended");
-  const decision = first.interruption?.pendingDecisions?.[0];
+  const decision = first.pending?.[0];
   const version = first.runState?.version;
   assert.ok(decision, "the child approval surfaced on the root run");
   assert.ok(version !== undefined, "the root run version is durable");
@@ -196,12 +200,12 @@ async function suspendThenResume(h: Harness, sessionId: string, outcome: "allow_
 
 describe("nested-agent approval propagation", () => {
   it("surfaces child approvals on the root run with attribution and routes the root batch back", async () => {
-    const h = harness();
-    const first = await h.root.createSession({ id: "s1" }).run("go", { runState: ROOT_RUN_STATE(h) });
+    const h = await harness();
+    const first = await (await h.root.session({ id: "s1", create: true })).run("go", { runState: ROOT_RUN_STATE(h) });
 
     assert.equal(first.status, "suspended");
     assert.equal(h.executed.length, 0);
-    const pending = first.interruption?.pendingDecisions;
+    const pending = first.pending;
     assert.equal(pending?.length, 1);
     assert.match(pending?.[0]?.approvalId ?? "", /^sub_[a-f0-9]{64}$/);
     assert.deepEqual(pending?.[0]?.attribution?.path, ["writer"]);
@@ -220,7 +224,7 @@ describe("nested-agent approval propagation", () => {
   });
 
   it("re-suspends the root with the remainder when a batch decides a subset of child approvals", async () => {
-    const h = harness();
+    const h = await harness();
     const checkpoints = h.checkpoints;
     // Child emits two gated calls in one round.
     const turns = new Map<string, number>();
@@ -233,11 +237,11 @@ describe("nested-agent approval propagation", () => {
       definitionRevision: "1",
       children: {
         writer: {
-          createAgent: (context) =>
-            createAgent({
+          createAgent: async (context) =>
+            await createAgent({
               id: "child-writer",
               model: { provider: "mock", model: "test" },
-              store: writerStore,
+              slots: { store: writerStore },
               provider: {
                 id: "mock",
                 async *generate() {
@@ -253,25 +257,27 @@ describe("nested-agent approval propagation", () => {
                   yield providerDone();
                 },
               },
-              tools: [
-                {
-                  name: "write",
-                  parameters: {},
-                  execute: (_args, context: { toolCallId: string }) => {
-                    executed.push(context.toolCallId);
-                    return { toolCallId: context.toolCallId, name: "write", value: "done" };
+              tools: {
+                add: [
+                  {
+                    name: "write",
+                    parameters: {},
+                    execute: (_args, context: { toolCallId: string }) => {
+                      executed.push(context.toolCallId);
+                      return { toolCallId: context.toolCallId, name: "write", value: "done" };
+                    },
                   },
-                },
-              ],
+                ],
+              },
             }),
         },
       },
     });
     let rootTurn = 0;
-    const root = createAgent({
+    const root = await createAgent({
       id: "root",
       model: { provider: "mock", model: "test" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -285,23 +291,25 @@ describe("nested-agent approval propagation", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "delegate",
-          parameters: {},
-          execute: async (args: JsonObject, context: { toolCallId: string }) => {
-            const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
-            return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+      tools: {
+        add: [
+          {
+            name: "delegate",
+            parameters: {},
+            execute: async (args: JsonObject, context: { toolCallId: string }) => {
+              const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
+              return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
     const runState = { checkpoints, definitionRevision: "1", resumeNestedRun: supervisor.resumeNestedRun };
-    const first = await root.createSession({ id: "s2" }).run("go", { runState });
+    const first = await (await root.session({ id: "s2", create: true })).run("go", { runState });
     assert.equal(first.status, "suspended");
-    const pending = first.interruption!.pendingDecisions!;
+    const pending = first.pending!;
     assert.equal(pending.length, 2);
-    assert.equal(first.interruption?.reason, "2 approval request(s) need a decision");
+    assert.equal(first.runState?.interruption?.reason, "2 approval request(s) need a decision");
 
     const partial = await resumeAgentRun(
       root,
@@ -310,9 +318,9 @@ describe("nested-agent approval propagation", () => {
       runState,
     );
     assert.equal(partial.status, "suspended");
-    assert.equal(partial.interruption?.reason, "1 approval request(s) remain");
-    assert.equal(partial.interruption?.pendingDecisions?.length, 1);
-    assert.equal(partial.interruption?.pendingDecisions?.[0]?.approvalId, pending[1]!.approvalId);
+    assert.equal(partial.runState?.interruption?.reason, "1 approval request(s) remain");
+    assert.equal(partial.pending?.length, 1);
+    assert.equal(partial.pending?.[0]?.approvalId, pending[1]!.approvalId);
     assert.equal(executed.length, 0);
 
     const done = await resumeAgentRun(
@@ -351,58 +359,62 @@ describe("nested-agent approval propagation", () => {
       definitionRevision: "1",
       children: {
         middle: {
-          createAgent: (context) =>
-            createAgent({
+          createAgent: async (context) =>
+            await createAgent({
               id: "child-middle",
               model: { provider: "mock", model: "test" },
-              store: childStores.middle,
+              slots: { store: childStores.middle },
               provider: counted(
                 context.resourceId,
                 () => ({ type: "tool_call", call: toolCallContent("m1", "delegate_leaf", {}) }),
                 "middle done",
               ),
-              tools: [
-                {
-                  name: "delegate_leaf",
-                  parameters: {},
-                  execute: async (_args: JsonObject, toolContext: { toolCallId: string }) => {
-                    const result = await context.delegate({ childId: "leaf", input: "go" });
-                    return { toolCallId: toolContext.toolCallId, name: "delegate_leaf", value: result.text };
+              tools: {
+                add: [
+                  {
+                    name: "delegate_leaf",
+                    parameters: {},
+                    execute: async (_args: JsonObject, toolContext: { toolCallId: string }) => {
+                      const result = await context.delegate({ childId: "leaf", input: "go" });
+                      return { toolCallId: toolContext.toolCallId, name: "delegate_leaf", value: result.text };
+                    },
                   },
-                },
-              ],
+                ],
+              },
             }),
         },
         leaf: {
-          createAgent: (context) =>
-            createAgent({
+          createAgent: async (context) =>
+            await createAgent({
               id: "child-leaf",
               model: { provider: "mock", model: "test" },
-              store: childStores.leaf,
+              slots: { store: childStores.leaf },
               provider: counted(
                 context.resourceId,
                 () => ({ type: "tool_call", call: toolCallContent("l1", "write", { v: 9 }) }),
                 "leaf done",
               ),
-              tools: [
-                {
-                  name: "write",
-                  parameters: {},
-                  execute: (args: JsonObject, toolContext: { toolCallId: string }) => {
-                    executed.push(JSON.stringify(args));
-                    return { toolCallId: toolContext.toolCallId, name: "write", value: "done" };
+              tools: {
+                add: [
+                  {
+                    name: "write",
+                    parameters: {},
+                    execute: (args: JsonObject, toolContext: { toolCallId: string }) => {
+                      executed.push(JSON.stringify(args));
+                      return { toolCallId: toolContext.toolCallId, name: "write", value: "done" };
+                    },
                   },
-                },
-              ],
+                ],
+              },
             }),
         },
       },
     });
     let rootTurn = 0;
-    const root = createAgent({
+    const root = await createAgent({
       id: "root",
       model: { provider: "mock", model: "test" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -416,23 +428,25 @@ describe("nested-agent approval propagation", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "delegate",
-          parameters: {},
-          execute: async (_args: JsonObject, context: { toolCallId: string }) => {
-            const result = await supervisor.delegate({ childId: "middle", input: "go" });
-            return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+      tools: {
+        add: [
+          {
+            name: "delegate",
+            parameters: {},
+            execute: async (_args: JsonObject, context: { toolCallId: string }) => {
+              const result = await supervisor.delegate({ childId: "middle", input: "go" });
+              return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
     const runState = { checkpoints, definitionRevision: "1", resumeNestedRun: supervisor.resumeNestedRun };
-    const first = await root.createSession({ id: "s3" }).run("go", { runState });
+    const first = await (await root.session({ id: "s3", create: true })).run("go", { runState });
 
     // Stage 1: the middle child's own gate covers its delegate_leaf call first.
     assert.equal(first.status, "suspended");
-    const stage1 = first.interruption!.pendingDecisions!;
+    const stage1 = first.pending!;
     assert.equal(stage1.length, 1);
     assert.deepEqual(stage1[0]!.attribution?.path, ["middle"]);
     assert.equal(stage1[0]!.scope.toolName, "delegate_leaf");
@@ -446,7 +460,7 @@ describe("nested-agent approval propagation", () => {
 
     // Stage 2: the leaf's write approval surfaces through both levels with full attribution.
     assert.equal(second.status, "suspended");
-    const stage2 = second.interruption!.pendingDecisions!;
+    const stage2 = second.pending!;
     assert.equal(stage2.length, 1);
     assert.deepEqual(stage2[0]!.attribution?.path, ["middle", "leaf"]);
     assert.equal(stage2[0]!.scope.toolName, "write");
@@ -473,7 +487,7 @@ describe("nested-agent approval propagation", () => {
   });
 
   it("rejects forged nested run ids closed and non-enumerating", async () => {
-    const h = harness();
+    const h = await harness();
     await assert.rejects(
       h.supervisor.resumeNestedRun({ ref: { runId: "run_forged" }, toolCallId: "t1", path: ["writer"] }, [
         { approvalId: "a1", outcome: "allow_once" },
@@ -492,11 +506,11 @@ describe("nested-agent approval propagation", () => {
   it("fails closed when a rebuilt child factory returns a non-Agent (resume path)", async () => {
     const checkpoints = createMemoryCheckpointStore();
     let valid = true;
-    const buildChild = (): Agent =>
-      createAgent({
+    const buildChild = async (): Promise<Agent> =>
+      await createAgent({
         id: "child-writer",
         model: { provider: "mock", model: "test" },
-        store: createMemorySessionStore(),
+        slots: { store: createMemorySessionStore() },
         provider: {
           id: "mock",
           async *generate() {
@@ -504,17 +518,19 @@ describe("nested-agent approval propagation", () => {
             yield providerDone();
           },
         },
-        tools: [
-          {
-            name: "write",
-            parameters: {},
-            execute: (_args: JsonObject, context: { toolCallId: string }) => ({
-              toolCallId: context.toolCallId,
+        tools: {
+          add: [
+            {
               name: "write",
-              value: "done",
-            }),
-          },
-        ],
+              parameters: {},
+              execute: (_args: JsonObject, context: { toolCallId: string }) => ({
+                toolCallId: context.toolCallId,
+                name: "write",
+                value: "done",
+              }),
+            },
+          ],
+        },
       });
     const supervisor = createSupervisor({
       id: "lead",
@@ -524,14 +540,15 @@ describe("nested-agent approval propagation", () => {
       children: {
         writer: {
           // Valid on the initial delegation; non-Agent on the durable rebuild.
-          createAgent: () => (valid ? buildChild() : (buildChild().createSession({ id: "s" }) as unknown as Agent)),
+          createAgent: async () =>
+            valid ? await buildChild() : ((await (await buildChild()).session({ id: "s", create: true })) as unknown as Agent),
         },
       },
     });
-    const root = createAgent({
+    const root = await createAgent({
       id: "root",
       model: { provider: "mock", model: "test" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -539,23 +556,25 @@ describe("nested-agent approval propagation", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "delegate",
-          parameters: {},
-          execute: async (args: JsonObject, context: { toolCallId: string }) => {
-            const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
-            return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+      tools: {
+        add: [
+          {
+            name: "delegate",
+            parameters: {},
+            execute: async (args: JsonObject, context: { toolCallId: string }) => {
+              const result = await supervisor.delegate({ childId: String(args.childId), input: "go" });
+              return { toolCallId: context.toolCallId, name: "delegate", value: result.text };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
     const runState = { checkpoints, definitionRevision: "1", resumeNestedRun: supervisor.resumeNestedRun };
-    const first = await root.createSession({ id: "s1" }).run("go", { runState });
+    const first = await (await root.session({ id: "s1", create: true })).run("go", { runState });
     assert.equal(first.status, "suspended");
 
     valid = false;
-    const pending = first.interruption!.pendingDecisions!;
+    const pending = first.pending!;
     let failureMessage = "";
     try {
       const result = await resumeAgentRun(
@@ -575,27 +594,21 @@ describe("nested-agent approval propagation", () => {
     const readOnly: PermissionPolicy = {
       check: (request) => (request.kind === "tool" ? { allowed: false, reason: "read-only child" } : { allowed: true }),
     };
-    const h = harness({ children: { writer: { permission: readOnly } } });
-    const first = await h.root.createSession({ id: "s5" }).run("go", { runState: ROOT_RUN_STATE(h) });
-    assert.equal(first.status, "suspended");
-    const pending = first.interruption!.pendingDecisions!;
-    const result = await resumeAgentRun(
-      h.root,
-      { runId: first.runId, sessionId: first.sessionId },
-      { expectedVersion: first.runState!.version!, decisions: [{ approvalId: pending[0]!.approvalId, outcome: "allow_once" }] },
-      ROOT_RUN_STATE(h),
-    );
-    // Root approved, but the child's narrowed permission still denied the dispatch.
-    assert.equal(result.status, "succeeded");
+    const h = await harness({ children: { writer: { permission: readOnly } } });
+    const first = await (await h.root.session({ id: "s5", create: true })).run("go", { runState: ROOT_RUN_STATE(h) });
+    // Roadmap §2.4: the child's deny wins over the root ask, so the call is refused without a
+    // suspension and a root approval can never widen it.
+    assert.equal(first.status, "succeeded");
+    assert.equal(first.runState?.interruption, undefined);
     assert.deepEqual(h.executed, []);
   });
 
   it("scopes a root sticky to one child's attribution path, never a sibling's", async () => {
-    const h = harness({ children: { c1: {}, c2: {} }, rootTurns: ["c1", "c2", "text"] });
+    const h = await harness({ children: { c1: {}, c2: {} }, rootTurns: ["c1", "c2", "text"] });
     // Root delegates to c1, then c2; both children call write with identical arguments.
-    const first = await h.root.createSession({ id: "s6" }).run("go", { runState: ROOT_RUN_STATE(h) });
+    const first = await (await h.root.session({ id: "s6", create: true })).run("go", { runState: ROOT_RUN_STATE(h) });
     assert.equal(first.status, "suspended");
-    const c1Pending = first.interruption!.pendingDecisions!;
+    const c1Pending = first.pending!;
     assert.deepEqual(c1Pending[0]!.attribution?.path, ["c1"]);
 
     const second = await resumeAgentRun(
@@ -606,7 +619,7 @@ describe("nested-agent approval propagation", () => {
     );
     // c1 completed under the sticky; c2 suspended and did NOT match the c1 sticky.
     assert.equal(second.status, "suspended");
-    const c2Pending = second.interruption!.pendingDecisions!;
+    const c2Pending = second.pending!;
     assert.equal(c2Pending.length, 1);
     assert.deepEqual(c2Pending[0]!.attribution?.path, ["c2"]);
     assert.equal(h.executed.filter((entry) => entry.startsWith("c1:")).length, 1);
@@ -626,7 +639,7 @@ describe("nested-agent approval propagation", () => {
   // and a resumed terminal outcome runs `hooks.after` with the original delegation id.
   it("projects child milestones and runs the terminal hook when a suspended child resumes", async () => {
     const completions: DelegationCompletion[] = [];
-    const h = harness({ childEvents: true, hooks: { after: (completion) => void completions.push(completion) } });
+    const h = await harness({ childEvents: true, hooks: { after: (completion) => void completions.push(completion) } });
     const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
     const result = await suspendThenResume(h, "s7");
     assert.equal((result as { status?: string }).status, "succeeded");
@@ -635,13 +648,13 @@ describe("nested-agent approval propagation", () => {
     const childEvents = events.filter((event) => event.type === "delegation_child_event");
     const types = childEvents.map((event) => event.childEvent.type);
     // One pump run per attempt: the live attempt (started, suspended) and the resume.
-    assert.equal(types.filter((type) => type === "agent_started").length, 2);
-    assert.ok(types.includes("agent_suspended"));
+    assert.equal(types.filter((type) => type === "run.started").length, 2);
+    assert.ok(types.includes("run.suspended"));
     // The gated tool only executes after the approval, so these milestones can only come from resume.
-    assert.ok(types.includes("tool_execution_started"));
-    assert.ok(types.includes("tool_execution_finished"));
-    assert.ok(types.includes("agent_finished"));
-    assert.equal(types.includes("message_delta") || types.includes("message_started"), false);
+    assert.ok(types.includes("tool.started"));
+    assert.ok(types.includes("tool.completed"));
+    assert.ok(types.includes("run.completed"));
+    assert.equal(types.includes("message.delta"), false);
     assert.equal(
       childEvents.every((event) => event.childId === "writer" && event.delegationId === "lead-1" && event.depth === 1),
       true,
@@ -660,7 +673,7 @@ describe("nested-agent approval propagation", () => {
   });
 
   it("caps resumed child events with one overflow marker per pump attempt", async () => {
-    const h = harness({ childEvents: true, limits: { maxChildEventsPerDelegation: 2 } });
+    const h = await harness({ childEvents: true, limits: { maxChildEventsPerDelegation: 2 } });
     const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
     await suspendThenResume(h, "s8");
 
@@ -676,7 +689,7 @@ describe("nested-agent approval propagation", () => {
 
   it("leaves the resume stream unchanged when childEvents is off and still runs the terminal hook", async () => {
     const completions: DelegationCompletion[] = [];
-    const h = harness({ hooks: { after: (completion) => void completions.push(completion) } });
+    const h = await harness({ hooks: { after: (completion) => void completions.push(completion) } });
     const iterator = h.supervisor.subscribe()[Symbol.asyncIterator]();
     await suspendThenResume(h, "s9");
 
@@ -699,7 +712,7 @@ describe("nested-agent approval propagation", () => {
   it("treats a denied rebuild as terminal: one rejection event and one terminal hook", async () => {
     const completions: DelegationCompletion[] = [];
     let beforeCalls = 0;
-    const h = harness({
+    const h = await harness({
       hooks: {
         before: () => (++beforeCalls === 1 ? { allowed: true } : { allowed: false, reason: "revoked" }),
         after: (completion) => void completions.push(completion),
@@ -721,7 +734,7 @@ describe("nested-agent approval propagation", () => {
   });
 
   it("keeps the delegation ancestry across a resume so the failure radius stays exact", async () => {
-    const h = harness({
+    const h = await harness({
       children: { lead: {}, writer: {} },
       rootTurns: ["lead", "text"],
       resumeSpawn: { childId: "lead", spawnChildId: "writer" },
@@ -747,10 +760,10 @@ describe("nested-agent approval propagation", () => {
       sessions: new Map<string, ReturnType<typeof createMemorySessionStore>>(),
       turns: new Map<string, number>(),
     };
-    const before = harness({ durable });
-    const suspended = await before.root.createSession({ id: "s12" }).run("go", { runState: ROOT_RUN_STATE(before) });
+    const before = await harness({ durable });
+    const suspended = await (await before.root.session({ id: "s12", create: true })).run("go", { runState: ROOT_RUN_STATE(before) });
     assert.equal(suspended.status, "suspended");
-    const decision = suspended.interruption?.pendingDecisions?.[0];
+    const decision = suspended.pending?.[0];
     const version = suspended.runState?.version;
     assert.ok(decision && version !== undefined, "the child approval and the root version are durable");
 
@@ -761,7 +774,7 @@ describe("nested-agent approval propagation", () => {
       release = resolve;
     });
     let beforeCalls = 0;
-    const after = harness({
+    const after = await harness({
       durable,
       resumeGate: gate,
       childEvents: true,
@@ -775,7 +788,7 @@ describe("nested-agent approval propagation", () => {
       ROOT_RUN_STATE(after),
     ).catch((error: unknown) => error);
     // The rebuilt delegation replays its one gated call, then holds its run open on the gate.
-    await pullUntil(iterator, (event) => event.type === "delegation_child_event" && event.childEvent.type === "tool_execution_finished");
+    await pullUntil(iterator, (event) => event.type === "delegation_child_event" && event.childEvent.type === "tool.completed");
     assert.equal(after.executed.length, 1, "only the resumed delegation ran its gated tool");
 
     // A second delegation of the same child is rejected while the resumed one is live: the row

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyThinkingLevel } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
@@ -10,7 +11,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createDeepSeekProvider,
-  createDeepSeekProviderPackage,
+  deepseekPackage,
   DEEPSEEK_DEFAULT_BASE_URL,
   deepseekBody,
   deepseekModels,
@@ -38,31 +39,23 @@ describe("@arnilo/prism-providers/deepseek", () => {
   });
 
   it("deepseek_registers_featured_catalog_and_api_key", async () => {
-    const registered: unknown[] = [];
-    await createDeepSeekProviderPackage({ apiKey: "fake-deepseek-key" }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as never);
-    assert(registered.some((item: any) => item.id === "deepseek"));
-    assert(registered.some((item: any) => item.model === "deepseek-v4-flash"));
-    assert(registered.some((item: any) => item.model === "deepseek-v4-pro"));
-    assert(registered.some((item: any) => item.kind === "api_key"));
+    await loadProviderPackage(deepseekPackage({ apiKey: "fake-deepseek-key" }));
+    const models = deepseekModels.map((entry) => entry.model);
+    assert.ok(models.includes("deepseek-v4-flash"));
+    assert.ok(models.includes("deepseek-v4-pro"));
   });
 
   it("deepseek_provider_setup_does_not_call_model_discovery", async () => {
     let fetches = 0;
-    await createDeepSeekProviderPackage({
-      apiKey: "fake-deepseek-key",
-      fetch: (async () => {
-        fetches += 1;
-        return ok(sse([]));
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as never);
+    await loadProviderPackage(
+      deepseekPackage({
+        apiKey: "fake-deepseek-key",
+        fetch: (async () => {
+          fetches += 1;
+          return ok(sse([]));
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(fetches, 0);
   });
 

@@ -38,11 +38,13 @@ const baseCard = (): A2AAgentCard => ({
   skills: [{ id: "research", name: "Research", description: "Researches a topic", tags: ["research"] }],
 });
 const ownership = { tenantId: "tenant", userId: "user" };
-const session = () =>
-  createAgent({
-    model: { provider: "mock", model: "test" },
-    provider: createMockProvider([providerTextDelta("answer"), providerDone()]),
-  }).createSession();
+const session = async () =>
+  await (
+    await createAgent({
+      model: { provider: "mock", model: "test" },
+      provider: createMockProvider([providerTextDelta("answer"), providerDone()]),
+    })
+  ).session();
 const rpc = (method = "SendMessage", input = "question") => ({
   jsonrpc: "2.0",
   id: 1,
@@ -121,8 +123,8 @@ describe("createA2AAgentEventSource", () => {
       status: { state: "TASK_STATE_WORKING", timestamp: "2026-08-04T00:00:00.000Z" },
     };
     for (const [id, event, timestamp] of [
-      ["event-1", { type: "agent_started", sessionId: "session-1", runId: "run-1" }, "2026-08-04T00:00:00.000Z"],
-      ["event-2", { type: "agent_finished", sessionId: "session-1", runId: "run-1" }, "2026-08-04T00:00:01.000Z"],
+      ["event-1", { type: "run.started", sessionId: "session-1", runId: "run-1" }, "2026-08-04T00:00:00.000Z"],
+      ["event-2", { type: "run.completed", sessionId: "session-1", status: "completed", runId: "run-1" }, "2026-08-04T00:00:01.000Z"],
     ] as const) {
       await source.append({ id, sessionId: "session-1", runId: "run-1", type: event.type, timestamp, event, redacted: true, ...ownership });
     }
@@ -130,9 +132,9 @@ describe("createA2AAgentEventSource", () => {
       source,
       resolveTask: ({ id }) => (id === task.id ? { task, run: { sessionId: "session-1", runId: "run-1" } } : undefined),
       map: ({ record, task: current }) =>
-        record.event.type === "agent_started"
+        record.event.type === "run.started"
           ? { task: current }
-          : record.event.type === "agent_finished"
+          : record.event.type === "run.completed"
             ? {
                 statusUpdate: {
                   taskId: current.id,
@@ -161,7 +163,11 @@ describe("createA2AAgentEventSource", () => {
 
 describe("createA2AHandler", () => {
   it("serves discovery and authorized SendMessage", async () => {
-    const handler = createA2AHandler({ card: baseCard(), exposure: { sessionFactory: () => session() }, authorize: () => ({ ownership }) });
+    const handler = createA2AHandler({
+      card: baseCard(),
+      exposure: { sessionFactory: async () => await session() },
+      authorize: () => ({ ownership }),
+    });
     const cardResponse = await handler(new Request("https://agent.example/.well-known/agent-card.json"));
     assert.equal(cardResponse.status, 200);
     assert.equal((await cardResponse.json()).name, "Research Agent");
@@ -179,14 +185,14 @@ describe("createA2AHandler", () => {
       () =>
         createA2AHandler({
           card: { ...baseCard(), capabilities: { streaming: true, pushNotifications: true } },
-          exposure: { sessionFactory: () => session() },
+          exposure: { sessionFactory: async () => await session() },
           authorize: () => ({ ownership }),
         }),
       /push capability/,
     );
     const denied = createA2AHandler({
       card: baseCard(),
-      exposure: { sessionFactory: () => session() },
+      exposure: { sessionFactory: async () => await session() },
       authorize: () => false,
       limits: { maxRequestBytes: 256 },
     });
@@ -196,7 +202,7 @@ describe("createA2AHandler", () => {
     assert.equal(unauthorized.status, 403);
     const allowed = createA2AHandler({
       card: baseCard(),
-      exposure: { sessionFactory: () => session() },
+      exposure: { sessionFactory: async () => await session() },
       authorize: () => ({ ownership }),
       limits: { maxRequestBytes: 256 },
     });
@@ -276,7 +282,7 @@ describe("createA2AHandler", () => {
     };
     const handler = createA2AHandler({
       card: { ...baseCard(), capabilities: { streaming: true, pushNotifications: true } },
-      exposure: { sessionFactory: () => session() },
+      exposure: { sessionFactory: async () => await session() },
       authorize: ({ request }) => ({ ownership: { tenantId: "tenant", userId: request.headers.get("x-user") ?? "user" } }),
       tasks: lifecycle,
       push,
@@ -382,7 +388,7 @@ describe("createA2AHandler", () => {
   it("streams bounded working and completed task events with redaction", async () => {
     const handler = createA2AHandler({
       card: baseCard(),
-      exposure: { sessionFactory: () => session() },
+      exposure: { sessionFactory: async () => await session() },
       authorize: () => ({ ownership }),
       redactor: createSecretRedactor(["answer"]),
     });
@@ -411,7 +417,7 @@ describe("createA2AClient", () => {
     });
     const handler = createA2AHandler({
       card,
-      exposure: { sessionFactory: () => session() },
+      exposure: { sessionFactory: async () => await session() },
       authorize: ({ request }) => (request.headers.get("authorization") === "Bearer token" ? { ownership } : false),
     });
     let authCalls = 0;

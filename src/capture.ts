@@ -1,8 +1,8 @@
-/** Provider request/response capture middleware (plan 062, review §7 P1):
+/** Provider request/response capture transform for the `model.request` hook (plan 062, review §7 P1):
  *  opt-in observation of already-normalized provider shapes — never raw HTTP.
  *
- *  Request side rides the existing `provider_request` middleware hook; response
- *  side rides the existing subscriber-event seam (`provider_turn_finished`,
+ *  Request side rides the `model.request` hook; response
+ *  side rides the existing subscriber-event seam (`turn.completed`,
  *  which core already redacts). No new seam. Captured entries land in a capped
  *  FIFO ring buffer (`maxEvents`, default 100).
  *
@@ -18,7 +18,6 @@
  *  headers are never captured at all — headers are where credentials ride.
  */
 import type { AgentEvent, ProviderRequest } from "./contracts.js";
-import type { Middleware } from "./middleware.js";
 import { resolveRedactor, type SecretRedactor } from "./redaction.js";
 
 export type CaptureRedaction = "secrets" | "all" | "none";
@@ -55,10 +54,9 @@ export interface ProviderCaptureEntry {
 }
 
 export interface ProviderCapture {
-  /** Register on the existing `provider_request` middleware hook. Passes the
-   *  request through untouched and records one entry per round. */
-  middleware(): Middleware<ProviderRequest>;
-  /** Feed `provider_turn_finished` events from the session's existing
+  /** Register on `model.request`. Passes the request through untouched and records one entry per round. */
+  transform(): (request: ProviderRequest) => ProviderRequest;
+  /** Feed `turn.completed` events from the session's existing
    *  subscriber loop (`session.subscribe()`) to record response entries. */
   observeEvent(event: AgentEvent): void;
   /** Ring-buffer snapshot, oldest first. */
@@ -88,8 +86,8 @@ export function createProviderCapture(options: ProviderCaptureOptions = {}): Pro
   };
 
   return {
-    middleware() {
-      return (request, next) => {
+    transform() {
+      return (request: ProviderRequest) => {
         const entry: ProviderCaptureEntry = {
           kind: "request",
           at: new Date(now()).toISOString(),
@@ -103,11 +101,11 @@ export function createProviderCapture(options: ProviderCaptureOptions = {}): Pro
             : {}),
         };
         record(entry);
-        return next(request);
+        return request;
       };
     },
     observeEvent(event) {
-      if (event.type !== "provider_turn_finished") return;
+      if (event.type !== "turn.completed") return;
       const metadata = (event.metadata ?? {}) as { readonly providerId?: unknown; readonly model?: unknown; readonly latencyMs?: unknown };
       record({
         kind: "response",

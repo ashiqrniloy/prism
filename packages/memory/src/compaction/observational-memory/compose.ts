@@ -1,10 +1,11 @@
 import type {
-  AgentSession,
+  Session,
   AIProvider,
-  CompactionStrategy,
+  Compactor,
   CompactionTrigger,
   CompactionTriggerContext,
-  ContextProvider,
+  ContextDraft,
+  HookContext,
   CredentialRequest,
   CredentialValueSource,
   ModelConfig,
@@ -12,7 +13,14 @@ import type {
   SessionEntry,
   SettingsProvider,
 } from "@arnilo/prism";
-import { assertCompactionTrigger, resolveInputCap, resolveShouldCompact, resumeAgentRun, resumeAgentRunStream } from "@arnilo/prism";
+import {
+  assertCompactionTrigger,
+  resolveInputCap,
+  resolveShouldCompact,
+  resumeAgentRun,
+  resumeAgentRunStream,
+  withContextBlocks,
+} from "@arnilo/prism";
 import type { ObservationalMemoryAppendOptions } from "./append-custom.js";
 
 export type { ObservationalMemoryAppendOptions } from "./append-custom.js";
@@ -32,7 +40,7 @@ import {
   resolveObservationalMemorySettings,
 } from "./settings.js";
 import { resolveSharedScopes, type SharedScopeAccessEvent, type SharedWorkScopeConfig } from "./shared-scopes.js";
-import { createObservationalMemoryCompactionStrategy, type ObservationalMemoryCompactionStrategyOptions } from "./strategy.js";
+import { createObservationalMemoryCompactor, type ObservationalMemoryCompactorOptions } from "./strategy.js";
 import { estimateEntryTokens } from "./tokens.js";
 
 export interface ObservationalMemoryWorkerConfig {
@@ -75,7 +83,7 @@ export interface CreateObservationalMemoryOptions {
   readonly credentialRequest?: CredentialRequest;
   readonly requireExplicitModel?: boolean;
   readonly secrets?: readonly (string | undefined)[];
-  readonly compaction?: ObservationalMemoryCompactionStrategyOptions;
+  readonly compaction?: ObservationalMemoryCompactorOptions;
   /** Compact-when gate (plan 074 C11); replaces `context.compactAfterTokens` when set. Takes precedence over `shouldCompact`. */
   readonly trigger?: CompactionTrigger;
   /** Shorthand for `trigger: { type: "custom", shouldCompact }`. */
@@ -107,15 +115,17 @@ export interface ObservationalMemoryAttachOptions {
 }
 
 export interface AttachedObservationalMemorySession {
-  readonly session: AgentSession;
+  readonly session: Session;
   readonly runtime: ObservationalMemoryRuntime;
-  readonly contextProvider: ContextProvider;
-  readonly compactionStrategy: CompactionStrategy;
+  /** Projects this session's observations into a `context.build` draft (roadmap §2.4). */
+  readonly contextBuild: (draft: ContextDraft, context: HookContext) => Promise<ContextDraft | undefined>;
+  /** The observational-memory `Compactor`; assign it to `AgentConfig.slots.compaction` to use it. */
+  readonly compactor: Compactor;
   readonly settings: ObservationalMemorySettings;
 }
 
 export interface ObservationalMemory {
-  attach(session: AgentSession, options: ObservationalMemoryAttachOptions): AttachedObservationalMemorySession;
+  attach(session: Session, options: ObservationalMemoryAttachOptions): AttachedObservationalMemorySession;
   wrapResumeRun(resume: typeof resumeAgentRun): typeof resumeAgentRun;
   wrapResumeStream(resumeStream: typeof resumeAgentRunStream): typeof resumeAgentRunStream;
 }
@@ -150,7 +160,7 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
       void resolveObservationalMemorySettings(options.settings, settingsOverrides).then((resolved) => {
         settingsHolder.value = resolved;
       });
-      const compactionStrategy = createObservationalMemoryCompactionStrategy({
+      const compactor = createObservationalMemoryCompactor({
         keepRecentEntries: defaultObservationalMemorySettings.context.recentMessages,
         observationsPoolMaxTokens: defaultObservationalMemorySettings.context.observationsPoolMaxTokens,
         ...options.compaction,
@@ -180,9 +190,8 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
         isRunActive: () => runDepth > 0,
       });
 
-      const contextProvider: ContextProvider = {
-        name: "observational-memory",
-        async resolve() {
+      const contextBuild = async (draft: ContextDraft, _context: HookContext): Promise<ContextDraft | undefined> => {
+        {
           const entries = await session.entries();
           const settings = await resolveObservationalMemorySettings(options.settings, settingsOverrides);
           settingsHolder.value = settings;
@@ -193,14 +202,15 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
             map: foldWorkScopeMap(entries),
             ...(attachOptions.onScopeAccess ? { onAccess: attachOptions.onScopeAccess } : {}),
           });
-          return buildObservationalMemoryContextBlocks(entries, {
+          const blocks = buildObservationalMemoryContextBlocks(entries, {
             keepRecentEntries: settings.context.recentMessages,
             maxTokens: settings.context.recentMessageMaxTokens,
             secrets: options.secrets,
             advertiseRecall: options.compaction?.advertiseRecall,
             ...(shared.length ? { shared } : {}),
           });
-        },
+          return withContextBlocks(draft, blocks);
+        }
       };
 
       const sync = async (flushOptions?: ObservationalMemoryFlushOptions) => {
@@ -229,8 +239,9 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
           options.debug?.("observational-memory:compaction-deferred", { skipped: flush.skipped });
           return;
         }
+        // Roadmap §2.5: the implementation is the `compaction` slot, so a host that wants the
+        // observational-memory compactor assigns `attach.compactor` to it when it builds the agent.
         await session.compact({
-          strategy: compactionStrategy,
           keepRecentEntries: settingsHolder.value.context.recentMessages,
           signal: attachOptions.signal,
         });
@@ -238,7 +249,7 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
 
       lifecycles.set(session.id, sync);
 
-      const proxied: AgentSession = {
+      const proxied: Session = {
         get id() {
           return session.id;
         },
@@ -249,15 +260,6 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
           runDepth++;
           try {
             return await session.run(input, runOptions);
-          } finally {
-            runDepth--;
-            await sync();
-          }
-        },
-        prompt: async (input, runOptions) => {
-          runDepth++;
-          try {
-            return await session.prompt(input, runOptions);
           } finally {
             runDepth--;
             await sync();
@@ -274,12 +276,22 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
             }
           })();
         },
+        resume(decisions, runOptions) {
+          runDepth++;
+          return (async function* () {
+            try {
+              for await (const event of session.resume(decisions, runOptions)) yield event;
+            } finally {
+              runDepth--;
+              await sync();
+            }
+          })();
+        },
         steer: (input, steerOptions) => session.steer(input, steerOptions),
         compact: async (compactOptions) => {
           await runtime.flush();
           return session.compact({
             ...compactOptions,
-            strategy: compactOptions?.strategy ?? compactionStrategy,
             signal: compactOptions?.signal ?? attachOptions.signal,
           });
         },
@@ -291,11 +303,8 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
         checkout: (leafId) => session.checkout(leafId),
         // Plan 091 T2: meter reads pass through untouched — the wrapper proxies state, it does not own it.
         contextMeter: () => session.contextMeter(),
-        fork: (forkOptions) => memory.attach(session.fork(forkOptions), attachOptions).session,
-        clone: async (cloneOptions) => {
-          const cloned = await session.clone(cloneOptions);
-          return memory.attach(cloned, attachOptions).session;
-        },
+        messages: () => session.messages(),
+        fork: async (forkOptions) => memory.attach(await session.fork(forkOptions), attachOptions).session,
       };
 
       return {
@@ -303,8 +312,8 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
           return proxied;
         },
         runtime,
-        contextProvider,
-        compactionStrategy,
+        contextBuild,
+        compactor,
         get settings() {
           return settingsHolder.value;
         },
@@ -321,7 +330,7 @@ export function createObservationalMemory(options: CreateObservationalMemoryOpti
       return async function* (agent, ref, resumeInput, resumeOptions) {
         let sessionId: string | undefined = ref.sessionId;
         for await (const event of resumeStream(agent, ref, resumeInput, resumeOptions)) {
-          if (event.type === "agent_finished" || event.type === "agent_suspended") sessionId = event.sessionId;
+          if (event.type === "run.completed" || event.type === "run.suspended") sessionId = event.sessionId;
           yield event;
         }
         if (sessionId) await runLifecycle(lifecycles, sessionId);

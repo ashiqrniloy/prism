@@ -44,8 +44,8 @@ const reflection: MemoryReflection = {
 
 async function setup() {
   const store = createMemorySessionStore();
-  const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-  const session = agent.createSession({ id: "scopes" });
+  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const session = await agent.session({ id: "scopes", create: true });
   await session.run("hello");
   return { session, store, controller: createWorkScopeController({ session, appendEntry: (entry) => store.append(entry) }) };
 }

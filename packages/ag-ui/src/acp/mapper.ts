@@ -267,13 +267,7 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
     async map(input) {
       const event = options.redactor?.redact(input) ?? input;
       switch (event.type) {
-        case "message_started":
-          if (event.message.role !== "assistant") return [];
-          messageId = text(event.message.id ?? `${event.runId}:message`);
-          textDeltaSeen = false;
-          thoughtDeltaSeen = false;
-          return [];
-        case "message_delta":
+        case "message.delta":
           // F1: thinking deltas ride agent_thought_chunk (same messageId scheme as
           // text); image/audio deltas stay dropped.
           if (event.content.type === "thinking") {
@@ -285,7 +279,7 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
           messageId ??= `${text(event.runId)}:message`;
           textDeltaSeen = true;
           return [message(messageId ?? `${text(event.runId)}:message`, text(event.content.text))];
-        case "message_finished": {
+        case "message.completed": {
           if (event.message.role !== "assistant") return [];
           const id = messageId ?? text(event.message.id ?? `${event.runId}:message`);
           // F1: emit finished blocks only for the kinds that had no live delta,
@@ -300,26 +294,31 @@ export function createAcpEventMapper(options: AcpEventMapperOptions = {}): AcpEv
           thoughtDeltaSeen = false;
           return updates;
         }
-        case "tool_execution_started":
+        case "tool.started":
           return [{ sessionUpdate: "tool_call", ...(await tool(event.call)) }];
-        case "tool_execution_progress":
+        case "tool.progress":
           return [
             { sessionUpdate: "tool_call_update", toolCallId: text(event.toolCallId), title: text(event.name), status: "in_progress" },
           ];
-        case "tool_execution_finished":
-          return [await finish(event.result.toolCallId, event.result.name, "completed", event.result)];
-        case "tool_execution_error":
-          return [await finish(event.call.id, event.call.name, "failed")];
-        case "tool_execution_blocked":
-          return [await finish(event.toolCallId, event.name, "failed")];
-        case "provider_turn_finished":
+        case "tool.completed":
+          return [
+            await finish(
+              event.toolCallId || event.result?.toolCallId,
+              event.name || event.result?.name,
+              event.status === "finished" ? "completed" : "failed",
+              event.status === "finished" ? event.result : undefined,
+            ),
+          ];
+        case "turn.completed":
           // B2: a failed provider turn is a request-level condition, not transcript content;
           // the agent's forward() throws ERR_PRISM_ACP_RUN when the run ends in a terminal
           // `error` event (retryable turn failures stay silent here and may recover).
-          return event.usage ? await usage(event.usage, event.metadata.model.model) : [];
-        case "agent_denied":
-          return [message(`${text(event.runId)}:status`, "Run denied")];
-        case "error":
+          return event.usage && event.metadata ? await usage(event.usage, event.metadata.model.model) : [];
+        case "decision.resolved":
+          return event.decisions.some((decision) => decision.outcome === "deny")
+            ? [message(`${text(event.runId)}:status`, "Run denied")]
+            : [];
+        case "run.failed":
           // B2: run-level errors fail the prompt request (forward() throws); never a fake chunk.
           return [];
         default:

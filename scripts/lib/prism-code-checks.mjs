@@ -129,13 +129,13 @@ export async function runPrismCodeChecks({
   const events = headless.stdout.trim().split("\n").filter(Boolean).map(parseJson);
   const types = events.map((line) => line?.event?.type);
   const text = events
-    .filter((line) => line?.event?.type === "message_finished")
+    .filter((line) => line?.event?.type === "message.completed")
     .flatMap((line) => line.event.message?.content ?? [])
     .map((part) => part.text ?? "")
     .join("");
   check(
     "headless -p --mode json on mock/default finishes",
-    headless.status === 0 && !events.includes(null) && types.at(-1) === "agent_finished" && text.includes("Mock response"),
+    headless.status === 0 && !events.includes(null) && types.at(-1) === "run.completed" && text.includes("Mock response"),
     `exit ${headless.status}, ${events.length} events`,
   );
   if (headless.status !== 0) process.stderr.write(headless.stderr);

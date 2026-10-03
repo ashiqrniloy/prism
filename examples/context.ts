@@ -1,20 +1,34 @@
-import type { ContextProvider, Message } from "@arnilo/prism";
-import { resolveContextProviders } from "@arnilo/prism";
+import {
+  createAgent,
+  type ContextBlock,
+  createMockProvider,
+  providerDone,
+  providerTextDelta,
+  withContextBlocks,
+  type ContextDraft,
+} from "@arnilo/prism";
 
-// Ordered context provider pipeline: each provider contributes context blocks
-// resolved in order. Host-owned — providers cannot grant tools or permissions.
+// Ordered context blocks as a `context.build` handler (roadmap §2.4). The draft is the provider
+// view for this turn only, so a host-owned handler adds context without touching the session
+// store. Blocks are appended in registration order, and a handler can never grant tools.
 export async function demo() {
-  const clock: ContextProvider = {
-    name: "clock",
-    resolve: () => [{ content: `UTC: ${new Date(0).toISOString()}` }],
-  };
-  const notes: ContextProvider = {
-    name: "notes",
-    resolve: () => [{ content: "Project notes placeholder." }],
-  };
+  let seen: readonly ContextBlock[] = [];
+  const agent = await createAgent({
+    model: { provider: "mock", model: "context-demo" },
+    provider: createMockProvider([providerTextDelta("ok"), providerDone()], {
+      onRequest: (request) => {
+        seen = request.context ?? [];
+      },
+    }),
+    hooks: (hooks) =>
+      hooks.on(
+        "context.build",
+        (draft: ContextDraft) =>
+          withContextBlocks(draft, [{ content: `UTC: ${new Date(0).toISOString()}` }, { content: "Project notes placeholder." }]),
+        { id: "clock-and-notes" },
+      ),
+  });
 
-  const messages: Message[] = [{ role: "user", content: [{ type: "text", text: "Hi" }] }];
-  const blocks = await resolveContextProviders({ messages, providers: [clock, notes] });
-
-  return { count: blocks.length, contents: blocks.map((b) => b.content) };
+  await (await agent.session()).run("Hi");
+  return { count: seen.length, contents: seen.map((b) => b.content) };
 }

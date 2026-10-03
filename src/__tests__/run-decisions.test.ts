@@ -4,7 +4,8 @@ import { loadAgentRunState } from "../agent-run-state.js";
 import type { CheckpointStore } from "../contracts-core.js";
 import {
   AgentDecisionError,
-  type AgentRunResult,
+  type RunResult,
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -33,45 +34,47 @@ function parallelProvider() {
   };
 }
 
-function decisionAgent(executed: string[], provider = parallelProvider()) {
-  return createAgent({
+async function decisionAgent(executed: string[], provider = parallelProvider()) {
+  return await createAgent({
+    hooks: askEveryTool(),
     id: "decision-demo",
     model: { provider: "mock", model: "demo" },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider,
-    tools: [
-      {
-        name: "write",
-        parameters: {},
-        execute: (args: JsonObject, context: { toolCallId: string }) => {
-          executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-          return { toolCallId: context.toolCallId, name: "write", value: "done" };
+    tools: {
+      add: [
+        {
+          name: "write",
+          parameters: {},
+          execute: (args: JsonObject, context: { toolCallId: string }) => {
+            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
 }
 
 const DURABLE = (checkpoints: ReturnType<typeof createMemoryCheckpointStore>) => ({
   checkpoints,
   definitionRevision: "1",
-  interruptBeforeTool: true,
 });
 
 describe("shared pending decisions", () => {
   it("collects a parallel tool round into one suspension and applies an approve-all batch", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s1" }).run("go", { runState: DURABLE(checkpoints) });
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s1", create: true })).run("go", { runState: DURABLE(checkpoints) });
 
     assert.equal(first.status, "suspended");
     assert.equal(executed.length, 0);
-    const pending = first.interruption?.pendingDecisions;
+    const pending = first.pending;
     assert.equal(pending?.length, 2);
-    assert.equal(first.interruption?.kind, "tool_approval");
-    assert.equal(first.interruption?.reason, "2 tool side effects require approval");
-    assert.equal(first.interruption?.guardrail, undefined);
+    assert.equal(first.runState?.interruption?.kind, "tool_approval");
+    assert.equal(first.runState?.interruption?.reason, "2 tool side effects require approval");
+    assert.equal(first.runState?.interruption?.guardrail, undefined);
     assert.equal(pending?.[0]?.scope.toolName, "write");
     assert.match(pending?.[0]?.scope.argumentsHash ?? "", /^[a-f0-9]{64}$/);
 
@@ -84,18 +87,18 @@ describe("shared pending decisions", () => {
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, ['call-1:{"value":"a"}', 'call-2:{"value":"b"}']);
   });
 
   it("re-suspends with the remainder when a batch decides a strict subset", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s2" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s2", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
 
-    const partial: AgentRunResult = await resumeAgentRun(
+    const partial: RunResult = await resumeAgentRun(
       agent,
       { runId: first.runId, sessionId: first.sessionId },
       { expectedVersion: first.runState!.version!, decisions: [{ approvalId: pending[0]!.approvalId, outcome: "allow_once" }] },
@@ -103,8 +106,8 @@ describe("shared pending decisions", () => {
     );
     assert.equal(partial.status, "suspended");
     assert.equal(partial.runState!.version, first.runState!.version! + 1);
-    assert.equal(partial.interruption?.pendingDecisions?.length, 1);
-    assert.equal(partial.interruption?.pendingDecisions?.[0]?.approvalId, pending[1]!.approvalId);
+    assert.equal(partial.pending?.length, 1);
+    assert.equal(partial.pending?.[0]?.approvalId, pending[1]!.approvalId);
     assert.equal(executed.length, 0);
 
     const done = await resumeAgentRun(
@@ -116,15 +119,15 @@ describe("shared pending decisions", () => {
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(done.status, "succeeded");
+    assert.equal(done.status, "completed");
     assert.deepEqual(executed, ['call-1:{"value":"a"}', 'call-2:{"value":"b"}']);
   });
 
   it("fails the whole batch closed on unknown, duplicate, or foreign approval ids", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = decisionAgent([]);
-    const first = await agent.createSession({ id: "s3" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const agent = await decisionAgent([]);
+    const first = await (await agent.session({ id: "s3", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
     const options = { checkpoints, definitionRevision: "1" };
     const ref = { runId: first.runId, sessionId: first.sessionId };
 
@@ -177,9 +180,9 @@ describe("shared pending decisions", () => {
 
   it("rejects invalid batches: empty, oversized reasons, mixed decision shapes", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const agent = decisionAgent([]);
-    const first = await agent.createSession({ id: "s4" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const agent = await decisionAgent([]);
+    const first = await (await agent.session({ id: "s4", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
     const options = { checkpoints, definitionRevision: "1" };
     const ref = { runId: first.runId, sessionId: first.sessionId };
     const version = first.runState!.version!;
@@ -220,9 +223,9 @@ describe("shared pending decisions", () => {
   it("reject_once continues the run with a blocked result and keeps the reason", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s5" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s5", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
 
     const result = await resumeAgentRun(
       agent,
@@ -236,7 +239,7 @@ describe("shared pending decisions", () => {
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, ['call-2:{"value":"b"}']);
   });
 
@@ -244,7 +247,7 @@ describe("shared pending decisions", () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
     let turn = 0;
-    const agent = decisionAgent(executed, {
+    const agent = await decisionAgent(executed, {
       id: "mock",
       async *generate() {
         turn += 1;
@@ -263,8 +266,8 @@ describe("shared pending decisions", () => {
         yield providerDone();
       },
     });
-    const first = await agent.createSession({ id: "s6" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const first = await (await agent.session({ id: "s6", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
 
     const second = await resumeAgentRun(
       agent,
@@ -276,7 +279,7 @@ describe("shared pending decisions", () => {
     // call-3 has different arguments and suspends the run again.
     assert.equal(second.status, "suspended");
     assert.deepEqual(executed, ['call-1:{"value":"same"}', 'call-2:{"value":"same"}']);
-    const remaining = second.interruption!.pendingDecisions!;
+    const remaining = second.pending!;
     assert.equal(remaining.length, 1);
     assert.equal(remaining[0]!.toolCallId, "call-3");
 
@@ -286,7 +289,7 @@ describe("shared pending decisions", () => {
       { expectedVersion: second.runState!.version!, decisions: [{ approvalId: remaining[0]!.approvalId, outcome: "allow_once" }] },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(done.status, "succeeded");
+    assert.equal(done.status, "completed");
     const { state } = await loadAgentRunState(checkpoints, { runId: first.runId });
     assert.equal(state.stickyDecisions, undefined); // expired at run end
   });
@@ -295,7 +298,7 @@ describe("shared pending decisions", () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
     let turn = 0;
-    const agent = decisionAgent(executed, {
+    const agent = await decisionAgent(executed, {
       id: "mock",
       async *generate() {
         turn += 1;
@@ -308,8 +311,8 @@ describe("shared pending decisions", () => {
         yield providerDone();
       },
     });
-    const first = await agent.createSession({ id: "s7" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const first = await (await agent.session({ id: "s7", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
     const result = await resumeAgentRun(
       agent,
       { runId: first.runId, sessionId: first.sessionId },
@@ -319,33 +322,36 @@ describe("shared pending decisions", () => {
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, []);
   });
 
   it("revalidates modified arguments and executes with them exactly once", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "modified-args-demo",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: parallelProvider(),
       validator: (_tool: unknown, args: unknown) =>
         typeof (args as { value?: unknown }).value === "string" ? undefined : "value must be a string",
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (args: JsonObject, context: { toolCallId: string }) => {
-            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (args: JsonObject, context: { toolCallId: string }) => {
+              executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+              return { toolCallId: context.toolCallId, name: "write", value: "done" };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const first = await agent.createSession({ id: "s8" }).run("go", { runState: DURABLE(checkpoints) });
-    const pending = first.interruption!.pendingDecisions!;
+    const first = await (await agent.session({ id: "s8", create: true })).run("go", { runState: DURABLE(checkpoints) });
+    const pending = first.pending!;
     const options = { checkpoints, definitionRevision: "1" };
     const ref = { runId: first.runId, sessionId: first.sessionId };
 
@@ -382,15 +388,15 @@ describe("shared pending decisions", () => {
       },
       options,
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, ['call-1:{"value":"edited"}', 'call-2:{"value":"b"}']);
   });
 
   it("validates elicitation payloads against the recorded schema and resolves the call", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s9" }).run("go", { runState: DURABLE(checkpoints) });
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s9", create: true })).run("go", { runState: DURABLE(checkpoints) });
     const ref = { runId: first.runId, sessionId: first.sessionId };
     const options = { checkpoints, definitionRevision: "1" };
 
@@ -439,7 +445,7 @@ describe("shared pending decisions", () => {
       { expectedVersion: record.version + 1, decisions: [{ approvalId, outcome: "allow_once", elicitation: { choice: "a" } }] },
       options,
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, []); // elicitation resolved the call without executing the tool
   });
 
@@ -447,10 +453,11 @@ describe("shared pending decisions", () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "elicitation-demo",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -464,28 +471,30 @@ describe("shared pending decisions", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "ask",
-          parameters: {},
-          elicitation: () => ({
-            schema: { type: "object", required: ["choice"], properties: { choice: { enum: ["a", "b"] } } },
-            reason: "Pick one",
-            validate: (payload) => {
-              if (payload.choice !== "a" && payload.choice !== "b") throw new Error("unknown option");
+      tools: {
+        add: [
+          {
+            name: "ask",
+            parameters: {},
+            elicitation: () => ({
+              schema: { type: "object", required: ["choice"], properties: { choice: { enum: ["a", "b"] } } },
+              reason: "Pick one",
+              validate: (payload) => {
+                if (payload.choice !== "a" && payload.choice !== "b") throw new Error("unknown option");
+              },
+            }),
+            execute: (_args: JsonObject, context: { toolCallId: string }) => {
+              executed.push(context.toolCallId);
+              return { toolCallId: context.toolCallId, name: "ask", value: "executed" };
             },
-          }),
-          execute: (_args: JsonObject, context: { toolCallId: string }) => {
-            executed.push(context.toolCallId);
-            return { toolCallId: context.toolCallId, name: "ask", value: "executed" };
           },
-        },
-      ],
+        ],
+      },
     });
-    const first = await agent.createSession({ id: "s10" }).run("go", { runState: DURABLE(checkpoints) });
+    const first = await (await agent.session({ id: "s10", create: true })).run("go", { runState: DURABLE(checkpoints) });
     assert.equal(first.status, "suspended");
-    const pending = first.interruption?.pendingDecisions;
-    assert.equal(first.interruption?.kind, "elicitation");
+    const pending = first.pending;
+    assert.equal(first.runState?.interruption?.kind, "elicitation");
     assert.equal(pending?.length, 1);
     assert.equal(pending?.[0]?.kind, "elicitation");
     assert.equal(pending?.[0]?.reason, "Pick one");
@@ -516,7 +525,7 @@ describe("shared pending decisions", () => {
       },
       options,
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, []); // elicitation resolved without executing
   });
 });
@@ -525,8 +534,8 @@ describe("durable resume input validation (plan 020 Task 2)", () => {
   it("unknown legacy decision fails closed with no checkpoint write and no tool call", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s11" }).run("go", { runState: DURABLE(checkpoints) });
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s11", create: true })).run("go", { runState: DURABLE(checkpoints) });
     assert.equal(first.status, "suspended");
     const ref = { runId: first.runId, sessionId: first.sessionId };
     const options = { checkpoints, definitionRevision: "1" };
@@ -561,7 +570,7 @@ describe("durable resume input validation (plan 020 Task 2)", () => {
         throw new Error("must not write");
       },
     };
-    const agent = decisionAgent([]);
+    const agent = await decisionAgent([]);
     const options = { checkpoints: throwing, definitionRevision: "1" };
     const ref = { runId: "r", sessionId: "s" };
     const cases: Array<[string, unknown]> = [
@@ -586,8 +595,8 @@ describe("durable resume input validation (plan 020 Task 2)", () => {
   it("malformed batches fail closed with stable AgentDecisionError codes", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s12" }).run("go", { runState: DURABLE(checkpoints) });
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s12", create: true })).run("go", { runState: DURABLE(checkpoints) });
     const options = { checkpoints, definitionRevision: "1" };
     const ref = { runId: first.runId, sessionId: first.sessionId };
     const version = first.runState!.version!;
@@ -680,13 +689,13 @@ describe("durable resume input validation (plan 020 Task 2)", () => {
   it("valid legacy approve and batch paths remain green after the assertion", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executed: string[] = [];
-    const agent = decisionAgent(executed);
-    const first = await agent.createSession({ id: "s13" }).run("go", { runState: DURABLE(checkpoints) });
+    const agent = await decisionAgent(executed);
+    const first = await (await agent.session({ id: "s13", create: true })).run("go", { runState: DURABLE(checkpoints) });
     const ref = { runId: first.runId, sessionId: first.sessionId };
     const options = { checkpoints, definitionRevision: "1" };
 
     const result = await resumeAgentRun(agent, ref, { expectedVersion: first.runState!.version!, decision: "approve" }, options);
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(executed, ['call-1:{"value":"a"}', 'call-2:{"value":"b"}']);
   });
 });

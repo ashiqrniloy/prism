@@ -126,8 +126,8 @@ const FAMILY_CALLS = [
   {
     name: "@arnilo/prism-providers",
     spec: "@arnilo/prism-providers/openai",
-    call: "(m) => m.createOpenAIProviderPackage().name",
-    expect: "@arnilo/prism-providers/openai",
+    call: "(m) => m.openaiPackage().definition.name",
+    expect: "@arnilo/prism-providers.openai",
   },
   {
     name: "@arnilo/prism-coding-tools",
@@ -144,7 +144,7 @@ const FAMILY_CALLS = [
   },
   { name: "@arnilo/prism-channels", spec: "@arnilo/prism-channels", call: "(m) => m.resolveChannelLimits().maxInputBytes", expect: 32768 },
   { name: "@arnilo/prism-mcp", spec: "@arnilo/prism-mcp", call: '(m) => m.defaultMcpNamePrefix("srv")', expect: "mcp:srv:" },
-  { name: "@arnilo/prism-hooks", spec: "@arnilo/prism-hooks", call: '(m) => m.estimateContextTokens("hello world")', expect: 3 },
+  { name: "@arnilo/prism-hooks-json", spec: "@arnilo/prism-hooks-json", call: '(m) => m.estimateContextTokens("hello world")', expect: 3 },
   { name: "@arnilo/prism-ag-ui", spec: "@arnilo/prism-ag-ui", call: "(m) => m.resolveAgUiLimits().maxEventBytes", expect: 65536 },
   {
     name: "@arnilo/prism-acp-agent",

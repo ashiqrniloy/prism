@@ -87,6 +87,7 @@ alibabaCacheEnabled	export declare function alibabaCacheEnabled(request: Provide
 alibabaEnableThinking	export declare function alibabaEnableThinking(request: ProviderRequest): boolean | undefined
 alibabaEvents	export declare function alibabaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 alibabaIsThinkingOnly	export declare function alibabaIsThinkingOnly(modelId: string): boolean
+alibabaPackage	export declare function alibabaPackage(options?: AlibabaProviderPackageOptions): PackageInstance
 alibabaThinkingFamily	export declare function alibabaThinkingFamily(modelId: string): "thinking_type" | undefined
 alibabaThinkingLevels	export declare function alibabaThinkingLevels(modelId: string): readonly string[] | undefined
 anthropicCacheEnabled	export declare function anthropicCacheEnabled(request: ProviderRequest): boolean
@@ -95,6 +96,7 @@ anthropicMessagesBody	export declare function anthropicMessagesBody(request: Pro
 anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 anthropicModels	export declare const anthropicModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig]
 anthropicOwnedHeaders	export declare function anthropicOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
+anthropicPackage	export declare function anthropicPackage(options?: AnthropicProviderPackageOptions): PackageInstance
 anthropicPreserveThinking	export declare function anthropicPreserveThinking(request: ProviderRequest): boolean
 anthropicThinking	export declare function anthropicThinking(request: ProviderRequest): JsonObject | undefined
 anthropicThinkingGeneration	export declare function anthropicThinkingGeneration(modelId: string): AnthropicThinkingGeneration
@@ -111,9 +113,11 @@ askSystemOneDecisions	export declare function askSystemOneDecisions(body: System
 assertBatchJobsSupported	export { assertBatchJobsSupported, modelSupportsBatchJobs } from "@arnilo/prism"
 assertSupportedAiSdkVersion	export declare function assertSupportedAiSdkVersion(version: string): void
 azureChatCompletionsUrl	export declare function azureChatCompletionsUrl(input:
+azurePackage	export declare function azurePackage(options: AzureOpenAIProviderPackageOptions): PackageInstance
 bedrockConverseBody	export declare function bedrockConverseBody(request: ProviderRequest): Promise<JsonObject>
 bedrockConverseResponseEvents	export declare function bedrockConverseResponseEvents(response: unknown): readonly ProviderEvent[]
 bedrockConverseStreamEvents	export declare function bedrockConverseStreamEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+bedrockPackage	export declare function bedrockPackage(options: BedrockProviderPackageOptions): PackageInstance
 bedrockPreserveThinking	export declare function bedrockPreserveThinking(request: ProviderRequest): boolean
 bedrockReasoningBlocks	export declare function bedrockReasoningBlocks(request: ProviderRequest):
 bedrockRuntimeEndpoint	export declare function bedrockRuntimeEndpoint(region: string, endpoint?: string): string
@@ -129,6 +133,7 @@ clinePassModels	export declare const clinePassModels: ModelConfig[]
 clinePassReasoningEffort	export declare function clinePassReasoningEffort(request: ProviderRequest): string | undefined
 clinePassThinkingLevelMap	export declare function clinePassThinkingLevelMap(request: ProviderRequest): ClinePassThinkingLevelMap | undefined
 clinePassThinkingSlot	export declare function clinePassThinkingSlot(value: unknown): ClinePassThinkingSlot | undefined
+clinepassPackage	export declare function clinepassPackage(options?: ClinePassProviderPackageOptions): PackageInstance
 commandCodeCacheEnabled	export declare function commandCodeCacheEnabled(request: ProviderRequest): boolean
 commandCodeChatBody	export declare function commandCodeChatBody(request: ProviderRequest): JsonObject
 commandCodeChatEvents	export declare function commandCodeChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
@@ -140,6 +145,7 @@ commandCodeReasoning	export declare function commandCodeReasoning(request: Provi
 commandCodeThinking	export declare function commandCodeThinking(request: ProviderRequest): JsonObject | undefined
 commandCodeThinkingFamily	export declare function commandCodeThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
 commandCodeThinkingLevels	export declare function commandCodeThinkingLevels(modelId: string): readonly string[] | undefined
+commandcodePackage	export declare function commandcodePackage(options?: CommandCodeProviderPackageOptions): PackageInstance
 compileSystemOneQuestions	export declare function compileSystemOneQuestions(schema: JsonObject): Readonly<Record<string, SystemOneQuestion>>
 compileSystemOneState	export declare function compileSystemOneState(messages: readonly Message[]): SystemOneState
 computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
@@ -150,36 +156,23 @@ createAlibabaEmbedder	export declare function createAlibabaEmbedder(options: Ali
 createAlibabaEmbeddingsProvider	export declare function createAlibabaEmbeddingsProvider(options: AlibabaEmbeddingsProviderOptions): EmbeddingsProvider
 createAlibabaImageGenerationProvider	export declare function createAlibabaImageGenerationProvider(options?: AlibabaImageGenerationOptions): ImageGenerationProvider
 createAlibabaProvider	export declare function createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
-createAlibabaProviderPackage	export declare function createAlibabaProviderPackage(options?: AlibabaProviderPackageOptions): ProviderPackage
 createAlibabaVideoGenerationProvider	export declare function createAlibabaVideoGenerationProvider(options: AlibabaVideoGenerationOptions): VideoGenerationProvider &
 createAnthropicMessagesProvider	export declare function createAnthropicMessagesProvider(options?: AnthropicMessagesProviderOptions): AIProvider
-createAnthropicProviderPackage	export declare function createAnthropicProviderPackage(options?: AnthropicProviderPackageOptions): ProviderPackage
 createAzureOpenAIProvider	export declare function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): AIProvider
-createAzureOpenAIProviderPackage	export declare function createAzureOpenAIProviderPackage(options: AzureOpenAIProviderPackageOptions): ProviderPackage
 createBedrockConverseProvider	export declare function createBedrockConverseProvider(options: BedrockConverseProviderOptions): AIProvider
 createBedrockProvider	export declare function createBedrockProvider(options: BedrockProviderOptions): AIProvider
-createBedrockProviderPackage	export declare function createBedrockProviderPackage(options: BedrockProviderPackageOptions): ProviderPackage
 createClinePassProvider	export declare function createClinePassProvider(options?: ClinePassProviderOptions): AIProvider
-createClinePassProviderPackage	export declare function createClinePassProviderPackage(options?: ClinePassProviderPackageOptions): ProviderPackage
 createCommandCodeProvider	export declare function createCommandCodeProvider(options?: CommandCodeProviderOptions): AIProvider
-createCommandCodeProviderPackage	export declare function createCommandCodeProviderPackage(options?: CommandCodeProviderPackageOptions): ProviderPackage
 createDeepSeekProvider	export declare function createDeepSeekProvider(options?: DeepSeekProviderOptions): AIProvider
-createDeepSeekProviderPackage	export declare function createDeepSeekProviderPackage(options?: DeepSeekProviderPackageOptions): ProviderPackage
 createFakeModelDiscovery	export declare function createFakeModelDiscovery(options?: CreateFakeModelDiscoveryOptions): ModelDiscovery
 createGoogleGenerateContentProvider	export declare function createGoogleGenerateContentProvider(options?: GoogleGenerateContentProviderOptions): AIProvider
 createGoogleModelDiscovery	export declare function createGoogleModelDiscovery(options: CreateGoogleModelDiscoveryOptions): ModelDiscovery
-createGoogleProviderPackage	export declare function createGoogleProviderPackage(options?: GoogleProviderPackageOptions): ProviderPackage
 createHyperProvider	export declare function createHyperProvider(options?: HyperProviderOptions): AIProvider
-createHyperProviderPackage	export declare function createHyperProviderPackage(options?: HyperProviderPackageOptions): ProviderPackage
 createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): AIProvider
-createKimiProviderPackage	export declare function createKimiProviderPackage(options?: KimiProviderPackageOptions): ProviderPackage
 createLayaProvider	export declare function createLayaProvider(options?: LayaProviderOptions): AIProvider
-createLayaProviderPackage	export declare function createLayaProviderPackage(options?: LayaProviderPackageOptions): ProviderPackage
 createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): AIProvider
 createNeuralWattProvider	export declare function createNeuralWattProvider(options?: NeuralWattProviderOptions): AIProvider
-createNeuralWattProviderPackage	export declare function createNeuralWattProviderPackage(options?: NeuralWattProviderPackageOptions): ProviderPackage
 createOllamaProvider	export declare function createOllamaProvider(options?: OllamaProviderOptions): AIProvider
-createOllamaProviderPackage	export declare function createOllamaProviderPackage(options?: OllamaProviderPackageOptions): ProviderPackage
 createOpenAIBatchJobsProvider	export declare function createOpenAIBatchJobsProvider(options: OpenAIBatchJobsOptions): BatchJobsProvider
 createOpenAICodexOAuthProvider	export declare function createOpenAICodexOAuthProvider(options?: OpenAICodexOAuthOptions): OAuthProvider
 createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): AIProvider
@@ -187,31 +180,25 @@ createOpenAIEmbeddingsProvider	export declare function createOpenAIEmbeddingsPro
 createOpenAIFileUploadManager	export declare function createOpenAIFileUploadManager(options?: OpenAIFileUploadManagerOptions):
 createOpenAIImageGenerationProvider	export declare function createOpenAIImageGenerationProvider(options?: OpenAIImageGenerationOptions): ImageGenerationProvider
 createOpenAIModerationProvider	export declare function createOpenAIModerationProvider(options: OpenAIModerationOptions): ModerationProvider
-createOpenAIProviderPackage	export declare function createOpenAIProviderPackage(options?: OpenAIProviderPackageOptions): ProviderPackage
 createOpenAIRealtimeSession	export declare function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOptions): RealtimeSession
 createOpenAIResponsesProvider	export declare function createOpenAIResponsesProvider(options?: OpenAIResponsesProviderOptions): AIProvider
 createOpenAISpeechProvider	export declare function createOpenAISpeechProvider(options?: OpenAISpeechOptions): SpeechProvider
 createOpenAITranscriptionProvider	export declare function createOpenAITranscriptionProvider(options?: OpenAITranscriptionOptions): TranscriptionProvider
 createOpenAiCompatibleModelDiscovery	export declare function createOpenAiCompatibleModelDiscovery(options: CreateOpenAiCompatibleModelDiscoveryOptions): ModelDiscovery
 createOpenCodeGoProvider	export declare function createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): AIProvider
-createOpenCodeGoProviderPackage	export declare function createOpenCodeGoProviderPackage(options?: OpenCodeGoProviderPackageOptions): ProviderPackage
 createOpenRouterProvider	export declare function createOpenRouterProvider(options?: OpenRouterProviderOptions): AIProvider
-createOpenRouterProviderPackage	export declare function createOpenRouterProviderPackage(options?: OpenRouterProviderPackageOptions): ProviderPackage
 createPkceVerifier	export declare function createPkceVerifier(bytes?: number): string
 createSystemOneDecisionProvider	export declare function createSystemOneDecisionProvider(options: SystemOneDecisionProviderOptions): AIProvider
 createTypeSafeProvider	export declare function createTypeSafeProvider(options?: TypeSafeProviderOptions): AIProvider
-createTypeSafeProviderPackage	export declare function createTypeSafeProviderPackage(options?: TypeSafeProviderPackageOptions): ProviderPackage
 createVertexProvider	export declare function createVertexProvider(options: VertexProviderOptions): AIProvider
-createVertexProviderPackage	export declare function createVertexProviderPackage(options: VertexProviderPackageOptions): ProviderPackage
 createXaiOAuthProvider	export declare function createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
 createXaiProvider	export declare function createXaiProvider(options?: XaiProviderOptions): AIProvider
-createXaiProviderPackage	export declare function createXaiProviderPackage(options?: XaiProviderPackageOptions): ProviderPackage
 createZaiProvider	export declare function createZaiProvider(options?: ZaiProviderOptions): AIProvider
-createZaiProviderPackage	export declare function createZaiProviderPackage(options?: ZaiProviderPackageOptions): ProviderPackage
 declaredThinkingLevelsFor	export declare function declaredThinkingLevelsFor(request: ProviderRequest): readonly string[] | undefined
 deepseekBody	export declare function deepseekBody(request: ProviderRequest): JsonObject
 deepseekEvents	export declare function deepseekEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 deepseekModels	export declare const deepseekModels: readonly [ModelConfig, ModelConfig]
+deepseekPackage	export declare function deepseekPackage(options?: DeepSeekProviderPackageOptions): PackageInstance
 deepseekReasoningEffort	export declare function deepseekReasoningEffort(request: ProviderRequest): "low" | "high" | "max" | undefined
 deepseekReplayThinking	export declare function deepseekReplayThinking(request: ProviderRequest, messageIndex: number): boolean
 deepseekThinking	export declare function deepseekThinking(request: ProviderRequest): JsonObject
@@ -239,6 +226,7 @@ googleGenerateContentBody	export declare function googleGenerateContentBody(requ
 googleGenerateContentEvents	export declare function googleGenerateContentEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 googleModels	export declare const googleModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig]
 googleOwnedHeaders	export declare function googleOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
+googlePackage	export declare function googlePackage(options?: GoogleProviderPackageOptions): PackageInstance
 googlePreserveThinking	export declare function googlePreserveThinking(request: ProviderRequest): boolean
 googleThinkingBudgetRange	export declare function googleThinkingBudgetRange(modelId: string): readonly [number, number] | undefined
 googleThinkingConfig	export declare function googleThinkingConfig(request: ProviderRequest): JsonObject | undefined
@@ -248,6 +236,7 @@ hyperChatBody	export declare function hyperChatBody(request: ProviderRequest): J
 hyperChatEvents	export declare function hyperChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 hyperHttpError	export declare function hyperHttpError(decision: HyperRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error
 hyperModels	export declare const hyperModels: readonly ModelConfig[]
+hyperPackage	export declare function hyperPackage(options?: HyperProviderPackageOptions): PackageInstance
 hyperPreserveThinking	export declare function hyperPreserveThinking(request: ProviderRequest): boolean
 hyperReasoningEffort	export declare function hyperReasoningEffort(request: ProviderRequest): string | undefined
 hyperThinking	export declare function hyperThinking(request: ProviderRequest): JsonObject | undefined
@@ -261,6 +250,7 @@ kimiAnthropicCacheEnabled	export declare function kimiAnthropicCacheEnabled(requ
 kimiAnthropicEvents	export declare function kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 kimiCodingModels	export declare const kimiCodingModels: readonly [ModelConfig, ModelConfig, ModelConfig]
 kimiIsK3Model	export declare function kimiIsK3Model(modelId: string): boolean
+kimiPackage	export declare function kimiPackage(options?: KimiProviderPackageOptions): PackageInstance
 kimiPreserveThinking	export declare function kimiPreserveThinking(request: ProviderRequest): boolean
 kimiReasoningEffort	export declare function kimiReasoningEffort(request: ProviderRequest): string | undefined
 kimiThinking	export declare function kimiThinking(request: ProviderRequest): JsonObject | undefined
@@ -268,6 +258,7 @@ kimiThinkingFamily	export declare function kimiThinkingFamily(modelId: string): 
 kimiThinkingLevels	export declare function kimiThinkingLevels(modelId: string): readonly string[] | undefined
 layaBaseUrl	export declare function layaBaseUrl(options?:
 layaModels	export declare const layaModels: readonly ModelConfig[]
+layaPackage	export declare function layaPackage(options?: LayaProviderPackageOptions): PackageInstance
 listAlibabaModels	export declare function listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
 listAnthropicModels	export declare function listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
 listCommandCodeModels	export declare function listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
@@ -282,6 +273,7 @@ listOpenCodeGoModels	export declare function listOpenCodeGoModels(options?: List
 listOpenRouterModels	export declare function listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
 listXaiModels	export declare function listXaiModels(options?: ListXaiModelsOptions): Promise<ModelConfig[]>
 listZaiModels	export declare function listZaiModels(options?: ListZaiModelsOptions): Promise<ModelConfig[]>
+loadProviderPackage	export declare function loadProviderPackage(instance: PackageInstance): Promise<void>
 mapAiSdkStream	export declare function mapAiSdkStream(stream: ReadableStream<LanguageModelV4StreamPart>, signal?: AbortSignal, redactor?: SecretRedactor): AsyncIterable<ProviderEvent>
 mapAlibabaModel	export declare function mapAlibabaModel(entry: AlibabaModelEntry): ModelConfig
 mapAnthropicModel	export declare function mapAnthropicModel(entry: AnthropicModelEntry, options?:
@@ -317,9 +309,11 @@ neuralWattPreserveThinking	export declare function neuralWattPreserveThinking(re
 neuralWattReasoningEffort	export declare function neuralWattReasoningEffort(request: ProviderRequest): string | undefined
 neuralWattThinkingTokenBudget	export declare function neuralWattThinkingTokenBudget(request: ProviderRequest): number | undefined
 neuralWattToolChoice	export declare function neuralWattToolChoice(request: ProviderRequest): string | JsonObject | undefined
+neuralwattPackage	export declare function neuralwattPackage(options?: NeuralWattProviderPackageOptions): PackageInstance
 ollamaBaseUrl	export declare function ollamaBaseUrl(options?:
 ollamaBody	export declare function ollamaBody(request: ProviderRequest): JsonObject
 ollamaEvents	export declare function ollamaEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+ollamaPackage	export declare function ollamaPackage(options?: OllamaProviderPackageOptions): PackageInstance
 ollamaReasoningEffort	export declare function ollamaReasoningEffort(request: ProviderRequest): string | undefined
 ollamaThinkingLevels	export declare function ollamaThinkingLevels(modelId: string): readonly string[] | undefined
 openAIChatBody	export declare function openAIChatBody(request: ProviderRequest): JsonObject
@@ -344,9 +338,12 @@ openRouterPreserveThinking	export declare function openRouterPreserveThinking(re
 openRouterSessionId	export declare function openRouterSessionId(options: ProviderRequestOptions | undefined): string | undefined
 openRouterTopLevelCacheControl	export declare function openRouterTopLevelCacheControl(request: ProviderRequest): JsonObject | undefined
 openRouterUsage	export declare function openRouterUsage(usage: OpenRouterUsage | undefined): Usage | undefined
+openaiPackage	export declare function openaiPackage(options?: OpenAIProviderPackageOptions): PackageInstance
 opencodeAnthropicCacheEnabled	export declare function opencodeAnthropicCacheEnabled(request: ProviderRequest): boolean
+opencodeGoPackage	export declare function opencodeGoPackage(options?: OpenCodeGoProviderPackageOptions): PackageInstance
 opencodeOwnedHeaders	export declare function opencodeOwnedHeaders(options: ProviderRequestOptions | undefined): Record<string, string>
 opencodeSessionId	export declare function opencodeSessionId(options: ProviderRequestOptions | undefined): string | undefined
+openrouterPackage	export declare function openrouterPackage(options?: OpenRouterProviderPackageOptions): PackageInstance
 parseErrorBody	export declare function parseErrorBody(body: unknown):
 parseHyperUsageCost	export declare function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
 parseNeuralWattComment	export declare function parseNeuralWattComment(text: string): NeuralWattTelemetryEvent | undefined
@@ -401,18 +398,18 @@ type AlibabaVideoGenerationOptions	export { ALIBABA_VIDEO_MAX_DURATION_SECONDS, 
 type AnthropicMessagesProviderOptions	export { type AnthropicMessagesProviderOptions, anthropicOwnedHeaders, createAnthropicMessagesProvider, } from "./provider.js"
 type AnthropicModelConfig	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
 type AnthropicModelEntry	export { ANTHROPIC_API_VERSION, ANTHROPIC_DEFAULT_BASE_URL, type AnthropicModelConfig, type AnthropicModelEntry, anthropicModels, defineAnthropicModel, type ListAnthropicModelsOptions, listAnthropicModels, mapAnthropicModel, } from "./models.js"
-type AwsCredentials	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type AwsCredentials	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, bedrockPackage, createBedrockProvider, signAwsRequest, } from "./provider.js"
 type AwsEventStreamErrorCode	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
 type AwsEventStreamHeaderValue	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
 type AwsEventStreamMessage	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
-type AzureAuthStyle	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
-type AzureOpenAIProviderOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
-type AzureOpenAIProviderPackageOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, createAzureOpenAIProviderPackage, } from "./provider.js"
-type BedrockConverseProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
-type BedrockCredentialSource	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
-type BedrockProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
-type BedrockProviderPackageOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
-type BedrockRoute	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, createBedrockProviderPackage, signAwsRequest, } from "./provider.js"
+type AzureAuthStyle	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, azurePackage, createAzureOpenAIProvider, } from "./provider.js"
+type AzureOpenAIProviderOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, azurePackage, createAzureOpenAIProvider, } from "./provider.js"
+type AzureOpenAIProviderPackageOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, azurePackage, createAzureOpenAIProvider, } from "./provider.js"
+type BedrockConverseProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, bedrockPackage, createBedrockProvider, signAwsRequest, } from "./provider.js"
+type BedrockCredentialSource	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, bedrockPackage, createBedrockProvider, signAwsRequest, } from "./provider.js"
+type BedrockProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, bedrockPackage, createBedrockProvider, signAwsRequest, } from "./provider.js"
+type BedrockProviderPackageOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, bedrockPackage, createBedrockProvider, signAwsRequest, } from "./provider.js"
+type BedrockRoute	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, bedrockPackage, createBedrockProvider, signAwsRequest, } from "./provider.js"
 type ClinePassModelConfig	export { CLINEPASS_DEFAULT_BASE_URL, CLINEPASS_FEATURED_SLUGS, type ClinePassModelConfig, clinePassModels, defineClinePassModel, } from "./models.js"
 type ClinePassProviderOptions	export { type ClinePassProviderOptions, clinePassBody, clinePassEvents, createClinePassProvider, } from "./provider.js"
 type ClinePassThinkingLevelMap	export { CLINEPASS_THINKING_MAPS, type ClinePassThinkingLevelMap, type ClinePassThinkingSlot, clinePassDeclaredLevels, clinePassReasoningEffort, clinePassThinkingLevelMap, clinePassThinkingSlot, } from "./thinking.js"
@@ -518,8 +515,8 @@ type SystemOneState	export { SystemOneAbortedError, type SystemOneAnswer, System
 type SystemOneUsage	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "../shar
 type TypeSafeModelConfig	export { defineTypeSafeModel, TYPESAFE_API_KEY_ENV, TYPESAFE_DEFAULT_BASE_URL, type TypeSafeModelConfig, typeSafeModels, } from "./models.js"
 type TypeSafeProviderOptions	export { createTypeSafeProvider, type TypeSafeProviderOptions } from "./provider.js"
-type VertexProviderOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
-type VertexProviderPackageOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
+type VertexProviderOptions	export { createVertexProvider, vertexPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
+type VertexProviderPackageOptions	export { createVertexProvider, vertexPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
 type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"
 type XaiModelEntry	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"
 type XaiOAuthOptions	export { createXaiOAuthProvider, parseXaiTokenCredentials, XAI_DEFAULT_CLIENT_ID, XAI_DEFAULT_DEVICE_CODE_URL, XAI_DEFAULT_REFERRER, XAI_DEFAULT_REVOKE_URL, XAI_DEFAULT_SCOPE, XAI_DEFAULT_TOKEN_URL, XAI_REFRESH_SKEW_MS, type XaiOAuthOptions, } from "./oauth.js"
@@ -528,13 +525,17 @@ type ZaiModelConfig	export { defineZaiModel, isGlm52Model, isGlm53Model, type Li
 type ZaiModelEntry	export { defineZaiModel, isGlm52Model, isGlm53Model, type ListZaiModelsOptions, listZaiModels, mapZaiModel, ZAI_GLM_5_2_THINKING_LEVELS, ZAI_GLM_5_3_THINKING_LEVELS, type ZaiModelConfig, type ZaiModelEntry, zaiModels, zaiThinkingFamily, zaiThinkingLevels, } from "./models.js"
 type ZaiProviderOptions	export { createZaiProvider, toZaiMessage, ZAI_DEFAULT_BASE_URL, type ZaiProviderOptions, zaiBody, zaiEvents, } from "./provider.js"
 typeSafeModels	export declare const typeSafeModels: readonly ModelConfig[]
+typesafePackage	export declare function typesafePackage(options?: TypeSafeProviderPackageOptions): PackageInstance
+vendorPackage	export declare function vendorPackage(name: string, description: string, create: () => readonly AIProvider[]): PackageInstance
 vertexOpenApiBaseUrl	export declare function vertexOpenApiBaseUrl(input:
+vertexPackage	export declare function vertexPackage(options: VertexProviderPackageOptions): PackageInstance
 withAlibabaCacheMarker	export declare function withAlibabaCacheMarker(contentItem: JsonObject, marker: JsonObject | undefined): JsonObject
 xGrokConvId	export declare function xGrokConvId(request: ProviderRequest): string | undefined
 xaiBody	export declare function xaiBody(request: ProviderRequest): JsonObject
 xaiCacheEnabled	export declare function xaiCacheEnabled(request: ProviderRequest): boolean
 xaiEvents	export declare function xaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 xaiModels	export declare const xaiModels: ModelConfig[]
+xaiPackage	export declare function xaiPackage(options?: XaiProviderPackageOptions): PackageInstance
 xaiReasoningEffort	export declare function xaiReasoningEffort(request: ProviderRequest): string | undefined
 xaiReplayThinking	export declare function xaiReplayThinking(request: ProviderRequest): boolean
 xaiThinkingLevels	export declare function xaiThinkingLevels(modelId: string): readonly string[] | undefined
@@ -542,6 +543,7 @@ zaiBody	export declare function zaiBody(request: ProviderRequest): JsonObject
 zaiClearThinking	export declare function zaiClearThinking(request: ProviderRequest): boolean | undefined
 zaiEvents	export declare function zaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 zaiModels	export declare const zaiModels: readonly [ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig, ModelConfig]
+zaiPackage	export declare function zaiPackage(options?: ZaiProviderPackageOptions): PackageInstance
 zaiPreserveThinking	export declare function zaiPreserveThinking(request: ProviderRequest): boolean
 zaiReasoningEffort	export declare function zaiReasoningEffort(request: ProviderRequest): string | undefined
 zaiThinking	export declare function zaiThinking(request: ProviderRequest): JsonObject | undefined

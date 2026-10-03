@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   assembleProviderInput,
-  createDefaultPromptBuilder,
   createLoadedSkillSet,
   DEFAULT_MAX_SKILL_CATALOG_ENTRIES,
   DEFAULT_MAX_SKILL_DESCRIPTION_BYTES,
@@ -85,12 +84,14 @@ describe("skill progressive disclosure", () => {
     assert.doesNotMatch(text, /Secret body/);
   });
 
-  it("default prompt builder passes disclosure through catalog shape", async () => {
-    const messages = await createDefaultPromptBuilder().build({
-      messages: [{ role: "user", content: [{ type: "text", text: "Q" }] }],
+  it("the kernel prompt composition passes disclosure through catalog shape", async () => {
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: [{ role: "user", content: [{ type: "text", text: "Q" }] }],
       skills: [{ name: "brief", description: "Short.", instructions: "Long." }],
       skillsDisclosure: "progressive",
     });
-    assert.match(messages[0]!.content[0]!.type === "text" ? messages[0]!.content[0]!.text : "", /Skill brief: Short\./);
+    const first = request.messages[0]!.content[0]!;
+    assert.match(first.type === "text" ? first.text : "", /Skill brief: Short\./);
   });
 });

@@ -1,6 +1,5 @@
 import {
   createAgent,
-  createAgentSession,
   createMockProvider,
   createSessionEntry,
   providerDone,
@@ -10,7 +9,7 @@ import {
 } from "@arnilo/prism";
 
 // Custom session store: a host implements the `SessionStore` contract
-// (append + list) and passes it to `createAgentSession`. The runtime appends
+// (append + list) and passes it as the `store` slot. The runtime appends
 // redacted session entries and reads them back to rebuild context across
 // turns. This is the lightest custom-store seam — for a DB-backed reference
 // with idempotency, conflict errors, and branch reads, see
@@ -42,12 +41,12 @@ function customStore(): SessionStore & { appendedKinds: () => readonly string[] 
 export async function demo(): Promise<{ appendedKinds: readonly string[]; entryCount: number; hostNoteId: string }> {
   const store = customStore();
 
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("stored"), providerDone()]),
   });
 
-  const session = createAgentSession({ agent, store });
+  const session = await agent.session();
   async function drain(): Promise<void> {
     for await (const _event of session.subscribe()) {
       /* consume */

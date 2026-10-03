@@ -102,13 +102,13 @@ export async function demo(): Promise<Record<string, unknown>> {
     },
   };
 
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "host-step-loop-agent",
     model: { provider: "mock", model: "demo" },
     provider,
-    tools: createToolRegistry([lookupTool]),
+    tools: { add: [lookupTool] },
   });
-  const session = agent.createSession({ id: "host-step-loop-session" });
+  const session = await agent.session({ id: "host-step-loop-session", create: true });
 
   const records: Record<string, unknown>[] = [];
   const stepSummaries: Record<string, unknown>[] = [];
@@ -122,7 +122,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     const toolCalls: { readonly id: string; readonly name: string; readonly argHash: string }[] = [];
     let eventsPushed = 0;
 
-    // Subscribe *before* starting the run so the folder receives `agent_started` too — the
+    // Subscribe *before* starting the run so the folder receives `run.started` too — the
     // subscriber is registered synchronously, while `session.run` emits its first event before
     // returning. Consume concurrently and drain after the run closes the subscriber.
     const subscription = session.subscribe();
@@ -130,7 +130,7 @@ export async function demo(): Promise<Record<string, unknown>> {
       for await (const event of subscription) {
         eventsPushed += 1;
         folder.push(event);
-        if (event.type === "tool_execution_started") {
+        if (event.type === "tool.started") {
           toolCalls.push({ id: event.call.id, name: event.call.name, argHash: hashArguments(event.call.arguments) });
         }
       }

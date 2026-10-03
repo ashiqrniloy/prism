@@ -1,4 +1,4 @@
-import { type AgentEvent, type AgentSession, createEventMultiplexer } from "@arnilo/prism";
+import { type AgentEvent, type Session, createEventMultiplexer } from "@arnilo/prism";
 import { DEFAULT_EVENT_BUFFER } from "./limits.js";
 import type { WorkflowEvent, WorkflowEventBus, WorkflowEventInput, WorkflowEventMergeOptions } from "./types.js";
 import { nowIso } from "./util.js";
@@ -34,7 +34,7 @@ export function createWorkflowEventBus(options: WorkflowEventMergeOptions): Work
     mux.publish({ ...event, sequence: eventSequence } as WorkflowEvent);
   }
 
-  function observeAgentNode(input: { readonly nodeId: string; readonly session: AgentSession }): () => void {
+  function observeAgentNode(input: { readonly nodeId: string; readonly session: Session }): () => void {
     return mux.observe(input.session.subscribe(options.subscribeOptions), (event: AgentEvent) => ({
       type: "agent_event",
       workflowId: options.workflowId,

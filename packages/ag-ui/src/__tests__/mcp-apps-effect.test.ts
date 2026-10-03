@@ -48,7 +48,8 @@ function handlerOptions(store: ToolEffectStore | undefined, callTool: McpAppsBri
   return {
     apps: appsBridge(callTool),
     authorize: () => ({ ownership }),
-    context: () => ({ sessionId: "session", runId: "run", toolCallId: "call-1", identity }),
+    context: () => ({ sessionId: "session", runId: "run", toolCallId: "call-1", principal: identity.principal }),
+    effectContext: () => ({ identity, ownership }),
     approveToolCall: () => true,
     allowedOrigins: ["https://ui.test"],
     ...(store === undefined ? {} : { effectStore: store }),
@@ -71,6 +72,21 @@ function call(
 }
 
 describe("MCP Apps effect recording (FR-4)", () => {
+  it("package verification rejects an expired identity before a UI side effect", async () => {
+    let calls = 0;
+    const handler = createAgUiMcpAppHandler(
+      handlerOptions(
+        createMemoryToolEffectStore(),
+        async () => {
+          calls++;
+          return { toolCallId: "call-1", name: "mutate" };
+        },
+        { effectContext: () => ({ identity: { ...identity, expiresAt: "2000-01-01T00:00:00.000Z" }, ownership }) },
+      ),
+    );
+    assert.notEqual((await call(handler)).status, 200);
+    assert.equal(calls, 0);
+  });
   it("records begin → dispatched → complete for an approved call and replays the result idempotently", async () => {
     let calls = 0;
     const store = createMemoryToolEffectStore();
@@ -84,7 +100,6 @@ describe("MCP Apps effect recording (FR-4)", () => {
     assert.equal(first.status, 200);
     assert.equal(calls, 1);
     const record = await store.get({
-      identity,
       ownership,
       key: deriveAppEffectKey({ ownership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) }),
       sessionId: "session",
@@ -113,7 +128,6 @@ describe("MCP Apps effect recording (FR-4)", () => {
     const response = await call(handler);
     assert.equal(response.status, 400);
     const record = await store.get({
-      identity,
       ownership,
       key: deriveAppEffectKey({ ownership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) }),
       sessionId: "session",
@@ -138,7 +152,6 @@ describe("MCP Apps effect recording (FR-4)", () => {
     const response = await call(handler);
     assert.equal(response.status, 400);
     const record = await store.get({
-      identity,
       ownership,
       key: deriveAppEffectKey({ ownership, sessionId: "session", runId: "run", toolName: "mutate", argumentsHash: hashJson({ id: 1 }) }),
       sessionId: "session",
@@ -232,12 +245,12 @@ describe("MCP Apps effect recording (FR-4)", () => {
     const otherHandler = createAgUiMcpAppHandler(
       handlerOptions(store, async () => ({ toolCallId: "call-1", name: "mutate", value: { ok: true } }), {
         authorize: () => ({ ownership: otherOwnership }),
-        context: () => ({ sessionId: "session", runId: "run", toolCallId: "call-1", identity: otherIdentity }),
+        context: () => ({ sessionId: "session", runId: "run", toolCallId: "call-1", principal: otherIdentity.principal }),
+        effectContext: () => ({ identity: otherIdentity, ownership: otherOwnership }),
       }),
     );
     assert.equal((await call(otherHandler)).status, 200);
     const records = await store.get({
-      identity: otherIdentity,
       ownership: otherOwnership,
       key: deriveAppEffectKey({
         ownership: otherOwnership,
@@ -261,6 +274,7 @@ describe("MCP Apps effect recording (FR-4)", () => {
     const handler = createAgUiMcpAppHandler(
       handlerOptions(store, async () => ({ toolCallId: "call-1", name: "mutate", value: { ok: true } }), {
         authorize: () => ({}),
+        effectContext: undefined,
       }),
     );
     const response = await call(handler);

@@ -7,7 +7,7 @@ import type {
   RequestPermissionResponse,
 } from "@agentclientprotocol/sdk";
 import { methods } from "@agentclientprotocol/sdk";
-import type { AgentEvent, JsonObject, RunDecision } from "@arnilo/prism";
+import type { AgentEvent, JsonObject, Decision } from "@arnilo/prism";
 import { resolveAgUiLimits } from "../../limits.js";
 import { truncate } from "./abort-truncate.js";
 import { notify } from "./forward-notify.js";
@@ -16,7 +16,7 @@ import type { AcpStreamBudget, ElicitationPendingDecision } from "./types.js";
 export async function permission(
   client: AgentContext,
   sessionId: string,
-  event: Extract<AgentEvent, { readonly type: "agent_suspended" }>,
+  event: Extract<AgentEvent, { readonly type: "run.suspended" }>,
   budget: AcpStreamBudget,
   limits: ReturnType<typeof resolveAgUiLimits>,
 ): Promise<RequestPermissionResponse> {
@@ -53,7 +53,7 @@ export async function permission(
 export async function elicit(
   client: AgentContext,
   sessionId: string,
-  event: Extract<AgentEvent, { readonly type: "agent_suspended" }>,
+  event: Extract<AgentEvent, { readonly type: "run.suspended" }>,
   decision: ElicitationPendingDecision,
   budget: AcpStreamBudget,
   limits: ReturnType<typeof resolveAgUiLimits>,
@@ -87,7 +87,7 @@ export async function elicit(
 export function decisionForElicitation(
   responses: readonly CreateElicitationResponse[],
   decisions: readonly ElicitationPendingDecision[],
-): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] } {
+): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly Decision[] } {
   const mapped = decisions.map((decision, index) => {
     const response = responses[index];
     if (response?.action === "accept") {

@@ -129,7 +129,7 @@ describe("production persistence contracts (compile only)", () => {
       sessionId: "s1",
       runId: "r1",
       entryId: "e1",
-      type: ["message_delta", "tool_execution_finished"],
+      type: ["message.delta", "tool.completed"],
       redacted: false,
       cursor: "event_10",
       limit: 100,
@@ -182,9 +182,9 @@ describe("production persistence contracts (compile only)", () => {
       id: "event-1",
       sessionId: "s1",
       runId: "r1",
-      type: "agent_started",
+      type: "run.started",
       timestamp: "2026-01-01T00:00:00.000Z",
-      event: { type: "agent_started", sessionId: "s1", runId: "r1" },
+      event: { type: "run.started", sessionId: "s1", runId: "r1" },
       redacted: true,
     };
     const events: AgentEventSource = {

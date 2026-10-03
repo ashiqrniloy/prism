@@ -67,7 +67,7 @@ export function defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig {
 
 /**
  * Caller-gated OpenAI-compatible `GET {base}/models`.
- * Never invoked by `createDeepSeekProviderPackage`.
+ * Never invoked by `deepseekPackage`.
  */
 export async function listDeepSeekModels(options: ListDeepSeekModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "deepseek";

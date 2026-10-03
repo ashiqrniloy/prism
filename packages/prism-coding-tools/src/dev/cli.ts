@@ -40,7 +40,7 @@ environment here.
 function resolveScaffoldAgent(cwd: string, stderr: Writable): Promise<Agent | undefined> {
   const entry = join(cwd, "dist", "agent.js");
   return import(entryHref(cwd)).then(
-    (mod: { createAppAgent?: () => Agent; default?: () => Agent }) => {
+    (mod: { createAppAgent?: () => Agent | Promise<Agent>; default?: () => Agent | Promise<Agent> }) => {
       const factory = mod.createAppAgent ?? mod.default;
       if (typeof factory !== "function") {
         stderr.write(`prism dev: ${entry} must export createAppAgent() — the prism init scaffold does this by default.\n`);

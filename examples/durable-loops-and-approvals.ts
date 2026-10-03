@@ -1,9 +1,10 @@
 import {
-  type AgentLoopStrategy,
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
   type JsonValue,
+  type LoopStrategy,
   providerDone,
   providerTextDelta,
   resumeAgentRun,
@@ -17,7 +18,7 @@ import {
 export async function demo(): Promise<Record<string, unknown>> {
   const checkpoints = createMemoryCheckpointStore();
   const loopState = { turns: 0, restored: false };
-  const loop: AgentLoopStrategy = {
+  const loop: LoopStrategy = {
     name: "demo-loop",
     revision: "1",
     snapshot: () => ({ turns: loopState.turns }) as JsonValue,
@@ -25,22 +26,21 @@ export async function demo(): Promise<Record<string, unknown>> {
       loopState.turns = (snapshot as { turns: number }).turns;
       loopState.restored = true;
     },
-    async run(ctx) {
+    async run(run) {
       loopState.turns += 1;
-      const { calls } = await ctx.generate(await ctx.assemble([]));
+      const turn = await run.turn();
       // Round-gate collects all gated calls into one suspension (Task 2).
-      await ctx.chargeToolRound?.(calls);
-      for (const call of calls) await ctx.dispatchToolCall(call);
-      return undefined;
+      if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
     },
   };
 
   let turn = 0;
   const executed: string[] = [];
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "durable-loops-approvals",
     model: { provider: "mock", model: "demo" },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore(), loop },
+    hooks: askEveryTool(),
     provider: {
       id: "mock",
       async *generate() {
@@ -55,23 +55,24 @@ export async function demo(): Promise<Record<string, unknown>> {
         yield providerDone();
       },
     },
-    loop,
-    tools: [
-      {
-        name: "write",
-        parameters: { type: "object" },
-        execute: (_args, context) => {
-          executed.push(context.toolCallId);
-          return { toolCallId: context.toolCallId, name: "write", value: "ok" };
+    tools: {
+      add: [
+        {
+          name: "write",
+          parameters: { type: "object" },
+          execute: (_args, context) => {
+            executed.push(context.toolCallId);
+            return { toolCallId: context.toolCallId, name: "write", value: "ok" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
 
-  const durable = { checkpoints, definitionRevision: "1", interruptBeforeTool: true };
-  const suspended = await agent.createSession({ id: "phase8-demo" }).run("go", { runState: durable });
+  const durable = { checkpoints, definitionRevision: "1" };
+  const suspended = await (await agent.session({ id: "phase8-demo", create: true })).run("go", { runState: durable });
   if (suspended.status !== "suspended") throw new Error(`expected suspended, got ${suspended.status}`);
-  const pending = suspended.interruption?.pendingDecisions ?? [];
+  const pending = suspended.pending ?? [];
   if (pending.length !== 2 || executed.length !== 0) throw new Error("expected two gated approvals before side effects");
 
   const done = await resumeAgentRun(

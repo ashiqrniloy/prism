@@ -1,4 +1,5 @@
-import type { Extension, InstructionInjector } from "@arnilo/prism";
+import { definePackage } from "@arnilo/prism";
+import { asPackageCommand } from "../package-command.js";
 import { createWikiIngestCommand, WIKI_INGEST_COMMAND_NAME } from "./commands/ingest.js";
 import { createWikiInitCommand, initWiki } from "./commands/init.js";
 import { createWikiLintCommand, lintWiki } from "./commands/lint.js";
@@ -22,61 +23,96 @@ export {
 };
 export const WIKI_INJECTOR_NAME = "wiki-guidance";
 
-export function createWikiExtension(options: WikiExtensionOptions = {}): Extension {
-  return {
-    name: "@arnilo/prism-memory/wiki",
-    async setup(api) {
-      const workspaceRoot = options.workspaceRoot ?? process.cwd();
+export interface WikiConfig {
+  readonly wikiRoot: string;
+  readonly rawRoots?: readonly string[];
+  readonly profile: "codebase" | "pkm" | "hybrid" | "auto";
+  readonly qmdPath: string;
+  readonly workspaceRoot?: string;
+  readonly autoDeploySkills: boolean;
+  readonly ocrImages: boolean;
+}
 
-      // Auto-deploy skills to .agents/skills/ if requested
-      if (options.autoDeploySkills !== false) {
+const CONFIG_KEYS = ["wikiRoot", "rawRoots", "profile", "qmdPath", "workspaceRoot", "autoDeploySkills", "ocrImages"] as const;
+
+function jsonConfig(options: WikiExtensionOptions): Partial<WikiConfig> {
+  const config: Partial<WikiConfig> = {};
+  for (const key of CONFIG_KEYS) {
+    if (options[key] !== undefined) (config as Record<string, unknown>)[key] = options[key];
+  }
+  return config;
+}
+
+/**
+ * `extractDocument` and `fetchUrl` stay factory arguments. JSON options are the package config.
+ * `wiki({ fetchUrl })` binds the hook; `packageConfig` or the same call's JSON fields fill the schema.
+ */
+export function wiki(options: WikiExtensionOptions = {}) {
+  const code = {
+    ...(options.extractDocument ? { extractDocument: options.extractDocument } : {}),
+    ...(options.fetchUrl ? { fetchUrl: options.fetchUrl } : {}),
+  };
+  return definePackage<WikiConfig>({
+    name: "@arnilo/prism-memory.wiki",
+    version: "0.12.1",
+    requires: { prism: "^0.12.1 || ^0.13.0-0" },
+    config: {
+      type: "object",
+      properties: {
+        wikiRoot: { type: "string", default: ".wiki" },
+        rawRoots: { type: "array", items: { type: "string" } },
+        profile: { type: "string", enum: ["codebase", "pkm", "hybrid", "auto"], default: "auto" },
+        qmdPath: { type: "string", default: "qmd" },
+        workspaceRoot: { type: "string" },
+        autoDeploySkills: { type: "boolean", default: true },
+        ocrImages: { type: "boolean", default: false },
+      },
+    },
+    async setup(prism) {
+      const bound: WikiExtensionOptions = { ...prism.config, ...code };
+      const workspaceRoot = bound.workspaceRoot ?? process.cwd();
+      if (bound.autoDeploySkills !== false) {
         try {
           await deployWikiSkills(workspaceRoot);
         } catch {
           // Non-blocking in restricted/virtual environments
         }
       }
-
-      // Register Tools
-      const searchTool = createWikiSearchTool(options);
-      const readPageTool = createWikiReadPageTool(options);
-      const recordInsightTool = createWikiRecordInsightTool(options);
-      const ingestTool = createWikiIngestTool(options);
-
-      api.registerTool(searchTool);
-      api.registerTool(readPageTool);
-      api.registerTool(recordInsightTool);
-      api.registerTool(ingestTool);
-
-      // Register Commands: /wiki-init, /wiki-refresh, /wiki-lint, /wiki-ingest
-      const initCommand = createWikiInitCommand(options);
-      const refreshCommand = createWikiRefreshCommand(options);
-      const lintCommand = createWikiLintCommand(options);
-      const ingestCommand = createWikiIngestCommand(options);
-
-      api.registerCommand(initCommand);
-      api.registerCommand(refreshCommand);
-      api.registerCommand(lintCommand);
-      api.registerCommand(ingestCommand);
-
-      // Register Skills
-      api.registerSkill(wikiSearcherSkill);
-      api.registerSkill(wikiMaintainerSkill);
-
-      // Register Instruction Injector for progressive context guidance
-      const wikiInjector: InstructionInjector = {
-        name: WIKI_INJECTOR_NAME,
-        description: "Injects wiki awareness instructions when wiki is active in the workspace.",
-        apply(_ctx) {
-          return {
-            when: "every_turn",
-            instructions:
-              "A compiled LLM Wiki is available in `.wiki/`. Use `wiki_search` to find conceptual models, architecture flows, and clickable code line references before running broad regex searches.",
-          };
-        },
-      };
-
-      api.registerInstructionInjector(wikiInjector);
+      const tools = bound;
+      prism.tools.register(createWikiSearchTool(tools));
+      prism.tools.register(createWikiReadPageTool(tools));
+      prism.tools.register(createWikiRecordInsightTool(tools));
+      prism.tools.register(createWikiIngestTool(tools));
+      for (const command of [
+        createWikiInitCommand(tools),
+        createWikiRefreshCommand(tools),
+        createWikiLintCommand(tools),
+        createWikiIngestCommand(tools),
+      ]) {
+        prism.commands.register(asPackageCommand(command));
+      }
+      prism.skills.register(wikiSearcherSkill);
+      prism.skills.register(wikiMaintainerSkill);
+      prism.hooks.on(
+        "context.build",
+        (draft) => ({
+          ...draft,
+          messages: [
+            ...draft.messages,
+            {
+              id: `${WIKI_INJECTOR_NAME}:guidance`,
+              role: "system" as const,
+              content: [
+                {
+                  type: "text" as const,
+                  text: "A compiled LLM Wiki is available in `.wiki/`. Use `wiki_search` to find conceptual models, architecture flows, and clickable code line references before running broad regex searches.",
+                },
+              ],
+            },
+          ],
+        }),
+        { id: WIKI_INJECTOR_NAME },
+      );
     },
-  };
+  })(jsonConfig(options));
 }

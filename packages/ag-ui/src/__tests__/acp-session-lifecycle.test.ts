@@ -14,14 +14,14 @@ import {
   methods,
   PROTOCOL_VERSION,
 } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
+import type { AgentRunLifecycle, Session } from "@arnilo/prism";
 import type { AcpMcpSeams, AcpSessionStoreSeams } from "../acp/index.js";
 import { type AcpAuthorization, type AcpCodingSeams, type CreatePrismAcpAgentOptions, createPrismAcpAgent } from "../acp/index.js";
 import type { AgUiLimitOptions } from "../limits.js";
 
 const authorization = { ownership: { userId: "user-1" } };
-const stream = { async *stream() {} } as unknown as AgentSession;
-const session = (id: string) => ({ session: { ...stream, id } }) as unknown as { session: AgentSession };
+const stream = { async *stream() {} } as unknown as Session;
+const session = (id: string) => ({ session: { ...stream, id } }) as unknown as { session: Session };
 
 interface Recorded {
   sessionFactoryInputs: Array<{ cwd: string; additionalDirectories: readonly string[]; mcpServers: readonly McpServer[] }>;

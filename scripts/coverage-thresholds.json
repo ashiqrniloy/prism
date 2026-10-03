@@ -29,7 +29,7 @@
     "@arnilo/prism-core": {
       "protectedException": "requires PRISM_TEST_POSTGRES_URL / PRISM_TEST_NATS_URL (enterprise and durable session store legs)"
     },
-    "@arnilo/prism-hooks": {
+    "@arnilo/prism-hooks-json": {
       "lines": 91.72,
       "branches": null,
       "functions": 94.01

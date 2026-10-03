@@ -149,13 +149,13 @@ describe("createRealtimeVoiceBridge", () => {
     assert.equal(snap.completedCallIds.includes("late-1"), false);
     const scorer = bargeInScorer();
     const bad = await scorer.score({
-      result: { sessionId: "s", runId: "r", status: "succeeded", text: "", content: [] },
+      result: { sessionId: "s", runId: "r", status: "completed", text: "", content: [], messages: [] },
       environment: { effectAfterInterrupt: true, cancelledBeforeEffect: false },
     });
     assert.equal(bad.score, 0);
     assert.equal(bad.metadata?.invariant, true);
     const good = await scorer.score({
-      result: { sessionId: "s", runId: "r", status: "succeeded", text: "", content: [] },
+      result: { sessionId: "s", runId: "r", status: "completed", text: "", content: [], messages: [] },
       environment: { effectAfterInterrupt: snap.effectAfterInterrupt, cancelledBeforeEffect: true },
     });
     assert.equal(good.score, 1);

@@ -20,11 +20,13 @@ function streams(input = "") {
   return { stdin: Readable.from(input), stdout: new MemoryWritable(), stderr: new MemoryWritable() };
 }
 
-function session(text = "Hello") {
-  return createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta(text), providerDone()]),
-  }).createSession();
+async function session(text = "Hello") {
+  return (
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta(text), providerDone()]),
+    })
+  ).session();
 }
 
 describe("cli", () => {
@@ -81,30 +83,32 @@ describe("cli", () => {
 
   it("print_mode_streams_text_deltas_from_mock_provider", async () => {
     const io = streams();
-    const code = await runCli(["-p", "Hi"], { ...io, createSession: (_options: CliOptions) => session("Hello") });
+    const code = await runCli(["-p", "Hi"], { ...io, createSession: async (_options: CliOptions) => await session("Hello") });
     assert.equal(code, 0);
     assert.equal(io.stdout.text(), "Hello");
   });
 
   it("json_mode_writes_one_event_per_line", async () => {
     const io = streams();
-    const code = await runCli(["--mode", "json", "-p", "Hi"], { ...io, createSession: () => session("Hi") });
+    const code = await runCli(["--mode", "json", "-p", "Hi"], { ...io, createSession: async () => await session("Hi") });
     assert.equal(code, 0);
     const lines = io.stdout
       .text()
       .trim()
       .split("\n")
       .map((line) => JSON.parse(line));
-    assert.ok(lines.some((line) => line.type === "event" && line.event.type === "message_delta"));
+    assert.ok(lines.some((line) => line.type === "event" && line.event.type === "message.delta"));
     assert.ok(lines.every((line) => line.sessionId));
   });
 
   it("print_mode_returns_nonzero_on_runtime_error", async () => {
     const io = streams();
-    const failing = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerError(new Error("boom"))]),
-    }).createSession();
+    const failing = (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: createMockProvider([providerError(new Error("boom"))]),
+      })
+    ).session();
     const code = await runCli(["-p", "Hi"], { ...io, createSession: () => failing });
     assert.equal(code, 1);
     assert.match(io.stderr.text(), /boom/);

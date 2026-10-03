@@ -15,13 +15,13 @@ function subscribersOf(session: object): Set<unknown> {
 }
 
 function event(n: number): AgentEvent {
-  return { type: "queue_updated", sessionId: "leak", size: n } as AgentEvent;
+  return { type: "turn.started", sessionId: "leak", runId: "leak", turn: n } as AgentEvent;
 }
 
 describe.skipIf(Boolean(LOW_MEM))("leak: sessions/subscribers/event-queue return to baseline", () => {
-  it("200 subscribe/dispose cycles leave zero subscribers", () => {
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider() });
-    const session = agent.createSession();
+  it("200 subscribe/dispose cycles leave zero subscribers", async () => {
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider() });
+    const session = await agent.session();
     for (let i = 0; i < N; i++) {
       const iterator = session.subscribe({ maxQueuedEvents: 8, overflow: "drop_oldest" })[Symbol.asyncIterator]();
       assert.equal(subscribersOf(session).size, 1, `cycle ${i}: subscribe must register`);
@@ -36,7 +36,7 @@ describe.skipIf(Boolean(LOW_MEM))("leak: sessions/subscribers/event-queue return
       const iterator = sub[Symbol.asyncIterator]();
       const parked = iterator.next(); // waiter parks (queue empty)
       sub.push(event(i));
-      assert.equal(((await parked).value as AgentEvent).type, "queue_updated", `cycle ${i}: parked waiter must get its event`);
+      assert.equal(((await parked).value as AgentEvent).type, "turn.started", `cycle ${i}: parked waiter must get its event`);
       for (let j = 0; j < 10; j++) sub.push(event(j)); // 10 into cap 8 → drop_oldest
       const drained: AgentEvent[] = [];
       for (let j = 0; j < 8; j++) drained.push((await iterator.next()).value!);

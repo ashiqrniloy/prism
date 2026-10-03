@@ -13,9 +13,9 @@ function record(overrides: Partial<AgentEventRecord> = {}): AgentEventRecord {
     id: `event-${Math.random().toString(36).slice(2)}`,
     sessionId: "session-1",
     runId: "run-1",
-    type: "message_delta",
+    type: "message.delta",
     timestamp: "2026-08-06T00:00:00.000Z",
-    event: { type: "message_delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "hello" } },
+    event: { type: "message.delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "hello" } },
     redacted: true,
     ...ownership,
     ...overrides,
@@ -23,7 +23,11 @@ function record(overrides: Partial<AgentEventRecord> = {}): AgentEventRecord {
 }
 
 function terminal(overrides: Partial<AgentEventRecord> = {}): AgentEventRecord {
-  return record({ type: "agent_finished", event: { type: "agent_finished", sessionId: "session-1", runId: "run-1" }, ...overrides });
+  return record({
+    type: "run.completed",
+    event: { type: "run.completed", sessionId: "session-1", status: "completed", runId: "run-1" },
+    ...overrides,
+  });
 }
 
 function makeSource(jetstream = new FakeJetStream(), options: Record<string, unknown> = {}) {
@@ -63,7 +67,7 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     await assert.rejects(
       source.append({
         ...original,
-        event: { type: "message_delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "different" } },
+        event: { type: "message.delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "different" } },
       }),
       (error: AgentEventSourceError) => error.code === "ERR_PRISM_AGENT_EVENT_SOURCE_INPUT",
     );
@@ -77,7 +81,7 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
     await source.append(
       record({
         runId: "run-2",
-        event: { type: "message_delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "other" } },
+        event: { type: "message.delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "other" } },
       }),
     );
     const page = await source.page({ ...read, limit: 10 });
@@ -234,7 +238,7 @@ describe("NATS JetStream AgentEventSource (FR-5)", () => {
       record({
         timestamp: "2026-01-01T00:00:00.000Z",
         runId: "run-2",
-        event: { type: "message_delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "x" } },
+        event: { type: "message.delta", sessionId: "session-1", runId: "run-2", content: { type: "text", text: "x" } },
       }),
     );
     const result = await source.cleanup({ ownership, before: "2026-06-01T00:00:00.000Z", limit: 10 });

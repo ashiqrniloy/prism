@@ -33,6 +33,11 @@ export interface SessionStoreConformanceOptions {
    * Skipped when the store does not implement `searchSessions`.
    */
   readonly exerciseSearchSessions?: boolean;
+  /**
+   * Exercise the optional `agent.sessions` capabilities the store declares (`listSessions`, `deleteSession`):
+   * a scoped listing, a page cursor, and a scoped delete that fails closed outside the scope.
+   */
+  readonly exerciseSessionIndex?: boolean;
   /** When true, appends concurrent children of the same parent (fork allowed). */
   readonly exerciseConcurrentParentAppend?: boolean;
   /**
@@ -109,6 +114,46 @@ export async function assertSessionStoreConforms(store: SessionStore, options: S
     throw new Error("Distinct linear appends sharing an idempotencyKey were collapsed; only same-position retries dedup");
   }
 
+  // 7. suspended_run entry round-trip: the store must preserve the kind and its data payload, so a
+  // new process can find and resume the run (roadmap §2.4 ask path).
+  const suspended: SessionEntry = {
+    id: "suspended",
+    sessionId,
+    timestamp: now(),
+    kind: "suspended_run",
+    data: { schemaVersion: 1, runId: "run-suspended", hookIds: ["host:tool.call"], loop: { name: "default", revision: "1" } },
+  };
+  await store.append(suspended);
+  const suspendedListed = (await store.list(sessionId)).find((entry) => entry.id === "suspended");
+  if (
+    suspendedListed?.kind !== "suspended_run" ||
+    (suspendedListed.data as { readonly runId?: unknown } | undefined)?.runId !== "run-suspended" ||
+    (suspendedListed.data as { readonly hookIds?: readonly string[] } | undefined)?.hookIds?.[0] !== "host:tool.call"
+  ) {
+    throw new Error("session store must preserve a suspended_run entry and its data payload");
+  }
+
+  // 8. package_state entry round-trip (plan 146 Task 7): package state is persisted as entries of this
+  // kind, so a store must preserve the kind and its { package, key, value } payload, objects included.
+  const packageState: SessionEntry = {
+    id: "package-state",
+    sessionId,
+    timestamp: now(),
+    kind: "package_state",
+    data: { schemaVersion: 1, package: "@acme/om", key: "ledger", value: { enabled: true, notes: ["a", 1, null] } },
+  };
+  await store.append(packageState);
+  const stateListed = (await store.list(sessionId)).find((entry) => entry.id === "package-state");
+  const stateData = stateListed?.data as { readonly package?: unknown; readonly key?: unknown; readonly value?: unknown } | undefined;
+  if (
+    stateListed?.kind !== "package_state" ||
+    stateData?.package !== "@acme/om" ||
+    stateData.key !== "ledger" ||
+    JSON.stringify(stateData.value) !== JSON.stringify({ enabled: true, notes: ["a", 1, null] })
+  ) {
+    throw new Error("session store must preserve a package_state entry and its { package, key, value } payload");
+  }
+
   if (options.exerciseReadBranchPath && typeof store.readBranchPath === "function") {
     const chain = await store.readBranchPath({ sessionId, leafId: branch.id });
     const ids = chain.items.map((entry) => entry.id);
@@ -120,6 +165,8 @@ export async function assertSessionStoreConforms(store: SessionStore, options: S
   if (options.exerciseSearchSessions && typeof store.searchSessions === "function") {
     await assertSessionStoreSearchSessions(store);
   }
+
+  if (options.exerciseSessionIndex) await assertSessionStoreIndexCapabilities(store);
 
   await assertSessionStoreBranchIsolation(store, options);
 
@@ -353,4 +400,43 @@ async function reject(fn: () => Promise<unknown>, match: RegExp | ((error: unkno
     }
   }
   if (!threw) throw new Error(message);
+}
+
+/** The optional `listSessions` / `deleteSession` capabilities, when the store declares them. */
+async function assertSessionStoreIndexCapabilities(store: SessionStore): Promise<void> {
+  const suffix = Math.random().toString(36).slice(2, 10);
+  const mine = `index-mine-${suffix}`;
+  const theirs = `index-theirs-${suffix}`;
+  const stamp = (sessionId: string, tenantId: string, n: number): SessionEntry => ({
+    id: `${sessionId}-e${n}`,
+    sessionId,
+    timestamp: new Date(Date.now() + n).toISOString(),
+    kind: "message",
+    message: { role: "user", content: [{ type: "text", text: "index conformance" }] },
+    metadata: { tenantId },
+  });
+  await store.append(stamp(mine, `tenant-${suffix}-a`, 1));
+  await store.append(stamp(theirs, `tenant-${suffix}-b`, 1));
+  if (typeof store.listSessions === "function") {
+    const page = await store.listSessions({ tenantId: `tenant-${suffix}-a`, limit: 100 });
+    const ids = page.items.map((item) => item.sessionId);
+    if (!ids.includes(mine) || ids.includes(theirs)) {
+      throw new Error(`listSessions must return only the scope's sessions; got ${JSON.stringify(ids)}`);
+    }
+    if (JSON.stringify(page.items).includes("index conformance")) throw new Error("listSessions must not carry a transcript");
+    const one = await store.listSessions({ tenantId: `tenant-${suffix}-a`, limit: 1 });
+    if (one.items.length !== 1) throw new Error("listSessions must honor limit");
+  }
+  if (typeof store.deleteSession === "function") {
+    if (await store.deleteSession(theirs, { tenantId: `tenant-${suffix}-a` })) {
+      throw new Error("deleteSession must refuse a session outside the scope");
+    }
+    if ((await store.list(theirs)).length === 0) throw new Error("a refused deleteSession removed entries");
+    if (!(await store.deleteSession(mine, { tenantId: `tenant-${suffix}-a` })))
+      throw new Error("deleteSession must delete an in-scope session");
+    if ((await store.list(mine)).length !== 0) throw new Error("deleteSession must remove every entry");
+    if (await store.deleteSession(mine, { tenantId: `tenant-${suffix}-a` }))
+      throw new Error("deleteSession of an absent session must resolve false");
+    await store.deleteSession(theirs, { tenantId: `tenant-${suffix}-b` });
+  }
 }

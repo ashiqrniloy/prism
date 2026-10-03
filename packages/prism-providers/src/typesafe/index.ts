@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { typeSafeModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createTypeSafeProvider } from "./provider.js";
 
 export interface TypeSafeProviderPackageOptions {
@@ -10,18 +10,10 @@ export interface TypeSafeProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createTypeSafeProviderPackage(options: TypeSafeProviderPackageOptions = {}): ProviderPackage {
-  const providerId = options.id ?? "typesafe";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/typesafe",
-    description: "TypeSafe Jev provider package for Prism.",
-    docs: { links: ["docs/providers/typesafe.md"] },
-    setup(api) {
-      api.registerProvider(createTypeSafeProvider(options));
-      for (const model of options.models ?? typeSafeModels) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+export function typesafePackage(options: TypeSafeProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.typesafe", "TypeSafe Jev provider package for Prism.", () => [
+    createTypeSafeProvider(options),
+  ]);
 }
 
 export * from "../decisions/index.js";

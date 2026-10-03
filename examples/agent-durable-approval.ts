@@ -1,4 +1,5 @@
 import {
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -13,10 +14,11 @@ export async function demo() {
   const checkpoints = createMemoryCheckpointStore();
   let turn = 0;
   let writes = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "approval-demo",
     model: { provider: "mock", model: "demo" },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
+    hooks: askEveryTool(),
     provider: {
       id: "mock",
       async *generate() {
@@ -25,10 +27,12 @@ export async function demo() {
         yield providerDone();
       },
     },
-    tools: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
+    tools: {
+      add: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
+    },
   });
-  const suspended = await agent.createSession({ id: "approval-session" }).run("write", {
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+  const suspended = await (await agent.session({ id: "approval-session", create: true })).run("write", {
+    runState: { checkpoints, definitionRevision: "1" },
   });
   if (suspended.status !== "suspended" || writes !== 0) throw new Error("expected pre-tool suspension");
   return resumeAgentRun(

@@ -2,14 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { compileAttention, createAttentionCompiler, createAttentionStickyFrontier, isAttentionBudgetError } from "../attention-compiler.js";
 import { type ContextBudgetMessageGroups, getContextBudgetReport, measureInputCost } from "../context-budget.js";
-import {
-  assembleProviderInput,
-  createMiddlewareRegistry,
-  type Message,
-  type ModelConfig,
-  resolveToolResultFold,
-  type ToolResult,
-} from "../index.js";
+import { assembleProviderInput, type Message, type ModelConfig, resolveToolResultFold, type ToolResult } from "../index.js";
 
 const model: ModelConfig = { provider: "test", model: "test-model" };
 
@@ -285,25 +278,6 @@ describe("attention compiler stages", () => {
     const withoutCompiler = await assembleProviderInput({ model, input: "next", history, turn: 3 });
 
     assert.deepEqual(withCompiler, withoutCompiler);
-  });
-
-  it("runs input_assembly middleware once with the compiler on", async () => {
-    const calls: string[] = [];
-    const middleware = createMiddlewareRegistry();
-    middleware.use<readonly Message[]>("input_assembly", (messages) => {
-      calls.push(`assembly:${messages.length}`);
-      return messages;
-    });
-    await assembleProviderInput({
-      model,
-      input: "next",
-      history: [toolMessage("call_1", "lookup", body(400))],
-      turn: 3,
-      middleware,
-      attentionCompiler: { maxInputTokens: 120, triggerRatio: 0.5, keepLast: 0 },
-    });
-
-    assert.deepEqual(calls, ["assembly:2"]);
   });
 
   it("rejects pairing the compiler with contextBudget and leaves compiler-off eviction alone", async () => {

@@ -50,7 +50,7 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-channels",
     "@arnilo/prism-coding-tools",
     // Plan 106 R4: the hooks.json adapter package, added after the 0.4 consolidation.
-    "@arnilo/prism-hooks",
+    "@arnilo/prism-hooks-json",
     // Plan 134: agent SDK package
     "@arnilo/prism-agent-sdk",
     ...(existsSync(join(rootDir, "packages/prism-work/package.json")) ? ["@arnilo/prism-work"] : []),

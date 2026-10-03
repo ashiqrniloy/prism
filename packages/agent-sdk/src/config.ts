@@ -449,14 +449,6 @@ export function resolveJsonConfig(
     ...(json.instructions ? { instructions: json.instructions } : {}),
     ...(json.hooks ? { hooks: json.hooks } : {}),
     ...(json.mcp ? { mcp: json.mcp } : {}),
-    ...(json.loop
-      ? {
-          loop:
-            json.loop === "single-shot" || json.loop === "singleShot"
-              ? { strategy: "single-shot" as const }
-              : { strategy: json.loop as "single-shot" },
-        }
-      : {}),
   };
 
   return mergeAgentConfig(base, override);

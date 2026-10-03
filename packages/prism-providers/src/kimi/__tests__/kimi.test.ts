@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, Message, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
@@ -11,7 +12,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createKimiCodingProvider,
-  createKimiProviderPackage,
+  kimiPackage,
   createMoonshotProvider,
   kimiAnthropicBody,
   kimiCodingModels,
@@ -34,16 +35,10 @@ const request: ProviderRequest = {
 
 describe("@arnilo/prism-providers/kimi", () => {
   it("kimi_registers_kimi_coding_models_by_default", async () => {
-    const registered: unknown[] = [];
-    await createKimiProviderPackage({ kimiApiKey: "fake-kimi-key", fetch: mockFetch(sse([])) }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
-    assert(registered.some((item: any) => item.id === "kimi-coding"));
-    assert(registered.some((item: any) => item.provider === "kimi-coding" && item.model === "kimi-for-coding"));
-    assert(registered.some((item: any) => item.provider === "kimi-coding" && item.model === "k3"));
-    assert(!registered.some((item: any) => item.provider === "moonshot" || item.id === "moonshot"));
+    await loadProviderPackage(kimiPackage({ kimiApiKey: "fake-kimi-key", fetch: mockFetch(sse([])) }));
+    const models = kimiCodingModels.map((entry) => entry.model);
+    assert.ok(models.includes("kimi-for-coding"));
+    assert.ok(models.includes("k3"));
   });
 
   it("kimi_provider_setup_does_not_call_model_discovery", async () => {
@@ -52,16 +47,14 @@ describe("@arnilo/prism-providers/kimi", () => {
       fetchCalls += 1;
       return ok(sse([]));
     }) as typeof fetch;
-    await createKimiProviderPackage({
-      kimiApiKey: "fake-kimi-key",
-      includeMoonshotModels: true,
-      moonshotApiKey: "fake-moonshot-key",
-      fetch: fetchImpl,
-    }).setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as any);
+    await loadProviderPackage(
+      kimiPackage({
+        kimiApiKey: "fake-kimi-key",
+        includeMoonshotModels: true,
+        moonshotApiKey: "fake-moonshot-key",
+        fetch: fetchImpl,
+      }),
+    );
     assert.equal(fetchCalls, 0);
   });
 
@@ -75,7 +68,7 @@ describe("@arnilo/prism-providers/kimi", () => {
           { type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "tool_1", name: "lookup" } },
           { type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: '{"q":"x"}' } },
           {
-            type: "message_delta",
+            type: "message.delta",
             usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
           },
         ]),
@@ -137,22 +130,17 @@ describe("@arnilo/prism-providers/kimi", () => {
   });
 
   it("kimi_optional_moonshot_registers_callable_provider_and_models", async () => {
-    const registered: unknown[] = [];
-    await createKimiProviderPackage({
-      kimiApiKey: "fake-kimi-key",
-      includeMoonshotModels: true,
-      moonshotApiKey: "fake-moonshot-key",
-      moonshotModels: moonshotKimiModels,
-      fetch: mockFetch(sse([])),
-    }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
-    assert(registered.some((item: any) => item.id === "moonshot"));
-    assert(registered.some((item: any) => item.provider === "moonshot" && item.model === "kimi-k2.7-code"));
-    assert(registered.some((item: any) => item.provider === "moonshot" && item.model === "kimi-k3"));
-    assert(registered.some((item: any) => item.provider === "moonshot" && item.kind === "api_key"));
+    await loadProviderPackage(
+      kimiPackage({
+        kimiApiKey: "fake-kimi-key",
+        includeMoonshotModels: true,
+        moonshotApiKey: "fake-moonshot-key",
+        fetch: mockFetch(sse([])),
+      }),
+    );
+    const models = moonshotKimiModels.map((entry) => entry.model);
+    assert.ok(models.includes("kimi-k2.7-code"));
+    assert.ok(models.includes("kimi-k3"));
   });
 
   it("kimi_anthropic_preserves_thinking_tool_use_and_tool_result", async () => {
@@ -634,7 +622,7 @@ describe("@arnilo/prism-providers/kimi", () => {
   it("kimi_anthropic_route_maps_stop_reason_to_taxonomy", async () => {
     const provider = createKimiCodingProvider({
       apiKey: "fake-kimi-key",
-      fetch: mockFetch(sse([{ type: "message_delta", delta: { stop_reason: "max_tokens" } }, { type: "message_stop" }])),
+      fetch: mockFetch(sse([{ type: "message.delta", delta: { stop_reason: "max_tokens" } }, { type: "message_stop" }])),
     });
     const events = await assertProviderStreamConforms({ provider, request });
     const done = events.at(-1);

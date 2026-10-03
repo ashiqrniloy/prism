@@ -599,13 +599,13 @@ SuspendAskUserDecisionOptions	export type { AskUserDecisionAnswer, AskUserDecisi
 TODO_STATUSES	export declare const TODO_STATUSES: readonly TodoStatus[]
 TODO_WRITE_TOOL_NAME	export declare const TODO_WRITE_TOOL_NAME: "todo_write"
 TextFileClient	export type { TextFileClient } from "./acp-operations.js"
-TodoContinuationStopHook	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
-TodoContinuationStopHookOptions	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
-TodoItem	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
-TodoListMetadata	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
-TodoNoProgressStopInfo	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
-TodoStatus	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
-TodoWriteToolOptions	export type { TodoContinuationStopHook, TodoContinuationStopHookOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoContinuationHandler	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoContinuationHandlerOptions	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoItem	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoListMetadata	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoNoProgressStopInfo	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoStatus	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
+TodoWriteToolOptions	export type { TodoContinuationHandler, TodoContinuationHandlerOptions, TodoItem, TodoListMetadata, TodoNoProgressStopInfo, TodoStatus, TodoWriteToolOptions, } from "./todo.js"
 TransformImage	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 TransformImageInput	export type { DocumentReader, DocumentReaderResult, ReadOperations, ReadTextOptions, ReadTextResult, ReadToolOptions, TransformImage, TransformImageInput, } from "./read.js"
 UI_CSP	export declare const UI_CSP: string
@@ -712,7 +712,6 @@ createGitTools	export declare function createGitTools(cwd: string, options?: Git
 createGitWorktreeTool	export declare function createGitWorktreeTool(cwd: string, options?: GitToolsOptions): ToolDefinition
 createGlobTool	export declare function createGlobTool(cwd: string, options?: GlobToolOptions): ToolDefinition
 createImpeccableCommand	export declare function createImpeccableCommand(): CommandDefinition
-createImpeccableExtension	export declare function createImpeccableExtension(options: ImpeccableExtensionOptions): Extension
 createImportTarStream	export declare function createImportTarStream(sourceRoot: string, bounds: TarBounds): Readable
 createIndexedRepositoryOperations	export declare function createIndexedRepositoryOperations(cwd: string, options: IndexedRepositoryOptions): RepositoryOperations &
 createLanguageIntelligence	export declare function createLanguageIntelligence(options: CreateLanguageIntelligenceOptions): LanguageIntelligence
@@ -741,7 +740,6 @@ createSecretRedactor	export declare function createSecretRedactor(secrets?: read
 createSessionsHost	export declare function createSessionsHost(options: CreateProcessSessionsOptions): SessionsHost
 createShellTool	export declare function createShellTool(cwd: string, options?: ShellToolOptions): ToolDefinition
 createTempArtifactWriter	export declare function createTempArtifactWriter(prefix?: string): ArtifactWriter
-createTodoContinuationStopHook	export declare function createTodoContinuationStopHook(options?: TodoContinuationStopHookOptions): TodoContinuationStopHook
 createTodoWriteTool	export declare function createTodoWriteTool(options?: TodoWriteToolOptions): ToolDefinition
 createWorktreeChildFactory	export declare function createWorktreeChildFactory(factory: (context: WorktreeChildContext) => Agent | Promise<Agent>, options: WorktreeChildFactoryOptions): WorktreeChildFactory
 createWriteTool	export declare function createWriteTool(cwd: string, options?: WriteToolOptions): ToolDefinition
@@ -778,6 +776,7 @@ gitRequireOk	export declare function gitRequireOk(runner: BoundGitRunner, reques
 gitText	export declare function gitText(result: GitExecResult, stream?: "stdout" | "stderr"): string
 globLocal	export declare function globLocal(request: RepositoryGlobRequest, defaults: ResolvedRepositoryLimits, walk: RepositoryWalk): Promise<RepositoryGlobResult>
 hasShellMetacharacters	export declare function hasShellMetacharacters(command: string): boolean
+impeccable	export declare function impeccable(options?: ImpeccableExtensionOptions): import("@arnilo/prism").PackageInstance
 inspectDevInspector	export declare function inspectDevInspector(options: CreatePrismDevInspectorOptions): HostCompositionReport
 inspectHostComposition	export { assertHostCompositionReadiness, HostCompositionError, type HostCompositionGovernance, type HostCompositionOptions, type HostCompositionProfile, type HostCompositionReport, type HostCompositionToolReport, inspectDevInspector, inspectHostComposition, } from "./composition.js"
 inspectorConfigResponse	export declare function inspectorConfigResponse(basePath: string, agentId: string): Response
@@ -833,6 +832,7 @@ recoverSessions	export declare function recoverSessions(host: SessionsHost, reco
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string
 redactRemoteUrl	export declare function redactRemoteUrl(url: string): string
 refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
+registerTodoContinuation	export declare function registerTodoContinuation(hooks: HookRegistrar, options?: TodoContinuationHandlerOptions): TodoContinuationHandler
 releaseRecordLease	export declare function releaseRecordLease(input:
 replayRunPage	export declare function replayRunPage(seams: DevReplaySeams, request: Request, runId: string, cursor: string | undefined): Promise<Response>
 requireRecord	export declare function requireRecord(host: SessionsHost, sessionId: string, owner?: string): SessionRecord

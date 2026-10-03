@@ -1,12 +1,12 @@
 // ponytail: dependency-free conformance runner for prompt-cache prefix stability.
 // The runner owns the fixture provider (network-free, deterministic) and fixture
 // skills; everything else in `host` is the caller's production assembly — system
-// prompt, context providers, prompt builder, middleware, disclosure settings.
+// prompt, context.build handlers, tool gating, and disclosure settings.
 // Throws plain Error; no test runner, no network, no credentials.
 
 import assert from "node:assert/strict";
 import { createAgent } from "../agent-session/create-agent.js";
-import type { AgentConfig, AgentSession, AIProvider, JsonObject, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
+import type { AgentConfig, Session, AIProvider, JsonObject, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
 import { providerDone, providerThinkingDelta, toolCallContent } from "../provider-events.js";
 import { createLoadSkillTool } from "../skill-load.js";
 import { createSkillRegistry } from "../skills.js";
@@ -20,6 +20,8 @@ export interface PrefixStabilityConformanceOptions {
   readonly host: Omit<AgentConfig, "provider" | "providerSource" | "skills">;
   /** Two distinct skills: the fixture loads `[0]` on the first turn and `[1]` on the second. */
   readonly skills: readonly [Skill, Skill];
+  /** Progressive (default) or eager disclosure for the fixture agent. */
+  readonly skillsDisclosure?: "progressive" | "eager";
   /** Minimum shared byte-prefix fraction between consecutive requests. Default `0.95`. */
   readonly minContinuity?: number;
   /**
@@ -169,15 +171,11 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
     "prefix stability conformance foldableToolResultBytes must be a positive safe integer",
   );
   const registry = createSkillRegistry([...skills]);
-  const hostTools: readonly ToolDefinition[] = host.tools && "list" in host.tools ? host.tools.list() : (host.tools ?? []);
-  const agent = createAgent({
+  const hostTools: readonly ToolDefinition[] = host.tools?.add ?? [];
+  const agent = await createAgent({
     ...host,
-    skills: registry,
-    tools: [
-      ...hostTools,
-      createLoadSkillTool({ registry }),
-      ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)]),
-    ],
+    skills: { add: registry.list(), disclosure: options.skillsDisclosure },
+    tools: { add: [...hostTools, ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)])] },
     provider: fixtureProvider(
       requests,
       [first.name, second.name],
@@ -185,9 +183,9 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
       foldableBytes !== undefined,
     ),
   });
-  const session = agent.createSession() as AgentSession & { readonly tailSegments: ReadonlyMap<string, Message> };
+  const session = (await agent.session()) as Session & { readonly tailSegments: ReadonlyMap<string, Message> };
   const [firstInput, secondInput] = options.inputs ?? ["Prefix stability turn one", "Prefix stability turn two"];
-  const runOptions = { activeSkills: [first.name, second.name], limits: { maxToolRounds: 1 } } as const;
+  const runOptions = { limits: { maxToolRounds: 1 } } as const;
   await session.run(firstInput, runOptions);
   await session.run(secondInput, runOptions);
 
@@ -198,7 +196,7 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   );
   // The session's own map holds the exact `Message` objects `appendTailSegment` allocated, so the
   // classification is exact rather than a heuristic over host-authored content. (`tailSegments` is
-  // runtime-session state, not part of the public `AgentSession` contract, hence the narrow above.)
+  // runtime-session state, not part of the public `Session` contract, hence the narrow above.)
   const assertOn = options.assertOn ?? "providerPrefix";
   // One measurement. The assertion below reads the sample; it does not serialize again.
   const sample = scorePrefixStability(requests, { tailSegments: session.tailSegments, minContinuity, assertOn });

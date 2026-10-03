@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- The package is frozen and receives no new features: `@arnilo/prism` is the one import for hosts and package authors. Its host-contract re-exports follow the kernel (`Session`, `RunResult`), and the kernel-behavior tests that ran through `defineAgent` (skills catalog, loop slot, principal, memory store default, `run.end` hooks) now live in the kernel suite.
+
 ## [0.1.0] - 2026-09-29
 
 First published version (independent version line; the package never shipped under the lockstep `0.12.0` number).

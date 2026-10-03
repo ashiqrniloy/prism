@@ -1,4 +1,4 @@
-import type { AgentRunResult, Message } from "@arnilo/prism";
+import type { RunResult, Message } from "@arnilo/prism";
 import { projectTraceTimeline } from "../observability/timeline.js";
 import type { ExecutionStep, ExecutionTimeline } from "../observability/timeline-types.js";
 import { EvalScoreError } from "./errors.js";
@@ -76,7 +76,7 @@ async function scoreOne<TInput, TExpected>(
   }
 }
 
-/** Score one `AgentRunResult` with the provided scorers. Failures become `failed` records. */
+/** Score one `RunResult` with the provided scorers. Failures become `failed` records. */
 export async function scoreRun<TInput = unknown, TExpected = unknown>(
   options: ScoreRunOptions<TInput, TExpected>,
 ): Promise<readonly EvaluationRecord[]> {
@@ -148,7 +148,7 @@ export async function scoreRun<TInput = unknown, TExpected = unknown>(
  * Scoring failure never mutates `result` and is attributable via `failed` records / `onError`.
  */
 export function scoreRunLive<TInput = unknown, TExpected = unknown>(
-  result: AgentRunResult,
+  result: RunResult,
   options: LiveScoreOptions<TInput, TExpected>,
 ): Promise<readonly EvaluationRecord[]> {
   return scoreRun({ ...options, result }).catch((error) => {

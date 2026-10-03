@@ -1,8 +1,8 @@
 import { createAppAgent } from "./agent.js";
 
 async function main() {
-  const agent = createAppAgent({ tenantId: "tenant-acme", userId: "worker-prod-1" });
-  const session = agent.createSession({ id: "biz-session-1" });
+  const agent = await createAppAgent({ tenantId: "tenant-acme", userId: "worker-prod-1" });
+  const session = await agent.session();
   const result = await session.run("Process batch queue item");
   console.log(result.text);
 }

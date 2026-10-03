@@ -1,60 +1,44 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { InstructionInjector, ProviderRequest } from "@arnilo/prism";
+import type { ContextSource, ProviderRequest } from "@arnilo/prism";
 import {
   createAgent,
-  createContributionRegistries,
   createMockProvider,
   createSecretRedactor,
   providerDone,
-  registerDiscoveredContributions,
-  resolveInstructionInjectors,
+  registerContextSources,
+  withContextBlocks,
 } from "@arnilo/prism";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
-import { registerDiscoveredInstructionInjectors } from "@arnilo/prism/node/instruction-injectors";
+import { loadInstructionSources } from "@arnilo/prism/node/instruction-sources";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 
 // Instruction injection, end-to-end with the mock provider.
 //
-// Demonstrates the three lifecycle modes (every_turn / first_turn / on_input
-// + predicate), Phase 29 discovery loading of a `.agents/instructions/<name>/`
-// bundle, name-based selection via resolveInstructionInjectors, and that an
-// injected secret token is redacted by the runtime before the provider sees it.
+// Instruction injectors and context providers are both `context.build` handlers now
+// (roadmap §2.4), so this shows the whole shape: a discovered
+// `.agents/instructions/<name>/` bundle loaded as a static source, an always-on
+// source, a source that reacts to the user's input, and a source that accidentally
+// emits a secret — which the runtime redactor strips before the provider sees it.
 // Network-free; no real credentials.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = join(here, "instruction-injection-workspace");
 
-// A first_turn injector: project context only on turn 1.
-const projectContext: InstructionInjector = {
+// Always-on project context.
+const projectContext: ContextSource = {
   name: "project-context",
-  apply: () => ({
-    contextBlocks: [{ title: "Repo", content: "Prism monorepo — see docs/." }],
-    when: "first_turn",
-  }),
+  contextBlocks: [{ title: "Repo", content: "Prism monorepo — see docs/." }],
 };
 
-// An on_input injector: reaction to the user asking for JSON.
-const jsonOnJsonInput: InstructionInjector = {
-  name: "json-on-json-input",
-  apply: (_ctx) => ({
-    instructions: "Reply with JSON because the user asked for JSON.",
-    when: "on_input",
-    predicate: (c) => c.input.some((m) => /json/i.test(JSON.stringify(m.content))),
-  }),
-};
-
-// A redaction demo injector that accidentally emits a secret in its text.
+// A redaction demo source that accidentally emits a secret in its text.
 // The runtime's redactor strips it from the ProviderRequest (backstop, not
-// an invitation — never author secrets into injector text).
+// an invitation — never author secrets into context-source text).
 const SECRET = "phase30-example-token-xyz";
-const leakyInjector: InstructionInjector = {
-  name: "leaky",
-  apply: () => ({ instructions: `auth token=${SECRET}`, when: "every_turn" }),
-};
+const leakySource: ContextSource = { name: "leaky", instructions: `auth token=${SECRET}` };
 
 export async function demo(): Promise<{
-  discoveredInjector: string | undefined;
+  discoveredSource: string | undefined;
   everyTurnInstructionInInput: boolean;
   firstTurnContextBlockInInput: boolean;
   onInputInjectorApplied: boolean;
@@ -68,23 +52,15 @@ export async function demo(): Promise<{
     trust,
   });
 
-  // 2. Register: markdown-only (no `module` field) becomes a static every_turn
-  //    injector reading the resource text. Core never `import()`s.
-  const registries = createContributionRegistries();
-  registerDiscoveredContributions(registries, discovered);
-  await registerDiscoveredInstructionInjectors(registries, discovered);
-  const discoveredInjector = registries.instructionInjectors.list()[0];
+  // 2. Load: markdown-only (no `module` field) becomes a static source reading the
+  //    resource text, trust-gated by the same policy. Core never `import()`s.
+  const discoveredSources = await loadInstructionSources(discovered, { resourceTrust: trust });
+  const selected = discoveredSources.filter((source) => source.name === "json-always");
+  const discoveredSource = selected[0];
 
-  // 3. Resolve names fail-closed: ["json-always"] -> live injectors.
-  //    Unknown name would throw "Unknown instruction injector: <name>".
-  const resolved = resolveInstructionInjectors({
-    registry: registries.instructionInjectors,
-    names: ["json-always"],
-  });
-
-  // 4. Run: mock provider captures the assembled request so we can prove the
-  //    injector instructions/blocks reached the model request. The runtime
-  //    redactor (configured on the agent) strips the leaky injector's secret
+  // 3. Run: mock provider captures the assembled request so we can prove the
+  //    context-source instructions/blocks reached the model request. The runtime
+  //    redactor (configured on the agent) strips the leaky source's secret
   //    before the provider is called.
   const captured: ProviderRequest[] = [];
   const provider = createMockProvider([providerDone()], {
@@ -92,15 +68,31 @@ export async function demo(): Promise<{
       captured.push(request);
     },
   });
-  const session = createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider,
-    instructions: "You are helpful.",
-    instructionInjectors: [...resolved, projectContext, jsonOnJsonInput, leakyInjector],
-    // ponytail: runtime redacts ProviderRequest before the provider is called;
-    // this is the backstop that strips the leaked secret from injector text.
-    redactor: createSecretRedactor([SECRET]),
-  }).createSession();
+  const session = await (
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      instructions: "You are helpful.",
+      // ponytail: runtime redacts ProviderRequest before the provider is called;
+      // this is the backstop that strips the leaked secret from source text.
+      redactor: createSecretRedactor([SECRET]),
+      hooks: (hooks) => {
+        registerContextSources(hooks, [...selected, projectContext, leakySource]);
+        // A handler can branch on the turn's transcript, which is what the retired
+        // `on_input` predicate did.
+        hooks.on(
+          "context.build",
+          (draft) => {
+            const asked = draft.messages.some((message) => /json/i.test(JSON.stringify(message.content)));
+            return asked
+              ? withContextBlocks(draft, [{ title: "Format", content: "Reply with JSON because the user asked for JSON." }])
+              : undefined;
+          },
+          { id: "json-on-json-input" },
+        );
+      },
+    })
+  ).session();
 
   // Fire run() (resolves into closeSubscribers) and drain the event stream.
   const done = session.run("List primes. Respond in JSON.");
@@ -113,12 +105,12 @@ export async function demo(): Promise<{
   const inputJson = JSON.stringify(captured[0]);
 
   return {
-    discoveredInjector: discoveredInjector?.name,
+    discoveredSource: discoveredSource?.name,
     everyTurnInstructionInInput: /Always structure the final answer as a single JSON object/.test(inputJson),
     firstTurnContextBlockInInput: /Prism monorepo — see docs\//.test(inputJson),
-    // on_input predicate matched because the user said "JSON".
+    // The transcript branch matched because the user said "JSON".
     onInputInjectorApplied: /Reply with JSON because the user asked for JSON/.test(inputJson),
-    // Runtime redacted the leaky injector's secret before the provider call.
+    // Runtime redacted the leaky source's secret before the provider call.
     injectedSecretRedacted: !inputJson.includes(SECRET),
   };
 }

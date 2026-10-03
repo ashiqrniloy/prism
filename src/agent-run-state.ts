@@ -21,12 +21,13 @@ import type {
   ModelConfig,
   NestedRunRef,
   OwnershipScope,
-  RunDecision,
+  Decision,
   RunLimitCounters,
   StickyDecision,
   ToolCallContent,
 } from "./contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "./contracts.js";
+import { agentHookIds, agentSkillSource, agentToolList, assignedLoop } from "./agent-session/runtime-registry.js";
 import type { SecretRedactor } from "./redaction.js";
 import { type LoadedSkillBodiesEntry, validateLoadedSkillBodies } from "./skill-load.js";
 import { HARD_RUN_TOOL_NAMES } from "./tools.js";
@@ -46,7 +47,7 @@ export interface PendingToolCall {
   readonly status: "ready" | "dispatched";
   readonly approvalId: string;
   /** Decision persisted by a partial batch; applied when the run finally resumes. */
-  readonly decision?: RunDecision;
+  readonly decision?: Decision;
 }
 
 export interface StoredAgentRunState extends AgentRunState {
@@ -59,7 +60,6 @@ export interface StoredAgentRunState extends AgentRunState {
   readonly nestedRuns?: readonly NestedRunRef[];
   /** Run-scoped sticky decisions; exact scope match, dropped at any terminal status. */
   readonly stickyDecisions?: readonly StickyDecision[];
-  readonly interruptBeforeTool?: boolean;
   readonly counters: RunLimitCounters;
   /** Wall deadline; absent when the run has no wall limit. Old snapshots with a deadline still parse. */
   readonly deadlineAt?: string;
@@ -96,11 +96,11 @@ export interface StoredAgentRunState extends AgentRunState {
   readonly checkpointPolicy?: "every-turn";
   /**
    * Set when a terminal state was written by a clean run-end stop that leaves the frontier intact:
-   * a `RunOptions.turnPolicy` stop (`host_policy`, plan 084 Task 2) or a stop-hook continuation cap
-   * (`hook_limit`, plan 106 R1). The run succeeded but `decision: "continue"` may resume it. Absent
+   * a `turn.before` stop (`hook_stop`, plan 145 Task 4) or a `run.end` continuation cap
+   * (`hook_limit`). The run succeeded but `decision: "continue"` may resume it. Absent
    * on every other state — a naturally finished run is never continuable.
    */
-  readonly stopReason?: "host_policy" | "hook_limit";
+  readonly stopReason?: "hook_stop" | "hook_limit";
 }
 
 /** Session-state caps (plan 015 Task 4): bounded names charged against the run-state byte budget. */
@@ -133,10 +133,9 @@ export interface PersistedGuardrailPacks {
   readonly state?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
-/** Revision stamps of the built-in loops; custom strategies declare their own `revision`. */
+/** Revision stamps of the built-in loop; custom strategies declare their own `revision`. */
 export const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>> = {
-  "single-shot": "1",
-  "generate-validate-revise": "1",
+  default: "1",
 };
 
 /** Validate a strategy snapshot as JSON-compatible and package it for the durable envelope. */
@@ -171,14 +170,8 @@ function assertJsonValue(value: unknown, depth: number): asserts value is JsonVa
 
 export function agentFingerprint(agent: Agent, revision: string): string {
   const config = agent.config;
-  const tools = !config.tools ? [] : "list" in config.tools ? config.tools.list() : config.tools;
-  const skills = !config.skills ? [] : "list" in config.skills ? config.skills.list() : config.skills;
-  const guardrails = [
-    ...(config.guardrails?.input ?? []),
-    ...(config.guardrails?.output ?? []),
-    ...(config.guardrails?.toolInput ?? []),
-    ...(config.guardrails?.toolOutput ?? []),
-  ];
+  const tools = agentToolList(agent);
+  const skills = agentSkillSource(agent);
   const systemPrompt =
     config.systemPrompt === false || config.systemPrompt === undefined
       ? (config.systemPrompt ?? null)
@@ -198,12 +191,17 @@ export function agentFingerprint(agent: Agent, revision: string): string {
       exclusive: tool.exclusive,
       effect: typeof tool.effect === "function" ? "classifier" : tool.effect,
     })),
-    guardrails: guardrails.map((guardrail) => ({ name: guardrail.name, stage: guardrail.stage, revision: guardrail.revision })),
+    // Hook registration ids participate so adding or removing a gate without a definitionRevision
+    // bump cannot resume a run whose decisions were made under a different gate set (roadmap §2.5).
+    hooks: agentHookIds(agent),
     // Loop revision participates so a loop change without a definitionRevision bump fails closed.
-    loop:
-      typeof config.loop === "object" && config.loop && "strategy" in config.loop
-        ? { name: config.loop.strategy, revision: BUILT_IN_LOOP_REVISIONS[config.loop.strategy] ?? null }
-        : { name: config.loop?.name ?? "single-shot", revision: config.loop?.revision ?? BUILT_IN_LOOP_REVISIONS["single-shot"] },
+    loop: (() => {
+      const loop = assignedLoop(agent);
+      return {
+        name: loop?.name ?? "default",
+        revision: loop?.revision ?? BUILT_IN_LOOP_REVISIONS.default,
+      };
+    })(),
   });
   return createHash("sha256").update(value).digest("hex");
 }
@@ -319,7 +317,6 @@ export function publicState(state: StoredAgentRunState): AgentRunState {
     pending: _pending,
     pendingCalls: _pendingCalls,
     nestedRuns: _nestedRuns,
-    interruptBeforeTool: _interruptBeforeTool,
     counters: _counters,
     deadlineAt: _deadlineAt,
     toolNames: _toolNames,
@@ -344,12 +341,16 @@ export function initialAgentRunState(input: {
   readonly messages?: readonly Message[];
   readonly pending?: StoredAgentRunState["pending"];
   readonly pendingCalls?: StoredAgentRunState["pendingCalls"];
-  readonly interruptBeforeTool?: boolean;
+  /** Label for an agent with no id or name: a suspension that needs no host checkpoint store still persists one. */
+  readonly fallbackAgentId?: string;
 }): StoredAgentRunState {
   validateRunStateOptions(input.options);
   return {
     schemaVersion: AGENT_RUN_STATE_SCHEMA_VERSION,
-    agentId: agentId(input.agent),
+    agentId:
+      input.fallbackAgentId !== undefined && !(input.agent.config.id ?? input.agent.config.name)?.trim()
+        ? input.fallbackAgentId
+        : agentId(input.agent),
     definitionRevision: input.options.definitionRevision,
     fingerprint: agentFingerprint(input.agent, input.options.definitionRevision),
     runId: input.runId,
@@ -361,7 +362,6 @@ export function initialAgentRunState(input: {
     input: input.messages,
     pending: input.pending,
     pendingCalls: input.pendingCalls,
-    interruptBeforeTool: input.interruptBeforeTool,
     counters: input.counters,
     deadlineAt: input.deadlineAt,
     ...(input.options.checkpointPolicy === "every-turn" ? { checkpointPolicy: "every-turn" as const } : {}),
@@ -452,7 +452,7 @@ export function parseAgentRunState(value: unknown, version?: number): StoredAgen
   if (state.checkpointPolicy !== undefined && state.checkpointPolicy !== "every-turn") {
     throw new AgentRunStateError("Malformed agent run checkpoint policy");
   }
-  if (state.stopReason !== undefined && state.stopReason !== "host_policy" && state.stopReason !== "hook_limit") {
+  if (state.stopReason !== undefined && state.stopReason !== "hook_stop" && state.stopReason !== "hook_limit") {
     throw new AgentRunStateError("Malformed agent run stop reason");
   }
   // Load bounds against the hard cap, not the default: the configured maxStateBytes is a

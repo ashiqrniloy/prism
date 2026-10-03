@@ -25,7 +25,7 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools", isSubpaths: true },
   { dir: "packages/prism-core", name: "@arnilo/prism-core", isSubpaths: true },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
-  { dir: "packages/hooks", name: "@arnilo/prism-hooks" },
+  { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
   { dir: "packages/agent-sdk", name: "@arnilo/prism-agent-sdk" },
   { dir: "packages/prism-code", name: "@arnilo/prism-code" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
@@ -251,17 +251,16 @@ const provider = { id: "mock", async *generate() {
   yield providerDone();
 } };
 const canary = "packed-integration-secret";
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" }, provider, tools,
   validator: createJsonSchemaToolArgumentValidator(), redactor: createSecretRedactor([canary]),
-  loop: { strategy: "single-shot", toolConcurrency: 3 },
 });
-const session = agent.createSession({ id: "packed-integration" });
+const session = await agent.session();
 const events = [];
 const reader = (async () => { for await (const event of session.subscribe()) events.push(event); })();
 await session.run(canary, { limits: { maxToolRounds: 1 } });
 await reader;
-const finished = events.filter((event) => event.type === "tool_execution_finished");
+const finished = events.filter((event) => event.type === "tool.completed");
 assert.equal(finished.length, 3);
 const entries = await session.entries();
 const orderedResults = entries.flatMap((entry) => entry.message?.content ?? []).filter((block) => block.type === "tool_result");
@@ -330,12 +329,12 @@ const fakeModel = {
   } }) }; },
 };
 const aiProvider = createAiSdkProvider({ model: fakeModel });
-const aiAgent = createAgent({ provider: aiProvider, model: { provider: aiProvider.id, model: "packed" } });
+const aiAgent = await createAgent({ provider: aiProvider, model: { provider: aiProvider.id, model: "packed" } });
 const streamed = [];
-for await (const event of aiAgent.createSession().stream("stream")) streamed.push(event.type);
-const runResult = await aiAgent.createSession().run("run");
+for await (const event of (await aiAgent.session()).stream("stream")) streamed.push(event.type);
+const runResult = await (await aiAgent.session()).run("run");
 assert.equal(runResult.text, "packed-result");
-assert.ok(streamed.includes("message_delta"));
+assert.ok(streamed.includes("message.delta"));
 
 const embedder = createHashEmbedder({ dimensions: 16 });
 const memory = createMemory({ tenantId: "packed", resourceId: "user", threadId: "thread", embedder });
@@ -383,8 +382,8 @@ assert.ok(schedule.lastRunId);
 const replay = await replayWorkflow(scheduledFlow, { sourceRunId: schedule.lastRunId, fromNodeId: "done" }, { checkpoints, ownership });
 assert.equal(replay.lineage.sourceRunId, schedule.lastRunId);
 
-const servedAgent = () => createAgent({ model: { provider: "mock", model: "served" }, provider: createMockProvider([providerTextDelta("served"), providerDone()]) });
-const handler = createPrismHandler({ agents: { demo: servedAgent() }, authorize: () => ({ ownership }) });
+const servedAgent = async () => await createAgent({ model: { provider: "mock", model: "served" }, provider: createMockProvider([providerTextDelta("served"), providerDone()]) });
+const handler = createPrismHandler({ agents: { demo: await servedAgent() }, authorize: () => ({ ownership }) });
 const served = await handler(new Request("https://packed.test/prism/agents/demo/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "hello" }) }));
 assert.equal(served.status, 200);
 assert.equal((await served.json()).text, "served");
@@ -400,7 +399,7 @@ const supervisor = createSupervisor({ ownership, children: { child: { createAgen
 assert.equal((await supervisor.delegate({ childId: "child", input: "hello" })).text, "served");
 const endpoint = "https://packed-agent.test/a2a/v1";
 const card = { name: "Packed", description: "Packed test agent", supportedInterfaces: [{ url: endpoint, protocolBinding: "JSONRPC", protocolVersion: "1.0" }], version: "1", capabilities: { streaming: false }, defaultInputModes: ["text/plain"], defaultOutputModes: ["text/plain"], skills: [] };
-const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: () => servedAgent().createSession() }, authorize: () => ({ ownership }) });
+const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: async () => (await servedAgent()).session() }, authorize: () => ({ ownership }) });
 const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
 assert.equal((await a2a.send("hello")).text, "served");
 
@@ -430,7 +429,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AgentDecisionError, createAgent, createMemoryCheckpointStore, createMemorySessionStore,
+  AgentDecisionError, askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore,
   providerDone, providerTextDelta, resumeAgentRun, toolCallContent,
 } from "@arnilo/prism";
 import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-tools/security";
@@ -444,15 +443,15 @@ const provider = { id: "mock", async *generate() {
   if (turn === 1) { yield { type: "tool_call", call: toolCallContent("call-1", "write", { value: "a" }) }; yield providerDone(); return; }
   yield providerTextDelta("finished"); yield providerDone();
 } };
-const agent = createAgent({
+const agent = await createAgent({
   id: "packed-phase20", model: { provider: "mock", model: "demo" },
-  store: createMemorySessionStore(), provider,
-  tools: [{ name: "write", parameters: {}, execute: (args, ctx) => { executed.push(ctx.toolCallId); return { toolCallId: ctx.toolCallId, name: "write", value: "done" }; } }],
+  slots: { store: createMemorySessionStore() }, provider, hooks: askEveryTool(),
+  tools: { add: [{ name: "write", parameters: {}, execute: (args, ctx) => { executed.push(ctx.toolCallId); return { toolCallId: ctx.toolCallId, name: "write", value: "done" }; } }] },
 });
 const checkpoints = createMemoryCheckpointStore();
-const first = await agent.createSession({ id: "phase20" }).run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+const first = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
 assert.equal(first.status, "suspended");
-const pending = first.interruption.pendingDecisions;
+const pending = first.pending;
 assert.equal(pending.length, 1);
 const version = first.runState.version;
 const ref = { runId: first.runId, sessionId: first.sessionId };
@@ -464,7 +463,7 @@ assert.ok(sidewaysError instanceof AgentDecisionError, "sideways must throw Agen
 assert.equal(sidewaysError.code, "ERR_PRISM_DECISION_INVALID");
 assert.deepEqual(executed, [], "invalid resume executed a tool");
 const approved = await resumeAgentRun(agent, ref, { expectedVersion: version, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] }, { checkpoints, definitionRevision: "1" });
-assert.equal(approved.status, "succeeded");
+assert.equal(approved.status, "completed");
 assert.equal(executed.length, 1, "valid resume must run exactly once");
 
 // --- phase20 blocker 2: work-tool child env isolation (no ambient host env, token isolated, fixed keys) ---
@@ -693,8 +692,8 @@ const seam = {
 const options = { connection: seam, stream: "packed22-stream", cursorSecret: "packed22-cursor-secret" };
 const source = createNatsAgentEventSource(options);
 const event = (id, type) => ({ id, ...ownership, sessionId: "s1", runId: "r1", type, timestamp: "2026-08-13T00:00:00.000Z", redacted: true, event: { type, sessionId: "s1", runId: "r1", turn: 1 } });
-await source.append(event("n-1", "agent_started"));
-await source.append(event("n-2", "turn_started"));
+await source.append(event("n-1", "run.started"));
+await source.append(event("n-2", "turn.started"));
 const read = { ownership, sessionId: "s1", runId: "r1", limit: 10 };
 const iterator = source.subscribe(read)[Symbol.asyncIterator]();
 assert.equal((await iterator.next()).value.record.id, "n-1");
@@ -741,7 +740,7 @@ for (const spec of specs) {
   const mod = await import(spec);
   if (spec === "@arnilo/prism") {
     assert.equal(mod.version, corePkg.version, "installed core must expose the manifest version");
-    for (const name of ["createAgent", "AgentRunError", "resumeAgentRunStream", "createMemoryCheckpointStore"]) {
+    for (const name of ["createAgent", "AgentRunStateError", "resumeAgentRunStream", "createMemoryCheckpointStore"]) {
       assert.equal(typeof mod[name], "function", "installed core must export " + name);
     }
   }
@@ -801,7 +800,7 @@ const redactor = createSecretRedactor([canary]);
 const validator = createJsonSchemaArgumentValidator();
 
 // 1. Valid Personal Composition
-const personalAgent = createSecureAgent({
+const personalAgent = await createSecureAgent({
   id: "packed-personal-assistant",
   definitionRevision: "1",
   ownership: { userId: "operator" },
@@ -837,7 +836,7 @@ assert.equal(personalReport.storage.kind, "memory");
 assert.equal(personalReport.readiness.ok, true);
 assert.equal(JSON.stringify(personalReport).includes(canary), false, "secret canary leaked in personal report");
 assert.doesNotThrow(() => assertHostCompositionReadiness({ profile: "personal", agent: personalAgent }));
-const personalSession = personalAgent.createSession();
+const personalSession = await personalAgent.session();
 const personalRun = await personalSession.run("hello");
 assert.equal(personalRun.text, "personal ready");
 
@@ -848,7 +847,7 @@ assert.equal(devReport.storage.durable, false);
 
 // 2. Valid Business Worker Composition
 const tenantId = "packed-tenant-corp";
-const businessAgent = createSecureAgent({
+const businessAgent = await createSecureAgent({
   id: "packed-business-worker",
   definitionRevision: "1",
   ownership: { tenantId, userId: "worker-1" },
@@ -903,7 +902,7 @@ assert.doesNotThrow(() =>
     sandboxRoots: ["/var/tenant-corp/run"],
   })
 );
-const businessSession = businessAgent.createSession();
+const businessSession = await businessAgent.session();
 const businessRun = await businessSession.run("hello");
 assert.equal(businessRun.text, "business ready");
 

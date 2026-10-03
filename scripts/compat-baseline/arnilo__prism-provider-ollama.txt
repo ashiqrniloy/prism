@@ -1,6 +1,6 @@
 DEFAULT_OLLAMA_BASE_URL	export declare const DEFAULT_OLLAMA_BASE_URL: string
 createOllamaProvider	export declare function createOllamaProvider(options?: OllamaProviderOptions): AIProvider
-createOllamaProviderPackage	export declare function createOllamaProviderPackage(options?: OllamaProviderPackageOptions): ProviderPackage
+ollamaPackage	export declare function ollamaPackage(options?: OllamaProviderPackageOptions): PackageInstance
 defineOllamaModel	export declare function defineOllamaModel(config: OllamaModelConfig): ModelConfig
 listOllamaModels	export declare function listOllamaModels(options?: ListOllamaModelsOptions): Promise<ModelConfig[]>
 mapOllamaModel	export declare function mapOllamaModel(entry: OllamaModelEntry): ModelConfig

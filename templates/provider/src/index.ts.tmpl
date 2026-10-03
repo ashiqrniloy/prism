@@ -1,5 +1,4 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { __PROVIDER_ID__Models } from "./models.js";
+import { type CredentialValueSource, definePackage, type ModelConfig, type PackageInstance } from "@arnilo/prism";
 import { create__PROVIDER_PASCAL__Provider } from "./provider.js";
 
 export interface __PROVIDER_PASCAL__ProviderPackageOptions {
@@ -10,18 +9,16 @@ export interface __PROVIDER_PASCAL__ProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function create__PROVIDER_PASCAL__ProviderPackage(options: __PROVIDER_PASCAL__ProviderPackageOptions = {}): ProviderPackage {
+export function __PROVIDER_ID__Package(options: __PROVIDER_PASCAL__ProviderPackageOptions = {}): PackageInstance {
   const providerId = options.id ?? "__PROVIDER_ID__";
-  return defineProviderPackage({
+  return definePackage({
     name: "__PACKAGE_NAME__",
+    version: "__PRISM_VERSION__",
     description: "__PROVIDER_ID__ provider package for Prism.",
-    docs: { links: ["docs/providers/__PROVIDER_ID__.md"] },
-    setup(api) {
-      api.registerProvider(create__PROVIDER_PASCAL__Provider(options));
-      for (const model of options.models ?? __PROVIDER_ID__Models) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
+    setup(prism) {
+      prism.providers.register(create__PROVIDER_PASCAL__Provider({ ...options, id: providerId }));
     },
-  });
+  })();
 }
 
 export { __PROVIDER_ID__Models, type __PROVIDER_PASCAL__ModelConfig } from "./models.js";

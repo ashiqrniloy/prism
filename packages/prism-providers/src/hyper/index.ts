@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { hyperModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createHyperProvider } from "./provider.js";
 
 export interface HyperProviderPackageOptions {
@@ -10,17 +10,8 @@ export interface HyperProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createHyperProviderPackage(options: HyperProviderPackageOptions = {}): ProviderPackage {
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/hyper",
-    description: "Charm Hyper provider package for Prism.",
-    docs: { links: ["docs/providers/hyper.md"] },
-    setup(api) {
-      api.registerProvider(createHyperProvider(options));
-      for (const model of options.models ?? hyperModels) api.registerModel(model);
-      api.registerAuthMethod({ kind: "api_key", provider: "hyper", credentialName: "apiKey" });
-    },
-  });
+export function hyperPackage(options: HyperProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.hyper", "Charm Hyper provider package for Prism.", () => [createHyperProvider(options)]);
 }
 
 export { applyHyperAnthropicCacheControl, hyperAnthropicCacheEnabled } from "./cache.js";

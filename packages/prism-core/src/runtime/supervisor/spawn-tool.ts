@@ -1,4 +1,4 @@
-import type { AgentRunResult, JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
+import type { RunResult, JsonObject, ToolDefinition, ToolResult } from "@arnilo/prism";
 import { SupervisorError } from "./errors.js";
 import { HARD_MILESTONE_EVERY_TURNS } from "./limits.js";
 import type { ChildReportPolicy, DelegationWaitResult, Supervisor } from "./types.js";
@@ -170,7 +170,7 @@ function delegationIdSchema(): JsonObject {
   } as unknown as JsonObject;
 }
 
-function resultToolCall(name: string, toolCallId: string, childId: string, result: AgentRunResult, supervisor: Supervisor): ToolResult {
+function resultToolCall(name: string, toolCallId: string, childId: string, result: RunResult, supervisor: Supervisor): ToolResult {
   const text = supervisor.redact(result.text);
   return {
     toolCallId,

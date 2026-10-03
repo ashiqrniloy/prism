@@ -1,5 +1,5 @@
 import { type AGUIEvent, EventType, type RunAgentInput } from "@ag-ui/core";
-import type { AgentEventSource, AgentSession, SecretRedactor } from "@arnilo/prism";
+import type { AgentEventSource, Session, SecretRedactor } from "@arnilo/prism";
 import { isTerminalAgentEventType } from "@arnilo/prism";
 import type {
   A2AAgentCard,
@@ -61,7 +61,7 @@ export interface CreateAgUiA2AServerOptions {
     readonly authorization: A2AAuthorization;
     readonly signal: AbortSignal;
     readonly input: AgUiPreparedInput;
-  }) => AgentSession | Promise<AgentSession>;
+  }) => Session | Promise<Session>;
   /** AG-UI full-input allow-list. Omit it to keep the last-text/default-deny boundary. */
   readonly input?: AgUiInputOptions<A2AAuthorization>;
   readonly projection?: AgUiProjection;
@@ -286,19 +286,19 @@ async function* runPipeline(
       maxQueuedEvents: agUiLimits.maxQueuedEvents,
       overflow: "close",
     })) {
-      if (prismEvent.type === "agent_finished") {
+      if (prismEvent.type === "run.completed") {
         terminal = status("TASK_STATE_COMPLETED");
         break;
       }
-      if (prismEvent.type === "agent_suspended") {
+      if (prismEvent.type === "run.suspended") {
         terminal = status("TASK_STATE_INPUT_REQUIRED");
         break;
       }
-      if (prismEvent.type === "agent_denied") {
+      if (prismEvent.type === "decision.resolved") {
         terminal = failed("Run denied");
         break;
       }
-      if (prismEvent.type === "error") {
+      if (prismEvent.type === "run.failed") {
         terminal = failed(prismEvent.error);
         break;
       }

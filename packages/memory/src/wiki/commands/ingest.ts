@@ -45,11 +45,12 @@ export function createWikiIngestCommand(options: WikiExtensionOptions = {}): Com
       const staged = await ingestWikiSource(input, ingestOptions);
       const brief = renderIngestBrief(staged);
 
-      // Automatic filing = host agent following the wiki-maintainer skill. Drivers are
+      // Automatic filing = host agent following the wiki-maintainer skill. The host activates that
+      // skill on the agent it starts (roadmap §2.3 has no per-run skill activation). Drivers are
       // host-opt-in; without them the command is stage-only (never throws).
       let runStarted = false;
       if (context.drivers?.startRun) {
-        await context.drivers.startRun(brief, { activeSkills: ["wiki-maintainer"] });
+        await context.drivers.startRun(brief);
         runStarted = true;
       }
 

@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { commandCodeModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createCommandCodeProvider } from "./provider.js";
 
 export interface CommandCodeProviderPackageOptions {
@@ -12,17 +12,10 @@ export interface CommandCodeProviderPackageOptions {
   readonly zdr?: boolean;
 }
 
-export function createCommandCodeProviderPackage(options: CommandCodeProviderPackageOptions = {}): ProviderPackage {
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/commandcode",
-    description: "Command Code provider package for Prism.",
-    docs: { links: ["docs/providers/commandcode.md"] },
-    setup(api) {
-      api.registerProvider(createCommandCodeProvider(options));
-      for (const model of options.models ?? commandCodeModels) api.registerModel(model);
-      api.registerAuthMethod({ kind: "api_key", provider: "commandcode", credentialName: "apiKey" });
-    },
-  });
+export function commandcodePackage(options: CommandCodeProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.commandcode", "Command Code provider package for Prism.", () => [
+    createCommandCodeProvider(options),
+  ]);
 }
 
 export { applyCommandCodeCacheControl, commandCodeCacheEnabled } from "./cache.js";

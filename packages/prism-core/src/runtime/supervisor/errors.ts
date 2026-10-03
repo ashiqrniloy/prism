@@ -1,4 +1,4 @@
-import type { AgentRunResult } from "@arnilo/prism";
+import type { RunResult } from "@arnilo/prism";
 
 export class SupervisorError extends Error {
   constructor(
@@ -24,10 +24,24 @@ export class SupervisorLimitError extends SupervisorError {
      * The child's terminal result when a delegated run died on its own ceiling; absent for a
      * supervisor-level ceiling (depth, active children, delegation or wait timeout, cycle, bytes).
      */
-    readonly result?: AgentRunResult,
+    readonly result?: RunResult,
   ) {
     super(message, "ERR_PRISM_SUPERVISOR_LIMIT");
     this.name = "SupervisorLimitError";
+  }
+}
+
+/**
+ * A delegated child run ended `failed` or `aborted`. `result` is the child's terminal result, the same
+ * `limit`, `attribution`, and `error` the `child_failed` event carries.
+ */
+export class SupervisorRunError extends SupervisorError {
+  constructor(readonly result: RunResult) {
+    super(
+      result.error?.message ?? (result.status === "aborted" ? "Delegated run aborted" : "Delegated run failed"),
+      "ERR_PRISM_SUPERVISOR_RUN",
+    );
+    this.name = "SupervisorRunError";
   }
 }
 

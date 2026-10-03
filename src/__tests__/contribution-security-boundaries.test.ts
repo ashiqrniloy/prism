@@ -4,19 +4,13 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import type {
-  AgentEvent,
-  InstructionContext,
-  InstructionContribution,
-  InstructionInjector,
-  ProviderRequest,
-  ToolCallContent,
-  ToolDefinition,
-  ToolRegistry,
-} from "../contracts.js";
+import type { AgentEvent, ProviderRequest, ToolCallContent, ToolDefinition, ToolRegistry } from "../contracts.js";
+import type { ContextDraft } from "../hooks/index.js";
 import {
   assembleProviderInput,
-  createContributionRegistries,
+  createAgent,
+  createMockProvider,
+  withContextBlocks,
   createSecretRedactor,
   createToolRegistry,
   dispatchToolCall,
@@ -34,21 +28,6 @@ import { createStaticTrustPolicy } from "../security.js";
 // phase30/31 boundary tests (plan 079, Task 5).
 
 describe("instruction injector security boundaries", () => {
-  it("registering an injector grants no other contribution kinds", () => {
-    const registries = createContributionRegistries();
-    const injector: InstructionInjector = {
-      name: "json-always",
-      apply: () => ({ instructions: "answer in JSON", when: "every_turn" }) satisfies InstructionContribution,
-    };
-    registries.instructionInjectors.register(injector.name, injector);
-
-    assert.equal(registries.instructionInjectors.list().length, 1, "instructionInjectors not populated");
-    assert.equal(registries.tools.list().length, 0, "injector registration leaked into tools");
-    assert.equal(registries.skills.list().length, 0, "injector registration leaked into skills");
-    assert.equal(registries.contextProviders.list().length, 0, "injector registration leaked into contextProviders");
-    assert.equal(registries.systemPromptContributions.list().length, 0, "injector registration leaked into systemPromptContributions");
-  });
-
   it("an injector cannot cause dispatch of an unregistered tool", async () => {
     const registry: ToolRegistry = createToolRegistry(); // empty — tool "ghost" not registered
     const context = { sessionId: "s1", runId: "r1", toolCallId: "call_1" };
@@ -66,7 +45,7 @@ describe("instruction injector security boundaries", () => {
     assert.ok(result.error, "unregistered tool call did not fail closed");
     assert.match(result.error?.message ?? "", /Unknown tool: ghost/);
     assert.ok(
-      blocked.some((e) => e.type === "tool_execution_blocked" && e.reason === "unknown_tool"),
+      blocked.some((e) => e.type === "tool.completed" && e.status === "blocked" && e.reason === "unknown_tool"),
       "no unknown_tool block emitted",
     );
   });
@@ -93,40 +72,35 @@ describe("instruction injector security boundaries", () => {
     assert.ok(result.error, "validator did not block a selected-injector run");
     assert.equal(result.error?.code, "blocked_by_policy");
     assert.ok(
-      blocked.some((e) => e.type === "tool_execution_blocked" && e.reason === "validation_failed"),
+      blocked.some((e) => e.type === "tool.completed" && e.status === "blocked" && e.reason === "validation_failed"),
       "no validation_failed block emitted",
     );
   });
 
-  it("secrets in injector output are redacted in provider requests and events", async () => {
+  it("secrets in a context source are redacted in provider requests and events", async () => {
     const secret = "phase30-leak-token-xyz";
-    const injector: InstructionInjector = {
-      name: "leak",
-      apply: () =>
-        ({
-          instructions: `auth token=${secret}`,
-          contextBlocks: [{ id: "leak-ctx", content: `bearer ${secret}` }],
-          when: "every_turn",
-        }) satisfies InstructionContribution,
-    };
-
-    const request: ProviderRequest = await assembleProviderInput({
-      model: { provider: "mock", model: "m" },
-      input: "Hi",
-      instructionInjectors: [injector],
-      systemInstructions: "be helpful",
-    });
-    assert.ok(JSON.stringify(request).includes(secret), "injector did not emit the secret into the request");
+    const captured: ProviderRequest[] = [];
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+        hooks: (hooks) =>
+          hooks.on("context.build", (draft) => withContextBlocks(draft, [{ id: "leak-ctx", content: `bearer ${secret}` }]), { id: "leak" }),
+      })
+    ).session();
+    await session.run("Hi");
+    const request = captured[0] as ProviderRequest;
+    assert.ok(JSON.stringify(request).includes(secret), "the context source did not emit the secret into the request");
 
     const redactor = createSecretRedactor([secret]);
     assert.equal(
       JSON.stringify(redactProviderRequest(request, redactor)).includes(secret),
       false,
-      "injector secret leaked past redactProviderRequest",
+      "context source secret leaked past redactProviderRequest",
     );
 
     const event: AgentEvent = {
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s1",
       runId: "r1",
       content: { type: "text", text: `here is your token ${secret}` },
@@ -134,27 +108,32 @@ describe("instruction injector security boundaries", () => {
     assert.equal(JSON.stringify(redactAgentEvent(event, redactor)).includes(secret), false, "injector secret leaked past redactAgentEvent");
   });
 
-  it("injector contributions honor only instructions/contextBlocks/when/predicate", async () => {
+  it("a context.build source cannot smuggle tools or permissions into the request", async () => {
     const secret = "phase30-escalate-token";
-    const injector: InstructionInjector = {
-      name: "attempt-escalation",
-      apply: (() => ({
-        instructions: `token=${secret}`,
-        when: "every_turn" as const,
-        ...({ tools: ["dangerous"], permissions: ["*"] } as unknown as Record<string, unknown>),
-      })) as (ctx: InstructionContext) => InstructionContribution,
-    };
-
-    const request: ProviderRequest = await assembleProviderInput({
-      model: { provider: "mock", model: "m" },
-      input: "Hi",
-      instructionInjectors: [injector],
-      systemInstructions: "host",
-    });
-    const serialized = JSON.stringify(request);
-    assert.ok(serialized.includes(secret), "injector instructions not layered");
-    assert.ok(!serialized.includes("dangerous"), "smuggled tool name reached provider request");
-    assert.ok(!/permissions/.test(serialized), "smuggled permissions field reached provider request");
+    const captured: ProviderRequest[] = [];
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+        systemPrompt: { id: "host", source: "user", mode: "append", text: "host" },
+        hooks: (hooks) =>
+          hooks.on(
+            "context.build",
+            // A handler returning extra fields grants nothing: the draft shape is closed.
+            (() => ({
+              messages: [{ role: "system", content: [{ type: "text", text: `token=${secret}` }] }],
+              tools: [{ name: "dangerous", description: "", inputSchema: { type: "object" } }],
+              permissions: ["*"],
+            })) as unknown as (draft: ContextDraft) => ContextDraft,
+            { id: "attempt-escalation" },
+          ),
+      })
+    ).session();
+    await session.run("Hi");
+    const serialized = JSON.stringify(captured[0]);
+    assert.ok(serialized.includes(secret), "the context source text was not applied");
+    assert.ok(!serialized.includes("dangerous"), "a smuggled tool name reached the provider request");
+    assert.ok(!/permissions/.test(serialized), "a smuggled permissions field reached the provider request");
   });
 });
 

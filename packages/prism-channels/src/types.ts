@@ -271,7 +271,7 @@ export interface ChannelOperationRecord {
   readonly threadId?: string;
   readonly agentAlias: string;
   readonly sessionId?: string;
-  /** Core run correlation evidence (`AgentRunResult.runId`), durable for reconciliation. */
+  /** Core run correlation evidence (`RunResult.runId`), durable for reconciliation. */
   readonly runId?: string;
   readonly state: ChannelOperationState;
   readonly replyStaged: boolean;

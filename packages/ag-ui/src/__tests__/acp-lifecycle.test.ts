@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
+import type { AgentRunLifecycle, Session } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";
 import { createCodingLifecycleEmitter } from "@arnilo/prism-coding-tools/agent";
 import { createAcpLifecycleMapper, createPrismAcpAgent } from "../acp/index.js";
@@ -203,9 +203,9 @@ describe("ACP lifecycle wiring (Task 7)", () => {
           id: "lifecycle-session",
           async *stream() {
             emitter.emit({ type: "file_changed", path: "/workspace/src/a.ts", op: "edit", toolCallId: "tool-1" });
-            yield { type: "message_delta", sessionId: "lifecycle-session", runId: "run", content: { type: "text", text: "done" } };
+            yield { type: "message.delta", sessionId: "lifecycle-session", runId: "run", content: { type: "text", text: "done" } };
           },
-        } as unknown as AgentSession,
+        } as unknown as Session,
       }),
       lifecycle: {} as AgentRunLifecycle,
       coding: { lifecycle: emitter },
@@ -232,9 +232,9 @@ describe("ACP lifecycle wiring (Task 7)", () => {
             async *stream() {
               emitter.emit({ type: "plan_changed", planPath: "plans/task-1.md", todos: [{ id: "a", text: "go", done: false }] });
               emitter.emit({ type: "plan_removed", planPath: "plans/task-1.md" });
-              yield { type: "message_delta", sessionId: "plan-session", runId: "run", content: { type: "text", text: "done" } };
+              yield { type: "message.delta", sessionId: "plan-session", runId: "run", content: { type: "text", text: "done" } };
             },
-          } as unknown as AgentSession,
+          } as unknown as Session,
         }),
         lifecycle: {} as AgentRunLifecycle,
         coding: { lifecycle: emitter },
@@ -276,9 +276,9 @@ describe("ACP lifecycle wiring (Task 7)", () => {
           id: "config-session",
           async *stream() {
             emitter.emit({ type: "configuration_changed", keys: ["verbose"] });
-            yield { type: "message_delta", sessionId: "config-session", runId: "run", content: { type: "text", text: "done" } };
+            yield { type: "message.delta", sessionId: "config-session", runId: "run", content: { type: "text", text: "done" } };
           },
-        } as unknown as AgentSession,
+        } as unknown as Session,
       }),
       lifecycle: {} as AgentRunLifecycle,
       coding: { lifecycle: emitter },
@@ -313,9 +313,9 @@ describe("ACP lifecycle wiring (Task 7)", () => {
           async *stream() {
             emitter.emit({ type: "worktree_changed", action: "add", path: "/workspace" });
             emitter.emit({ type: "process_started", sessionId: "ps", processId: "p", owner: "u", at: "now" });
-            yield { type: "message_delta", sessionId: "quiet-session", runId: "run", content: { type: "text", text: "done" } };
+            yield { type: "message.delta", sessionId: "quiet-session", runId: "run", content: { type: "text", text: "done" } };
           },
-        } as unknown as AgentSession,
+        } as unknown as Session,
       }),
       lifecycle: {} as AgentRunLifecycle,
       coding: { lifecycle: emitter },
@@ -333,7 +333,7 @@ describe("ACP lifecycle wiring (Task 7)", () => {
 
 describe("ACP elicitation (Task 7)", () => {
   const suspension = {
-    type: "agent_suspended" as const,
+    type: "run.suspended" as const,
     sessionId: "elicit-session",
     runId: "run",
     interruption: {
@@ -370,7 +370,13 @@ describe("ACP elicitation (Task 7)", () => {
     const lifecycle = {
       async *resumeStream(_ref: unknown, resume: unknown) {
         resumed.push(resume);
-        yield { type: "agent_denied", sessionId: "elicit-session", runId: "run", interruption: { kind: "elicitation" }, version: 1 };
+        yield {
+          type: "decision.resolved",
+          sessionId: "elicit-session",
+          runId: "run",
+          decisions: [{ toolCallId: "elicit", outcome: "deny" }],
+          via: "resume",
+        };
       },
     } as unknown as AgentRunLifecycle;
     const app = createPrismAcpAgent({
@@ -381,7 +387,7 @@ describe("ACP elicitation (Task 7)", () => {
           async *stream() {
             yield suspension as never;
           },
-        } as unknown as AgentSession,
+        } as unknown as Session,
       }),
       lifecycle,
     });

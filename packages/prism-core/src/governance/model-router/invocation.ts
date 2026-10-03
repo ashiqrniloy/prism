@@ -326,9 +326,7 @@ export function createGovernedProvider(options: GovernedProviderOptions): Govern
           model: selectedModel,
         };
 
-        const finalRequest = selection.providerRequestPolicy
-          ? extractRequest(await selection.providerRequestPolicy.apply({ request: adaptedRequest }))
-          : adaptedRequest;
+        const finalRequest = selection.modelRequestTransform ? await selection.modelRequestTransform(adaptedRequest) : adaptedRequest;
 
         const innerStream = selection.provider.generate(finalRequest);
         const iterator = innerStream[Symbol.asyncIterator]();

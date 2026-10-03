@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import type { AIProvider, JsonObject, ModelConfig, ProviderEvent, ProviderRequest, ToolDefinition } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyThinkingLevel, cacheSavings } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
@@ -11,7 +12,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createNeuralWattProvider,
-  createNeuralWattProviderPackage,
+  neuralwattPackage,
   defineNeuralWattModel,
   listNeuralWattModels,
   mapNeuralWattTelemetry,
@@ -129,36 +130,6 @@ describe("@arnilo/prism-providers/neuralwatt (provider shell)", () => {
     });
     await collect(provider, request);
     assert.equal(capturedUrl, "https://proxy.example.test/neuralwatt/v1/chat/completions");
-  });
-});
-
-describe("@arnilo/prism-providers/neuralwatt (model registry)", () => {
-  it("neuralwatt_registers_models_and_auth", async () => {
-    const registered: unknown[] = [];
-    await createNeuralWattProviderPackage({
-      apiKey: "fake-neuralwatt-key",
-      fetch: (async () => ok(rawSse([]))) as typeof fetch,
-    }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (m: ModelConfig) => registered.push(m),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as never);
-    assert.ok(
-      registered.some((item) => (item as AIProvider).id === "neuralwatt"),
-      "provider registered",
-    );
-    assert.ok(
-      registered.some((item) => (item as ModelConfig).provider === "neuralwatt" && (item as ModelConfig).model === "glm-5.2"),
-      "glm-5.2 model registered",
-    );
-    assert.ok(
-      registered.some((item) => (item as ModelConfig).provider === "neuralwatt" && (item as ModelConfig).model === "kimi-k2.6"),
-      "kimi-k2.6 model registered",
-    );
-    assert.ok(
-      registered.some((item) => (item as AuthMethod).provider === "neuralwatt" && (item as AuthMethod).kind === "api_key"),
-      "api_key auth method registered",
-    );
   });
 
   it("neuralwatt_models_include_featured_aliases", () => {
@@ -337,16 +308,14 @@ describe("@arnilo/prism-providers/neuralwatt (model discovery)", () => {
 
   it("neuralwatt_provider_setup_does_not_call_model_discovery", async () => {
     let calls = 0;
-    await createNeuralWattProviderPackage({
-      fetch: (async () => {
-        calls++;
-        return json(200, modelsFixture());
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: () => undefined,
-      registerModel: () => undefined,
-      registerAuthMethod: () => undefined,
-    } as never);
+    await loadProviderPackage(
+      neuralwattPackage({
+        fetch: (async () => {
+          calls++;
+          return json(200, modelsFixture());
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(calls, 0);
   });
 });

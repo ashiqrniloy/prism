@@ -1,6 +1,6 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { xaiModels } from "./models.js";
-import { createXaiOAuthProvider, type XaiOAuthOptions } from "./oauth.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
+import { type XaiOAuthOptions } from "./oauth.js";
 import { createXaiProvider } from "./provider.js";
 
 export interface XaiProviderPackageOptions {
@@ -12,23 +12,8 @@ export interface XaiProviderPackageOptions {
   readonly oauth?: XaiOAuthOptions;
 }
 
-export function createXaiProviderPackage(options: XaiProviderPackageOptions = {}): ProviderPackage {
-  const providerId = options.id ?? "xai";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/xai",
-    description: "xAI (Grok) provider package for Prism.",
-    docs: { links: ["docs/providers/xai.md"] },
-    setup(api) {
-      api.registerProvider(createXaiProvider(options));
-      for (const model of options.models ?? xaiModels) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-      api.registerAuthMethod({
-        kind: "oauth",
-        provider: providerId,
-        oauth: createXaiOAuthProvider({ fetch: options.fetch, ...options.oauth }),
-      });
-    },
-  });
+export function xaiPackage(options: XaiProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.xai", "xAI (Grok) provider package for Prism.", () => [createXaiProvider(options)]);
 }
 
 export { XAI_CONV_ID_MAX_LENGTH, xaiCacheEnabled, xGrokConvId } from "./cache.js";

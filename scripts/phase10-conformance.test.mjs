@@ -234,7 +234,7 @@ describe("Phase 10 conformance — composed ACP scenario (Task 8)", () => {
           const output = await terminal.output();
           assert.equal(output.output, "a.txt\n");
           host.lifecycle.emit({ type: "file_changed", path: "/workspace/b.txt", op: "write", toolCallId: "tool-1" });
-          yield { type: "message_delta", sessionId, runId: "run-1", content: { type: "text", text: "listing done" } };
+          yield { type: "message.delta", sessionId, runId: "run-1", content: { type: "text", text: "listing done" } };
           yield { type: "agent_done", sessionId, runId: "run-1", reason: "end_turn" };
         },
       });
@@ -415,7 +415,7 @@ describe("Phase 10 conformance — adversarial inputs and limit ladder (Task 8)"
       id: "host-1",
       cwd: "/workspace",
       async *stream() {
-        yield { type: "message_delta", sessionId: "host-1", runId: "run-3", content: { type: "text", text: "token SECRET visible" } };
+        yield { type: "message.delta", sessionId: "host-1", runId: "run-3", content: { type: "text", text: "token SECRET visible" } };
         yield { type: "agent_done", sessionId: "host-1", runId: "run-3", reason: "end_turn" };
       },
     });
@@ -443,7 +443,7 @@ describe("Phase 10 conformance — elicitation and lifecycle mapping (Task 8)", 
       cwd: "/workspace",
       async *stream() {
         yield {
-          type: "agent_suspended",
+          type: "run.suspended",
           sessionId: "host-1",
           runId: "run-4",
           version: 1,
@@ -494,7 +494,7 @@ describe("Phase 10 conformance — elicitation and lifecycle mapping (Task 8)", 
       cwd: "/workspace",
       async *stream() {
         yield {
-          type: "agent_suspended",
+          type: "run.suspended",
           sessionId: "host-1",
           runId: "run-4b",
           version: 1,

@@ -1,9 +1,9 @@
 import type {
-  AgentSession,
+  Session,
   AIProvider,
-  ContextBlock,
-  ContextProvider,
-  ContextResolutionContext,
+  ContextDraft,
+  HookContext,
+  HookRegistrar,
   ModelConfig,
   RunOptions,
   SessionEntry,
@@ -165,7 +165,7 @@ export class ObservationalMemoryCoordinator {
   }
 
   async toggleSession(
-    session: AgentSession,
+    session: Session,
     sessionModel: ModelConfig,
     store?: SessionStore,
     workspaceRoot?: string,
@@ -193,7 +193,7 @@ export class ObservationalMemoryCoordinator {
   }
 
   async setSessionWorkerModel(
-    session: AgentSession,
+    session: Session,
     workerModel: ModelConfig | undefined,
     sessionModel: ModelConfig,
     store?: SessionStore,
@@ -232,7 +232,7 @@ export class ObservationalMemoryCoordinator {
     return { workerModel: effectiveModel };
   }
 
-  async getOrAttach(session: AgentSession, sessionModel: ModelConfig, store?: SessionStore): Promise<AttachedObservationalMemorySession> {
+  async getOrAttach(session: Session, sessionModel: ModelConfig, store?: SessionStore): Promise<AttachedObservationalMemorySession> {
     const state = await this.loadSessionState(session.id, store);
     const effectiveModel = state.workerModel ?? sessionModel;
 
@@ -290,7 +290,7 @@ export class ObservationalMemoryCoordinator {
     return attached;
   }
 
-  async getActiveSession(session: AgentSession, sessionModel: ModelConfig, store?: SessionStore): Promise<AgentSession> {
+  async getActiveSession(session: Session, sessionModel: ModelConfig, store?: SessionStore): Promise<Session> {
     if (this.isSessionEnabled(session.id)) {
       const attached = await this.getOrAttach(session, sessionModel, store);
       return attached.session;
@@ -298,32 +298,32 @@ export class ObservationalMemoryCoordinator {
     return this.wrapSessionDisabled(session);
   }
 
-  private wrapSessionDisabled(session: AgentSession): AgentSession {
+  private wrapSessionDisabled(session: Session): Session {
     const filterOptions = <T extends RunOptions | undefined>(opts: T): T => {
       const tools = this.getAgentTools(session);
       const hasRecall = tools.some((t) => t.name === "recall");
       if (!hasRecall) return opts;
       const allowed = tools.map((t) => t.name).filter((n) => n !== "recall");
-      if (opts?.toolNames) {
+      const only = opts?.tools?.only;
+      if (only) {
         return {
           ...opts,
-          toolNames: opts.toolNames.filter((n) => n !== "recall"),
+          tools: { ...opts?.tools, only: only.filter((n) => n !== "recall") },
         };
       }
       return {
         ...opts,
-        toolNames: allowed,
+        tools: { ...opts?.tools, only: allowed },
       };
     };
 
     const wrapper = Object.create(session);
     wrapper.run = (input: any, opts: any) => session.run(input, filterOptions(opts));
-    wrapper.prompt = (input: any, opts: any) => session.prompt(input, filterOptions(opts));
     wrapper.stream = (input: any, opts: any) => session.stream(input, filterOptions(opts));
     return wrapper;
   }
 
-  private getAgentTools(session: AgentSession): readonly ToolDefinition[] {
+  private getAgentTools(session: Session): readonly ToolDefinition[] {
     const toolsConfig = (session as any).agent?.config?.tools;
     if (!toolsConfig) return [];
     if (typeof toolsConfig.list === "function") return toolsConfig.list();
@@ -331,21 +331,21 @@ export class ObservationalMemoryCoordinator {
     return [];
   }
 
-  createDelegatingContextProvider(): ContextProvider {
-    return {
-      name: "observational-memory",
-      resolve: async (context: ContextResolutionContext): Promise<readonly ContextBlock[]> => {
-        const sessionId = context.sessionId;
-        if (!sessionId || !this.isSessionEnabled(sessionId)) {
-          return [];
-        }
-        const instance = this.attachedInstances.get(sessionId);
-        if (!instance) {
-          return [];
-        }
-        return await instance.attached.contextProvider.resolve(context);
-      },
-    };
+  /**
+   * Delegate this agent's sessions to their own observational-memory fabric: a `context.build`
+   * handler that forwards to the instance attached to the payload's session, and abstains for a
+   * session that never enabled it.
+   */
+  registerDelegatingContext(hooks: HookRegistrar): void {
+    hooks.on("context.build", (draft: ContextDraft, context: HookContext) => this.projectDelegatingContext(draft, context), {
+      id: "observational-memory",
+    });
+  }
+
+  private projectDelegatingContext(draft: ContextDraft, context: HookContext): Promise<ContextDraft | undefined> | undefined {
+    const instance = this.attachedInstances.get(context.sessionId);
+    if (!instance || !this.isSessionEnabled(context.sessionId)) return undefined;
+    return instance.attached.contextBuild(draft, context);
   }
 
   createRecallTool(store?: SessionStore): ToolDefinition {

@@ -3,6 +3,7 @@ import {
   type AgentIdentity,
   createAgent,
   createMockProvider,
+  type LoopStrategy,
   narrowIdentity,
   providerDone,
   providerTextDelta,
@@ -10,6 +11,25 @@ import {
   type ToolDefinition,
 } from "@arnilo/prism";
 import { createSpawnAgentTool, createSupervisor, createWaitAgentTool } from "@arnilo/prism-core/runtime/supervisor";
+
+/** Demo loop with bounded tool concurrency (the kernel default loop dispatches sequentially). */
+function concurrentLoop(concurrency: number): LoopStrategy {
+  return {
+    name: "demo-concurrent",
+    revision: "1",
+    async run(run) {
+      for (;;) {
+        const turn = await run.turn();
+        if (turn.stopped) return;
+        if (turn.toolCalls.length > 0) {
+          await run.executeTools(turn.toolCalls, { concurrency });
+          continue;
+        }
+        if (!(await run.end()).continue) return;
+      }
+    },
+  };
+}
 
 /** The explore child's whole tool set: read-only, host-owned, no write path. */
 const readOnly: ToolDefinition = {
@@ -50,15 +70,15 @@ export async function demo(): Promise<{ readonly spawned: number; readonly refus
         description: "Read-only research.",
         // Host-authored grant; the supervisor derives each child identity from it.
         scopes: exploreGrant.scopes,
-        createAgent: (context) => {
+        createAgent: async (context) => {
           spawned += 1;
           live += 1;
           peak = Math.max(peak, live);
           assert.deepEqual([...(context.identity?.scopes ?? [])], ["read"], "the child identity is narrowed, never widened");
-          return createAgent({
+          return await createAgent({
             model: { provider: "mock", model: "demo" },
             provider: createMockProvider([providerTextDelta("research complete"), providerDone()]),
-            tools: [readOnly],
+            tools: { add: [readOnly] },
           });
         },
       },
@@ -83,8 +103,9 @@ export async function demo(): Promise<{ readonly spawned: number; readonly refus
       return result;
     },
   };
-  const parent = createAgent({
+  const parent = await createAgent({
     model: { provider: "mock", model: "demo" },
+    slots: { loop: concurrentLoop(3) },
     provider: {
       id: "mock",
       async *generate() {
@@ -113,12 +134,10 @@ export async function demo(): Promise<{ readonly spawned: number; readonly refus
         yield providerDone();
       },
     },
-    tools: [observedSpawn, createWaitAgentTool({ supervisor })],
+    tools: { add: [observedSpawn, createWaitAgentTool({ supervisor })] },
   });
-  const result = await parent.createSession().run("Research auth and billing.", {
-    loop: { strategy: "single-shot", toolConcurrency: 3 },
-  });
-  assert.equal(result.status, "succeeded");
+  const result = await (await parent.session()).run("Research auth and billing.");
+  assert.equal(result.status, "completed");
   assert.equal(spawned, 2, "both explores ran");
   assert.equal(peak, 2, "both explores ran in parallel");
   assert.deepEqual(refused, ["deploy"], "an uncatalogued child fails closed");

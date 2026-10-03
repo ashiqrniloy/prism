@@ -19,6 +19,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
+  askEveryTool,
   createAgent,
   createMemoryAgentEventSource,
   createMemoryCheckpointStore,
@@ -36,8 +37,8 @@ const devLegs = new Set();
 
 const OWNERSHIP = { tenantId: "local", userId: "local" };
 
-function mockAgent() {
-  return createAgent({
+async function mockAgent() {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
   });
@@ -46,16 +47,16 @@ function mockAgent() {
 describe("phase40 dev-inspector security conformance (plan 040 Task 5, built public entrypoints)", () => {
   it("D1 bind: non-loopback is refused before binding; loopback binds a listener", async () => {
     // Constructor fail-close — no listener can exist for a refused host.
-    assert.throws(
-      () => createPrismDevInspector({ agent: mockAgent(), host: "0.0.0.0", port: 0 }),
+    await assert.rejects(
+      async () => createPrismDevInspector({ agent: await mockAgent(), host: "0.0.0.0", port: 0 }),
       (error) => error instanceof Error && /** @type {{code?: string}} */ (error).code === "ERR_PRISM_DEV_REMOTE_BIND",
     );
-    assert.throws(
-      () => createPrismDevInspector({ agent: mockAgent(), host: "0.0.0.0", remoteAuthorize: undefined }),
+    await assert.rejects(
+      async () => createPrismDevInspector({ agent: await mockAgent(), host: "0.0.0.0", remoteAuthorize: undefined }),
       (error) => error instanceof Error && /** @type {{code?: string}} */ (error).code === "ERR_PRISM_DEV_REMOTE_BIND",
     );
     // Loopback default binds and reports a loopback URL only.
-    const inspector = createPrismDevInspector({ agent: mockAgent(), port: 0 });
+    const inspector = createPrismDevInspector({ agent: await mockAgent(), port: 0 });
     await inspector.listen();
     try {
       assert.match(inspector.url, /^http:\/\/127\.0\.0\.1:\d+\//);
@@ -73,20 +74,20 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
     await events.append({
       ...base,
       id: "event-1",
-      type: "message_delta",
+      type: "message.delta",
       timestamp: "2026-09-05T00:00:00.000Z",
-      event: { type: "message_delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: `args leak ${secret}` } },
+      event: { type: "message.delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: `args leak ${secret}` } },
     });
     await events.append({
       ...base,
       id: "event-2",
-      type: "agent_finished",
+      type: "run.completed",
       timestamp: "2026-09-05T00:00:01.000Z",
-      event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" },
+      event: { type: "run.completed", sessionId: "session-1", runId: "stored-run", status: "completed" },
     });
 
     const inspector = createPrismDevInspector({
-      agent: mockAgent(),
+      agent: await mockAgent(),
       port: 0,
       redactor: createSecretRedactor([secret]),
       eventSource: events,
@@ -113,12 +114,12 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
     await events.append({
       ...base,
       id: "event-1",
-      type: "agent_finished",
+      type: "run.completed",
       timestamp: "2026-09-05T00:00:01.000Z",
-      event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" },
+      event: { type: "run.completed", sessionId: "session-1", runId: "stored-run", status: "completed" },
     });
     const inspector = createPrismDevInspector({
-      agent: mockAgent(),
+      agent: await mockAgent(),
       port: 0,
       eventSource: events,
       resolveRun: (input) => (input.runId === "public-run" ? { sessionId: "session-1", runId: "stored-run" } : undefined),
@@ -139,7 +140,7 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
     }
 
     // No event source wired at all: documented 404, never a silent re-run.
-    const bare = createPrismDevInspector({ agent: mockAgent(), port: 0 });
+    const bare = createPrismDevInspector({ agent: await mockAgent(), port: 0 });
     await bare.listen();
     try {
       const root = bare.url.replace(/\/prism$/, "");
@@ -154,7 +155,8 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
     const checkpoints = createMemoryCheckpointStore();
     let calls = 0;
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "dev-inspector",
       model: { provider: "mock", model: "offline" },
       provider: {
@@ -169,9 +171,9 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
           yield providerDone();
         },
       },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const inspector = createPrismDevInspector({ agent, port: 0, checkpoints });
     await inspector.listen();
@@ -205,7 +207,7 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
       const resumed = await post(`/runs/${run.runId}/decisions/${approvalId}`, { outcome: "allow_once", expectedVersion });
       const result = await resumed.json();
       assert.equal(resumed.status, 200, JSON.stringify(result));
-      assert.equal(result.status, "succeeded");
+      assert.equal(result.status, "completed");
       assert.equal(calls, 1, "approved tool executes exactly once");
     } finally {
       await inspector.close();

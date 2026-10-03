@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
 import type { JsonObject, ModelConfig } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
-import { bedrockRuntimeEndpoint, createBedrockProvider, createBedrockProviderPackage, signAwsRequest } from "../index.js";
+import { bedrockRuntimeEndpoint, createBedrockProvider, bedrockPackage, signAwsRequest } from "../index.js";
 
 describe("@arnilo/prism-providers/bedrock", () => {
   it("preserves region/private endpoint and signs requests", async () => {
@@ -59,7 +60,7 @@ describe("@arnilo/prism-providers/bedrock", () => {
 
   it("setup stays inert with zero fetch and zero credential resolution", async () => {
     const calls: unknown[] = [];
-    const pkg = createBedrockProviderPackage({
+    const pkg = bedrockPackage({
       region: "us-east-1",
       credential: () => {
         calls.push("credential");
@@ -71,11 +72,7 @@ describe("@arnilo/prism-providers/bedrock", () => {
         throw new Error("should not fetch");
       }) as typeof fetch,
     });
-    await pkg.setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as any);
+    await loadProviderPackage(pkg);
     assertNoFetches(calls);
   });
 
@@ -138,11 +135,11 @@ describe("@arnilo/prism-providers/bedrock", () => {
       now: new Date("2026-07-23T12:00:00.000Z"),
     });
     assert.match(headers.authorization, /Signature=[a-f0-9]{64}/);
-    const pkg = createBedrockProviderPackage({
+    const pkg = bedrockPackage({
       region: "us-east-1",
       credential: { accessKeyId: "a", secretAccessKey: "b" },
     });
-    assert.equal(pkg.name, "@arnilo/prism-providers/bedrock");
+    assert.equal(pkg.definition.name, "@arnilo/prism-providers.bedrock");
     const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
     assert.deepEqual(manifest.dependencies ?? {}, {});
   });

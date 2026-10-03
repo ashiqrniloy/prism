@@ -3,21 +3,21 @@ import { describe, it } from "bun:test";
 import { loadAgentRunState } from "../agent-run-state.js";
 import {
   AgentLoopStateError,
-  type AgentLoopStrategy,
   agentFingerprint,
   createAgent,
+  askEveryTool,
   createMemoryCheckpointStore,
   createMemorySessionStore,
-  generateValidateReviseLoop,
   type JsonValue,
+  type LoopStrategy,
   providerDone,
   providerTextDelta,
   resumeAgentRun,
   toolCallContent,
 } from "../index.js";
 
-/** Minimal custom loop: one provider turn, dispatch any calls, one more provider turn. */
-function customLoop(hooks: boolean, state: { turns: number; restored?: JsonValue }): AgentLoopStrategy {
+/** Minimal custom loop: one provider turn, dispatch any calls. */
+function customLoop(hooks: boolean, state: { turns: number; restored?: JsonValue }): LoopStrategy {
   return {
     name: "custom-loop",
     revision: "1",
@@ -30,11 +30,10 @@ function customLoop(hooks: boolean, state: { turns: number; restored?: JsonValue
           },
         }
       : {}),
-    async run(ctx) {
+    async run(run) {
       state.turns += 1;
-      const { calls } = await ctx.generate(await ctx.assemble([]));
-      for (const call of calls) await ctx.dispatchToolCall(call);
-      return undefined;
+      const turn = await run.turn();
+      if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
     },
   };
 }
@@ -64,7 +63,7 @@ describe("durable custom loops", () => {
     const checkpoints = createMemoryCheckpointStore();
     let providerCalls = 0;
     const state = { turns: 0 };
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "not-durable-loop",
       model: { provider: "mock", model: "demo" },
       provider: {
@@ -75,10 +74,10 @@ describe("durable custom loops", () => {
           yield providerDone();
         },
       },
-      loop: customLoop(false, state),
+      slots: { loop: customLoop(false, state) },
     });
     await assert.rejects(
-      () => agent.createSession().run("go", { runState: { checkpoints, definitionRevision: "1" } }),
+      async () => (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } }),
       (error: unknown) => error instanceof AgentLoopStateError && error.code === "ERR_PRISM_LOOP_NOT_DURABLE",
     );
     assert.equal(providerCalls, 0);
@@ -89,26 +88,28 @@ describe("durable custom loops", () => {
     const provider = twoTurnProvider();
     const state: { turns: number; restored?: JsonValue } = { turns: 0 };
     let calls = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "durable-custom-loop",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
       provider: provider(),
-      loop: customLoop(true, state),
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: () => {
-            calls += 1;
-            return { toolCallId: "call-1", name: "write", value: "done" };
+      slots: { store: createMemorySessionStore(), loop: customLoop(true, state) },
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: () => {
+              calls += 1;
+              return { toolCallId: "call-1", name: "write", value: "done" };
+            },
           },
-        },
-      ],
+        ],
+      },
     });
-    const first = await agent
-      .createSession({ id: "durable-loop-session" })
-      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
+    const first = await (await agent.session({ id: "durable-loop-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
+    });
     assert.equal(first.status, "suspended");
     assert.equal(calls, 0);
 
@@ -121,7 +122,7 @@ describe("durable custom loops", () => {
       { decision: "approve", expectedVersion: first.runState!.version! },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(calls, 1);
     assert.deepEqual(state.restored, { turns: 1 });
     assert.equal(state.turns, 2);
@@ -129,92 +130,38 @@ describe("durable custom loops", () => {
 
   it("fails closed when a snapshot is not JSON-compatible", async () => {
     const checkpoints = createMemoryCheckpointStore();
-    const loop: AgentLoopStrategy = {
+    const loop: LoopStrategy = {
       name: "bad-snapshot-loop",
       revision: "1",
       snapshot: () => ({ callback: () => undefined }) as unknown as JsonValue,
       restore: () => undefined,
-      async run(ctx) {
-        const { calls } = await ctx.generate(await ctx.assemble([]));
-        for (const call of calls) await ctx.dispatchToolCall(call);
-        return undefined;
+      async run(run) {
+        const turn = await run.turn();
+        if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "bad-snapshot",
       model: { provider: "mock", model: "demo" },
       provider: twoTurnProvider()(),
-      loop,
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write" }) }],
+      slots: { loop },
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write" }) }] },
     });
-    await assert.rejects(
-      () => agent.createSession().run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } }),
-      (error: unknown) => error instanceof Error && (error.cause as { code?: string } | undefined)?.code === "ERR_PRISM_LOOP_SNAPSHOT",
-    );
+    const refused = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
+    assert.equal(refused.status, "failed");
+    assert.equal(refused.error?.code, "ERR_PRISM_LOOP_SNAPSHOT");
   });
 
-  it("keeps generate-validate-revise attempt state across a durable suspension", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    let turn = 0;
-    const seen: string[] = [];
-    const loop = generateValidateReviseLoop({
-      toolCalls: "bounded",
-      maxRevisions: 2,
-      validator: (value: unknown) => {
-        seen.push(String(value));
-        return { ok: true as const, value };
-      },
-    });
-    const agent = createAgent({
-      id: "durable-gvr",
-      model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
-      provider: {
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call-1", "draft", {}) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("artifact-v1");
-          yield providerDone();
-        },
-      },
-      loop,
-      tools: [{ name: "draft", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "draft", value: "drafted" }) }],
-    });
-    const first = await agent
-      .createSession({ id: "gvr-session" })
-      .run("go", { runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true } });
-    assert.equal(first.status, "suspended");
-
-    const { state: stored } = await loadAgentRunState(checkpoints, { runId: first.runId });
-    assert.equal(stored.loopState?.name, "generate-validate-revise");
-    assert.equal(stored.loopState?.revision, "1");
-    const snap = stored.loopState?.snapshot as { attempts: number } | undefined;
-    assert.equal(snap?.attempts, 0);
-
-    const result = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      { decision: "approve", expectedVersion: first.runState!.version! },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(result.status, "succeeded");
-    assert.deepEqual(seen, ["artifact-v1"]);
-  });
-
-  it("changes the fingerprint when a custom loop revision changes", () => {
+  it("changes the fingerprint when a custom loop revision changes", async () => {
     const base = {
       id: "fp-loop",
       model: { provider: "mock", model: "demo" },
-      loop: { name: "custom-loop", revision: "1", run: async () => undefined } as AgentLoopStrategy,
+      slots: { loop: { name: "custom-loop", revision: "1", run: async () => undefined } as LoopStrategy },
     };
-    const a = agentFingerprint(createAgent(base), "1");
-    const b = agentFingerprint(createAgent({ ...base, loop: { ...base.loop, revision: "2" } }), "1");
-    const c = agentFingerprint(createAgent({ ...base, loop: undefined }), "1");
+    const a = agentFingerprint(await createAgent(base), "1");
+    const b = agentFingerprint(await createAgent({ ...base, slots: { loop: { ...base.slots.loop, revision: "2" } } }), "1");
+    const c = agentFingerprint(await createAgent({ ...base, slots: undefined }), "1");
     assert.notEqual(a, b);
     assert.notEqual(a, c);
   });

@@ -403,10 +403,10 @@ describe("ACP agent wiring", () => {
       deleteCheckpoint: (input) => baseCheckpoints.deleteCheckpoint(input),
     };
     const leases = createMemoryLeaseStore();
-    const prismAgent = createAgent({
+    const prismAgent = await createAgent({
       id: "recovery-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
@@ -419,11 +419,11 @@ describe("ACP agent wiring", () => {
     const makeApp = () =>
       createPrismAcpAgent<AcpAuthorization>({
         authorize: () => ({ ownership: { userId: "user-1" } }),
-        sessionFactory: () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "recovery-agent" }),
+        sessionFactory: async () => ({ session: await prismAgent.session({ id: "acp-session", create: true }), agentId: "recovery-agent" }),
         lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) }),
         sessionStore: store,
         sessions: {
-          load: async () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "recovery-agent" }),
+          load: async () => ({ session: await prismAgent.session({ id: "acp-session", create: true }), agentId: "recovery-agent" }),
         },
         recovery: { checkpoints, leases, ownerId: "replica-1" },
       });
@@ -534,10 +534,10 @@ describe("ACP agent wiring", () => {
     const controllerAbort = new Promise<void>((resolve) => {
       runAborted = resolve;
     });
-    const prismAgent = createAgent({
+    const prismAgent = await createAgent({
       id: "close-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
@@ -563,11 +563,11 @@ describe("ACP agent wiring", () => {
     });
     const app = createPrismAcpAgent<AcpAuthorization>({
       authorize: () => ({ ownership: { userId: "user-1" } }),
-      sessionFactory: () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "close-agent" }),
+      sessionFactory: async () => ({ session: await prismAgent.session({ id: "acp-session", create: true }), agentId: "close-agent" }),
       lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) }),
       sessionStore: store,
       sessions: {
-        load: async () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "close-agent" }),
+        load: async () => ({ session: await prismAgent.session({ id: "acp-session", create: true }), agentId: "close-agent" }),
       },
       recovery: { checkpoints, leases, ownerId: "replica-1" },
     });

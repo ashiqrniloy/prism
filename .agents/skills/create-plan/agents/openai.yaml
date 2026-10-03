@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create plan"
+  short_description: "Plan Prism phases with chores built into tasks"
+  default_prompt: "Use $create-plan to write the plan for the next roadmap phase."

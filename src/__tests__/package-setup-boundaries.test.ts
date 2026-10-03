@@ -1,14 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentSession,
-  type AIProvider,
-  createAgent,
-  createExtensionKernel,
-  type Extension,
-  type ModelConfig,
-  providerDone,
-} from "../index.js";
+import { type Session, type AIProvider, createAgent, type ModelConfig, providerDone } from "../index.js";
 
 // Optional-package setup invariants: every first-party capability package must
 // import from its public entrypoint and set up inertly (no network, no provider
@@ -16,12 +8,12 @@ import {
 // the former phase12/13/14 boundary tests (plan 079, Task 5).
 
 const providerPackages = [
-  ["openai", "createOpenAIProviderPackage", "listOpenAIModels", { apiKey: "fake-openai-key" }],
-  ["opencode-go", "createOpenCodeGoProviderPackage", "listOpenCodeGoModels", { apiKey: "fake-opencode-key" }],
-  ["openrouter", "createOpenRouterProviderPackage", "listOpenRouterModels", { apiKey: "fake-openrouter-key" }],
-  ["zai", "createZaiProviderPackage", "listZaiModels", { apiKey: "fake-zai-key" }],
-  ["kimi", "createKimiProviderPackage", "listKimiModels", { kimiApiKey: "fake-kimi-key" }],
-  ["neuralwatt", "createNeuralWattProviderPackage", "listNeuralWattModels", { apiKey: "fake-neuralwatt-key" }],
+  ["openai", "openaiPackage", "listOpenAIModels", { apiKey: "fake-openai-key" }],
+  ["opencode-go", "opencodeGoPackage", "listOpenCodeGoModels", { apiKey: "fake-opencode-key" }],
+  ["openrouter", "openrouterPackage", "listOpenRouterModels", { apiKey: "fake-openrouter-key" }],
+  ["zai", "zaiPackage", "listZaiModels", { apiKey: "fake-zai-key" }],
+  ["kimi", "kimiPackage", "listKimiModels", { kimiApiKey: "fake-kimi-key" }],
+  ["neuralwatt", "neuralwattPackage", "listNeuralWattModels", { apiKey: "fake-neuralwatt-key" }],
 ] as const;
 
 describe("optional package setup boundaries", () => {
@@ -33,38 +25,32 @@ describe("optional package setup boundaries", () => {
     }
   });
 
-  it("provider packages set up without network and register auth", async () => {
+  it("provider packages set up without network", async () => {
     for (const [name, factory, , options] of providerPackages) {
       let fetchCalls = 0;
-      const registered: unknown[] = [];
       const specifier = `../../packages/prism-providers/dist/${name}/index.js`;
-      const mod = (await import(specifier)) as Record<string, (options: unknown) => { setup(api: unknown): unknown }>;
-      await mod[factory]!({
+      const mod = (await import(specifier)) as Record<string, (options: unknown) => unknown>;
+      const instance = mod[factory]!({
         ...options,
         fetch: (() => {
           fetchCalls++;
           throw new Error("network disabled");
         }) as typeof fetch,
-      }).setup({
-        registerProvider: (item: unknown) => registered.push(item),
-        registerModel: (item: unknown) => registered.push(item),
-        registerAuthMethod: (item: unknown) => registered.push(item),
       });
+      const agent = await createAgent({
+        model: { provider: "probe", model: "probe" },
+        packages: [instance as never],
+      });
+      await agent.dispose();
       assert.equal(fetchCalls, 0, `${specifier} setup called fetch`);
-      assert.ok(
-        registered.some(
-          (item) => typeof item === "object" && item !== null && "kind" in item && (item.kind === "api_key" || item.kind === "oauth"),
-        ),
-        `${specifier} did not register auth`,
-      );
     }
   });
 
   it("compaction-llm exposes its public entrypoint and sets up inert", async () => {
     const mod = (await import("../../packages/memory/" + "dist/compaction/llm/index.js")) as Record<string, unknown>;
     for (const name of [
-      "createLlmCompactionStrategy",
-      "createLlmCompactionExtension",
+      "createLlmCompactor",
+      "llmCompaction",
       "prepareLlmCompaction",
       "serializeCompactionConversation",
       "collectFileOperations",
@@ -74,10 +60,10 @@ describe("optional package setup boundaries", () => {
     assert.equal(typeof mod.SUMMARIZATION_SYSTEM_PROMPT, "string");
 
     type LlmCompactionModule = {
-      createLlmCompactionStrategy(options: unknown): unknown;
-      createLlmCompactionExtension(options: unknown): Extension;
+      createLlmCompactor(options: unknown): unknown;
+      llmCompaction: { (): unknown };
     };
-    const { createLlmCompactionExtension, createLlmCompactionStrategy } = mod as unknown as LlmCompactionModule;
+    const { llmCompaction, createLlmCompactor } = mod as unknown as LlmCompactionModule;
     let calls = 0;
     const options = {
       summaryProvider: () => {
@@ -90,8 +76,9 @@ describe("optional package setup boundaries", () => {
       },
       summaryModel: { provider: "mock", model: "summary" },
     };
-    createLlmCompactionStrategy(options);
-    await createExtensionKernel().load([createLlmCompactionExtension(options)]);
+    createLlmCompactor(options);
+    const agent = await createAgent({ model: { provider: "mock", model: "summary" }, packages: [llmCompaction as never] });
+    await agent.dispose();
     assert.equal(calls, 0);
   });
 
@@ -99,8 +86,8 @@ describe("optional package setup boundaries", () => {
     const mod = (await import("../../packages/memory/" + "dist/compaction/observational-memory/index.js")) as Record<string, unknown>;
     for (const name of [
       "createObservationalMemoryRuntime",
-      "createObservationalMemoryCompactionStrategy",
-      "createObservationalMemoryExtension",
+      "createObservationalMemoryCompactor",
+      "observationalMemory",
       "foldObservationalMemoryLedger",
       "buildObservationalMemoryProjection",
       "renderObservationalMemory",
@@ -117,16 +104,16 @@ describe("optional package setup boundaries", () => {
 
     type ObservationalMemoryModule = {
       createObservationalMemoryRuntime(options: {
-        session: AgentSession;
+        session: Session;
         appendEntry(entry: unknown): Promise<void>;
         observation: { provider: AIProvider; model: ModelConfig };
       }): { status(): { inFlight: boolean } };
-      createObservationalMemoryExtension(options: {
+      observationalMemory(options: {
         recallTool: { getEntries(): readonly unknown[] };
         commands: { getEntries(): readonly unknown[] };
-      }): Extension;
+      }): unknown;
     };
-    const { createObservationalMemoryExtension, createObservationalMemoryRuntime } = mod as unknown as ObservationalMemoryModule;
+    const { observationalMemory, createObservationalMemoryRuntime } = mod as unknown as ObservationalMemoryModule;
     let providerCalls = 0;
     const workerProvider = {
       id: "mock",
@@ -135,7 +122,10 @@ describe("optional package setup boundaries", () => {
         yield providerDone();
       },
     } satisfies AIProvider;
-    const session = createAgent({ model: { provider: "mock", model: "memory" }, provider: workerProvider }).createSession({ id: "s1" });
+    const session = await (await createAgent({ model: { provider: "mock", model: "memory" }, provider: workerProvider })).session({
+      id: "s1",
+      create: true,
+    });
     const runtime = createObservationalMemoryRuntime({
       session,
       appendEntry: async () => {
@@ -144,9 +134,12 @@ describe("optional package setup boundaries", () => {
       observation: { provider: workerProvider, model: { provider: "mock", model: "memory" } },
     });
     assert.equal(runtime.status().inFlight, false);
-    await createExtensionKernel().load([
-      createObservationalMemoryExtension({ recallTool: { getEntries: () => [] }, commands: { getEntries: () => [] } }),
-    ]);
+    const loaded = await createAgent({
+      model: { provider: "mock", model: "memory" },
+      provider: workerProvider,
+      packages: [observationalMemory({ recallTool: { getEntries: () => [] }, commands: { getEntries: () => [] } }) as never],
+    });
+    await loaded.dispose();
     assert.equal(providerCalls, 0);
   });
 });

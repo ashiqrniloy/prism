@@ -21,6 +21,10 @@ export interface ErrorInfo {
   /** Provider backpressure hint (e.g. from a `Retry-After` header); retry policies
    *  honor it capped at their own `maxDelayMs`. */
   readonly retryAfterMs?: number;
+  /** The package (or `host` / `kernel`) whose hook handler failed the run; present with `hook`. */
+  readonly owner?: string;
+  /** The hook a failing handler was registered on, e.g. `model.request`. */
+  readonly hook?: string;
   readonly cause?: unknown;
 }
 

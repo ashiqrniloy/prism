@@ -756,9 +756,10 @@ function approvalAuthority(_tenantId, approver1Id, approver2Id, _requesterId, po
     const result = {
       sessionId: "session_erp_journey",
       runId: `run_erp_${randomUUID()}`,
-      status: "succeeded",
+      status: "completed",
       text: JSON.stringify(facts),
       content: [{ type: "text", text: "erp-journey" }],
+      messages: [],
     };
     const records = await scoreRun({ result, scorers: createErpInvariantScorers(), datasetId: erpInvariantDataset.id });
     const failed = records.filter((r) => r.score !== 1);

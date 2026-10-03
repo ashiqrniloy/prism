@@ -1,4 +1,5 @@
-import type { DelegatedAgentStep, DelegatedAgentStepKind, DelegatedAgentStepUsage } from "./contracts-protocol.js";
+import type { AgentEvent, DelegatedAgentStepData, DelegatedAgentStepKind, DelegatedAgentStepUsage } from "./contracts-protocol.js";
+import type { JsonValue } from "./contracts-core.js";
 
 export const MAX_DELEGATED_AGENT_EVENT_BYTES = 64 * 1024;
 export const MAX_DELEGATED_AGENT_ID_BYTES = 512;
@@ -7,7 +8,9 @@ export const MAX_DELEGATED_AGENT_STEP_INDEX = 1_000_000;
 export const MAX_DELEGATED_AGENT_DURATION_MS = 24 * 60 * 60 * 1000;
 export const MAX_DELEGATED_AGENT_TOKEN_COUNT = 1_000_000_000_000;
 
-export interface DelegatedAgentStepInput extends Omit<DelegatedAgentStep, "type" | "kind" | "state"> {
+export interface DelegatedAgentStepInput extends Omit<DelegatedAgentStepData, "kind" | "state"> {
+  readonly sessionId: string;
+  readonly runId: string;
   readonly kind: string;
   readonly state: string;
 }
@@ -25,7 +28,7 @@ export class DelegatedAgentStepError extends Error {
  * Builds the only safe core shape for delegated timeline metadata. Unknown step
  * kinds become `unknown`; unbounded or malformed identity/counter fields fail closed.
  */
-export function createDelegatedAgentStep(input: DelegatedAgentStepInput): DelegatedAgentStep {
+export function createDelegatedAgentStep(input: DelegatedAgentStepInput): Extract<AgentEvent, { readonly type: "package.event" }> {
   if (!input || typeof input !== "object") throw invalid("event");
   const state = input.state;
   if (state !== "active" && state !== "done" && state !== "error") throw invalid("state");
@@ -34,24 +37,28 @@ export function createDelegatedAgentStep(input: DelegatedAgentStepInput): Delega
     throw invalid("stepIndex");
   }
 
-  const event: DelegatedAgentStep = {
-    type: "delegated_agent_step",
+  const event: Extract<AgentEvent, { readonly type: "package.event" }> = {
+    type: "package.event",
     sessionId: boundedText(input.sessionId, "sessionId", MAX_DELEGATED_AGENT_ID_BYTES),
     runId: boundedText(input.runId, "runId", MAX_DELEGATED_AGENT_ID_BYTES),
-    adapterId: boundedText(input.adapterId, "adapterId", MAX_DELEGATED_AGENT_ID_BYTES),
-    externalConversationId: boundedText(input.externalConversationId, "externalConversationId", MAX_DELEGATED_AGENT_ID_BYTES),
-    stepIndex: input.stepIndex,
-    state,
-    kind,
-    ...(input.durationMs === undefined
-      ? {}
-      : { durationMs: boundedNumber(input.durationMs, "durationMs", MAX_DELEGATED_AGENT_DURATION_MS) }),
-    ...(input.usage === undefined ? {} : { usage: normalizeUsage(input.usage) }),
-    ...(input.toolName === undefined ? {} : { toolName: boundedText(input.toolName, "toolName", MAX_DELEGATED_AGENT_NAME_BYTES) }),
-    ...(input.subagentType === undefined
-      ? {}
-      : { subagentType: boundedText(input.subagentType, "subagentType", MAX_DELEGATED_AGENT_NAME_BYTES) }),
-    ...(input.detail === undefined ? {} : { detail: normalizeDetail(input.detail) }),
+    package: "kernel",
+    name: "agent.step",
+    data: {
+      adapterId: boundedText(input.adapterId, "adapterId", MAX_DELEGATED_AGENT_ID_BYTES),
+      externalConversationId: boundedText(input.externalConversationId, "externalConversationId", MAX_DELEGATED_AGENT_ID_BYTES),
+      stepIndex: input.stepIndex,
+      state,
+      kind,
+      ...(input.durationMs === undefined
+        ? {}
+        : { durationMs: boundedNumber(input.durationMs, "durationMs", MAX_DELEGATED_AGENT_DURATION_MS) }),
+      ...(input.usage === undefined ? {} : { usage: normalizeUsage(input.usage) }),
+      ...(input.toolName === undefined ? {} : { toolName: boundedText(input.toolName, "toolName", MAX_DELEGATED_AGENT_NAME_BYTES) }),
+      ...(input.subagentType === undefined
+        ? {}
+        : { subagentType: boundedText(input.subagentType, "subagentType", MAX_DELEGATED_AGENT_NAME_BYTES) }),
+      ...(input.detail === undefined ? {} : { detail: normalizeDetail(input.detail) }),
+    } as unknown as JsonValue,
   };
 
   if (utf8Bytes(JSON.stringify(event)) > MAX_DELEGATED_AGENT_EVENT_BYTES) throw invalid("event bytes");
@@ -75,7 +82,7 @@ function normalizeUsage(value: DelegatedAgentStepUsage): DelegatedAgentStepUsage
   return output;
 }
 
-function normalizeDetail(value: DelegatedAgentStep["detail"]): DelegatedAgentStep["detail"] {
+function normalizeDetail(value: DelegatedAgentStepData["detail"]): DelegatedAgentStepData["detail"] {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw invalid("detail");
   const referenceId =
     value.referenceId === undefined ? undefined : boundedOpaque(value.referenceId, "detail.referenceId", MAX_DELEGATED_AGENT_ID_BYTES);

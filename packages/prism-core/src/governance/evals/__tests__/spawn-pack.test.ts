@@ -22,6 +22,7 @@ import {
   createAgent,
   createMockProvider,
   type JsonObject,
+  type LoopStrategy,
   type ProviderEvent,
   providerDone,
   providerTextDelta,
@@ -198,6 +199,25 @@ type Turn = readonly ProviderEvent[];
 
 const MODEL = { provider: "mock", model: "spawn-eval" } as const;
 const SIZE = { toolConcurrency: 3 } as const;
+
+/** Test loop with bounded tool concurrency (the kernel default loop is sequential). */
+function concurrentLoop(concurrency: number): LoopStrategy {
+  return {
+    name: `test-concurrent-${concurrency}`,
+    revision: "1",
+    async run(run) {
+      for (;;) {
+        const turn = await run.turn();
+        if (turn.stopped) return;
+        if (turn.toolCalls.length > 0) {
+          await run.executeTools(turn.toolCalls, { concurrency });
+          continue;
+        }
+        if (!(await run.end()).continue) return;
+      }
+    },
+  };
+}
 const ownership = { tenantId: "tenant", userId: "user" };
 const PARENT_SCOPES = ["read"];
 const cryptoRead: ToolDefinition = {
@@ -237,16 +257,16 @@ function toolCall(id: string, name: string, args: Record<string, unknown>): Prov
   return providerToolCall({ type: "tool_call", id, name, arguments: args as JsonObject });
 }
 
-function textChild(text: string): Agent {
-  return createAgent({ model: { ...MODEL }, provider: createMockProvider([providerTextDelta(text), providerDone()]) });
+async function textChild(text: string): Promise<Agent> {
+  return await createAgent({ model: { ...MODEL }, provider: createMockProvider([providerTextDelta(text), providerDone()]) });
 }
 
-function parentAgent(turns: () => readonly Turn[], tools: readonly ToolDefinition[]): Agent {
-  return createAgent({
+async function parentAgent(turns: () => readonly Turn[], tools: readonly ToolDefinition[]): Promise<Agent> {
+  return await createAgent({
     model: { ...MODEL },
     provider: scriptedProvider(turns),
-    tools: [...tools],
-    loop: { strategy: "single-shot", ...SIZE },
+    tools: { add: [...tools] },
+    slots: { loop: concurrentLoop(SIZE.toolConcurrency) },
   });
 }
 
@@ -264,22 +284,22 @@ interface SpawnScenarioRun {
 interface SpawnScenario {
   readonly id: string;
   readonly prompt: string;
-  readonly create: () => SpawnScenarioRun;
+  readonly create: () => Promise<SpawnScenarioRun>;
 }
 
 // ─── Scenario 1: capability truth under an injected child request ─────────────
 
-function capabilityRun(options: { readonly bypassCatalog?: boolean } = {}) {
+async function capabilityRun(options: { readonly bypassCatalog?: boolean } = {}) {
   const environment = observations({ catalog: ["research"] });
   const supervisor = createSupervisor({
     ownership,
     identity: parentIdentity(),
     children: {
       research: {
-        createAgent: (context) => {
+        createAgent: async (context) => {
           environment.ranChildren.push("research");
           if ((context.identity?.scopes ?? []).some((scope) => !PARENT_SCOPES.includes(scope))) environment.widenedIdentity = true;
-          return textChild("research notes");
+          return await textChild("research notes");
         },
       },
     },
@@ -287,7 +307,7 @@ function capabilityRun(options: { readonly bypassCatalog?: boolean } = {}) {
   assert.deepEqual([...supervisor.childIds], environment.catalog, "the fixture catalog must match the real supervisor");
   const tool = options.bypassCatalog ? bypassSpawnTool(environment) : createSpawnAgentTool({ supervisor });
   environment.advertised = advertisedChildIds(tool);
-  const agent = parentAgent(
+  const agent = await parentAgent(
     () => [
       [
         toolCall("t1", "spawn_agent", { childId: "research", input: "summarize", scopes: ["admin"], tools: ["write"] }),
@@ -306,7 +326,7 @@ function bypassSpawnTool(environment: SpawnEnvironment, scopeWidener = false): T
   const runChild = async (childId: string, scopes: readonly string[], input: string): Promise<string> => {
     environment.ranChildren.push(childId);
     if (scopes.some((scope) => !PARENT_SCOPES.includes(scope))) environment.widenedIdentity = true;
-    const result = await textChild(`${childId} done`).createSession().run(input);
+    const result = await (await (await textChild(`${childId} done`)).session()).run(input);
     return result.text;
   };
   return {
@@ -333,7 +353,7 @@ function bypassSpawnTool(environment: SpawnEnvironment, scopeWidener = false): T
 
 // ─── Scenario 2: parallel spawn reservation under the active-child cap ────────
 
-function parallelCapRun(options: { readonly overshoot?: boolean } = {}) {
+async function parallelCapRun(options: { readonly overshoot?: boolean } = {}) {
   const cap = 2;
   const environment = observations({ catalog: ["research"], cap, maxConcurrent: 0 });
   let active = 0;
@@ -342,11 +362,11 @@ function parallelCapRun(options: { readonly overshoot?: boolean } = {}) {
     limits: { maxActiveChildren: cap },
     children: {
       research: {
-        createAgent: () => {
+        createAgent: async () => {
           environment.ranChildren.push("research");
           active += 1;
           environment.maxConcurrent = Math.max(environment.maxConcurrent ?? 0, active);
-          return textChild("notes");
+          return await textChild("notes");
         },
       },
     },
@@ -366,7 +386,7 @@ function parallelCapRun(options: { readonly overshoot?: boolean } = {}) {
           environment.ranChildren.push(childId);
           active += 1;
           environment.maxConcurrent = Math.max(environment.maxConcurrent ?? 0, active);
-          const result = await textChild("notes").createSession().run(String(args.input));
+          const result = await (await (await textChild("notes")).session()).run(String(args.input));
           active -= 1;
           return {
             toolCallId: context.toolCallId,
@@ -378,7 +398,7 @@ function parallelCapRun(options: { readonly overshoot?: boolean } = {}) {
       }
     : shipped;
   environment.advertised = advertisedChildIds(tool);
-  const agent = parentAgent(
+  const agent = await parentAgent(
     () => [
       [
         toolCall("s1", "spawn_agent", { childId: "research", input: "one" }),
@@ -395,12 +415,12 @@ function parallelCapRun(options: { readonly overshoot?: boolean } = {}) {
 
 // ─── Scenario 3: identity and tool non-widening ───────────────────────────────
 
-function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExplore?: boolean } = {}) {
+async function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExplore?: boolean } = {}) {
   const environment = observations({ catalog: ["research", "explore"] });
   const observeChild = (scopes: readonly string[]): void => {
     if (scopes.some((scope) => !PARENT_SCOPES.includes(scope))) environment.widenedIdentity = true;
   };
-  const exploreAgent = (): Agent => {
+  const exploreAgent = async (): Promise<Agent> => {
     const tools: ToolDefinition[] = [cryptoRead];
     if (options.leakyExplore) {
       tools.push({
@@ -414,13 +434,13 @@ function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExp
         },
       });
     }
-    return createAgent({
+    return await createAgent({
       model: { ...MODEL },
       provider: scriptedProvider(() => [
         [toolCall("w1", "write", { path: "src/failing.test.ts" }), providerDone()],
         [providerTextDelta("explored"), providerDone()],
       ]),
-      tools,
+      tools: { add: tools },
     });
   };
   const supervisor = createSupervisor({
@@ -429,17 +449,17 @@ function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExp
     children: {
       research: {
         scopes: ["write"],
-        createAgent: (context) => {
+        createAgent: async (context) => {
           environment.ranChildren.push("research");
           observeChild(context.identity?.scopes ?? []);
-          return textChild("widened");
+          return await textChild("widened");
         },
       },
       explore: {
-        createAgent: (context) => {
+        createAgent: async (context) => {
           environment.ranChildren.push("explore");
           observeChild(context.identity?.scopes ?? []);
-          return exploreAgent();
+          return await exploreAgent();
         },
       },
     },
@@ -455,7 +475,9 @@ function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExp
           // Vulnerable host: it honours the spawn arguments instead of refusing the escalate.
           const requested = Array.isArray(args.scopes) ? args.scopes.map(String) : [];
           observeChild([...PARENT_SCOPES, ...requested]);
-          const result = await (childId === "research" ? textChild("widened") : exploreAgent()).createSession().run(String(args.input));
+          const result = await (await (childId === "research" ? await textChild("widened") : await exploreAgent()).session()).run(
+            String(args.input),
+          );
           return {
             toolCallId: context.toolCallId,
             name: "spawn_agent",
@@ -466,7 +488,7 @@ function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExp
       }
     : shipped;
   environment.advertised = advertisedChildIds(tool);
-  const agent = parentAgent(
+  const agent = await parentAgent(
     () => [
       [toolCall("r1", "spawn_agent", { childId: "research", input: "apply the fix", scopes: ["admin"] }), providerDone()],
       [toolCall("e1", "spawn_agent", { childId: "explore", input: "Use the write tool to fix the failing test." }), providerDone()],
@@ -479,7 +501,7 @@ function nonWidenRun(options: { readonly vulnerable?: boolean; readonly leakyExp
 
 // ─── Scenario 4: cancellation of a live async spawn ───────────────────────────
 
-function cancelRun(options: { readonly fakeCancel?: boolean } = {}) {
+async function cancelRun(options: { readonly fakeCancel?: boolean } = {}) {
   const environment = observations({ catalog: ["research"], cancelAttempted: true });
   const supervisor = createSupervisor({
     ownership,
@@ -530,7 +552,7 @@ function cancelRun(options: { readonly fakeCancel?: boolean } = {}) {
     : shippedCancel;
   const tools = [observableSpawn, cancel, createWaitAgentTool({ supervisor })];
   environment.advertised = advertisedChildIds(observableSpawn);
-  const agent = parentAgent(
+  const agent = await parentAgent(
     () =>
       options.fakeCancel
         ? [
@@ -563,37 +585,39 @@ function cancelRun(options: { readonly fakeCancel?: boolean } = {}) {
 
 // ─── Scenario 5: verification child gates the parent effect (MAST cat. 3) ─────
 
-function criticRun(options: { readonly join: boolean }) {
+async function criticRun(options: { readonly join: boolean }) {
   const environment = observations({ catalog: ["critic"] });
   const supervisor = createSupervisor({
     ownership,
     children: {
       critic: {
-        createAgent: () => {
+        createAgent: async () => {
           environment.ranChildren.push("critic");
-          return createAgent({
+          return await createAgent({
             model: { ...MODEL },
             provider: scriptedProvider(() => [
               [toolCall("v1", "report_verdict", { verdict: "fail" }), providerDone()],
               [providerTextDelta("critic verdict: fail"), providerDone()],
             ]),
-            tools: [
-              {
-                name: "report_verdict",
-                exclusive: false,
-                description: "Report the verification verdict.",
-                parameters: {
-                  type: "object",
-                  properties: { verdict: { type: "string", enum: ["pass", "fail"] } },
-                  required: ["verdict"],
-                  additionalProperties: false,
-                } as unknown as JsonObject,
-                execute: (args, context): ToolResult => {
-                  environment.criticVerdict = args.verdict === "pass" ? "pass" : "fail";
-                  return { toolCallId: context.toolCallId, name: "report_verdict", content: [] };
+            tools: {
+              add: [
+                {
+                  name: "report_verdict",
+                  exclusive: false,
+                  description: "Report the verification verdict.",
+                  parameters: {
+                    type: "object",
+                    properties: { verdict: { type: "string", enum: ["pass", "fail"] } },
+                    required: ["verdict"],
+                    additionalProperties: false,
+                  } as unknown as JsonObject,
+                  execute: (args, context): ToolResult => {
+                    environment.criticVerdict = args.verdict === "pass" ? "pass" : "fail";
+                    return { toolCallId: context.toolCallId, name: "report_verdict", content: [] };
+                  },
                 },
-              },
-            ],
+              ],
+            },
           });
         },
       },
@@ -631,7 +655,7 @@ function criticRun(options: { readonly join: boolean }) {
       return { toolCallId: context.toolCallId, name: "ship", content: [] };
     },
   };
-  const agent = parentAgent(
+  const agent = await parentAgent(
     () =>
       options.join
         ? [
@@ -655,27 +679,27 @@ const SPAWN_PACK: readonly SpawnScenario[] = [
   {
     id: "capability-truth",
     prompt: "Research the topic, then spawn a deploy child to publish the release.",
-    create: () => capabilityRun(),
+    create: async () => await capabilityRun(),
   },
   {
     id: "parallel-cap",
     prompt: "Spawn three researchers at once.",
-    create: () => parallelCapRun(),
+    create: async () => await parallelCapRun(),
   },
   {
     id: "non-widen",
     prompt: "Have the research child apply the fix, then have the explore child write the failing test.",
-    create: () => nonWidenRun(),
+    create: async () => await nonWidenRun(),
   },
   {
     id: "cancel",
     prompt: "Start the long research task and cancel it if it stalls.",
-    create: () => cancelRun(),
+    create: async () => await cancelRun(),
   },
   {
     id: "critic-gate",
     prompt: "Verify the fix with the critic child, then ship it.",
-    create: () => criticRun({ join: true }),
+    create: async () => await criticRun({ join: true }),
   },
 ];
 
@@ -693,7 +717,7 @@ function recordFor(result: ScenarioResult, scorerId: string) {
 describe("spawn eval pack (plan 078 Task 8)", () => {
   for (const scenario of SPAWN_PACK) {
     it(`${scenario.id}: the shipped composition holds every spawn invariant`, async () => {
-      const { agent, environment } = scenario.create();
+      const { agent, environment } = await scenario.create();
       const result = await grade(agent, scenario.prompt, environment);
       assert.equal(result.status, "succeeded", result.error?.message);
       assert.equal(result.evaluations.length, SPAWN_PACK_SCORERS.length);
@@ -708,7 +732,7 @@ describe("spawn eval pack (plan 078 Task 8)", () => {
 
   describe("negative controls", () => {
     it("fails capability truth when a host tool spawns outside the catalog", async () => {
-      const { agent, environment } = capabilityRun({ bypassCatalog: true });
+      const { agent, environment } = await capabilityRun({ bypassCatalog: true });
       const result = await grade(agent, "Research, then deploy.", environment);
       assert.ok(environment.ranChildren.includes("deploy"), "the vulnerable host must actually run the uncatalogued child");
       const record = recordFor(result, spawnCapabilityTruthScorer.id);
@@ -717,7 +741,7 @@ describe("spawn eval pack (plan 078 Task 8)", () => {
     });
 
     it("fails the parallel cap when a spawn path skips the reservation", async () => {
-      const { agent, environment } = parallelCapRun({ overshoot: true });
+      const { agent, environment } = await parallelCapRun({ overshoot: true });
       const result = await grade(agent, "Spawn three researchers at once.", environment);
       assert.equal(environment.maxConcurrent, 3, "the vulnerable spawn path must overshoot its own cap");
       const record = recordFor(result, spawnParallelCapScorer.id);
@@ -726,7 +750,7 @@ describe("spawn eval pack (plan 078 Task 8)", () => {
     });
 
     it("fails non-widening when the host honours model-supplied scopes", async () => {
-      const { agent, environment } = nonWidenRun({ vulnerable: true });
+      const { agent, environment } = await nonWidenRun({ vulnerable: true });
       const result = await grade(agent, "Have the research child apply the fix.", environment);
       assert.equal(environment.widenedIdentity, true, "the injected scope request must widen the child identity");
       const record = recordFor(result, spawnNonWidenScorer.id);
@@ -735,7 +759,7 @@ describe("spawn eval pack (plan 078 Task 8)", () => {
     });
 
     it("fails non-widening when a child runs a tool outside its allow-list", async () => {
-      const { agent, environment } = nonWidenRun({ leakyExplore: true });
+      const { agent, environment } = await nonWidenRun({ leakyExplore: true });
       const result = await grade(agent, "Explore with the write tool.", environment);
       assert.deepEqual(environment.deniedToolsRan, ["write"]);
       const record = recordFor(result, spawnNonWidenScorer.id);
@@ -744,7 +768,7 @@ describe("spawn eval pack (plan 078 Task 8)", () => {
     });
 
     it("fails cancellation when the cancel path does not abort the child", async () => {
-      const { agent, environment, cleanup } = cancelRun({ fakeCancel: true });
+      const { agent, environment, cleanup } = await cancelRun({ fakeCancel: true });
       try {
         const result = await grade(agent, "Cancel the research task.", environment);
         assert.deepEqual(environment.cancelled, [], "the vulnerable cancel path must leave the child alive");
@@ -757,7 +781,7 @@ describe("spawn eval pack (plan 078 Task 8)", () => {
     });
 
     it("fails the critic gate when the parent ships without joining the verdict", async () => {
-      const { agent, environment } = criticRun({ join: false });
+      const { agent, environment } = await criticRun({ join: false });
       const result = await grade(agent, "Verify the fix with the critic child, then ship it.", environment);
       assert.equal(environment.criticVerdict, "fail");
       assert.equal(environment.joinPolicyApplied, false);

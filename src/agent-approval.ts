@@ -12,21 +12,21 @@ import {
   AgentRunStateOptions,
   DEFAULT_MAX_STICKY_DECISIONS,
   DecisionScope,
-  Guardrails,
+  Guardrail,
   HARD_MAX_PENDING_DECISIONS,
   JsonObject,
   MAX_DECISION_REASON_BYTES,
   MAX_ELICITATION_BYTES,
   NestedRunOutcome,
   PendingDecision,
-  RunDecision,
+  Decision,
   StickyDecision,
   ToolCallContent,
   ToolRegistry,
   ToolResult,
 } from "./contracts.js";
-import { guardrailRefusalText, runGuardrails } from "./guardrails.js";
-import type { AgentIdentity } from "./identity.js";
+import { guardrailRefusalText, runGuardrailList } from "./guardrails.js";
+import type { Principal } from "./identity.js";
 import { canonicalToolEffectJson } from "./tool-effects.js";
 
 /** Pending decisions of a suspended state, synthesizing the legacy single-approval shape. */
@@ -128,7 +128,7 @@ export function assertValidAgentRunResume(resume: AgentRunResume): void {
 }
 
 interface ResolvedRunDecisions {
-  readonly decisionsById: ReadonlyMap<string, RunDecision>;
+  readonly decisionsById: ReadonlyMap<string, Decision>;
   readonly stickyDecisions: readonly StickyDecision[];
   readonly remaining: readonly PendingDecision[];
 }
@@ -141,14 +141,14 @@ interface ResolvedRunDecisions {
 export async function resolveRunDecisions(input: {
   readonly agent: Agent;
   readonly state: StoredAgentRunState;
-  readonly decisions: readonly RunDecision[];
+  readonly decisions: readonly Decision[];
   readonly signal?: AbortSignal;
   /**
-   * Plan 104 T6: extra `tool_input` guardrails for decision-time revalidation of modified arguments —
+   * Plan 104 T6: extra `tool_input` pack rules for decision-time revalidation of modified arguments —
    * the resumed session's restored pack rules. Session-scoped on purpose: `agent.config.guardrails` is
    * never mutated, so no other session of that agent inherits the packs.
    */
-  readonly guardrails?: Guardrails;
+  readonly toolInputGuardrails?: readonly Guardrail<"tool_input">[];
 }): Promise<ResolvedRunDecisions> {
   const { agent, state, decisions } = input;
   if (decisions.length === 0) throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Decision batch must not be empty");
@@ -159,10 +159,10 @@ export async function resolveRunDecisions(input: {
   if (!pending?.length) throw new AgentDecisionError("ERR_PRISM_DECISION_UNKNOWN", "No pending approval decisions for this run");
   const byId = new Map(pending.map((entry) => [entry.approvalId, entry]));
   const seen = new Set<string>();
-  const decisionsById = new Map<string, RunDecision>();
+  const decisionsById = new Map<string, Decision>();
   const stickies: StickyDecision[] = [];
   const decidedAt = new Date().toISOString();
-  const { registry } = activeTools(agent.config.tools);
+  const { registry } = activeTools(agent);
   for (const decision of decisions) {
     if (seen.has(decision.approvalId)) {
       throw new AgentDecisionError("ERR_PRISM_DECISION_DUPLICATE", "Duplicate approval decision in batch");
@@ -185,7 +185,7 @@ export async function resolveRunDecisions(input: {
       if (target.kind !== "tool_approval" || !target.toolCallId) {
         throw new AgentDecisionError("ERR_PRISM_DECISION_SCOPE", "Modified arguments apply only to tool approvals");
       }
-      await validateModifiedArguments(agent, registry, state, target, decision.modifiedArguments, input.signal, input.guardrails);
+      await validateModifiedArguments(agent, registry, state, target, decision.modifiedArguments, input.signal, input.toolInputGuardrails);
     }
     if (decision.elicitation !== undefined) {
       if (target.kind !== "elicitation") {
@@ -226,7 +226,7 @@ async function validateModifiedArguments(
   target: PendingDecision,
   modified: JsonObject,
   signal?: AbortSignal,
-  extraGuardrails?: Guardrails,
+  extraGuardrails?: readonly Guardrail<"tool_input">[],
 ): Promise<void> {
   const invalid = (message: string, cause?: unknown) => new AgentDecisionError("ERR_PRISM_DECISION_INVALID", message, { cause });
   if (JSON.stringify(modified) === undefined || Buffer.byteLength(JSON.stringify(modified), "utf8") > MAX_ELICITATION_BYTES) {
@@ -245,15 +245,15 @@ async function validateModifiedArguments(
   const value: ToolCallContent = call
     ? { ...call, arguments: modified }
     : { type: "tool_call", id: target.toolCallId ?? "", name: toolName, arguments: modified };
-  // Plan 104 T6: the session's pack rules join the agent's own here, so an approval that edits
-  // arguments into a pack-violating state is refused at decision time instead of being accepted and
-  // stopped at dispatch. Only `tool_input` is evaluated by this function, so only it is merged.
-  const guardrails = extraGuardrails?.toolInput?.length
-    ? { ...agent.config.guardrails, toolInput: [...(agent.config.guardrails?.toolInput ?? []), ...extraGuardrails.toolInput] }
-    : agent.config.guardrails;
-  const guarded = await runGuardrails({
+  // Plan 104 T6: the session's pack rules are the only `tool_input` guardrails after Task 2 (the
+  // host `guardrails` container carries input/output only), so they join the agent's own here — an
+  // approval that edits arguments into a pack-violating state is refused at decision time instead of
+  // being accepted and stopped at dispatch.
+  const guards = extraGuardrails ?? [];
+  if (guards.length === 0) return;
+  const guarded = await runGuardrailList({
     stage: "tool_input",
-    guardrails,
+    guards,
     value,
     context: {
       sessionId: state.sessionId,
@@ -335,10 +335,10 @@ export interface ActiveDurableRun extends ActiveDurableRunExtras {
   state?: StoredAgentRunState;
   version: number;
   /** Validated decisions driving the pending-call replay on a resumed run. */
-  readonly decisions?: ReadonlyMap<string, RunDecision>;
+  readonly decisions?: ReadonlyMap<string, Decision>;
 }
 
 /** Compact redacted principal reference used in decision scopes; never a credential. */
-export function decisionIdentityRef(identity: AgentIdentity | undefined): string | undefined {
-  return identity ? `${identity.tenantId}:${identity.principal.kind}:${identity.principal.id}` : undefined;
+export function decisionPrincipalRef(principal: Principal | undefined): string | undefined {
+  return principal?.id;
 }

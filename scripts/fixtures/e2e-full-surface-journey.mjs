@@ -38,7 +38,7 @@ await section("@arnilo/prism: .", async () => {
   const provider = prism.createMockProvider([prism.providerTextDelta("pong"), prism.providerDone()], {
     onRequest: (request) => seen.push(request),
   });
-  const agent = prism.createAgent({
+  const agent = await prism.createAgent({
     model: {
       provider: "mock",
       model: "reasoner-1",
@@ -49,8 +49,8 @@ await section("@arnilo/prism: .", async () => {
     instructions: "reply exactly: pong",
     thinkingLevel: "low",
   });
-  const session = prism.createAgentSession({ agent });
-  const result = await session.prompt("say pong");
+  const session = await agent.session();
+  const result = await session.run("say pong");
   assert.ok(result, "mock-provider session must complete a run");
   assert.equal(seen.length, 1, "mock run must produce exactly one generate request");
   const generated = seen[0];
@@ -87,13 +87,7 @@ await section("@arnilo/prism: .", async () => {
     call: { id: "t1", name: "echo", arguments: { text: "hi" } },
     registry,
     context: { sessionId: "s-1", runId: "r-1", toolCallId: "t1", signal: new AbortController().signal, metadata: {} },
-    identity: {
-      tenantId: "t",
-      principal: { kind: "agent", id: "a" },
-      scopes: ["probe"],
-      issuedAt: new Date().toISOString(),
-      verified: true,
-    },
+    principal: { kind: "agent", id: "a" },
   });
   assert.match(JSON.stringify(dispatched), /"hi"/, "tool dispatch must round-trip");
   assert.equal(prism.createSecretRedactor(["s3cret"]).redact("a s3cret b"), "a [REDACTED] b");
@@ -151,6 +145,7 @@ for (const sub of ["providers/openai-compatible", "providers/transport", "provid
 
 await section("@arnilo/prism: testing/* conformance helpers", async () => {
   const helpers = [
+    "testing",
     "testing/provider-conformance",
     "testing/agent-event-source-conformance",
     "testing/state-concurrency-conformance",
@@ -158,7 +153,6 @@ await section("@arnilo/prism: testing/* conformance helpers", async () => {
     "testing/compaction-conformance",
     "testing/tool-conformance",
     "testing/tool-effect-store-conformance",
-    "testing/extension-conformance",
     "testing/persistence-schema",
     "testing/run-ledger-conformance",
     "testing/feedback",
@@ -178,7 +172,7 @@ await section("@arnilo/prism: node/* node adapters", async () => {
   const trust = await import("@arnilo/prism/node/trust");
   const jsonl = await import("@arnilo/prism/node/session-store-jsonl");
   const contributions = await import("@arnilo/prism/node/contribution-discovery");
-  const injectors = await import("@arnilo/prism/node/instruction-injectors");
+  const injectors = await import("@arnilo/prism/node/instruction-sources");
   const prompts = await import("@arnilo/prism/node/system-prompts");
   const agents = await import("@arnilo/prism/node/agent-definitions");
   assert.equal(typeof config.defaultUserConfigPath, "function");
@@ -190,7 +184,7 @@ await section("@arnilo/prism: node/* node adapters", async () => {
   const store = jsonl.createJsonlSessionStore(dir);
   assert.ok(store, "jsonl session store must construct over a directory");
   assert.equal(typeof contributions.discoverContributions, "function");
-  assert.equal(typeof injectors.loadInstructionInjectors, "function");
+  assert.equal(typeof injectors.loadInstructionSources, "function");
   assert.equal(typeof prompts.loadSystemPromptFiles, "function");
   assert.equal(typeof agents.discoverAgentBundles, "function");
 });
@@ -621,7 +615,7 @@ await section("@arnilo/prism-coding-tools: computer-use-linux + dev", async () =
 
 await section("@arnilo/prism-coding-tools: persona extension", async () => {
   const impeccable = await import("@arnilo/prism-coding-tools/impeccable");
-  assert.ok(impeccable.createImpeccableExtension, "impeccable extension factory must resolve");
+  assert.ok(impeccable.impeccable, "impeccable package factory must resolve");
 });
 
 // ---------------------------------------------------------------------------

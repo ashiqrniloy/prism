@@ -86,10 +86,10 @@ async function refusalsOf(store: MemorySessionStore, sessionId: string): Promise
 /** Step 1: two built-in packs on one session; the blocked calls name the rule that refused them. */
 async function blockedCalls(executed: string[]): Promise<readonly { tool: string; message: string }[]> {
   const store = createMemorySessionStore();
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "pack-demo-block",
     model: { ...MODEL },
-    store,
+    slots: { store },
     provider: scriptedProvider([
       [
         call("c1", "shell", { command: "git push origin main --force" }),
@@ -98,15 +98,15 @@ async function blockedCalls(executed: string[]): Promise<readonly { tool: string
       ],
       FINISH,
     ]),
-    tools: [recordingTool("shell", executed), recordingTool("write", executed)],
+    tools: { add: [recordingTool("shell", executed), recordingTool("write", executed)] },
   });
   const sessionConfig: AgentSessionConfig = {
     guardrailPacks: ["destructive-commands", { id: "coding-standard", options: { cwd: "/repo", roots: ["/repo"] } }],
   };
-  const result = await agent.createSession({ id: "pack-block", ...sessionConfig }).run("redeploy and tidy the tests");
+  const result = await (await agent.session({ ...sessionConfig })).run("redeploy and tidy the tests");
   const refusals = await refusalsOf(store, result.sessionId);
   for (const refusal of refusals) console.log(`step 1 built-in packs: ${refusal.tool} refused — ${refusal.message}`);
-  assert.equal(result.status, "succeeded", "a blocked tool call does not fail the run");
+  assert.equal(result.status, "completed", "a blocked tool call does not fail the run");
   assert.deepEqual(executed, [], "neither refused call reached its tool");
   assert.equal(refusals.length, 2, "both calls were refused");
   assert.match(refusals[0]?.message ?? "", /pack:destructive-commands\/no-force-push/);
@@ -116,12 +116,12 @@ async function blockedCalls(executed: string[]): Promise<readonly { tool: string
 
 /** Step 2: the same denial graded on the execution timeline, which is what release evidence reads. */
 async function scoredScenario(executed: string[]): Promise<string> {
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "pack-demo-eval",
     model: { ...MODEL },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider: scriptedProvider([[call("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH]),
-    tools: [recordingTool("shell", executed)],
+    tools: { add: [recordingTool("shell", executed)] },
   });
   const scenario = await runScenario({
     agent,
@@ -156,22 +156,22 @@ async function durableAsk(executed: string[]): Promise<{ rule?: string; dispatch
       },
     ],
   };
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "pack-demo-ask",
     model: { ...MODEL },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider: scriptedProvider([
       [call("d1", "deploy", { version: "prod-7" }), providerDone()],
       [providerTextDelta("shipped"), providerDone()],
     ]),
-    tools: [recordingTool("deploy", executed)],
+    tools: { add: [recordingTool("deploy", executed)] },
   });
-  const session = agent.createSession({ id: "pack-ask", guardrailPacks: [askPack] });
+  const session = await agent.session({ guardrailPacks: [askPack] });
   // `persistSessionState` is what carries the inline pack's pattern rules to the resumed session.
   let result = await session.run("ship prod-7", {
     runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
   });
-  const pending = result.interruption?.pendingDecisions?.[0];
+  const pending = result.pending?.[0];
   if (pending === undefined) throw new Error(`expected a durable ask suspension, got ${result.status}`);
   console.log(`step 3 ask gate: suspended on ${pending.guardrail} — ${pending.reason}`);
   assert.deepEqual(executed, [], "the gated call did not dispatch before the decision");
@@ -185,7 +185,7 @@ async function durableAsk(executed: string[]): Promise<{ rule?: string; dispatch
     { checkpoints, definitionRevision: "1" },
   );
   console.log(`step 3 ask gate: approved → run ${result.status}, dispatched ${executed.join(", ")}`);
-  assert.equal(result.status, "succeeded");
+  assert.equal(result.status, "completed");
   assert.deepEqual(executed, ["deploy"], "the approved call dispatched exactly once");
   return { rule: pending.guardrail, dispatched: executed };
 }
@@ -195,17 +195,17 @@ async function secretRefusal(executed: string[]): Promise<string> {
   // Obviously fake and deliberately short of a real key shape: no credential is ever a literal here.
   const fakeToken = "sk-TESTONLYFAKEKEY1";
   const store = createMemorySessionStore();
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "pack-demo-secret",
     model: { ...MODEL },
-    store,
+    slots: { store },
     provider: scriptedProvider([
       [call("s1", "write", { path: "/repo/.env.example", content: `TOKEN=${fakeToken}` }), providerDone()],
       FINISH,
     ]),
-    tools: [recordingTool("write", executed)],
+    tools: { add: [recordingTool("write", executed)] },
   });
-  const result = await agent.createSession({ id: "pack-secret", guardrailPacks: ["secrets-hygiene"] }).run("write the example env file");
+  const result = await (await agent.session({ guardrailPacks: ["secrets-hygiene"] })).run("write the example env file");
   const refusal = (await refusalsOf(store, result.sessionId))[0];
   console.log(`step 4 secrets hygiene: ${refusal?.tool} refused — ${refusal?.message}`);
   assert.match(refusal?.message ?? "", /pack:secrets-hygiene\/no-secret-material-in-arguments/);

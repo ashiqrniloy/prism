@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentRunResult } from "@arnilo/prism";
+import type { RunResult } from "@arnilo/prism";
 import { createErpInvariantScorers, ERP_INVARIANT_SCHEMA_VERSION, erpInvariantDataset, scoreRun } from "../index.js";
 
 /**
@@ -12,13 +12,14 @@ import { createErpInvariantScorers, ERP_INVARIANT_SCHEMA_VERSION, erpInvariantDa
  * absent/false makes its scorer fail and no weighted average hides it.
  */
 
-function result(facts: unknown): AgentRunResult {
+function result(facts: unknown): RunResult {
   return {
     sessionId: "session_erp",
     runId: "run_erp",
-    status: "succeeded",
+    status: "completed",
     text: JSON.stringify(facts),
     content: [{ type: "text", text: "erp-journey" }],
+    messages: [],
   };
 }
 
@@ -147,7 +148,7 @@ describe("createErpInvariantScorers", () => {
   });
 
   it("treats malformed result text as a total failure (no hidden pass)", async () => {
-    const malformed: AgentRunResult = { ...result(passingFacts()), text: "not-json" };
+    const malformed: RunResult = { ...result(passingFacts()), text: "not-json" };
     const records = await scoreRun({ result: malformed, scorers: createErpInvariantScorers() });
     assert.equal(records.length, SCORER_IDS.length);
     for (const record of records) {

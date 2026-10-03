@@ -1,32 +1,27 @@
-import { createExtensionKernel, createMockProvider, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
+import { createAgent, createMockProvider, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
+import { openaiPackage } from "@arnilo/prism-providers/openai";
 
-// Register a provider package through the extension kernel and resolve
-// providers/models from host-owned registries. Uses a fake API key.
-// `createOpenAIProviderPackage` is structurally an Extension (name + setup),
-// so the kernel can load it directly.
+// Load a provider package, then resolve a host-owned mock from host registries.
+// No network, no real credentials.
 export async function demo() {
-  const kernel = createExtensionKernel();
-  await kernel.load([createOpenAIProviderPackage({ apiKey: () => "fake-openai-key" })]);
+  const agent = await createAgent({
+    model: { provider: "mock", model: "demo" },
+    provider: createMockProvider([providerDone()], { id: "mock" }),
+    packages: [openaiPackage({ apiKey: () => "fake-openai-key" })],
+  });
+  await agent.dispose();
 
   const mock = createMockProvider([providerDone()]);
   const providerRegistry = createProviderRegistry([mock]);
   const modelRegistry = createModelRegistry([{ provider: "mock", model: "demo" }]);
-
-  providerRegistry.register(mock);
-  modelRegistry.register({ provider: "mock", model: "demo" });
-
   return {
     provider: providerRegistry.resolve("mock").id,
     model: modelRegistry.resolve("mock", "demo").model,
   };
 }
 
-// Runnable end-to-end demo: `node examples/provider-registration.ts` (Node 24
-// strips types natively). No network, no real credentials.
 export async function main() {
-  const result = await demo();
-  console.log(JSON.stringify(result));
+  console.log(JSON.stringify(await demo()));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

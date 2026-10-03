@@ -1,4 +1,4 @@
-import type { ContextProvider, JsonObject, Message, SecretRedactor } from "@arnilo/prism";
+import type { JsonObject, Message, SecretRedactor } from "@arnilo/prism";
 import type { Embedder, MemoryVectorRecord, RagAccessConstraint, VectorStore } from "../types.js";
 
 export type { RagAccessConstraint, SourceAccessGrant } from "../types.js";
@@ -281,4 +281,5 @@ export interface RagContextProviderOptions extends Omit<RetrieveContextOptions, 
   readonly query?: string | ((context: { readonly messages: readonly Message[] }) => string | undefined);
 }
 
-export type RagContextProvider = ContextProvider;
+/** A `context.build` handler projected from the retrieved RAG context for one turn. */
+export type RagContextBuild = (hooks: import("@arnilo/prism").HookRegistrar, options: RagContextProviderOptions) => void;

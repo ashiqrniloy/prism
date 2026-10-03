@@ -142,7 +142,7 @@ describe("Per-run model/provider/effort switching", () => {
       const session = (tui as any).session;
       void (async () => {
         for await (const event of session.subscribe({ acrossRuns: true })) {
-          if (event.type === "provider_turn_started") providerIds.push(event.metadata.providerId);
+          if (event.type === "turn.started") providerIds.push(event.metadata.providerId);
         }
       })();
 

@@ -21,7 +21,15 @@ export function loadRelease(root = process.cwd()) {
   const packagesDir = join(root, "packages");
   if (existsSync(packagesDir)) {
     for (const entry of readdirSync(packagesDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json"))) paths.push(`packages/${entry.name}`);
+      if (!entry.isDirectory()) continue;
+      if (existsSync(join(packagesDir, entry.name, "package.json"))) {
+        paths.push(`packages/${entry.name}`);
+        continue;
+      }
+      const group = join(packagesDir, entry.name);
+      for (const child of readdirSync(group, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        if (child.isDirectory() && existsSync(join(group, child.name, "package.json"))) paths.push(`packages/${entry.name}/${child.name}`);
+      }
     }
   }
   // Packages that own their version line (plan 140) come from release tooling data, never from a
@@ -115,6 +123,15 @@ export function topologicalOrder(release) {
   return order;
 }
 
+/** `src/version.ts` carries the kernel version for `requires.prism`; keep it in step with the root manifest. */
+function syncKernelVersion(root, version) {
+  const file = join(root, "src", "version.ts");
+  if (!existsSync(file)) return;
+  const text = readFileSync(file, "utf8");
+  const next = text.replace(/(export const KERNEL_VERSION = ")[^"]*(";)/, `$1${version}$2`);
+  if (next !== text) writeFileSync(file, next);
+}
+
 export function bumpRelease(release, from, to) {
   const changed = [];
   for (const pkg of release.packages) {
@@ -127,6 +144,7 @@ export function bumpRelease(release, from, to) {
       }
     }
     writeFileSync(join(release.root, pkg.path, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    if (pkg.manifest.name === "@arnilo/prism") syncKernelVersion(release.root, to);
     changed.push(pkg.manifest.name);
   }
   return changed;
@@ -304,6 +322,7 @@ export function bumpPackage(release, name, type) {
   const to = incrementVersion(from, type);
   pkg.manifest.version = to;
   writeFileSync(join(release.root, pkg.path, "package.json"), `${JSON.stringify(pkg.manifest, null, 2)}\n`);
+  if (name === "@arnilo/prism") syncKernelVersion(release.root, to);
   return { name, from, to };
 }
 

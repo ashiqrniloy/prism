@@ -35,6 +35,30 @@ const EVENT_KEYS = [
   "truncated",
 ].sort();
 
+/** The kernel `attention.compiled` payloads of a run, with the envelope ids merged in for assertions. */
+function compiledEvents(events: readonly AgentEvent[]) {
+  return events
+    .filter(
+      (event): event is Extract<AgentEvent, { readonly type: "package.event" }> =>
+        event.type === "package.event" && event.name === "attention.compiled",
+    )
+    .map((event) => ({
+      type: event.type,
+      sessionId: event.sessionId,
+      runId: event.runId,
+      ...(event.data as {
+        used: number;
+        usedAfter: number;
+        inputCap: number;
+        triggerRatio: number;
+        droppedThinkingTurns: number;
+        stubbedToolResults: number;
+        stubbedBytes: number;
+        truncated: boolean;
+      }),
+    }));
+}
+
 const bigTool: ToolDefinition = {
   name: "echo",
   parameters: { type: "object", properties: {} },
@@ -57,8 +81,8 @@ function toolThenReply(): { provider: AIProvider; requests: ProviderRequest[] } 
   };
 }
 
-const agentWith = (provider: AIProvider, config: Partial<AgentConfig> = {}) =>
-  createAgent({ model, provider, tools: [bigTool], ...config });
+const agentWith = async (provider: AIProvider, config: Partial<AgentConfig> = {}) =>
+  await createAgent({ model, provider, tools: { add: [bigTool] }, ...config });
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -69,40 +93,40 @@ async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[
 describe("attention_compiled telemetry", () => {
   it("emits nothing when the compiler is off", async () => {
     const { provider } = toolThenReply();
-    const session = agentWith(provider).createSession({ id: "s" });
+    const session = await (await agentWith(provider)).session({ id: "s", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("seed: use the tool");
 
-    assert.deepEqual(
-      (await reader).filter((event) => event.type === "attention_compiled"),
-      [],
-    );
+    assert.deepEqual(compiledEvents(await reader), []);
   });
 
   it("emits nothing under the ratio", async () => {
     const { provider } = toolThenReply();
-    const session = agentWith(provider, { attentionCompiler: { maxInputTokens: 500_000 } }).createSession({ id: "s" });
+    const session = await (await agentWith(provider, { attentionCompiler: { maxInputTokens: 500_000 } })).session({
+      id: "s",
+      create: true,
+    });
     const reader = collect(session.subscribe());
 
     await session.run("seed: use the tool");
 
-    assert.deepEqual(
-      (await reader).filter((event) => event.type === "attention_compiled"),
-      [],
-    );
+    assert.deepEqual(compiledEvents(await reader), []);
   });
 
   it("emits one counts-only event for a mutated turn, before that turn's provider call", async () => {
     const { provider, requests } = toolThenReply();
-    const session = agentWith(provider, { attentionCompiler: { maxInputTokens: 120, keepLast: 0 } }).createSession({ id: "s" });
+    const session = await (await agentWith(provider, { attentionCompiler: { maxInputTokens: 120, keepLast: 0 } })).session({
+      id: "s",
+      create: true,
+    });
     const reader = collect(session.subscribe());
 
     await session.run("seed: use the tool");
     const events = await reader;
-    const compiled = events.filter((event) => event.type === "attention_compiled");
+    const compiled = compiledEvents(events);
 
-    assert.ok(compiled[0] && compiled[0].type === "attention_compiled");
+    assert.ok(compiled[0]);
     // Round 1 is the tiny pre-tool request (under the ratio, no event); round 2 carries the
     // 4 KB tool result, is over the ratio, and is the one turn that reports a mutation.
     assert.equal(requests.length, 2);
@@ -122,9 +146,9 @@ describe("attention_compiled telemetry", () => {
     // Message bytes minus the folded header the stub leaves behind, so payload-sized, not exact.
     assert.ok(first.stubbedBytes > 3_000, `stubbedBytes ${first.stubbedBytes} must be payload-sized`);
     assert.ok(first.usedAfter > 0);
-    const providerTurns = events.flatMap((event, index) => (event.type === "provider_turn_started" ? [index] : []));
+    const providerTurns = events.flatMap((event, index) => (event.type === "turn.started" ? [index] : []));
     assert.equal(providerTurns.length, 2);
-    const emittedAt = events.indexOf(first);
+    const emittedAt = events.findIndex((event) => event.type === "package.event" && event.name === "attention.compiled");
     assert.equal(emittedAt > (providerTurns[0] ?? -1) && emittedAt < (providerTurns[1] ?? -1), true, "emitted between round 1 and round 2");
     // Payload-free by construction: no field can hold message text, and the stub body never leaks.
     assert.deepEqual(Object.keys(first).sort(), EVENT_KEYS);
@@ -144,11 +168,13 @@ describe("attention_compiled telemetry", () => {
         yield providerDone();
       },
     };
-    const session = agentWith(provider, { attentionCompiler: { maxInputTokens: 120, keepLast: 0 } }).createSession({ id: "s", store });
+    const session = await (
+      await agentWith(provider, { attentionCompiler: { maxInputTokens: 120, keepLast: 0 }, slots: { store } })
+    ).session({ id: "s", create: true });
     const reader = collect(session.subscribe());
 
     await session.run("seed: use the tool");
-    const compiled = (await reader).filter((event) => event.type === "attention_compiled");
+    const compiled = compiledEvents(await reader);
 
     assert.equal(requests.length, 3);
     assert.equal(compiled.length, 2, "each over-ratio round reports, and the pre-tool round does not");

@@ -2,18 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   assembleProviderInput,
-  type ContextProvider,
   createDefaultInputBuilder,
-  createDefaultPromptBuilder,
-  createExtensionKernel,
   createLoadedSkillSet,
-  createMiddlewareRegistry,
   createSkillRegistry,
   type Message,
   type ResourceLoader,
   renderPromptTemplate,
   resolveActiveSkills,
-  resolveContextProviders,
   type ToolDefinition,
   type ToolResult,
 } from "../index.js";
@@ -180,41 +175,6 @@ describe("default input builder", () => {
     assert.equal(messages[1]?.content[0]?.type, "tool_result");
     assert.equal(text(messages[2]!), "Follow up");
   });
-
-  it("leaves input_assembly middleware to the assembler", async () => {
-    const middleware = createMiddlewareRegistry();
-    middleware.use<readonly Message[]>("input_assembly", (messages) => [
-      ...messages,
-      { role: "system", content: [{ type: "text", text: "middleware" }] },
-    ]);
-
-    // Builders never apply middleware; assembleProviderInput owns that seam.
-    assert.equal((await createDefaultInputBuilder().build("Hi")).length, 1);
-    assert.equal((await createDefaultInputBuilder().build("Hi", { middleware })).length, 1);
-  });
-
-  it("applies input_assembly middleware once even when a custom builder ignores it", async () => {
-    const middleware = createMiddlewareRegistry();
-    let calls = 0;
-    middleware.use<readonly Message[]>("input_assembly", (messages) => {
-      calls += 1;
-      return [...messages, { role: "system" as const, content: [{ type: "text" as const, text: "middleware" }] }];
-    });
-    const model = { provider: "mock", model: "demo" };
-    const customBuilder = {
-      name: "custom",
-      build: (input: string) => [{ role: "user" as const, content: [{ type: "text" as const, text: input }] }],
-    };
-
-    const request = await assembleProviderInput({ model, input: "Hi", middleware, inputBuilder: customBuilder });
-    assert.equal(calls, 1);
-    assert.ok(request.messages.some((message) => text(message) === "middleware"));
-
-    calls = 0;
-    const budgeted = await assembleProviderInput({ model, input: "Hi", middleware, contextBudget: { maxInputTokens: 10_000 } });
-    assert.equal(calls, 1);
-    assert.ok(budgeted.messages.some((message) => text(message) === "middleware"));
-  });
 });
 
 describe("assembleProviderInput session defaults", () => {
@@ -279,120 +239,10 @@ describe("prompt template rendering", () => {
   });
 });
 
-describe("extension contribution integration", () => {
-  it("extension registered input builder is inert until host uses it", async () => {
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "input",
-        setup: (api) => {
-          api.registerInputBuilder({ name: "custom-input", build: () => [{ role: "user", content: [{ type: "text", text: "custom" }] }] });
-        },
-      },
-    ]);
-
-    const defaultRequest = await assembleProviderInput({ model: { provider: "mock", model: "demo" }, input: "default" });
-    const customRequest = await assembleProviderInput({
-      model: { provider: "mock", model: "demo" },
-      input: "default",
-      inputBuilder: kernel.registries.inputBuilders.resolve("custom-input"),
-    });
-
-    assert.equal(text(defaultRequest.messages.at(-1)!), "default");
-    assert.equal(text(customRequest.messages.at(-1)!), "custom");
-  });
-
-  it("extension registered context provider is selected explicitly", async () => {
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "context",
-        setup: (api) => {
-          api.registerContextProvider({ name: "project", resolve: () => [{ title: "Project", content: "selected" }] });
-        },
-      },
-    ]);
-
-    const withoutContext = await assembleProviderInput({ model: { provider: "mock", model: "demo" }, input: "Hi" });
-    const withContext = await assembleProviderInput({
-      model: { provider: "mock", model: "demo" },
-      input: "Hi",
-      contextProviders: [kernel.registries.contextProviders.resolve("project")],
-    });
-
-    assert.equal(withoutContext.context?.length, 0);
-    assert.equal(withContext.context?.[0]?.title, "Project");
-  });
-
-  it("extension registered prompt builder can replace default", async () => {
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "prompt",
-        setup: (api) => {
-          api.registerPromptBuilder({
-            name: "custom-prompt",
-            build: () => [{ role: "system", content: [{ type: "text", text: "custom prompt" }] }],
-          });
-        },
-      },
-    ]);
-
-    const request = await assembleProviderInput({
-      model: { provider: "mock", model: "demo" },
-      input: "ignored",
-      promptBuilder: kernel.registries.promptBuilders.resolve("custom-prompt"),
-    });
-
-    assert.deepEqual(request.messages, [{ role: "system", content: [{ type: "text", text: "custom prompt" }] }]);
-  });
-
-  it("input context prompt middleware runs in documented order", async () => {
-    const order: string[] = [];
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "mw",
-        setup: (api) => {
-          api.use<readonly Message[]>("input_assembly", (messages) => {
-            order.push("input");
-            return messages;
-          });
-          api.use("context", (blocks: readonly { content: string }[]) => {
-            order.push("context");
-            return blocks;
-          });
-          api.use("prompt_build", (request) => {
-            order.push("prompt");
-            return request;
-          });
-          api.registerContextProvider({ name: "ctx", resolve: () => [{ content: "ctx" }] });
-        },
-      },
-    ]);
-
-    await assembleProviderInput({
-      model: { provider: "mock", model: "demo" },
-      input: "Hi",
-      contextProviders: [kernel.registries.contextProviders.resolve("ctx")],
-      middleware: kernel.middleware,
-    });
-
-    assert.deepEqual(order, ["input", "context", "prompt"]);
-  });
-
-  it("extension registered skill is selected explicitly before prompt use", async () => {
+describe("skill contribution integration", () => {
+  it("a skill is selected explicitly before prompt use", async () => {
     const tool: ToolDefinition = { name: "echo", execute: () => ({ toolCallId: "c", name: "echo" }) };
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "skill",
-        setup: (api) => {
-          api.registerSkill({ name: "brief", instructions: "Be brief.", toolNames: ["echo"] });
-        },
-      },
-    ]);
-    const registry = createSkillRegistry([kernel.registries.skills.resolve("brief")]);
+    const registry = createSkillRegistry([{ name: "brief", instructions: "Be brief.", toolNames: ["echo"] }]);
     const skills = resolveActiveSkills({ registry, names: ["brief"], tools: [tool] });
 
     const request = await assembleProviderInput({
@@ -407,120 +257,54 @@ describe("extension contribution integration", () => {
   });
 });
 
-describe("context resolution and prompt composition", () => {
-  it("runs context providers in order and passes context", async () => {
-    const calls: string[] = [];
-    const providers: ContextProvider[] = ["one", "two"].map((name) => ({
-      name,
-      resolve(context) {
-        calls.push(`${name}:${context.sessionId}:${context.runId}:${text(context.messages[0]!)}`);
-        return [{ title: name, content: name }];
-      },
-    }));
-
-    const blocks = await resolveContextProviders({
-      providers,
-      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-      sessionId: "s1",
-      runId: "r1",
-    });
-
-    assert.deepEqual(calls, ["one:s1:r1:hi", "two:s1:r1:hi"]);
-    assert.deepEqual(
-      blocks.map((block) => block.title),
-      ["one", "two"],
-    );
-  });
-
-  it("respects abort signal before later providers", async () => {
-    const controller = new AbortController();
-    const calls: string[] = [];
-    const providers: ContextProvider[] = [
-      {
-        name: "one",
-        resolve: () => {
-          calls.push("one");
-          controller.abort();
-          return [];
-        },
-      },
-      {
-        name: "two",
-        resolve: () => {
-          calls.push("two");
-          return [];
-        },
-      },
-    ];
-
-    await assert.rejects(() => resolveContextProviders({ providers, messages: [], signal: controller.signal }), /aborted/);
-    assert.deepEqual(calls, ["one"]);
-  });
-
-  it("context middleware can transform blocks", async () => {
-    const middleware = createMiddlewareRegistry();
-    middleware.use("context", (blocks: readonly { title?: string; content: string }[]) => [
-      ...blocks,
-      { title: "added", content: "middleware" },
-    ]);
-
-    const blocks = await resolveContextProviders({
-      providers: [{ name: "base", resolve: () => [{ title: "base", content: "context" }] }],
-      messages: [],
-      middleware,
-    });
-
-    assert.deepEqual(
-      blocks.map((block) => block.title),
-      ["base", "added"],
-    );
-  });
-
-  it("default prompt builder includes context skills tools and messages", async () => {
+describe("prompt composition", () => {
+  it("the kernel composition includes skills, tool text, and the current turn", async () => {
     const tool: ToolDefinition = { name: "echo", description: "Echo input", execute: () => ({ toolCallId: "c", name: "echo" }) };
-    const messages = await createDefaultPromptBuilder().build({
-      messages: [{ role: "user", content: [{ type: "text", text: "Question" }] }],
-      context: [{ title: "Project", content: "Context" }],
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Question",
       skills: [{ name: "brief", instructions: "Be brief." }],
       tools: [tool],
       skillsDisclosure: "eager",
     });
 
     assert.deepEqual(
-      messages.map((message) => message.role),
-      ["system", "system", "system", "user"],
+      request.messages.map((message) => message.role),
+      ["system", "system", "user"],
     );
-    assert.match(text(messages[0]!)!, /Project:\nContext/);
-    assert.match(text(messages[1]!)!, /Skill brief:\nBe brief\./);
-    assert.match(text(messages[2]!)!, /Available tools:\n- echo: Echo input/);
+    assert.match(text(request.messages[0]!)!, /Skill brief:\nBe brief\./);
+    assert.match(text(request.messages[1]!)!, /Available tools:\n- echo: Echo input/);
   });
 
-  it("default prompt builder progressive mode shows skill catalog only", async () => {
-    const messages = await createDefaultPromptBuilder().build({
-      messages: [{ role: "user", content: [{ type: "text", text: "Question" }] }],
+  it("progressive disclosure shows the skill catalog only", async () => {
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Question",
       skills: [{ name: "brief", description: "Be brief.", instructions: "Full instructions." }],
       skillsDisclosure: "progressive",
     });
-    assert.match(text(messages[0]!)!, /Skill brief: Be brief\./);
-    assert.doesNotMatch(text(messages[0]!)!, /Full instructions/);
+    assert.match(text(request.messages[0]!)!, /Skill brief: Be brief\./);
+    assert.doesNotMatch(text(request.messages[0]!)!, /Full instructions/);
   });
 
-  it("default prompt builder omits the tool text list for tool-capable models only", async () => {
+  it("the tool text list is omitted for tool-capable models only", async () => {
     const tool: ToolDefinition = { name: "echo", description: "Echo input", execute: () => ({ toolCallId: "c", name: "echo" }) };
-    const base = { messages: [{ role: "user" as const, content: [{ type: "text" as const, text: "Question" }] }], tools: [tool] };
-    const builder = createDefaultPromptBuilder();
+    const base = { input: "Question", tools: [tool] };
 
-    const capable = await builder.build({ ...base, model: { provider: "mock", model: "demo", capabilities: { tools: true } } });
+    const capable = await assembleProviderInput({
+      ...base,
+      model: { provider: "mock", model: "demo", capabilities: { tools: true } },
+    });
     assert.equal(
-      capable.some((message) => /Available tools:/.test(text(message) ?? "")),
+      capable.messages.some((message) => /Available tools:/.test(text(message) ?? "")),
       false,
     );
 
     // Unknown (undefined) or declared-false capability keeps the text (fail-safe for text-only providers).
     for (const capabilities of [undefined, { tools: false }]) {
-      const kept = await builder.build({ ...base, model: { provider: "mock", model: "demo", capabilities } });
+      const kept = await assembleProviderInput({ ...base, model: { provider: "mock", model: "demo", capabilities } });
       assert.equal(
-        kept.some((message) => /Available tools:/.test(text(message) ?? "")),
+        kept.messages.some((message) => /Available tools:/.test(text(message) ?? "")),
         true,
       );
     }
@@ -535,7 +319,6 @@ describe("context resolution and prompt composition", () => {
       summaries: ["Summary"],
       history: [{ role: "assistant" as const, content: [{ type: "text" as const, text: "old" }] }],
       attachments: [{ name: "schema.md", text: "stable schema" }],
-      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Context" }] }],
       tools: [tool],
     };
     const first = await assembleProviderInput({ ...common, input: "Ask A" });
@@ -547,7 +330,6 @@ describe("context resolution and prompt composition", () => {
       );
 
     assert.equal(text(first.messages[0]!), "System instruction:\nRules");
-    assert.equal(text(first.messages[1]!), "Project:\nContext");
     assert.deepEqual(
       JSON.parse(JSON.stringify(prefix(first.messages, "Ask A"))),
       JSON.parse(JSON.stringify(prefix(second.messages, "Ask B"))),
@@ -555,16 +337,12 @@ describe("context resolution and prompt composition", () => {
     assert.equal(first.messages.at(-1) ? text(first.messages.at(-1)!) : undefined, "Ask A");
     assert.equal(second.messages.at(-1) ? text(second.messages.at(-1)!) : undefined, "Ask B");
 
-    const changedContext = await assembleProviderInput({
-      ...common,
-      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Changed" }] }],
-      input: "Ask A",
-    });
+    // Only the trailing input differs, so everything ahead of it is byte-identical.
     assert.deepEqual(
-      JSON.parse(JSON.stringify(prefix(first.messages, "Project:\nContext"))),
-      JSON.parse(JSON.stringify(prefix(changedContext.messages, "Project:\nChanged"))),
+      JSON.parse(JSON.stringify(prefix(first.messages, "Ask A"))),
+      JSON.parse(JSON.stringify(prefix(second.messages, "Ask B"))),
     );
-    assert.deepEqual(changedContext.tools, first.tools);
+    assert.deepEqual(second.tools, first.tools);
   });
 
   it("cache-aware prompt order keeps loaded skill changes after the stable prefix", async () => {
@@ -573,7 +351,6 @@ describe("context resolution and prompt composition", () => {
       model: { provider: "mock", model: "demo", capabilities: { tools: true } },
       inputLayout: "cache_aware" as const,
       systemInstructions: "Stable rules",
-      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Dynamic context" }] }],
       skills: [skill],
       skillsDisclosure: "progressive" as const,
       input: "Ask",
@@ -675,7 +452,6 @@ describe("context resolution and prompt composition", () => {
       inputLayout: "legacy",
       input: "Ask",
       systemInstructions: "Rules",
-      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Context" }] }],
       skills: [{ name: "brief", instructions: "Be brief" }],
       skillsDisclosure: "eager",
       summaries: ["Summary"],
@@ -687,13 +463,14 @@ describe("context resolution and prompt composition", () => {
 
     assert.deepEqual(
       request.messages.map((message) => message.role),
-      ["system", "system", "system", "system", "assistant", "user", "user", "tool"],
+      ["system", "system", "system", "assistant", "user", "user", "tool"],
     );
-    assert.equal(text(request.messages[0]!), "Project:\nContext");
-    assert.equal(text(request.messages[2]!), "System instruction:\nRules");
-    assert.equal(text(request.messages[3]!), "Summary:\nSummary");
-    assert.equal(text(request.messages[5]!), "Ask");
-    assert.equal(text(request.messages[6]!), "Attachment notes.md:\nnotes");
+    // Legacy keeps the old whole-prompt order: context, skills, tools, then the message groups.
+    assert.equal(text(request.messages[0]!), "Skill brief:\nBe brief");
+    assert.equal(text(request.messages[1]!), "System instruction:\nRules");
+    assert.equal(text(request.messages[2]!), "Summary:\nSummary");
+    assert.equal(text(request.messages[4]!), "Ask");
+    assert.equal(text(request.messages[5]!), "Attachment notes.md:\nnotes");
     assert.deepEqual(request.tools, [tool]);
   });
 
@@ -706,23 +483,14 @@ describe("context resolution and prompt composition", () => {
         return { toolCallId: "c", name: "echo" };
       },
     };
-    const middleware = createMiddlewareRegistry();
-    middleware.use("prompt_build", (request: { tools?: readonly ToolDefinition[] }) => ({
-      ...request,
-      tools: [{ name: "bad", execute: () => ({ toolCallId: "bad", name: "bad" }) }],
-    }));
-
     const request = await assembleProviderInput({
       model: { provider: "mock", model: "demo" },
       input: "Hello",
-      contextProviders: [{ name: "project", resolve: () => [{ title: "Project", content: "Context" }] }],
       tools: [tool],
-      middleware,
     });
 
     assert.equal(executed, false);
     assert.deepEqual(request.tools, [tool]);
-    assert.equal(request.context?.[0]?.title, "Project");
     assert.equal(request.messages.at(-1)?.role, "user");
   });
 });

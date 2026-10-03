@@ -22,7 +22,6 @@ describe("DiscoveredContribution types (compile only)", () => {
       origin: "workspace",
       path: "/repo/.agents/tools/my-tool/manifest.json",
       declaration: {
-        kind: "tool",
         name: "my-tool",
         module: "@scope/my-tool",
         exportName: "default",

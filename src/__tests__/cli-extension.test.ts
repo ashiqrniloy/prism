@@ -25,11 +25,13 @@ function streams(input = "") {
   return { stdin: Readable.from(input), stdout: new MemoryWritable(), stderr: new MemoryWritable() };
 }
 
-function session(text = "Hello") {
-  return createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta(text), providerDone()]),
-  }).createSession();
+async function session(text = "Hello") {
+  return (
+    await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider: createMockProvider([providerTextDelta(text), providerDone()]),
+    })
+  ).session();
 }
 
 describe("cli --extension", () => {
@@ -37,17 +39,17 @@ describe("cli --extension", () => {
     await mkdir(TEST_DIR, { recursive: true });
     await writeFile(
       join(TEST_DIR, "fixture.js"),
-      `export function createExtension() {
-  return {
-    name: "fixture-ext",
-    setup(api) {
-      api.registerTool({
-        name: "echo_ext",
-        execute: (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo_ext", value: "ok" }),
-      });
-    },
-  };
-}
+      `import { definePackage } from "@arnilo/prism";
+export default definePackage({
+  name: "fixture-ext",
+  version: "1.0.0",
+  setup(prism) {
+    prism.tools.register({
+      name: "echo_ext",
+      execute: (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo_ext", value: "ok" }),
+    });
+  },
+});
 `,
       "utf8",
     );
@@ -67,9 +69,9 @@ describe("cli --extension", () => {
     let sawActivated = false;
     const code = await runCli(["--provider", "mock", "-p", "hi", "--extension", FIXTURE_REL], {
       ...io,
-      createSession: (options) => {
-        sawActivated = options.activatedExtensions?.tools.some((tool) => tool.name === "echo_ext") ?? false;
-        return session();
+      createSession: async (options) => {
+        sawActivated = (options.packages ?? []).some((pkg) => (typeof pkg === "function" ? pkg : pkg.definition).name === "fixture-ext");
+        return await session();
       },
     });
 
@@ -110,12 +112,12 @@ describe("cli --extension", () => {
   it("cli_extension_bare_package_with_allowlist_imports", async () => {
     process.env.PRISM_EXTENSION_ALLOWLIST = "@arnilo/prism";
     const io = streams();
-    // @arnilo/prism resolves and imports; it has no extension export, so the
+    // @arnilo/prism resolves and imports; it has no package export, so the
     // failure is the export-shape error — proving the allow-list gate passed.
     const code = await runCli(["--provider", "mock", "-p", "hi", "--extension", "@arnilo/prism"], io);
 
     assert.equal(code, 2);
-    assert.match(io.stderr.text(), /must export createExtension/);
+    assert.match(io.stderr.text(), /must export a definePackage/);
   });
 
   it("cli_extension_bad_export_usage_error", async () => {
@@ -126,7 +128,7 @@ describe("cli --extension", () => {
     );
 
     assert.equal(code, 2);
-    assert.match(io.stderr.text(), /must export createExtension/);
+    assert.match(io.stderr.text(), /must export a definePackage/);
   });
 
   it("cli_extension_missing_file_usage_error", async () => {

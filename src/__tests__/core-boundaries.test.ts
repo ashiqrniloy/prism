@@ -44,6 +44,7 @@ const contractsText = [...sourceFiles("src/contracts-core", () => true), "src/co
   .map((path) => readFileSync(path, "utf8"))
   .join("\n");
 const toolsText = readFileSync("src/tools.ts", "utf8");
+const contextBuildText = readFileSync("src/context-build.ts", "utf8");
 
 const DOMAIN_TERMS = ["workflow", "node", "step"];
 const PROVIDER_LITERALS = ["openrouter", "anthropic", "zai", "kimi", "opencode", "openai-codex", "chatgpt", "moonshot"];
@@ -124,21 +125,12 @@ describe("core contract seams stay domain-agnostic", () => {
     assert.equal(/\bworkflow\b/i.test(contractsText), false, "src/contracts.ts mentions workflow");
   });
 
-  it("agent loop and artifact contracts have no domain vocabulary", () => {
-    assertNoDomainVocabulary(anchoredBlock("// ponytail: AgentLoopStrategy"), "loop contract block");
+  it("artifact contracts have no domain vocabulary", () => {
     assertNoDomainVocabulary(anchoredBlock("export interface ArtifactValidation", "export "), "artifact contract block");
-    assertNoDomainVocabulary(
-      anchoredBlock("export interface AgentLoopStrategy", "export interface ArtifactValidation"),
-      "AgentLoop* block",
-    );
   });
 
   it("AgentEvent union has no domain vocabulary", () => {
     assertNoDomainVocabulary(anchoredBlock("export type AgentEvent =", "export interface ToolDefinition"), "AgentEvent union block");
-  });
-
-  it("instruction injector contract has no domain vocabulary", () => {
-    assertNoDomainVocabulary(anchoredBlock("export type InstructionTiming", "export "), "injector contract block");
   });
 
   it("system-prompt contract has no domain vocabulary", () => {
@@ -152,30 +144,26 @@ describe("core contract seams stay domain-agnostic", () => {
   });
 
   it("validators are host-shaped and not domain-narrowed", () => {
-    const artifactValidatorDecl = /export type ArtifactValidator<T> = \([\s\S]*?;/.exec(contractsText)?.[0] ?? "";
     const toolValidatorDecl = /export type ToolValidator = \([\s\S]*?;/.exec(toolsText)?.[0] ?? "";
-    assert.ok(artifactValidatorDecl.length > 0, "could not locate ArtifactValidator declaration");
-    assert.ok(/<T>/.test(artifactValidatorDecl), "ArtifactValidator is not generic over T");
-    assert.ok(/value:\s*T\b/.test(artifactValidatorDecl), "ArtifactValidator does not take value: T");
-    assert.ok(/ctx:\s*ArtifactContext/.test(artifactValidatorDecl), "ArtifactValidator does not take ctx: ArtifactContext");
     assert.ok(toolValidatorDecl.length > 0, "could not locate ToolValidator declaration");
     assert.ok(/tool:\s*ToolDefinition/.test(toolValidatorDecl), "ToolValidator does not take tool: ToolDefinition");
     assert.ok(/args:\s*JsonObject/.test(toolValidatorDecl), "ToolValidator does not take args: JsonObject");
     assert.ok(/context:\s*ToolExecutionContext/.test(toolValidatorDecl), "ToolValidator does not take context: ToolExecutionContext");
     for (const term of DOMAIN_TERMS) {
       assert.equal(new RegExp(`\\b${term}\\b`, "i").test(toolValidatorDecl), false, `ToolValidator mentions ${term}`);
-      assert.equal(new RegExp(`\\b${term}\\b`, "i").test(artifactValidatorDecl), false, `ArtifactValidator mentions ${term}`);
     }
   });
 
-  it("instruction contribution carries no tool or privilege fields", () => {
-    const decl = /export interface InstructionContribution[\s\S]*?\n}/.exec(contractsText)?.[0] ?? "";
-    assert.ok(decl.length > 0, "could not locate InstructionContribution declaration");
-    for (const forbidden of ["tools", "skills", "permissions", "toolsAllow", "execute"]) {
-      assert.equal(new RegExp(`\\b${forbidden}\\??\\s*:`).test(decl), false, `InstructionContribution declares ${forbidden}`);
+  it("a context source carries no tool or privilege fields", () => {
+    // `ContextSource` (src/context-build.ts) is the whole context contribution surface: text and
+    // context blocks, nothing that could grant a capability.
+    const decl = /export interface ContextSource \{[\s\S]*?\n}/.exec(contextBuildText)?.[0] ?? "";
+    assert.ok(decl.length > 0, "could not locate ContextSource declaration");
+    for (const forbidden of ["tools", "skills", "permissions", "toolsAllow", "execute", "hooks"]) {
+      assert.equal(new RegExp(`\\b${forbidden}\\??\\s*:`).test(decl), false, `ContextSource declares ${forbidden}`);
     }
-    for (const allowed of ["instructions?", "contextBlocks?", "when", "predicate?"]) {
-      assert.ok(new RegExp(`\\b${allowed.replace("?", "\\??")}\\s*:`).test(decl), `InstructionContribution missing ${allowed}`);
+    for (const allowed of ["name", "instructions?", "contextBlocks?"]) {
+      assert.ok(new RegExp(`\\b${allowed.replace("?", "\\??")}\\s*:`).test(decl), `ContextSource missing ${allowed}`);
     }
   });
 });

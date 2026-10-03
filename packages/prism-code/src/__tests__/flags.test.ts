@@ -207,12 +207,12 @@ test("mock provider end-to-end run via defineAgent from config", async () => {
 
   try {
     assert(assembled.agent);
-    assert(typeof assembled.createSession === "function");
-    const session = await assembled.createSession();
+    assert(typeof assembled.session === "function");
+    const session = await assembled.session();
     assert(session);
-    assert.equal(typeof session.prompt, "function");
+    assert.equal(typeof session.run, "function");
 
-    const result = await session.prompt("Ping test");
+    const result = await session.run("Ping test");
     assert(result);
   } finally {
     await assembled.dispose();

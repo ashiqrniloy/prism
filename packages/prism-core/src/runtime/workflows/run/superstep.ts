@@ -3,7 +3,7 @@
  * Wave-based superstep execution engine for cyclic workflow graphs and dynamic routing.
  */
 
-import type { AgentSession } from "@arnilo/prism";
+import type { Session } from "@arnilo/prism";
 import { WorkflowAbortError, WorkflowLoopLimitError, WorkflowRuntimeError, WorkflowSuperstepLimitError } from "../errors.js";
 import { createWorkflowEventBus } from "../events.js";
 import { DEFAULT_MAX_CONCURRENCY, DEFAULT_MAX_NESTED_DEPTH, DEFAULT_MAX_NODES } from "../limits.js";
@@ -51,7 +51,7 @@ export async function executeSuperstepScheduler(state: SchedulerState, options: 
   };
 
   let fatalError: unknown;
-  const activeSessions = new Map<string, AgentSession>();
+  const activeSessions = new Map<string, Session>();
 
   const abortAllSessions = () => {
     for (const session of activeSessions.values()) {

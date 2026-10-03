@@ -136,7 +136,7 @@ export function defineCommandCodeModel(config: CommandCodeModelConfig): ModelCon
 /**
  * Caller-gated Command Code model discovery via the public
  * `GET /provider/v1/models` endpoint. Never invoked by
- * `createCommandCodeProviderPackage` — hosts call this and pass results via
+ * `commandcodePackage` — hosts call this and pass results via
  * `models:`. Public endpoint: no auth header is emitted when no key resolves.
  * @see https://commandcode.ai/docs/provider
  */

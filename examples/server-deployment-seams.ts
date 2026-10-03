@@ -20,7 +20,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const drain = createPrismDrainController({ deadlineMs: 1_000 });
   const rateLimit = createMemoryRateLimiter({ maxRequests: 8, windowMs: 60_000 });
   const ownership = { tenantId: "demo", userId: "ops" };
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "offline" },
     provider: createMockProvider([providerTextDelta("deployed"), providerDone()]),
   });

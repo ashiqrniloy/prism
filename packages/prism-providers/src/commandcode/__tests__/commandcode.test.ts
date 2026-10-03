@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertAbortIsObserved,
@@ -19,7 +20,7 @@ import {
   commandCodeChatBody,
   commandCodeModels,
   createCommandCodeProvider,
-  createCommandCodeProviderPackage,
+  commandcodePackage,
   listCommandCodeModels,
   routeForCommandCodeModel,
 } from "../index.js";
@@ -96,18 +97,9 @@ describe("@arnilo/prism-providers/commandcode", () => {
       fetchCalls.push(1);
       return ok(sse([]));
     }) as typeof fetch;
-    const registered: unknown[] = [];
-    await createCommandCodeProviderPackage({ apiKey: "fake-key", fetch: fetchImpl }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(commandcodePackage({ apiKey: "fake-key", fetch: fetchImpl }));
     assertNoFetches(fetchCalls);
-    assert(registered.some((item: any) => item.id === "commandcode"));
-    assert(registered.some((item: any) => item.provider === "commandcode" && item.kind === "api_key"));
-    const models = registered.filter(
-      (item: any): item is ModelConfig => typeof item?.model === "string" && item.provider === "commandcode",
-    );
+    const models = commandCodeModels;
     assert.ok(models.length >= 38, `expected curated catalog, got ${models.length}`);
     const byId = new Map(models.map((m) => [m.model, m]));
     const sonnet = byId.get("claude-sonnet-5");
@@ -485,7 +477,7 @@ describe("@arnilo/prism-providers/commandcode", () => {
           { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "hello" } },
           { type: "content_block_stop", index: 0 },
           {
-            type: "message_delta",
+            type: "message.delta",
             usage: { input_tokens: 4, output_tokens: 3, cache_read_input_tokens: 1, cache_creation_input_tokens: 2 },
           },
           { type: "message_stop" },

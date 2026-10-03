@@ -263,12 +263,10 @@ interface PackScenarioRun {
 
 async function runPackScenario(scenario: PackScenario): Promise<PackScenarioRun> {
   const executed: string[] = [];
-  const agent: Agent = createAgent({
+  const agent: Agent = await createAgent({
     model: { ...MODEL },
     provider: scriptedProvider(scenario.script),
-    tools: [...scenario.tools(executed)],
-    // One dispatch at a time keeps denial order on the timeline equal to call order.
-    loop: { strategy: "single-shot", toolConcurrency: 1 },
+    tools: { add: [...scenario.tools(executed)] },
   });
   const result = await runScenario({
     agent,

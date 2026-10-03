@@ -43,7 +43,7 @@ export {
   type PrismCodeChecksConfig,
   type PrismCodeCompactionConfig,
   type PrismCodeCompactionOptionsConfig,
-  type PrismCodeCompactionStrategyKind,
+  type PrismCodeCompactionKind,
   type PrismCodeCompactionTriggerKind,
   type PrismCodeConfig,
   type PrismCodeConfigLayer,
@@ -125,7 +125,7 @@ export {
   writeState,
 } from "./home.js";
 export {
-  createCostTurnPolicy,
+  registerCostStop,
   PRISM_CODE_DEFAULT_LIMITS,
   type PrismCodeLimitsConfig,
   type PrismCodeLoopConfig,
@@ -176,8 +176,8 @@ export {
 } from "./observational-memory.js";
 export {
   CODING_SYSTEM_PROMPT,
-  createEnvironmentContextProvider,
-  type EnvironmentContextProviderOptions,
+  createEnvironmentContextSource,
+  type EnvironmentContextSourceOptions,
   type ResolvePrismCodeInstructionsOptions,
   resolvePrismCodeInstructions,
 } from "./prompt.js";

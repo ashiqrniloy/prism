@@ -1,12 +1,4 @@
-import {
-  createAgent,
-  createAgentSession,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -27,7 +19,7 @@ const provider = createMockProvider([
   providerUsage({ inputTokens: 10, outputTokens: 6, totalTokens: 16 }),
   providerDone(),
 ]);
-const summarizerAgent = createAgent({
+const summarizerAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
   instructions: "Synthesize research findings into a one-paragraph summary.",
@@ -85,7 +77,7 @@ export async function demo() {
     workflow,
     { topics: ["hooks", "signals", "suspense"] },
     {
-      agentFactory: () => createAgentSession({ agent: summarizerAgent }),
+      agentFactory: () => summarizerAgent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },

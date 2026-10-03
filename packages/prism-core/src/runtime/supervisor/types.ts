@@ -2,7 +2,8 @@ import type {
   Agent,
   AgentEvent,
   AgentIdentity,
-  AgentRunResult,
+  AgentRunStatus,
+  RunResult,
   BudgetAxisUsage,
   BudgetConsumedCounters,
   CheckpointStore,
@@ -65,7 +66,7 @@ export interface DelegationHandle {
 }
 
 /** A completed child result, or the terminal result of host cancellation. */
-export type DelegationWaitResult = AgentRunResult | { readonly delegationId: string; readonly status: "cancelled" };
+export type DelegationWaitResult = RunResult | { readonly delegationId: string; readonly status: "cancelled" };
 
 export interface DelegationWaitOptions {
   /** Stops this wait only; it does not cancel the delegated child. */
@@ -86,7 +87,7 @@ export interface DelegationChildContext {
   readonly threadId: string;
   readonly permission: PermissionPolicy;
   readonly signal: AbortSignal;
-  delegate(request: DelegationRequest): Promise<AgentRunResult>;
+  delegate(request: DelegationRequest): Promise<RunResult>;
 }
 
 export interface SupervisorChild {
@@ -123,9 +124,9 @@ export interface DelegationCompletion {
   readonly childId: string;
   readonly delegationId: string;
   readonly depth: number;
-  readonly status: AgentRunResult["status"] | "rejected";
+  readonly status: AgentRunStatus | "rejected";
   readonly text: string;
-  readonly usage?: AgentRunResult["usage"];
+  readonly usage?: RunResult["usage"];
   readonly error?: string;
 }
 
@@ -148,7 +149,7 @@ export type SupervisorEvent =
       readonly childId: string;
       readonly delegationId: string;
       readonly depth: number;
-      readonly status: AgentRunResult["status"];
+      readonly status: AgentRunStatus;
       readonly totalTokens: number;
     }
   | {
@@ -208,11 +209,11 @@ export type SupervisorEvent =
       readonly delegationId: string;
       readonly depth: number;
       readonly reason: string;
-      readonly status?: AgentRunResult["status"];
+      readonly status?: AgentRunStatus;
       readonly limit?: RunLimitBreach;
-      readonly stopReason?: AgentRunResult["stopReason"];
+      readonly stopReason?: RunResult["stopReason"];
       readonly usage?: Usage;
-      /** Plan-087 attribution carried by the child's own `AgentRunResult.attribution` on a ceiling death. */
+      /** Plan-087 attribution carried by the child's own `RunResult.attribution` on a ceiling death. */
       readonly consumed?: BudgetConsumedCounters;
       readonly closestOtherAxes?: readonly BudgetAxisUsage[];
       readonly recentToolCalls?: readonly ToolCallSummary[];
@@ -223,7 +224,7 @@ export type SupervisorEvent =
  * otherwise the terminal run status (`succeeded`/`failed`/`aborted`/`suspended`/`denied`) or
  * `rejected` for a host-hook denial. Same vocabulary as `delegation_finished.status`.
  */
-export type SupervisorChildOutcome = "idle" | "running" | AgentRunResult["status"] | "rejected";
+export type SupervisorChildOutcome = "idle" | "running" | AgentRunStatus | "rejected";
 
 /** One row of `Supervisor.summary()`; counters are incremental and survive terminal retention. */
 export interface SupervisorChildSummary {
@@ -269,15 +270,15 @@ export interface CreateSupervisorOptions {
   readonly childEventSink?: (event: AgentEvent) => void;
   /**
    * Opt-in supervisor-wide default report ceiling: projects a redacted, capped milestone subset
-   * of child `AgentEvent`s (`agent_started`/`finished`/`suspended`/`denied` and tool-execution
+   * of child `AgentEvent`s (`run.started`/`finished`/`suspended`/`denied` and tool-execution
    * events) onto the supervisor stream as `delegation_child_event`. Default off — the stream is
    * unchanged when unset/false. Per-child `policy.report` overrides it (lower or equal). Full
    * per-token streaming is out of scope.
    */
   readonly childEvents?: boolean;
   /**
-   * Durable child runs: with `checkpoints` + `definitionRevision`, every child runs with
-   * `interruptBeforeTool`; a child that suspends on pending decisions throws
+   * Durable child runs: with `checkpoints` + `definitionRevision`, every child runs with a host
+   * `tool.call` ask gate; a child that suspends on pending decisions throws
    * `AgentDelegationSuspendedError` so the hosting root run can surface them.
    */
   readonly checkpoints?: CheckpointStore;
@@ -290,7 +291,7 @@ export interface Supervisor {
   readonly childIds: readonly string[];
   /** Applies the supervisor's configured redactor to model-visible spawn results. */
   redact(value: string): string;
-  delegate(request: DelegationRequest): Promise<AgentRunResult>;
+  delegate(request: DelegationRequest): Promise<RunResult>;
   /** Starts a child without awaiting it. Set `lifetime: "session"` to detach it from the caller signal. */
   delegateAsync(request: DelegationRequest): Promise<DelegationHandle>;
   /** Joins one local async child. Wait is capped at this supervisor's timeout. */

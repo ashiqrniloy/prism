@@ -3,7 +3,7 @@
 import type { AgentContext, McpServer } from "@agentclientprotocol/sdk";
 import type {
   AgentRunLifecycle,
-  AgentSession,
+  Session,
   CheckpointStore,
   LeaseStore,
   OwnershipScope,
@@ -24,7 +24,7 @@ import type { AcpClientTerminals } from "../terminal-client.js";
 export interface AcpAuthorization extends AgUiAuthorization {}
 
 export interface AcpSessionBinding {
-  readonly session: AgentSession;
+  readonly session: Session;
   /** Optional host assertion passed to the durable lifecycle. */
   readonly agentId?: string;
   /** Optional tool registry; its `kind` metadata feeds ACP tool_call kinds (B4). */

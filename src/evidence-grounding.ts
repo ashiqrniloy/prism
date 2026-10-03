@@ -1,4 +1,5 @@
-import type { ContentBlock, Guardrail, GuardrailContext, ToolResult } from "./contracts.js";
+import type { ContentBlock, Message, ToolResult } from "./contracts.js";
+import type { HookContext, HookRejection } from "./hooks/index.js";
 
 const MAX_EVIDENCE_FIGURES = 4096;
 const MAX_EVIDENCE_DEPTH = 16;
@@ -26,11 +27,17 @@ export interface ClaimGroundingEvidenceExtractorContext {
 export type ClaimGroundingEvidenceExtractor = (context: ClaimGroundingEvidenceExtractorContext) => readonly ClaimGroundingEvidence[];
 
 export interface ClaimGroundingGuardrailOptions {
-  /** False makes the returned guardrail a no-op. */
+  /** False makes the returned handler a no-op. */
   readonly requireEvidenceForNumbers: boolean;
+  /**
+   * Same-run completed tool results, read at `model.response` time. The hook payload is the assistant
+   * message alone, so the host supplies the run's results; defaults to none (every number is ungrounded
+   * unless `requireEvidenceForNumbers` is false).
+   */
+  readonly toolResults?: () => readonly ToolResult[];
   /** Defaults to same-run tool results. A host extractor may return its own governed figures. */
   readonly evidenceSources?: "tool_results" | ClaimGroundingEvidenceExtractor;
-  /** Defaults to block. Flag emits an allow record with `metadata.violation: true`. */
+  /** Defaults to block, which is `ctx.reject(reason)`. Flag emits a `guardrail_decision` tripwire. */
   readonly onViolation?: "block" | "flag";
   /** Exact numeric equality by default; rounded accepts half the final printed unit. */
   readonly tolerance?: "exact" | "rounded";
@@ -47,36 +54,42 @@ type Claim = {
 };
 
 /**
- * Deterministic output guardrail for figures that must be grounded in same-run tool results
+ * Deterministic `model.response` gate for figures that must be grounded in same-run tool results
  * or host-governed evidence. It never calls a provider, store, or extractor asynchronously.
+ * `onViolation: "block"` returns `ctx.reject(...)` (fails the run); `"flag"` emits a `guardrail_decision`.
  */
-export function createClaimGroundingGuardrail(options: ClaimGroundingGuardrailOptions): Guardrail<"output"> {
+export function createClaimGroundingGuardrail(
+  options: ClaimGroundingGuardrailOptions,
+): (message: Message, context: HookContext) => HookRejection | undefined {
   const resolved = resolveOptions(options);
-  return {
-    name: "claim-grounding",
-    stage: "output",
-    revision: "1",
-    evaluate(context) {
-      if (!resolved.requireEvidenceForNumbers) return { action: "allow" };
-      const figures = evidenceFigures(resolved.evidenceSources, context);
-      const refs = new Set(figures.flatMap((figure) => (figure.ref === undefined ? [] : [figure.ref])));
-      for (const claim of outputClaims(context.value.content)) {
-        const block = context.value.content[claim.contentIndex];
-        if (matchesEvidence(claim, figures, resolved.tolerance) || (block?.type === "text" && citesEvidence(block.text, claim.end, refs)))
-          continue;
-        const metadata = {
-          violation: true,
-          claim: claim.text.slice(0, MAX_CLAIM_CHARS),
-          contentIndex: claim.contentIndex,
-          start: claim.end - claim.text.length,
-          end: claim.end,
-        };
-        return resolved.onViolation === "block"
-          ? { action: "block", reason: "claim_ungrounded", metadata }
-          : { action: "allow", reason: "claim_ungrounded", metadata };
-      }
-      return { action: "allow" };
-    },
+  return (message, context) => {
+    if (!resolved.requireEvidenceForNumbers) return undefined;
+    const content = message.content;
+    const figures = evidenceFigures(resolved, content, context);
+    const refs = new Set(figures.flatMap((figure) => (figure.ref === undefined ? [] : [figure.ref])));
+    for (const claim of outputClaims(content)) {
+      const block = content[claim.contentIndex];
+      if (matchesEvidence(claim, figures, resolved.tolerance) || (block?.type === "text" && citesEvidence(block.text, claim.end, refs)))
+        continue;
+      const metadata = {
+        violation: true,
+        claim: claim.text.slice(0, MAX_CLAIM_CHARS),
+        contentIndex: claim.contentIndex,
+        start: claim.end - claim.text.length,
+        end: claim.end,
+      };
+      if (resolved.onViolation === "block") return context.reject("claim_ungrounded");
+      void context.emit({
+        type: "package.event",
+        sessionId: context.sessionId,
+        runId: context.runId,
+        package: "kernel",
+        name: "guardrail.decision",
+        data: { record: { guardrail: "claim-grounding", stage: "output", action: "tripwire", reason: "claim_ungrounded", metadata } },
+      });
+      return undefined;
+    }
+    return undefined;
   };
 }
 
@@ -90,25 +103,35 @@ function resolveOptions(options: ClaimGroundingGuardrailOptions): Required<Claim
   if (onViolation !== "block" && onViolation !== "flag") throw new TypeError('Claim grounding onViolation must be "block" or "flag"');
   const tolerance = options.tolerance ?? "exact";
   if (tolerance !== "exact" && tolerance !== "rounded") throw new TypeError('Claim grounding tolerance must be "exact" or "rounded"');
-  return { requireEvidenceForNumbers: options.requireEvidenceForNumbers, evidenceSources, onViolation, tolerance };
+  const toolResults = options.toolResults;
+  if (toolResults !== undefined && typeof toolResults !== "function") throw new TypeError("Claim grounding toolResults must be a function");
+  return {
+    requireEvidenceForNumbers: options.requireEvidenceForNumbers,
+    toolResults: () => toolResults?.() ?? [],
+    evidenceSources,
+    onViolation,
+    tolerance,
+  };
 }
 
 function evidenceFigures(
-  source: Required<ClaimGroundingGuardrailOptions>["evidenceSources"],
-  context: GuardrailContext<"output">,
+  resolved: Required<ClaimGroundingGuardrailOptions>,
+  content: readonly ContentBlock[],
+  context: HookContext,
 ): readonly Figure[] {
-  if (source !== "tool_results")
-    return source({
-      sessionId: context.sessionId,
-      runId: context.runId,
-      metadata: context.metadata,
-      toolResults: context.toolResults ?? [],
-    })
+  if (resolved.evidenceSources !== "tool_results")
+    return resolved
+      .evidenceSources({
+        sessionId: context.sessionId,
+        runId: context.runId,
+        metadata: {},
+        toolResults: resolved.toolResults?.() ?? [],
+      })
       .filter(validFigure)
       .slice(0, MAX_EVIDENCE_FIGURES);
   const figures: Figure[] = [];
   const budget: EvidenceBudget = { chars: MAX_EVIDENCE_TEXT_CHARS, nodes: MAX_EVIDENCE_NODES };
-  for (const result of context.toolResults ?? []) {
+  for (const result of resolved.toolResults?.() ?? []) {
     if (result.error) continue;
     const ref = `tool:${result.toolCallId}`;
     collectFigures(result.value, figures, ref, new WeakSet(), 0, budget);

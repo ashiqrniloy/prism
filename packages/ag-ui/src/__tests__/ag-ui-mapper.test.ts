@@ -18,33 +18,27 @@ describe("@arnilo/prism-ag-ui", () => {
       },
     });
     const events = [
-      ...(await mapper.map({ type: "agent_started", sessionId: "thread-1", runId: "run-1" })),
+      ...(await mapper.map({ type: "run.started", sessionId: "thread-1", runId: "run-1" })),
       ...(await mapper.map({
-        type: "message_started",
-        sessionId: "thread-1",
-        runId: "run-1",
-        message: { id: "message-1", role: "assistant", content: [] },
-      })),
-      ...(await mapper.map({
-        type: "message_delta",
+        type: "message.delta",
         sessionId: "thread-1",
         runId: "run-1",
         content: { type: "text", text: "hello secret" },
       })),
       ...(await mapper.map({
-        type: "message_finished",
+        type: "message.completed",
         sessionId: "thread-1",
         runId: "run-1",
         message: { id: "message-1", role: "assistant", content: [] },
       })),
       ...(await mapper.map({
-        type: "tool_execution_started",
+        type: "tool.started",
         sessionId: "thread-1",
         runId: "run-1",
         call: { type: "tool_call", id: "tool-1", name: "read", arguments: { path: "/host/workspace/secret" } },
       })),
       ...(await mapper.map({
-        type: "tool_execution_progress",
+        type: "tool.progress",
         sessionId: "thread-1",
         runId: "run-1",
         toolCallId: "tool-1",
@@ -52,21 +46,22 @@ describe("@arnilo/prism-ag-ui", () => {
         progress: { path: "/host/workspace" },
       })),
       ...(await mapper.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "thread-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read", value: "secret" },
         metadata: { durationMs: 1, status: "finished" },
       })),
       ...(await mapper.map({
-        type: "provider_turn_finished",
+        type: "turn.completed",
         sessionId: "thread-1",
         runId: "run-1",
         turn: 1,
         metadata: { providerId: "fake", model: { provider: "fake", model: "fake" } },
         usage: { inputTokens: 3, outputTokens: 5 },
       })),
-      ...(await mapper.map({ type: "agent_finished", sessionId: "thread-1", runId: "run-1" })),
+      ...(await mapper.map({ type: "run.completed", sessionId: "thread-1", runId: "run-1", status: "completed" })),
     ];
 
     for (const event of events) assert.equal(EventSchemas.safeParse(event).success, true);
@@ -94,10 +89,10 @@ describe("@arnilo/prism-ag-ui", () => {
 
   it("closes active sequences before suspension/error and never maps unknown events", async () => {
     const mapper = createAgUiEventMapper();
-    await mapper.map({ type: "agent_started", sessionId: "session-1", runId: "run-1" });
-    await mapper.map({ type: "message_started", sessionId: "session-1", runId: "run-1", message: { role: "assistant", content: [] } });
+    await mapper.map({ type: "run.started", sessionId: "session-1", runId: "run-1" });
+    await mapper.map({ type: "message.delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "hi" } });
     const suspended = await mapper.map({
-      type: "agent_suspended",
+      type: "run.suspended",
       sessionId: "session-1",
       runId: "run-1",
       version: 3,
@@ -110,9 +105,9 @@ describe("@arnilo/prism-ag-ui", () => {
     assert.deepEqual((suspended.at(-1) as { snapshot: unknown }).snapshot, { prism: { run: { status: "suspended", version: 3 } } });
 
     const failed = createAgUiEventMapper();
-    await failed.map({ type: "message_started", sessionId: "session-1", runId: "run-1", message: { role: "assistant", content: [] } });
+    await failed.map({ type: "message.delta", sessionId: "session-1", runId: "run-1", content: { type: "text", text: "hi" } });
     const error = await failed.map({
-      type: "error",
+      type: "run.failed",
       sessionId: "session-1",
       runId: "run-1",
       error: { message: "secret failure", code: "E_FAIL" },
@@ -131,9 +126,9 @@ describe("@arnilo/prism-ag-ui", () => {
         stateDelta: () => [{ op: "add", path: "/stage", value: "delta" }],
         messages: () => [{ id: "snapshot-user", role: "user", content: "safe" }],
         activity: (event) =>
-          event.type === "turn_started"
+          event.type === "turn.started"
             ? { type: "snapshot", messageId: "activity-1", activityType: "turn", content: { status: "started" } }
-            : event.type === "turn_finished"
+            : event.type === "turn.completed"
               ? {
                   type: "delta",
                   messageId: "activity-1",
@@ -147,24 +142,30 @@ describe("@arnilo/prism-ag-ui", () => {
       },
     });
     const events = [
-      ...(await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" })),
-      ...(await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 })),
+      ...(await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" })),
       ...(await mapper.map({
-        type: "message_started",
+        type: "turn.started",
+        sessionId: "s1",
+        runId: "r1",
+        turn: 1,
+        metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+      })),
+      ...(await mapper.map({ type: "message.delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } })),
+      ...(await mapper.map({ type: "message.delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } })),
+      ...(await mapper.map({
+        type: "message.completed",
         sessionId: "s1",
         runId: "r1",
         message: { id: "m1", role: "assistant", content: [] },
       })),
-      ...(await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "thinking", text: "safe" } })),
-      ...(await mapper.map({ type: "message_delta", sessionId: "s1", runId: "r1", content: { type: "text", text: "answer" } })),
       ...(await mapper.map({
-        type: "message_finished",
+        type: "turn.completed",
         sessionId: "s1",
         runId: "r1",
-        message: { id: "m1", role: "assistant", content: [] },
+        turn: 1,
+        metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
       })),
-      ...(await mapper.map({ type: "turn_finished", sessionId: "s1", runId: "r1", turn: 1 })),
-      ...(await mapper.map({ type: "agent_finished", sessionId: "s1", runId: "r1" })),
+      ...(await mapper.map({ type: "run.completed", sessionId: "s1", runId: "r1", status: "completed" })),
     ];
     for (const mapped of events) assert.equal(EventSchemas.safeParse(mapped).success, true);
     for (const type of [
@@ -275,7 +276,7 @@ describe("@arnilo/prism-ag-ui", () => {
     assert.throws(() => resolveAgUiLimits({ maxErrorBytes: 65_537 }), /maxErrorBytes/);
     const mapper = createAgUiEventMapper();
     const events = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "session-1",
       runId: "run-1",
       content: { type: "text", text: "x".repeat(100_000) },

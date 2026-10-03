@@ -271,8 +271,8 @@ describe("phase22 security conformance (plan 022 Task 5, built public entrypoint
       redacted: true,
       event: { type, sessionId: "s1", runId: "r1", turn: 1 },
     });
-    await source.append(record("event-1", "agent_started"));
-    await source.append(record("event-2", "turn_started"));
+    await source.append(record("event-1", "run.started"));
+    await source.append(record("event-2", "turn.started"));
 
     const read = { ownership, sessionId: "s1", runId: "r1", limit: 10 };
     const first = source.subscribe(read);
@@ -293,7 +293,7 @@ describe("phase22 security conformance (plan 022 Task 5, built public entrypoint
 
     // Cross-tenant ownership mints a different durable name (no cross-run collision).
     const other = createNatsAgentEventSource({ ...options, connection: seam, stream });
-    await other.append(record("event-3", "turn_started", { tenantId: "phase22-b", userId: "u1" }));
+    await other.append(record("event-3", "turn.started", { tenantId: "phase22-b", userId: "u1" }));
     const foreign = await other
       .subscribe({ ...read, ownership: { ...ownership, tenantId: "phase22-b" } })
       [Symbol.asyncIterator]()

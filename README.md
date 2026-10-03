@@ -7,6 +7,8 @@ and compaction strategies, CLI/RPC adapters, and first-party provider/compaction
 packages. The current 0.12.1 line publishes the manifest-derived package inventory (see
 [Packages](#packages)); family subpaths are imports, not packages to install. Prism defines contracts, not apps.
 
+The target is `@arnilo/prism` 1.0: an SDK kernel for the agent loop, tools, skills, and hooks, extended by installable packages. [PRODUCT.md](PRODUCT.md) explains it and [roadmap.md](roadmap.md) is the build order. That design is not shipped. Until it is, use the 0.12.1 install lines and [docs/index.md](docs/index.md) below.
+
 ## Current scope
 
 - **Agent/session runtime**: `createAgent`/`createAgentSession`, run prompts,
@@ -64,7 +66,7 @@ Use subpaths only in imports, after installing their owning package:
 
 ```ts
 import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
-import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
+import { openaiPackage } from "@arnilo/prism-providers/openai";
 ```
 
 See [docs/release-and-install.md](docs/release-and-install.md) for install
@@ -124,18 +126,16 @@ for await (const event of session.stream("Hi again")) {
 })();
 ```
 
-Register a first-party provider package through the extension kernel:
+Register a first-party provider package:
 
 ```ts
-import { createExtensionKernel, createEnvCredentialResolver } from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
+import { createAgent } from "@arnilo/prism";
+import { openaiPackage, openAIModels } from "@arnilo/prism-providers/openai";
 
-const kernel = createExtensionKernel();
-await kernel.load([
-  createOpenAIProviderPackage({
-    apiKey: createEnvCredentialResolver({ OPENAI_API_KEY: "fake" }, { openai: "OPENAI_API_KEY" }),
-  }),
-]);
+const agent = await createAgent({
+  model: openAIModels[0],
+  packages: [openaiPackage({ apiKey: () => process.env.OPENAI_API_KEY })],
+});
 ```
 
 Hosts own credentials. Do not put secrets in prompts, messages, events, stores,
@@ -174,7 +174,7 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | `@arnilo/prism-ag-ui` | 0.12.1 | capability — AG-UI/A2A/A2UI adapter |
 | `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
 | `@arnilo/prism-code` | 0.4.1 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
-| `@arnilo/prism-hooks` | 0.12.1 | capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams |
+| `@arnilo/prism-hooks-json` | 0.12.1 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
 | `@arnilo/prism-mcp` | 0.12.1 | capability — MCP client/server/OAuth interop |
 | `@arnilo/prism-memory` | 0.12.1 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
 | `@arnilo/prism-web-tools` | 0.12.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |

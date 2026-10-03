@@ -7,19 +7,11 @@ describe("TUI Reducer", () => {
   it("delta append coalesces sequential message_delta events into one message entry", () => {
     let state = createInitialTuiState();
 
-    const startEvent: AgentEvent = {
-      type: "message_started",
-      sessionId: "s1",
-      runId: "r1",
-      message: { role: "assistant", content: [] },
-    };
-    state = tuiReducer(state, { type: "session_event", event: startEvent });
-    assert.strictEqual(state.entries.length, 1);
-    assert.strictEqual(state.entries[0]?.type, "message");
-    assert.strictEqual((state.entries[0] as UiMessageEntry).text, "");
+    // The reducer opens a message on the first delta; there is no separate start event.
+    assert.strictEqual(state.entries.length, 0);
 
     const delta1: AgentEvent = {
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s1",
       runId: "r1",
       content: { type: "text", text: "Hello " },
@@ -29,7 +21,7 @@ describe("TUI Reducer", () => {
     assert.strictEqual((state.entries[0] as UiMessageEntry).text, "Hello ");
 
     const delta2: AgentEvent = {
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s1",
       runId: "r1",
       content: { type: "text", text: "world!" },
@@ -39,7 +31,7 @@ describe("TUI Reducer", () => {
     assert.strictEqual((state.entries[0] as UiMessageEntry).text, "Hello world!");
 
     const finishEvent: AgentEvent = {
-      type: "message_finished",
+      type: "message.completed",
       sessionId: "s1",
       runId: "r1",
       message: { role: "assistant", content: [{ type: "text", text: "Hello world!" }] },
@@ -53,7 +45,7 @@ describe("TUI Reducer", () => {
     let state = createInitialTuiState();
 
     const toolStart: AgentEvent = {
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s1",
       runId: "r1",
       call: {
@@ -72,7 +64,8 @@ describe("TUI Reducer", () => {
     assert.ok(toolEntry.argsSummary.includes("src/"));
 
     const toolFinish: AgentEvent = {
-      type: "tool_execution_finished",
+      type: "tool.completed",
+      status: "finished",
       sessionId: "s1",
       runId: "call_abc123",
       result: {
@@ -95,7 +88,7 @@ describe("TUI Reducer", () => {
       state = tuiReducer(state, {
         type: "session_event",
         event: {
-          type: "tool_execution_started",
+          type: "tool.started",
           sessionId: "s",
           runId: "shared-run",
           call: { id, type: "tool_call", name: "shell", arguments: { id } },
@@ -106,7 +99,8 @@ describe("TUI Reducer", () => {
       state = tuiReducer(state, {
         type: "session_event",
         event: {
-          type: "tool_execution_finished",
+          type: "tool.completed",
+          status: "finished",
           sessionId: "s",
           runId: "shared-run",
           result: { toolCallId: id, name: "shell", value: id },
@@ -126,7 +120,7 @@ describe("TUI Reducer", () => {
       state = tuiReducer(state, {
         type: "session_event",
         event: {
-          type: "tool_execution_started",
+          type: "tool.started",
           sessionId: "s",
           runId: "r",
           call: { id, type: "tool_call", name: "shell", arguments: {} },
@@ -136,20 +130,23 @@ describe("TUI Reducer", () => {
     state = tuiReducer(state, {
       type: "session_event",
       event: {
-        type: "tool_execution_blocked",
+        type: "tool.completed",
         sessionId: "s",
         runId: "r",
         toolCallId: "blocked",
         name: "shell",
+        status: "blocked",
         reason: "approval refused",
+        result: { toolCallId: "blocked", name: "shell", error: { message: "denied" } },
         error: { message: "denied" },
-        metadata: { durationMs: 1, status: "error" },
+        metadata: { durationMs: 1, status: "blocked" },
       },
     });
     state = tuiReducer(state, {
       type: "session_event",
       event: {
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "error",
         sessionId: "s",
         runId: "r",
         result: { toolCallId: "error", name: "shell", error: { message: "operation failed" } },
@@ -159,10 +156,13 @@ describe("TUI Reducer", () => {
     state = tuiReducer(state, {
       type: "session_event",
       event: {
-        type: "tool_execution_error",
+        type: "tool.completed",
         sessionId: "s",
         runId: "r",
-        call: { id: "refused", type: "tool_call", name: "shell", arguments: {} },
+        toolCallId: "refused",
+        name: "shell",
+        status: "error",
+        result: { toolCallId: "refused", name: "shell", error: { message: "permission denied" } },
         error: { message: "permission denied" },
         metadata: { durationMs: 1, status: "error" },
       },
@@ -177,7 +177,7 @@ describe("TUI Reducer", () => {
     let state = createInitialTuiState();
 
     const toolStart: AgentEvent = {
-      type: "tool_execution_started",
+      type: "tool.started",
       sessionId: "s1",
       runId: "r1",
       call: {
@@ -190,15 +190,13 @@ describe("TUI Reducer", () => {
     state = tuiReducer(state, { type: "session_event", event: toolStart });
 
     const toolError: AgentEvent = {
-      type: "tool_execution_error",
+      type: "tool.completed",
       sessionId: "s1",
       runId: "r1",
-      call: {
-        id: "call_err456",
-        type: "tool_call",
-        name: "shell",
-        arguments: { command: "false" },
-      },
+      toolCallId: "call_err456",
+      name: "shell",
+      status: "error",
+      result: { toolCallId: "call_err456", name: "shell", error: { message: "Command failed with exit code 1" } },
       error: { message: "Command failed with exit code 1" },
       metadata: { durationMs: 12, status: "error" },
     };
@@ -209,45 +207,32 @@ describe("TUI Reducer", () => {
     assert.strictEqual(entry.error, "Command failed with exit code 1");
   });
 
-  it("error events (run_limit_exceeded, budget_exhausted, agent_denied) render distinctly", () => {
+  it("a limit death and a denied run render distinctly", () => {
     let state = createInitialTuiState();
 
     const limitEvent: AgentEvent = {
-      type: "run_limit_exceeded",
+      type: "run.failed",
       sessionId: "s1",
       runId: "r1",
-      breach: { limit: "maxToolRounds", maximum: 5, observed: 6 },
+      error: { message: "limit" },
+      limit: { limit: "maxToolRounds", maximum: 5, observed: 6 },
     };
     state = tuiReducer(state, { type: "session_event", event: limitEvent });
     assert.strictEqual(state.entries.length, 1);
     assert.strictEqual(state.entries[0]?.type, "error");
     assert.ok(state.entries[0]?.message.includes("maxToolRounds"));
 
-    const budgetEvent: AgentEvent = {
-      type: "budget_exhausted",
-      sessionId: "s1",
-      runId: "r1",
-      limit: "maxTurns",
-      consumed: { turns: 10, inputTokens: 50000, providerAttempts: 10, requestBytes: 1024 },
-      closestOtherAxes: [],
-      recentToolCalls: [],
-    };
-    state = tuiReducer(state, { type: "session_event", event: budgetEvent });
-    assert.strictEqual(state.entries.length, 2);
-    assert.strictEqual(state.entries[1]?.type, "error");
-    assert.ok(state.entries[1]?.message.includes("maxTurns"));
-
     const deniedEvent: AgentEvent = {
-      type: "agent_denied",
+      type: "decision.resolved",
       sessionId: "s1",
       runId: "r1",
-      interruption: { kind: "tool_approval", reason: "Operation cancelled by operator" },
-      version: 1,
+      decisions: [{ toolCallId: "call-1", outcome: "deny" }],
+      via: "inline",
     };
     state = tuiReducer(state, { type: "session_event", event: deniedEvent });
-    assert.strictEqual(state.entries.length, 3);
-    assert.strictEqual(state.entries[2]?.type, "error");
-    assert.ok(state.entries[2]?.message.includes("Operation cancelled by operator"));
+    assert.strictEqual(state.entries.length, 2);
+    assert.strictEqual(state.entries[1]?.type, "error");
+    assert.ok(state.entries[1]?.message.includes("denied"));
   });
 
   it("scrollback cap is enforced and evicts oldest entries", () => {
@@ -291,9 +276,10 @@ describe("TUI Reducer", () => {
     let state = createInitialTuiState();
 
     const finishEvent: AgentEvent = {
-      type: "agent_finished",
+      type: "run.completed",
       sessionId: "s1",
       runId: "r1",
+      status: "completed",
       usage: { inputTokens: 1200, outputTokens: 350, totalTokens: 1550 },
     };
     state = tuiReducer(state, { type: "session_event", event: finishEvent });

@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  loadBinaryResource,
-  loadJsonResource,
-  loadManifestResource,
-  loadTextResource,
-  type ResourceLoadContext,
-  type ResourceLoader,
-} from "../index.js";
+import { loadBinaryResource, loadJsonResource, loadTextResource, type ResourceLoadContext, type ResourceLoader } from "../index.js";
 
 describe("resource helpers", () => {
   it("loads text resources from text or data", async () => {
@@ -40,20 +33,6 @@ describe("resource helpers", () => {
 
     await assert.rejects(() => loadJsonResource(loader, "package://demo/bad.json"), /Invalid JSON resource/);
     await assert.rejects(() => loadJsonResource(loader, "package://demo/array.json"), /must be a JSON object/);
-  });
-
-  it("loads manifests through manifest validation", async () => {
-    const loader: ResourceLoader = {
-      async load(uri) {
-        return { uri, text: JSON.stringify({ name: "demo", resources: [{ uri: "package://demo/prompt.md", purpose: "prompt" }] }) };
-      },
-    };
-
-    assert.deepEqual(await loadManifestResource(loader, "package://demo/prism.manifest.json"), {
-      name: "demo",
-      contributions: undefined,
-      resources: [{ uri: "package://demo/prompt.md", purpose: "prompt" }],
-    });
   });
 
   it("loads binary resources with byte bounds", async () => {

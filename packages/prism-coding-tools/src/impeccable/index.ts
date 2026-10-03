@@ -1,5 +1,5 @@
 export { createImpeccableCommand } from "./commands.js";
-export { createImpeccableExtension } from "./extension.js";
+export { impeccable } from "./extension.js";
 export { IMPECCABLE_SKILL_NAME, loadImpeccableSkill } from "./skills.js";
 export type { ImpeccableExtensionOptions } from "./types.js";
 export {

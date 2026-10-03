@@ -1,7 +1,6 @@
 import { assertJsonObject } from "./config.js";
 import { DEFAULT_MAX_MEDIA_ITEM_BYTES, loadBoundedBinaryResource, type MediaContentBounds } from "./content.js";
 import type { JsonObject, ResourceLoadContext, ResourceLoader } from "./contracts.js";
-import { type PrismManifest, parsePrismManifest } from "./manifests.js";
 import { assertPermission, assertTrusted } from "./security.js";
 
 export async function loadTextResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<string> {
@@ -22,10 +21,6 @@ export async function loadJsonResource(loader: ResourceLoader, uri: string, cont
   }
   assertJsonObject(parsed, `resource ${uri}`);
   return parsed;
-}
-
-export async function loadManifestResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<PrismManifest> {
-  return parsePrismManifest(await loadJsonResource(loader, uri, context));
 }
 
 export interface LoadBinaryResourceOptions extends MediaContentBounds {

@@ -1,6 +1,5 @@
 import {
   createAgent,
-  createAgentSession,
   createMockProvider,
   createSecretRedactor,
   type ExecutionAction,
@@ -58,7 +57,7 @@ const scanTool = mapMcpToolsToDefinitions(
   },
 )[0]!;
 
-const researchAgent = createAgent({
+const researchAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
   instructions: "Research the repo.",
@@ -121,7 +120,7 @@ export async function demo() {
     workflow,
     { repo: "my-project" },
     {
-      agentFactory: () => createAgentSession({ agent: researchAgent }),
+      agentFactory: () => researchAgent.session(),
       checkpoints,
       redactor,
       executionPolicy: policy,

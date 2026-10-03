@@ -117,8 +117,8 @@ function trackingStore(ids: Set<string>): SessionStore {
   };
 }
 
-function agentWith(provider: AIProvider, store: SessionStore = createMemorySessionStore()): Agent {
-  return createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, provider, store });
+async function agentWith(provider: AIProvider, store: SessionStore = createMemorySessionStore()): Promise<Agent> {
+  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, provider, slots: { store } });
 }
 
 interface Harness {
@@ -151,10 +151,10 @@ function durableWorld(provider: AIProvider, ids: Set<string>, leaseStore?: boole
   return {
     checkpoints,
     store,
-    first: (deliver?: (reply: ChannelReply) => ChannelSendResult | Promise<ChannelSendResult>) =>
-      harness({ agent: agentWith(provider, store), ...shared, ...(deliver === undefined ? {} : { deliver }) }),
-    second: (deliver?: (reply: ChannelReply) => ChannelSendResult | Promise<ChannelSendResult>) =>
-      harness({ agent: agentWith(provider, store), ...shared, ...(deliver === undefined ? {} : { deliver }) }),
+    first: async (deliver?: (reply: ChannelReply) => ChannelSendResult | Promise<ChannelSendResult>) =>
+      harness({ agent: await agentWith(provider, store), ...shared, ...(deliver === undefined ? {} : { deliver }) }),
+    second: async (deliver?: (reply: ChannelReply) => ChannelSendResult | Promise<ChannelSendResult>) =>
+      harness({ agent: await agentWith(provider, store), ...shared, ...(deliver === undefined ? {} : { deliver }) }),
   };
 }
 
@@ -166,7 +166,7 @@ describe("plan 079 channel durable recovery", () => {
       textProvider(calls, (turn) => `answer ${turn}`),
       ids,
     );
-    const first = world.first();
+    const first = await world.first();
 
     const admitted = await first.runtime.admit(event());
     assert.equal(admitted.status, "accepted");
@@ -177,7 +177,7 @@ describe("plan 079 channel durable recovery", () => {
     assert.ok(sessionId !== undefined);
 
     // "Restart": a second runtime over the same journal, no memory shared with the first.
-    const second = world.second();
+    const second = await world.second();
     const next = await second.runtime.admit(event({ eventId: "2" }));
     assert.equal(next.status, "accepted");
     await second.runtime.drain();
@@ -200,7 +200,7 @@ describe("plan 079 channel durable recovery", () => {
       textProvider(calls, (turn) => `answer ${turn}`),
       ids,
     );
-    const first = world.first();
+    const first = await world.first();
     await first.runtime.admit(event());
     await first.runtime.drain();
     await first.runtime.admit(event({ eventId: "2", text: "/new" }));
@@ -208,7 +208,7 @@ describe("plan 079 channel durable recovery", () => {
     const generationOne = [...ids][0];
     assert.ok(generationOne !== undefined);
 
-    const second = world.second();
+    const second = await world.second();
     await second.runtime.admit(event({ eventId: "3" }));
     await second.runtime.drain();
     const generationTwo = [...ids][1];
@@ -217,7 +217,7 @@ describe("plan 079 channel durable recovery", () => {
 
     // A different tenant with the same connection + event id is a different operation record.
     const otherTenant = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider(calls, (turn) => `answer ${turn}`),
         trackingStore(new Set()),
       ),
@@ -233,7 +233,7 @@ describe("plan 079 channel durable recovery", () => {
     const calls = { count: 0 };
     const ids = new Set<string>();
     const world = durableWorld(hangingProvider(calls), ids);
-    const dying = world.first();
+    const dying = await world.first();
     const admitted = await dying.runtime.admit(event());
     assert.equal(admitted.status, "accepted");
     assert.ok(admitted.operationId !== undefined);
@@ -246,7 +246,7 @@ describe("plan 079 channel durable recovery", () => {
     const claimedVersion = unresolved[0]?.version ?? 0;
 
     // Restart while the old process is still "running" its claimed operation.
-    const restarted = world.second();
+    const restarted = await world.second();
     const retry = await restarted.runtime.admit(event());
     assert.equal(retry.duplicate, true, "a claimed operation is never re-executed");
     await restarted.runtime.drain();
@@ -303,7 +303,7 @@ describe("plan 079 channel durable recovery", () => {
       textProvider(calls, () => "the durable answer"),
       ids,
     );
-    const first = world.first(() => {
+    const first = await world.first(() => {
       throw new Error("socket closed after the platform accepted the message");
     });
     const admitted = await first.runtime.admit(event());
@@ -312,7 +312,7 @@ describe("plan 079 channel durable recovery", () => {
     assert.equal(calls.count, 1);
     assert.equal(first.delivered.length, 0);
 
-    const restarted = world.second();
+    const restarted = await world.second();
     const attention = await restarted.runtime.listUnresolved({ identity: identity() });
     assert.equal(attention.length, 1, "a settled operation with an unconfirmed reply still needs attention");
     assert.equal(attention[0]?.replyState, "delivery_unknown");
@@ -398,7 +398,7 @@ describe("plan 079 channel durable recovery", () => {
 
     const calls = { count: 0 };
     const restarted = harness({
-      agent: agentWith(textProvider(calls, () => "unused")),
+      agent: await agentWith(textProvider(calls, () => "unused")),
       checkpoints,
     });
     const foreign = await restarted.runtime.reconcile({
@@ -441,12 +441,15 @@ describe("plan 079 channel durable recovery", () => {
         yield providerDone();
       },
     };
-    const owner = harness({ agent: agentWith(gated, store), checkpoints, leases });
-    const other = harness({ agent: agentWith(textProvider({ count: 0 }, () => "other")), checkpoints, leases });
+    const owner = harness({ agent: await agentWith(gated, store), checkpoints, leases });
+    const other = harness({ agent: await agentWith(textProvider({ count: 0 }, () => "other")), checkpoints, leases });
 
     const admitted = await owner.runtime.admit(event());
     assert.ok(admitted.operationId !== undefined);
     await waitFor(() => owner.runtime.diagnostics().active === 1, "the lease holder to start running");
+    // The run is admitted before its provider turn starts; wait for the gate to be armed so
+    // `gate.resolve()` cannot race the provider's own `new Promise`.
+    await waitFor(() => calls.count === 1, "the gated provider to start");
 
     const deferred = await other.runtime.admit(event({ eventId: "2" }));
     assert.equal(deferred.status, "accepted");
@@ -530,7 +533,7 @@ describe("plan 079 channel durable recovery", () => {
       )) !== null,
     );
 
-    const runtime = harness({ agent: agentWith(textProvider({ count: 0 }, () => "x")), checkpoints }).runtime;
+    const runtime = harness({ agent: await agentWith(textProvider({ count: 0 }, () => "x")), checkpoints }).runtime;
     const result = await runtime.prune({ identity: identity(), now: "2026-09-16T00:00:00.000Z" });
     assert.equal(result.deleted, 2, "the settled operation and its delivered reply are removed");
     assert.ok(result.retained >= 2);

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { agentSkillSource, agentToolList, assignedLoop, tryAgentRuntime } from "./agent-session/runtime-registry.js";
 import { agentFingerprint, BUILT_IN_LOOP_REVISIONS } from "./agent-run-state.js";
-import type { Agent, AgentSessionConfig, GuardrailPackRef, GuardrailStage, Guardrails, RunOptions, ToolDefinition } from "./contracts.js";
+import type { Agent, AgentSessionConfig, GuardrailPackRef, GuardrailStage, RunOptions, Skill } from "./contracts.js";
 import { describeGuardrailPacks } from "./guardrails.js";
 import { describeStorage } from "./host-composition.js";
 import { canonicalizeJsonSchema } from "./providers/schema.js";
@@ -57,7 +58,6 @@ export interface RunBundleSnapshot {
   /** Host-shaped JSON as configured (`true`/`false`/options); `null` when unset. */
   readonly attentionCompiler: unknown;
   readonly model: { readonly provider: string | null; readonly model: string | null };
-  readonly requestPolicies: readonly string[];
   /** Kinds only — never a connection string, path, or credential. */
   readonly storage: {
     readonly sessionStore: { readonly kind: string; readonly durable: boolean };
@@ -91,12 +91,11 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
   const redactor = run?.redactor ?? config.redactor;
   const definitionRevision = run?.runState?.definitionRevision ?? config.runState?.definitionRevision ?? null;
 
-  const tools = selectRunTools(listTools(config.tools), run?.toolNames).tools;
-  const skills = listSkills(config.skills, run?.skills);
+  const tools = selectRunTools(agentToolList(input.agent), run?.tools?.only).tools;
+  const skills = agentSkillSource(input.agent);
   const model = run?.model ?? config.model;
-  const effectiveLoop = run?.loop ?? config.loop;
+  const effectiveLoop = assignedLoop(input.agent);
   const systemPrompt = run?.systemPrompt ?? config.systemPrompt;
-  const policies = [config.providerRequestPolicies, run?.providerRequestPolicies].flatMap((policy) => policy ?? []);
 
   const snapshot: Omit<RunBundleSnapshot, "digest"> = {
     schemaVersion: RUN_BUNDLE_SCHEMA_VERSION,
@@ -126,11 +125,8 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
       exclusive: tool.exclusive === true,
       effect: tool.effect === undefined ? null : typeof tool.effect === "function" ? "classifier" : tool.effect.kind,
     })),
-    activeSkills: run?.activeSkills ?? null,
-    guardrails: [
-      ...guardrailRows(config.guardrails, run?.guardrails),
-      ...describeGuardrailPacks(input.packs ?? input.config?.guardrailPacks),
-    ],
+    activeSkills: skills.length ? skills.map((skill) => skill.name) : null,
+    guardrails: describeGuardrailPacks(input.packs ?? input.config?.guardrailPacks),
     loop: loopIdentity(effectiveLoop),
     thinkingLevel: run?.thinkingLevel ?? config.thinkingLevel ?? null,
     limits: resolveRunLimits(config.limits, run?.limits),
@@ -139,9 +135,8 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
       provider: typeof model === "string" ? (config.provider?.id ?? null) : (model?.provider ?? null),
       model: typeof model === "string" ? model : (model?.model ?? null),
     },
-    requestPolicies: policies.map((policy) => policy.name),
     storage: {
-      sessionStore: kindOf(describeStorage(input.config?.store ?? config.store, undefined)),
+      sessionStore: kindOf(describeStorage(tryAgentRuntime(input.agent)?.slots.resolve("store", config.slots?.store), undefined)),
       checkpoints: kindOf(describeStorage(undefined, (run?.runState ?? config.runState)?.checkpoints)),
       effectStore: kindOf(describeStorage(run?.effectStore ?? config.effectStore, undefined)),
       memory: kindOf(describeStorage(input.memory, undefined)),
@@ -167,45 +162,19 @@ function agentId(agent: Agent): string {
   return agent.config.id ?? agent.config.name ?? "agent";
 }
 
-function listTools(tools: Agent["config"]["tools"]): readonly ToolDefinition[] {
-  if (!tools) return [];
-  return "list" in tools ? tools.list() : tools;
-}
-
 function listSkills(
-  skills: Agent["config"]["skills"],
-  runSkills: RunOptions["skills"],
+  skills: readonly Skill[],
 ): readonly { readonly name: string; readonly instructions?: string; readonly toolNames?: readonly string[] }[] {
-  const listed = !skills ? [] : "list" in skills ? skills.list() : skills;
-  const byName = new Map(listed.map((skill) => [skill.name, skill]));
-  for (const skill of runSkills ?? []) byName.set(skill.name, skill);
-  return [...byName.values()];
+  return skills;
 }
 
-function guardrailRows(
-  configGuardrails: Guardrails | undefined,
-  runGuardrails: Guardrails | undefined,
-): readonly { readonly name: string; readonly stage: GuardrailStage; readonly revision: string | null }[] {
-  const rows: { name: string; stage: GuardrailStage; revision: string | null }[] = [];
-  for (const guardrails of [configGuardrails, runGuardrails]) {
-    if (!guardrails) continue;
-    for (const stage of ["input", "output", "tool_input", "tool_output"] as const) {
-      const key = stage === "tool_input" ? "toolInput" : stage === "tool_output" ? "toolOutput" : stage;
-      for (const guardrail of guardrails[key] ?? []) {
-        rows.push({ name: guardrail.name, stage, revision: guardrail.revision ?? null });
-      }
-    }
-  }
-  return rows;
-}
-
-function loopIdentity(loop: RunOptions["loop"]): { readonly strategy: string; readonly revision: string | null } {
-  if (typeof loop === "object" && loop && "strategy" in loop) {
-    return { strategy: loop.strategy, revision: BUILT_IN_LOOP_REVISIONS[loop.strategy] ?? null };
-  }
+function loopIdentity(loop: import("./loop/index.js").LoopStrategy | undefined): {
+  readonly strategy: string;
+  readonly revision: string | null;
+} {
   return {
-    strategy: loop?.name ?? "single-shot",
-    revision: loop?.revision ?? BUILT_IN_LOOP_REVISIONS["single-shot"] ?? null,
+    strategy: loop?.name ?? "default",
+    revision: loop?.revision ?? BUILT_IN_LOOP_REVISIONS.default ?? null,
   };
 }
 

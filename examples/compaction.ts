@@ -1,7 +1,7 @@
 import { createMemorySessionStore, createMockProvider, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createLlmCompactionStrategy } from "@arnilo/prism-memory/compaction/llm";
+import { createLlmCompactor } from "@arnilo/prism-memory/compaction/llm";
 
-// LLM compaction with a mock summarization provider: the strategy calls the
+// LLM compaction with a mock summarization provider: the compactor calls the
 // provider to summarize older history, then appends a `compaction` entry. Raw
 // history is never deleted. No network, no real credentials.
 export async function demo() {
@@ -22,7 +22,7 @@ export async function demo() {
     prev = entry.id;
   }
 
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("compact summary"), providerDone()]),
     model: { provider: "mock", model: "summary" },
     keepRecentTokens: 1,

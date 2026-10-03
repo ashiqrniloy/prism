@@ -4,7 +4,7 @@ import { describe, it } from "bun:test";
 import { createUsageAccumulator } from "../agent-session/helpers.js";
 import { recordProviderUsage } from "../agent-session/session/provider-round.js";
 import type { RoundContext, SessionHost } from "../agent-session/session/types.js";
-import type { AgentEvent, AgentSession, ContextMeter, ModelConfig, ProviderRequest, RunLedger, UsageRecord } from "../index.js";
+import type { AgentEvent, Session, ContextMeter, ModelConfig, ProviderRequest, RunLedger, UsageRecord } from "../index.js";
 import {
   createAgent,
   createMemorySessionStore,
@@ -44,14 +44,14 @@ const silentProvider = {
 };
 
 /** Subscribe first, collect events, and snapshot `contextMeter()` while the run is still active. */
-async function runWithMeters(session: AgentSession, input: string, options: Parameters<AgentSession["run"]>[1] = {}) {
+async function runWithMeters(session: Session, input: string, options: Parameters<Session["run"]>[1] = {}) {
   const events: AgentEvent[] = [];
   const meters = new Map<number, ContextMeter>();
   const subscription = session.subscribe();
   const pump = (async () => {
     for await (const event of subscription) {
       events.push(event);
-      if (event.type === "provider_turn_finished") meters.set(event.turn, session.contextMeter());
+      if (event.type === "turn.completed") meters.set(event.turn, session.contextMeter());
     }
   })();
   const outcome = await session.run(input, options).then(
@@ -63,22 +63,22 @@ async function runWithMeters(session: AgentSession, input: string, options: Para
 }
 
 function finished(events: readonly AgentEvent[]) {
-  const event = events.find((candidate) => candidate.type === "provider_turn_finished");
-  assert.ok(event?.type === "provider_turn_finished", "a provider turn must finish");
+  const event = events.find((candidate) => candidate.type === "turn.completed");
+  assert.ok(event?.type === "turn.completed", "a provider turn must finish");
   return event;
 }
 
 describe("usage fallback and context meter (plan 091 T2)", () => {
   it("a non-reporting provider gets a labeled estimate in the event, ledger, run totals, and meter", async () => {
     const { ledger, usage: rows } = memoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "usage-fallback",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: MODEL,
       provider: silentProvider,
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "usage-fallback-session" });
+    const session = await agent.session({ id: "usage-fallback-session", create: true });
     const { events, meters, result, error } = await runWithMeters(session, "hi", { limits: { maxInputTokens: 5_000, maxTurns: 4 } });
     assert.equal(error, undefined, String(error));
 
@@ -86,9 +86,9 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
     assert.equal(turn.usage?.estimated, true, "a missing provider report must be labeled as an estimate");
     assert.equal(turn.usage?.confidence, "medium", "calibrated family tables are medium confidence");
     assert.ok((turn.usage?.inputTokens ?? 0) > 0);
-    assert.equal(turn.metadata.budgets?.inputTokens, turn.usage?.inputTokens, "the estimate feeds the turn budget snapshot");
-    assert.equal(turn.metadata.budgets?.inputTokensSource, "estimated", "the fallback labels the budget figure's provenance");
-    assert.equal(turn.metadata.budgets?.runInputUsed, turn.usage?.inputTokens, "the estimate charges the run input budget");
+    assert.equal(turn.metadata?.budgets?.inputTokens, turn.usage?.inputTokens, "the estimate feeds the turn budget snapshot");
+    assert.equal(turn.metadata?.budgets?.inputTokensSource, "estimated", "the fallback labels the budget figure's provenance");
+    assert.equal(turn.metadata?.budgets?.runInputUsed, turn.usage?.inputTokens, "the estimate charges the run input budget");
 
     assert.equal(rows.length, 2, "provider-turn and run-total usage rows");
     const turnRow = rows.find((row) => row.scope === "provider_turn");
@@ -125,14 +125,14 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ id: "usage-reported", store: createMemorySessionStore(), model: MODEL, provider });
-    const session = agent.createSession({ id: "usage-reported-session" });
+    const agent = await createAgent({ id: "usage-reported", slots: { store: createMemorySessionStore() }, model: MODEL, provider });
+    const session = await agent.session({ id: "usage-reported-session", create: true });
     const { events, meters, result, error } = await runWithMeters(session, "hi");
     assert.equal(error, undefined, String(error));
 
     const turn = finished(events);
     assert.deepEqual(turn.usage, { inputTokens: 500, outputTokens: 7, totalTokens: 507 }, "reported usage is never overwritten");
-    assert.equal(turn.metadata.budgets?.inputTokensSource, "reported", "a provider report is labeled as such");
+    assert.equal(turn.metadata?.budgets?.inputTokensSource, "reported", "a provider report is labeled as such");
     assert.equal(meters.get(1)?.source, "reported");
     assert.equal(meters.get(1)?.inputTokens, 500);
     assert.equal(result?.usage?.estimated, undefined);
@@ -141,23 +141,23 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
 
   it('usageEstimation: "off" leaves absent usage absent and records nothing', async () => {
     const { ledger, usage: rows } = memoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "usage-off",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: MODEL,
       provider: silentProvider,
       usageEstimation: "off",
       runLedger: ledger,
     });
-    const session = agent.createSession({ id: "usage-off-session" });
+    const session = await agent.session({ id: "usage-off-session", create: true });
     const { events, result, error } = await runWithMeters(session, "hi");
     assert.equal(error, undefined, String(error));
 
     const turn = finished(events);
     assert.equal(turn.usage, undefined, "off means absent, never zero");
-    assert.equal(turn.metadata.budgets?.inputTokens, undefined);
-    assert.equal(turn.metadata.budgets?.inputTokensSource, undefined, "no figure means no provenance label");
-    assert.equal(turn.metadata.budgets?.runInputUsed, 0);
+    assert.equal(turn.metadata?.budgets?.inputTokens, undefined);
+    assert.equal(turn.metadata?.budgets?.inputTokensSource, undefined, "no figure means no provenance label");
+    assert.equal(turn.metadata?.budgets?.runInputUsed, 0);
     assert.equal(rows.length, 0, "nothing estimated into the ledger");
     assert.equal(result?.usage, undefined);
 
@@ -169,9 +169,9 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
   it("estimated usage is never priced through the cost catalog", async () => {
     let quotes = 0;
     const { ledger, usage: rows } = memoryLedger();
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "usage-estimate-cost",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: MODEL,
       provider: silentProvider,
       runLedger: ledger,
@@ -182,7 +182,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
         },
       },
     });
-    const session = agent.createSession({ id: "usage-estimate-cost-session" });
+    const session = await agent.session({ id: "usage-estimate-cost-session", create: true });
     const { result, error } = await runWithMeters(session, "hi");
     assert.equal(error, undefined, String(error));
     assert.equal(quotes, 0, "a catalog quote on estimated tokens would invent billing");
@@ -193,8 +193,13 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
 
   it("an unknown model family falls back to low confidence and still measures", async () => {
     const unknown: ModelConfig = { provider: "mock", model: "demo-local-7b" };
-    const agent = createAgent({ id: "usage-unknown", store: createMemorySessionStore(), model: unknown, provider: silentProvider });
-    const session = agent.createSession({ id: "usage-unknown-session" });
+    const agent = await createAgent({
+      id: "usage-unknown",
+      slots: { store: createMemorySessionStore() },
+      model: unknown,
+      provider: silentProvider,
+    });
+    const session = await agent.session({ id: "usage-unknown-session", create: true });
     const { events, error } = await runWithMeters(session, "hi");
     assert.equal(error, undefined, String(error));
     const turn = finished(events);

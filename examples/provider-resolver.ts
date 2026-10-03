@@ -1,45 +1,23 @@
-import {
-  type AgentEvent,
-  createAgent,
-  createExtensionKernel,
-  createMockProvider,
-  createProviderResolver,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
-import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
+import { type AgentEvent, createAgent, createMockProvider, createProviderResolver, providerDone, providerTextDelta } from "@arnilo/prism";
+import { openaiPackage } from "@arnilo/prism-providers/openai";
 
-// Build a provider resolver from a mix of first-party provider package
-// contributions (loaded through the extension kernel) and a third-party own
-// provider, then run an agent with `providerSource` and no direct `provider`.
-// No network, no real credentials — the model routes to the own mock provider.
+// A loaded provider package resolves `model.provider` with no `AgentConfig.provider`.
+// `providerSource` still wins for a host-owned provider. No network, no real credentials.
 export async function demo(): Promise<{ streamed: string; providers: string[] }> {
-  // First-party provider package, inert until loaded; fake key only.
-  const kernel = createExtensionKernel();
-  await kernel.load([createOpenAIProviderPackage({ apiKey: () => "fake-openai-key" })]);
-
-  // Third-party own provider.
   const own = createMockProvider([providerTextDelta("from-own"), providerDone()], { id: "own" });
-
-  // Resolver from an explicit list mixing first-party (from the kernel registry)
-  // and own. Hosts can also pass the registry directly:
-  //   createProviderResolver(kernel.registries.providers)
-  // or implement ProviderResolver as a one-line function over their own map.
-  const providerSource = createProviderResolver([...kernel.registries.providers.list(), own]);
-
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "own", model: "demo" },
-    providerSource,
+    packages: [openaiPackage({ apiKey: () => "fake-openai-key" })],
+    providerSource: createProviderResolver([own]),
   });
 
-  const session = agent.createSession({ id: "s1" });
+  const session = await agent.session({ id: "s1", create: true });
   const reader = collect(session.subscribe());
   await session.run("Hi");
   const events = await reader;
-
-  const delta = events.find((event) => event.type === "message_delta");
+  const delta = events.find((event) => event.type === "message.delta");
   const streamed = delta?.content.type === "text" ? delta.content.text : "";
-  return { streamed, providers: [...kernel.registries.providers.list(), own].map((p) => p.id) };
+  return { streamed, providers: [own.id, ...agent.inspect().packages.map((item) => item.name)] };
 }
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {

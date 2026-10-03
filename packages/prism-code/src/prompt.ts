@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import type { ContextBlock, ContextProvider, ContextResolutionContext } from "@arnilo/prism";
+import type { ContextBlock, ContextSource } from "@arnilo/prism";
 import type { InstructionsPlaneConfig } from "@arnilo/prism-agent-sdk";
 import type { PrismCodeConfig } from "./config.js";
 import { resolvePrismHome } from "./home.js";
@@ -30,7 +30,7 @@ export const CODING_SYSTEM_PROMPT = `You are Prism Code, an expert autonomous so
 - Explain what you changed and why, referencing exact file paths and test results.
 - Avoid conversational filler, disclaimers, or excessive verbosity.`;
 
-export interface EnvironmentContextProviderOptions {
+export interface EnvironmentContextSourceOptions {
   readonly repoRoot: string;
   readonly cwd?: string;
   readonly model?: string | { readonly provider?: string; readonly model?: string };
@@ -82,10 +82,15 @@ export function detectGitDirty(repoRoot: string): boolean {
   }
 }
 
-export function createEnvironmentContextProvider(options: EnvironmentContextProviderOptions): ContextProvider {
+/**
+ * The environment block as a `context.build` source. The block is built once at agent-assembly
+ * time: every value in it (cwd, git branch, git dirty, date) is a property of the workspace, not of
+ * the turn, so re-reading it per turn would only cost `execSync` calls for an identical result.
+ */
+export function createEnvironmentContextSource(options: EnvironmentContextSourceOptions): ContextSource {
   return {
     name: "environment",
-    resolve(context: ContextResolutionContext): readonly ContextBlock[] {
+    contextBlocks: ((): readonly ContextBlock[] => {
       const cwd = options.cwd ?? options.repoRoot;
       const repoRoot = options.repoRoot;
       const os = `${process.platform} (${process.arch})`;
@@ -93,12 +98,7 @@ export function createEnvironmentContextProvider(options: EnvironmentContextProv
       const date = options.getDate ? options.getDate() : new Date().toISOString().slice(0, 10);
       const branch = options.getGitBranch ? options.getGitBranch() : detectGitBranch(repoRoot);
       const dirty = options.getGitDirty ? options.getGitDirty() : detectGitDirty(repoRoot);
-      const modelId = options.getModelId
-        ? options.getModelId()
-        : ((context.metadata?.model as any)?.model ??
-          (context.metadata?.model as any) ??
-          (typeof options.model === "object" ? options.model?.model : options.model) ??
-          "default");
+      const modelId = options.getModelId?.() ?? (typeof options.model === "object" ? options.model?.model : options.model) ?? "default";
 
       return [
         {
@@ -115,7 +115,7 @@ export function createEnvironmentContextProvider(options: EnvironmentContextProv
           ].join("\n"),
         },
       ];
-    },
+    })(),
   };
 }
 

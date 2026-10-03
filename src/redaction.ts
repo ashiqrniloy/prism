@@ -209,12 +209,16 @@ export function errorToErrorInfo(error: unknown, secrets: readonly (string | und
   const failureClass = readProviderFailureClass(error);
   const failure = failureClass === undefined ? {} : { failureClass };
   if (error instanceof Error) {
+    // A failing hook handler is named by package and hook, so a failed run says whose handler it was.
+    const { owner, hook } = error as { owner?: unknown; hook?: unknown };
+    const hookSource = typeof owner === "string" && typeof hook === "string" ? { owner, hook } : {};
     return {
       name: error.name,
       message: redactSecrets(error.message, secrets),
       code,
       ...failure,
       ...retryAfter,
+      ...hookSource,
       cause: error.cause ? redactSecrets(String(error.cause), secrets) : undefined,
     };
   }

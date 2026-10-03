@@ -1,6 +1,6 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, createMockProvider, providerDone, providerTextDelta, withContextBlocks } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { chunkMarkdown, createRagContextProvider, indexChunks, retrieveContext } from "@arnilo/prism-memory/rag";
+import { chunkMarkdown, indexChunks, registerRagContext, retrieveContext } from "@arnilo/prism-memory/rag";
 
 const embedder = createHashEmbedder();
 const store = createMemoryVectorStore();
@@ -19,11 +19,21 @@ const retrieved = await retrieveContext("execution policy approval", {
   filter: { category: "security" },
 });
 
-const agent = createAgent({
+// RAG retrieval rides the `context.build` hook (roadmap §2.4): the retrieved blocks join this
+// turn's provider view only. The session store is never touched.
+const agent = await createAgent({
   model: { provider: "mock", model: "rag-demo" },
   provider: createMockProvider([providerTextDelta(`Policy answer ${retrieved.citations[0]?.id ?? "without citation"}`), providerDone()]),
-  context: [createRagContextProvider({ embedder, store, scope })],
+  hooks: (hooks) => {
+    registerRagContext(hooks, { embedder, store, scope });
+    // A second handler composes on top of the retrieved blocks, in registration order.
+    hooks.on(
+      "context.build",
+      (draft) => withContextBlocks(draft, [{ id: "house-rule", title: "House rule", content: "Cite the security guide." }]),
+      { id: "house-rule" },
+    );
+  },
 });
 
-const result = await agent.createSession().run("How does approval protect tool execution?");
+const result = await (await agent.session()).run("How does approval protect tool execution?");
 console.log(JSON.stringify({ context: retrieved.text, answer: result.text }));

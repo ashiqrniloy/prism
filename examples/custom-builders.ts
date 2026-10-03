@@ -1,26 +1,21 @@
 import {
-  type ContextBlock,
+  type ContextDraft,
   createAgent,
-  createAgentSession,
   createMockProvider,
-  type InputBuildContext,
-  type InputBuilder,
   type Message,
-  type PromptBuilder,
-  type PromptBuildRequest,
   providerDone,
   providerTextDelta,
+  withContextBlocks,
 } from "@arnilo/prism";
 
-// Custom input + prompt builders: a host replaces the default assembly seams
-// to control how raw user input becomes messages and how the final message
-// list is ordered. Both builders are plain objects implementing the
-// `InputBuilder` / `PromptBuilder` contracts and are passed to `createAgent`.
+// A host-owned prompt composition plus a `run.input` hook: both interception
+// points a 0.12 `PromptBuilder` / `ContextProvider` pair used to occupy, now both
+// on the hook bus (roadmap §2.4).
 //
-// - The custom InputBuilder wraps raw string input in a tagged user message
-//   and prepends a host-owned preamble (no middleware, no eval).
-// - The custom PromptBuilder places context first, then tools, then skills,
-//   then the input messages — a different order than the default builder.
+// - The `run.input` handler wraps raw user text in a tagged user message and
+//   prepends a host-owned preamble.
+// - The `context.build` handler places the host's context blocks and a tool
+//   summary ahead of the transcript — a different order than the kernel's own.
 //
 // Uses the mock provider — no network, no credentials.
 const preambleMessage: Message = {
@@ -28,44 +23,40 @@ const preambleMessage: Message = {
   content: [{ type: "text", text: "Host preamble: answer in one short sentence." }],
 };
 
-const customInputBuilder: InputBuilder = {
-  name: "host-input",
-  async build(input: string | Message | readonly Message[], _context?: InputBuildContext): Promise<readonly Message[]> {
-    const userText = typeof input === "string" ? input : "<structured input>";
-    return [preambleMessage, { role: "user", content: [{ type: "text", text: userText }] }];
-  },
-};
-
-const customPromptBuilder: PromptBuilder = {
-  name: "host-prompt",
-  async build(request: PromptBuildRequest): Promise<readonly Message[]> {
-    const blocks = request.context ?? [];
-    const blockMessages: Message[] = blocks.map((b: ContextBlock) => ({
-      role: "system",
-      content: [{ type: "text", text: `${b.title ?? "Context"}: ${typeof b.content === "string" ? b.content : "<blocks>"}` }],
-    }));
-    const toolMessages: Message[] = (request.tools ?? []).map((t) => ({
-      role: "system",
-      content: [{ type: "text", text: `Tool available: ${t.name}` }],
-    }));
-    const skillMessages: Message[] = (request.skills ?? []).map((s) => ({
-      role: "system",
-      content: [{ type: "text", text: `Skill active: ${s.name}` }],
-    }));
-    return [...blockMessages, ...toolMessages, ...skillMessages, ...request.messages];
-  },
-};
-
 export async function demo(): Promise<readonly string[]> {
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
-    inputBuilder: customInputBuilder,
-    promptBuilder: customPromptBuilder,
-    context: [{ name: "workspace", resolve: () => [{ title: "Workspace", content: "demo repo" }] }],
+    hooks: (hooks) => {
+      hooks.on("run.input", (messages) => [
+        preambleMessage,
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: messages
+                .map((m) => m.content)
+                .flat()
+                .map((b) => (b.type === "text" ? b.text : ""))
+                .join(" "),
+            },
+          ],
+        },
+      ]);
+      hooks.on(
+        "context.build",
+        (draft: ContextDraft) =>
+          withContextBlocks(draft, [
+            { title: "Workspace", content: "demo repo" },
+            { title: "Tools", content: (draft.tools ?? []).map((entry) => entry.name).join(", ") || "none" },
+          ]),
+        { id: "host-context" },
+      );
+    },
   });
 
-  const session = createAgentSession({ agent });
+  const session = await agent.session();
   const types: string[] = [];
   async function drain(): Promise<void> {
     for await (const event of session.subscribe()) types.push(event.type);

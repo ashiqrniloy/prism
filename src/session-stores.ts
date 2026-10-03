@@ -5,22 +5,28 @@ import {
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
+  DEFAULT_SESSION_LIST_LIMIT,
+  HARD_MAX_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
   HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
   HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS,
   type Message,
+  type OwnershipScope,
   type PersistencePage,
   resolveSessionSearchQuery,
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
+  SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
+  type SessionListQuery,
   type SessionSearchHit,
   type SessionSearchQuery,
   SessionSearchUnsupportedError,
   type SessionStore,
+  type SessionSummary,
 } from "./contracts.js";
 import { createId } from "./ids.js";
 
@@ -259,6 +265,19 @@ export function createMemorySessionStore(
     async searchSessions(query) {
       if (mode === "unsupported") throw new SessionSearchUnsupportedError();
       return searchLinearSessions(bySession, leafBySession, query, searchCaps);
+    },
+    async listSessions(query) {
+      query.signal?.throwIfAborted();
+      return listMemorySessions(bySession, leafBySession, query);
+    },
+    async deleteSession(sessionId, scope) {
+      const entries = bySession.get(sessionId);
+      // Fail closed and non-enumerating: an absent session and another scope's session answer alike.
+      if (!entries || entries.length === 0 || !entriesInScope(entries, scope)) return false;
+      for (const entry of entries) byId.delete(entry.id);
+      bySession.delete(sessionId);
+      leafBySession.delete(sessionId);
+      return true;
     },
     async readBranchPath(query) {
       const entries = bySession.get(query.sessionId) ?? [];
@@ -535,3 +554,71 @@ function indexEntries(entries: readonly SessionEntry[]): { byId: Map<string, Ses
 }
 
 const randomId = createId;
+
+const OWNERSHIP_SCOPE_KEYS = ["tenantId", "accountId", "userId"] as const;
+
+/**
+ * Whether every entry carries each field of `scope` with the same value. An undefined scope (or an undefined
+ * field) constrains nothing; an entry written without the stamp is outside any scope that names the field.
+ */
+export function entriesInScope(entries: readonly SessionEntry[], scope: OwnershipScope | undefined): boolean {
+  if (!scope) return true;
+  return entries.every((entry) => OWNERSHIP_SCOPE_KEYS.every((key) => scope[key] === undefined || entry.metadata?.[key] === scope[key]));
+}
+
+/** Summary of one session from its entries: no transcript, only counts, times, and display metadata. */
+export function summarizeSession(sessionId: string, entries: readonly SessionEntry[], leafId: string | undefined): SessionSummary {
+  let createdAt: string | undefined;
+  let updatedAt: string | undefined;
+  let messageCount = 0;
+  let title: string | undefined;
+  let workspaceRoot: string | undefined;
+  for (const entry of entries) {
+    if (createdAt === undefined || entry.timestamp < createdAt) createdAt = entry.timestamp;
+    if (updatedAt === undefined || entry.timestamp > updatedAt) updatedAt = entry.timestamp;
+    if (entry.kind === "message") messageCount += 1;
+    const meta = entry.metadata;
+    if (typeof meta?.[SESSION_TITLE_METADATA_KEY] === "string") title = meta[SESSION_TITLE_METADATA_KEY] as string;
+    if (typeof meta?.[SESSION_SEARCH_WORKSPACE_METADATA_KEY] === "string")
+      workspaceRoot = meta[SESSION_SEARCH_WORKSPACE_METADATA_KEY] as string;
+  }
+  return {
+    sessionId,
+    ...(leafId !== undefined ? { leafId } : {}),
+    ...(createdAt !== undefined ? { createdAt } : {}),
+    ...(updatedAt !== undefined ? { updatedAt } : {}),
+    messageCount,
+    ...(title !== undefined ? { title } : {}),
+    ...(workspaceRoot !== undefined ? { metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } } : {}),
+  };
+}
+
+function listMemorySessions(
+  bySession: Map<string, SessionEntry[]>,
+  leafBySession: Map<string, string>,
+  query: SessionListQuery,
+): PersistencePage<SessionSummary> {
+  const limit = query.limit ?? DEFAULT_SESSION_LIST_LIMIT;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HARD_MAX_SESSION_LIST_LIMIT) {
+    throw new TypeError(`SessionListQuery.limit must be a safe integer from 1 to ${HARD_MAX_SESSION_LIST_LIMIT}`);
+  }
+  const order = query.order ?? "desc";
+  if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
+  const summaries: SessionSummary[] = [];
+  for (const [sessionId, entries] of bySession) {
+    if (entries.length === 0 || !entriesInScope(entries, query)) continue;
+    summaries.push(summarizeSession(sessionId, entries, leafBySession.get(sessionId)));
+  }
+  const key = (summary: SessionSummary) => `${summary.updatedAt ?? ""}\t${summary.sessionId}`;
+  summaries.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0) * (order === "asc" ? 1 : -1));
+  let start = 0;
+  if (query.cursor !== undefined) {
+    // The cursor is the key of the last row served; resume strictly after it in the sort order.
+    if (typeof query.cursor !== "string" || !query.cursor.includes("\t")) throw new TypeError("SessionListQuery.cursor is invalid");
+    start = summaries.findIndex((summary) => (order === "asc" ? key(summary) > query.cursor! : key(summary) < query.cursor!));
+    if (start < 0) start = summaries.length;
+  }
+  const page = summaries.slice(start, start + limit);
+  const last = page.at(-1);
+  return { items: page, nextCursor: start + page.length < summaries.length && last ? key(last) : undefined };
+}

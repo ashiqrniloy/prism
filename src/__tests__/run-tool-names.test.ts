@@ -4,10 +4,10 @@ import { loadAgentRunState } from "../agent-run-state.js";
 import {
   type AgentEvent,
   type AIProvider,
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
-  createMiddlewareRegistry,
   createSkillRegistry,
   createToolRegistry,
   type PermissionPolicy,
@@ -18,6 +18,7 @@ import {
   toolCallContent,
 } from "../index.js";
 import { HARD_RUN_TOOL_NAMES, selectRunTools } from "../tools.js";
+import { failedRun } from "./run-result-helpers.js";
 
 function tool(name: string, executed?: string[]): ToolDefinition {
   return {
@@ -47,7 +48,7 @@ async function blockedReasons(session: { subscribe(): AsyncIterable<AgentEvent> 
   const reasons: string[] = [];
   const consume = (async () => {
     for await (const event of session.subscribe()) {
-      if (event.type === "tool_execution_blocked") reasons.push(`${event.name}:${event.reason}`);
+      if (event.type === "tool.completed" && event.status === "blocked") reasons.push(`${event.name}:${event.reason}`);
     }
   })();
   await Promise.all([consume, run.catch(() => undefined)]);
@@ -111,12 +112,14 @@ describe("RunOptions.toolNames", () => {
         yield providerDone();
       },
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      tools: [echo, secret],
-    }).createSession();
-    const reasons = await blockedReasons(session, session.run("Hi", { toolNames: ["echo"] }));
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        tools: { add: [echo, secret] },
+      })
+    ).session();
+    const reasons = await blockedReasons(session, session.run("Hi", { tools: { only: ["echo"] } }));
     assert.ok(seen.length >= 1);
     assert.ok(seen.every((names) => names.length === 1 && names[0] === "echo"));
     assert.deepEqual(reasons, ["secret:unknown_tool"]);
@@ -130,13 +133,15 @@ describe("RunOptions.toolNames", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: open,
-      tools: [echo, secret],
-    })
-      .createSession()
-      .run("Hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider: open,
+          tools: { add: [echo, secret] },
+        })
+      ).session()
+    ).run("Hi");
     assert.deepEqual(full, [["echo", "secret"]]);
   });
 
@@ -149,13 +154,15 @@ describe("RunOptions.toolNames", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      tools: [tool("echo")],
-    })
-      .createSession()
-      .run("Hi", { toolNames: [] });
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          tools: { add: [tool("echo")] },
+        })
+      ).session()
+    ).run("Hi", { tools: { only: [] } });
     assert.equal(seen.length, 1);
     assert.equal(seen[0] ?? 0, 0);
   });
@@ -164,92 +171,88 @@ describe("RunOptions.toolNames", () => {
     const registry = createToolRegistry([tool("echo"), tool("secret")]);
     const seenA: string[][] = [];
     const seenB: string[][] = [];
-    const sessionA = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: {
-        id: "mock",
-        async *generate(request) {
-          seenA.push((request.tools ?? []).map((item) => item.name));
-          yield providerDone();
+    const sessionA = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: {
+          id: "mock",
+          async *generate(request) {
+            seenA.push((request.tools ?? []).map((item) => item.name));
+            yield providerDone();
+          },
         },
-      },
-      tools: registry,
-    }).createSession();
-    const sessionB = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: {
-        id: "mock",
-        async *generate(request) {
-          seenB.push((request.tools ?? []).map((item) => item.name));
-          yield providerDone();
+        tools: { add: registry.list() },
+      })
+    ).session();
+    const sessionB = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: {
+          id: "mock",
+          async *generate(request) {
+            seenB.push((request.tools ?? []).map((item) => item.name));
+            yield providerDone();
+          },
         },
-      },
-      tools: registry,
-    }).createSession();
-    await Promise.all([sessionA.run("a", { toolNames: ["echo"] }), sessionB.run("b", { toolNames: ["secret"] })]);
+        tools: { add: registry.list() },
+      })
+    ).session();
+    await Promise.all([sessionA.run("a", { tools: { only: ["echo"] } }), sessionB.run("b", { tools: { only: ["secret"] } })]);
     assert.deepEqual(seenA, [["echo"]]);
     assert.deepEqual(seenB, [["secret"]]);
     registry.register(tool("late"));
     const seenC: string[][] = [];
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: {
-        id: "mock",
-        async *generate(request) {
-          seenC.push((request.tools ?? []).map((item) => item.name));
-          yield providerDone();
-        },
-      },
-      tools: registry,
-    })
-      .createSession()
-      .run("c", { toolNames: ["echo"] });
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider: {
+            id: "mock",
+            async *generate(request) {
+              seenC.push((request.tools ?? []).map((item) => item.name));
+              yield providerDone();
+            },
+          },
+          tools: { add: registry.list() },
+        })
+      ).session()
+    ).run("c", { tools: { only: ["echo"] } });
     assert.deepEqual(seenC, [["echo"]]);
-  });
-
-  it("middleware rename cannot widen the run grant", async () => {
-    const middleware = createMiddlewareRegistry();
-    middleware.use<ToolCallContent>("tool_call", (value) => ({ ...value, name: "secret" }));
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: providerCalls("echo"),
-      tools: [tool("echo"), tool("secret")],
-      middleware,
-    }).createSession();
-    const reasons = await blockedReasons(session, session.run("Hi", { toolNames: ["echo"] }));
-    assert.deepEqual(reasons, ["secret:unknown_tool"]);
   });
 
   it("skill toolNames uses the narrowed set", async () => {
     const registry = createSkillRegistry([{ name: "needs-secret", instructions: "Use secret.", toolNames: ["secret"] }]);
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: {
-        id: "mock",
-        async *generate() {
-          yield providerDone();
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: {
+          id: "mock",
+          async *generate() {
+            yield providerDone();
+          },
         },
-      },
-      tools: [tool("echo"), tool("secret")],
-      skills: registry,
-    }).createSession();
-    await assert.rejects(session.run("Hi", { toolNames: ["echo"], activeSkills: ["needs-secret"] }), /requires inactive tool: secret/);
+        tools: { add: [tool("echo"), tool("secret")] },
+        skills: { add: registry.list() },
+      })
+    ).session();
+    await failedRun(session.run("Hi", { tools: { only: ["echo"] } }), /requires inactive tool: secret/);
   });
 
   it("durable resume keeps the checkpointed grant", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     const registry = createToolRegistry([tool("echo"), tool("secret")]);
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "narrow",
       model: { provider: "mock", model: "demo" },
       provider: providerCalls("echo"),
-      tools: registry,
-      store,
+      tools: { add: registry.list() },
+      slots: { store },
     });
-    const first = await agent.createSession({ id: "s1" }).run("go", {
-      toolNames: ["echo"],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const first = await (await agent.session({ id: "s1", create: true })).run("go", {
+      tools: { only: ["echo"] },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     assert.equal(first.status, "suspended");
     const loaded = await loadAgentRunState(checkpoints, { runId: first.runId, sessionId: first.sessionId });
@@ -263,15 +266,15 @@ describe("RunOptions.toolNames", () => {
       },
     };
     const result = await resumeAgentRun(
-      createAgent({ ...agent.config, provider: resumeProvider }),
+      await createAgent({ ...agent.config, provider: resumeProvider }),
       { runId: first.runId, sessionId: first.sessionId },
       {
         expectedVersion: first.runState!.version!,
-        decisions: first.interruption!.pendingDecisions!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
+        decisions: first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
       },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.deepEqual(seen, [["echo"]]);
   });
 
@@ -296,31 +299,31 @@ describe("RunOptions.toolNames", () => {
         yield providerDone();
       },
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      tools: registry,
-    })
-      .createSession()
-      .run("Hi", { limits: { maxToolRounds: 2 } });
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider,
+          tools: { add: registry.list() },
+        })
+      ).session()
+    ).run("Hi", { limits: { maxToolRounds: 2 } });
     assert.deepEqual(seen, [["echo"], ["echo"]]);
     assert.ok(registry.get("late"));
   });
 
-  it("policy denial still applies inside the narrowed set", async () => {
-    const permission: PermissionPolicy = {
-      async check(input) {
-        if (input.target === "echo") return { allowed: false, reason: "revoked" };
-        return { allowed: true };
-      },
-    };
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: providerCalls("echo"),
-      tools: [tool("echo")],
-      permission,
-    }).createSession();
-    const reasons = await blockedReasons(session, session.run("Hi", { toolNames: ["echo"] }));
-    assert.deepEqual(reasons, ["echo:permission_denied"]);
+  it("tool.call denial still applies inside the narrowed set", async () => {
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider: providerCalls("echo"),
+        tools: { add: [tool("echo")] },
+        hooks: (hooks) => hooks.on("tool.call", (payload) => (payload.name === "echo" ? { deny: "revoked" } : undefined)),
+      })
+    ).session();
+    await session.run("Hi", { tools: { only: ["echo"] } });
+    const blocks = (await session.entries()).flatMap((entry) => entry.message?.content ?? []);
+    const denied = blocks.find((block) => block.type === "tool_result" && block.error !== undefined);
+    assert.ok(denied && denied.type === "tool_result" && denied.error?.message === "revoked");
   });
 });

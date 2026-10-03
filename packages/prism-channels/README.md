@@ -2,7 +2,7 @@
 
 Messaging channels for Prism: run selected Prism agents over chat transports without building another agent runtime, conversation store or queue.
 
-- Transport-neutral runtime — authorize an observed sender, bind them to an owned Prism session, run turns through the existing `AgentSession`, project only the current run's final text back to the bound destination.
+- Transport-neutral runtime — authorize an observed sender, bind them to an owned Prism session, run turns through the existing `Session`, project only the current run's final text back to the bound destination.
 - Durable journal — bindings, `/new` generations, admission dedup, claims and staged replies live in the host's `CheckpointStore`/`LeaseStore`; recovery is explicit (`reconcile`), never an automatic replay.
 - Deny by default — transport fields are never authority; a host grant, verified identity, ownership scope and a re-check before provider work and before every send.
 - Durable approvals — opaque one-use controls bind a pending core decision to exact sender, binding, agent revision and expiry; Telegram renders them as callback buttons, the experimental Signal subpath as `/approve` / `/deny` command text.

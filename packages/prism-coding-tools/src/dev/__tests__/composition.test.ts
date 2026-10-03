@@ -76,7 +76,7 @@ describe("composition (plan 040 Task 1)", () => {
   });
 
   it("boot: create + bind stays under the 1s envelope (excl. host model calls)", async () => {
-    const inspector = createPrismDevInspector({ agent: mockAgent(), port: 0 });
+    const inspector = createPrismDevInspector({ agent: await mockAgent(), port: 0 });
     const started = performance.now();
     await inspector.listen();
     const bootMs = performance.now() - started;
@@ -85,7 +85,7 @@ describe("composition (plan 040 Task 1)", () => {
   });
 
   it("composed handler: direct agent run flows through createPrismHandler with the local-user default", async () => {
-    const inspector = createPrismDevInspector({ agent: mockAgent("Hello from mock"), port: 0 });
+    const inspector = createPrismDevInspector({ agent: await mockAgent("Hello from mock"), port: 0 });
     await inspector.listen();
     try {
       const response = await fetch(`${inspector.url}/agents/default/runs`, {
@@ -104,7 +104,7 @@ describe("composition (plan 040 Task 1)", () => {
   });
 
   it("GET /inspect returns host composition report with effective tools, ownership, and storage", async () => {
-    const agent = mockAgent("Composition check");
+    const agent = await mockAgent("Composition check");
     const inspector = createPrismDevInspector({ agent, port: 0 });
     await inspector.listen();
     try {
@@ -126,8 +126,8 @@ describe("composition (plan 040 Task 1)", () => {
     }
   });
 
-  it("inspectDevInspector reports composition from inspector options", () => {
-    const agent = mockAgent("Test");
+  it("inspectDevInspector reports composition from inspector options", async () => {
+    const agent = await mockAgent("Test");
     const report = inspectDevInspector({ agent });
     assert.equal(report.profile, "personal");
     assert.equal(report.storage.durable, false);
@@ -135,8 +135,8 @@ describe("composition (plan 040 Task 1)", () => {
   });
 });
 
-function mockAgent(text = "Hello"): ReturnType<typeof createAgent> {
-  return createAgent({
+async function mockAgent(text = "Hello"): ReturnType<typeof createAgent> {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta(text), providerDone()]),
   });

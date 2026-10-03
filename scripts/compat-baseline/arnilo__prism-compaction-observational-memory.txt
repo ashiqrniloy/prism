@@ -99,7 +99,6 @@ createMemoryViewCommand	export declare function createMemoryViewCommand(options:
 createObservationalMemory	export declare function createObservationalMemory(options: CreateObservationalMemoryOptions): ObservationalMemory
 createObservationalMemoryCommands	export declare function createObservationalMemoryCommands(options: MemoryCommandOptions): readonly CommandDefinition[]
 createObservationalMemoryCompactionStrategy	export declare function createObservationalMemoryCompactionStrategy(options?: ObservationalMemoryCompactionStrategyOptions): CompactionStrategy
-createObservationalMemoryExtension	export declare function createObservationalMemoryExtension(options?: ObservationalMemoryExtensionOptions): Extension
 createObservationalMemoryRuntime	export declare function createObservationalMemoryRuntime(options: ObservationalMemoryRuntimeOptions): ObservationalMemoryRuntime
 createRecallMemoryTool	export declare function createRecallMemoryTool(options: RecallMemoryToolOptions): ToolDefinition
 defaultObservationalMemorySettings	export declare const defaultObservationalMemorySettings: ObservationalMemorySettings
@@ -121,6 +120,7 @@ isObservationsRecordedData	export declare function isObservationsRecordedData(va
 isReflectionsRecordedData	export declare function isReflectionsRecordedData(value: unknown): value is ReflectionsRecordedData
 joinWorkerText	export declare function joinWorkerText(parts: Iterable<string>, maxBytes: number, label: string): string
 measureWorkerJson	export declare function measureWorkerJson(value: unknown, maxBytes: number, label: string): number
+observationalMemory	export declare function observationalMemory(options?: ObservationalMemoryExtensionOptions): import("@arnilo/prism").PackageDefinition<{ recall: boolean }>
 observationsUncoveredByReflection	export declare function observationsUncoveredByReflection(entries: readonly SessionEntry[], ledger: ObservationalMemoryLedger, fullRebuild?: boolean): readonly MemoryObservation[]
 packageName	export declare const packageName = "@arnilo/prism-compaction-observational-memory"
 recallObservationalMemory	export declare function recallObservationalMemory(entries: readonly SessionEntry[], id: string, secrets?: readonly (string | undefined)[]): MemoryRecallResult

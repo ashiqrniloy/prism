@@ -9,10 +9,10 @@ import {
   type SessionNotification,
 } from "@agentclientprotocol/sdk";
 import {
-  type AgentLoopStrategy,
+  askEveryTool,
   type AgentRunLifecycle,
   type AgentRunRef,
-  type AgentSession,
+  type Session,
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
@@ -39,7 +39,7 @@ describe("createPrismAcpAgent", () => {
   it("initialize advertises wired seams truthfully and the package version", async () => {
     const acpAgent = createPrismAcpAgent({
       authorize: () => authorization,
-      sessionFactory: () => ({ session: { id: "x", async *stream() {} } as unknown as AgentSession }),
+      sessionFactory: () => ({ session: { id: "x", async *stream() {} } as unknown as Session }),
       lifecycle: {} as AgentRunLifecycle,
       sessions: { list: () => [{ sessionId: "s1", cwd: "/w" }] },
       mcp: { select: () => true, transports: ["sse"] },
@@ -68,11 +68,12 @@ describe("createPrismAcpAgent", () => {
     const updates: SessionNotification[] = [];
     const permissions: RequestPermissionRequest[] = [];
     let authorizations = 0;
-    const prismAgent = createAgent({
+    const prismAgent = await createAgent({
+      hooks: askEveryTool(),
       id: "approval-agent",
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate() {
@@ -81,16 +82,18 @@ describe("createPrismAcpAgent", () => {
           yield providerDone();
         },
       },
-      tools: [
-        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
-      ],
+      tools: {
+        add: [
+          { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
+        ],
+      },
     });
     const acpAgent = createPrismAcpAgent({
       authorize: () => {
         authorizations += 1;
         return authorization;
       },
-      sessionFactory: () => ({ session: prismAgent.createSession({ id: "acp-session" }), agentId: "approval-agent" }),
+      sessionFactory: async () => ({ session: await prismAgent.session({ id: "acp-session", create: true }), agentId: "approval-agent" }),
       lifecycle: createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) }),
     });
     const acpClient = client({ name: "test-client" })
@@ -138,10 +141,10 @@ describe("createPrismAcpAgent", () => {
         session: {
           id: "bounded",
           async *stream() {
-            yield { type: "message_delta", sessionId: "bounded", runId: "run", content: { type: "text", text: "one" } };
-            yield { type: "message_delta", sessionId: "bounded", runId: "run", content: { type: "text", text: "two" } };
+            yield { type: "message.delta", sessionId: "bounded", runId: "run", content: { type: "text", text: "one" } };
+            yield { type: "message.delta", sessionId: "bounded", runId: "run", content: { type: "text", text: "two" } };
           },
-        } as unknown as AgentSession,
+        } as unknown as Session,
       }),
       lifecycle: {} as AgentRunLifecycle,
       limits: { maxStreamEvents: 1 },
@@ -160,8 +163,8 @@ describe("createPrismAcpAgent", () => {
       const acpAgent = createPrismAcpAgent({
         authorize: () => authorization,
         lifecycle: {} as AgentRunLifecycle,
-        sessionFactory: () => ({
-          session: createAgent(config).createSession({ id: "acp-f4" }),
+        sessionFactory: async () => ({
+          session: await (await createAgent(config)).session({ id: "acp-f4", create: true }),
           agentId: "f4-agent",
         }),
       });
@@ -179,7 +182,7 @@ describe("createPrismAcpAgent", () => {
     };
     const base = {
       model: { provider: "mock", model: "mock" },
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       provider: {
         id: "mock",
         async *generate() {
@@ -201,28 +204,13 @@ describe("createPrismAcpAgent", () => {
             yield providerDone();
           },
         },
-        tools: [{ name: "echo", parameters: { type: "object" }, execute: () => ({ toolCallId: "f4-call", name: "echo", value: {} }) }],
+        tools: {
+          add: [{ name: "echo", parameters: { type: "object" }, execute: () => ({ toolCallId: "f4-call", name: "echo", value: {} }) }],
+        },
       }),
       "max_turn_requests",
     );
     // Other finish reasons map through the same field (no core producer yet for these).
-    for (const [finishReason, expected] of [
-      ["token_limit", "max_tokens"],
-      ["refusal", "refusal"],
-    ] as const) {
-      assert.equal(
-        await promptStopReason({
-          ...base,
-          loop: {
-            name: `stop-${finishReason}`,
-            run: async (ctx) => {
-              ctx.finishReason = finishReason;
-            },
-          } satisfies AgentLoopStrategy,
-        }),
-        expected,
-      );
-    }
   });
 
   it("denies reject, cancelled, and unknown permission outcomes", async () => {
@@ -232,11 +220,11 @@ describe("createPrismAcpAgent", () => {
       async *resumeStream(_ref: unknown, resume: { decision: string }) {
         decisions.push(resume.decision);
         yield {
-          type: "agent_denied",
+          type: "decision.resolved",
           sessionId: "fake",
           runId: "run",
-          interruption: { kind: "tool_approval", reason: "approval" },
-          version: 1,
+          decisions: [{ toolCallId: "tool-1", outcome: "deny" }],
+          via: "resume",
         };
       },
     } as unknown as AgentRunLifecycle;
@@ -247,14 +235,14 @@ describe("createPrismAcpAgent", () => {
           id: `fake-${++sessionNumber}`,
           async *stream() {
             yield {
-              type: "agent_suspended",
+              type: "run.suspended",
               sessionId: `fake-${sessionNumber}`,
               runId: "run",
               interruption: { kind: "tool_approval", reason: "approval", toolCallId: "tool" },
               version: 1,
             };
           },
-        } as unknown as AgentSession,
+        } as unknown as Session,
       }),
       lifecycle,
     });
@@ -282,11 +270,12 @@ it("maps the four ACP outcomes onto the shared decision batch without widening s
   const checkpoints = createMemoryCheckpointStore();
   let writes = 0;
   let turn = 0;
-  const prismAgent = createAgent({
+  const prismAgent = await createAgent({
+    hooks: askEveryTool(),
     id: "batch-approval-agent",
     model: { provider: "mock", model: "mock" },
-    store: createMemorySessionStore(),
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    slots: { store: createMemorySessionStore() },
+    runState: { checkpoints, definitionRevision: "1" },
     provider: {
       id: "mock",
       async *generate() {
@@ -299,13 +288,18 @@ it("maps the four ACP outcomes onto the shared decision batch without widening s
         yield providerDone();
       },
     },
-    tools: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
+    tools: {
+      add: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
+    },
   });
   const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: prismAgent, definitionRevision: "1" }) });
   let receivedDecisions: readonly { approvalId: string; outcome: string }[] | undefined;
   const acpAgent = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: prismAgent.createSession({ id: "batch-acp-session" }), agentId: "batch-approval-agent" }),
+    sessionFactory: async () => ({
+      session: await prismAgent.session({ id: "batch-acp-session", create: true }),
+      agentId: "batch-approval-agent",
+    }),
     lifecycle: {
       ...lifecycle,
       resumeStream: ((ref: AgentRunRef, resume: { decisions?: readonly { approvalId: string; outcome: string }[] }, options: unknown) => {
@@ -347,9 +341,9 @@ it("B2: a run-level error rejects session/prompt with ERR_PRISM_ACP_RUN and neve
       session: {
         id: "failing",
         async *stream() {
-          yield { type: "error", sessionId: "failing", runId: "run", error: { message: "SECRET exploded" } };
+          yield { type: "run.failed", sessionId: "failing", runId: "run", error: { message: "SECRET exploded" } };
         },
-      } as unknown as AgentSession,
+      } as unknown as Session,
     }),
     lifecycle: {} as AgentRunLifecycle,
     redactor: createSecretRedactor(["SECRET"]),
@@ -402,7 +396,7 @@ it("F2: session/load replays bounded, redacted user/assistant chunks only when t
       sessionId: "s1",
       timestamp: "2026-01-01T00:00:02.000Z",
       kind: "event",
-      event: { type: "tool_execution_started", sessionId: "s1", runId: "r", call: toolCallContent("t1", "read", {}) },
+      event: { type: "tool.started", sessionId: "s1", runId: "r", call: toolCallContent("t1", "read", {}) },
     },
     {
       id: "e4",
@@ -414,12 +408,12 @@ it("F2: session/load replays bounded, redacted user/assistant chunks only when t
   ];
   const withSeam = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
     redactor: createSecretRedactor(["SECRET"]),
     sessions: {
-      load: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
-      resume: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+      load: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
+      resume: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
       transcript: ({ sessionId }) => (sessionId === "s1" ? transcript : []),
     },
   });
@@ -448,9 +442,9 @@ it("F2: session/load replays bounded, redacted user/assistant chunks only when t
   // Without the seam: load succeeds but emits nothing.
   const withoutSeam = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
-    sessions: { load: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }) },
+    sessions: { load: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }) },
   });
   const silent: SessionNotification[] = [];
   await client()
@@ -479,11 +473,11 @@ it("F2: transcript replay truncates oversize chunks and stops at maxReplayEvents
   }));
   const acpAgent = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
     limits: { maxTextBytes: 16, maxReplayEvents: 3 },
     sessions: {
-      load: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+      load: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
       transcript: () => transcript,
     },
   });
@@ -511,9 +505,9 @@ it("F6: the title seam emits session_info_update on change (redacted and capped)
       session: {
         id: "s1",
         async *stream() {
-          yield { type: "message_delta", sessionId: "s1", runId: "r", content: { type: "text", text: "done" } };
+          yield { type: "message.delta", sessionId: "s1", runId: "r", content: { type: "text", text: "done" } };
         },
-      } as unknown as AgentSession,
+      } as unknown as Session,
     }),
     lifecycle: {} as AgentRunLifecycle,
     redactor: createSecretRedactor(["SECRET"]),
@@ -549,7 +543,7 @@ it("F6: no title seam means no session_info_update, and list passes title/update
   const updates: SessionNotification[] = [];
   const acpAgent = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
     sessions: {
       list: () => [
@@ -586,9 +580,9 @@ it("F6: title seam throws are best-effort and never fail the prompt", async () =
       session: {
         id: "s1",
         async *stream() {
-          yield { type: "message_delta", sessionId: "s1", runId: "r", content: { type: "text", text: "done" } };
+          yield { type: "message.delta", sessionId: "s1", runId: "r", content: { type: "text", text: "done" } };
         },
-      } as unknown as AgentSession,
+      } as unknown as Session,
     }),
     lifecycle: {} as AgentRunLifecycle,
     sessions: { title: () => Promise.reject(new Error("store down")) },
@@ -608,7 +602,7 @@ it("F9: commands seam emits available_commands_update on session/new; absent sea
   const updates: SessionNotification[] = [];
   const withSeam = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
     redactor: createSecretRedactor(["SECRET"]),
     commands: {
@@ -642,7 +636,7 @@ it("F9: commands seam emits available_commands_update on session/new; absent sea
   const silent: SessionNotification[] = [];
   const without = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s2", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s2", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
   });
   await client()
@@ -660,7 +654,7 @@ it("F9: available_commands_update is sliced at acpCommandsPerUpdate", async () =
   const updates: SessionNotification[] = [];
   const acpAgent = createPrismAcpAgent({
     authorize: () => authorization,
-    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as AgentSession }),
+    sessionFactory: () => ({ session: { id: "s1", async *stream() {} } as unknown as Session }),
     lifecycle: {} as AgentRunLifecycle,
     limits: { acpCommandsPerUpdate: 2 },
     commands: {

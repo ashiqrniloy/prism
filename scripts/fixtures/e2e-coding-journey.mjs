@@ -112,7 +112,7 @@ try {
       const text = typeof prompt === "string" ? prompt : (prompt?.content?.[0]?.text ?? "");
       if (!text.includes("edit")) {
         yield {
-          type: "message_delta",
+          type: "message.delta",
           sessionId: "stored-session",
           runId: "stored-run",
           content: { type: "text", text: "stored turn" },
@@ -182,7 +182,7 @@ try {
           if (text.includes("edit")) {
             // Host-side approval path: suspend with a four-outcome decision.
             yield {
-              type: "agent_suspended",
+              type: "run.suspended",
               sessionId: id,
               runId: `run-${id}`,
               version: 1,
@@ -353,7 +353,8 @@ try {
     },
     registry,
     context: context("w1"),
-    identity,
+    principal: identity.principal,
+    ownership,
     redactor,
   });
   assert.match(JSON.stringify(refused), /not read in this session/i, "read-before-write must refuse");
@@ -369,7 +370,8 @@ try {
     },
     registry,
     context: context("w2"),
-    identity,
+    principal: identity.principal,
+    ownership,
     redactor,
   });
   assert.ok(written.content);
@@ -377,7 +379,8 @@ try {
     call: { id: "g1", name: "glob", arguments: { pattern: "src/**/*.ts" } },
     registry,
     context: context("g1"),
-    identity,
+    principal: identity.principal,
+    ownership,
     redactor,
   });
   assert.match(JSON.stringify(globbed), /new\.ts/);
@@ -390,7 +393,8 @@ try {
     },
     registry,
     context: context("d1"),
-    identity,
+    principal: identity.principal,
+    ownership,
     redactor,
   });
   assert.match(JSON.stringify(denied), /outside trusted roots|denied/i, "path outside trusted roots must be denied");

@@ -1,13 +1,5 @@
 import { type AGUIEvent, type AgentCapabilities, AgentCapabilitiesSchema, EventSchemas, EventType, type Interrupt } from "@ag-ui/core";
-import type {
-  AgentEvent,
-  AgentRunLifecycle,
-  AgentRunStatusResult,
-  AgentSession,
-  Message,
-  RunDecision,
-  SecretRedactor,
-} from "@arnilo/prism";
+import type { AgentEvent, AgentRunLifecycle, AgentRunStatusResult, Session, Message, Decision, SecretRedactor } from "@arnilo/prism";
 import {
   HARD_MAX_DECISION_REASON_BYTES,
   HARD_MAX_ELICITATION_BYTES,
@@ -117,7 +109,7 @@ export type AgUiInterruptResolution =
       readonly reason?: string;
       readonly expectedVersion?: number;
     }
-  | { readonly decisions: readonly RunDecision[]; readonly expectedVersion?: number };
+  | { readonly decisions: readonly Decision[]; readonly expectedVersion?: number };
 
 export interface AgUiHandler {
   (request: Request): Promise<Response>;
@@ -134,7 +126,7 @@ export interface CreateAgUiHandlerOptions<Authorization extends AgUiAuthorizatio
     readonly authorization: Authorization;
     readonly signal: AbortSignal;
     readonly input: AgUiPreparedInput;
-  }) => AgentSession | Promise<AgentSession>;
+  }) => Session | Promise<Session>;
   readonly lifecycle?: AgentRunLifecycle;
   /** Required for durable AG-UI resume; binds protocol selectors to internal checkpoint IDs. */
   readonly resolveRun?: (
@@ -488,7 +480,7 @@ async function resumeDecision<Authorization extends AgUiAuthorization>(
   options: CreateAgUiHandlerOptions<Authorization>,
   capabilities: AgentCapabilities,
   signal: AbortSignal,
-): Promise<{ readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] }> {
+): Promise<{ readonly decision: "approve" | "deny" } | { readonly decisions: readonly Decision[] }> {
   const expectedInterruptId = interruptId(protocolRunId, status.version);
   if (!capabilities.humanInTheLoop?.approveWithEdits && hasEditedArgs(input.resume)) return { decision: "deny" };
   if (!options.interrupts?.resume) {
@@ -537,11 +529,11 @@ const RUN_DECISION_KEYS = new Set(["approvalId", "outcome", "reason", "modifiedA
  * Boundary validation for a client-supplied decision batch: shape and hard caps only.
  * Core re-validates every entry against the recorded pending set under CAS.
  */
-function readRunDecisions(value: unknown): readonly RunDecision[] {
+function readRunDecisions(value: unknown): readonly Decision[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > HARD_MAX_PENDING_DECISIONS) {
     throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume decisions must be a non-empty bounded array");
   }
-  return value.map((entry): RunDecision => {
+  return value.map((entry): Decision => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new AgUiError("ERR_PRISM_AG_UI_INPUT", "Resume decision must be an object");
     }
@@ -572,7 +564,7 @@ function readRunDecisions(value: unknown): readonly RunDecision[] {
         throw new AgUiError("ERR_PRISM_AG_UI_INPUT", `Resume decision ${key} exceeds limits`);
       }
     }
-    return entry as RunDecision;
+    return entry as Decision;
   });
 }
 
@@ -600,7 +592,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
       } else {
         for (const mappedEvent of mappedEvents) yield tagged(mappedEvent, item.record.id, item.cursor);
       }
-      if (item.record.event.type === "agent_suspended") {
+      if (item.record.event.type === "run.suspended") {
         yield tagged(await interruptEvent(input, item.record.event, options, limits, capabilities), item.record.id, item.cursor);
         return;
       }
@@ -611,7 +603,7 @@ async function* replaySource<Authorization extends AgUiAuthorization>(
   const page = await options.replay!.page(request);
   for (const record of page.records) {
     for (const mappedEvent of await mapper.map(record.event)) yield tagged(mappedEvent, record.id);
-    if (record.event.type === "agent_suspended") {
+    if (record.event.type === "run.suspended") {
       yield await interruptEvent(input, record.event, options, limits, capabilities);
       return;
     }
@@ -651,7 +643,7 @@ async function* mapped<Authorization extends AgUiAuthorization>(
   const mapper = mapperFor(input, options, limits);
   for await (const prismEvent of source) {
     yield* await mapper.map(prismEvent);
-    if (prismEvent.type === "agent_suspended") {
+    if (prismEvent.type === "run.suspended") {
       const run = { ref: { runId: prismEvent.runId, sessionId: prismEvent.sessionId } };
       await options.onSuspended?.({
         threadId: input.threadId,
@@ -725,7 +717,7 @@ function simpleResumeDecision(
   },
   status: AgentRunStatusResult,
   capabilities: AgentCapabilities,
-): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly RunDecision[] } {
+): { readonly decision: "approve" | "deny" } | { readonly decisions: readonly Decision[] } {
   if (entry.status === "cancelled") return { decision: "deny" };
   const payload = entry.payload;
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
@@ -836,7 +828,7 @@ function hasEditedArgs(entries: readonly { readonly payload?: unknown }[]): bool
 
 async function interruptEvent<Authorization extends AgUiAuthorization>(
   input: ParsedAgUiInput,
-  eventValue: Extract<AgentEvent, { readonly type: "agent_suspended" }>,
+  eventValue: Extract<AgentEvent, { readonly type: "run.suspended" }>,
   options: CreateAgUiHandlerOptions<Authorization>,
   limits: ResolvedAgUiLimits,
   capabilities: AgentCapabilities,

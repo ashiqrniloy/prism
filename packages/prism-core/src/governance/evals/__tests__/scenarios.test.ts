@@ -1,14 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import {
-  type Agent,
-  type AgentRunResult,
-  type AIProvider,
-  createAgent,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-} from "@arnilo/prism";
+import { type Agent, type RunResult, type AIProvider, createAgent, providerDone, providerTextDelta, providerToolCall } from "@arnilo/prism";
 import { defineDataset } from "../dataset.js";
 import { runExperiment } from "../experiment.js";
 import {
@@ -34,15 +26,16 @@ function makeMockAgent(replies: string[], onRun?: () => void): Agent {
           return {
             sessionId: "sess-scenario",
             runId: `run-${callIdx}`,
-            status: "succeeded",
+            status: "completed",
             text,
             content: [],
-          } as unknown as AgentRunResult;
+            messages: [],
+          } as unknown as RunResult;
         },
         subscribe() {
           return {
             async *[Symbol.asyncIterator]() {
-              yield { type: "agent_finished", sessionId: "sess-scenario", runId: `run-${callIdx}` };
+              yield { type: "run.completed", sessionId: "sess-scenario", runId: `run-${callIdx}` };
             },
           };
         },
@@ -114,8 +107,8 @@ test("clarify/refuse multi-turn scenario with assertions and scoring", async () 
 
 test("store-failure injection fails on run, not createSession", async () => {
   const baseAgent = makeMockAgent(["hello"]);
-  const failingAgent = wrapAgentWithFailureInjection(baseAgent, { failStore: true });
-  const session = failingAgent.createSession();
+  const failingAgent = await wrapAgentWithFailureInjection(baseAgent, { failStore: true });
+  const session = await failingAgent.session();
   await assert.rejects(() => session.run("hi"), /injected store failure/);
 });
 
@@ -296,21 +289,23 @@ test("corrupt manifest in runExperiment throws EvalError", async () => {
 
 test("denyTools skips execute and appears as failed, not succeeded", async () => {
   let ran = 0;
-  const agent = wrapAgentWithFailureInjection(
-    createAgent({
+  const agent = await wrapAgentWithFailureInjection(
+    await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: oneShotToolProvider("refund"),
-      tools: [
-        {
-          name: "refund",
-          description: "refund",
-          parameters: { type: "object", properties: {} },
-          async execute(_args, ctx) {
-            ran += 1;
-            return { toolCallId: ctx.toolCallId, name: "refund", value: { ok: true } };
+      tools: {
+        add: [
+          {
+            name: "refund",
+            description: "refund",
+            parameters: { type: "object", properties: {} },
+            async execute(_args, ctx) {
+              ran += 1;
+              return { toolCallId: ctx.toolCallId, name: "refund", value: { ok: true } };
+            },
           },
-        },
-      ],
+        ],
+      },
     }),
     { denyTools: ["refund"] },
   );
@@ -335,22 +330,24 @@ test("denyTools skips execute and appears as failed, not succeeded", async () =>
 
 test("unknownEffect marks unknown and fails effect-success invariant", async () => {
   let ran = 0;
-  const agent = wrapAgentWithFailureInjection(
-    createAgent({
+  const agent = await wrapAgentWithFailureInjection(
+    await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: oneShotToolProvider("mutate"),
-      tools: [
-        {
-          name: "mutate",
-          description: "mutate",
-          parameters: { type: "object", properties: {} },
-          effect: { kind: "external_mutation", idempotency: "none" },
-          async execute(_args, ctx) {
-            ran += 1;
-            return { toolCallId: ctx.toolCallId, name: "mutate", value: { ok: true } };
+      tools: {
+        add: [
+          {
+            name: "mutate",
+            description: "mutate",
+            parameters: { type: "object", properties: {} },
+            effect: { kind: "external_mutation", idempotency: "none" },
+            async execute(_args, ctx) {
+              ran += 1;
+              return { toolCallId: ctx.toolCallId, name: "mutate", value: { ok: true } };
+            },
           },
-        },
-      ],
+        ],
+      },
     }),
     { unknownEffect: true },
   );
@@ -377,7 +374,7 @@ test("unknownEffect marks unknown and fails effect-success invariant", async () 
 
 test("timeline collector captures agent_finished without a 10ms drain", async () => {
   const report = await runExperiment({
-    agent: createAgent({
+    agent: await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",

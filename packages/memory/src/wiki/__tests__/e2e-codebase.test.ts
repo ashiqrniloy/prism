@@ -4,8 +4,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
-import { createExtensionKernel } from "@arnilo/prism";
-import { createWikiExtension, initWiki, lintWiki, refreshWiki } from "../index.js";
+import { createWikiSearchTool, initWiki, lintWiki, refreshWiki } from "../index.js";
 
 const FIXTURE_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-e2e-codebase-"));
 
@@ -125,17 +124,11 @@ export function revokeToken(tokenId: string): void {
     assert.ok(logContent.includes("contradiction"));
     assert.ok(logContent.includes("decodePayload"));
 
-    // 3. Load Extension Kernel and Execute wiki_search
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      createWikiExtension({
-        workspaceRoot: FIXTURE_DIR,
-        wikiRoot: ".wiki",
-      }),
-    ]);
-
-    const searchTool = kernel.registries.tools.get("wiki_search");
-    assert.ok(searchTool);
+    const searchTool = createWikiSearchTool({
+      workspaceRoot: FIXTURE_DIR,
+      wikiRoot: ".wiki",
+      autoDeploySkills: false,
+    });
 
     const searchRes = await searchTool.execute(
       { query: "verifyToken", mode: "search" },

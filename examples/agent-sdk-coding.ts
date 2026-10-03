@@ -1,5 +1,5 @@
 import { type AgentEvent, type ToolRegistry, createMockProvider, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
-import { type AgentSdkConfig, codingPreset, defineAgent, mergeAgentConfig } from "@arnilo/prism-agent-sdk";
+import { codingPreset, defineAgent, mergeAgentConfig } from "@arnilo/prism-agent-sdk";
 
 // Demonstrates assembling a coding agent using `@arnilo/prism-agent-sdk`
 // with `codingPreset`, mock provider, and session execution.
@@ -20,21 +20,21 @@ export async function demo(): Promise<{
       model: { provider: "mock", model: "coding-assistant" },
       provider,
       instructions: "You are a helpful coding assistant.",
-    }) as AgentSdkConfig,
+    }) as Parameters<typeof defineAgent>[0],
   );
 
-  const session = app.createSession();
+  const session = app.session();
   const eventTypes: string[] = [];
 
   async function drain(): Promise<void> {
-    for await (const event of session.subscribe() as AsyncIterable<AgentEvent>) {
+    for await (const event of (await session).subscribe() as AsyncIterable<AgentEvent>) {
       eventTypes.push(event.type);
     }
   }
 
-  await Promise.all([drain(), session.run("Review the repository layout")]);
+  await Promise.all([drain(), (await session).run("Review the repository layout")]);
 
-  const toolCount = (app.agent.config.tools as ToolRegistry).list().length;
+  const toolCount = app.agent.tools.length;
   const connectedMcpServers = app.connectedMcpServerIds;
 
   await app.dispose();

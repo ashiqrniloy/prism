@@ -10,7 +10,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import type { AgentSession } from "@arnilo/prism";
+import type { Session } from "@arnilo/prism";
 import { createSecretRedactor } from "@arnilo/prism";
 import { type CreatePrismAcpAgentOptions, createAcpEventMapper, createPrismAcpAgent } from "../acp/index.js";
 
@@ -19,14 +19,14 @@ const WAV = Buffer.from("RIFFxxxxWAVEfmt").toString("base64");
 
 const authorization = { ownership: { userId: "user-1" } };
 
-function recordingSession(id: string): { session: AgentSession; inputs: unknown[] } {
+function recordingSession(id: string): { session: Session; inputs: unknown[] } {
   const inputs: unknown[] = [];
   const session = {
     id,
     async *stream(input: unknown) {
       inputs.push(input);
     },
-  } as unknown as AgentSession;
+  } as unknown as Session;
   return { session, inputs };
 }
 
@@ -165,13 +165,19 @@ describe("ACP rich prompt content (Task 6)", () => {
 });
 
 describe("ACP mapper diff and locations (Task 6)", () => {
-  const finished = (result: unknown) => ({
-    type: "tool_execution_finished" as const,
-    sessionId: "session-1",
-    runId: "run-1",
-    result: result as never,
-    metadata: { durationMs: 1, status: "finished" as const },
-  });
+  const finished = (result: unknown) => {
+    const tool = result as { toolCallId?: string; name?: string };
+    return {
+      type: "tool.completed" as const,
+      sessionId: "session-1",
+      runId: "run-1",
+      toolCallId: tool.toolCallId ?? "tool-1",
+      name: tool.name ?? "edit",
+      status: "finished" as const,
+      result: result as never,
+      metadata: { durationMs: 1, status: "finished" as const },
+    };
+  };
 
   it("attaches locations from the projection allow-list, capped at acpLocationsPerUpdate", async () => {
     const mapper = createAcpEventMapper({

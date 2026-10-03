@@ -27,8 +27,9 @@ async function assemble(model: ModelConfig): Promise<ProviderRequest> {
   return assembleProviderInput({
     model,
     inputLayout: "cache_aware",
+    // Host context is a `context.build` handler now, so this assembler call sees only what the
+    // kernel assembles: instructions, skills, attachments, summaries, and the transcript.
     systemInstructions: "Answer from the pinned workspace context.",
-    contextProviders: [{ name: "workspace", resolve: () => [{ title: "Dynamic workspace state", content: "Current branch is clean." }] }],
     skills: [{ name: "concise", description: "Keep answers short.", instructions: "Use concise answers." }],
     skillsDisclosure: "progressive",
     attachments: [{ name: "schema.md", text: "Stable response schema." }],

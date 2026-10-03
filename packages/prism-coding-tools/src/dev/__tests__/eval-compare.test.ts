@@ -10,7 +10,7 @@ import {
   type Agent,
   type AgentEventRecord,
   type AgentIdentity,
-  type AgentRunResult,
+  type RunResult,
   type AIProvider,
   createAgent,
   createMemoryAgentEventSource,
@@ -41,7 +41,7 @@ const OWNERSHIP = { tenantId: "local", userId: "local" } as const;
 const here = dirname(fileURLToPath(import.meta.url));
 
 function result(text = "Great answer.") {
-  return { sessionId: "s", runId: "r", status: "succeeded" as const, text, content: [] };
+  return { sessionId: "s", runId: "r", status: "completed" as const, text, content: [], messages: [] };
 }
 
 function timeline(steps: ExecutionStep[]): ExecutionTimeline {
@@ -100,17 +100,17 @@ describe("inspector eval comparison", () => {
       {
         ...base,
         id: "event-1",
-        type: "agent_started",
+        type: "run.started",
         timestamp: "2026-09-05T00:00:00.000Z",
-        event: { type: "agent_started", sessionId: "session-1", runId: "stored-run" },
+        event: { type: "run.started", sessionId: "session-1", runId: "stored-run" },
       },
       {
         ...base,
         id: "event-2",
-        type: "message_delta",
+        type: "message.delta",
         timestamp: "2026-09-05T00:00:01.000Z",
         event: {
-          type: "message_delta",
+          type: "message.delta",
           sessionId: "session-1",
           runId: "stored-run",
           content: { type: "text", text: secret },
@@ -119,19 +119,20 @@ describe("inspector eval comparison", () => {
       {
         ...base,
         id: "event-3",
-        type: "agent_finished",
+        type: "run.completed",
         timestamp: "2026-09-05T00:00:02.000Z",
         event: {
-          type: "agent_finished",
+          type: "run.completed",
           sessionId: "session-1",
           runId: "stored-run",
+          status: "completed",
           usage: { inputTokens: 3, outputTokens: 5, totalTokens: 8, cost: 0.25, currency: "USD" },
         },
       },
     ];
     for (const record of records) await events.append(record);
     const inspector = createPrismDevInspector({
-      agent: createAgent({
+      agent: await createAgent({
         model: { provider: "mock", model: "offline" },
         provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
       }),
@@ -266,12 +267,12 @@ describe("host-journey gates over plan 072 evals", () => {
     let turn = 0;
     const agent = {
       config: {},
-      createSession() {
+      async session() {
         return {
           id: "s",
           async run() {
             const text = replies[turn++] ?? "";
-            return { sessionId: "s", runId: `r${turn}`, status: "succeeded", text, content: [] };
+            return { sessionId: "s", runId: `r${turn}`, status: "completed", text, content: [], messages: [] };
           },
           subscribe() {
             return {
@@ -291,11 +292,11 @@ describe("host-journey gates over plan 072 evals", () => {
     assert.equal(scenario.status, "succeeded");
     assert.equal(scenario.turnsCompleted, 2);
 
-    const real = createAgent({
+    const real = await createAgent({
       model: { provider: "mock", model: "offline" },
       provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
     });
-    const injected = wrapAgentWithFailureInjection(real, { failStore: true }).createSession();
+    const injected = await (await wrapAgentWithFailureInjection(real, { failStore: true })).session();
     await assert.rejects(() => injected.run("ok"), /injected store failure/);
 
     validateEvalManifest({
@@ -351,12 +352,12 @@ function oneShotToolProvider(name: string): AIProvider {
 function countingAgent(onRun: () => void): Agent {
   return {
     config: {},
-    createSession() {
+    async session() {
       return {
         id: "s",
         async run() {
           onRun();
-          return { sessionId: "s", runId: "r", status: "succeeded", text: "ok", content: [] } as AgentRunResult;
+          return { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] } as RunResult;
         },
       };
     },
@@ -392,21 +393,23 @@ describe("host-activity packs on true 072 primitives", () => {
   it("denyTools skips execute; unknownEffect is not success", async () => {
     let deniedRan = 0;
     const denied = await runExperiment({
-      agent: wrapAgentWithFailureInjection(
-        createAgent({
+      agent: await wrapAgentWithFailureInjection(
+        await createAgent({
           model: { provider: "mock", model: "demo" },
           provider: oneShotToolProvider("drop_database"),
-          tools: [
-            {
-              name: "drop_database",
-              description: "drop",
-              parameters: { type: "object", properties: {} },
-              async execute(_args, ctx) {
-                deniedRan += 1;
-                return { toolCallId: ctx.toolCallId, name: "drop_database", value: { dropped: true } };
+          tools: {
+            add: [
+              {
+                name: "drop_database",
+                description: "drop",
+                parameters: { type: "object", properties: {} },
+                async execute(_args, ctx) {
+                  deniedRan += 1;
+                  return { toolCallId: ctx.toolCallId, name: "drop_database", value: { dropped: true } };
+                },
               },
-            },
-          ],
+            ],
+          },
         }),
         { denyTools: ["drop_database"] },
       ),
@@ -428,22 +431,24 @@ describe("host-activity packs on true 072 primitives", () => {
 
     let unknownRan = 0;
     const unknown = await runExperiment({
-      agent: wrapAgentWithFailureInjection(
-        createAgent({
+      agent: await wrapAgentWithFailureInjection(
+        await createAgent({
           model: { provider: "mock", model: "demo" },
           provider: oneShotToolProvider("write_record"),
-          tools: [
-            {
-              name: "write_record",
-              description: "write",
-              parameters: { type: "object", properties: {} },
-              effect: { kind: "local_mutation", idempotency: "none" },
-              async execute(_args, ctx) {
-                unknownRan += 1;
-                return { toolCallId: ctx.toolCallId, name: "write_record", value: { ok: true } };
+          tools: {
+            add: [
+              {
+                name: "write_record",
+                description: "write",
+                parameters: { type: "object", properties: {} },
+                effect: { kind: "local_mutation", idempotency: "none" },
+                async execute(_args, ctx) {
+                  unknownRan += 1;
+                  return { toolCallId: ctx.toolCallId, name: "write_record", value: { ok: true } };
+                },
               },
-            },
-          ],
+            ],
+          },
         }),
         { unknownEffect: true },
       ),
@@ -557,7 +562,7 @@ describe("host-activity packs on true 072 primitives", () => {
           metadata: { invariant: true },
         }),
       });
-      const agent = createAgent({
+      const agent = await createAgent({
         model: { provider: "mock", model: "offline" },
         provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
       });

@@ -1,9 +1,9 @@
 /**
- * `@arnilo/prism-agent-sdk` — assembly-only agent SDK.
+ * `@arnilo/prism-agent-sdk` — define, open, and stream an agent.
  *
  * Assembles a configurable agentic runtime (tool planes, skills, instructions,
  * MCP bridges, hooks, session stores) over the Prism harness with every plane
- * optional and replaceable.
+ * optional and replaceable, then hands the host an `Agent` it can run directly.
  */
 
 export type {
@@ -20,11 +20,32 @@ export {
   resolveJsonConfig,
 } from "./config.js";
 export type {
+  Agent,
   AgentSdkConfig,
-  AgentSdkDefinition,
   AgentSdkMcpPlane,
 } from "./define-agent.js";
 export { defineAgent } from "./define-agent.js";
+
+// Host-contract re-exports: the ten types a host needs to define, open, run, and
+// stream an agent without importing `@arnilo/prism` directly. Frozen (plan 149 Task 6): the root
+// of `@arnilo/prism` is the one import now, and this list gains nothing.
+export {
+  createMockProvider,
+  providerDone,
+  providerTextDelta,
+  providerUsage,
+} from "@arnilo/prism";
+export type {
+  AgentEvent,
+  RunResult,
+  Session,
+  AIProvider,
+  ExecutionPolicy,
+  PermissionPolicy,
+  RunOptions,
+  SessionStore,
+  ToolDefinition,
+} from "@arnilo/prism";
 export { AgentSdkConfigError, McpConnectError } from "./errors.js";
 export type {
   AssembledHooksPlane,

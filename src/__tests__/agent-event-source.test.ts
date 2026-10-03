@@ -10,8 +10,8 @@ const input = { ownership, sessionId: "session-a", runId: "run-a" };
 describe("AgentEventSource", () => {
   it("assigns durable sequence, pages exclusively, and drains terminal records", async () => {
     const source = createMemoryAgentEventSource();
-    const first = await source.append(record("event-a", "agent_started"));
-    const second = await source.append(record("event-b", "agent_finished"));
+    const first = await source.append(record("event-a", "run.started"));
+    const second = await source.append(record("event-b", "run.completed"));
     assert.equal(first.sequence, 1);
     assert.equal(second.sequence, 2);
 
@@ -34,26 +34,26 @@ describe("AgentEventSource", () => {
 
   it("hands off from replay to live without a gap or duplicate", async () => {
     const source = createMemoryAgentEventSource();
-    await source.append(record("event-a", "agent_started"));
+    await source.append(record("event-a", "run.started"));
     const cursor = (await source.page(input)).items[0]!.cursor;
     const iterator = source.subscribe({ ...input, after: cursor })[Symbol.asyncIterator]();
     const next = iterator.next();
-    await source.append(record("event-b", "turn_started", "2026-01-01T00:00:01.000Z"));
+    await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
     assert.equal((await next).value?.record.id, "event-b");
     await iterator.return?.();
   });
 
   it("rejects invalid records and non-enumerating cursor mismatches", async () => {
     const source = createMemoryAgentEventSource({ maxEventBytes: 512 });
-    const first = await source.append(record("event-a", "agent_started"));
-    assert.equal((await source.append(record("event-a", "agent_started"))).sequence, first.sequence);
+    const first = await source.append(record("event-a", "run.started"));
+    assert.equal((await source.append(record("event-a", "run.started"))).sequence, first.sequence);
     const cursor = (await source.page(input)).items[0]!.cursor;
 
-    await rejects(() => source.append({ ...record("event-a", "agent_started"), timestamp: "2026-01-01T00:00:01.000Z" }), "INPUT");
-    await rejects(() => source.append({ ...record("event-unredacted", "turn_started"), redacted: false }), "INPUT");
-    await rejects(() => source.append({ ...record("event-sequence", "turn_started"), sequence: 0 }), "INPUT");
-    await rejects(() => source.append({ ...record("event-regression", "turn_started"), sequence: 1 }), "INPUT");
-    await rejects(() => source.append({ ...record("event-large", "turn_started"), metadata: { body: "x".repeat(1024) } }), "INPUT");
+    await rejects(() => source.append({ ...record("event-a", "run.started"), timestamp: "2026-01-01T00:00:01.000Z" }), "INPUT");
+    await rejects(() => source.append({ ...record("event-unredacted", "turn.started"), redacted: false }), "INPUT");
+    await rejects(() => source.append({ ...record("event-sequence", "turn.started"), sequence: 0 }), "INPUT");
+    await rejects(() => source.append({ ...record("event-regression", "turn.started"), sequence: 1 }), "INPUT");
+    await rejects(() => source.append({ ...record("event-large", "turn.started"), metadata: { body: "x".repeat(1024) } }), "INPUT");
     await rejects(() => source.page({ ...input, limit: 0 }), "INPUT");
     await assert.rejects(source.page({ ...input, signal: AbortSignal.abort(new Error("already stopped")) }), /already stopped/);
     await rejects(() => source.page({ ...input, after: "not-a-cursor" }), "CURSOR");
@@ -66,12 +66,12 @@ describe("AgentEventSource", () => {
 
   it("bounds slow subscribers and releases waiters on abort, return, and close", async () => {
     const source = createMemoryAgentEventSource({ maxQueuedEvents: 1 }) as AgentEventSource & { close(): void };
-    await source.append(record("event-a", "agent_started"));
+    await source.append(record("event-a", "run.started"));
     const iterator = source.subscribe(input)[Symbol.asyncIterator]();
     assert.equal((await iterator.next()).value?.record.id, "event-a");
-    await source.append(record("event-b", "turn_started", "2026-01-01T00:00:01.000Z"));
-    await source.append(record("event-c", "turn_started", "2026-01-01T00:00:02.000Z"));
-    await source.append(record("event-d", "turn_started", "2026-01-01T00:00:03.000Z"));
+    await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
+    await source.append(record("event-c", "turn.started", "2026-01-01T00:00:02.000Z"));
+    await source.append(record("event-d", "turn.started", "2026-01-01T00:00:03.000Z"));
     await iterator.next();
     await iterator.next();
     await iterator.next();
@@ -96,10 +96,10 @@ describe("AgentEventSource", () => {
 
   it("caps retained events per run without retaining stale cursors", async () => {
     const source = createMemoryAgentEventSource({ maxRetainedEventsPerRun: 2 });
-    await source.append(record("event-a", "agent_started"));
+    await source.append(record("event-a", "run.started"));
     const cursor = (await source.page(input)).items[0]!.cursor;
-    await source.append(record("event-b", "turn_started", "2026-01-01T00:00:01.000Z"));
-    await source.append(record("event-c", "turn_started", "2026-01-01T00:00:02.000Z"));
+    await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
+    await source.append(record("event-c", "turn.started", "2026-01-01T00:00:02.000Z"));
     assert.deepEqual(
       (await source.page(input)).items.map((item) => item.record.id),
       ["event-b", "event-c"],
@@ -109,8 +109,8 @@ describe("AgentEventSource", () => {
 
   it("returns retention errors after explicit bounded cleanup", async () => {
     const source = createMemoryAgentEventSource();
-    await source.append(record("event-a", "agent_started"));
-    await source.append(record("event-b", "turn_started", "2026-01-01T00:00:01.000Z"));
+    await source.append(record("event-a", "run.started"));
+    await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
     const cursor = (await source.page({ ...input, limit: 1 })).items[0]!.cursor;
     assert.deepEqual(await source.cleanup({ ownership, before: "2026-01-01T00:00:02.000Z", limit: 1 }), { deleted: 1 });
     await rejects(() => source.page({ ...input, after: cursor }), "RETENTION");
@@ -120,65 +120,50 @@ describe("AgentEventSource", () => {
     // The table is exhaustive over `AgentEventType`: a new event member fails to compile here until
     // it is classified, which is the point — one predicate decides every stream-ending site.
     const expected: Record<AgentEventType, boolean> = {
-      agent_started: false,
-      agent_resumed: false,
-      agent_suspended: false,
-      agent_denied: true,
-      agent_finished: true,
-      error: true,
-      turn_started: false,
-      turn_finished: false,
-      deterministic_turn: false,
-      delegated_agent_step: false,
-      message_started: false,
-      message_delta: false,
-      message_finished: false,
-      provider_turn_started: false,
-      provider_turn_finished: false,
-      retry_scheduled: false,
-      compaction_started: false,
-      compaction_finished: false,
-      compaction_failed: false,
-      attention_compiled: false,
-      tool_narrowing_clamped: false,
-      tool_execution_started: false,
-      tool_execution_progress: false,
-      tool_execution_finished: false,
-      tool_execution_error: false,
-      tool_execution_blocked: false,
-      guardrail_decision: false,
-      steer_rejected: false,
-      run_limit_exceeded: false,
-      budget_exhausted: false,
-      queue_updated: false,
-      event_subscriber_overflow: false,
-      artifact_revision_started: false,
-      artifact_validation_started: false,
-      artifact_validation_finished: false,
-      artifact_finished: false,
-      artifact_failed: false,
+      "session.opened": false,
+      "session.closed": false,
+      "run.started": false,
+      "run.completed": true,
+      "run.failed": true,
+      "run.suspended": false,
+      "turn.started": false,
+      "turn.completed": false,
+      "message.delta": false,
+      "message.completed": false,
+      "tool.started": false,
+      "tool.progress": false,
+      "tool.completed": false,
+      "decision.pending": false,
+      "decision.resolved": false,
+      "compaction.started": false,
+      "compaction.completed": false,
+      "background.started": false,
+      "background.completed": false,
+      "background.failed": false,
+      "hook.error": false,
+      "package.status": false,
+      "package.event": false,
     };
     const mismatched = Object.entries(expected)
       .filter(([type, terminal]) => isTerminalAgentEventType(type as AgentEventType) !== terminal)
       .map(([type]) => type);
     assert.deepEqual(mismatched, []);
-    assert.equal(Object.values(expected).filter(Boolean).length, 3, "the terminal set is exactly three members");
+    assert.equal(Object.values(expected).filter(Boolean).length, 2, "the terminal set is exactly the two outcome records");
   });
 
-  it("ends a stream on the run's outcome, never on limit attribution", async () => {
+  it("ends a stream on the run's outcome record", async () => {
     const source = createMemoryAgentEventSource();
-    await source.append(record("event-limit", "run_limit_exceeded"));
-    assert.equal((await source.page(input)).terminal, false, "a limit breach must not close the stream");
-    await source.append(record("event-attr", "budget_exhausted", "2026-01-01T00:00:01.000Z"));
-    assert.equal((await source.page(input)).terminal, false, "budget attribution must not close the stream");
-    await source.append(record("event-death", "error", "2026-01-01T00:00:02.000Z"));
-    assert.equal((await source.page(input)).terminal, true, "the run's error closes the stream");
+    await source.append(record("event-turn", "turn.started"));
+    assert.equal((await source.page(input)).terminal, false, "an in-run turn must not close the stream");
+    // A limit death is a single `run.failed` carrying its breach and attribution, so it *is* the
+    // outcome: there is no non-terminal attribution record to page past any more.
+    await source.append(record("event-death", "run.failed", "2026-01-01T00:00:02.000Z"));
+    assert.equal((await source.page(input)).terminal, true, "the run's failure closes the stream");
 
     const iterator = source.subscribe(input)[Symbol.asyncIterator]();
-    assert.equal((await iterator.next()).value?.record.type, "run_limit_exceeded");
-    assert.equal((await iterator.next()).value?.record.type, "budget_exhausted");
-    assert.equal((await iterator.next()).value?.record.type, "error");
-    assert.equal((await iterator.next()).done, true, "the subscriber must end on the error, not on the breach");
+    assert.equal((await iterator.next()).value?.record.type, "turn.started");
+    assert.equal((await iterator.next()).value?.record.type, "run.failed");
+    assert.equal((await iterator.next()).done, true, "the subscriber must end on the outcome record");
   });
 
   it("conforms through the dependency-free adapter helper", async () => {
@@ -188,27 +173,28 @@ describe("AgentEventSource", () => {
 
 function record(
   id: string,
-  type: "agent_started" | "agent_finished" | "turn_started" | "run_limit_exceeded" | "budget_exhausted" | "error",
+  type: "run.started" | "run.completed" | "turn.started" | "run.failed",
   timestamp = "2026-01-01T00:00:00.000Z",
 ): AgentEventRecord {
   const scoped = { sessionId: input.sessionId, runId: input.runId };
   const event =
-    type === "turn_started"
-      ? { type, ...scoped, turn: 1 }
-      : type === "run_limit_exceeded"
-        ? { type, ...scoped, breach: { limit: "maxTurns" as const, maximum: 1, observed: 2 } }
-        : type === "budget_exhausted"
-          ? {
-              type,
-              ...scoped,
-              limit: "maxTurns" as const,
+    type === "turn.started"
+      ? { type, ...scoped, turn: 1, metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } } }
+      : type === "run.failed"
+        ? {
+            type,
+            ...scoped,
+            error: { message: "run limit exceeded" },
+            limit: { limit: "maxTurns" as const, maximum: 1, observed: 2 },
+            attribution: {
               consumed: { turns: 2, inputTokens: 0, providerAttempts: 1, requestBytes: 0 },
               closestOtherAxes: [],
               recentToolCalls: [],
-            }
-          : type === "error"
-            ? { type, ...scoped, error: { message: "run limit exceeded" } }
-            : { type, ...scoped };
+            },
+          }
+        : type === "run.completed"
+          ? { type, ...scoped, status: "completed" as const }
+          : { type, ...scoped };
   return { id, ...ownership, sessionId: input.sessionId, runId: input.runId, type, timestamp, event, redacted: true };
 }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEvent, AgentSession } from "@arnilo/prism";
+import type { AgentEvent, Session } from "@arnilo/prism";
 import { createAgent, createMemoryAgentEventSource, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { type A2AAgentCard, type A2ATaskEvent, type A2ATaskLifecycle, createA2AClient } from "@arnilo/prism-core/runtime/supervisor";
 import { type AgUiA2AServer, createAgUiA2AServer } from "../index.js";
@@ -19,11 +19,13 @@ const baseCard = (): A2AAgentCard => ({
   skills: [],
 });
 
-const localAgent = () =>
-  createAgent({
-    model: { provider: "mock", model: "test" },
-    provider: createMockProvider([providerTextDelta("hello from local agent"), providerDone()]),
-  }).createSession();
+const localAgent = async () =>
+  await (
+    await createAgent({
+      model: { provider: "mock", model: "test" },
+      provider: createMockProvider([providerTextDelta("hello from local agent"), providerDone()]),
+    })
+  ).session();
 
 const message = (text = "question", extra: Record<string, unknown> = {}) => ({
   role: "user" as const,
@@ -58,7 +60,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
     });
     const task = await clientFor(server).sendMessage(message("question"));
     assert.equal(task.status.state, "TASK_STATE_COMPLETED");
@@ -69,7 +71,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
     });
     const client = clientFor(server);
     const started = await client.sendMessage(message("question"), { returnImmediately: true });
@@ -93,9 +95,9 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: (input) => {
+      sessionFactory: async (input) => {
         seenFactory = input;
-        return localAgent();
+        return await localAgent();
       },
       input: {
         project: (input) => {
@@ -117,7 +119,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
       parts: { allowData: true },
       input: {
         project: (input) => {
@@ -136,7 +138,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
     });
     await assert.rejects(clientFor(server).sendMessage(message("question", { parts: [{ text: "x" }, { data: { a: 1 } }] })));
   });
@@ -145,7 +147,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => false,
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
     });
     await assert.rejects(clientFor(server).sendMessage(message()));
   });
@@ -155,12 +157,12 @@ describe("createAgUiA2AServer", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const stub = (): AgentSession =>
+    const stub = (): Session =>
       ({
         id: "session-1",
         leafId: "leaf-1",
         stream: async function* (_input: unknown, options: { signal: AbortSignal }) {
-          yield { type: "agent_started", sessionId: "session-1", runId: "run-1" } as AgentEvent;
+          yield { type: "run.started", sessionId: "session-1", runId: "run-1" } as AgentEvent;
           await new Promise<void>((resolve, reject) => {
             const onAbort = () => reject(options.signal.reason);
             options.signal.addEventListener("abort", onAbort, { once: true });
@@ -170,9 +172,9 @@ describe("createAgUiA2AServer", () => {
             });
           });
           if (options.signal.aborted) throw options.signal.reason;
-          yield { type: "agent_finished", sessionId: "session-1", runId: "run-1" } as AgentEvent;
+          yield { type: "run.completed", sessionId: "session-1", runId: "run-1", status: "completed" } as AgentEvent;
         },
-      }) as unknown as AgentSession;
+      }) as unknown as Session;
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
@@ -208,20 +210,20 @@ describe("createAgUiA2AServer", () => {
       tenantId: "tenant",
       userId: "user",
     });
-    await source.append(record("e1", { type: "agent_started", sessionId: "session-d", runId: "run-d" }));
+    await source.append(record("e1", { type: "run.started", sessionId: "session-d", runId: "run-d" }));
     await source.append(
       record("e2", {
-        type: "message_delta",
+        type: "message.delta",
         sessionId: "session-d",
         runId: "run-d",
         content: { type: "text", text: "durable hello" },
       }),
     );
-    await source.append(record("e3", { type: "agent_finished", sessionId: "session-d", runId: "run-d" }));
+    await source.append(record("e3", { type: "run.completed", sessionId: "session-d", runId: "run-d", status: "completed" }));
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
       durable: {
         source,
         resolveTask: async ({ id }) =>
@@ -265,7 +267,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
       durable: {
         source,
         resolveTask: async ({ id }) =>
@@ -282,10 +284,10 @@ describe("createAgUiA2AServer", () => {
       },
     });
     const client = clientFor(server);
-    await source.append(record("e1", { type: "agent_started", sessionId: "session-d", runId: "run-d" }));
+    await source.append(record("e1", { type: "run.started", sessionId: "session-d", runId: "run-d" }));
     await source.append(
       record("e2", {
-        type: "message_delta",
+        type: "message.delta",
         sessionId: "session-d",
         runId: "run-d",
         content: { type: "text", text: "first" },
@@ -300,13 +302,13 @@ describe("createAgUiA2AServer", () => {
     const cursor = first[first.length - 1]!.eventId;
     await source.append(
       record("e3", {
-        type: "message_delta",
+        type: "message.delta",
         sessionId: "session-d",
         runId: "run-d",
         content: { type: "text", text: "second" },
       }),
     );
-    await source.append(record("e5", { type: "agent_finished", sessionId: "session-d", runId: "run-d" }));
+    await source.append(record("e5", { type: "run.completed", sessionId: "session-d", runId: "run-d", status: "completed" }));
     const resumed = await collect(client.subscribeToTask("task-d2", { afterEventId: cursor }));
     const text = resumed
       .filter((event): event is Extract<A2ATaskEvent, { artifactUpdate: unknown }> => "artifactUpdate" in event)
@@ -337,7 +339,7 @@ describe("createAgUiA2AServer", () => {
     const server = await createAgUiA2AServer({
       card: baseCard(),
       authorize: () => ({ ownership }),
-      sessionFactory: () => localAgent(),
+      sessionFactory: async () => await localAgent(),
       tasks,
     });
     const task = await clientFor(server).sendMessage(message("hi"));

@@ -44,9 +44,9 @@ describe("createBatchedRunLedger", () => {
       id: "event_1",
       sessionId: "session_1",
       runId: "run_1",
-      type: "agent_started",
+      type: "run.started",
       timestamp: "2026-01-01T00:00:00Z",
-      event: { type: "agent_started", sessionId: "session_1", runId: "run_1" },
+      event: { type: "run.started", sessionId: "session_1", runId: "run_1" },
       redacted: true,
     });
     assert.deepEqual(ledger.status(), { accepted: 2, flushed: 0, buffered: 2 });
@@ -87,13 +87,15 @@ describe("createBatchedRunLedger", () => {
       flushes += 1;
       return ledger.status();
     };
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
-      runLedger: ledger,
-    })
-      .createSession()
-      .run("hi");
+    await (
+      await (
+        await createAgent({
+          model: { provider: "mock", model: "demo" },
+          provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+          runLedger: ledger,
+        })
+      ).session()
+    ).run("hi");
     assert.equal(flushes, 1);
   });
 

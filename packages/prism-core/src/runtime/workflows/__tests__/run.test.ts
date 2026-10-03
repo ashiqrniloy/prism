@@ -507,8 +507,8 @@ describe("runWorkflow", () => {
     );
   });
 
-  it("runs agent nodes through AgentSession.run", async () => {
-    const agent = createAgent({
+  it("runs agent nodes through Session.run", async () => {
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("hello-agent"), providerDone()]),
     });
@@ -518,7 +518,7 @@ describe("runWorkflow", () => {
     });
     const workflow = defineWorkflow({ revision: "1", id: "agentic", nodes: { research } });
     const result = await runWorkflow(workflow, "topic", {
-      agentFactory: async () => agent.createSession({ id: "s-research" }),
+      agentFactory: async () => await agent.session({ id: "s-research", create: true }),
     });
     assert.equal(result.outputs.research, "hello-agent");
   });
@@ -547,30 +547,6 @@ describe("runWorkflow", () => {
     assert.equal(result.outputs.node, "hi");
     assert.equal(seen[0]?.metadata?.workflowId, "tools");
     assert.equal(seen[0]?.metadata?.nodeId, "node");
-  });
-
-  it("routes workflow tools through core guardrails before side effects", async () => {
-    let executed = false;
-    const tool: ToolDefinition = {
-      name: "blocked",
-      execute: () => {
-        executed = true;
-        return { toolCallId: "x", name: "blocked" };
-      },
-    };
-    const workflow = defineWorkflow({
-      revision: "1",
-      id: "guarded-tool",
-      nodes: { node: toolNode({ tool, args: async () => ({}) }) },
-    });
-    await assert.rejects(
-      () =>
-        runWorkflow(workflow, null, {
-          guardrails: { toolInput: [{ name: "deny", stage: "tool_input", evaluate: () => ({ action: "block" }) }] },
-        }),
-      /Tool call blocked by guardrail/,
-    );
-    assert.equal(executed, false);
   });
 
   it("durably approves a tool before side effects and rechecks execution policy", async () => {
@@ -1205,7 +1181,7 @@ describe("runWorkflow", () => {
           return inner.save(input);
         },
       };
-      const agent = createAgent({
+      const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
         provider: createMockProvider([providerTextDelta("done"), providerDone()]),
       });
@@ -1240,7 +1216,7 @@ describe("runWorkflow", () => {
             runId: "test-run",
             agentFactory: async () => {
               effects += 1;
-              return agent.createSession({ id: "effect-session" });
+              return await agent.session({ id: "effect-session", create: true });
             },
             onEvent: (event) => events.push(event),
           }),

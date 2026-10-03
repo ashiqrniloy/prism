@@ -93,6 +93,14 @@ export function workspaceShape(rootDir = DEFAULT_ROOT) {
     .filter((entry) => entry.isDirectory() && existsSync(join(packagesDir, entry.name, "package.json")))
     .map((entry) => join(packagesDir, entry.name))
     .sort();
+  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || existsSync(join(packagesDir, entry.name, "package.json"))) continue;
+    const group = join(packagesDir, entry.name);
+    for (const child of readdirSync(group, { withFileTypes: true })) {
+      if (child.isDirectory() && existsSync(join(group, child.name, "package.json"))) dirs.push(join(group, child.name));
+    }
+  }
+  dirs.sort();
   const names = dirs.map((dir) => basename(dir));
   const providerDirs = names.filter((name) => name.startsWith("provider-"));
   const prismDirs = names.filter((name) => name.startsWith("prism-"));
@@ -205,8 +213,8 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-providers": "family — all provider adapters as `/<adapter>` subpaths",
   "@arnilo/prism-acp-agent": "capability — ACP adapter",
   "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
-  "@arnilo/prism-hooks":
-    "capability — Claude/Codex-compatible hooks.json adapter compiled onto middleware, guardrail, injector, and stop-hook seams",
+  "@arnilo/prism-hooks-json":
+    "capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end",
   "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
   "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths",
   "@arnilo/prism-work":

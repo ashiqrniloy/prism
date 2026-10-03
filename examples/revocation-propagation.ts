@@ -19,7 +19,7 @@
  * Offline: hash embedder, in-memory vector/session stores, no network.
  */
 import {
-  type AgentSession,
+  type Session,
   type ContextBlock,
   createAgent,
   createMemorySessionStore,
@@ -139,11 +139,13 @@ const rowsRetainedAfterAccessLoss = (await store.getBySource(vectorScope, PAYROL
 
 /** Scenario 3: observational memory holds one observation that rests on the payroll source. */
 const sessionStore = createMemorySessionStore();
-const session: AgentSession = createAgent({
-  model: { provider: "mock", model: "revocation-demo" },
-  provider: createMockProvider([]),
-  store: sessionStore,
-}).createSession({ id: "s-revocation" });
+const session: Session = await (
+  await createAgent({
+    model: { provider: "mock", model: "revocation-demo" },
+    provider: createMockProvider([]),
+    slots: { store: sessionStore },
+  })
+).session({ id: "s-revocation", create: true });
 const observation = {
   id: createMemoryId("x"),
   content: OBSERVATION_TEXT,

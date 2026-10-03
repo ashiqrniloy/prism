@@ -1,11 +1,8 @@
 import {
-  createAgentSession,
-  createContributionRegistries,
   providerDone,
   providerTextDelta,
   providerToolCall,
   resolveAgentDefinition,
-  resolveContextProviders,
   toolCallContent,
   type AIProvider,
   type AgentDefinition,
@@ -67,7 +64,6 @@ if (now.explain.some((entry) => entry.link)) console.log("linked neighbors arriv
 const definition: AgentDefinition = {
   name: "assistant",
   model: { provider: "mock", model: "demo" },
-  context: ["memory-fabric"],
   tools: ["memory.recall"],
   instructions: "Answer using the memory fabric. Cite the note you used.",
 };
@@ -86,14 +82,18 @@ const provider: AIProvider = {
   },
 };
 
-const registries = createContributionRegistries();
-registries.contextProviders.register("memory-fabric", fabric.createContextProvider({ includeWorking: true }));
 const recallTool = fabric.tools().find((tool) => tool.name === "memory.recall");
 if (recallTool === undefined) throw new Error("the fabric did not expose memory.recall");
-registries.tools.register("memory.recall", recallTool);
 
-const agent = await resolveAgentDefinition(definition, { registries, providerSource: () => provider });
-const session = createAgentSession({ agent });
+// The fabric's context seam is a `context.build` handler (roadmap §2.4), installed on the agent's bus.
+const agent = await resolveAgentDefinition(definition, {
+  tools: [recallTool],
+  providerSource: () => provider,
+  overrides: {
+    hooks: (hooks) => fabric.registerContextBuild(hooks, { includeWorking: true }),
+  },
+});
+const session = await agent.session();
 const attached = fabric.attach(session);
 const run = await session.run("How do deploys go out?");
 if (round !== 2) throw new Error("the model never called the fabric tool");
@@ -101,10 +101,13 @@ console.log(`ran ${run.leafId} with the memory.recall tool; workers ${attached.s
 
 // 4. Context seam: the registered provider resolves blocks for the next turn. The attention
 //    compiler is not enabled here — blocks still reach the provider input.
-const blocks = await resolveContextProviders({
-  providers: [attached.contextProvider],
-  messages: [{ role: "user", content: [{ type: "text", text: "How do deploys go out?" }] }],
-});
+const blocks =
+  (
+    await attached.contextBuild(
+      { messages: [{ role: "user", content: [{ type: "text", text: "How do deploys go out?" }] }] },
+      { sessionId: session.id, runId: run.runId, emit: () => undefined, reject: () => ({ __prismHookRejection: "x" }) },
+    )
+  )?.context ?? [];
 for (const block of blocks) console.log(`${block.title} (${String(block.metadata?.source)}) -> ${String(block.content).slice(0, 60)}...`);
 
 // A host can take the gate away again; notes stay until they are forgotten.

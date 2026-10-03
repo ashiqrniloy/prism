@@ -7,6 +7,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import {
+  askEveryTool,
   type AgentEventRecord,
   createAgent,
   createMemoryAgentEventSource,
@@ -22,8 +23,8 @@ import { createPrismDevInspector } from "../index.js";
 
 const OWNERSHIP = { tenantId: "local", userId: "local" } as const;
 
-function simpleAgent(text = "done"): ReturnType<typeof createAgent> {
-  return createAgent({
+async function simpleAgent(text = "done"): ReturnType<typeof createAgent> {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([providerTextDelta(text), providerDone()]),
   });
@@ -35,23 +36,23 @@ function seededRecords(): AgentEventRecord[] {
     {
       ...base,
       id: "event-1",
-      type: "agent_started",
+      type: "run.started",
       timestamp: "2026-09-05T00:00:00.000Z",
-      event: { type: "agent_started", sessionId: "session-1", runId: "stored-run" },
+      event: { type: "run.started", sessionId: "session-1", runId: "stored-run" },
     },
     {
       ...base,
       id: "event-2",
-      type: "message_delta",
+      type: "message.delta",
       timestamp: "2026-09-05T00:00:01.000Z",
-      event: { type: "message_delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "durable" } },
+      event: { type: "message.delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "durable" } },
     },
     {
       ...base,
       id: "event-3",
-      type: "agent_finished",
+      type: "run.completed",
       timestamp: "2026-09-05T00:00:02.000Z",
-      event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" },
+      event: { type: "run.completed", sessionId: "session-1", runId: "stored-run", status: "completed" },
     },
   ];
 }
@@ -89,7 +90,7 @@ async function cursorAfter(events: ReturnType<typeof createMemoryAgentEventSourc
 
 describe("inspector routes (plan 040 Task 2)", () => {
   it("POST /prompt runs the agent through the server handler adapter", async () => {
-    const inspector = createPrismDevInspector({ agent: simpleAgent("hello prompt"), port: 0 });
+    const inspector = createPrismDevInspector({ agent: await simpleAgent("hello prompt"), port: 0 });
     await inspector.listen();
     try {
       const root = inspector.url.replace(/\/prism$/, "");
@@ -113,7 +114,7 @@ describe("inspector routes (plan 040 Task 2)", () => {
     for (const record of seededRecords()) await events.append(record);
     const cursors = await cursorAfter(events);
     const inspector = createPrismDevInspector({
-      agent: simpleAgent(),
+      agent: await simpleAgent(),
       port: 0,
       eventSource: events,
       resolveRun: (input) => (input.runId === "public-run" ? { sessionId: "session-1", runId: "stored-run" } : undefined),
@@ -127,7 +128,7 @@ describe("inspector routes (plan 040 Task 2)", () => {
       const parsed = parseSseEvents(await full.text());
       assert.deepEqual(
         parsed.map((entry) => entry.type),
-        ["agent_started", "message_delta", "agent_finished"],
+        ["run.started", "message.delta", "run.completed"],
       );
 
       // Reconnect after event-1: exactly event-2 and event-3 follow (no duplicates, no loss).
@@ -138,7 +139,7 @@ describe("inspector routes (plan 040 Task 2)", () => {
       assert.equal(reconnect.status, 200);
       assert.deepEqual(
         parseSseEvents(await reconnect.text()).map((entry) => entry.type),
-        ["message_delta", "agent_finished"],
+        ["message.delta", "run.completed"],
       );
 
       // Missing runId fails closed before the server seam is consulted.
@@ -156,22 +157,22 @@ describe("inspector routes (plan 040 Task 2)", () => {
     await events.append({
       ...base,
       id: "event-1",
-      type: "message_delta",
+      type: "message.delta",
       timestamp: "2026-09-05T00:00:00.000Z",
-      event: { type: "message_delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: `leak ${secret}` } },
+      event: { type: "message.delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: `leak ${secret}` } },
     });
     await events.append({
       ...base,
       id: "event-2",
-      type: "agent_finished",
+      type: "run.completed",
       timestamp: "2026-09-05T00:00:01.000Z",
-      event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" },
+      event: { type: "run.completed", sessionId: "session-1", runId: "stored-run", status: "completed" },
     });
     const page = await events.page({ ownership: OWNERSHIP, sessionId: "session-1", runId: "stored-run" });
     const cursorOf = (id: string) => page.items.find((entry) => entry.record.id === id)!.cursor;
 
     const inspector = createPrismDevInspector({
-      agent: simpleAgent(),
+      agent: await simpleAgent(),
       port: 0,
       redactor: createSecretRedactor([secret]),
       eventSource: events,
@@ -215,7 +216,7 @@ describe("inspector routes (plan 040 Task 2)", () => {
   });
 
   it("replay without a durable event source is a documented 404, never a re-run", async () => {
-    const inspector = createPrismDevInspector({ agent: simpleAgent(), port: 0 });
+    const inspector = createPrismDevInspector({ agent: await simpleAgent(), port: 0 });
     await inspector.listen();
     try {
       const root = inspector.url.replace(/\/prism$/, "");
@@ -234,7 +235,8 @@ describe("inspector routes (plan 040 Task 2)", () => {
     // One shared, host-owned checkpoint store: the agent's runState and the
     // inspector lifecycle must compose over the SAME store (the host owns both).
     const checkpoints = createMemoryCheckpointStore();
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "dev-inspector",
       model: { provider: "mock", model: "offline" },
       provider: {
@@ -249,9 +251,9 @@ describe("inspector routes (plan 040 Task 2)", () => {
           yield providerDone();
         },
       },
-      store: createMemorySessionStore(),
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true as const },
+      slots: { store: createMemorySessionStore() },
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const inspector = createPrismDevInspector({
       agent,

@@ -5,14 +5,14 @@ import { createAppAgent } from "../agent.js";
 
 describe("personal assistant template", () => {
   it("creates agent and runs an offline turn", async () => {
-    const agent = createAppAgent({ userId: "test-user" });
-    const session = agent.createSession({ id: "test-session" });
+    const agent = await createAppAgent({ userId: "test-user" });
+    const session = await agent.session();
     const result = await session.run("Hello");
     assert.ok(result.text.includes("Personal Assistant ready"));
   });
 
-  it("passes personal host composition readiness inspection", () => {
-    const agent = createAppAgent({ userId: "test-user" });
+  it("passes personal host composition readiness inspection", async () => {
+    const agent = await createAppAgent({ userId: "test-user" });
     const report = inspectHostComposition({
       profile: "personal",
       agent,

@@ -1,4 +1,4 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta, resolveContextProviders } from "@arnilo/prism";
+import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createHashEmbedder, createMemory } from "@arnilo/prism-memory";
 
 const memory = createMemory({
@@ -43,13 +43,14 @@ console.log(
   recalled.adjacent.map((item) => item.id),
 );
 
-const blocks = await resolveContextProviders({
-  providers: [memory.createContextProvider()],
-  messages: [{ role: "user", content: [{ type: "text", text: "What format should replies use?" }] }],
-});
+// The same projection the agent's `context.build` handler runs, called directly here.
+const draft = await memory.contextBlocks(
+  { messages: [{ role: "user", content: [{ type: "text", text: "What format should replies use?" }] }] },
+  { sessionId: "s", runId: "r", emit: () => undefined, reject: () => ({ __prismHookRejection: "x" }) },
+);
 console.log(
   "context blocks",
-  blocks.map((block) => block.title),
+  (draft?.context ?? []).map((block) => block.title),
 );
 
 const processor = memory.createWorkingMemoryProcessor({
@@ -58,11 +59,11 @@ const processor = memory.createWorkingMemoryProcessor({
 await processor.process([{ role: "user", content: [{ type: "text", text: "switch format" }] }]);
 console.log("working", await memory.getWorking());
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider: createMockProvider([providerTextDelta("Understood."), providerDone()]),
-  context: [memory.createContextProvider({ includeWorking: true, includeSemantic: true })],
+  hooks: (hooks) => memory.registerContextBuild(hooks, { includeWorking: true, includeSemantic: true }),
 });
 
-const result = await agent.createSession().run("Remind me how to format answers");
+const result = await (await agent.session()).run("Remind me how to format answers");
 console.log("agent", result.text);

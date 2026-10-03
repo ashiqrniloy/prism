@@ -96,7 +96,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ provider, model: { provider: "mock", model: "test-model" } });
+    const agent = await createAgent({ provider, model: { provider: "mock", model: "test-model" } });
 
     const worker = functionNode({
       activation: "any",
@@ -133,7 +133,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
     });
 
     const result = await runWorkflow(workflow, null, {
-      agentFactory: async () => agent.createSession({ id: "s-reviewer" }),
+      agentFactory: async () => await agent.session({ id: "s-reviewer", create: true }),
     });
 
     assert.equal(result.status, "succeeded");
@@ -388,7 +388,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ provider, model: { provider: "mock", model: "test-model" } });
+    const agent = await createAgent({ provider, model: { provider: "mock", model: "test-model" } });
 
     const entry = functionNode({
       activation: "any",
@@ -426,7 +426,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
         signal: controller.signal,
         concurrency: 2,
         agentFactory: async () => {
-          const session = agent.createSession({ id: "s-abort" });
+          const session = await agent.session({ id: "s-abort", create: true });
           const originalAbort = session.abort.bind(session);
           session.abort = (reason) => {
             sessionAborted = true;

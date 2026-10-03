@@ -4,7 +4,7 @@ anthropicMessagesBody	export declare function anthropicMessagesBody(request: Pro
 anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 applyOpencodeAnthropicCacheControl	export declare function applyOpencodeAnthropicCacheControl(request: ProviderRequest): readonly Message[]
 createOpenCodeGoProvider	export declare function createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): AIProvider
-createOpenCodeGoProviderPackage	export declare function createOpenCodeGoProviderPackage(options?: OpenCodeGoProviderPackageOptions): ProviderPackage
+opencodeGoPackage	export declare function opencodeGoPackage(options?: OpenCodeGoProviderPackageOptions): PackageInstance
 defineOpenCodeGoModel	export declare function defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
 listOpenCodeGoModels	export declare function listOpenCodeGoModels(options?: ListOpenCodeGoModelsOptions): Promise<ModelConfig[]>
 mapOpenCodeGoModel	export declare function mapOpenCodeGoModel(entry: OpenCodeGoModelEntry, options?:

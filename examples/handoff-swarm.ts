@@ -2,7 +2,7 @@ import {
   type Agent,
   type AgentDefinition,
   type AgentEvent,
-  createAgentSession,
+  type Session,
   createMemorySessionStore,
   type ProviderEvent,
   type ProviderRequest,
@@ -119,7 +119,7 @@ const definitions: Readonly<Record<string, AgentDefinition>> = {
  *  event stream. Returns undefined when the run did not hand off. */
 function handoffTarget(events: readonly AgentEvent[]): string | undefined {
   for (const event of events) {
-    if (event.type !== "tool_execution_finished" || event.result.name !== "handoff") continue;
+    if (event.type !== "tool.completed" || event.result.name !== "handoff") continue;
     const value: unknown = event.result.error === undefined ? event.result.value : undefined;
     if (value && typeof value === "object" && "transferredTo" in value) return String(value.transferredTo);
   }
@@ -129,7 +129,7 @@ function handoffTarget(events: readonly AgentEvent[]): string | undefined {
 /** Handoff tool error text from a run's event stream, when the tool failed closed. */
 function handoffError(events: readonly AgentEvent[]): string | undefined {
   for (const event of events) {
-    if (event.type === "tool_execution_finished" && event.result.name === "handoff" && event.result.error) {
+    if (event.type === "tool.completed" && event.result.name === "handoff" && event.result.error) {
       return event.result.error.message;
     }
   }
@@ -152,7 +152,7 @@ function transcript(entries: readonly SessionEntry[]): string[] {
     });
 }
 
-async function drain(session: ReturnType<typeof createAgentSession>): Promise<AgentEvent[]> {
+async function drain(session: Session): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for await (const event of session.subscribe() as AsyncIterable<AgentEvent>) {
     events.push(event);
@@ -171,10 +171,10 @@ export async function demo(): Promise<{
 }> {
   const store = createMemorySessionStore();
   const blocked: string[] = [];
-  const trackBlocked = (session: ReturnType<typeof createAgentSession>): Promise<AgentEvent[]> =>
+  const trackBlocked = (session: Session): Promise<AgentEvent[]> =>
     drain(session).then((events) => {
       for (const event of events) {
-        if (event.type === "tool_execution_blocked") blocked.push(`${event.name}:${event.reason}`);
+        if (event.type === "tool.completed" && event.status === "blocked") blocked.push(`${event.name}:${event.reason}`);
       }
       return events;
     });
@@ -190,9 +190,9 @@ export async function demo(): Promise<{
   ]);
   const triageA = await resolveAgentDefinition(definitions.triage, {
     tools: [createHandoffTool(definitions)],
-    overrides: { provider: unknownRound.aiProvider },
+    overrides: { provider: unknownRound.aiProvider, slots: { store } },
   });
-  const sessionA = createAgentSession({ agent: triageA, store, id: "handoff-demo" });
+  const sessionA = await triageA.session();
   const [eventsA, _runA] = await Promise.all([trackBlocked(sessionA), sessionA.run("My last invoice was charged twice.")]);
   const unknownTargetError = handoffError(eventsA);
 
@@ -212,9 +212,9 @@ export async function demo(): Promise<{
   ]);
   const triage = await resolveAgentDefinition(definitions.triage, {
     tools: [createHandoffTool(definitions)],
-    overrides: { provider: triageRounds.aiProvider },
+    overrides: { provider: triageRounds.aiProvider, slots: { store } },
   });
-  const triageSession = createAgentSession({ agent: triage, store, id: "handoff-demo" });
+  const triageSession = await triage.session();
   const [triageEvents, triageRun] = await Promise.all([
     trackBlocked(triageSession),
     triageSession.run("My last invoice was charged twice."),
@@ -227,9 +227,9 @@ export async function demo(): Promise<{
   const swapStart = performance.now();
   const billing: Agent = await resolveAgentDefinition(definitions.billing, {
     tools: [refundTool],
-    overrides: { provider: billingRounds.aiProvider },
+    overrides: { provider: billingRounds.aiProvider, slots: { store } },
   });
-  const billingSession = createAgentSession({ agent: billing, store, id: "handoff-demo", leafId: triageRun.leafId });
+  const billingSession = await billing.session({ id: triageSession.id, leafId: triageRun.leafId });
   const swapMs = performance.now() - swapStart;
   const swapProviderCalls = billingRounds.requests.length;
   await Promise.all([trackBlocked(billingSession), billingSession.run([])]);

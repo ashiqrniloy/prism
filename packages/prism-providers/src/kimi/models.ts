@@ -94,7 +94,7 @@ export function kimiThinkingFamily(modelId: string): "reasoning_effort" | "think
 
 /**
  * Caller-gated Moonshot Open Platform model discovery via official `GET /v1/models`.
- * Never invoked by `createKimiProviderPackage` — hosts call this and pass results via
+ * Never invoked by `kimiPackage` — hosts call this and pass results via
  * `moonshotModels:` / `models:` (or register themselves).
  * Kimi For Coding (`api.kimi.com/coding`) has no public list API; use featured
  * `kimiCodingModels` (official Coding ids) as offline bootstrap.

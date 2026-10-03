@@ -10,7 +10,7 @@ anthropicPreserveThinking	export declare function anthropicPreserveThinking(requ
 anthropicThinking	export declare function anthropicThinking(request: ProviderRequest): JsonObject | undefined
 applyAnthropicCacheControl	export declare function applyAnthropicCacheControl(request: ProviderRequest): readonly Message[]
 createAnthropicMessagesProvider	export declare function createAnthropicMessagesProvider(options?: AnthropicMessagesProviderOptions): AIProvider
-createAnthropicProviderPackage	export declare function createAnthropicProviderPackage(options?: AnthropicProviderPackageOptions): ProviderPackage
+anthropicPackage	export declare function anthropicPackage(options?: AnthropicProviderPackageOptions): PackageInstance
 defineAnthropicModel	export declare function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig
 listAnthropicModels	export declare function listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
 mapAnthropicModel	export declare function mapAnthropicModel(entry: AnthropicModelEntry, options?:

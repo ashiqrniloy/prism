@@ -26,11 +26,13 @@ describe("delegated agent step", () => {
       ...({ arguments: { path: "/secret" }, result: "raw" } as Record<string, unknown>),
     } as never);
 
-    assert.equal(event.type, "delegated_agent_step");
-    assert.equal(event.kind, "unknown");
-    assert.equal("arguments" in event, false);
-    assert.equal("result" in event, false);
-    assert.deepEqual(event.usage, { inputTokens: 100, outputTokens: 20, thinkingTokens: 4, totalTokens: 124 });
+    assert.equal(event.type, "package.event");
+    assert.equal(event.name, "agent.step");
+    const data = event.data as Record<string, unknown>;
+    assert.equal(data.kind, "unknown");
+    assert.equal("arguments" in data, false);
+    assert.equal("result" in data, false);
+    assert.deepEqual(data.usage, { inputTokens: 100, outputTokens: 20, thinkingTokens: 4, totalTokens: 124 });
   });
 
   it("bounds identifiers, counters, and serialized event size", () => {
@@ -103,7 +105,7 @@ describe("delegated agent step", () => {
     const page = await source.page({ ownership: { tenantId: "tenant-1" }, sessionId: "session-1", runId: "run-1", limit: 10 });
     assert.equal(page.items.length, 1);
     const stored = page.items[0]?.record.event;
-    assert.equal(stored?.type, "delegated_agent_step");
-    if (stored?.type === "delegated_agent_step") assert.equal(stored.toolName, "[REDACTED]-tool");
+    assert.equal(stored?.type, "package.event");
+    if (stored?.type === "package.event") assert.equal((stored.data as { toolName?: string }).toolName, "[REDACTED]-tool");
   });
 });

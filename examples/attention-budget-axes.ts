@@ -42,17 +42,19 @@ const requests: ProviderRequest[] = [];
 /** One row per tool call, ~1.2 KB each: small per turn, additive over the run. */
 const row = (turn: number) => `row ${turn} ${"y".repeat(1_200)}`;
 
-const agent = createAgent({
+const agent = await createAgent({
   id: "budget-axes-demo",
   model,
-  store: createMemorySessionStore(),
-  tools: [
-    {
-      name: "scan",
-      parameters: { type: "object", properties: {} },
-      execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "scan", value: row(requestCount) }),
-    },
-  ],
+  slots: { store: createMemorySessionStore() },
+  tools: {
+    add: [
+      {
+        name: "scan",
+        parameters: { type: "object", properties: {} },
+        execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "scan", value: row(requestCount) }),
+      },
+    ],
+  },
   attentionCompiler: {
     // Any-of, first axis that fires wins and is reported: the window axis cannot fire here, so the
     // run-budget axis is the one that opens the gate.
@@ -78,7 +80,7 @@ const agent = createAgent({
   },
 });
 
-const session = agent.createSession({ id: "budget-axes-session" });
+const session = await agent.session({ id: "budget-axes-session", create: true });
 /** One entry per mutated turn. Assembly runs before the provider call, so `requestCount + 1` is the
  *  turn this report belongs to and `spentInputTokens` is the spend of the turns before it. */
 interface CompiledTurn {
@@ -96,16 +98,24 @@ const events: AgentEvent[] = [];
 const reader = (async () => {
   for await (const event of session.subscribe()) {
     events.push(event);
-    if (event.type === "attention_compiled") {
+    if (event.type === "package.event" && event.name === "attention.compiled") {
+      const report = event.data as {
+        used: number;
+        usedAfter: number;
+        inputCap: number;
+        stubbedToolResults: number;
+        stubbedBytes: number;
+        truncated: boolean;
+      };
       compiled.push({
         turn: requestCount + 1,
-        used: event.used,
-        usedAfter: event.usedAfter,
-        inputCap: event.inputCap,
-        stubbed: event.stubbedToolResults,
-        stubbedBytes: event.stubbedBytes,
+        used: report.used,
+        usedAfter: report.usedAfter,
+        inputCap: report.inputCap,
+        stubbed: report.stubbedToolResults,
+        stubbedBytes: report.stubbedBytes,
         spendBefore: spentInputTokens,
-        truncated: event.truncated,
+        truncated: report.truncated,
       });
     }
   }

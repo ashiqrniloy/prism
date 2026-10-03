@@ -92,20 +92,22 @@ describe("AG-UI protocol fronting", () => {
     const handler = createAgUiHandler({
       authorize: () => authorization,
       mcp,
-      sessionFactory: ({ input }) => {
+      sessionFactory: async ({ input }) => {
         selected = input.serverTools;
-        return createAgent({
-          model: { provider: "mock", model: "mock" },
-          tools: input.serverTools,
-          provider: {
-            id: "mock",
-            async *generate() {
-              if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("weather-1", "mcp:weather:get", {}) };
-              else yield providerTextDelta("forecast ready");
-              yield providerDone();
+        return await (
+          await createAgent({
+            model: { provider: "mock", model: "mock" },
+            tools: { add: input.serverTools },
+            provider: {
+              id: "mock",
+              async *generate() {
+                if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("weather-1", "mcp:weather:get", {}) };
+                else yield providerTextDelta("forecast ready");
+                yield providerDone();
+              },
             },
-          },
-        }).createSession({ id: "mcp-session" });
+          })
+        ).session({ id: "mcp-session", create: true });
       },
     });
     const output = await events(await handler(request({})));

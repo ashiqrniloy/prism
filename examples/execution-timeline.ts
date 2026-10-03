@@ -22,10 +22,10 @@ const provider = createMockProvider([
   providerDone(),
 ]);
 
-const extractorAgent = createAgent({
+const extractorAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
-  tools: createToolRegistry(),
+  tools: { add: [] },
   instructions: "You extract technical entity names from input documents.",
 });
 
@@ -65,7 +65,7 @@ const checkpoints = createMemoryWorkflowCheckpoints();
 const ownership = { tenantId: "tenant-demo" };
 
 const runResult = await runWorkflow(workflow, "Prism execution timeline provides host cockpit waterfalls and trajectory evals.", {
-  agentFactory: (_name) => extractorAgent.createSession(),
+  agentFactory: (_name) => extractorAgent.session(),
   checkpoints,
   ownership,
   onEvent: (event) => {
@@ -107,7 +107,7 @@ const graphOverlay = projectWorkflowGraphRun(graph, timeline);
 // 5. Demonstrate live incremental folding from agent session
 // ============================================================================
 
-const liveAgent = createAgent({
+const liveAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider: createMockProvider([
     providerTextDelta("Streaming timeline fold example."),
@@ -116,10 +116,10 @@ const liveAgent = createAgent({
   ]),
 });
 
-const session = liveAgent.createSession();
+const session = await liveAgent.session();
 const folder = createTimelineFolder({ content: "metadata" });
 
-// Subscribe before starting the run: `session.run` emits `agent_started` before it returns, so a
+// Subscribe before starting the run: `session.run` emits `run.started` before it returns, so a
 // subscriber attached afterwards misses the run identity (`timeline.runId` stays empty).
 const subscription = session.subscribe();
 const consume = (async () => {

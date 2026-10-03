@@ -2,7 +2,7 @@
 
 import {
   AgentRunSuspended,
-  decisionIdentityRef,
+  decisionPrincipalRef,
   decisionScopesEqual,
   nestedApprovalId,
   nestedOutcomeToolResult,
@@ -10,16 +10,16 @@ import {
 } from "../../agent-approval.js";
 import type { PendingToolCall } from "../../agent-run-state.js";
 import { toolElicitationRequest } from "../../agent-tool-dispatch.js";
+import type { SessionContext } from "../../session-context.js";
+import { toolOwner } from "../runtime-registry.js";
 import type {
   AgentRunInterruption,
   AgentRunRef,
   GuardrailRecord,
-  Guardrails,
-  LoopContext,
   NestedRunRef,
   PendingDecision,
   ResumeNestedRun,
-  RunDecision,
+  Decision,
   StickyDecision,
   ToolCallContent,
   ToolRegistry,
@@ -30,11 +30,9 @@ import {
   AgentDecisionError,
   AgentDelegationSuspendedError,
   AgentRunStateError,
-  DEFAULT_MAX_PENDING_DECISIONS,
   HARD_MAX_PENDING_DECISIONS,
   MAX_ATTRIBUTION_DEPTH,
 } from "../../contracts.js";
-import { runGuardrails } from "../../guardrails.js";
 import { toToolResultMessage } from "../../input.js";
 import { canonicalToolEffectJson, toolEffectArgumentsHash } from "../../tool-effects.js";
 import { dispatchToolCall, resolveToolEffectDeclaration } from "../../tools.js";
@@ -55,7 +53,7 @@ export function matchNestedSticky(session: SessionHost, decision: PendingDecisio
 export function matchStickyDecision(session: SessionHost, call: ToolCallContent, registry: ToolRegistry): StickyDecision | undefined {
   const stickies = session.activeDurable?.state?.stickyDecisions;
   if (!stickies?.length) return undefined;
-  const identityRef = decisionIdentityRef(session.activeIdentity);
+  const identityRef = decisionPrincipalRef(session.activePrincipal);
   let argumentsHash: string | undefined;
   let effectKind: import("../../contracts.js").ToolEffectKind | undefined;
   let effectResolved = false;
@@ -108,7 +106,7 @@ export function buildPendingDecision(
         metadata,
       })
     : undefined;
-  const identityRef = decisionIdentityRef(session.activeIdentity);
+  const identityRef = decisionPrincipalRef(session.activePrincipal);
   const elicitation = toolElicitationRequest(tool, call.arguments, {
     sessionId: session.id,
     runId,
@@ -224,6 +222,38 @@ function buildRunInterruption(input: {
   };
 }
 
+/**
+ * Stage the `{ ask }` calls of one tool round as pending decisions on the session, exactly like
+ * the charge-time gate. The round's allowed calls still run; {@link suspendGatedRound} throws at the
+ * next turn boundary or loop end, so a loop body that runs after `executeTools` completes first.
+ */
+export function stageAskDecisions(
+  ctx: RoundContext,
+  requests: readonly { readonly call: ToolCallContent; readonly reason: string }[],
+): void {
+  for (const { call, reason } of requests) {
+    const approvalId = randomId("approval");
+    // Plan 104 T3: the pack `ask` record rides alongside the `{ ask }` reason, so the pending
+    // decision keeps its machine-readable guardrail identity. Cleared once staged.
+    const ask = ctx.session.packAskRecords?.get(call.id);
+    ctx.session.packAskRecords?.delete(call.id);
+    const base = buildPendingDecision(ctx.session, call, approvalId, ctx.registry, ctx.runId, ctx.metadata, ctx.controller.signal, ask);
+    ctx.session.activeGatedRound ??= new Map();
+    ctx.session.activeGatedRound.set(call.id, {
+      entry: { call, status: "ready", approvalId },
+      decision: { ...base, reason: base.kind === "elicitation" ? base.reason : reason },
+    });
+  }
+  // The staged decisions are the run's suspension cause; announce them redacted (PendingDecision
+  // carries hashes and scopes, never raw arguments) so a host can hold the queue before resuming.
+  ctx.session.emit({
+    type: "decision.pending",
+    sessionId: ctx.session.id,
+    runId: ctx.runId,
+    decisions: [...(ctx.session.activeGatedRound?.values() ?? [])].map((gatedCall) => gatedCall.decision),
+  });
+}
+
 export async function suspendGatedRound(ctx: RoundContext): Promise<void> {
   const gated = ctx.session.activeGatedRound;
   if (!gated?.size) return;
@@ -323,56 +353,10 @@ export async function handleNestedSignal(ctx: RoundContext, error: AgentDelegati
   await suspendNested(ctx, { entry: applied.entry, toolCall: error.toolCall, pending: applied.pending });
 }
 
-export function bindChargeToolRound(ctx: RoundContext): LoopContext["chargeToolRound"] {
+export function bindChargeToolRound(ctx: RoundContext): (calls: readonly ToolCallContent[]) => void | Promise<void> {
   return async (calls) => {
     if (calls.length > 0) ctx.limits.charge("maxToolRounds");
-    const durable = ctx.session.activeDurable;
-    // A run that cannot suspend never gates here: `activeGuardrails` already carries the pack `ask`
-    // rules as plain blocks (assemble.ts), so the ordinary stage path refuses the call.
-    if (!durable || calls.length === 0) return;
-    if (!ctx.session.packAskGate && !durable.options.interruptBeforeTool) return;
-    for (const call of calls) {
-      if (matchStickyDecision(ctx.session, call, ctx.registry)) continue;
-      const ask = await matchAskGate(ctx, call);
-      if (!ask && !durable.options.interruptBeforeTool) continue;
-      const approvalId = randomId("approval");
-      ctx.session.activeGatedRound ??= new Map();
-      ctx.session.activeGatedRound.set(call.id, {
-        entry: { call, status: "ready", approvalId },
-        decision: buildPendingDecision(ctx.session, call, approvalId, ctx.registry, ctx.runId, ctx.metadata, ctx.controller.signal, ask),
-      });
-    }
-    if (ctx.session.activeGatedRound && ctx.session.activeGatedRound.size > DEFAULT_MAX_PENDING_DECISIONS) {
-      throw new AgentDecisionError("ERR_PRISM_DECISION_LIMIT", `Pending decisions exceed ${DEFAULT_MAX_PENDING_DECISIONS} per run`);
-    }
   };
-}
-
-/**
- * Plan 104 T3: evaluate the pack `ask` rules for one call at charge time. The rules run through the
- * same compiler and stage runner as every other pack rule, so matching, bounds, and redaction are
- * shared; a match emits its `guardrail_decision` (`interrupt`: awaiting a decision) and gates the
- * call before it can dispatch.
- */
-async function matchAskGate(ctx: RoundContext, call: ToolCallContent): Promise<GuardrailRecord | undefined> {
-  const gate: Guardrails | undefined = ctx.session.packAskGate;
-  if (!gate) return undefined;
-  const result = await runGuardrails({
-    stage: "tool_input",
-    guardrails: gate,
-    value: call,
-    context: {
-      sessionId: ctx.session.id,
-      runId: ctx.runId,
-      toolCallId: call.id,
-      toolName: call.name,
-      metadata: ctx.metadata,
-      signal: ctx.controller.signal,
-    },
-    redactor: ctx.session.activeRedactor,
-    emit: (event) => ctx.session.emit(event),
-  });
-  return result.terminal;
 }
 
 /** Last-N dispatched tool calls kept for `budget_exhausted` attribution (plan 087 T2); the hash
@@ -385,6 +369,11 @@ function recordRecentToolCall(session: SessionHost, call: ToolCallContent): void
   if (recent.length > RECENT_TOOL_CALL_LIMIT) recent.shift();
 }
 
+function toolSession(ctx: RoundContext, tool: string): { session?: SessionContext } {
+  const owner = toolOwner(ctx.session.agent, tool);
+  return owner === undefined ? {} : { session: ctx.session.sessionContextFor(owner) };
+}
+
 function dispatchFilter(ctx: RoundContext): { filter: { allow: readonly string[] } | { deny: readonly string[] } } | Record<string, never> {
   const hiddenOk = ctx.options.allowHiddenToolCalls ?? ctx.session.agent.config.allowHiddenToolCalls;
   if (hiddenOk || ctx.turnAllow === undefined) {
@@ -394,7 +383,7 @@ function dispatchFilter(ctx: RoundContext): { filter: { allow: readonly string[]
   return ctx.tools.length > 0 ? { filter: { deny: ctx.tools.map((tool) => tool.name) } } : {};
 }
 
-export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchToolCall"] {
+export function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent) => Promise<ToolResult> {
   return async (call) => {
     const sticky = matchStickyDecision(ctx.session, call, ctx.registry);
     if (sticky?.outcome === "reject_for_run") {
@@ -418,24 +407,23 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
           runId: ctx.runId,
           toolCallId: call.id,
           signal: ctx.controller.signal,
+          // A package tool sees the session as its own package does, so `background` is capability-checked.
+          ...toolSession(ctx, call.name),
           metadata: {
             ...ctx.metadata,
             loadedSkills: ctx.session.loadedSkills,
             activeTools: ctx.tools,
             activeSkillNames: ctx.activeSkills.map((skill) => skill.name),
           },
-          identity: ctx.session.activeIdentity,
+          principal: ctx.session.activePrincipal,
         },
-        middleware: ctx.session.agent.config.middleware,
         emit: (event) => ctx.session.emit(event),
-        permission: ctx.session.agent.config.permission,
         trust: ctx.session.agent.config.trust,
         redactor: ctx.session.activeRedactor,
         ledger: ctx.session.activeLedger,
         effectStore: ctx.session.activeEffectStore,
         ownership: ctx.session.activeOwnership,
-        identity: ctx.session.activeIdentity,
-        guardrails: ctx.session.activeGuardrails,
+        principal: ctx.session.activePrincipal,
         ...dispatchFilter(ctx),
         limitTracker: ctx.limits,
         beforeExecute: async (mediatedCall) => {
@@ -462,36 +450,6 @@ export function bindDispatchToolCall(ctx: RoundContext): LoopContext["dispatchTo
             });
             return;
           }
-          if (!durable.options.interruptBeforeTool) return;
-          if (matchStickyDecision(ctx.session, mediatedCall, ctx.registry)?.outcome === "allow_for_run") return;
-          const approvalId = randomId("approval");
-          const decision = buildPendingDecision(
-            ctx.session,
-            mediatedCall,
-            approvalId,
-            ctx.registry,
-            ctx.runId,
-            ctx.metadata,
-            ctx.controller.signal,
-          );
-          const interruption = buildRunInterruption({
-            decisions: [decision],
-            kind: "tool_approval",
-            reason: decision.reason,
-            toolCallId: mediatedCall.id,
-            toolName: mediatedCall.name,
-          });
-          throw new AgentRunSuspended(
-            await suspendDurable(ctx.session, {
-              runId: ctx.runId,
-              model: ctx.model,
-              limits: ctx.limits,
-              interruption,
-              pending: { call: mediatedCall, status: "ready" },
-              pendingCalls: [{ call: mediatedCall, status: "ready", approvalId }],
-            }),
-            interruption,
-          );
         },
         validate: ctx.validate,
       });
@@ -516,7 +474,7 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
     const surfacedPending: PendingDecision[] = [];
     const resolvedToolCallIds = new Set<string>();
     for (const entry of nestedRuns) {
-      const grouped: RunDecision[] = [];
+      const grouped: Decision[] = [];
       for (const approval of entry.approvals) {
         const decision = entry.decisions?.[approval.id] ?? resumed.decisions?.get(approval.id);
         if (decision) grouped.push({ ...decision, approvalId: approval.childApprovalId });
@@ -607,23 +565,23 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
       }
       const call = decision?.modifiedArguments ? { ...entry.call, arguments: decision.modifiedArguments } : entry.call;
       try {
-        await replayToolResult(ctx, await ctx.loopCtx.dispatchToolCall(call));
+        await replayToolResult(ctx, await ctx.dispatchToolCall(call));
       } catch (error) {
         if (!(error instanceof AgentDelegationSuspendedError)) throw error;
         await handleNestedSignal(ctx, error);
       }
     }
   } else if (resumed?.state?.pending?.status === "ready") {
-    await replayToolResult(ctx, await ctx.loopCtx.dispatchToolCall(resumed.state.pending.call));
+    await replayToolResult(ctx, await ctx.dispatchToolCall(resumed.state.pending.call));
   }
 }
 
 export async function runLoopUntilSettled(ctx: RoundContext): Promise<Usage | undefined> {
   while (true) {
     try {
-      const loopUsage = await ctx.loop.run(ctx.loopCtx);
+      await ctx.loop.run(ctx.runController);
       await suspendGatedRound(ctx);
-      return loopUsage;
+      return undefined;
     } catch (error) {
       if (!(error instanceof AgentDelegationSuspendedError)) throw error;
       await handleNestedSignal(ctx, error);

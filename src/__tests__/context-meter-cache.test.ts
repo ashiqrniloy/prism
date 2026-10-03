@@ -1,7 +1,7 @@
 /** Plan 103 T4: snapshot-keyed `contextMeter()` cache — identity, invalidation, parity, and poll cost. */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentSession, ContextMeter, Message, ModelConfig } from "../index.js";
+import type { Session, ContextMeter, Message, ModelConfig } from "../index.js";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, resolveInputCap } from "../index.js";
 
 const MODEL: ModelConfig = { provider: "mock", model: "claude-sonnet-4.5", limits: { contextWindow: 100_000 } };
@@ -20,9 +20,14 @@ const silentProvider = {
   },
 };
 
-function createSession(id: string): AgentSession {
-  const agent = createAgent({ id: `${id}-agent`, store: createMemorySessionStore(), model: MODEL, provider: silentProvider });
-  return agent.createSession({ id });
+async function createSession(id: string): Promise<Session> {
+  const agent = await createAgent({
+    id: `${id}-agent`,
+    slots: { store: createMemorySessionStore() },
+    model: MODEL,
+    provider: silentProvider,
+  });
+  return await agent.session({ id, create: true });
 }
 
 function textMessage(role: "user" | "assistant", text: string): Message {
@@ -30,17 +35,17 @@ function textMessage(role: "user" | "assistant", text: string): Message {
 }
 
 /** Test-only reach into the private history (same cast pattern as `leak-sessions.test.ts`). */
-function historyOf(session: AgentSession): Message[] {
+function historyOf(session: Session): Message[] {
   return (session as unknown as { history: Message[] }).history;
 }
 
 /** Read the meter while the run is still active (run budget visible), then once more after it ends. */
-async function metersDuringRun(session: AgentSession, input: string): Promise<{ during?: ContextMeter; after: ContextMeter }> {
+async function metersDuringRun(session: Session, input: string): Promise<{ during?: ContextMeter; after: ContextMeter }> {
   let during: ContextMeter | undefined;
   const subscription = session.subscribe();
   const pump = (async () => {
     for await (const event of subscription) {
-      if (event.type === "provider_turn_finished") during = session.contextMeter();
+      if (event.type === "turn.completed") during = session.contextMeter();
     }
   })();
   await session.run(input, { limits: { maxInputTokens: RUN_INPUT_BUDGET, maxTurns: 4 } });
@@ -49,8 +54,8 @@ async function metersDuringRun(session: AgentSession, input: string): Promise<{ 
 }
 
 describe("context-meter cache (plan 103 T4)", () => {
-  it("returns the identical frozen value until something changes", () => {
-    const session = createSession("meter-identity");
+  it("returns the identical frozen value until something changes", async () => {
+    const session = await createSession("meter-identity");
     historyOf(session).push(textMessage("user", "x".repeat(4_000)));
     const first = session.contextMeter();
     assert.equal(session.contextMeter(), first, "unchanged state serves the same object");
@@ -61,8 +66,8 @@ describe("context-meter cache (plan 103 T4)", () => {
     assert.equal(first.inputCap, CAP);
   });
 
-  it("a recomputed value after invalidation deep-equals the cached one", () => {
-    const session = createSession("meter-parity");
+  it("a recomputed value after invalidation deep-equals the cached one", async () => {
+    const session = await createSession("meter-parity");
     historyOf(session).push(textMessage("user", "x".repeat(4_000)));
     const cached = session.contextMeter();
     (session as unknown as { invalidateSnapshot(): void }).invalidateSnapshot();
@@ -71,11 +76,11 @@ describe("context-meter cache (plan 103 T4)", () => {
     assert.deepEqual(fresh, cached, "the recompute is field-identical: no stale-field drift");
   });
 
-  it("an in-place history push invalidates without a generation bump", () => {
-    const session = createSession("meter-push");
+  it("an in-place history push invalidates without a generation bump", async () => {
+    const session = await createSession("meter-push");
     historyOf(session).push(textMessage("user", "a".repeat(4_000)));
     const before = session.contextMeter();
-    // The run loop pushes into the same array during a turn (`agent-loops.ts`), before any
+    // The run loop pushes into the same array during a turn (`loop/run-controller.ts`), before any
     // entry append bumps the generation — the length guard is what keeps the meter honest.
     historyOf(session).push(textMessage("assistant", "b".repeat(4_000)));
     const after = session.contextMeter();
@@ -84,7 +89,7 @@ describe("context-meter cache (plan 103 T4)", () => {
   });
 
   it("an appended turn invalidates and labels the new reading", async () => {
-    const session = createSession("meter-append");
+    const session = await createSession("meter-append");
     const before = session.contextMeter();
     assert.equal(before.inputTokens, 0, "an empty history estimates zero");
     const { after } = await metersDuringRun(session, "hello");
@@ -95,7 +100,7 @@ describe("context-meter cache (plan 103 T4)", () => {
   });
 
   it("a run boundary changes runInputBudget and invalidates both ways", async () => {
-    const session = createSession("meter-run");
+    const session = await createSession("meter-run");
     const idle = session.contextMeter();
     assert.equal(idle.runInputBudget, undefined, "no run, no budget");
     const { during, after } = await metersDuringRun(session, "hi");
@@ -108,7 +113,7 @@ describe("context-meter cache (plan 103 T4)", () => {
   });
 
   it("compact() drops the pre-compaction reading", async () => {
-    const session = createSession("meter-compact");
+    const session = await createSession("meter-compact");
     const { after } = await metersDuringRun(session, "hi");
     assert.equal(session.contextMeter(), after);
     await session.compact();
@@ -118,9 +123,9 @@ describe("context-meter cache (plan 103 T4)", () => {
     assert.equal(session.contextMeter(), compacted);
   });
 
-  it("two sessions over different histories never share a value", () => {
-    const first = createSession("meter-first");
-    const second = createSession("meter-second");
+  it("two sessions over different histories never share a value", async () => {
+    const first = await createSession("meter-first");
+    const second = await createSession("meter-second");
     historyOf(first).push(textMessage("user", "a".repeat(4_000)));
     historyOf(second).push(textMessage("user", "b".repeat(8_000)));
     const firstMeter = first.contextMeter();
@@ -131,8 +136,8 @@ describe("context-meter cache (plan 103 T4)", () => {
     assert.equal(second.contextMeter(), secondMeter);
   });
 
-  it("1,000 warm reads over a 200k-char history touch no history element", () => {
-    const session = createSession("meter-poll");
+  it("1,000 warm reads over a 200k-char history touch no history element", async () => {
+    const session = await createSession("meter-poll");
     const touches = { iterated: 0, indexed: 0 };
     const probe = new Proxy(
       Array.from({ length: 20 }, (_, index) => textMessage("user", `message ${index} ${"x".repeat(10_000)}`)),

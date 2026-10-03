@@ -1,4 +1,4 @@
-import type { AgentRunResult } from "@arnilo/prism";
+import type { RunResult } from "@arnilo/prism";
 import { defineScorer, scoreRun } from "@arnilo/prism-evals";
 
 /**
@@ -12,6 +12,6 @@ export const greetsScorer = defineScorer({
   }),
 });
 
-export async function scoreGreeting(result: AgentRunResult) {
+export async function scoreGreeting(result: RunResult) {
   return scoreRun({ result, scorers: [greetsScorer] });
 }

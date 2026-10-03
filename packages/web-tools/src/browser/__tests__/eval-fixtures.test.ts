@@ -8,7 +8,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import type { AgentRunResult, ExecutionPolicy } from "@arnilo/prism";
+import type { RunResult, ExecutionPolicy } from "@arnilo/prism";
 import {
   assertEvaluationThreshold,
   defineDataset,
@@ -26,14 +26,15 @@ const openNetwork = {
   allowLoopback: true as const,
 };
 
-function resultOf(itemId: string, observed: Readonly<Record<string, unknown>>): AgentRunResult {
+function resultOf(itemId: string, observed: Readonly<Record<string, unknown>>): RunResult {
   const text = JSON.stringify(observed);
   return {
     sessionId: "browser-eval-s",
     runId: `browser-eval-${itemId}`,
-    status: "succeeded",
+    status: "completed",
     text,
     content: [{ type: "text", text }],
+    messages: [],
   };
 }
 

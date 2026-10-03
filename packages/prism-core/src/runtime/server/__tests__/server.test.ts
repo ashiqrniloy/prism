@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
+  askEveryTool,
   type AgentEventRecord,
   type AIProvider,
   createAgent,
@@ -29,8 +30,8 @@ function jsonRequest(path: string, body: unknown, init: RequestInit = {}): Reque
   });
 }
 
-function mockAgent(text = "hello") {
-  return createAgent({
+async function mockAgent(text = "hello") {
+  return await createAgent({
     model: { provider: "mock", model: "offline" },
     provider: createMockProvider([providerTextDelta(text), providerDone()]),
   });
@@ -40,7 +41,7 @@ describe("createPrismHandler", () => {
   it("runs selected agents directly and streams bounded SSE events", async () => {
     const calls: string[] = [];
     const handler = createPrismHandler({
-      agents: { support: mockAgent() },
+      agents: { support: await mockAgent() },
       authorize(input) {
         calls.push(`${input.operation}:${input.capabilityId}`);
         return authorization;
@@ -67,7 +68,7 @@ describe("createPrismHandler", () => {
       events.append({ ...event, id, type: event.event.type, timestamp, redacted: true, ...authorization.ownership });
     await record(
       "event-1",
-      { sessionId: "session-1", runId: "stored-run", event: { type: "agent_started", sessionId: "session-1", runId: "stored-run" } },
+      { sessionId: "session-1", runId: "stored-run", event: { type: "run.started", sessionId: "session-1", runId: "stored-run" } },
       "2026-08-04T00:00:00.000Z",
     );
     await record(
@@ -75,13 +76,17 @@ describe("createPrismHandler", () => {
       {
         sessionId: "session-1",
         runId: "stored-run",
-        event: { type: "message_delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "durable" } },
+        event: { type: "message.delta", sessionId: "session-1", runId: "stored-run", content: { type: "text", text: "durable" } },
       },
       "2026-08-04T00:00:01.000Z",
     );
     await record(
       "event-3",
-      { sessionId: "session-1", runId: "stored-run", event: { type: "agent_finished", sessionId: "session-1", runId: "stored-run" } },
+      {
+        sessionId: "session-1",
+        runId: "stored-run",
+        event: { type: "run.completed", sessionId: "session-1", status: "completed", runId: "stored-run" },
+      },
       "2026-08-04T00:00:02.000Z",
     );
     const page = await events.page({ ownership: authorization.ownership, sessionId: "session-1", runId: "stored-run" });
@@ -133,7 +138,8 @@ describe("createPrismHandler", () => {
     const secret = "agent-lifecycle-secret";
     let calls = 0;
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "support",
       model: { provider: "mock", model: "offline" },
       provider: {
@@ -149,9 +155,9 @@ describe("createPrismHandler", () => {
         },
       },
       redactor: createSecretRedactor([secret]),
-      store,
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store },
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const lifecycle = createAgentRunLifecycle({
       checkpoints,
@@ -199,7 +205,8 @@ describe("createPrismHandler", () => {
     const store = createMemorySessionStore();
     let calls = 0;
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "batch-support",
       model: { provider: "mock", model: "offline" },
       provider: {
@@ -215,9 +222,9 @@ describe("createPrismHandler", () => {
           yield providerDone();
         },
       },
-      store,
-      tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store },
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
     const handler = createPrismHandler({
@@ -263,7 +270,8 @@ describe("createPrismHandler", () => {
     const store = createMemorySessionStore();
     const executed: string[] = [];
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "editable-support",
       model: { provider: "mock", model: "offline" },
       provider: {
@@ -278,20 +286,22 @@ describe("createPrismHandler", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
       validator: (_tool: unknown, args: unknown) =>
         typeof (args as { value?: unknown }).value === "string" ? undefined : "value must be a string",
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (args: unknown, context: { toolCallId: string }) => {
-            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (args: unknown, context: { toolCallId: string }) => {
+              executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+              return { toolCallId: context.toolCallId, name: "write", value: "done" };
+            },
           },
-        },
-      ],
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+        ],
+      },
+      runState: { checkpoints, definitionRevision: "1" },
     });
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent, definitionRevision: "1" }) });
     const handler = createPrismHandler({
@@ -401,7 +411,8 @@ describe("createPrismHandler", () => {
     let multiTurn = 0;
     const multiExecuted: string[] = [];
     const multiCheckpoints = createMemoryCheckpointStore();
-    const multiAgent = createAgent({
+    const multiAgent = await createAgent({
+      hooks: askEveryTool(),
       id: "multi-editable",
       model: { provider: "mock", model: "offline" },
       provider: {
@@ -417,18 +428,20 @@ describe("createPrismHandler", () => {
           yield providerDone();
         },
       },
-      store: createMemorySessionStore(),
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (args: unknown, context: { toolCallId: string }) => {
-            multiExecuted.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+      slots: { store: createMemorySessionStore() },
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (args: unknown, context: { toolCallId: string }) => {
+              multiExecuted.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+              return { toolCallId: context.toolCallId, name: "write", value: "done" };
+            },
           },
-        },
-      ],
-      runState: { checkpoints: multiCheckpoints, definitionRevision: "1", interruptBeforeTool: true },
+        ],
+      },
+      runState: { checkpoints: multiCheckpoints, definitionRevision: "1" },
     });
     const multiLifecycle = createAgentRunLifecycle({
       checkpoints: multiCheckpoints,
@@ -627,7 +640,7 @@ describe("createPrismHandler", () => {
     const checkpoints = createMemoryWorkflowCheckpoints();
     const workflow = defineWorkflow({ revision: "1", id: "safe", nodes: { one: functionNode({ execute: () => 1 }) }, edges: [] });
     const handler = createPrismHandler({
-      agents: { allowed: mockAgent() },
+      agents: { allowed: await mockAgent() },
       workflows: { safe: { definition: workflow, checkpoints } },
       authorize: ({ request }) => (request.headers.get("authorization") === "Bearer ok" ? authorization : false),
       allowedHosts: ["example.test"],
@@ -679,7 +692,7 @@ describe("createPrismHandler", () => {
     );
 
     const timed = createPrismHandler({
-      agents: { allowed: mockAgent() },
+      agents: { allowed: await mockAgent() },
       authorize: () => new Promise<false>(() => undefined),
       limits: { requestTimeoutMs: 1 },
     });
@@ -709,7 +722,7 @@ describe("createPrismHandler", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ model: { provider: "slow", model: "slow" }, provider });
+    const agent = await createAgent({ model: { provider: "slow", model: "slow" }, provider });
     const handler = createPrismHandler({
       agents: { slow: agent },
       authorize: () => authorization,
@@ -728,7 +741,7 @@ describe("createPrismHandler", () => {
   it("bounds result and event bytes and never returns configured secrets", async () => {
     const secret = "server-canary-secret";
     const handler = createPrismHandler({
-      agents: { large: mockAgent(`${secret}-${"x".repeat(200)}`) },
+      agents: { large: await mockAgent(`${secret}-${"x".repeat(200)}`) },
       authorize: () => authorization,
       redactor: createSecretRedactor([secret]),
       limits: { maxResponseBytes: 100, maxEventBytes: 120 },

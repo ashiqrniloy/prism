@@ -4,8 +4,8 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
-import { createExtensionKernel } from "@arnilo/prism";
-import { createWikiExtension, createWikiIngestCommand, createWikiLintCommand, initWiki, lintWiki, refreshWiki } from "../index.js";
+import { createAgent } from "@arnilo/prism";
+import { createWikiIngestCommand, createWikiLintCommand, initWiki, lintWiki, refreshWiki, wiki } from "../index.js";
 
 const TEST_DIR = mkdtempSync(join(tmpdir(), "prism-wiki-commands-"));
 
@@ -97,30 +97,31 @@ describe("prism-wiki commands & lifecycle hooks", () => {
     assert.deepEqual(result.metadata?.trust, "untrusted_external");
   });
 
-  it("commands_execute_via_prism_extension_kernel", async () => {
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      createWikiExtension({
-        workspaceRoot: TEST_DIR,
-        wikiRoot: ".wiki",
-      }),
-    ]);
-
-    const initCmd = kernel.registries.commands.get("wiki-init");
-    const refreshCmd = kernel.registries.commands.get("wiki-refresh");
-    const lintCmd = kernel.registries.commands.get("wiki-lint");
-
-    assert.ok(initCmd);
-    assert.ok(refreshCmd);
-    assert.ok(lintCmd);
-
-    const refreshResult = await refreshCmd.execute({}, { sessionId: "s1", runId: "r1" });
-    assert.equal(refreshResult.name, "wiki-refresh");
-    assert.ok(refreshResult.content && refreshResult.content[0].type === "text" && refreshResult.content[0].text.includes("Refreshed"));
-
-    const lintResult = await lintCmd.execute({}, { sessionId: "s1", runId: "r1" });
-    assert.equal(lintResult.name, "wiki-lint");
-    assert.ok(lintResult.content && lintResult.content[0].type === "text" && lintResult.content[0].text.includes("health check passed"));
+  it("commands_execute_via_package", async () => {
+    const agent = await createAgent({
+      model: { provider: "mock", model: "wiki" },
+      packages: [wiki({ workspaceRoot: TEST_DIR, wikiRoot: ".wiki", autoDeploySkills: false })],
+    });
+    try {
+      const names = new Set(agent.inspect().commands.map((command) => command.name));
+      assert.ok(names.has("wiki-init"));
+      assert.ok(names.has("wiki-refresh"));
+      assert.ok(names.has("wiki-lint"));
+      const refreshResult = (await agent.commands.run("wiki-refresh", {})) as {
+        name: string;
+        content?: { type: string; text?: string }[];
+      };
+      assert.equal(refreshResult.name, "wiki-refresh");
+      assert.ok(refreshResult.content?.[0]?.type === "text" && refreshResult.content[0]?.text?.includes("Refreshed"));
+      const lintResult = (await agent.commands.run("wiki-lint", {})) as {
+        name: string;
+        content?: { type: string; text?: string }[];
+      };
+      assert.equal(lintResult.name, "wiki-lint");
+      assert.ok(lintResult.content?.[0]?.type === "text" && lintResult.content[0]?.text?.includes("health check passed"));
+    } finally {
+      await agent.dispose();
+    }
   });
 
   it("wiki_ingest_command_stages_text_and_returns_brief", async () => {
@@ -145,14 +146,12 @@ describe("prism-wiki commands & lifecycle hooks", () => {
     }, /requires exactly one of text, path, or url/);
   });
 
-  it("wiki_ingest_command_with_drivers_calls_startRun_and_activeSkills_wiki_maintainer", async () => {
+  it("wiki_ingest_command_with_drivers_calls_startRun", async () => {
     const cmd = createWikiIngestCommand({ workspaceRoot: TEST_DIR, wikiRoot: ".wiki" });
     let seenInput = "";
-    let seenSkills: readonly string[] | undefined;
     const drivers = {
-      startRun: async (input: string, runOptions?: { activeSkills?: readonly string[] }) => {
+      startRun: async (input: string) => {
         seenInput = input;
-        seenSkills = runOptions?.activeSkills;
         return { runId: "run-1", status: "started", entries: [] } as never;
       },
       startWorkflow: async () => ({ runId: "run-1", status: "started" }) as never,
@@ -163,7 +162,6 @@ describe("prism-wiki commands & lifecycle hooks", () => {
 
     assert.equal((result.value as { runStarted: boolean }).runStarted, true);
     assert.match(seenInput, /Driven note/);
-    assert.deepEqual(seenSkills, ["wiki-maintainer"]);
   });
 
   it("wiki_ingest_command_labels_untrusted_and_skips_drivers_when_absent", async () => {

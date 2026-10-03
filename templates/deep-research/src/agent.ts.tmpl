@@ -10,10 +10,10 @@ import { createResearchSearchAdapter, createResearchWebTools } from "./tools.js"
 /**
  * Creates the planning agent responsible for breaking down topics into search queries.
  */
-export function createPlannerAgent(options?: {
+export async function createPlannerAgent(options?: {
   readonly model?: { provider: string; model: string };
   readonly provider?: import("@arnilo/prism").AIProvider;
-}): Agent {
+}): Promise<Agent> {
   const provider =
     options?.provider ??
     createMockProvider([
@@ -29,7 +29,7 @@ export function createPlannerAgent(options?: {
       providerDone(),
     ]);
 
-  return createAgent({
+  return await createAgent({
     model: options?.model ?? { provider: "mock", model: "demo" },
     provider,
     instructions:
@@ -40,10 +40,10 @@ export function createPlannerAgent(options?: {
 /**
  * Creates the synthesis agent responsible for compiling findings into a cited report.
  */
-export function createSynthesizerAgent(options?: {
+export async function createSynthesizerAgent(options?: {
   readonly model?: { provider: string; model: string };
   readonly provider?: import("@arnilo/prism").AIProvider;
-}): Agent {
+}): Promise<Agent> {
   const provider =
     options?.provider ??
     createMockProvider([
@@ -53,7 +53,7 @@ export function createSynthesizerAgent(options?: {
       providerDone(),
     ]);
 
-  return createAgent({
+  return await createAgent({
     model: options?.model ?? { provider: "mock", model: "demo" },
     provider,
     instructions:
@@ -64,11 +64,11 @@ export function createSynthesizerAgent(options?: {
 /**
  * Default app agent export for `prism dev` and CLI inspector.
  */
-export function createAppAgent(): Agent {
+export async function createAppAgent(): Promise<Agent> {
   const adapter = createResearchSearchAdapter();
   const tools = createResearchWebTools(adapter);
 
-  return createAgent({
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([
       providerTextDelta("Deep Research Agent ready. Ask me to research any topic."),

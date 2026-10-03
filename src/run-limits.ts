@@ -23,8 +23,22 @@ export const DEFAULT_RUN_LIMITS = Object.freeze({
   maxTotalTokens: 50_000,
 });
 
-/** Stop-hook continuation cap when no layer configures one (plan 106 R1). Not a counter axis. */
-const DEFAULT_MAX_STOP_CONTINUATIONS = 3;
+/** `run.end` continuation cap when no layer configures one. Not a counter axis. */
+const DEFAULT_MAX_CONTINUATIONS = 3;
+
+/** How long `session.close()` waits for background tasks when no limit configures it. */
+export const DEFAULT_BACKGROUND_SETTLE_MS = 5_000;
+
+/**
+ * Bounded settle for `session.close()` (plan 146 Task 7): the agent-wide `backgroundSettleMs`, validated
+ * as a non-negative safe integer. A per-run layer cannot set it, since a session outlives a run.
+ */
+export function resolveBackgroundSettleMs(agent?: RunLimits): number {
+  const value = agent?.backgroundSettleMs;
+  if (value === undefined) return DEFAULT_BACKGROUND_SETTLE_MS;
+  if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("backgroundSettleMs must be a non-negative safe integer");
+  return value;
+}
 
 /**
  * Process-safety ceilings that exist so a bug cannot OOM the host via JSON.parse of giant
@@ -113,13 +127,13 @@ export function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<R
     if (attempts !== null && turns !== null && attempts < turns) resolved.maxProviderAttempts = turns;
   }
   const maxCost = override?.maxCost ?? base?.maxCost;
-  // Stop-hook continuation cap (plan 106 R1): no counters-table row — the wrapper turns it into a
+  // `run.end` continuation cap: no counters-table row — the loop turns it into a
   // clean `hook_limit` stop, not a breach — so it resolves outside the counter-backed axes and
   // keeps the same narrowing-only law (min, `null` = uncapped).
-  const stopContinuations = minCap(base?.maxStopContinuations, override?.maxStopContinuations);
+  const continuations = minCap(base?.maxContinuations, override?.maxContinuations);
   return Object.freeze({
     ...resolved,
-    maxStopContinuations: stopContinuations !== undefined ? stopContinuations : DEFAULT_MAX_STOP_CONTINUATIONS,
+    maxContinuations: continuations !== undefined ? continuations : DEFAULT_MAX_CONTINUATIONS,
     ...(maxCost
       ? {
           maxCost:
@@ -156,13 +170,10 @@ function validateLimits(input: RunLimits): RunLimits {
     if (!Number.isFinite(amount) || amount < 0 || !currency.trim())
       throw new TypeError("maxCost requires a finite non-negative amount and currency");
   }
-  const stopContinuations = input.maxStopContinuations;
-  if (
-    stopContinuations !== undefined &&
-    stopContinuations !== null &&
-    (!Number.isSafeInteger(stopContinuations) || stopContinuations < 0)
-  ) {
-    throw new TypeError("maxStopContinuations must be a non-negative safe integer or null to disable the cap");
+  resolveBackgroundSettleMs(input);
+  const continuations = input.maxContinuations;
+  if (continuations !== undefined && continuations !== null && (!Number.isSafeInteger(continuations) || continuations < 0)) {
+    throw new TypeError("maxContinuations must be a non-negative safe integer or null to disable the cap");
   }
   return input;
 }
@@ -322,7 +333,7 @@ function axisCap(limits: Readonly<ResolvedRunLimits>, axis: RunLimitName): numbe
 
 /**
  * Attribution carried by a limit death (plan 087 T2, plan 108 T5): the `budget_exhausted` payload
- * without `limit`, which `AgentRunResult.limit` / `child_failed.limit` already carry.
+ * without `limit`, which `RunResult.limit` / `child_failed.limit` already carry.
  */
 export interface BudgetExhaustionAttribution {
   readonly consumed: BudgetConsumedCounters;

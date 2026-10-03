@@ -62,8 +62,8 @@ test("aggregate ceiling spans three session runs and auxiliary work on one task 
   // Two successful runs plus the auxiliary compaction call share the pool; the third run is denied
   // by the reservation check instead of resetting its per-run cap.
   assert.deepEqual(payload.runs, [
-    { step: 1, status: "succeeded", model: "fixed-pin", outcome: "early_close" },
-    { step: 2, status: "succeeded", model: "fixed-pin", outcome: "early_close" },
+    { step: 1, status: "completed", model: "fixed-pin", outcome: "early_close" },
+    { step: 2, status: "completed", model: "fixed-pin", outcome: "early_close" },
     { step: 3, status: "failed", deniedCode: "ERR_PRISM_MODEL_ROUTER_BUDGET" },
   ]);
   assert.equal(payload.auxiliary.kind, "compaction");
@@ -83,7 +83,7 @@ test("renewal fencing keeps the aggregate hold single-committed", () => {
 
 test("unknown usage settles as reserved liability, not zero", () => {
   const payload = runExample();
-  assert.equal(payload.unknownUsage.status, "succeeded");
+  assert.equal(payload.unknownUsage.status, "completed");
   assert.equal(payload.unknownUsage.settlementUnknownUsage, true);
   assert.equal(payload.unknownUsage.budgetCommitted, true);
   assert.equal(payload.unknownUsage.chargedTokens, payload.unknownUsage.reservationTokens);

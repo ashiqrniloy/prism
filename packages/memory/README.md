@@ -49,9 +49,39 @@ const recalled = await memory.recall("preferred response format", { topK: 5, mes
 
 const agent = createAgent({
   // ...provider/model
-  context: [memory.createContextProvider()],
+  hooks: (hooks) => memory.registerContextBuild(hooks),
 });
 ```
+
+## Compaction
+
+`createLlmCompactor`, `createCodingCompactor`, and `createObservationalMemoryCompactor` are
+`Compactor` slot implementations (roadmap §2.5), not extension contributions:
+
+```ts
+createAgent({ model, slots: { compaction: createLlmCompactor({ model, provider }) } });
+```
+
+Family extensions are packages. JSON options are package config; function options stay factory arguments:
+
+```ts
+import { observationalMemory } from "@arnilo/prism-memory/compaction/observational-memory";
+import { wiki } from "@arnilo/prism-memory/wiki";
+
+const agent = await createAgent({
+  model,
+  packages: [
+    wiki({ fetchUrl: guardedFetch }),
+    observationalMemory({ recallTool: { getEntries } }),
+  ],
+  packageConfig: { "@arnilo/prism-memory.wiki": { wikiRoot: ".wiki" } },
+});
+```
+
+`wiki` config fields: `wikiRoot`, `rawRoots`, `profile`, `qmdPath`, `workspaceRoot`, `autoDeploySkills`, `ocrImages`. `fetchUrl` and `extractDocument` stay factory arguments.
+
+The LLM and coding compactors **make a model call** to summarize older history; the
+observational-memory compactor and the kernel default make none.
 
 ## API surface
 
@@ -64,7 +94,7 @@ const agent = createAgent({
 | `createMemoryVectorStore` / `createMemoryWorkingStore` | In-memory reference adapters |
 | `createPostgresMemoryStores` | PostgreSQL/pgvector production path |
 | `runMemoryConformance` | Shared network-free conformance helper |
-| `createContextProvider` / `createWorkingMemoryProcessor` | Existing context seam + opt-in update helper |
+| `registerContextBuild` / `contextBlocks` / `createWorkingMemoryProcessor` | `context.build` context seam + opt-in update helper |
 | `setConsent` / `correct` / `forget` / `applyRetention` | Consent lifecycle: grant/revoke visibility, re-embed corrections, real deletes, bounded retention batches |
 | `exportMemory` / `rebuildIndex` | Exact-identity, redacted consented export pages; abortable/resumable bounded re-embedding |
 | `listByThread` / `countByThread` | Optional bounded-store methods required for export/rebuild and retention respectively |
@@ -75,7 +105,7 @@ const agent = createAgent({
 - Memory text/metadata are redacted when `secrets` / `redactor` are configured.
 - Injected context is inert text only — no tools or permissions.
 - Cross-tenant and cross-thread recall is denied.
-- Consent (0.0.14): records carry `consent { source, scope, visible }`; `recall()` drops revoked/invisible entries at assembly time (direct recall and `createContextProvider` injection), and `requireConsent` strict mode also drops consent-less entries.
+- Consent (0.0.14): records carry `consent { source, scope, visible }`; `recall()` drops revoked/invisible entries at assembly time (direct recall and `context.build` injection), and `requireConsent` strict mode also drops consent-less entries.
 - `exportMemory({ identity, cursor? })` requires exact tenant/resource/thread identity and emits only explicitly consented visible records, redacted and capped at 100 entries / 4 MiB / 10 seconds by default (200 / 32 MiB / 60 seconds hard). `rebuildIndex({ cursor? })` re-embeds one stable page (32 default / 128 hard) and returns `nextCursor` for host-owned resume.
 - Embedder output, in-memory upserts/queries, PostgreSQL/pgvector parameters, and export/rebuild pages accept only non-empty finite number vectors; NaN, ±Infinity, non-numbers, and wrong configured dimensions fail before scoring, SQL, response, or re-indexing.
 

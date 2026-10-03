@@ -1,20 +1,17 @@
 import {
-  type AgentIdentity,
-  AgentRunError,
-  type AgentRunResult,
-  type AgentSession,
+  type Principal,
+  type RunResult,
+  type Session,
   type AgentSessionConfig,
   type AIProvider,
-  createLoadSkillTool,
-  createSkillRegistry,
   type ExecutionPolicy,
   type OwnershipScope,
   type ToolDefinition,
   type TrustPolicy,
 } from "@arnilo/prism";
 import {
+  type Agent,
   type AgentSdkConfig,
-  type AgentSdkDefinition,
   assembleSkillsPlane,
   barePreset,
   codingPreset,
@@ -25,21 +22,22 @@ import {
   type AskUserDecisionHandler,
   createAskUserDecisionTool,
   createCodingCheckTool,
-  createTodoContinuationStopHook,
+  registerTodoContinuation,
   createTodoWriteTool,
-  type TodoContinuationStopHook,
+  type TodoContinuationHandler,
 } from "@arnilo/prism-coding-tools/agent";
 import { createPrismCodeApprovalPolicy, resolvePrismCodeApprovalMode } from "./approval.js";
 import { resolvePrismCodeCompaction, resolvePrismCodeContextBudget, resolvePrismCodeToolResultFold } from "./compaction.js";
 import type { PrismCodeConfig } from "./config.js";
 import { PrismCodeCredentialManager } from "./credentials.js";
 import { resolvePrismHome } from "./home.js";
-import { createCostTurnPolicy, resolveContinueOnOpenTodos, resolvePrismCodeLimits, resolvePrismCodeLoop } from "./limits.js";
+import { registerCostStop, resolveContinueOnOpenTodos, resolvePrismCodeLimits, resolvePrismCodeLoop } from "./limits.js";
 import { type McpTrustContext, resolveMcpServers } from "./mcp.js";
 import { ObservationalMemoryCoordinator } from "./observational-memory.js";
-import { createEnvironmentContextProvider, resolvePrismCodeInstructions } from "./prompt.js";
+import { createEnvironmentContextSource, resolvePrismCodeInstructions } from "./prompt.js";
 import { createProviderCache, enrichModelConfig, type ProviderCache } from "./providers.js";
 import {
+  configuredSessionStore,
   deriveSessionTitle,
   ensureDurableSessionRecord,
   getCanonicalWorkspaceRoot,
@@ -93,7 +91,7 @@ export async function assembleAppAgent(
   providerCache?: ProviderCache,
   trust?: TrustPolicy,
   hostBindings?: AppHostBindings,
-): Promise<AgentSdkDefinition> {
+): Promise<Agent> {
   const credentials = credentialManager ?? new PrismCodeCredentialManager();
   const sessionModel = config.model ?? { provider: "mock", model: "default" };
 
@@ -144,7 +142,7 @@ export async function assembleAppAgent(
 
   // 3. Optional web plane + wiki extension (both inert when unconfigured/disabled)
   const web = await resolveWebTools(config, credentials);
-  const wiki = await resolveWikiContributions(config, { webTools: web.tools });
+  const wiki = resolveWikiContributions(config, { webTools: web.tools });
 
   // 4. Custom User Tools
   const addTools = await loadToolModules(config.tools?.add ?? [], config.cwd, {
@@ -190,10 +188,10 @@ export async function assembleAppAgent(
   }
 
   // Task-completion continuation (plan 137 Task 7): default on; `loop.continueOnOpenTodos: false`
-  // disables both the planning tool and the stop hook.
+  // disables both the planning tool and the `run.end` gate.
   const continueOnOpenTodos = resolveContinueOnOpenTodos(config.loop);
   const todoWriteTool = continueOnOpenTodos ? createTodoWriteTool() : undefined;
-  const todoStopHook: TodoContinuationStopHook | undefined = continueOnOpenTodos ? createTodoContinuationStopHook() : undefined;
+  let todoContinuation: TodoContinuationHandler | undefined;
 
   // 6. Skills Plane Resolution
   const repoRoot = findRepoRoot(config.cwd);
@@ -202,17 +200,14 @@ export async function assembleAppAgent(
   const assembledSkills = await assembleSkillsPlane({
     roots: skillRoots,
     exclude: config.skills?.exclude,
-    add: wiki.skills,
+    add: [],
     disclosure,
     activateAll: true,
   });
 
-  const loadSkillTool =
-    disclosure !== "eager" ? createLoadSkillTool({ registry: assembledSkills.skills ?? createSkillRegistry([]) }) : undefined;
-
   const skillCommands = createSkillCommands(config);
 
-  const envContextProvider = createEnvironmentContextProvider({
+  const envContextSource = createEnvironmentContextSource({
     repoRoot,
     cwd: config.cwd,
     model: sessionModel,
@@ -224,20 +219,10 @@ export async function assembleAppAgent(
   const resolvedToolResultFold = resolvePrismCodeToolResultFold();
   const resolvedContextBudget = resolvePrismCodeContextBudget(sessionModel);
 
-  // Local single-user host identity. Durable tool effects (`edit`, `write`, `delete`, `move`) fail
-  // closed without a verified identity, so the TUI/headless assembly asserts one for the local
-  // operator exactly like the ACP surface does; a host embedding Prism can override it by setting
-  // their own identity on the agent config.
+  // Host-selected principal is opaque, not a claim of verified identity.
   const localUserId = config.userId ?? "local";
-  const ownership: OwnershipScope = { userId: localUserId };
-  const identity: AgentIdentity = {
-    tenantId: "local",
-    userId: localUserId,
-    principal: { kind: "user", id: localUserId },
-    scopes: ["coding"],
-    issuedAt: new Date().toISOString(),
-    verified: true,
-  };
+  const ownership: OwnershipScope = { tenantId: "local", userId: localUserId };
+  const principal: Principal = { kind: "user", id: localUserId };
 
   // 7. Merge Configuration
   const agentSdkConfig = mergeAgentConfig(basePreset, {
@@ -247,24 +232,18 @@ export async function assembleAppAgent(
     trust,
     store,
     ownership,
-    identity,
+    principal,
     limits: resolvedLimits,
     ...(resolvedLoop ? { loop: resolvedLoop } : {}),
-    compaction: resolvedCompaction,
+    // Roadmap §2.5: the compactor is the `compaction` slot; `compaction` keeps only the sizing knobs.
+    ...(resolvedCompaction === false
+      ? { compaction: false }
+      : { compaction: resolvedCompaction.options, compactor: resolvedCompaction.compactor }),
     toolResultFold: resolvedToolResultFold,
     contextBudget: resolvedContextBudget,
-    context: [coordinator.createDelegatingContextProvider(), envContextProvider],
     tools: {
       exclude: config.tools?.exclude ?? [],
-      add: [
-        ...addTools,
-        ...optInTools,
-        ...web.tools,
-        ...wiki.tools,
-        ...(loadSkillTool ? [loadSkillTool] : []),
-        ...(todoWriteTool ? [todoWriteTool] : []),
-        coordinator.createRecallTool(store),
-      ],
+      add: [...addTools, ...optInTools, ...web.tools, ...(todoWriteTool ? [todoWriteTool] : []), coordinator.createRecallTool(store)],
       replace: replaceTools,
     },
     skills: {
@@ -281,9 +260,22 @@ export async function assembleAppAgent(
         }
       : undefined,
     commands: [...skillCommands, ...wiki.commands],
+    ...(wiki.package ? { packages: [wiki.package] } : {}),
   });
 
-  const definition = await defineAgent(agentSdkConfig as AgentSdkConfig);
+  const definition = await defineAgent({
+    ...(agentSdkConfig as AgentSdkConfig),
+    // The TUI reports the no-progress stop through the handler instance, and `defineAgent` owns
+    // the registrar, so the gate is installed through a wrapper that captures what it registers.
+    // The wrapper runs inside `createAgent`, so `todoContinuation` is set before this resolves.
+    contextSources: [envContextSource],
+    registerHooks: (registrar) => {
+      coordinator.registerDelegatingContext(registrar);
+      registerCostStop(registrar, resolvedLimits.maxCost);
+      if (continueOnOpenTodos) todoContinuation = registerTodoContinuation(registrar);
+      if (resolvedCompaction !== false) resolvedCompaction.registerTrigger(registrar);
+    },
+  });
   (definition as any).omCoordinator = coordinator;
   (definition as any).providerCache = cache;
   (definition as any).webResolution = web;
@@ -292,16 +284,18 @@ export async function assembleAppAgent(
   (definition as any).repoRoot = repoRoot;
   (definition as any).limits = resolvedLimits;
   (definition as any).loop = resolvedLoop;
-  (definition as any).compaction = resolvedCompaction;
+  (definition as any).compaction = resolvedCompaction === false ? false : resolvedCompaction.options;
   (definition as any).toolResultFold = resolvedToolResultFold;
   (definition as any).contextBudget = resolvedContextBudget;
-  // TUI surfaces the no-progress stop as a system note through this hook instance.
-  (definition as any).todoStopHook = todoStopHook;
+  // TUI surfaces the no-progress stop as a system note through this handler instance.
+  (definition as any).todoContinuation = todoContinuation;
 
-  const originalCreateSession = definition.createSession.bind(definition);
-  definition.createSession = (sessionConfig?: AgentSessionConfig): AgentSession => {
-    const session = originalCreateSession(sessionConfig);
+  const originalSession = definition.session.bind(definition);
+  definition.session = async (sessionConfig?: AgentSessionConfig): Promise<Session> => {
+    const session = await originalSession(sessionConfig);
     const originalRun = session.run.bind(session);
+    // The clean cost stop is a `turn.before` gate on the agent's bus, not a per-run overlay: the
+    // bus is per-agent, so it is installed above next to the todo gate.
     session.run = async (prompt, runOptions) => {
       let finalRunOpts = runOptions;
       // Every run model carries limits: Prism Code's own compaction trigger resolves the model's
@@ -310,44 +304,13 @@ export async function assembleAppAgent(
       if (finalRunOpts?.model) {
         finalRunOpts = { ...finalRunOpts, model: (await enrichModelConfig(finalRunOpts.model)).model };
       }
-      if (resolvedLimits.maxCost) {
-        const costPolicy = createCostTurnPolicy(resolvedLimits.maxCost);
-        if (costPolicy) {
-          finalRunOpts = {
-            ...runOptions,
-            turnPolicy: runOptions?.turnPolicy
-              ? {
-                  ...runOptions.turnPolicy,
-                  stop: (ctx) => {
-                    const decision = costPolicy.stop ? costPolicy.stop(ctx) : { action: "continue" as const };
-                    if (decision.action === "stop") return decision;
-                    return runOptions.turnPolicy?.stop ? runOptions.turnPolicy.stop(ctx) : { action: "continue" };
-                  },
-                }
-              : costPolicy,
-          };
-        }
+      const result = await originalRun(prompt, finalRunOpts);
+      // A provider-reported cost breach is still a hard limit; a `turn.before` stop that fires
+      // first lands on the `hook_stop` path and never reaches here.
+      if (result.status === "failed" && result.limit?.limit === "maxCost") {
+        return { ...result, status: "stopped", stopReason: "hook_stop", stopDetail: "max_cost" };
       }
-      if (todoStopHook) {
-        finalRunOpts = {
-          ...finalRunOpts,
-          stopHooks: [...(finalRunOpts?.stopHooks ?? []), todoStopHook],
-        };
-      }
-      try {
-        return await originalRun(prompt, finalRunOpts);
-      } catch (err) {
-        if (err instanceof AgentRunError && err.result.limit?.limit === "maxCost") {
-          return {
-            ...err.result,
-            status: "succeeded",
-            stopReason: "host_policy",
-            stopDetail: "max_cost",
-            finishReason: "host_policy",
-          };
-        }
-        throw err;
-      }
+      return result;
     };
     return session;
   };
@@ -401,7 +364,7 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
     },
   });
 
-  let assembled: AgentSdkDefinition | undefined;
+  let assembled: Agent | undefined;
   try {
     assembled = await assembleAppAgent(
       config,
@@ -429,7 +392,7 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       }
     }
 
-    const store = assembled.agent.config.store ?? resolveSessionStore(config, options.home);
+    const store = configuredSessionStore(assembled.agent) ?? resolveSessionStore(config, options.home);
     let sessionId = options.sessionId;
     if (options.continueRecent) {
       try {
@@ -443,12 +406,13 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       return writeHeadlessError(`session not found: ${sessionId}`);
     }
 
-    const session = assembled.createSession({
+    const session = await assembled.session({
       id: sessionId,
       metadata: {
         workspaceRoot: config.cwd,
         userId: config.userId ?? "local",
       },
+      create: true,
     });
 
     await ensureDurableSessionRecord(store, session.id, config.cwd, {
@@ -480,21 +444,16 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
             event,
           });
           stdout.write(`${payload}\n`);
-        } else if (event.type === "message_delta" && event.content.type === "text") {
+        } else if (event.type === "message.delta" && event.content.type === "text") {
           stdout.write(event.content.text);
           textWritten = true;
-        } else if (event.type === "agent_denied" || event.type === "run_limit_exceeded" || event.type === "budget_exhausted") {
+        } else if (event.type === "decision.resolved" || event.type === "run.failed") {
           hasRunFailure = true;
         }
       }
     })();
 
-    let result: AgentRunResult;
-    const wikiContributions = (assembled as any).wikiContributions as WikiContributions | undefined;
-    const runOptions =
-      wikiContributions && wikiContributions.instructionInjectors.length > 0
-        ? { instructionInjectors: wikiContributions.instructionInjectors }
-        : undefined;
+    let result: RunResult;
     let signalExitCode: number | undefined;
     const onSigint = () => {
       signalExitCode = 130;
@@ -514,7 +473,7 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
     process.on("SIGTERM", onSigterm);
 
     try {
-      result = await sessionToRun.run(options.prompt, runOptions);
+      result = await sessionToRun.run(options.prompt);
     } catch (runErr) {
       await eventPromise.catch(() => {});
       if (signalExitCode !== undefined) {
@@ -537,6 +496,11 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       return signalExitCode;
     }
 
+    // A failed or aborted run resolves to its result; report it the way a thrown failure was reported.
+    if (result.status === "failed" || result.status === "aborted") {
+      throw new Error(result.error?.message ?? (result.status === "aborted" ? "Agent run aborted" : "Agent run failed"));
+    }
+
     if (mode === "print") {
       if (!textWritten && result.text) {
         stdout.write(result.text);
@@ -547,7 +511,7 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       }
     }
 
-    if (hasRunFailure || result.status !== "succeeded") {
+    if (hasRunFailure || (result.status !== "completed" && result.status !== "stopped")) {
       return 1;
     }
     // A refused approval is an operator-visible policy outcome even when the model recovers.

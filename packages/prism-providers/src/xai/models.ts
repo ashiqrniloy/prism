@@ -90,7 +90,7 @@ export function defineXaiModel(config: XaiModelConfig): ModelConfig {
   };
 }
 
-/** Caller-gated `GET {base}/models`. Never invoked by `createXaiProviderPackage`. */
+/** Caller-gated `GET {base}/models`. Never invoked by `xaiPackage`. */
 export async function listXaiModels(options: ListXaiModelsOptions = {}): Promise<ModelConfig[]> {
   const provider = options.provider ?? "xai";
   const baseUrl = trimTrailingSlashes(options.baseUrl ?? XAI_DEFAULT_BASE_URL);

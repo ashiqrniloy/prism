@@ -18,7 +18,7 @@ export interface CreatePersonalAgentOptions {
   readonly workspaceRoot?: string;
 }
 
-export function createAppAgent(options: CreatePersonalAgentOptions = {}): Agent {
+export async function createAppAgent(options: CreatePersonalAgentOptions = {}): Promise<Agent> {
   const userId = options.userId ?? process.env.USER ?? "local-user";
   const redactor = createSecretRedactor(
     [process.env.OPENAI_API_KEY].filter((v): v is string => typeof v === "string" && v.length > 0),
@@ -31,7 +31,7 @@ export function createAppAgent(options: CreatePersonalAgentOptions = {}): Agent 
       providerDone(),
     ]);
 
-  return createSecureAgent({
+  return await createSecureAgent({
     id: "personal-assistant",
     definitionRevision: "1",
     ownership: { userId },

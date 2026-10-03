@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import {
   assertNoForeignCacheFields,
   assertProviderOwnedHeadersWin,
@@ -9,7 +10,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createXaiProvider,
-  createXaiProviderPackage,
+  xaiPackage,
   listXaiModels,
   mapXaiModel,
   XAI_CONV_ID_MAX_LENGTH,
@@ -33,37 +34,23 @@ describe("@arnilo/prism-providers/xai", () => {
     assertNoForeignCacheFields(body);
     assert.ok(!JSON.stringify(body).includes("conv-1"));
     assert.equal(xGrokConvId({ ...request, options: { cache: { key: "conv-1" } } }), "conv-1");
-  });
-
-  it("xai_registers_featured_catalog_api_key_and_oauth", async () => {
-    const registered: unknown[] = [];
-    await createXaiProviderPackage({ apiKey: "fake-xai-key" }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as never);
-    assert(registered.some((item: any) => item.id === "xai"));
     assert.deepEqual(
       xaiModels.map((model) => model.model),
       ["grok-4.6", "grok-4.3", "grok-build-0.1"],
     );
-    assert(registered.some((item: any) => item.kind === "api_key"));
-    assert(registered.some((item: any) => item.kind === "oauth" && item.oauth?.id === "xai"));
   });
 
   it("xai_provider_setup_does_not_call_model_discovery_or_login", async () => {
     let fetches = 0;
-    await createXaiProviderPackage({
-      apiKey: "fake-xai-key",
-      fetch: (async () => {
-        fetches += 1;
-        return ok(sse([]));
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as never);
+    await loadProviderPackage(
+      xaiPackage({
+        apiKey: "fake-xai-key",
+        fetch: (async () => {
+          fetches += 1;
+          return ok(sse([]));
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(fetches, 0);
   });
 

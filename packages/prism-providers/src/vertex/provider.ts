@@ -1,7 +1,8 @@
-import type { AIProvider, CredentialValueSource, ModelConfig, ProviderPackage } from "@arnilo/prism";
-import { defineProviderPackage, providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
+import type { AIProvider, CredentialValueSource, ModelConfig, PackageInstance } from "@arnilo/prism";
+import { providerError, resolveCredentialValue as resolveOnce, trimTrailingSlashes } from "@arnilo/prism";
 import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
 import { openAICompatThinkingExtra } from "../shared/openai-compat.js";
+import { vendorPackage } from "../shared/package.js";
 
 export interface VertexProviderOptions {
   readonly id?: string;
@@ -71,28 +72,9 @@ export function createVertexProvider(options: VertexProviderOptions): AIProvider
   };
 }
 
-export function createVertexProviderPackage(options: VertexProviderPackageOptions): ProviderPackage {
-  const baseUrl = vertexOpenApiBaseUrl(options);
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/vertex",
-    description: "Google Vertex AI enterprise provider for Prism.",
-    docs: { links: ["docs/providers/vertex.md"] },
-    setup(api) {
-      api.registerProvider(createVertexProvider(options));
-      for (const model of options.models ?? []) {
-        api.registerModel({ ...model, provider: options.id ?? "vertex" });
-      }
-      api.registerAuthMethod({
-        kind: "api_key",
-        provider: options.id ?? "vertex",
-        credentialName: "credential",
-        metadata: {
-          projectId: options.projectId,
-          location: options.location,
-          endpoint: baseUrl,
-          note: "Host supplies ADC/workload token; distinct from @arnilo/prism-providers/google API keys.",
-        },
-      });
-    },
-  });
+export function vertexPackage(options: VertexProviderPackageOptions): PackageInstance {
+  vertexOpenApiBaseUrl(options);
+  return vendorPackage("@arnilo/prism-providers.vertex", "Google Vertex AI enterprise provider for Prism.", () => [
+    createVertexProvider(options),
+  ]);
 }

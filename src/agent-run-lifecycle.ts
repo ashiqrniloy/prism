@@ -1,8 +1,9 @@
 import { assertValidAgentRunResume, pendingDecisionsOf, resolveRunDecisions } from "./agent-approval.js";
+import { restoreRunSessionState } from "./agent-run-restore.js";
 import type { StoredAgentRunState } from "./agent-run-state.js";
 import { agentFingerprint, loadAgentRunState, publicState, resolveCheckpointMetadata, saveAgentRunState } from "./agent-run-state.js";
-import { RuntimeAgentSession, throwIfAbortedSignal } from "./agent-session.js";
-import { parseAttentionStickyFrontier, restoreAttentionFoldLedger } from "./attention-compiler.js";
+import { RuntimeAgentSession, throwIfAbortedSignal, tryAgentRuntime } from "./agent-session.js";
+import { createMemorySessionStore } from "./session-stores.js";
 import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
 import { runCheckpointRestoreHooks } from "./checkpoint-restore.js";
 import type {
@@ -12,7 +13,7 @@ import type {
   AgentRunCheckpointMetadata,
   AgentRunCheckpointMetadataSource,
   AgentRunRef,
-  AgentRunResult,
+  RunResult,
   AgentRunResume,
   AgentRunResumeOptions,
   AgentRunResumeStreamOptions,
@@ -20,7 +21,8 @@ import type {
   AgentRunStatusResult,
   CheckpointStore,
   OwnershipScope,
-  RunDecision,
+  Decision,
+  PendingDecision,
   SubscribeOptions,
 } from "./contracts.js";
 import { AgentRunStateError } from "./contracts.js";
@@ -72,7 +74,7 @@ export interface AgentRunLifecycleStreamRequest extends AgentRunLifecycleRequest
 
 export interface AgentRunLifecycle {
   status(ref: AgentRunRef, options?: AgentRunLifecycleRequest): Promise<AgentRunStatusResult>;
-  resume(ref: AgentRunRef, resume: AgentRunResume, options?: AgentRunLifecycleRequest): Promise<AgentRunResult>;
+  resume(ref: AgentRunRef, resume: AgentRunResume, options?: AgentRunLifecycleRequest): Promise<RunResult>;
   resumeStream(ref: AgentRunRef, resume: AgentRunResume, options?: AgentRunLifecycleStreamRequest): AsyncIterable<AgentEvent>;
 }
 
@@ -151,7 +153,7 @@ export async function resumeAgentRun(
   ref: AgentRunRef,
   resume: AgentRunResume,
   options: AgentRunResumeOptions,
-): Promise<AgentRunResult> {
+): Promise<RunResult> {
   throwIfAbortedSignal(options.signal);
   return executePreparedAgentRunResume(await prepareAgentRunResume(agent, ref, resume, options, options.signal), options.signal);
 }
@@ -188,7 +190,7 @@ type PreparedAgentRunResume =
   | {
       readonly kind: "deny";
       readonly session: RuntimeAgentSession;
-      readonly result: AgentRunResult;
+      readonly result: RunResult;
       readonly interruption: import("./contracts.js").AgentRunInterruption;
       readonly version: number;
       readonly ownership?: OwnershipScope;
@@ -196,7 +198,7 @@ type PreparedAgentRunResume =
   | {
       readonly kind: "resuspend";
       readonly session: RuntimeAgentSession;
-      readonly result: AgentRunResult;
+      readonly result: RunResult;
       readonly interruption: import("./contracts.js").AgentRunInterruption;
       readonly version: number;
       readonly ownership?: OwnershipScope;
@@ -206,7 +208,9 @@ type PreparedAgentRunResume =
       readonly session: RuntimeAgentSession;
       readonly state: StoredAgentRunState;
       readonly runState: AgentRunStateOptions;
-      readonly decisions?: ReadonlyMap<string, RunDecision>;
+      readonly decisions?: ReadonlyMap<string, Decision>;
+      /** The suspension's pending decisions (the claimed state no longer carries them). */
+      readonly pending?: readonly PendingDecision[];
       readonly ownership?: OwnershipScope;
       /** Sidecar seed for writes after the claim when the run options configure no provider. */
       readonly checkpointMetadata?: AgentRunCheckpointMetadata;
@@ -222,8 +226,7 @@ type PreparedAgentRunResume =
  */
 function isContinuableState(state: StoredAgentRunState): boolean {
   return (
-    state.status === "running" ||
-    (state.status === "succeeded" && (state.stopReason === "host_policy" || state.stopReason === "hook_limit"))
+    state.status === "running" || (state.status === "succeeded" && (state.stopReason === "hook_stop" || state.stopReason === "hook_limit"))
   );
 }
 
@@ -263,69 +266,34 @@ async function prepareAgentRunResume(
       throw new AgentRunStateError("Continue resume requires a running checkpoint with no pending decisions");
     }
   }
-  const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId });
+  const store = tryAgentRuntime(agent)?.slots.resolve("store", agent.config.slots?.store) ?? createMemorySessionStore();
+  const session = new RuntimeAgentSession({ agent, id: state.sessionId, leafId: state.leafId, store });
   // Plan 078 Task 7: hand the reconstructed session to an observer (supervisor child-event pump)
   // before any event flows. Called for every resume outcome; a throw fails closed.
   options.onSession?.(session);
-  // Plan 104 T2: pack enforcement rides the checkpoint. A run without `persistSessionState` never
-  // writes the key, so its presence is the host's opt-in — restore before any turn (and before the
-  // pending-decision block, which may re-run input guardrails) or fail closed on a pack mismatch.
-  if (state.sessionState?.guardrailPacks) {
-    session.restoreGuardrailPacks(state.sessionState.guardrailPacks.packs, state.sessionState.guardrailPacks.state);
-  }
-  // Opt-in session-state restore (plan 015 Task 4): names only; bodies re-resolve from
-  // the live registry the next time the model (re)loads them via load_skill.
-  if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
-    session.restoreLoadedSkills(state.sessionState.loadedSkillNames);
-  }
-  // Plan 041: re-add search-activated tool names (names only; absent tools stay inert until re-searched).
-  if (options.persistSessionState && state.sessionState?.activatedToolNames) {
-    session.restoreActivatedTools(state.sessionState.activatedToolNames);
-  }
-  // Plan 074 P3: restore sticky attention mutations (already validated at load) so the first
-  // turn after a resume keeps its stubs instead of re-deciding them from the ratio.
-  if (options.persistSessionState && state.sessionState?.attentionSticky) {
-    const frontier = parseAttentionStickyFrontier(state.sessionState.attentionSticky);
-    if (frontier) session.restoreAttentionSticky(frontier);
-  }
-  // Plan 086 T3: durable folding writes its own ledger (with the frontier it belongs to), so it
-  // is restored whenever the checkpoint carries one — the `durable` opt-in was the host's
-  // consent, and a run without it never has this key. Without the frontier the ledger's rows
-  // would not be re-applied on an under-ratio turn, so the two ride together.
-  if (state.sessionState?.attentionFold) {
-    const ledger = restoreAttentionFoldLedger(state.sessionState.attentionFold);
-    if (ledger) {
-      session.restoreAttentionFold(ledger);
-      if (!options.persistSessionState && state.sessionState.attentionSticky) {
-        const frontier = parseAttentionStickyFrontier(state.sessionState.attentionSticky);
-        if (frontier) session.restoreAttentionSticky(frontier);
-      }
-    }
-  }
-  // Plan 018 Task 6 (closeout `checkpoint-bodies`): restore exact instructions so the
-  // resumed session renders them registry-independently (no load_skill round-trip).
-  if (options.persistSessionState && options.includeSkillBodies && state.sessionState?.loadedSkillBodies) {
-    session.restoreLoadedSkillBodies(state.sessionState.loadedSkillBodies);
-  }
+  restoreRunSessionState(session, state, {
+    persistSessionState: options.persistSessionState,
+    includeSkillBodies: options.includeSkillBodies,
+  });
   const pendingDecisions = pendingDecisionsOf(state);
   // Plan 104 T6: pack rules revalidate modified arguments at decision time. The set is the session's
   // restored deny/tripwire rules plus its `ask` rules compiled as blocks — an approval that edits
   // arguments into *any* pack-violating state is refused instead of becoming a run-wide allowance.
   // Passed explicitly (never read from agent config), so a checkpoint that carried packs fails closed.
-  const sessionGuardrails = { toolInput: [...(session.packGuardrails?.toolInput ?? []), ...(session.packAskBlocks?.toolInput ?? [])] };
-  const decisionGuardrails = sessionGuardrails.toolInput.length > 0 ? sessionGuardrails : undefined;
+  const toolInputGuardrails = [...(session.packGuardrails?.toolInput ?? []), ...(session.packAskBlocks ?? [])];
+  const decisionGuardrails = toolInputGuardrails.length > 0 ? toolInputGuardrails : undefined;
   // Legacy approve maps to allow-once on every pending decision; legacy deny keeps its
   // terminal-denied behavior. Batch decisions are validated and applied atomically below.
   const resolved =
     resume.decisions !== undefined
-      ? await resolveRunDecisions({ agent, state, decisions: resume.decisions, signal, guardrails: decisionGuardrails })
+      ? await resolveRunDecisions({ agent, state, decisions: resume.decisions, signal, toolInputGuardrails: decisionGuardrails })
       : resume.decision === "approve" && pendingDecisions
         ? await resolveRunDecisions({
             agent,
             state,
             decisions: pendingDecisions.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
             signal,
-            guardrails: decisionGuardrails,
+            toolInputGuardrails: decisionGuardrails,
           })
         : undefined;
   if (resolved && resolved.remaining.length > 0) {
@@ -383,8 +351,9 @@ async function prepareAgentRunResume(
         leafId: state.leafId,
         text: "",
         content: [],
+        messages: [],
+        pending: interruption.pendingDecisions,
         runState: publicState(resuspended.state),
-        interruption,
       },
     };
   }
@@ -414,12 +383,13 @@ async function prepareAgentRunResume(
       result: {
         sessionId: state.sessionId,
         runId: state.runId,
-        status: "denied",
+        status: "stopped",
+        stopReason: "denied",
         leafId: state.leafId,
         text: "",
         content: [],
+        messages: [],
         runState: publicState(denied.state),
-        interruption: state.interruption,
       },
     };
   }
@@ -468,6 +438,7 @@ async function prepareAgentRunResume(
     session,
     state: claimed.state,
     decisions: resolved?.decisionsById,
+    ...(pendingDecisions ? { pending: pendingDecisions } : {}),
     ownership: options.ownership,
     // The configured object must be passed by identity (agent-session assemble rejects a
     // replaced config); its own `checkpointMetadata` provider wins, and the resolved map rides
@@ -475,7 +446,6 @@ async function prepareAgentRunResume(
     runState: configured ?? {
       checkpoints: options.checkpoints,
       definitionRevision: options.definitionRevision,
-      interruptBeforeTool: state.interruptBeforeTool,
       fencingToken: options.fencingToken,
       resumeNestedRun: options.resumeNestedRun,
       // The checkpoint records its own cadence (plan 084 Task 1), so a continued run keeps writing
@@ -488,17 +458,26 @@ async function prepareAgentRunResume(
 }
 
 /** Pending decisions of a suspended state, synthesizing the legacy single-approval shape. */
-async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, signal?: AbortSignal): Promise<AgentRunResult> {
+async function executePreparedAgentRunResume(prepared: PreparedAgentRunResume, signal?: AbortSignal): Promise<RunResult> {
   if (prepared.kind === "deny") {
-    await prepared.session.recordDurableDenial(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
+    await prepared.session.announceDenied(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
     return prepared.result;
   }
   if (prepared.kind === "resuspend") {
-    await prepared.session.recordDurableResumption(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
+    await prepared.session.announceResuspended(prepared.result.runId, prepared.interruption, prepared.version, prepared.ownership);
     return prepared.result;
   }
-  return prepared.session.resumeDurable(prepared.state, prepared.runState, prepared.ownership, signal, prepared.decisions, {
-    ...(prepared.checkpointMetadata ? { checkpointMetadata: prepared.checkpointMetadata } : {}),
-    ...(prepared.restore ? { restore: prepared.restore } : {}),
-  });
+  return prepared.session.continueSuspendedRun(
+    prepared.state,
+    prepared.runState,
+    prepared.ownership,
+    signal,
+    prepared.decisions,
+    {
+      ...(prepared.checkpointMetadata ? { checkpointMetadata: prepared.checkpointMetadata } : {}),
+      ...(prepared.restore ? { restore: prepared.restore } : {}),
+    },
+    undefined,
+    prepared.pending,
+  );
 }

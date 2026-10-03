@@ -4,7 +4,7 @@ import type {
   AgentIdentity,
   AgentRunLifecycle,
   AgentRunRef,
-  AgentSession,
+  Session,
   OwnershipScope,
   RunOptions,
   SecretRedactor,
@@ -59,7 +59,7 @@ export interface PrismAgentEventResolutionInput {
 }
 
 export interface PrismAgentExposure {
-  readonly sessionFactory: (authorization: PrismServerAuthorization) => AgentSession | Promise<AgentSession>;
+  readonly sessionFactory: (authorization: PrismServerAuthorization) => Session | Promise<Session>;
   readonly runOptions?: Omit<RunOptions, "ownership" | "signal" | "redactor">;
   /** Optional durable cross-replica event source. Requires resolveRun. */
   readonly events?: AgentEventSource;

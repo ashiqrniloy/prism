@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentIdentity, ToolCallContent, ToolDefinition, ToolEffectKey, ToolEffectStore } from "../index.js";
+import type { ToolCallContent, ToolDefinition, ToolEffectKey, ToolEffectStore } from "../index.js";
 import {
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -17,17 +18,8 @@ import {
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 import { deriveToolEffectKey, toolEffectArgumentsHash } from "../tool-effects.js";
 
-const identity: AgentIdentity = {
-  tenantId: "tenant",
-  accountId: "account",
-  userId: "user",
-  principal: { kind: "service", id: "principal" },
-  scopes: ["tools:execute"],
-  issuedAt: "2026-01-01T00:00:00.000Z",
-  verified: true,
-};
 const ownership = { tenantId: "tenant", accountId: "account", userId: "user" };
-const context = { sessionId: "session", runId: "run", toolCallId: "call", identity };
+const context = { sessionId: "session", runId: "run", toolCallId: "call" };
 const call = (argumentsValue = { value: "ok" }): ToolCallContent => ({
   type: "tool_call",
   id: "call",
@@ -37,7 +29,6 @@ const call = (argumentsValue = { value: "ok" }): ToolCallContent => ({
 
 function effectKey(key?: string, toolCallId = "call"): ToolEffectKey {
   const base = {
-    identity,
     ownership,
     sessionId: "session",
     runId: "run",
@@ -62,7 +53,6 @@ function invoke(
     call: input,
     registry: createToolRegistry([tool]),
     context,
-    identity,
     ownership,
     effectStore: store,
     ...extra,
@@ -337,7 +327,7 @@ describe("tool effect dispatch", () => {
     assert.match(managedKey ?? "", /^prism:tool-effect:v1:/);
   });
 
-  it("keeps explicit unsupported effects executable without durable identity", async () => {
+  it("keeps explicit unsupported effects executable without durable ownership", async () => {
     let calls = 0;
     const unsupported: ToolDefinition = {
       name: "mutate",
@@ -362,12 +352,12 @@ describe("tool effect dispatch", () => {
     const store = createMemoryToolEffectStore();
     let calls = 0;
     let turns = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "effect-durable",
       model: { provider: "mock", model: "test" },
       ownership,
-      identity,
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       effectStore: store,
       provider: {
         id: "mock",
@@ -382,10 +372,10 @@ describe("tool effect dispatch", () => {
           yield providerDone();
         },
       },
-      tools: [mutation(() => ({ toolCallId: "call", name: "mutate", value: ++calls }))],
+      tools: { add: [mutation(() => ({ toolCallId: "call", name: "mutate", value: ++calls }))] },
     });
-    const suspended = await agent.createSession({ id: "effect-durable-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "effect-durable-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     assert.equal(suspended.status, "suspended");
     assert.equal(calls, 0);
@@ -395,7 +385,7 @@ describe("tool effect dispatch", () => {
       { decision: "approve", expectedVersion: suspended.runState!.version! },
       { checkpoints, definitionRevision: "1", ownership },
     );
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.equal(calls, 1);
   });
 
@@ -406,7 +396,7 @@ describe("tool effect dispatch", () => {
       name: "mutate",
       effect: (_args, effectContext) => {
         classified += 1;
-        assert.equal(effectContext.identity, undefined);
+        assert.equal(effectContext.principal, undefined);
         assert.equal(effectContext.idempotencyKey, undefined);
         return { kind: "none", idempotency: "none" };
       },

@@ -32,7 +32,7 @@
  * Run: npm run build:core && node examples/host-composition-compat.ts
  */
 import assert from "node:assert/strict";
-import type { AIProvider, ProviderEvent, ProviderRequest, ProviderRequestPolicy } from "@arnilo/prism";
+import type { AIProvider, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 
 interface CompatCheck {
   readonly name: string;
@@ -91,44 +91,42 @@ await check("host-tools-only", async () => {
     ],
     (request) => requests.push(request),
   );
-  const agent = prism.createAgent({
+  const agent = await prism.createAgent({
     model: { provider: "mock", model: "compat" },
     provider,
-    tools: prism.createToolRegistry([hostLookup]),
+    tools: { add: [hostLookup] },
   });
-  const result = await agent.createSession().run("look up the record");
+  const result = await (await agent.session()).run("look up the record");
   const names = (requests[0]?.tools ?? []).map((tool) => tool.name);
   assert.deepEqual(names, ["host_lookup"], "the request exposes host tools only");
   assert.ok(
     names.every((name) => !/memory|fabric|recall|observation/i.test(name)),
     `memory-shaped tools must not be model-visible: ${names.join(", ")}`,
   );
-  assert.equal(result.status, "succeeded");
+  assert.equal(result.status, "completed");
   return { turns: requests.length, toolNames: names };
 });
 
-await check("policy-chain-snapshot", async () => {
+await check("hook-chain-snapshot", async () => {
   const prism = await import("@arnilo/prism");
   const applied: string[] = [];
-  const policy = (name: string): ProviderRequestPolicy => ({
-    name,
-    apply: ({ request }) => {
-      applied.push(name);
-      return request;
-    },
-  });
-  const agent = prism.createAgent({
+  const transform = (name: string) => (request: ProviderRequest) => {
+    applied.push(name);
+    return request;
+  };
+  const agent = await prism.createAgent({
     model: { provider: "mock", model: "compat" },
     provider: prism.createMockProvider([prism.providerTextDelta("ok"), prism.providerDone()]),
-    providerRequestPolicies: [policy("agent-first"), policy("agent-second")],
+    hooks: (hooks) => {
+      hooks.on("model.request", transform("first"));
+      hooks.on("model.request", transform("second"));
+    },
   });
-  const run = { providerRequestPolicies: policy("run-last") };
-  await agent.createSession().run("test", run);
-  const bundle = prism.snapshotRunBundle({ agent, run });
-  assert.deepEqual(applied, ["agent-first", "agent-second", "run-last"], "execution order");
-  assert.deepEqual(bundle.requestPolicies, applied, "the snapshot records the executed chain");
+  await (await agent.session()).run("test");
+  const bundle = prism.snapshotRunBundle({ agent });
+  assert.deepEqual(applied, ["first", "second"], "execution order");
   assert.equal(bundle.digest.startsWith("sha256:"), true);
-  return { requestPolicies: bundle.requestPolicies, digest: bundle.digest };
+  return { applied, digest: bundle.digest };
 });
 
 await check("step-boundaries-and-trace-fields", async () => {
@@ -142,13 +140,13 @@ await check("step-boundaries-and-trace-fields", async () => {
     ],
     [prism.providerTextDelta("done"), prism.providerUsage({ inputTokens: 20, outputTokens: 4, totalTokens: 24 }), prism.providerDone()],
   ]);
-  const agent = prism.createAgent({
+  const agent = await prism.createAgent({
     model: { provider: "mock", model: "compat" },
     provider,
-    tools: prism.createToolRegistry([hostLookup]),
+    tools: { add: [hostLookup] },
     attentionCompiler: { maxInputTokens: 4096 },
   });
-  const session = agent.createSession();
+  const session = await agent.session();
   const folder = timelineModule.createTimelineFolder({ content: "metadata" });
   const subscription = session.subscribe();
   const consume = (async () => {
@@ -156,7 +154,7 @@ await check("step-boundaries-and-trace-fields", async () => {
   })();
   const result = await session.run("handle the request", { limits: { maxInputTokens: 10_000 } });
   await consume;
-  assert.equal(result.status, "succeeded");
+  assert.equal(result.status, "completed");
   const timeline = folder.snapshot();
   const turns = timeline.turns ?? [];
   assert.equal(turns.length, 2, "one timeline turn per provider turn");
@@ -212,7 +210,7 @@ await check("om-coverage-admission-retention", async () => {
     message("m2", "unscanned turn one", "om1"),
     message("m3", "unscanned turn two", "m2"),
   ];
-  const strategy = om.createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1 });
+  const strategy = om.createObservationalMemoryCompactor({ keepRecentEntries: 1 });
   const result = await strategy.compact({ sessionId: "compat", entries, trigger: "auto" });
   const data = result.entries?.[0]?.data as { readonly keepEntryIds?: readonly string[]; readonly throughEntryId?: string } | undefined;
   assert.deepEqual(

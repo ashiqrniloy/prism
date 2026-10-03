@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { layaModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createLayaProvider } from "./provider.js";
 
 export interface LayaProviderPackageOptions {
@@ -10,18 +10,8 @@ export interface LayaProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createLayaProviderPackage(options: LayaProviderPackageOptions = {}): ProviderPackage {
-  const providerId = options.id ?? "laya";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/laya",
-    description: "Laya provider package for Prism.",
-    docs: { links: ["docs/providers/laya.md"] },
-    setup(api) {
-      api.registerProvider(createLayaProvider(options));
-      for (const model of options.models ?? layaModels) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+export function layaPackage(options: LayaProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.laya", "Laya provider package for Prism.", () => [createLayaProvider(options)]);
 }
 
 export * from "../decisions/index.js";

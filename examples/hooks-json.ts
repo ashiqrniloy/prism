@@ -1,57 +1,20 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import {
-  type AIProvider,
-  activateKernel,
-  createAgent,
-  createExtensionKernel,
-  providerDone,
-  providerTextDelta,
-  providerToolCallDelta,
-  type ToolDefinition,
-} from "@arnilo/prism";
-import { createHooksExtension, hookCommandHash, parseHooksConfig } from "@arnilo/prism-hooks";
+import { type AIProvider, createAgent, providerDone, providerTextDelta, providerToolCallDelta, type ToolDefinition } from "@arnilo/prism";
+import { hookCommandHash, hooksJson } from "@arnilo/prism-hooks-json";
 
-// hooks.json adapter: a host loads a Claude/Codex-shaped hooks config and gets an
-// Extension back. The package compiles the declarative events onto public seams —
-// `session_start` middleware (SessionStart), the `input` guardrail + instruction
-// injector (UserPromptSubmit), `tool_call` middleware + `tool_input` guardrail
-// (PreToolUse), `tool_result` middleware + `tool_output` guardrail (PostToolUse),
-// and a registered stop hook (Stop). Guardrails and stop hooks stay inert until
-// the host activates them, exactly like every other kernel contribution.
-//
-// The handler here is a local fixture script (`hooks-audit-command.mjs`) spawned
-// with an argv array — no shell, no network, no credentials. Trust is an
-// explicit hash allowlist; `trusted: "all"` is the escape hatch and logs loudly.
+// hooks.json package: config is the file. SessionStart is session.opened. PreToolUse is tool.call.
+// The handler is a local fixture spawned with an argv array. The allow-list is a hash pin.
 
 const fixture = fileURLToPath(new URL("./hooks-audit-command.mjs", import.meta.url));
-const config = parseHooksConfig(`
-{
-  "SessionStart": [
-    { "hooks": [{ "type": "command", "command": "node ${fixture}", "timeout": 10 }] }
-  ],
-  "PreToolUse": [
-    { "matcher": "write", "hooks": [{ "type": "command", "command": "node ${fixture}", "timeout": 10 }] }
-  ],
-  "Stop": [
-    { "hooks": [{ "type": "command", "command": "node ${fixture}", "timeout": 10 }] }
-  ]
-}
-`);
-
-if (config.events.PreToolUse?.[0]?.matcher !== "write") throw new Error("hooks config did not parse");
-if (config.additionalContextLimit !== 2500) throw new Error("default additionalContextLimit changed");
-
-const handler = { type: "command", command: `node ${fixture}`, timeout: 10 } as const;
-const hooks = createHooksExtension(config, {
-  trusted: { [handler.command]: hookCommandHash(handler) },
-  onWarning: (warning) => console.log(`warning: ${warning.code} ${warning.message}`),
-});
-
-const kernel = createExtensionKernel();
-await kernel.load([hooks]);
-const activated = activateKernel(kernel);
+const handler = { type: "command" as const, command: `node ${fixture}`, timeout: 10 };
+const config = {
+  SessionStart: [{ hooks: [handler] }],
+  PreToolUse: [{ matcher: "write", hooks: [handler] }],
+  Stop: [{ hooks: [handler] }],
+  allowCommands: { [handler.command]: hookCommandHash(handler) },
+};
 
 const written: string[] = [];
 const write: ToolDefinition = {
@@ -85,17 +48,14 @@ const provider: AIProvider = {
   },
 };
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
-  tools: [write],
-  guardrails: hooks.guardrails,
-  instructionInjectors: activated.instructionInjectors,
-  stopHooks: activated.stopHooks,
-  middleware: activated.middleware,
+  tools: { add: [write] },
+  packages: [hooksJson({ config, onWarning: (warning) => console.log(`warning: ${warning.code} ${warning.message}`) })],
 });
 
-const session = agent.createSession({ id: "hooks-json-example" });
+const session = await agent.session({ id: "hooks-json-example", create: true });
 const result = await session.run("Record the notes, then the environment file.");
 
 console.log(
@@ -106,9 +66,8 @@ console.log(
       envBlocked: written.includes(".env") === false,
       sessionStartContextInjected: JSON.stringify(requests).includes("Audit trail: every write is logged."),
       seams: {
-        guardrails: Object.keys(hooks.guardrails).sort(),
-        stopHooks: activated.stopHooks?.length ?? 0,
-        instructionInjectors: activated.instructionInjectors?.length ?? 0,
+        // Every hooks.json event now arrives as one hook registration on the agent's bus.
+        hooks: Object.keys(agent.inspect().hooks),
         fixtureReadable: readFileSync(fixture, "utf8").length > 0,
       },
     },

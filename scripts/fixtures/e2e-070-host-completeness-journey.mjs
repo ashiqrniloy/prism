@@ -15,6 +15,7 @@ import {
   createMemoryCheckpointStore,
   createMemorySessionStore,
   createMockProvider,
+  askEveryTool,
   createSecretRedactor,
   createSecureAgent,
   createSessionEntry,
@@ -84,7 +85,7 @@ mark("TRAP_A OK");
 // --- R05 personal / business composition ---
 const redactor = createSecretRedactor(["packed-secret"]);
 const validator = { validate: () => ({ ok: true }) };
-const personal = createSecureAgent({
+const personal = await createSecureAgent({
   id: "personal-assistant",
   definitionRevision: "1",
   ownership: { userId: "alice" },
@@ -110,7 +111,7 @@ assert.equal(personalReport.readiness.ok, true);
 assert.equal(personalReport.ownership.userId, "alice");
 mark("PERSONAL OK");
 
-const business = createSecureAgent({
+const business = await createSecureAgent({
   id: "business-worker",
   definitionRevision: "1",
   ownership: { tenantId: identity.tenantId, userId: identity.userId },
@@ -227,13 +228,15 @@ const codingTools = [
     },
   },
 ];
-await createAgent({
-  model: { provider: "mock", model: "offline" },
-  provider: codingProvider(),
-  tools: codingTools,
-})
-  .createSession()
-  .run("edit", { toolNames: ["read"] });
+await (
+  await (
+    await createAgent({
+      model: { provider: "mock", model: "offline" },
+      provider: codingProvider(),
+      tools: codingTools,
+    })
+  ).session()
+).run("edit", { toolNames: ["read"] });
 assert.equal(writeRan, 0, "run grant must not dispatch write");
 
 const checkpoints = createMemoryCheckpointStore();
@@ -241,31 +244,32 @@ const codingConfig = {
   id: "restart-agent",
   model: { provider: "mock", model: "offline" },
   store: createMemorySessionStore(),
+  hooks: askEveryTool(),
   tools: codingTools,
 };
-const first = await createAgent({ ...codingConfig, provider: codingProvider() })
-  .createSession({ id: "restart-1" })
-  .run("edit", {
-    toolNames: ["read", "write"],
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
-  });
+const first = await (
+  await (await createAgent({ ...codingConfig, provider: codingProvider() })).session({ id: "restart-1", create: true })
+).run("edit", {
+  toolNames: ["read", "write"],
+  runState: { checkpoints, definitionRevision: "1" },
+});
 assert.equal(first.status, "suspended");
 const resumed = await resumeAgentRun(
-  createAgent({
+  await createAgent({
     ...codingConfig,
     provider: createMockProvider([providerTextDelta("done"), providerDone()]),
   }),
   { runId: first.runId, sessionId: first.sessionId },
   {
     expectedVersion: first.runState.version,
-    decisions: first.interruption.pendingDecisions.map((decision) => ({
+    decisions: first.pending.map((decision) => ({
       approvalId: decision.approvalId,
       outcome: "allow_once",
     })),
   },
   { checkpoints, definitionRevision: "1" },
 );
-assert.equal(resumed.status, "succeeded");
+assert.equal(resumed.status, "completed");
 assert.equal(writeRan, 1, "restart must execute the interrupted write exactly once");
 mark("CODING OK");
 
@@ -284,12 +288,12 @@ validateReleaseEvalManifest(manifest);
 function countingAgent(onRun) {
   return {
     config: {},
-    createSession() {
+    async session() {
       return {
         id: "s",
         async run() {
           onRun();
-          return { sessionId: "s", runId: "r", status: "succeeded", text: "ok", content: [] };
+          return { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] };
         },
       };
     },
@@ -329,8 +333,8 @@ function oneShot(name) {
 
 let deniedRan = 0;
 const denied = await runExperiment({
-  agent: wrapAgentWithFailureInjection(
-    createAgent({
+  agent: await wrapAgentWithFailureInjection(
+    await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: oneShot("drop_database"),
       tools: [
@@ -351,12 +355,12 @@ const denied = await runExperiment({
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
 });
 assert.equal(deniedRan, 0);
-assert.equal(denied.status, "succeeded");
+assert.equal(denied.status, "completed");
 
 let unknownRan = 0;
 const unknown = await runExperiment({
-  agent: wrapAgentWithFailureInjection(
-    createAgent({
+  agent: await wrapAgentWithFailureInjection(
+    await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: oneShot("move_money"),
       tools: [
@@ -378,7 +382,7 @@ const unknown = await runExperiment({
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
 });
 assert.equal(unknownRan, 0);
-assert.equal(unknown.status, "succeeded");
+assert.equal(unknown.status, "completed");
 
 const dir = mkdtempSync(join(tmpdir(), "prism-070-oracle-"));
 try {
@@ -392,7 +396,7 @@ try {
     }),
   });
   const red = await runExperiment({
-    agent: createAgent({
+    agent: await createAgent({
       model: { provider: "mock", model: "offline" },
       provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
     }),
@@ -411,7 +415,7 @@ try {
 }
 
 const revoked = await createCitationIntegrityScorer().score({
-  result: { sessionId: "s", runId: "r", status: "succeeded", text: "ok", content: [] },
+  result: { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] },
   environment: {
     citations: [
       {
@@ -427,9 +431,9 @@ mark("EVAL OK");
 
 // --- R15 timeline + graph ---
 const folder = createTimelineFolder({ content: "metadata" });
-folder.push({ type: "agent_started", sessionId: "s", runId: "r" });
+folder.push({ type: "run.started", sessionId: "s", runId: "r" });
 folder.push({
-  type: "tool_execution_finished",
+  type: "tool.completed",
   sessionId: "s",
   runId: "r",
   toolCallId: "c1",
@@ -528,11 +532,13 @@ mark("VOICE OK");
 
 // --- R16 work-scope memory index ---
 const scopeStore = createMemorySessionStore();
-const scopeSession = createAgent({
-  model: { provider: "mock", model: "offline" },
-  provider: createMockProvider([providerTextDelta("ready"), providerDone()]),
-  store: scopeStore,
-}).createSession({ id: "work-scope-journey" });
+const scopeSession = await (
+  await createAgent({
+    model: { provider: "mock", model: "offline" },
+    provider: createMockProvider([providerTextDelta("ready"), providerDone()]),
+    slots: { store: scopeStore },
+  })
+).session({ id: "work-scope-journey", create: true });
 await scopeSession.run("start work-scope journey");
 const scopes = createWorkScopeController({ session: scopeSession, appendEntry: (entry) => scopeStore.append(entry) });
 await scopes.open({ id: "plan:memory", kind: "plan" });

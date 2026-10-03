@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEvent, AgentSession, ProviderEvent, RunLimits } from "../index.js";
+import type { AgentEvent, Session, ProviderEvent, RunLimits } from "../index.js";
 import {
   createAgent,
   createMemorySessionStore,
@@ -74,8 +74,8 @@ async function collect(provider: ReturnType<typeof createOpenAICompatibleProvide
   return events;
 }
 
-/** Run a session and collect every event, so `provider_turn_finished` metadata can be asserted. */
-async function collectRun(session: AgentSession, input: string, limits?: RunLimits) {
+/** Run a session and collect every event, so `turn.completed` metadata can be asserted. */
+async function collectRun(session: Session, input: string, limits?: RunLimits) {
   const events: AgentEvent[] = [];
   const subscription = session.subscribe();
   const pump = (async () => {
@@ -121,9 +121,9 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
   });
 
   it("provider_turn_finished carries stopReason and the effective budget snapshot", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "stop-reason-budget",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo", limits: { contextWindow: 100_000 } },
       provider: {
         id: "mock",
@@ -134,13 +134,13 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
         },
       },
     });
-    const session = agent.createSession({ id: "stop-reason-session" });
+    const session = await agent.session({ id: "stop-reason-session", create: true });
     const { events, error } = await collectRun(session, "hi", { maxTurns: 5, maxInputTokens: 1000 });
     assert.equal(error, undefined, String(error));
 
-    const finished = events.filter((event) => event.type === "provider_turn_finished");
+    const finished = events.filter((event) => event.type === "turn.completed");
     assert.equal(finished.length, 1);
-    const metadata = finished[0].type === "provider_turn_finished" ? finished[0].metadata : undefined;
+    const metadata = finished[0].type === "turn.completed" ? finished[0].metadata : undefined;
     assert.equal(metadata?.stopReason, "end_turn");
     assert.deepEqual(metadata?.budgets, {
       inputTokens: 500,
@@ -155,9 +155,9 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
 
   it("a completed turn that produced tool calls is attributed to tool_calls", async () => {
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "stop-reason-tools",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -172,21 +172,21 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
           yield providerDone();
         },
       },
-      tools: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }],
+      tools: { add: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }] },
     });
-    const session = agent.createSession({ id: "stop-reason-tools-session" });
+    const session = await agent.session({ id: "stop-reason-tools-session", create: true });
     const { events, error } = await collectRun(session, "investigate");
     assert.equal(error, undefined, String(error));
     const reasons = events
-      .filter((event) => event.type === "provider_turn_finished")
-      .map((event) => (event.type === "provider_turn_finished" ? event.metadata.stopReason : undefined));
+      .filter((event) => event.type === "turn.completed")
+      .map((event) => (event.type === "turn.completed" ? event.metadata?.stopReason : undefined));
     assert.deepEqual(reasons, ["tool_calls", "end_turn"]);
   });
 
   it("a provider error attributes the turn to provider_error", async () => {
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "stop-reason-error",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider: {
         id: "mock",
@@ -195,9 +195,9 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
         },
       },
     });
-    const session = agent.createSession({ id: "stop-reason-error-session" });
+    const session = await agent.session({ id: "stop-reason-error-session", create: true });
     const { events } = await collectRun(session, "hi");
-    const finished = events.find((event) => event.type === "provider_turn_finished");
-    assert.equal(finished?.type === "provider_turn_finished" ? finished.metadata.stopReason : undefined, "provider_error");
+    const finished = events.find((event) => event.type === "turn.completed");
+    assert.equal(finished?.type === "turn.completed" ? finished.metadata?.stopReason : undefined, "provider_error");
   });
 });

@@ -10,7 +10,7 @@ alibabaEvents	export declare function alibabaEvents(body: ReadableStream<Uint8Ar
 applyAlibabaCacheControl	export declare function applyAlibabaCacheControl(request: ProviderRequest): readonly CacheControlledMessage[]
 createAlibabaEmbedder	export declare function createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaEmbedder
 createAlibabaProvider	export declare function createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
-createAlibabaProviderPackage	export declare function createAlibabaProviderPackage(options?: AlibabaProviderPackageOptions): ProviderPackage
+alibabaPackage	export declare function alibabaPackage(options?: AlibabaProviderPackageOptions): PackageInstance
 defineAlibabaModel	export declare function defineAlibabaModel(config: AlibabaModelConfig): ModelConfig
 listAlibabaModels	export declare function listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
 mapAlibabaModel	export declare function mapAlibabaModel(entry: AlibabaModelEntry): ModelConfig

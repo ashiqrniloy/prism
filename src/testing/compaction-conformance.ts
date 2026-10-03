@@ -1,30 +1,31 @@
-// ponytail: dependency-free conformance helper for the CompactionStrategy
-// adapter contract. The core default strategy and the first-party LLM
-// compaction package both implement CompactionStrategy; adapter authors call
+// ponytail: dependency-free conformance helper for the Compactor
+// slot contract. The core default compactor and the first-party LLM
+// compaction package both implement Compactor; adapter authors call
 // this once to assert the summary-result shape, secret redaction, and
 // abort-observation invariants that compaction.test.ts and the LLM
-// compaction package's strategy tests already check. Throws plain Error; no
+// compaction package's compactor tests already check. Throws plain Error; no
 // test runner, no network, no real credentials.
 
-import type { CompactionContext, CompactionStrategy, SessionEntry } from "../contracts.js";
+import type { CompactionContext, SessionEntry } from "../contracts.js";
+import type { Compactor } from "../slots/types.js";
 import { createSessionEntry } from "../session-stores.js";
 
 export interface CompactionConformanceOptions {
   /** Secret strings that must not appear in the summary or returned entries. */
   readonly secrets?: readonly string[];
-  /** When true, asserts the strategy observes an already-aborted signal. */
+  /** When true, asserts the compactor observes an already-aborted signal. */
   readonly exerciseAbort?: boolean;
 }
 
 /**
- * Assert that a `CompactionStrategy` satisfies the core adapter contract:
+ * Assert that a `Compactor` satisfies the compaction slot contract:
  * `compact()` returns a `CompactionResult` with a non-empty summary, known
  * secrets are redacted from the summary and any returned entries, and (when
  * requested) an already-aborted signal is observed. Throws on the first
- * violation; returns the result when the strategy conforms.
+ * violation; returns the result when the compactor conforms.
  */
-export async function assertCompactionStrategyConforms(
-  strategy: CompactionStrategy,
+export async function assertCompactorConforms(
+  compactor: Compactor,
   options: CompactionConformanceOptions = {},
 ): Promise<{ summary: string }> {
   const secrets = options.secrets ?? [];
@@ -45,19 +46,19 @@ export async function assertCompactionStrategyConforms(
     secrets,
   };
 
-  const result = await strategy.compact(context);
+  const result = await compactor.compact(context);
   if (!result.summary || typeof result.summary !== "string") {
-    throw new Error("CompactionStrategy must return a non-empty string summary");
+    throw new Error("Compactor must return a non-empty string summary");
   }
   for (const secret of secrets) {
     if (secret && result.summary.includes(secret)) {
-      throw new Error(`CompactionStrategy leaked a secret into the summary: ${secret.slice(0, 8)}...`);
+      throw new Error(`Compactor leaked a secret into the summary: ${secret.slice(0, 8)}...`);
     }
   }
   if (result.entries) {
     for (const secret of secrets) {
       if (secret && JSON.stringify(result.entries).includes(secret)) {
-        throw new Error(`CompactionStrategy leaked a secret into returned entries: ${secret.slice(0, 8)}...`);
+        throw new Error(`Compactor leaked a secret into returned entries: ${secret.slice(0, 8)}...`);
       }
     }
   }
@@ -67,12 +68,12 @@ export async function assertCompactionStrategyConforms(
     controller.abort(new Error("aborted"));
     let observed = false;
     try {
-      await strategy.compact({ ...context, signal: controller.signal });
+      await compactor.compact({ ...context, signal: controller.signal });
     } catch {
       observed = true;
     }
     if (!observed) {
-      throw new Error("CompactionStrategy did not observe an already-aborted signal");
+      throw new Error("Compactor did not observe an already-aborted signal");
     }
   }
 

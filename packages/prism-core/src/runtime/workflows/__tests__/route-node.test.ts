@@ -211,7 +211,7 @@ describe("routeNode dynamic routing (Plan 130 Task 4)", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({ provider, model: { provider: "mock", model: "test-model" } });
+    const agent = await createAgent({ provider, model: { provider: "mock", model: "test-model" } });
 
     const triageAgent = agentNode({
       agent: "triage",
@@ -267,7 +267,7 @@ describe("routeNode dynamic routing (Plan 130 Task 4)", () => {
     });
 
     const result = await runWorkflow(workflow, null, {
-      agentFactory: async () => agent.createSession({ id: "s-triage" }),
+      agentFactory: async () => await agent.session({ id: "s-triage", create: true }),
     });
 
     assert.equal(result.status, "succeeded");

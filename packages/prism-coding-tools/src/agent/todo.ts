@@ -14,9 +14,9 @@ import type {
   JsonObject,
   Message,
   SessionEntry,
-  StopHook,
-  StopHookContext,
-  StopHookDecision,
+  HookRegistrar,
+  RunEndDecision,
+  RunEndPayload,
   ToolDefinition,
   ToolExecutionContext,
   ToolResult,
@@ -293,7 +293,7 @@ function countToolResults(history: readonly Message[]): number {
   return count;
 }
 
-export interface TodoContinuationStopHookOptions {
+export interface TodoContinuationHandlerOptions {
   /** Consecutive continuations with no new tool call and no list change before stopping. Default 2. */
   readonly maxNoProgress?: number;
   readonly maxSteerItems?: number;
@@ -305,9 +305,11 @@ export interface TodoNoProgressStopInfo {
   readonly noProgress: number;
 }
 
-export interface TodoContinuationStopHook extends StopHook {
+/** The `run.end` handler this factory installs, plus the host stop notifier it calls. */
+export interface TodoContinuationHandler {
   /** Host hook for surfacing the stop (e.g. a TUI system note). Never called with secrets. */
   onNoProgressStop?: (info: TodoNoProgressStopInfo) => void;
+  decide(payload: RunEndPayload, context: { readonly signal?: AbortSignal }): RunEndDecision | undefined;
 }
 
 interface TodoRunState {
@@ -322,7 +324,7 @@ function truncateUtf8(value: string, maxBytes: number): string {
   return bytes.length <= maxBytes ? value : bytes.subarray(0, maxBytes).toString("utf8");
 }
 
-function continueDecision(open: readonly TodoItem[], maxSteerItems: number, maxSteerBytes: number): StopHookDecision {
+function continueDecision(open: readonly TodoItem[], maxSteerItems: number, maxSteerBytes: number): RunEndDecision {
   const shown = open.slice(0, maxSteerItems);
   const lines = shown.map((todo) => `- [${todo.status}] ${todo.id}: ${todo.content}`);
   if (open.length > shown.length) lines.push(`- …and ${open.length - shown.length} more`);
@@ -330,10 +332,15 @@ function continueDecision(open: readonly TodoItem[], maxSteerItems: number, maxS
     `Open todo items (${open.length}):\n${lines.join("\n")}\nContinue with the remaining items, or mark them completed/cancelled with a reason.`,
     maxSteerBytes,
   );
-  return { action: "continue", reason: "Open todo items remain; the task is not complete.", steer };
+  return { continue: { reason: "Open todo items remain; the task is not complete.", steer } };
 }
 
-export function createTodoContinuationStopHook(options?: TodoContinuationStopHookOptions): TodoContinuationStopHook {
+/**
+ * Register the todo continuation gate as a `run.end` hook (roadmap §2.4): while open todos remain,
+ * the run is asked to continue once per loop end, carrying the list as a steer. It stops
+ * continuing after `maxNoProgress` consecutive ends with no new tool call and no list change.
+ */
+export function registerTodoContinuation(hooks: HookRegistrar, options?: TodoContinuationHandlerOptions): TodoContinuationHandler {
   const maxNoProgress =
     options?.maxNoProgress === undefined
       ? DEFAULT_MAX_TODO_NO_PROGRESS
@@ -350,27 +357,26 @@ export function createTodoContinuationStopHook(options?: TodoContinuationStopHoo
   // Per-run continuation counters; a host reuses one hook instance across runs.
   const runs = new Map<string, TodoRunState>();
 
-  const hook: TodoContinuationStopHook = {
-    name: "todo-continuation",
-    decide(context: StopHookContext): StopHookDecision {
-      const key = `${context.sessionId}:${context.runId}`;
+  const handler: TodoContinuationHandler = {
+    decide(payload, context): RunEndDecision | undefined {
+      const key = `${payload.sessionId}:${payload.runId}`;
       // User abort always wins over continuation.
-      if (context.signal.aborted) {
+      if (context.signal?.aborted) {
         runs.delete(key);
-        return { action: "stop" };
+        return undefined;
       }
-      const todos = latestTodoList(context.history);
+      const todos = latestTodoList(payload.history);
       if (todos === undefined) {
         runs.delete(key);
-        return { action: "stop" };
+        return undefined;
       }
       const open = todos.filter((todo) => OPEN_TODO_STATUSES.has(todo.status));
       if (open.length === 0) {
         runs.delete(key);
-        return { action: "stop" };
+        return undefined;
       }
 
-      const signature = `${countToolResults(context.history)}:${JSON.stringify(todos)}`;
+      const signature = `${countToolResults(payload.history)}:${JSON.stringify(todos)}`;
       const previous = runs.get(key);
       if (previous === undefined) {
         if (runs.size >= MAX_TRACKED_RUNS) runs.clear();
@@ -381,8 +387,8 @@ export function createTodoContinuationStopHook(options?: TodoContinuationStopHoo
         previous.noProgress += 1;
         if (previous.noProgress >= maxNoProgress) {
           runs.delete(key);
-          hook.onNoProgressStop?.({ openTodos: open, noProgress: previous.noProgress });
-          return { action: "stop" };
+          handler.onNoProgressStop?.({ openTodos: open, noProgress: previous.noProgress });
+          return undefined;
         }
       } else {
         previous.signature = signature;
@@ -391,5 +397,6 @@ export function createTodoContinuationStopHook(options?: TodoContinuationStopHoo
       return continueDecision(open, maxSteerItems, maxSteerBytes);
     },
   };
-  return hook;
+  hooks.on("run.end", (payload, context) => handler.decide(payload, context), { id: "todo-continuation" });
+  return handler;
 }

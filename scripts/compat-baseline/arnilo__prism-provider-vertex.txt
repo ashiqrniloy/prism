@@ -1,5 +1,5 @@
 createVertexProvider	export declare function createVertexProvider(options: VertexProviderOptions): AIProvider
-createVertexProviderPackage	export declare function createVertexProviderPackage(options: VertexProviderPackageOptions): ProviderPackage
-type VertexProviderOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
-type VertexProviderPackageOptions	export { createVertexProvider, createVertexProviderPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
+vertexPackage	export declare function vertexPackage(options: VertexProviderPackageOptions): PackageInstance
+type VertexProviderOptions	export { createVertexProvider, vertexPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
+type VertexProviderPackageOptions	export { createVertexProvider, vertexPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
 vertexOpenApiBaseUrl	export declare function vertexOpenApiBaseUrl(input:

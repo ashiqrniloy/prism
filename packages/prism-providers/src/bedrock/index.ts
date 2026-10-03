@@ -28,7 +28,7 @@ export {
   type BedrockRoute,
   bedrockRuntimeEndpoint,
   createBedrockConverseProvider,
+  bedrockPackage,
   createBedrockProvider,
-  createBedrockProviderPackage,
   signAwsRequest,
 } from "./provider.js";

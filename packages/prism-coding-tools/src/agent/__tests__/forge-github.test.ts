@@ -174,6 +174,27 @@ test("push injects token via GIT_CONFIG_* env, never argv; returns remoteRef", a
   }
 });
 
+test("forge verifies identity before ownership-scoped effects", async () => {
+  let requests = 0;
+  const forge = createGitHubForge({
+    credentials: { name: "gh", resolver: { resolve: () => cred("tok") } },
+    repository: "acme/repo",
+    cwd: "/tmp/checkout",
+    git: { runner: async () => gitOk() },
+    effectStore: createMemoryToolEffectStore(),
+    fetch: (() => {
+      requests++;
+      throw new Error("must not dispatch");
+    }) as typeof fetch,
+    identity: { ...IDENTITY, expiresAt: "2000-01-01T00:00:00.000Z" },
+    ownership: OWNERSHIP,
+    sessionId: "s",
+    runId: "r",
+  });
+  await assert.rejects(() => forge.createPullRequest({ head: "x", base: "main", title: "t", body: "b" }), /expired/);
+  assert.equal(requests, 0);
+});
+
 test("createPullRequest is idempotent: same args replay the completed effect without a second POST", async () => {
   const fake = await startFakeGitHub({
     "POST /repos/acme/repo/pulls": { status: 201, json: PR },

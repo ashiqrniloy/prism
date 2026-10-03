@@ -1,12 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  type AgentDefinition,
-  type AIProvider,
-  createAgentSession,
-  providerDone,
-  providerTextDelta,
-  resolveAgentDefinition,
-} from "@arnilo/prism";
+import { type AgentDefinition, type AIProvider, providerDone, providerTextDelta, resolveAgentDefinition } from "@arnilo/prism";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -288,8 +281,8 @@ export async function demo(): Promise<CyclicReflectionDemoResult> {
       checkpoints,
       runId: "cyclic-run-happy",
       ownership: { tenantId: "demo-tenant" },
-      agentFactory: (name) => {
-        if (name === "reviewer") return createAgentSession({ agent: reviewerAgent });
+      agentFactory: async (name) => {
+        if (name === "reviewer") return await reviewerAgent.session();
         throw new Error(`Unknown agent: ${name}`);
       },
       onEvent: (event) => {
@@ -335,7 +328,7 @@ export async function demo(): Promise<CyclicReflectionDemoResult> {
         checkpoints,
         runId: "cyclic-run-budget-breach",
         ownership: { tenantId: "demo-tenant" },
-        agentFactory: () => createAgentSession({ agent: alwaysRevisingAgent }),
+        agentFactory: () => alwaysRevisingAgent.session(),
       },
     );
   } catch (error) {

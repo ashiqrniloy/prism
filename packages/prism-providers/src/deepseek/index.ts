@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { deepseekModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createDeepSeekProvider } from "./provider.js";
 
 export interface DeepSeekProviderPackageOptions {
@@ -10,18 +10,8 @@ export interface DeepSeekProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createDeepSeekProviderPackage(options: DeepSeekProviderPackageOptions = {}): ProviderPackage {
-  const providerId = options.id ?? "deepseek";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/deepseek",
-    description: "DeepSeek provider package for Prism.",
-    docs: { links: ["docs/providers/deepseek.md"] },
-    setup(api) {
-      api.registerProvider(createDeepSeekProvider(options));
-      for (const model of options.models ?? deepseekModels) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+export function deepseekPackage(options: DeepSeekProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.deepseek", "DeepSeek provider package for Prism.", () => [createDeepSeekProvider(options)]);
 }
 
 export { canonicalizeDeepSeekTools, canonicalizeJsonSchema } from "./cache.js";

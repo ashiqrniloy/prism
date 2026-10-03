@@ -1,4 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createOpenRouterProvider } from "./provider.js";
 
 export interface OpenRouterProviderPackageOptions {
@@ -11,17 +12,10 @@ export interface OpenRouterProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createOpenRouterProviderPackage(options: OpenRouterProviderPackageOptions = {}): ProviderPackage {
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/openrouter",
-    description: "OpenRouter provider package for Prism.",
-    docs: { links: ["docs/providers/openrouter.md"] },
-    setup(api) {
-      api.registerProvider(createOpenRouterProvider(options));
-      for (const model of options.models ?? []) api.registerModel(model);
-      api.registerAuthMethod({ kind: "api_key", provider: "openrouter", credentialName: "apiKey" });
-    },
-  });
+export function openrouterPackage(options: OpenRouterProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.openrouter", "OpenRouter provider package for Prism.", () => [
+    createOpenRouterProvider(options),
+  ]);
 }
 
 export {

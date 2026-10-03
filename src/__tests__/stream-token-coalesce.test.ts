@@ -41,22 +41,24 @@ describe("stream token coalesce", () => {
       },
     };
 
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      store: createMemorySessionStore(),
-      tools: [{ name: "echo", parameters: {}, execute: () => ({ toolCallId: "c1", name: "echo", value: "ok" }) }],
-    }).createSession({ id: "coalesce" });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        slots: { store: createMemorySessionStore() },
+        tools: { add: [{ name: "echo", parameters: {}, execute: () => ({ toolCallId: "c1", name: "echo", value: "ok" }) }] },
+      })
+    ).session({ id: "coalesce", create: true });
     const pending = collect(session.subscribe());
     await session.run("Hi");
     const events = await pending;
 
     const liveThinking = events
-      .filter((event) => event.type === "message_delta" && event.content.type === "thinking")
-      .map((event) => (event.type === "message_delta" && event.content.type === "thinking" ? event.content.text : ""));
+      .filter((event) => event.type === "message.delta" && event.content.type === "thinking")
+      .map((event) => (event.type === "message.delta" && event.content.type === "thinking" ? event.content.text : ""));
     const liveText = events
-      .filter((event) => event.type === "message_delta" && event.content.type === "text")
-      .map((event) => (event.type === "message_delta" && event.content.type === "text" ? event.content.text : ""));
+      .filter((event) => event.type === "message.delta" && event.content.type === "text")
+      .map((event) => (event.type === "message.delta" && event.content.type === "text" ? event.content.text : ""));
     assert.deepEqual(liveThinking, thinkingTokens);
     assert.deepEqual(liveText, [...textTokens, "ok"]);
 

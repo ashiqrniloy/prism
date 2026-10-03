@@ -4,6 +4,6 @@ export {
   type AzureOpenAIProviderOptions,
   type AzureOpenAIProviderPackageOptions,
   azureChatCompletionsUrl,
+  azurePackage,
   createAzureOpenAIProvider,
-  createAzureOpenAIProviderPackage,
 } from "./provider.js";

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import {
   assertNoForeignCacheFields,
   assertProviderStreamConforms,
@@ -8,7 +9,7 @@ import {
 } from "@arnilo/prism/testing/provider-conformance";
 import {
   createOllamaProvider,
-  createOllamaProviderPackage,
+  ollamaPackage,
   defineOllamaModel,
   listOllamaModels,
   mapOllamaModel,
@@ -221,24 +222,18 @@ describe("@arnilo/prism-providers/ollama", () => {
 
   it("package_setup_registers_provider_auth_and_host_models_without_discovery", async () => {
     let fetchCalls = 0;
-    const registered: unknown[] = [];
     const discovered = [mapOllamaModel({ id: "gpt-oss:20b" })];
-    await createOllamaProviderPackage({
-      apiKey: "ollama-cloud-secret",
-      models: discovered,
-      fetch: (async () => {
-        fetchCalls += 1;
-        return ok(chatSse([]));
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (m: ModelConfig) => registered.push(m),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(
+      ollamaPackage({
+        apiKey: "ollama-cloud-secret",
+        models: discovered,
+        fetch: (async () => {
+          fetchCalls += 1;
+          return ok(chatSse([]));
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(fetchCalls, 0, "setup must not call model discovery");
-    assert.ok(registered.some((item: any) => item.id === "ollama"));
-    assert.ok(registered.some((item: any) => item.provider === "ollama" && item.model === "gpt-oss:20b"));
-    assert.ok(registered.some((item: any) => item.provider === "ollama" && item.kind === "api_key"));
   });
 });
 

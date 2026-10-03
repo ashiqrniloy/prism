@@ -47,7 +47,7 @@ interface FoldTurn {
 }
 
 /** One long tool-calling run; usage is what a provider would bill for the assembled request. */
-function longRun() {
+async function longRun() {
   const requests: ProviderRequest[] = [];
   const folds: FoldTurn[] = [];
   let requestCount = 0;
@@ -69,11 +69,11 @@ function longRun() {
     parameters: { type: "object", properties: {} },
     execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "scan", value: row(requestCount) }),
   };
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "budget-conformance",
     model: wideModel,
-    store: createMemorySessionStore(),
-    tools: [scan],
+    slots: { store: createMemorySessionStore() },
+    tools: { add: [scan] },
     attentionCompiler: {
       trigger: [
         { kind: "input_ratio", ratio: windowAxisRatio },
@@ -89,18 +89,19 @@ function longRun() {
 
 describe("budget-capped long run conformance", () => {
   it("folds on cumulative run spend while the window ratio is never reachable", async () => {
-    const run = longRun();
-    const session = run.agent.createSession({ id: "budget-conformance" });
+    const run = await longRun();
+    const session = await run.agent.session({ id: "budget-conformance", create: true });
     const reader = (async () => {
       for await (const event of session.subscribe() as AsyncIterable<AgentEvent>) {
-        if (event.type !== "attention_compiled") continue;
+        if (event.type !== "package.event" || event.name !== "attention.compiled") continue;
+        const report = event.data as { used: number; inputCap: number; stubbedToolResults: number; truncated: boolean };
         // Assembly precedes the provider call of this turn, so the counter holds the turns before.
         run.folds.push({
           turn: run.requestCount() + 1,
-          used: event.used,
-          inputCap: event.inputCap,
-          stubbed: event.stubbedToolResults,
-          truncated: event.truncated,
+          used: report.used,
+          inputCap: report.inputCap,
+          stubbed: report.stubbedToolResults,
+          truncated: report.truncated,
           spendBefore: run.spent(),
         });
       }
@@ -118,7 +119,7 @@ describe("budget-capped long run conformance", () => {
     await reader;
 
     // The run survives the budget: folding is what keeps it under the cap.
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.stopReason, undefined, "the run input budget must not have been breached");
     assert.equal(run.requestCount(), turns, "every turn ran");
     assert.ok(run.spent() < runInputBudget, `spend ${run.spent()} stayed under ${runInputBudget}`);
@@ -199,7 +200,7 @@ describe("budget-capped long run conformance", () => {
       folding?: { foldingTurns?: number };
       axisEvidence?: { windowRatioReached?: boolean; runBudgetThreshold?: number; firstFoldSpendPlusEstimate?: number };
     };
-    assert.equal(payload.result, "succeeded");
+    assert.equal(payload.result, "completed");
     assert.equal(payload.providerTurns, turns);
     assert.ok((payload.folding?.foldingTurns ?? 0) >= 1, "example must demonstrate folding");
     assert.equal(payload.axisEvidence?.windowRatioReached, false, "the window axis must never be satisfied");

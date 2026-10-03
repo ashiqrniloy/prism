@@ -137,24 +137,7 @@ describe("settings auth trust security", () => {
     assert.equal(await isPathInsideReal("/nonexistent/root", "/nonexistent/root/file"), false);
   });
 
-  it("blocks extension setup before side effects", async () => {
-    const { createExtensionKernel } = await import("../index.js");
-    let setup = false;
-    const kernel = createExtensionKernel({ permission: createStaticPermissionPolicy(false) });
-
-    await kernel.load([
-      {
-        name: "demo",
-        setup: () => {
-          setup = true;
-        },
-      },
-    ]);
-
-    assert.equal(setup, false);
-  });
-
-  it("blocks tool permission before validation and execution", async () => {
+  it("blocks an untrusted tool before validation and execution", async () => {
     let validated = false;
     let executed = false;
     const result = await dispatchToolCall({
@@ -169,13 +152,13 @@ describe("settings auth trust security", () => {
         },
       ]),
       context: { sessionId: "s1", runId: "r1", toolCallId: "c1" },
-      permission: createStaticPermissionPolicy(false),
+      trust: createStaticTrustPolicy(false),
       validate: () => {
         validated = true;
       },
     });
 
-    assert.equal(result.error?.code, "ERR_PRISM_PERMISSION_DENIED");
+    assert.equal(result.error?.code, "ERR_PRISM_UNTRUSTED");
     assert.equal(validated, false);
     assert.equal(executed, false);
   });

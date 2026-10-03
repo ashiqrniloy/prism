@@ -7,8 +7,8 @@ const model = { provider: "mock", model: "demo" };
 
 async function setup() {
   const store = createMemorySessionStore();
-  const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-  const session = agent.createSession({ id: "scopes-helper" });
+  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const session = await agent.session({ id: "scopes-helper", create: true });
   await session.run("hello");
   return { session, controller: createWorkScopeController({ session, appendEntry: (entry) => store.append(entry) }) };
 }

@@ -1,4 +1,4 @@
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequestPolicy, ProviderResolver } from "@arnilo/prism";
+import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequest, ProviderResolver } from "@arnilo/prism";
 
 export interface ModelRouterAllowList {
   readonly providers?: readonly string[];
@@ -306,9 +306,12 @@ export interface ModelRouterResolveResult {
   readonly circuitProbeToken?: string;
   /** Pass to recordUsage to commit the admission reservation against actual usage. */
   readonly budgetReservation?: ModelRouterReservation;
-  /** Chainable policy that strips OpenRouter routing unless router allows it. */
-  readonly providerRequestPolicy: ProviderRequestPolicy;
+  /** A `model.request` transform that strips OpenRouter routing unless the router allows it. */
+  readonly modelRequestTransform: ModelRouterRequestTransform;
 }
+
+/** A `model.request` transform handed straight to `hooks.on("model.request", …)`. */
+export type ModelRouterRequestTransform = (request: ProviderRequest) => ProviderRequest | Promise<ProviderRequest>;
 
 export interface ModelRouter {
   resolve(request: ModelRouterResolveRequest): Promise<ModelRouterResolveResult>;
@@ -371,7 +374,7 @@ export interface ModelRouter {
   createGovernedProvider(
     options?: Omit<import("./invocation.js").GovernedProviderOptions, "router">,
   ): import("./invocation.js").GovernedProvider;
-  createOpenRouterRoutingPolicy(): ProviderRequestPolicy;
+  createOpenRouterRoutingTransform(): ModelRouterRequestTransform;
 }
 
 export type {

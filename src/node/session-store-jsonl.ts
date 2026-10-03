@@ -241,6 +241,10 @@ function validateSessionEntry(
       if (!isPlainObject(entry.data))
         return { ok: false, error: { line: lineNumber, message: "Invalid metadata entry: expected object data", raw } };
       break;
+    case "package_state":
+      if (!isPlainObject(entry.data))
+        return { ok: false, error: { line: lineNumber, message: "Invalid package_state entry: expected object data", raw } };
+      break;
   }
   return { ok: true, entry: entry as unknown as SessionEntry };
 }

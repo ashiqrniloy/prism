@@ -9,8 +9,9 @@ import {
   providerTextDelta,
   type SessionEntry,
 } from "@arnilo/prism";
+import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
 import {
-  createObservationalMemoryCompactionStrategy,
+  createObservationalMemoryCompactor,
   FOLDED_MEMORY,
   type MemoryObservation,
   type MemoryReflection,
@@ -145,7 +146,7 @@ function scopeEntry(id: string, data: unknown): SessionEntry {
 
 describe("observational memory compaction strategy", () => {
   it("observational_memory_strategy_renders_existing_memory_without_provider_call", async () => {
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, secrets: ["secret-token"] });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 1, secrets: ["secret-token"] });
     const result = await strategy.compact({ sessionId: "s1", entries: memoryEntries(), trigger: "manual" });
     assert.match(result.summary, /Observational Memory/);
     assert.match(result.summary, /Use package-only strategy/);
@@ -153,7 +154,7 @@ describe("observational memory compaction strategy", () => {
   });
 
   it("observational_memory_strategy_returns_standard_compaction_data_with_folded_memory", async () => {
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 2 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 2 });
     const result = await strategy.compact({ sessionId: "s1", entries: memoryEntries(), trigger: "auto" });
     const entry = result.entries?.[0];
     const data = entry?.data as any;
@@ -169,16 +170,17 @@ describe("observational memory compaction strategy", () => {
   it("observational_memory_strategy_preserves_raw_history_and_rebuilds_recent_context", async () => {
     const store = createMemorySessionStore(memoryEntries());
     const seen: string[] = [];
-    const agent = createAgent({
+    const agent = await createAgent({
       model,
       provider: createMockProvider([providerTextDelta("ok"), providerDone()], {
         onRequest: (request) => seen.push(JSON.stringify(request.messages)),
       }),
-      store,
+      // Roadmap §2.5: the compactor is the `compaction` slot.
+      slots: { store, compaction: createObservationalMemoryCompactor({ keepRecentEntries: 2 }) },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
     await session.checkout("m3");
-    await session.compact({ strategy: createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1 }) });
+    await session.compact();
     assert.equal((await store.list("s1")).length, 6);
     await session.run("after compact");
     assert.match(seen.at(-1) ?? "", /Observational Memory/);
@@ -187,7 +189,7 @@ describe("observational memory compaction strategy", () => {
   });
 
   it("observational_memory_strategy_full_fold_trims_observations_to_pool_cap", async () => {
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, observationsPoolMaxTokens: 4 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 1, observationsPoolMaxTokens: 4 });
     const result = await strategy.compact({ sessionId: "s1", entries: memoryEntries() });
     const memory = (result.entries?.[0]?.data as any)!.memory;
     assert.equal(memory.fullFold, true);
@@ -195,7 +197,7 @@ describe("observational memory compaction strategy", () => {
   });
 
   it("observational_memory_strategy_handles_repeated_compactions_and_full_fold", async () => {
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, observationsPoolMaxTokens: 1 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 1, observationsPoolMaxTokens: 1 });
     const first = await strategy.compact({ sessionId: "s1", entries: memoryEntries() });
     const secondEntries = [...memoryEntries(), first.entries![0]!];
     const second = await strategy.compact({ sessionId: "s1", entries: secondEntries });
@@ -205,7 +207,7 @@ describe("observational memory compaction strategy", () => {
   });
 
   it("observational_memory_strategy_packs_the_projected_episodic_layer_when_work_scopes_exist", async () => {
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 2 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 2 });
     const result = await strategy.compact({ sessionId: "s1", entries: scopedMemoryEntries(false) });
     assert.match(result.summary, /The plan owns the shared canary flag/);
     assert.doesNotMatch(result.summary, /Task one keeps the retry budget small/);
@@ -228,12 +230,24 @@ describe("observational memory compaction strategy", () => {
   });
 
   it("observational_memory_strategy_redacts_known_secrets_from_summary_and_data", async () => {
-    const result = await createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, secrets: ["secret-token"] }).compact({
+    const result = await createObservationalMemoryCompactor({ keepRecentEntries: 1, secrets: ["secret-token"] }).compact({
       sessionId: "s1",
       entries: memoryEntries(),
     });
     const text = JSON.stringify(result);
     assert.equal(text.includes("secret-token"), false);
     assert.match(text, /\[REDACTED\]/);
+  });
+});
+
+describe("family compactors conform to the compaction slot contract", () => {
+  it("family_compactors_pass_compaction_conformance", async () => {
+    // Both first-party compactors are `Compactor` slot implementations (roadmap §2.5), so they
+    // satisfy the same adapter contract the kernel's default does.
+    const { summary: omSummary } = await assertCompactorConforms(createObservationalMemoryCompactor(), {
+      secrets: ["secret-value"],
+      exerciseAbort: true,
+    });
+    assert.ok(omSummary.length > 0);
   });
 });

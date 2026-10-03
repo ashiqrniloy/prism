@@ -4,7 +4,7 @@ MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES = 262144
 SKILL_FILE_CANDIDATES	export declare const SKILL_FILE_CANDIDATES: readonly ["skills/impeccable/SKILL.md", "SKILL.md"]
 UpstreamResolveError	export declare class UpstreamResolveError extends Error
 createImpeccableCommand	export declare function createImpeccableCommand(): CommandDefinition
-createImpeccableExtension	export declare function createImpeccableExtension(options: ImpeccableExtensionOptions): Extension
+impeccable	export declare function impeccable(options?: ImpeccableExtensionOptions): import("@arnilo/prism").PackageInstance
 loadImpeccableSkill	export declare function loadImpeccableSkill(root: string, skillRelativePath: string): Skill
 readBoundedFile	export declare function readBoundedFile(root: string, relativePath: string, maxBytes: number): string
 redactPaths	export declare function redactPaths(text: string, paths?: readonly string[]): string

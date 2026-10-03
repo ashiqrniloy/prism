@@ -35,10 +35,10 @@ const agent = createPrismAcpAgent({
         id,
         async *stream(message) {
           const text = typeof message === "string" ? message : (message?.content?.[0]?.text ?? "");
-          yield { type: "message_delta", sessionId: id, runId: `run-${counter}`, content: { type: "text", text: "smoke turn" } };
+          yield { type: "message.delta", sessionId: id, runId: `run-${counter}`, content: { type: "text", text: "smoke turn" } };
           if (store.get(id)?.modeId === "edit" && text.includes("edit")) {
             yield {
-              type: "agent_suspended",
+              type: "run.suspended",
               sessionId: id,
               runId: `run-${counter}`,
               version: 1,
@@ -105,7 +105,7 @@ const agent = createPrismAcpAgent({
         session: {
           id: sessionId,
           async *stream() {
-            yield { type: "message_delta", sessionId, runId: "run-load", content: { type: "text", text: "reloaded" } };
+            yield { type: "message.delta", sessionId, runId: "run-load", content: { type: "text", text: "reloaded" } };
             yield { type: "agent_done", sessionId, runId: "run-load", reason: "end_turn" };
           },
         },

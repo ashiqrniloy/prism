@@ -29,7 +29,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import { AGENT_RUN_STATE_NAMESPACE, AgentRunError, createAgent } from "@arnilo/prism";
+import { AGENT_RUN_STATE_NAMESPACE, AgentRunStateError, createAgent } from "@arnilo/prism";
 
 const ROOT = join(import.meta.dirname, "..");
 const LOCK = join(ROOT, "scripts", "with-build-lock.mjs");
@@ -43,7 +43,7 @@ const blockerIds = new Set();
 // The built public entry must already expose the frozen surface at module
 // load (phase22 precedent: threat-suites runs after a build in every chain).
 assert.equal(typeof createAgent, "function");
-assert.equal(typeof AgentRunError, "function");
+assert.equal(typeof AgentRunStateError, "function");
 assert.equal(typeof AGENT_RUN_STATE_NAMESPACE, "string");
 
 function spawn(cmd, args, options = {}) {

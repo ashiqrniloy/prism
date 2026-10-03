@@ -5,13 +5,12 @@ import type {
   AgentDefinition,
   AgentDefinitionResolutionContext,
   AIProvider,
-  ContextProvider,
   ModelConfig,
   Skill,
   ToolDefinition,
   ToolRegistry,
 } from "./contracts.js";
-import { createSkillRegistry, resolveActiveSkills } from "./skills.js";
+import { resolveActiveSkills } from "./skills.js";
 import { createToolRegistry } from "./tools.js";
 
 /** Resolve an {@link AgentDefinition} into a runnable {@link Agent}.
@@ -43,13 +42,11 @@ function buildBaseConfig(def: AgentDefinition, context: AgentDefinitionResolutio
   return {
     model,
     ...resolveProviderOptions(model, context),
-    ...(tools !== undefined && { tools }),
-    ...(skills !== undefined && { skills }),
-    ...(def.context !== undefined && { context: resolveContextProviders(def.name, def.context, context) }),
+    ...(tools !== undefined && { tools: { add: tools.list() } }),
+    ...(skills !== undefined && { skills: { add: skills } }),
     ...(def.systemPrompt !== undefined && { systemPrompt: def.systemPrompt }),
     ...(def.instructions !== undefined && { instructions: def.instructions }),
     ...(def.attentionCompiler !== undefined && { attentionCompiler: def.attentionCompiler }),
-    ...(def.loop !== undefined && { loop: def.loop }),
     ...(def.metadata !== undefined && { metadata: def.metadata }),
   };
 }
@@ -63,9 +60,6 @@ function resolveModel(agentName: string, model: ModelConfig | string | undefined
   }
   const provider = model.slice(0, slash);
   const modelId = model.slice(slash + 1);
-  if (context.registries?.models) {
-    return context.registries.models.resolve(provider, modelId);
-  }
   return { provider, model: modelId };
 }
 
@@ -76,14 +70,11 @@ function resolveProviderOptions(
   if (context.providerSource) {
     return { providerSource: context.providerSource };
   }
-  if (context.registries?.providers) {
-    return { provider: context.registries.providers.resolve(model) };
-  }
   return undefined;
 }
 
 function resolveTools(names: readonly string[] | undefined, context: AgentDefinitionResolutionContext): ToolRegistry | undefined {
-  const source = context.tools ?? context.registries?.tools;
+  const source = context.tools;
   if (!names) {
     if (!context.activateAllCapabilities) return undefined;
     if (!source) return undefined;
@@ -122,8 +113,7 @@ function resolveSkills(
   tools: ToolRegistry | undefined,
   context: AgentDefinitionResolutionContext,
 ): readonly Skill[] | undefined {
-  const registry =
-    context.skillsRegistry ?? (context.registries?.skills ? createSkillRegistry(context.registries.skills.list()) : undefined);
+  const registry = context.skillsRegistry;
   if (!names && !context.activateAllCapabilities) return undefined;
   if (!registry) {
     if (!names) return undefined;
@@ -132,16 +122,6 @@ function resolveSkills(
   const toolList = tools?.list() ?? [];
   const activeNames = names ?? registry.list().map((skill) => skill.name);
   return resolveActiveSkills({ registry, names: activeNames, tools: toolList });
-}
-
-function resolveContextProviders(
-  agentName: string,
-  names: readonly string[],
-  context: AgentDefinitionResolutionContext,
-): readonly ContextProvider[] {
-  const registry = context.registries?.contextProviders;
-  if (!registry) throw new Error(`Agent "${agentName}" declares context providers but no registry is in scope`);
-  return names.map((name) => registry.resolve(name));
 }
 
 function applyConfigOverrides(config: AgentConfig, overrides: Partial<AgentConfig> | undefined): AgentConfig {

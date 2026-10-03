@@ -75,7 +75,7 @@ export interface ExecutionStep {
 
 /**
  * One entry per `turn` step: turn number, timing, provider attempts, cache hit rate, budget snapshot,
- * and the stop reason of the last provider attempt (`provider_turn_finished` metadata).
+ * and the stop reason of the last provider attempt (`turn.completed` metadata).
  */
 export interface TimelineTurn {
   readonly turn: number;

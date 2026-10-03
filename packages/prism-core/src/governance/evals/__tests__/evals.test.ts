@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
-  type AgentRunResult,
+  type RunResult,
   createAgent,
   createMemoryRunFeedbackStore,
   createMockProvider,
@@ -28,8 +28,8 @@ import {
   serializeEvaluationReport,
 } from "../index.js";
 
-function mockAgent(text: string) {
-  return createAgent({
+async function mockAgent(text: string) {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider([
       providerTextDelta(text),
@@ -39,13 +39,14 @@ function mockAgent(text: string) {
   });
 }
 
-function sampleResult(overrides: Partial<AgentRunResult> = {}): AgentRunResult {
+function sampleResult(overrides: Partial<RunResult> = {}): RunResult {
   return {
     sessionId: "session_1",
     runId: "run_1",
-    status: "succeeded",
+    status: "completed",
     text: "hello [citation]",
     content: [{ type: "text", text: "hello [citation]" }],
+    messages: [],
     usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
     ...overrides,
   };
@@ -227,9 +228,9 @@ describe("bounded trace, judge, comparison, and thresholds", () => {
             id: "e1",
             sessionId: "session_1",
             runId: "run_1",
-            type: "agent_started",
+            type: "run.started",
             timestamp: run.startedAt,
-            event: { type: "agent_started", agentId: "a", runId: "run_1", sessionId: "session_1", timestamp: run.startedAt },
+            event: { type: "run.started", agentId: "a", runId: "run_1", sessionId: "session_1", timestamp: run.startedAt },
             redacted: true,
             ...ownership,
           },
@@ -289,7 +290,7 @@ describe("bounded trace, judge, comparison, and thresholds", () => {
     assert.doesNotThrow(() => assertEvaluationThreshold(report, { maximumFailures: 0, minimumCandidateWins: { alpha: 1 } }));
 
     const experiment = await runExperiment({
-      agent: mockAgent("ok"),
+      agent: await mockAgent("ok"),
       dataset,
       scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
     });
@@ -307,7 +308,7 @@ describe("runExperiment / scoreRunLive", () => {
   it("bounds concurrency, preserves item order, and aggregates scores", async () => {
     let active = 0;
     let maxActive = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: createMockProvider([providerTextDelta("answer"), providerDone()]),
     });
@@ -353,8 +354,8 @@ describe("runExperiment / scoreRunLive", () => {
   });
 
   it("live scoring does not mutate the agent result and isolates failures", async () => {
-    const agent = mockAgent("ok");
-    const session = agent.createSession();
+    const agent = await mockAgent("ok");
+    const session = await agent.session();
     const result = await session.run("hi");
     const snapshot = structuredClone(result);
 
@@ -381,9 +382,9 @@ describe("runExperiment / scoreRunLive", () => {
 
   it("rejects invalid concurrency", async () => {
     await assert.rejects(
-      () =>
+      async () =>
         runExperiment({
-          agent: mockAgent("x"),
+          agent: await mockAgent("x"),
           dataset: defineDataset({ id: "d", items: [{ id: "1", input: "x" }] }),
           scorers: [defineScorer({ id: "s", score: () => ({ score: 1 }) })],
           concurrency: 0,

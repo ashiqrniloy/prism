@@ -1,7 +1,7 @@
 // Offline pre-publish gates: API surface diff, tarball allow/deny, version ranges.
 // Stdlib-only. Used by `release.mjs gate` and wired into `bun run sdk:ready`.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
 export const BASELINE_DIR = "scripts/compat-baseline";
@@ -127,6 +127,45 @@ export function extractDeclaredSurface(distDir) {
   return surface;
 }
 
+function sourceEntry(manifest) {
+  const exp = manifest.exports?.["."];
+  const target = typeof exp === "string" ? exp : exp?.default;
+  return typeof target === "string" && target.endsWith(".ts") ? target : undefined;
+}
+
+/** `dist/` when the package builds, otherwise a declaration emit for a TypeScript-source export. */
+function declarationDir(root, pkg) {
+  const distDir = join(root, pkg.path, "dist");
+  if (existsSync(distDir)) return distDir;
+  const entry = sourceEntry(pkg.manifest);
+  if (!entry) return undefined;
+  const pkgDir = join(root, pkg.path);
+  const out = join(pkgDir, ".types");
+  const configPath = join(pkgDir, ".types-tsconfig.json");
+  rmSync(out, { recursive: true, force: true });
+  writeFileSync(
+    configPath,
+    JSON.stringify({
+      compilerOptions: {
+        declaration: true,
+        emitDeclarationOnly: true,
+        outDir: out,
+        rootDir: "src",
+        module: "nodenext",
+        moduleResolution: "nodenext",
+        skipLibCheck: true,
+        types: ["node"],
+      },
+      include: ["src"],
+      exclude: ["src/**/__tests__"],
+    }),
+  );
+  const result = spawnSync("bun", ["x", "tsc", "-p", configPath], { cwd: pkgDir, encoding: "utf8" });
+  rmSync(configPath, { force: true });
+  if (result.status !== 0) throw new Error(`compat: ${pkg.manifest.name} declaration emit failed:\n${result.stdout}\n${result.stderr}`);
+  return out;
+}
+
 export function serializeSurface(surface) {
   return `${[...surface.entries()]
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
@@ -206,8 +245,8 @@ export function runGates({ release, version, independent = false, allowBreak = f
   // 2. API surface diff against checked-in baselines.
   const breaks = [];
   for (const pkg of release.packages) {
-    const distDir = join(release.root, pkg.path, "dist");
-    if (!existsSync(distDir)) {
+    const distDir = declarationDir(release.root, pkg);
+    if (!distDir) {
       // Manifest-only profiles ship no code; nothing to diff.
       if (!pkg.manifest.types && !pkg.manifest.main && !pkg.manifest.exports) continue;
       errors.push(`compat: ${pkg.manifest.name} has no dist/ — run bun run build first`);

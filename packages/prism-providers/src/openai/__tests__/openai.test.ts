@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, Message, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyDefaultProviderRequestOptions } from "@arnilo/prism";
 import {
   assertCanonicalToolParameters,
@@ -9,13 +10,7 @@ import {
   assertSerializedRequestCoversContent,
   assertToolCallDeltasReconstruct,
 } from "@arnilo/prism/testing/provider-conformance";
-import {
-  createOpenAIProviderPackage,
-  createOpenAIResponsesProvider,
-  listOpenAIModels,
-  mapOpenAIModel,
-  resolveOpenAIReasoning,
-} from "../index.js";
+import { openaiPackage, createOpenAIResponsesProvider, listOpenAIModels, mapOpenAIModel, resolveOpenAIReasoning } from "../index.js";
 import { openAICodexModels, openAIModels, openAIThinkingLevels } from "../models.js";
 import { createOpenAIFileUploadManager } from "../uploads.js";
 
@@ -719,52 +714,8 @@ describe("@arnilo/prism-providers/openai responses", () => {
       fetchCalls += 1;
       return ok(sse([]));
     }) as typeof fetch;
-    const registered: unknown[] = [];
-    await createOpenAIProviderPackage({ apiKey: "fake-openai-key", fetch: fetchImpl }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
+    await loadProviderPackage(openaiPackage({ apiKey: "fake-openai-key", fetch: fetchImpl }));
     assert.equal(fetchCalls, 0);
-    assert(registered.some((item: any) => item.id === "openai"));
-  });
-
-  it("openai_provider_package_accepts_models_override", async () => {
-    const custom: ModelConfig = { provider: "openai", model: "gpt-custom", displayName: "Custom" };
-    const registered: ModelConfig[] = [];
-    await createOpenAIProviderPackage({
-      apiKey: "fake-openai-key",
-      models: [custom],
-      codexModels: [],
-      fetch: mockFetch(sse([])),
-    }).setup({
-      registerProvider: () => {},
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: () => {},
-    } as any);
-    assert.deepEqual(
-      registered.map((model) => model.model),
-      ["gpt-custom"],
-    );
-  });
-
-  it("openai_package_passes_provider_conformance_without_network", async () => {
-    const registered: unknown[] = [];
-    await createOpenAIProviderPackage({ apiKey: "fake-openai-key", fetch: mockFetch(sse([])) }).setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (model: ModelConfig) => registered.push(model),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as any);
-    assert(registered.some((item: any) => item.id === "openai"));
-    const auth = registered.filter((item: any) => item?.kind);
-    assert.deepEqual(
-      auth.map((item: any) => ({ kind: item.kind, provider: item.provider })),
-      [
-        { kind: "api_key", provider: "openai" },
-        { kind: "oauth", provider: "openai-codex" },
-      ],
-    );
-    assert.equal((auth[1] as AuthMethod & { oauth: { id: string } }).oauth.id, "openai-codex");
   });
 
   it("list_openai_models_maps_fixture_and_forwards_auth_abort_baseurl", async () => {

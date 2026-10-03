@@ -208,8 +208,8 @@ describe("Session Resume: titles, history, and CLI/TUI flows", () => {
       // First run through the agent with a model override so the session stores a model_change entry.
       const store = createSqlitePersistence({ filename: dbPath });
       const definition1 = await assembleAppAgent(config, createMockProvider([providerTextDelta("first answer"), providerDone()]));
-      const session1 = definition1.createSession({ id: "resume-e2e", metadata: { workspaceRoot: repo } });
-      await session1.run("resume me", { model: { provider: "mock", model: "other" } });
+      const session1 = definition1.session({ id: "resume-e2e", metadata: { workspaceRoot: repo }, create: true });
+      await (await session1).run("resume me", { model: { provider: "mock", model: "other" } });
       await ensureDurableSessionRecord(store, "resume-e2e", repo);
       await definition1.dispose();
       const beforeCount = (await store.list("resume-e2e")).length;

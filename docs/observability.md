@@ -237,7 +237,7 @@ Cardinality and correctness guarantees:
 - `onTraceReference` receives `{ runId, traceId }` when a run starts. `traceId(runId)` keeps only the newest 1,024 mappings by default (`maxTraceReferences`, hard cap 10,000); durable linkage remains host-owned.
 - Run `error`, suspension, denial, and detach close every attributable span. Repeated terminal events are idempotent and cannot end a span twice.
 - Disabled instrumentation performs no per-delta span work (`enabled: false` or missing tracer/meter).
-- `createProviderCapture()` (plan 062) is the opt-in request/response capture middleware: register `capture.middleware()` on the existing `provider_request` hook and feed `provider_turn_finished` events from the session subscriber loop into `capture.observeEvent()`. Entries land in a capped FIFO ring buffer (`policy.maxEvents`, default 100) exposed via `capture.events()`.
+- `createProviderCapture()` (plan 062) is the opt-in request/response capture middleware: register `capture.transform()` as a `model.request` hook and feed `provider_turn_finished` events from the session subscriber loop into `capture.observeEvent()`. Entries land in a capped FIFO ring buffer (`policy.maxEvents`, default 100) exposed via `capture.events()`.
 
 ### Provider request/response capture middleware
 
@@ -249,7 +249,7 @@ const capture = createProviderCapture({
   policy: { redact: "secrets", maxEvents: 100 },
 });
 const middleware = createMiddlewareRegistry({ secrets });
-middleware.use("provider_request", capture.middleware()); // request entries, pass-through
+hooks.on("model.request", capture.transform()); // request entries, pass-through
 
 for await (const event of session.subscribe()) {
   if (event.type === "provider_turn_finished") capture.observeEvent(event); // response entries

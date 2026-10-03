@@ -176,11 +176,11 @@ export interface PrismCodeConfigOptionsConfig {
   readonly options: readonly PrismCodeConfigOption[];
 }
 
-export type PrismCodeCompactionStrategyKind = "coding" | "llm" | "om" | "observational-memory";
+export type PrismCodeCompactionKind = "coding" | "llm" | "om" | "observational-memory";
 export type PrismCodeCompactionTriggerKind = "input_ratio" | "threshold_tokens" | "threshold_entries" | "each_turn";
 
 export interface PrismCodeCompactionOptionsConfig {
-  readonly strategy?: PrismCodeCompactionStrategyKind;
+  readonly strategy?: PrismCodeCompactionKind;
   readonly trigger?: PrismCodeCompactionTriggerKind;
   readonly ratio?: number;
   readonly tokens?: number;
@@ -1120,7 +1120,7 @@ function validateConfigInternal(
       compaction = false;
     } else if (isRecord(raw.compaction)) {
       rejectUnknown(raw.compaction, KNOWN_COMPACTION_KEYS, `${source}.compaction`);
-      let strategy: PrismCodeCompactionStrategyKind | undefined;
+      let strategy: PrismCodeCompactionKind | undefined;
       if (raw.compaction.strategy !== undefined) {
         const strat = requireString(raw.compaction.strategy, `${source}.compaction`, "strategy");
         if (strat !== "coding" && strat !== "llm" && strat !== "om" && strat !== "observational-memory") {

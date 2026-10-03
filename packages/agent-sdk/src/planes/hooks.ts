@@ -1,15 +1,7 @@
 import { readFile } from "node:fs/promises";
-import {
-  activateKernel,
-  createExtensionKernel,
-  type Guardrails,
-  type InstructionInjector,
-  type MiddlewareRegistry,
-  type StopHook,
-  type TrustPolicy,
-} from "@arnilo/prism";
+import type { PackageInstance, TrustPolicy } from "@arnilo/prism";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
-import { createHooksExtension, parseHooksConfig } from "@arnilo/prism-hooks";
+import { hooksJson } from "@arnilo/prism-hooks-json";
 import { AgentSdkConfigError } from "../errors.js";
 
 export interface HooksPlaneConfig {
@@ -24,16 +16,14 @@ export interface AssembleHooksOptions {
 }
 
 export interface AssembledHooksPlane {
-  readonly guardrails?: Guardrails;
-  readonly middleware?: MiddlewareRegistry;
-  readonly instructionInjectors?: readonly InstructionInjector[];
-  readonly stopHooks?: readonly StopHook[];
+  /** Loaded hooks.json package. Pass it in `createAgent({ packages })`. */
+  readonly package?: PackageInstance;
 }
 
 /**
  * Assemble hooks plane: validates the hooks file path against the trust policy,
- * compiles hooks.json via `@arnilo/prism-hooks`, loads it into an extension kernel,
- * and activates the resulting middleware, guardrails, stop hooks, and instruction injectors.
+ * then returns the `@arnilo/prism-hooks-json` package. The host lists it in `packages`.
+ * `SessionStart` maps to `session.opened`. An unlisted command fails when the agent loads.
  */
 export async function assembleHooksPlane(options: AssembleHooksOptions = {}): Promise<AssembledHooksPlane> {
   const { hooks, workspaceRoot, trust } = options;
@@ -61,16 +51,15 @@ export async function assembleHooksPlane(options: AssembleHooksOptions = {}): Pr
     throw new AgentSdkConfigError(`hooks: failed to read "${target}": ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  const parsed = parseHooksConfig(content);
-  const hooksExt = createHooksExtension(parsed);
-  const kernel = createExtensionKernel();
-  await kernel.load([hooksExt]);
-  const activated = activateKernel(kernel);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch (err) {
+    throw new AgentSdkConfigError(`hooks: "${target}" is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new AgentSdkConfigError(`hooks: "${target}" must be a JSON object`);
+  }
 
-  return {
-    guardrails: hooksExt.guardrails,
-    middleware: activated.middleware,
-    instructionInjectors: activated.instructionInjectors,
-    stopHooks: activated.stopHooks,
-  };
+  return { package: hooksJson({ config: parsed as never }) };
 }

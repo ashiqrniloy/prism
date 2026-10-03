@@ -1,6 +1,6 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-09-29T18:14:35.934Z`
+Generated: `2026-10-02T11:40:38.743Z`
 Repository root version: `0.12.1`
 
 ## 1. Executive Summary & Counts
@@ -40,6 +40,7 @@ Repository root version: `0.12.1`
   - `@arnilo/prism/./providers/openai`
   - `@arnilo/prism/./providers/schema`
   - `@arnilo/prism/./providers/media`
+  - `@arnilo/prism/./testing`
   - `@arnilo/prism/./testing/provider-conformance`
   - `@arnilo/prism/./testing/agent-event-source-conformance`
   - `@arnilo/prism/./testing/state-concurrency-conformance`
@@ -47,7 +48,6 @@ Repository root version: `0.12.1`
   - `@arnilo/prism/./testing/compaction-conformance`
   - `@arnilo/prism/./testing/tool-conformance`
   - `@arnilo/prism/./testing/tool-effect-store-conformance`
-  - `@arnilo/prism/./testing/extension-conformance`
   - `@arnilo/prism/./testing/persistence-schema`
   - `@arnilo/prism/./testing/run-ledger-conformance`
   - `@arnilo/prism/./testing/feedback`
@@ -56,7 +56,7 @@ Repository root version: `0.12.1`
   - `@arnilo/prism/./node/trust`
   - `@arnilo/prism/./node/session-store-jsonl`
   - `@arnilo/prism/./node/contribution-discovery`
-  - `@arnilo/prism/./node/instruction-injectors`
+  - `@arnilo/prism/./node/instruction-sources`
   - `@arnilo/prism/./node/system-prompts`
   - `@arnilo/prism/./node/agent-definitions`
 - **Retained Executables (bin):** `prism`
@@ -273,7 +273,7 @@ Repository root version: `0.12.1`
 | `@arnilo/prism-browser` | web | `0.3.3` | `@arnilo/prism-web-tools/browser` | 194 symbols | none |
 | `@arnilo/prism-obscura` | web | `0.3.3` | `@arnilo/prism-web-tools/obscura` | 40 symbols | none |
 | `@arnilo/prism-rag` | memory | `0.3.3` | `@arnilo/prism-memory/rag` | 120 symbols | none |
-| `@arnilo/prism-compaction-llm` | memory | `0.3.3` | `@arnilo/prism-memory/compaction/llm` | 32 symbols | none |
+| `@arnilo/prism-compaction-llm` | memory | `0.3.3` | `@arnilo/prism-memory/compaction/llm` | 31 symbols | none |
 | `@arnilo/prism-compaction-observational-memory` | memory | `0.3.3` | `@arnilo/prism-memory/compaction/observational-memory` | 145 symbols | none |
 | `@arnilo/prism-graft` | memory | `0.3.3` | `@arnilo/prism-memory/graft` | 55 symbols | none |
 | `@arnilo/prism-wiki` | memory | `0.3.3` | `@arnilo/prism-memory/wiki` | 60 symbols | none |
@@ -569,17 +569,17 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
-| `@arnilo/prism` | 1053 | 1477 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 1234 | 1581 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-mcp` | 132 | 139 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
-| `@arnilo/prism-providers` | 550 | 588 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
-| `@arnilo/prism-memory` | 784 | 862 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
+| `@arnilo/prism-providers` | 552 | 590 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
+| `@arnilo/prism-memory` | 785 | 864 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
 | `@arnilo/prism-work` | 352 | 442 | `scripts/compat-baseline/arnilo__prism-work.txt` |
-| `@arnilo/prism-core` | 1333 | 1462 | `scripts/compat-baseline/arnilo__prism-core.txt` |
+| `@arnilo/prism-core` | 1333 | 1463 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-channels` | 91 | 106 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
 | `@arnilo/prism-coding-tools` | 919 | 969 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
 | `@arnilo/prism-ag-ui` | 299 | 313 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
 | `@arnilo/prism-web-tools` | 294 | 304 | `scripts/compat-baseline/arnilo__prism-web-tools.txt` |
 | `@arnilo/prism-acp-agent` | 13 | 20 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
-| `@arnilo/prism-hooks` | 33 | 34 | `scripts/compat-baseline/arnilo__prism-hooks.txt` |
-| `@arnilo/prism-agent-sdk` | 47 | 50 | `scripts/compat-baseline/arnilo__prism-agent-sdk.txt` |
-| `@arnilo/prism-code` | 336 | 371 | `scripts/compat-baseline/arnilo__prism-code.txt` |
+| `@arnilo/prism-hooks-json` | 0 | 35 | `scripts/compat-baseline/arnilo__prism-hooks-json.txt` |
+| `@arnilo/prism-agent-sdk` | 60 | 54 | `scripts/compat-baseline/arnilo__prism-agent-sdk.txt` |
+| `@arnilo/prism-code` | 337 | 373 | `scripts/compat-baseline/arnilo__prism-code.txt` |

@@ -497,7 +497,8 @@ describe("Phase 11 conformance — composed enterprise journey (Task 6)", () => 
       registry,
       context: { sessionId: "s-1", runId: "r-1", toolCallId: "call-1", signal: new AbortController().signal, metadata: {} },
       effectStore,
-      identity,
+      principal: identity.principal,
+      ownership,
       redactor,
     });
     assert.equal(apiRequests.length, 1);

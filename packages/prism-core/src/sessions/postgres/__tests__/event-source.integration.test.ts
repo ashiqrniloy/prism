@@ -17,7 +17,7 @@ function schema(): string {
 
 function event(
   id: string,
-  type: "agent_started" | "turn_started" | "agent_finished",
+  type: "run.started" | "turn.started" | "run.completed",
   sessionId: string,
   runId: string,
   timestamp = "2026-01-01T00:00:00.000Z",
@@ -29,7 +29,12 @@ function event(
     runId,
     type,
     timestamp,
-    event: type === "turn_started" ? { type, sessionId, runId, turn: 1 } : { type, sessionId, runId },
+    event:
+      type === "turn.started"
+        ? { type, sessionId, runId, turn: 1, metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } } }
+        : type === "run.completed"
+          ? { type, sessionId, runId, status: "completed" }
+          : { type, sessionId, runId },
     redacted: true,
   };
 }
@@ -75,7 +80,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const input = { ownership, sessionId: "session-concurrent", runId: "run-concurrent" };
     const appended = await Promise.all(
       Array.from({ length: 16 }, (_, index) =>
-        (index % 2 === 0 ? first : second).events.append(event(`event-${index}`, "turn_started", input.sessionId, input.runId)),
+        (index % 2 === 0 ? first : second).events.append(event(`event-${index}`, "turn.started", input.sessionId, input.runId)),
       ),
     );
     assert.deepEqual(
@@ -97,8 +102,8 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const valuePool = pool();
     const first = await persistence(valuePool, valueSchema);
     const input = { ownership, sessionId: "session-backfill", runId: "run-backfill" };
-    await first.events.append(event("event-a", "agent_started", input.sessionId, input.runId));
-    await first.events.append(event("event-b", "turn_started", input.sessionId, input.runId, "2026-01-01T00:00:01.000Z"));
+    await first.events.append(event("event-a", "run.started", input.sessionId, input.runId));
+    await first.events.append(event("event-b", "turn.started", input.sessionId, input.runId, "2026-01-01T00:00:01.000Z"));
     await first.close();
 
     const migrations = qualifyTable(valueSchema, "prism_migrations");
@@ -119,7 +124,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
 
     const reopened = await persistence(valuePool, valueSchema);
     assert.equal(
-      (await reopened.events.append(event("event-c", "turn_started", input.sessionId, input.runId, "2026-01-01T00:00:02.000Z"))).sequence,
+      (await reopened.events.append(event("event-c", "turn.started", input.sessionId, input.runId, "2026-01-01T00:00:02.000Z"))).sequence,
       3,
     );
     await reopened.close();
@@ -130,7 +135,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const valuePool = pool();
     const first = await persistence(valuePool, valueSchema);
     const input = { ownership, sessionId: "session-duplicate", runId: "run-duplicate" };
-    await first.events.append(event("event-a", "agent_started", input.sessionId, input.runId));
+    await first.events.append(event("event-a", "run.started", input.sessionId, input.runId));
     await first.close();
 
     const migrations = qualifyTable(valueSchema, "prism_migrations");
@@ -163,7 +168,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
   it("purges event counters before deleting a retained session", async () => {
     const store = await persistence(pool(), schema());
     const input = { ownership, sessionId: "session-purge", runId: "run-purge" };
-    await store.events.append(event("event-purge", "agent_started", input.sessionId, input.runId));
+    await store.events.append(event("event-purge", "run.started", input.sessionId, input.runId));
     assert.deepEqual(
       await store.lifecycle.applyRetention({
         ...ownership,
@@ -186,7 +191,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const input = { ownership, sessionId: "session-listen", runId: "run-listen" };
     const iterator = subscriber.events.subscribe(input)[Symbol.asyncIterator]();
     const pending = iterator.next();
-    await producer.events.append(event("event-listen", "agent_started", input.sessionId, input.runId));
+    await producer.events.append(event("event-listen", "run.started", input.sessionId, input.runId));
     const received = await Promise.race([
       pending,
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("LISTEN wake timed out")), 2000)),
@@ -202,7 +207,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const database = pool();
     const store = await persistence(database, valueSchema);
     const input = { ownership, sessionId: "session-plan", runId: "run-plan" };
-    await store.events.append(event("event-plan", "agent_started", input.sessionId, input.runId));
+    await store.events.append(event("event-plan", "run.started", input.sessionId, input.runId));
     const events = qualifyTable(valueSchema, "prism_agent_events");
     const sessions = qualifyTable(valueSchema, "prism_sessions");
     await database.query(
@@ -212,7 +217,7 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     );
     await database.query(
       `INSERT INTO ${events} (id, session_id, run_id, sequence, type, timestamp, event, redacted, tenant_id, account_id, user_id)
-       SELECT 'noise-event-' || value, 'noise-session-' || value, 'noise-run-' || value, 1, 'turn_started',
+       SELECT 'noise-event-' || value, 'noise-session-' || value, 'noise-run-' || value, 1, 'turn.started',
               '2026-01-01T00:00:00.000Z', '{}', TRUE, $1, $2, $3
        FROM generate_series(1, 1000) AS value`,
       [ownership.tenantId, ownership.accountId, ownership.userId],

@@ -187,8 +187,8 @@ describe("prism providers add", () => {
       const models = readFileSync(join(target, "src/models.ts"), "utf8");
       assert.match(models, /model: "acme-large"/);
       const index = readFileSync(join(target, "src/index.ts"), "utf8");
-      assert.match(index, /api\.registerAuthMethod\(\{ kind: "api_key", provider: providerId/);
-      assert.match(index, /createAcmeProviderPackage/);
+      assert.match(index, /prism\.providers\.register\(createAcmeProvider/);
+      assert.match(index, /acmePackage/);
       const cache = readFileSync(join(target, "src/cache.ts"), "utf8");
       assert.match(cache, /ACME_PROMPT_CACHE_KEY_MAX_LENGTH/);
       assert.ok(readFileSync(join(target, "docs/providers/acme.md"), "utf8").includes("# acme provider"));

@@ -97,7 +97,7 @@ describe("session store helpers", () => {
   it("memory session store round trips all entry kinds", async () => {
     const entries = [
       entry("message"),
-      createSessionEntry({ id: "event", sessionId: "s1", kind: "event", event: { type: "agent_started", sessionId: "s1", runId: "r1" } }),
+      createSessionEntry({ id: "event", sessionId: "s1", kind: "event", event: { type: "run.started", sessionId: "s1", runId: "r1" } }),
       createSessionEntry({ id: "summary", sessionId: "s1", kind: "summary", summary: "recap" }),
       createSessionEntry({ id: "metadata", sessionId: "s1", kind: "metadata", data: { ok: true } }),
       createSessionEntry({ id: "model", sessionId: "s1", kind: "model_change", model: { provider: "mock", model: "next" } }),
@@ -526,11 +526,13 @@ describe("memory readBranchPath", () => {
       searchSessions: store.searchSessions?.bind(store),
       readBranchPath: readBranchPath.bind(store),
     };
-    const session = createAgent({
-      model: { provider: "mock", model: "m" },
-      provider: createMockProvider(),
-      store: wrapped,
-    }).createSession({ id: "s1", leafId: parent });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider: createMockProvider(),
+        slots: { store: wrapped },
+      })
+    ).session({ id: "s1", leafId: parent, create: true });
     const slot = globalThis as { structuredClone: typeof structuredClone };
     const orig = slot.structuredClone;
     let clones = 0;

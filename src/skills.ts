@@ -28,6 +28,9 @@ export function createSkillRegistry(skills: readonly Skill[] = [], options: Skil
     list() {
       return [...byName.values()];
     },
+    unregister(name) {
+      return byName.delete(name);
+    },
   };
 
   for (const skill of skills) registry.register(skill);
@@ -38,8 +41,22 @@ export function resolveActiveSkills(options: ResolveActiveSkillsOptions): readon
   const toolNames = new Set((options.tools ?? []).map((tool) => tool.name));
   return (options.names ?? []).map((name) => {
     const skill = options.registry.resolve(name);
-    const missingTool = skill.toolNames?.find((toolName) => !toolNames.has(toolName));
-    if (missingTool) throw new Error(`Skill ${skill.name} requires inactive tool: ${missingTool}`);
+    assertSkillTools(skill, toolNames);
     return skill;
   });
+}
+
+/**
+ * Every configured skill is active (roadmap §2.3 has no per-run skill narrowing): validate each
+ * skill's `toolNames` requirement against the run's tools without rebuilding a registry.
+ */
+export function resolveAllActiveSkills(skills: readonly Skill[], tools: readonly ToolDefinition[]): readonly Skill[] {
+  const toolNames = new Set(tools.map((tool) => tool.name));
+  for (const skill of skills) assertSkillTools(skill, toolNames);
+  return skills;
+}
+
+function assertSkillTools(skill: Skill, toolNames: ReadonlySet<string>): void {
+  const missingTool = skill.toolNames?.find((toolName) => !toolNames.has(toolName));
+  if (missingTool) throw new Error(`Skill ${skill.name} requires inactive tool: ${missingTool}`);
 }

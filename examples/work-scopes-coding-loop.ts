@@ -47,8 +47,8 @@ function observationProvider(store: SessionStore, sessionId: string): AIProvider
 // runWorkflow remains unaware.
 export async function demo() {
   const store = createMemorySessionStore();
-  const agent = createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), store });
-  const baseSession = agent.createSession({ id: "work-scopes" });
+  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const baseSession = await agent.session({ id: "work-scopes", create: true });
   const memory = createObservationalMemory({
     observation: { provider: observationProvider(store, baseSession.id), model: workerModel },
     overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 1_000 }, agentMaxTurns: 1 },

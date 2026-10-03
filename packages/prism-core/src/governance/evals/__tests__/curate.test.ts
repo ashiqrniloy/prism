@@ -18,11 +18,11 @@ function userEvent(id: string, runId: string, sessionId: string, own: OwnershipS
     id,
     sessionId,
     runId,
-    type: "message_started",
+    type: "message.completed",
     timestamp: "2026-01-01T00:00:00Z",
     redacted: true,
     ...own,
-    event: { type: "message_started", sessionId, runId, message: { role: "user", content: [{ type: "text", text: "question" }] } },
+    event: { type: "message.completed", sessionId, runId, message: { role: "user", content: [{ type: "text", text: "question" }] } },
   };
 }
 
@@ -31,11 +31,11 @@ function assistantEvent(id: string, runId: string, sessionId: string, text: stri
     id,
     sessionId,
     runId,
-    type: "message_finished",
+    type: "message.completed",
     timestamp: "2026-01-01T00:00:01Z",
     redacted: true,
     ...own,
-    event: { type: "message_finished", sessionId, runId, message: { role: "assistant", content: [{ type: "text", text }] } },
+    event: { type: "message.completed", sessionId, runId, message: { role: "assistant", content: [{ type: "text", text }] } },
   };
 }
 

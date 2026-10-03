@@ -23,8 +23,7 @@ export {
   unscannedEntries,
 } from "./coverage-helpers.js";
 export { createObservationalMemoryDropHandler } from "./drop-invalidated.js";
-export type { ObservationalMemoryExtensionOptions } from "./extension.js";
-export { createObservationalMemoryExtension } from "./extension.js";
+export { observationalMemory, type ObservationalMemoryExtensionOptions } from "./extension.js";
 export { createMemoryId, isMemoryId } from "./ids.js";
 export type { ObservationalMemoryLedger } from "./ledger.js";
 export { activeObservations, foldObservationalMemoryLedger, mergeObservationalMemoryLedgers } from "./ledger.js";
@@ -169,8 +168,8 @@ export type {
   SharedWorkScopeConfigEntry,
 } from "./shared-scopes.js";
 export { mergeSharedScopes, resolveSharedScopes } from "./shared-scopes.js";
-export type { ObservationalMemoryCompactionStrategyOptions } from "./strategy.js";
-export { createObservationalMemoryCompactionStrategy } from "./strategy.js";
+export type { ObservationalMemoryCompactorOptions } from "./strategy.js";
+export { createObservationalMemoryCompactor } from "./strategy.js";
 export { estimateEntryTokens, estimateMessageTokens, estimateTextTokens } from "./tokens.js";
 export type { GetMemoryEntries, RecallMemoryToolOptions } from "./tool.js";
 export { createRecallMemoryTool } from "./tool.js";

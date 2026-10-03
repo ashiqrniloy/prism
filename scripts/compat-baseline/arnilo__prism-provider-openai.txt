@@ -4,7 +4,7 @@ computeS256Challenge	export declare function computeS256Challenge(verifier: stri
 createOpenAICodexOAuthProvider	export declare function createOpenAICodexOAuthProvider(options?: OpenAICodexOAuthOptions): OAuthProvider
 createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): AIProvider
 createOpenAIFileUploadManager	export declare function createOpenAIFileUploadManager(options?: OpenAIFileUploadManagerOptions):
-createOpenAIProviderPackage	export declare function createOpenAIProviderPackage(options?: OpenAIProviderPackageOptions): ProviderPackage
+openaiPackage	export declare function openaiPackage(options?: OpenAIProviderPackageOptions): PackageInstance
 createOpenAIRealtimeSession	export declare function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOptions): RealtimeSession
 createOpenAIResponsesProvider	export declare function createOpenAIResponsesProvider(options?: OpenAIResponsesProviderOptions): AIProvider
 createPkceVerifier	export declare function createPkceVerifier(bytes?: number): string

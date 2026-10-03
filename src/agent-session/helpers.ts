@@ -1,11 +1,10 @@
 /** helpers (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 
-import { singleShotLoop } from "../agent-loops.js";
+import { defaultLoop } from "../loop/index.js";
 import type {
   CompactionOptions,
   ContentBlock,
   ErrorInfo,
-  Guardrails,
   Message,
   ProviderEvent,
   RetryOptions,
@@ -113,25 +112,13 @@ export function mergeCompaction(
 }
 
 /**
- * Durable-run gate: built-in option forms and the single-shot singleton are durable via the
- * pending-call mechanism; a custom strategy must declare both snapshot and restore hooks.
+ * Durable-run gate: the built-in default loop is durable via the pending-call mechanism; a custom
+ * strategy must declare both snapshot and restore hooks.
  */
-export function isDurableLoop(loop: import("../contracts.js").AgentLoopStrategy | import("../contracts.js").AgentLoopOptions): boolean {
+export function isDurableLoop(loop: import("../loop/index.js").LoopStrategy): boolean {
   if (typeof loop !== "object" || loop === null) return true;
-  if ("strategy" in loop) return true;
-  if (loop === singleShotLoop) return true;
+  if (loop === defaultLoop) return true;
   return typeof loop.snapshot === "function" && typeof loop.restore === "function";
-}
-
-export function mergeGuardrails(agent: Guardrails | undefined, run: Guardrails | undefined): Guardrails | undefined {
-  if (!agent && !run) return undefined;
-  return {
-    input: [...(agent?.input ?? []), ...(run?.input ?? [])],
-    output: [...(agent?.output ?? []), ...(run?.output ?? [])],
-    toolInput: [...(agent?.toolInput ?? []), ...(run?.toolInput ?? [])],
-    toolOutput: [...(agent?.toolOutput ?? []), ...(run?.toolOutput ?? [])],
-    maxConcurrency: run?.maxConcurrency ?? agent?.maxConcurrency,
-  };
 }
 
 export function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[] {

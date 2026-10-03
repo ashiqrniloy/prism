@@ -1,6 +1,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import {
+  askEveryTool,
   AgentDecisionError,
   createAgent,
   createMemoryCheckpointStore,
@@ -556,10 +557,11 @@ test("durable gating surfaces ask_user_decision as a shared elicitation decision
     },
   });
   let turn = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
+    hooks: askEveryTool(),
     id: "ask-demo",
     model: { provider: "mock", model: "demo" },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider: {
       id: "mock",
       async *generate() {
@@ -573,14 +575,14 @@ test("durable gating surfaces ask_user_decision as a shared elicitation decision
         yield providerDone();
       },
     },
-    tools: [tool],
+    tools: { add: [tool] },
   });
-  const runState = { checkpoints, definitionRevision: "1", interruptBeforeTool: true as const };
-  const first = await agent.createSession({ id: "ask-d1" }).run("go", { runState });
+  const runState = { checkpoints, definitionRevision: "1" };
+  const first = await (await agent.session({ id: "ask-d1", create: true })).run("go", { runState });
 
   assert.equal(first.status, "suspended");
-  assert.equal(first.interruption?.kind, "elicitation");
-  const pending = first.interruption?.pendingDecisions?.[0];
+  assert.equal(first.runState?.interruption?.kind, "elicitation");
+  const pending = first.pending?.[0];
   assert.equal(pending?.kind, "elicitation");
   assert.equal(pending?.reason, validArgs.question);
   // Choice/pros-cons UX payload preserved on the schema's extension key.

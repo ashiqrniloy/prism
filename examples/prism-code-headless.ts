@@ -39,7 +39,7 @@ export async function demo(): Promise<{
   });
 
   const app = await assembleAppAgent(config, provider);
-  const toolCount = (app.agent.config.tools as ToolRegistry).list().length;
+  const toolCount = app.agent.tools.length;
   const webMode = (app as unknown as { webResolution?: { mode?: string } }).webResolution?.mode ?? "off";
   await app.dispose();
 

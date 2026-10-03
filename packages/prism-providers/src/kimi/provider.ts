@@ -134,7 +134,7 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
     if (data === "[DONE]") break;
     const event = JSON.parse(data) as KimiEvent;
     if (event.type === "message_stop") sawMessageStop = true;
-    if (event.type === "message_delta" && event.delta?.stop_reason) stopReason = event.delta.stop_reason;
+    if (event.type === "message.delta" && event.delta?.stop_reason) stopReason = event.delta.stop_reason;
     if (event.type === "content_block_start" && event.content_block?.type === "tool_use")
       blocks.set(event.index ?? 0, { id: event.content_block.id, name: event.content_block.name, argumentsText: "" });
     if (event.type === "content_block_stop") {
@@ -155,7 +155,7 @@ export async function* kimiAnthropicEvents(body: ReadableStream<Uint8Array>, sig
       }
     }
     usage = toUsage(event.message?.usage ?? event.usage) ?? usage;
-    if (event.type === "message_delta" && usage) yield providerUsage(usage);
+    if (event.type === "message.delta" && usage) yield providerUsage(usage);
   }
   const danglingBlock = [...blocks.values()].some((call) => !call.id || !call.name || !call.complete);
   if (!sawMessageStop || danglingBlock) {

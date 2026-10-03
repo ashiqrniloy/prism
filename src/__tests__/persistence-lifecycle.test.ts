@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createExtensionKernel, createMemoryPersistenceLifecycle, PersistenceLifecycleError } from "../index.js";
+import { createMemoryPersistenceLifecycle, PersistenceLifecycleError } from "../index.js";
 
 const ownership = { tenantId: "t1", userId: "u1" };
 
@@ -31,20 +31,5 @@ describe("persistence lifecycle", () => {
       () => store.consumeTenantQuota({ ...ownership, resourceKind: "session" }),
       (error: unknown) => error instanceof PersistenceLifecycleError && error.code === "ERR_PRISM_LIFECYCLE_QUOTA_EXHAUSTED",
     );
-  });
-});
-
-describe("extension load policy", () => {
-  it("denies unsigned / unallowlisted extensions fail-closed", async () => {
-    const kernel = createExtensionKernel({
-      errorPolicy: "throw",
-      loadPolicy: {
-        allowList: ["good"],
-        verifySignature: (extension) => extension.signature === "sig-ok",
-      },
-    });
-    await assert.rejects(() => kernel.load([{ name: "other", setup() {} }]), /not allow-listed/);
-    await assert.rejects(() => kernel.load([{ name: "good", setup() {} }]), /unsigned/);
-    await kernel.load([{ name: "good", signature: "sig-ok", setup() {} }]);
   });
 });

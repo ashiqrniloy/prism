@@ -74,7 +74,7 @@ describe("multi-agent runtime coverage and baselines", () => {
       if (hasChannels && name === "@arnilo/prism-channels") continue;
       if (hasCodingTools && (name === "@arnilo/prism-coding-tools" || name === "@arnilo/prism-core")) continue;
       if (hasCore && name === "@arnilo/prism-core") continue;
-      if (name === "@arnilo/prism-hooks" || name === "@arnilo/prism-agent-sdk") continue; // plan 106 R4 / plan 134: covered by their own suites, not the multi-agent evidence matrix
+      if (name === "@arnilo/prism-hooks-json" || name === "@arnilo/prism-agent-sdk") continue; // plan 106 R4 / plan 134: covered by their own suites, not the multi-agent evidence matrix
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);
     }
     const classes = ["hot-path", "optional-in-run", "persistence-coordination", "setup-only"];

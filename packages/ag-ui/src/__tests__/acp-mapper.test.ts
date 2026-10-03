@@ -9,34 +9,29 @@ describe("createAcpEventMapper", () => {
     const call = toolCallContent("tool-1", "write_file", { path: "/private/SECRET.txt", contents: "SECRET" });
     const output = [
       ...(await mapper.map({
-        type: "message_started",
-        sessionId: "session-1",
-        runId: "run-1",
-        message: { id: "message-1", role: "assistant", content: [] },
-      })),
-      ...(await mapper.map({
-        type: "message_delta",
+        type: "message.delta",
         sessionId: "session-1",
         runId: "run-1",
         content: { type: "text", text: "hello SECRET" },
       })),
-      ...(await mapper.map({ type: "tool_execution_started", sessionId: "session-1", runId: "run-1", call })),
+      ...(await mapper.map({ type: "tool.started", sessionId: "session-1", runId: "run-1", call })),
       ...(await mapper.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "write_file", value: { path: "/private/SECRET.txt" } },
         metadata: { durationMs: 1, status: "finished" },
       })),
       ...(await mapper.map({
-        type: "provider_turn_finished",
+        type: "turn.completed",
         sessionId: "session-1",
         runId: "run-1",
         turn: 1,
         metadata: { providerId: "mock", model: { provider: "mock", model: "mock" } },
         usage: { inputTokens: 2, outputTokens: 3 },
       })),
-      ...(await mapper.map({ type: "error", sessionId: "session-1", runId: "run-1", error: { message: "SECRET failed" } })),
+      ...(await mapper.map({ type: "run.failed", sessionId: "session-1", runId: "run-1", error: { message: "SECRET failed" } })),
     ];
 
     assert.deepEqual(
@@ -68,7 +63,7 @@ describe("createAcpEventMapper", () => {
 
   it("B1: emits usage_update with the host-reported context window; omits it when the seam is absent, throws, or returns an invalid size", async () => {
     const turn = {
-      type: "provider_turn_finished" as const,
+      type: "turn.completed" as const,
       sessionId: "session-1",
       runId: "run-1",
       turn: 1,
@@ -102,12 +97,6 @@ describe("createAcpEventMapper", () => {
 
   it("F1: thinking deltas and blocks map to agent_thought_chunk; other non-text deltas stay dropped", async () => {
     const mapper = createAcpEventMapper({ redactor: createSecretRedactor(["SECRET"]) });
-    const start = {
-      type: "message_started" as const,
-      sessionId: "s",
-      runId: "run-1",
-      message: { id: "m1", role: "assistant" as const, content: [] },
-    };
     const delta = (
       content:
         | { type: "thinking"; text: string }
@@ -115,13 +104,12 @@ describe("createAcpEventMapper", () => {
         | { type: "image" }
         | { type: "tool_call_delta"; index: number },
     ) => ({
-      type: "message_delta" as const,
+      type: "message.delta" as const,
       sessionId: "s",
       runId: "run-1",
       content,
     });
     const updates = [
-      ...(await mapper.map(start)),
       ...(await mapper.map(delta({ type: "thinking", text: "think SECRET" }))),
       ...(await mapper.map(delta({ type: "text", text: "plain" }))),
       ...(await mapper.map(delta({ type: "image" }))),
@@ -141,14 +129,8 @@ describe("createAcpEventMapper", () => {
 
   it("F1: message_finished emits thinking/text blocks that had no live delta, sharing one messageId", async () => {
     const mapper = createAcpEventMapper({});
-    const start = {
-      type: "message_started" as const,
-      sessionId: "s",
-      runId: "run-1",
-      message: { id: "m1", role: "assistant" as const, content: [] },
-    };
     const finish = (blocks: readonly ({ type: "thinking"; text: string } | { type: "text"; text: string })[]) => ({
-      type: "message_finished" as const,
+      type: "message.completed" as const,
       sessionId: "s",
       runId: "run-1",
       message: { id: "m1", role: "assistant" as const, content: blocks },
@@ -165,8 +147,7 @@ describe("createAcpEventMapper", () => {
       { sessionUpdate: "agent_message_chunk", messageId: "m1", content: { type: "text", text: "visible" } },
     ]);
     // A text delta suppresses only the text block; the thinking block still arrives.
-    await mapper.map(start);
-    await mapper.map({ type: "message_delta", sessionId: "s", runId: "run-1", content: { type: "text", text: "streamed" } });
+    await mapper.map({ type: "message.delta", sessionId: "s", runId: "run-1", content: { type: "text", text: "streamed" } });
     const afterTextDelta = await mapper.map(
       finish([
         { type: "thinking", text: "hidden" },
@@ -174,14 +155,14 @@ describe("createAcpEventMapper", () => {
       ]),
     );
     assert.deepEqual(afterTextDelta, [
-      { sessionUpdate: "agent_thought_chunk", messageId: "m1", content: { type: "text", text: "hidden" } },
+      { sessionUpdate: "agent_thought_chunk", messageId: "run-1:message", content: { type: "text", text: "hidden" } },
     ]);
   });
 
   it("F1: thinking text passes the shared redactor and byte cap", async () => {
     const mapper = createAcpEventMapper({ redactor: createSecretRedactor(["SECRET"]), limits: { maxTextBytes: 16 } });
     const [update] = await mapper.map({
-      type: "message_delta",
+      type: "message.delta",
       sessionId: "s",
       runId: "run-1",
       content: { type: "thinking", text: "SECRET long-thinking" },
@@ -201,7 +182,7 @@ describe("createAcpEventMapper", () => {
     });
     const started = async (name: string) => {
       const call = toolCallContent("tool-1", name, {});
-      const [update] = await mapper.map({ type: "tool_execution_started", sessionId: "s", runId: "r", call });
+      const [update] = await mapper.map({ type: "tool.started", sessionId: "s", runId: "r", call });
       return update as { kind: string };
     };
     assert.equal((await started("write_file")).kind, "execute");
@@ -215,10 +196,13 @@ describe("createAcpEventMapper", () => {
     const mapper = createAcpEventMapper({});
     const call = toolCallContent("tool-1", "write", { path: "/host/x.txt" });
     const updates = await mapper.map({
-      type: "tool_execution_error",
+      type: "tool.completed",
       sessionId: "session-1",
       runId: "run-1",
-      call,
+      toolCallId: "tool-1",
+      name: "write",
+      status: "error",
+      result: { toolCallId: "tool-1", name: "write", error: { message: "boom" } },
       error: { message: "boom" },
       metadata: { durationMs: 1, status: "error" },
     });
@@ -228,10 +212,11 @@ describe("createAcpEventMapper", () => {
   it("uses only an explicit safe projector for displayable tool content", async () => {
     const mapper = createAcpEventMapper({ projection: { toolArguments: () => "safe input", toolResult: () => "safe output" } });
     const call = toolCallContent("tool-1", "write", { secret: "hidden" });
-    const started = (await mapper.map({ type: "tool_execution_started", sessionId: "session-1", runId: "run-1", call }))[0]!;
+    const started = (await mapper.map({ type: "tool.started", sessionId: "session-1", runId: "run-1", call }))[0]!;
     const finished = (
       await mapper.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "write", value: "hidden" },
@@ -262,7 +247,8 @@ describe("createAcpEventMapper", () => {
     });
     const editFinished = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: {
@@ -294,7 +280,8 @@ describe("createAcpEventMapper", () => {
 
     const writeFinished = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: {
@@ -315,7 +302,8 @@ describe("createAcpEventMapper", () => {
 
     const deleteFinished = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: {
@@ -336,7 +324,8 @@ describe("createAcpEventMapper", () => {
 
     const moveFinished = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: {
@@ -357,7 +346,8 @@ describe("createAcpEventMapper", () => {
 
     const moveFromFallback = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-6", name: "move", metadata: { from: "/w/old.txt" } },
@@ -374,7 +364,8 @@ describe("createAcpEventMapper", () => {
 
     const failedMove = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "error",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-7", name: "move", error: { message: "denied" }, metadata: { to: "/w/new.txt" } },
@@ -386,7 +377,8 @@ describe("createAcpEventMapper", () => {
     // Non-coding tool + coding projector: no diff/locations.
     const other = (
       await withProjection.map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-3", name: "shell", metadata: { path: "/w/nope" } },
@@ -399,7 +391,8 @@ describe("createAcpEventMapper", () => {
     // Default (no projection): still deny-by-default.
     const denied = (
       await createAcpEventMapper({}).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: {
@@ -422,7 +415,8 @@ describe("createAcpEventMapper", () => {
         projection: createCodingToolProjection(),
         limits: { acpDiffBytes: 1024 },
       }).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "edit", metadata: { path: "/w/a.ts", patch } },
@@ -436,7 +430,8 @@ describe("createAcpEventMapper", () => {
         projection: createCodingToolProjection({ maxDiffBytes: 32 }),
         limits: { acpDiffBytes: 1024 },
       }).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "edit", metadata: { path: "/w/a.ts", patch } },
@@ -453,7 +448,8 @@ describe("createAcpEventMapper", () => {
       await createAcpEventMapper({
         projection: { toolResult: () => image },
       }).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read", value: "/w/shot.png" },
@@ -473,7 +469,8 @@ describe("createAcpEventMapper", () => {
         projection: { toolResult: () => ({ type: "image", data: "x".repeat(2048), mimeType: "image/png" }) },
         limits: { acpImageBytes: 1024 },
       }).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read" },
@@ -484,7 +481,8 @@ describe("createAcpEventMapper", () => {
 
     const denied = (
       await createAcpEventMapper({}).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read" },
@@ -498,7 +496,8 @@ describe("createAcpEventMapper", () => {
       await createAcpEventMapper({
         projection: { toolResult: () => "ok" },
       }).map({
-        type: "tool_execution_finished",
+        type: "tool.completed",
+        status: "finished",
         sessionId: "session-1",
         runId: "run-1",
         result: { toolCallId: "tool-1", name: "read" },

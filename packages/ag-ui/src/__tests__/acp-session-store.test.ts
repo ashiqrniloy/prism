@@ -15,7 +15,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { type ClientContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession, SecretRedactor } from "@arnilo/prism";
+import type { AgentRunLifecycle, Session, SecretRedactor } from "@arnilo/prism";
 import {
   type AcpConfigOptionsSeam,
   AcpError,
@@ -27,8 +27,8 @@ import {
 } from "../acp/index.js";
 import { validatePersistedSession } from "../acp/session-store.js";
 
-const stream = { async *stream() {} } as unknown as AgentSession;
-const session = (id: string) => ({ session: { ...stream, id } }) as unknown as { session: AgentSession };
+const stream = { async *stream() {} } as unknown as Session;
+const session = (id: string) => ({ session: { ...stream, id } }) as unknown as { session: Session };
 const iso = "2026-08-11T12:00:00.000Z";
 
 /** In-memory AcpSessionStore fixture; also serves as the shared store across "restarts". */

@@ -1,12 +1,4 @@
-import {
-  createAgent,
-  createAgentSession,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import {
   agentNode,
   cancelWorkflowRun,
@@ -30,7 +22,7 @@ const provider = createMockProvider([
   providerDone(),
 ]);
 
-const agent = createAgent({
+const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
   provider,
 });
@@ -74,7 +66,7 @@ export async function demo() {
     workflow,
     { step: "cancel-test" },
     {
-      agentFactory: () => createAgentSession({ agent }),
+      agentFactory: () => agent.session(),
       checkpoints,
       redactor,
       runId: "cancel-test-run",
@@ -106,7 +98,7 @@ export async function demo() {
     workflow,
     { runId: "cancel-test-run" },
     {
-      agentFactory: () => createAgentSession({ agent }),
+      agentFactory: () => agent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },

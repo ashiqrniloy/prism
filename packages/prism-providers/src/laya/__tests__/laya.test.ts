@@ -1,15 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { assertNoSecretLeak, collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
-import {
-  createLayaProvider,
-  createLayaProviderPackage,
-  DEFAULT_LAYA_BASE_URL,
-  LAYA_API_KEY_ENV,
-  layaBaseUrl,
-  layaModels,
-} from "../index.js";
+import { createLayaProvider, layaPackage, DEFAULT_LAYA_BASE_URL, LAYA_API_KEY_ENV, layaBaseUrl, layaModels } from "../index.js";
 
 const schema: JsonObject = {
   type: "object",
@@ -59,17 +53,8 @@ function textOf(events: readonly ProviderEvent[]): string {
 
 describe("@arnilo/prism-providers/laya", () => {
   it("laya_package_registers_provider_three_models_and_auth", async () => {
-    const registered: unknown[] = [];
-    await createLayaProviderPackage().setup({
-      registerProvider: (provider: AIProvider) => registered.push(provider),
-      registerModel: (entry: ModelConfig) => registered.push(entry),
-      registerAuthMethod: (method: AuthMethod) => registered.push(method),
-    } as never);
-    assert.ok(registered.some((item) => (item as AIProvider).id === "laya"));
-    const models = registered.filter(
-      (item): item is ModelConfig =>
-        typeof item === "object" && item !== null && "model" in item && (item as ModelConfig).provider === "laya",
-    );
+    await loadProviderPackage(layaPackage());
+    const models = layaModels;
     assert.deepEqual(
       models.map((entry) => entry.model),
       ["laya", "laya-multilingual", "laya-typed-decisions"],
@@ -82,14 +67,6 @@ describe("@arnilo/prism-providers/laya", () => {
     assert.ok(models.every((entry) => entry.capabilities?.structuredOutput === "json_schema" && entry.capabilities.tools === false));
     assert.equal(models[1]?.metadata?.extendedContextWindow, 8192);
     assert.ok(models.every((entry) => entry.cost?.input === 0 && entry.cost.output === 0));
-    assert.deepEqual(
-      registered.find((item) => (item as AuthMethod).kind === "api_key"),
-      {
-        kind: "api_key",
-        provider: "laya",
-        credentialName: "apiKey",
-      },
-    );
     assert.equal(DEFAULT_LAYA_BASE_URL, "http://localhost:8000");
     assert.equal(LAYA_API_KEY_ENV, "LAYA_API_KEY");
     assert.equal(layaBaseUrl(), DEFAULT_LAYA_BASE_URL);

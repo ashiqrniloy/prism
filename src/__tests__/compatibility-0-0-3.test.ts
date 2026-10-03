@@ -17,9 +17,8 @@ test("0.0.3 agent construction remains source compatible", async () => {
   const config: AgentConfig = {
     model: { provider: "mock", model: "demo", capabilities: { structuredOutput: "json_schema" } },
     provider,
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     redactor: createSecretRedactor(["compat-secret"]),
-    loop: { strategy: "single-shot", toolConcurrency: 2 },
   };
   const options: ProviderRequestOptions = {
     structuredOutput: {
@@ -29,7 +28,7 @@ test("0.0.3 agent construction remains source compatible", async () => {
     },
   };
 
-  const session = createAgent(config).createSession({ id: "compat-0-0-3" });
+  const session = await (await createAgent(config)).session({ id: "compat-0-0-3", create: true });
   await session.run("legacy input", { providerOptions: options });
   assert.equal((await session.entries()).at(-1)?.message?.role, "assistant");
 });

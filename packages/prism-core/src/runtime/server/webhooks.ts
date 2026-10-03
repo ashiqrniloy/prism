@@ -282,16 +282,14 @@ export function createWebhookNotifier(options: WebhookNotifierOptions): WebhookN
     notify,
     onAgentEvent(event) {
       switch (event.type) {
-        case "agent_finished":
+        case "run.completed":
           notify({ event: "run.completed", runId: event.runId, status: "completed", payload: event });
           break;
-        case "agent_suspended":
+        case "run.suspended":
           notify({ event: "run.suspended", runId: event.runId, status: "suspended", payload: event });
           break;
-        case "agent_denied":
-        case "run_limit_exceeded":
-        case "error":
-          notify({ event: "run.failed", runId: event.runId, status: "failed", payload: event });
+        case "run.failed":
+          notify({ event: "run.failed", runId: event.runId ?? "", status: "failed", payload: event });
           break;
         default:
           break;

@@ -3,7 +3,6 @@ import { test } from "bun:test";
 import {
   type AIProvider,
   createMockProvider,
-  createSessionCachePolicy,
   createSessionEntry,
   type ModelConfig,
   type ProviderRequest,
@@ -12,7 +11,7 @@ import {
   type SessionEntry,
 } from "@arnilo/prism";
 import { HARD_MAX_SUMMARY_ERROR_BYTES, HARD_MAX_SUMMARY_TOKENS, HARD_RESERVE_TOKENS } from "../limits.js";
-import { createLlmCompactionStrategy } from "../strategy.js";
+import { createLlmCompactor } from "../strategy.js";
 
 const timestamp = "2026-01-01T00:00:00.000Z";
 const model = { provider: "mock", model: "summary", limits: { maxOutputTokens: 1000 } };
@@ -30,7 +29,7 @@ function textEntry(id: string, role: "user" | "assistant", text: string, parentI
 
 test("llm_compaction_strategy_builds_provider_request_and_returns_compaction_entry", async () => {
   let request: ProviderRequest | undefined;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("## Goal\nSummarized"), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -65,7 +64,7 @@ test("llm_compaction_strategy_builds_provider_request_and_returns_compaction_ent
 
 test("llm_compaction_strategy_updates_previous_summary_and_split_turn_prefix", async () => {
   const requests: ProviderRequest[] = [];
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("summary"), { type: "done" }], { onRequest: (request) => requests.push(request) }),
     model,
     keepRecentTokens: 50,
@@ -98,7 +97,7 @@ test("llm_compaction_strategy_updates_previous_summary_and_split_turn_prefix", a
 
 test("llm_compaction_strategy_maps_max_output_tokens_to_request_model", async () => {
   let request: ProviderRequest | undefined;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("summary"), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -117,7 +116,7 @@ test("llm_compaction_strategy_maps_max_output_tokens_to_request_model", async ()
 
 test("llm_compaction_strategy_applies_policy_thinking_and_max_summary_tokens", async () => {
   let request: ProviderRequest | undefined;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("x".repeat(20)), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -127,13 +126,7 @@ test("llm_compaction_strategy_applies_policy_thinking_and_max_summary_tokens", a
     keepRecentTokens: 1,
     maxSummaryTokens: 2,
     thinkingLevel: "low",
-    providerRequestPolicies: {
-      name: "cache",
-      apply: ({ request }) => ({
-        request: { ...request, options: { ...request.options, cacheRetention: "long" } },
-        secrets: ["policy-secret"],
-      }),
-    },
+    requestTransforms: [(request) => ({ ...request, options: { ...request.options, cacheRetention: "long" } })],
   });
 
   const result = await strategy.compact({
@@ -151,7 +144,7 @@ test("llm_compaction_strategy_applies_policy_thinking_and_max_summary_tokens", a
 
 test("llm_compaction_strategy_resolves_credential_per_call_without_storing_it", async () => {
   let credentialSeen: string | undefined;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     summaryProvider: (credential) => {
       credentialSeen = credential;
       return createMockProvider([providerTextDelta("summary secret-token"), { type: "done" }]);
@@ -173,7 +166,7 @@ test("llm_compaction_strategy_resolves_credential_per_call_without_storing_it", 
 });
 
 test("llm_compaction_strategy_throws_on_provider_error_without_result", async () => {
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerError(new Error("boom"))]),
     model,
     keepRecentTokens: 1,
@@ -198,7 +191,7 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
       }
     },
   };
-  const strategy = createLlmCompactionStrategy({ provider, model, keepRecentTokens: 1, maxSummaryTokens: 10 });
+  const strategy = createLlmCompactor({ provider, model, keepRecentTokens: 1, maxSummaryTokens: 10 });
   const result = await strategy.compact({
     sessionId: "s1",
     entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")],
@@ -208,7 +201,7 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
   assert.equal(closed, true);
   assert.equal(request?.model.parameters?.maxTokens, 10);
 
-  const splitUnicode = createLlmCompactionStrategy({
+  const splitUnicode = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("\uD83D"), providerTextDelta("\uDE00"), { type: "done" }]),
     model,
     keepRecentTokens: 1,
@@ -230,7 +223,7 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
   };
   await assert.rejects(
     async () =>
-      createLlmCompactionStrategy({ provider: throwing, model, keepRecentTokens: 1, maxErrorBytes: 16 }).compact({
+      createLlmCompactor({ provider: throwing, model, keepRecentTokens: 1, maxErrorBytes: 16 }).compact({
         sessionId: "s1",
         entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")],
         secrets: [secret],
@@ -246,7 +239,7 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
   };
   await assert.rejects(
     async () =>
-      createLlmCompactionStrategy({ provider: infiniteEvents, model, keepRecentTokens: 1, maxSummaryTokens: 1 }).compact({
+      createLlmCompactor({ provider: infiniteEvents, model, keepRecentTokens: 1, maxSummaryTokens: 1 }).compact({
         sessionId: "s1",
         entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")],
       }),
@@ -254,14 +247,11 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
   );
   await assert.rejects(
     async () =>
-      createLlmCompactionStrategy({
+      createLlmCompactor({
         provider: createMockProvider([providerTextDelta("unused")]),
         model,
         keepRecentTokens: 1,
-        providerRequestPolicies: {
-          name: "bad-budget",
-          apply: ({ request }) => ({ ...request, model: { ...request.model, parameters: { maxTokens: Infinity } } }),
-        },
+        requestTransforms: [(request) => ({ ...request, model: { ...request.model, parameters: { maxTokens: Infinity } } })],
       }).compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old"), textEntry("a2", "assistant", "new", "u1")] }),
     /provider request maxTokens/,
   );
@@ -276,9 +266,9 @@ test("llm_compaction_strategy_rejects_invalid_limits_and_accepts_hard_boundaries
     ["maxErrorBytes", HARD_MAX_SUMMARY_ERROR_BYTES],
   ] as const;
   for (const [name, hardCap] of limits) {
-    assert.doesNotThrow(() => createLlmCompactionStrategy({ ...base, [name]: hardCap }));
+    assert.doesNotThrow(() => createLlmCompactor({ ...base, [name]: hardCap }));
     for (const value of [0, -1, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, hardCap + 1]) {
-      assert.throws(() => createLlmCompactionStrategy({ ...base, [name]: value }), new RegExp(name));
+      assert.throws(() => createLlmCompactor({ ...base, [name]: value }), new RegExp(name));
     }
   }
 });
@@ -286,7 +276,7 @@ test("llm_compaction_strategy_rejects_invalid_limits_and_accepts_hard_boundaries
 test("llm_compaction_strategy_observes_abort_signal", async () => {
   const controller = new AbortController();
   controller.abort(new Error("stop"));
-  const strategy = createLlmCompactionStrategy({ provider: createMockProvider([providerTextDelta("unused")]), model });
+  const strategy = createLlmCompactor({ provider: createMockProvider([providerTextDelta("unused")]), model });
 
   await assert.rejects(
     async () => strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")], signal: controller.signal }),
@@ -302,7 +292,7 @@ test("llm_compaction_strategy_thinking_level_reaches_model_family_field", async 
     compat: { thinkingConfig: {} },
     capabilities: { reasoning: true },
   } as ModelConfig;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -320,7 +310,7 @@ test("llm_compaction_strategy_thinking_level_reaches_model_family_field", async 
 test("llm_compaction_strategy_non_reasoning_model_gets_no_invented_field", async () => {
   let request: ProviderRequest | undefined;
   const plainModel = { provider: "mock", model: "plain" } as ModelConfig;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -336,7 +326,7 @@ test("llm_compaction_strategy_non_reasoning_model_gets_no_invented_field", async
 
 test("llm_compaction_stamps_context_sessionId_without_policies", async () => {
   let request: ProviderRequest | undefined;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -352,7 +342,7 @@ test("llm_compaction_stamps_context_sessionId_without_policies", async () => {
 
 test("llm_compaction_createSessionCachePolicy_overlays_cacheKey", async () => {
   let request: ProviderRequest | undefined;
-  const strategy = createLlmCompactionStrategy({
+  const strategy = createLlmCompactor({
     provider: createMockProvider([providerTextDelta("summary text"), { type: "done" }], {
       onRequest: (value) => {
         request = value;
@@ -360,7 +350,7 @@ test("llm_compaction_createSessionCachePolicy_overlays_cacheKey", async () => {
     }),
     model,
     keepRecentTokens: 1,
-    providerRequestPolicies: createSessionCachePolicy({ cacheKey: "x" }),
+    requestTransforms: [(request) => ({ ...request, options: { ...request.options, cacheKey: "x" } })],
   });
   await strategy.compact({ sessionId: "s1", entries: [textEntry("u1", "user", "old")] });
   assert.equal(request?.options?.sessionId, "s1");

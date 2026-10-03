@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { afterAll as after, describe, it } from "bun:test";
-import type { AgentIdentity, ToolEffectKey, ToolResult } from "@arnilo/prism";
+import type { ToolEffectKey, ToolResult } from "@arnilo/prism";
 import { ToolEffectError } from "@arnilo/prism";
 import { assertToolEffectStoreConforms } from "@arnilo/prism/testing/tool-effect-store-conformance";
 import { Pool } from "pg";
@@ -16,23 +16,9 @@ function uniqueSchema(): string {
   return `prism_enterprise_e_${randomUUID().replaceAll("-", "")}`;
 }
 
-function identity(tenantId = "tenant"): AgentIdentity {
-  return {
-    tenantId,
-    accountId: "account",
-    userId: "user",
-    principal: { kind: "agent", id: "agent" },
-    scopes: ["tools:execute"],
-    issuedAt: "2026-08-04T00:00:00.000Z",
-    verified: true,
-  };
-}
-
 function effect(key: string, overrides: Partial<ToolEffectKey> = {}): ToolEffectKey {
-  const agent = overrides.identity ?? identity();
   return {
-    identity: agent,
-    ownership: overrides.ownership ?? { tenantId: agent.tenantId, accountId: agent.accountId, userId: agent.userId },
+    ownership: overrides.ownership ?? { tenantId: "tenant", accountId: "account", userId: "user" },
     key,
     sessionId: "session",
     runId: "run",
@@ -87,9 +73,7 @@ describeIntegration("enterprise PostgreSQL tool effects", () => {
     const reopened = await createPostgresEnterpriseState({ pool: firstPool, schema });
     assert.deepEqual((await reopened.toolEffects.get(base))?.result, result(base));
     assert.equal(
-      await second.toolEffects.get(
-        effect(base.key, { identity: identity("foreign"), ownership: { tenantId: "foreign", accountId: "account", userId: "user" } }),
-      ),
+      await second.toolEffects.get(effect(base.key, { ownership: { tenantId: "foreign", accountId: "account", userId: "user" } })),
       undefined,
     );
     await assert.rejects(
@@ -160,7 +144,6 @@ describeIntegration("enterprise PostgreSQL tool effects", () => {
     const dispatchedClaim = await state.toolEffects.begin(dispatched);
     await state.toolEffects.markDispatched(transition(dispatched, dispatchedClaim.record));
     const foreign = effect("maintenance-foreign", {
-      identity: identity("foreign"),
       ownership: { tenantId: "foreign", accountId: "account", userId: "user" },
     });
     await state.toolEffects.begin(foreign);

@@ -80,7 +80,7 @@ export interface AgUiProjection {
   /** Explicitly expose one bounded named `CUSTOM` value. */
   custom?(event: AgentEvent): Awaitable<AgUiCustomProjection | undefined>;
   /** Return safe interrupt additions. Core decision/CAS fields remain adapter-owned. */
-  interrupt?(event: Extract<AgentEvent, { readonly type: "agent_suspended" }>): Awaitable<readonly Interrupt[] | undefined>;
+  interrupt?(event: Extract<AgentEvent, { readonly type: "run.suspended" }>): Awaitable<readonly Interrupt[] | undefined>;
   /** Return a safe, JSON-serializable co-work payload; absent exposes the redacted event fields. */
   coWork?(event: CoWorkEvent): Awaitable<unknown>;
   /** Reserved for host-owned path projection in handlers; mapper never exposes paths itself. */

@@ -8,7 +8,7 @@ clinePassReasoningEffort	export declare function clinePassReasoningEffort(reques
 clinePassThinkingLevelMap	export declare function clinePassThinkingLevelMap(request: ProviderRequest): ClinePassThinkingLevelMap | undefined
 clinePassThinkingSlot	export declare function clinePassThinkingSlot(value: unknown): ClinePassThinkingSlot | undefined
 createClinePassProvider	export declare function createClinePassProvider(options?: ClinePassProviderOptions): AIProvider
-createClinePassProviderPackage	export declare function createClinePassProviderPackage(options?: ClinePassProviderPackageOptions): ProviderPackage
+clinepassPackage	export declare function clinepassPackage(options?: ClinePassProviderPackageOptions): PackageInstance
 defineClinePassModel	export declare function defineClinePassModel(config: ClinePassModelConfig): ModelConfig
 type ClinePassModelConfig	export { CLINEPASS_DEFAULT_BASE_URL, CLINEPASS_FEATURED_SLUGS, type ClinePassModelConfig, clinePassModels, defineClinePassModel, } from "./models.js"
 type ClinePassProviderOptions	export { type ClinePassProviderOptions, clinePassBody, clinePassEvents, createClinePassProvider, } from "./provider.js"

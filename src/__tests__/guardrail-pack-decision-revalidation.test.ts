@@ -15,6 +15,8 @@ import {
   type ProviderEvent,
   type ProviderRequest,
   createAgent,
+  type Session,
+  askEveryTool,
   createMemoryCheckpointStore,
   createMemorySessionStore,
   loadAgentRunState,
@@ -66,13 +68,14 @@ const DURABLE = (checkpoints: ReturnType<typeof createMemoryCheckpointStore>, ex
   ...extra,
 });
 
-function deployAgent(executions: string[], calls: JsonObject[]) {
+async function deployAgent(executions: string[], calls: JsonObject[]) {
   const requests: ProviderRequest[] = [];
   let turn = 0;
-  const agent = createAgent({
+  const agent = await createAgent({
     id: "decision-revalidation",
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
+    hooks: askEveryTool(),
     provider: {
       id: "mock",
       async *generate(request) {
@@ -85,26 +88,28 @@ function deployAgent(executions: string[], calls: JsonObject[]) {
         for (const event of events) yield event;
       },
     },
-    tools: [
-      {
-        name: "deploy",
-        parameters: {},
-        execute: (args, context) => {
-          executions.push(context.toolCallId);
-          calls.push(args);
-          return { toolCallId: context.toolCallId, name: "deploy", value: "deployed" };
+    tools: {
+      add: [
+        {
+          name: "deploy",
+          parameters: {},
+          execute: (args, context) => {
+            executions.push(context.toolCallId);
+            calls.push(args);
+            return { toolCallId: context.toolCallId, name: "deploy", value: "deployed" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
   return { agent, requests };
 }
 
 /** Suspends one deploy call and returns the pieces a resume needs. */
-async function suspend(session: ReturnType<ReturnType<typeof createAgent>["createSession"]>, options: Record<string, unknown>) {
+async function suspend(session: Session, options: Record<string, unknown>) {
   const suspended = await session.run("ship the release", { runState: options as never });
   assert.equal(suspended.status, "suspended");
-  const approvalId = suspended.interruption?.pendingDecisions?.[0]?.approvalId;
+  const approvalId = suspended.pending?.[0]?.approvalId;
   const expectedVersion = suspended.runState?.version;
   assert.ok(approvalId !== undefined && expectedVersion !== undefined, "the suspension carries a decision id and version");
   return { ref: { runId: suspended.runId, sessionId: suspended.sessionId }, approvalId, expectedVersion };
@@ -115,8 +120,8 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
     const calls: JsonObject[] = [];
-    const { agent } = deployAgent(executions, calls);
-    const session = agent.createSession({ id: "revalidate-ask", guardrailPacks: [ASK_PACK] });
+    const { agent } = await deployAgent(executions, calls);
+    const session = await agent.session({ guardrailPacks: [ASK_PACK] });
     const { ref, approvalId, expectedVersion } = await suspend(session, DURABLE(checkpoints));
 
     await assert.rejects(
@@ -146,7 +151,7 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
       { decisions: [{ approvalId, outcome: "allow_once" }], expectedVersion },
       DURABLE(checkpoints),
     );
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.deepEqual(calls, [{ version: "prod-1" }]);
   });
 
@@ -154,8 +159,8 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
     const calls: JsonObject[] = [];
-    const { agent } = deployAgent(executions, calls);
-    const session = agent.createSession({ id: "revalidate-benign", guardrailPacks: [ASK_PACK] });
+    const { agent } = await deployAgent(executions, calls);
+    const session = await agent.session({ guardrailPacks: [ASK_PACK] });
     const { ref, approvalId, expectedVersion } = await suspend(session, DURABLE(checkpoints));
 
     const resumed = await resumeAgentRun(
@@ -165,49 +170,31 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
       DURABLE(checkpoints),
     );
 
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.deepEqual(calls, [{ version: "staging-2" }], "the edit dispatches, the pack does not fire");
     assert.deepEqual(executions, ["call-deploy"]);
   });
 
-  it("refuses an edit into a pack deny rule instead of letting the run die at dispatch", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("denies a matching pack rule at tool.call instead of suspending", async () => {
     const executions: string[] = [];
     const calls: JsonObject[] = [];
-    const { agent } = deployAgent(executions, calls);
-    const session = agent.createSession({ id: "revalidate-deny", guardrailPacks: [DENY_PACK] });
-    // The all-tools gate suspends before dispatch; the pack rule would have blocked at dispatch.
-    const { ref, approvalId, expectedVersion } = await suspend(session, DURABLE(checkpoints, { interruptBeforeTool: true }));
-
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          ref,
-          { decisions: [{ approvalId, outcome: "allow_once", modifiedArguments: { version: "prod-9" } }], expectedVersion },
-          DURABLE(checkpoints, { interruptBeforeTool: true }),
-        ),
-      (error: unknown) =>
-        error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID" && error.message.includes(`rule ${DENY_RULE}`),
-    );
+    const { agent } = await deployAgent(executions, calls);
+    const session = await agent.session({ guardrailPacks: [DENY_PACK] });
+    // The host `askEveryTool` gate and the pack deny both match. Roadmap §2.4: the deny wins, so the
+    // call is refused without a suspension and never reaches dispatch.
+    const result = await session.run("ship the release");
+    assert.equal(result.status, "completed");
+    assert.equal(result.runState?.interruption, undefined, "a deny match never suspends");
     assert.deepEqual(executions, [], "the run does not reach dispatch");
-
-    const resumed = await resumeAgentRun(
-      agent,
-      ref,
-      { decisions: [{ approvalId, outcome: "allow_once", modifiedArguments: { version: "staging-9" } }], expectedVersion },
-      DURABLE(checkpoints, { interruptBeforeTool: true }),
-    );
-    assert.equal(resumed.status, "succeeded");
-    assert.deepEqual(calls, [{ version: "staging-9" }], "the deny rule refuses only what it matches");
+    assert.deepEqual(calls, []);
   });
 
   it("does not write an allow_for_run allowance for a pack-violating edit", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const executions: string[] = [];
     const calls: JsonObject[] = [];
-    const { agent } = deployAgent(executions, calls);
-    const session = agent.createSession({ id: "revalidate-sticky", guardrailPacks: [ASK_PACK] });
+    const { agent } = await deployAgent(executions, calls);
+    const session = await agent.session({ guardrailPacks: [ASK_PACK] });
     const { ref, approvalId, expectedVersion } = await suspend(session, DURABLE(checkpoints));
 
     await assert.rejects(
@@ -242,7 +229,7 @@ describe("pack decision-time revalidation (plan 104 Task 6)", () => {
       { decisions: [{ approvalId, outcome: "allow_for_run" }], expectedVersion },
       DURABLE(checkpoints),
     );
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.deepEqual(calls, [{ version: "prod-1" }], "the unedited allowance dispatched the call it was given");
   });
 });

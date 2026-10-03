@@ -128,9 +128,9 @@ describeIntegration("createPostgresPersistence integration", () => {
       runId: "new-run",
       tenantId: "tenant-a",
       timestamp: old,
-      type: "agent_started",
+      type: "run.started",
       redacted: true,
-      event: { type: "agent_started", sessionId, runId: "new-run" },
+      event: { type: "run.started", sessionId, runId: "new-run" },
     });
     assert.equal((await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0]?.updatedAt, recent);
 
@@ -186,9 +186,15 @@ describeIntegration("createPostgresPersistence integration", () => {
       runId: "new-run",
       tenantId: "tenant-a",
       timestamp: "2026-01-04T00:00:00.003Z",
-      type: "turn_started",
+      type: "turn.started",
       redacted: true,
-      event: { type: "turn_started", sessionId, runId: "new-run", turn: 1 },
+      event: {
+        type: "turn.started",
+        sessionId,
+        runId: "new-run",
+        turn: 1,
+        metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+      },
     });
     const current = (await persistence.querySessions({ id: sessionId, tenantId: "tenant-a" })).items[0];
     assert.equal(current?.updatedAt, "2026-01-04T00:00:00.003Z");

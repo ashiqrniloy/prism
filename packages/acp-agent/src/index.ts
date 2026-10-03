@@ -11,8 +11,9 @@ import { randomUUID } from "node:crypto";
 import type { AgentApp, McpServer } from "@agentclientprotocol/sdk";
 import {
   type Agent,
-  type AgentIdentity,
+  type Principal,
   type AIProvider,
+  askEveryTool,
   type CheckpointStore,
   createAgent,
   createAgentRunLifecycle,
@@ -230,7 +231,7 @@ function resolveCredential(ref: string, provider: string, resolver?: CredentialR
   return resolved.trim();
 }
 
-export function createSpawnableAgent(options: CreateSpawnableAgentOptions): AgentApp {
+export async function createSpawnableAgent(options: CreateSpawnableAgentOptions): Promise<AgentApp> {
   const { config } = options;
 
   let effectiveModel: ModelConfig;
@@ -274,16 +275,8 @@ export function createSpawnableAgent(options: CreateSpawnableAgentOptions): Agen
     }
   }
 
-  const ownership: OwnershipScope = { userId: config.userId };
-  const identity: AgentIdentity = {
-    tenantId: "local",
-    userId: config.userId,
-    principal: { kind: "user", id: config.userId },
-    scopes: ["coding"],
-    issuedAt: new Date().toISOString(),
-    verified: true,
-    credentialRefs: config.credentialRef ? [config.credentialRef] : undefined,
-  };
+  const ownership: OwnershipScope = { tenantId: "local", userId: config.userId };
+  const principal: Principal = { kind: "user", id: config.userId };
   let store: SessionStore;
   let checkpoints: CheckpointStore;
   if (config.sessionStore.type === "sqlite") {
@@ -296,25 +289,26 @@ export function createSpawnableAgent(options: CreateSpawnableAgentOptions): Agen
   }
   const defaultAgentId = "prism-acp-agent";
   const tools = createToolRegistry(createCodingTools(config.cwd));
-  const prismAgent = createAgent({
+  const prismAgent = await createAgent({
     id: defaultAgentId,
     model: effectiveModel,
     provider: effectiveProvider,
-    store,
-    tools,
+    slots: { store },
+    tools: { add: tools.list() },
     ownership,
-    identity,
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    principal,
+    hooks: askEveryTool(),
+    runState: { checkpoints, definitionRevision: "1" },
   });
   // ACP fs adapters carry session ids, so editor-backed tool registries must be
   // built per session instead of shared through the default disk agent.
   const sessionAgents = new Map<string, Agent>();
-  const resolveAgent = ({ agentId }: { agentId: string }) => {
+  const resolveAgent = async ({ agentId }: { agentId: string }) => {
     if (agentId === defaultAgentId) return { agent: prismAgent, definitionRevision: "1" };
     let sessionAgent = sessionAgents.get(agentId);
     if (!sessionAgent) {
       if (agentId.startsWith(`${defaultAgentId}:`)) {
-        sessionAgent = createAgent({ ...prismAgent.config, id: agentId, tools });
+        sessionAgent = await createAgent({ ...prismAgent.config, id: agentId, tools: { add: tools.list() } });
         sessionAgents.set(agentId, sessionAgent);
       } else {
         throw new Error(`Unknown ACP session agent: ${agentId}`);
@@ -327,7 +321,6 @@ export function createSpawnableAgent(options: CreateSpawnableAgentOptions): Agen
     name: "Prism ACP Agent",
     authorize: () => ({ ownership }),
     sessionFactory: async (input) => {
-      const sessionId = input.sessionId ?? randomUUID();
       let sessionAgent = prismAgent;
       let sessionTools = tools;
       let agentId = defaultAgentId;
@@ -340,12 +333,13 @@ export function createSpawnableAgent(options: CreateSpawnableAgentOptions): Agen
             edit: { operations: operations.edit },
           }),
         );
-        agentId = `${defaultAgentId}:${sessionId}`;
-        sessionAgent = createAgent({ ...prismAgent.config, id: agentId, tools: sessionTools });
+        agentId = input.sessionId ? `${defaultAgentId}:${input.sessionId}` : `${defaultAgentId}:${randomUUID()}`;
+        sessionAgent = await createAgent({ ...prismAgent.config, id: agentId, tools: { add: sessionTools.list() } });
         sessionAgents.set(agentId, sessionAgent);
       }
+      const session = input.sessionId ? await sessionAgent.session({ id: input.sessionId, create: true }) : await sessionAgent.session();
       return {
-        session: sessionAgent.createSession({ id: sessionId }),
+        session,
         agentId,
         tools: sessionTools,
       };

@@ -1,5 +1,4 @@
 import type { JsonValue, Skill } from "./contracts.js";
-import type { ManifestContributionDeclaration } from "./manifests.js";
 
 /** Frontmatter split + scalar/simple-list parser for `SKILL.md` and agent bundle
  *  markdown files. Stdlib `String` parsing only — no YAML dependency, no Markdown
@@ -94,7 +93,7 @@ export function parseSkillFile(text: string, path: string): Skill {
   const toolNamesValue = front.get("toolNames") ?? front.get("tools");
   const toolNames = Array.isArray(toolNamesValue) ? (toolNamesValue as string[]) : undefined;
   const metadata: Record<string, JsonValue> = {};
-  // ponytail: `context` from a file SKILL.md lands here as metadata; not wired into a live ContextProvider (needs a module). Phase 30.
+  // ponytail: `context` from a file SKILL.md lands here as metadata only; a host wires it to a `context.build` handler.
   for (const [key, value] of front) {
     if (key !== "name" && key !== "description" && key !== "toolNames" && key !== "tools") {
       metadata[key] = value as JsonValue;
@@ -111,10 +110,16 @@ export function parseSkillFile(text: string, path: string): Skill {
   return skill;
 }
 
-/** Parse a per-agent `AGENT.md` bundle frontmatter file into a manifest-referenced declaration.
- *  Only `name`/`metadata` surface here; full agent resolution is Phase 33's
- *  `resolveAgentDefinition`. The file path is recorded as `resource`. */
-export function parseAgentFile(text: string, path: string): ManifestContributionDeclaration {
+export interface AgentFileDeclaration {
+  readonly kind: "agent";
+  readonly name: string;
+  readonly resource: string;
+  readonly metadata?: Readonly<Record<string, JsonValue>>;
+}
+
+/** Parse a per-agent `AGENT.md` bundle frontmatter file. Only `name`/`metadata`
+ *  surface here; full resolution is `resolveAgentDefinition`. */
+export function parseAgentFile(text: string, path: string): AgentFileDeclaration {
   const { front } = splitFrontmatter(text, path);
   const name = String(front.get("name") ?? "").trim() || parentDirName(path);
   if (!NAME_RE.test(name)) {
@@ -125,7 +130,7 @@ export function parseAgentFile(text: string, path: string): ManifestContribution
   for (const [key, value] of front) {
     if (key !== "name") metadata[key] = value as JsonValue;
   }
-  const declaration: ManifestContributionDeclaration = {
+  const declaration: AgentFileDeclaration = {
     kind: "agent",
     name: name.replace(/\s+/g, "-"),
     resource: path,

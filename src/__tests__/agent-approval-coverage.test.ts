@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { test } from "bun:test";
 import {
   assertValidAgentRunResume,
-  decisionIdentityRef,
+  decisionPrincipalRef,
   decisionScopesEqual,
   nestedApprovalId,
   nestedOutcomeToolResult,
@@ -405,7 +405,7 @@ test("nestedOutcomeToolResult shapes completed and failed nested outcomes", () =
   });
 });
 
-test("decisionIdentityRef renders a compact principal ref or undefined", () => {
-  assert.equal(decisionIdentityRef({ tenantId: "t1", principal: { kind: "user", id: "u1" } } as never), "t1:user:u1");
-  assert.equal(decisionIdentityRef(undefined), undefined);
+test("decisionPrincipalRef returns opaque principal id or undefined", () => {
+  assert.equal(decisionPrincipalRef({ kind: "user", id: "u1" }), "u1");
+  assert.equal(decisionPrincipalRef(undefined), undefined);
 });

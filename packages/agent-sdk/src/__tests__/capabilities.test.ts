@@ -4,7 +4,7 @@ import {
   type CommandDefinition,
   type CompactionOptions,
   type CompactionResult,
-  type CompactionStrategy,
+  type Compactor,
   createMockProvider,
   providerDone,
   providerTextDelta,
@@ -25,7 +25,7 @@ describe("capabilities composition", () => {
     });
 
     assert.strictEqual(app.commands.length, 0);
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.strictEqual(tools.length, 0);
     assert.strictEqual(app.connectedMcpServerIds.length, 0);
 
@@ -59,7 +59,7 @@ describe("capabilities composition", () => {
     assert.strictEqual(app.commands[0].name, "clear-cache");
 
     // NOT exposed as a model-visible tool
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.strictEqual(tools.length, 0);
 
     // Host can dispatch directly
@@ -129,7 +129,7 @@ describe("capabilities composition", () => {
       },
     });
 
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.strictEqual(tools.length, 2);
     assert.ok(tools.find((t) => t.name === "web_search"));
     assert.ok(tools.find((t) => t.name === "web_fetch"));
@@ -161,7 +161,7 @@ describe("capabilities composition", () => {
     );
 
     // Commands are host-only, not model-visible tools
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.strictEqual(tools.length, 0);
 
     await app.dispose();
@@ -171,7 +171,7 @@ describe("capabilities composition", () => {
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
 
     let compactionRan = false;
-    const mockStrategy: CompactionStrategy = {
+    const mockStrategy: Compactor = {
       name: "custom-test-compaction",
       async compact(): Promise<CompactionResult> {
         compactionRan = true;
@@ -181,19 +181,20 @@ describe("capabilities composition", () => {
       },
     };
 
-    const compactionConfig: CompactionOptions = {
-      strategy: mockStrategy,
-    };
+    // Roadmap §2.5: the compactor is the slot; `compaction` only sizes it.
+    const compactionConfig: CompactionOptions = { keepRecentEntries: 2 };
 
     const app = await defineAgent({
       model: defaultModel,
       provider,
       compaction: compactionConfig,
+      compactor: mockStrategy,
     });
 
     assert.strictEqual(app.agent.config.compaction, compactionConfig);
-    const session = app.createSession();
-    const result = await session.compact(app.agent.config.compaction as CompactionOptions);
+    assert.strictEqual(app.agent.config.slots?.compaction, mockStrategy);
+    const session = app.session();
+    const result = await (await session).compact(app.agent.config.compaction as CompactionOptions);
     assert.strictEqual(compactionRan, true);
     assert.strictEqual(result.summary, "test compacted summary");
 

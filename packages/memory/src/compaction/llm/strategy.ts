@@ -4,16 +4,14 @@ import {
   applyThinkingLevelForModel,
   type CompactionContext,
   type CompactionResult,
-  type CompactionStrategy,
+  type Compactor,
   type CredentialRequest,
   type CredentialValueSource,
-  createProviderRequestPolicyChain,
   createSessionEntry,
   type Message,
   type ModelConfig,
   type ProviderRequest,
   type ProviderRequestOptions,
-  type ProviderRequestPolicy,
   redactSecrets,
   resolveCredentialValue,
   resolveUseCaseModel,
@@ -33,7 +31,10 @@ import { type LlmCompactionPreparation, type PrepareLlmCompactionOptions, prepar
 import { SUMMARIZATION_SYSTEM_PROMPT, TURN_PREFIX_SYSTEM_PROMPT } from "./prompts.js";
 import { type SerializeCompactionConversationOptions, serializeCompactionConversation } from "./serialize.js";
 
-export interface LlmCompactionStrategyOptions extends PrepareLlmCompactionOptions, SerializeCompactionConversationOptions {
+/** A synchronous or asynchronous rewrite of the summarization request. */
+export type ProviderRequestTransform = (request: ProviderRequest) => ProviderRequest | Promise<ProviderRequest>;
+
+export interface LlmCompactorOptions extends PrepareLlmCompactionOptions, SerializeCompactionConversationOptions {
   readonly name?: string;
   readonly provider?: AIProvider;
   readonly summaryProvider?: AIProvider | ((credential: string | undefined) => AIProvider | Promise<AIProvider>);
@@ -41,7 +42,12 @@ export interface LlmCompactionStrategyOptions extends PrepareLlmCompactionOption
   /** Explicit summary model. When omitted, falls back to {@link model} (session / host fallback slot). */
   readonly summaryModel?: ModelConfig;
   readonly providerOptions?: ProviderRequestOptions;
-  readonly providerRequestPolicies?: ProviderRequestPolicy | readonly ProviderRequestPolicy[];
+  /**
+   * Request rewrites for the summarization round. Compaction runs its own provider call outside any
+   * agent hook bus, so a plain transform list replaces the retired provider-request policies: apply
+   * them in order, returning a new request (or the same one to leave it unchanged).
+   */
+  readonly requestTransforms?: readonly ProviderRequestTransform[];
   readonly credential?: CredentialValueSource;
   readonly credentialRequest?: CredentialRequest;
   readonly customInstructions?: string;
@@ -59,7 +65,7 @@ interface ResolvedSummaryLimits {
   readonly maxErrorBytes: number;
 }
 
-export function createLlmCompactionStrategy(options: LlmCompactionStrategyOptions): CompactionStrategy {
+export function createLlmCompactor(options: LlmCompactorOptions): Compactor {
   const name = options.name ?? "llm-compaction";
   const limits = resolveSummaryLimits(options);
   return {
@@ -112,7 +118,7 @@ export function createLlmCompactionStrategy(options: LlmCompactionStrategyOption
 async function summarizeHistory(
   context: CompactionContext,
   prep: LlmCompactionPreparation,
-  options: LlmCompactionStrategyOptions,
+  options: LlmCompactorOptions,
   provider: AIProvider,
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
@@ -132,7 +138,7 @@ async function summarizeHistory(
 async function summarizeTurnPrefix(
   context: CompactionContext,
   prep: LlmCompactionPreparation,
-  options: LlmCompactionStrategyOptions,
+  options: LlmCompactorOptions,
   provider: AIProvider,
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
@@ -149,7 +155,7 @@ async function summarizeTurnPrefix(
 
 async function runSummaryProvider(
   context: CompactionContext,
-  options: LlmCompactionStrategyOptions,
+  options: LlmCompactorOptions,
   provider: AIProvider,
   systemPrompt: string,
   prompt: string,
@@ -181,17 +187,9 @@ async function runSummaryProvider(
   };
   request = applyDefaultProviderRequestOptions(request, { sessionId: context.sessionId });
 
-  const policy = normalizePolicies(options.providerRequestPolicies);
-  if (policy) {
+  for (const transform of options.requestTransforms ?? []) {
     try {
-      const result = await createProviderRequestPolicyChain(policy).apply({
-        request,
-        sessionId: context.sessionId,
-        metadata: context.metadata,
-        signal: context.signal,
-      });
-      request = "request" in result ? result.request : result;
-      secrets = [...secrets, ...("request" in result ? (result.secrets ?? []) : [])];
+      request = await transform(request);
     } catch (error) {
       throw new Error(`Summarization failed: ${safeError(error, secrets, limits.maxErrorBytes)}`);
     }
@@ -233,11 +231,11 @@ async function runSummaryProvider(
   return summary;
 }
 
-function summaryRequestModel(options: LlmCompactionStrategyOptions, reserveRatio: number, limits: ResolvedSummaryLimits): ModelConfig {
+function summaryRequestModel(options: LlmCompactorOptions, reserveRatio: number, limits: ResolvedSummaryLimits): ModelConfig {
   return withMaxTokens(summaryModel(options), outputBudget(options, reserveRatio, limits));
 }
 
-function outputBudget(options: LlmCompactionStrategyOptions, reserveRatio: number, limits: ResolvedSummaryLimits): number {
+function outputBudget(options: LlmCompactorOptions, reserveRatio: number, limits: ResolvedSummaryLimits): number {
   if (options.maxSummaryTokens !== undefined || options.maxOutputTokens !== undefined) return limits.maxSummaryTokens;
   const modelLimit = summaryModel(options).limits?.maxOutputTokens;
   const finiteModelLimit =
@@ -261,7 +259,7 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted) throw signal.reason ?? new Error("Compaction aborted");
 }
 
-function summaryModel(options: LlmCompactionStrategyOptions): ModelConfig {
+function summaryModel(options: LlmCompactorOptions): ModelConfig {
   const resolved = resolveUseCaseModel({
     configured: options.summaryModel,
     sessionModel: options.model,
@@ -270,20 +268,13 @@ function summaryModel(options: LlmCompactionStrategyOptions): ModelConfig {
   return resolved.model;
 }
 
-async function resolveSummaryProvider(options: LlmCompactionStrategyOptions, credential: string | undefined): Promise<AIProvider> {
+async function resolveSummaryProvider(options: LlmCompactorOptions, credential: string | undefined): Promise<AIProvider> {
   const provider = options.summaryProvider ?? options.provider;
   if (!provider) throw new Error("LLM compaction requires summaryProvider or provider");
   return typeof provider === "function" ? provider(credential) : provider;
 }
 
-function normalizePolicies(
-  policy: ProviderRequestPolicy | readonly ProviderRequestPolicy[] | undefined,
-): readonly ProviderRequestPolicy[] | undefined {
-  if (!policy) return undefined;
-  return Array.isArray(policy) ? policy : [policy as ProviderRequestPolicy];
-}
-
-function resolveSummaryLimits(options: LlmCompactionStrategyOptions): ResolvedSummaryLimits {
+function resolveSummaryLimits(options: LlmCompactorOptions): ResolvedSummaryLimits {
   if (options.maxOutputTokens !== undefined) validateCompactionLimit("maxOutputTokens", options.maxOutputTokens, HARD_MAX_SUMMARY_TOKENS);
   if (options.maxSummaryTokens !== undefined)
     validateCompactionLimit("maxSummaryTokens", options.maxSummaryTokens, HARD_MAX_SUMMARY_TOKENS);

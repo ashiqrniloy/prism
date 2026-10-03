@@ -25,7 +25,7 @@ describe("standard AG-UI projectors", () => {
       },
     });
     const mapper = createAgUiEventMapper({ projection });
-    const events = await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" });
+    const events = await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" });
     const snap = events.find((event) => event.type === EventType.MESSAGES_SNAPSHOT);
     assert.ok(snap);
     assert.equal(EventSchemas.safeParse(snap).success, true);
@@ -35,18 +35,24 @@ describe("standard AG-UI projectors", () => {
     );
     // unchanged transcript → no second snapshot
     assert.equal(
-      await (await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 })).some(
-        (e) => e.type === EventType.MESSAGES_SNAPSHOT,
-      ),
+      await (
+        await mapper.map({
+          type: "turn.started",
+          sessionId: "s1",
+          runId: "r1",
+          turn: 1,
+          metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+        })
+      ).some((e) => e.type === EventType.MESSAGES_SNAPSHOT),
       false,
     );
   });
 
   it("messagesFromSession accumulates live message_finished when getMessages absent", async () => {
     const mapper = createAgUiEventMapper({ projection: createMessagesFromSessionProjection() });
-    await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" });
+    await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" });
     const events = await mapper.map({
-      type: "message_finished",
+      type: "message.completed",
       sessionId: "s1",
       runId: "r1",
       message: { id: "m1", role: "assistant", content: [{ type: "text", text: "done" }] },
@@ -70,7 +76,7 @@ describe("standard AG-UI projectors", () => {
     const mapper = createAgUiEventMapper({
       projection: createStateFromStoreProjection(store),
     });
-    const start = await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" });
+    const start = await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" });
     const snapshot = start.find((event) => event.type === EventType.STATE_SNAPSHOT);
     assert.ok(snapshot);
     assert.equal(EventSchemas.safeParse(snapshot).success, true);
@@ -78,7 +84,13 @@ describe("standard AG-UI projectors", () => {
 
     state = { stage: "running", count: 0 };
     for (const listener of listeners) listener();
-    const deltaEvents = await mapper.map({ type: "turn_started", sessionId: "s1", runId: "r1", turn: 1 });
+    const deltaEvents = await mapper.map({
+      type: "turn.started",
+      sessionId: "s1",
+      runId: "r1",
+      turn: 1,
+      metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+    });
     const delta = deltaEvents.find((event) => event.type === EventType.STATE_DELTA);
     assert.ok(delta);
     assert.equal(EventSchemas.safeParse(delta).success, true);
@@ -94,7 +106,7 @@ describe("standard AG-UI projectors", () => {
       }),
     });
     assert.equal(
-      (await throwing.map({ type: "agent_started", sessionId: "s1", runId: "r1" })).some((e) => e.type === EventType.STATE_SNAPSHOT),
+      (await throwing.map({ type: "run.started", sessionId: "s1", runId: "r1" })).some((e) => e.type === EventType.STATE_SNAPSHOT),
       false,
     );
 
@@ -102,16 +114,16 @@ describe("standard AG-UI projectors", () => {
       projection: createStateFromStoreProjection({ get: () => ({ blob: "x".repeat(200) }) }, { maxStateBytes: 32 }),
     });
     assert.equal(
-      (await oversized.map({ type: "agent_started", sessionId: "s1", runId: "r1" })).some((e) => e.type === EventType.STATE_SNAPSHOT),
+      (await oversized.map({ type: "run.started", sessionId: "s1", runId: "r1" })).some((e) => e.type === EventType.STATE_SNAPSHOT),
       false,
     );
   });
 
   it("activityFromToolProgress emits snapshot then delta; missing progress drops", async () => {
     const mapper = createAgUiEventMapper({ projection: createActivityFromToolProgressProjection() });
-    await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" });
+    await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" });
     const first = await mapper.map({
-      type: "tool_execution_progress",
+      type: "tool.progress",
       sessionId: "s1",
       runId: "r1",
       toolCallId: "t1",
@@ -124,7 +136,7 @@ describe("standard AG-UI projectors", () => {
     assert.equal((snap as { activityType: string }).activityType, "tool-progress");
 
     const second = await mapper.map({
-      type: "tool_execution_progress",
+      type: "tool.progress",
       sessionId: "s1",
       runId: "r1",
       toolCallId: "t1",
@@ -136,7 +148,7 @@ describe("standard AG-UI projectors", () => {
     assert.equal(EventSchemas.safeParse(delta).success, true);
 
     const empty = await mapper.map({
-      type: "tool_execution_progress",
+      type: "tool.progress",
       sessionId: "s1",
       runId: "r1",
       toolCallId: "t2",
@@ -157,7 +169,7 @@ describe("standard AG-UI projectors", () => {
     );
     assert.equal(composed.toolResult?.({ toolCallId: "t", name: "x", value: 1 }), "host-wins");
     const mapper = createAgUiEventMapper({ projection: composed });
-    const snap = (await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" })).find(
+    const snap = (await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" })).find(
       (event) => event.type === EventType.MESSAGES_SNAPSHOT,
     ) as { messages: { id: string }[] };
     assert.equal(snap.messages[0]?.id, "first");
@@ -174,9 +186,9 @@ describe("standard AG-UI projectors", () => {
   it("default mapper stays inert without opt-in projectors", async () => {
     const mapper = createAgUiEventMapper();
     const events = [
-      ...(await mapper.map({ type: "agent_started", sessionId: "s1", runId: "r1" })),
+      ...(await mapper.map({ type: "run.started", sessionId: "s1", runId: "r1" })),
       ...(await mapper.map({
-        type: "tool_execution_progress",
+        type: "tool.progress",
         sessionId: "s1",
         runId: "r1",
         toolCallId: "t1",

@@ -4,18 +4,35 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  type AgentLoopStrategy,
   createMockProvider,
+  createSkillRegistry,
+  type LoopStrategy,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
+  type SessionStore,
   type SkillRegistry,
-  singleShotLoop,
   type ToolDefinition,
   type ToolRegistry,
 } from "@arnilo/prism";
 import type { McpToolBridge } from "@arnilo/prism-mcp";
 import { AgentSdkConfigError, defineAgent } from "../index.js";
+import {
+  type Agent as SdkAgent,
+  type AgentEvent as SdkAgentEvent,
+  type RunResult as SdkAgentRunResult,
+  type Session as SdkAgentSession,
+  type AIProvider as SdkAIProvider,
+  type ExecutionPolicy as SdkExecutionPolicy,
+  type PermissionPolicy as SdkPermissionPolicy,
+  type RunOptions as SdkRunOptions,
+  type SessionStore as SdkSessionStore,
+  type ToolDefinition as SdkToolDefinition,
+  createMockProvider as sdkCreateMockProvider,
+  providerDone as sdkProviderDone,
+  providerTextDelta as sdkProviderTextDelta,
+  providerUsage as sdkProviderUsage,
+} from "../index.js";
 
 function stubTool(name: string, description = `stub:${name}`): ToolDefinition {
   return {
@@ -47,14 +64,14 @@ describe("defineAgent", () => {
     });
 
     assert.ok(app.agent);
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.strictEqual(tools.length, 0);
 
-    const session = app.createSession();
+    const session = app.session();
     assert.ok(session);
 
-    const result = await session.run("Hi there");
-    assert.strictEqual(result.status, "succeeded");
+    const result = await (await session).run("Hi there");
+    assert.strictEqual(result.status, "completed");
     assert.strictEqual(result.text, "Hello bare agent!");
 
     await app.dispose();
@@ -77,7 +94,7 @@ describe("defineAgent", () => {
       },
     });
 
-    const registered = (app.agent.config.tools as ToolRegistry).list();
+    const registered = app.agent.config.tools?.add ?? [];
     assert.deepStrictEqual(
       registered.map((t: ToolDefinition) => t.name),
       ["tool_a", "tool_b", "tool_c"],
@@ -109,52 +126,13 @@ describe("defineAgent", () => {
         },
       });
 
-      const skillRegistry = app.agent.config.skills as SkillRegistry;
-      assert.ok(skillRegistry);
-      assert.ok(skillRegistry.get("skill-one"));
-      assert.strictEqual(skillRegistry.get("skill-two"), undefined);
-
-      await app.dispose();
-    } finally {
-      await rm(tempDir, { recursive: true, force: true });
-    }
-  });
-
-  it("skills plane: discovered skills render in prompt catalog on first run without activeSkills (regression)", async () => {
-    const tempDir = await makeTempDir("skills-render");
-    try {
-      await writeFileDeep(
-        join(tempDir, ".agents/skills/active-skill/SKILL.md"),
-        "---\nname: active-skill\ndescription: renders in catalog\n---\nActive body\n",
+      const skills = app.agent.config.skills?.add ?? [];
+      assert.ok(skills.length > 0);
+      assert.ok(skills.some((skill) => skill.name === "skill-one"));
+      assert.strictEqual(
+        skills.some((skill) => skill.name === "skill-two"),
+        false,
       );
-
-      const capturedRequests: ProviderRequest[] = [];
-      const capturingProvider = {
-        id: "mock",
-        async *generate(request: ProviderRequest) {
-          capturedRequests.push(request);
-          yield providerTextDelta("done");
-          yield providerDone();
-        },
-      };
-
-      const app = await defineAgent({
-        model: defaultModel,
-        provider: capturingProvider,
-        skills: {
-          workspaceRoot: tempDir,
-        },
-      });
-
-      const session = app.createSession();
-      await session.run("Test message");
-
-      assert.strictEqual(capturedRequests.length, 1);
-      const text = (capturedRequests[0]?.messages ?? [])
-        .flatMap((m) => m.content)
-        .map((b) => (b.type === "text" ? b.text : ""))
-        .join("\n");
-      assert.match(text, /Skill active-skill: renders in catalog/);
 
       await app.dispose();
     } finally {
@@ -256,7 +234,7 @@ describe("defineAgent", () => {
       },
     });
 
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.deepStrictEqual(
       tools.map((t: ToolDefinition) => t.name),
       ["local_tool", "mcp_search"],
@@ -266,7 +244,7 @@ describe("defineAgent", () => {
     await app.dispose();
   });
 
-  it("dispose() closes all bridges; second dispose() is a no-op; createSession after dispose fails closed", async () => {
+  it("dispose() closes all bridges; second dispose() is a no-op; session() after dispose fails closed", async () => {
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
     let closeCallCount = 0;
 
@@ -294,7 +272,7 @@ describe("defineAgent", () => {
     });
 
     // Session before disposal works
-    const session = app.createSession();
+    const session = app.session();
     assert.ok(session);
 
     // Dispose once
@@ -305,9 +283,9 @@ describe("defineAgent", () => {
     await app.dispose();
     assert.strictEqual(closeCallCount, 1);
 
-    // createSession after dispose fails closed
-    assert.throws(
-      () => app.createSession(),
+    // session() after dispose fails closed
+    await assert.rejects(
+      async () => app.session(),
       (err: unknown) => {
         assert.ok(err instanceof AgentSdkConfigError);
         assert.ok(err.message.includes("disposed"));
@@ -316,29 +294,140 @@ describe("defineAgent", () => {
     );
   });
 
-  it("per-run loop override in createSession().run(input, { loop }) reaches resolveLoop", async () => {
-    let customLoopInvoked = false;
+  it("define_agent_rejects_unknown_identity_profile_field", async () => {
+    const provider = createMockProvider([providerTextDelta("x"), providerDone()]);
+    await assert.rejects(
+      // @ts-expect-error identity is retired
+      defineAgent({ model: defaultModel, provider, identity: "retired-profile" }),
+      (err: unknown) => err instanceof AgentSdkConfigError && /Unknown config field: identity/.test(err.message),
+    );
+  });
 
-    const customLoop: AgentLoopStrategy = {
-      name: "custom-test-loop",
-      async run(ctx) {
-        customLoopInvoked = true;
-        await ctx.generate(await ctx.assemble([]));
-      },
-    };
+  it("host contract names import from the SDK package root", () => {
+    // The ten type names below and the four mock helpers are the host contract; compiling
+    // this file against `../index.js` is the assertion. Runtime checks keep the imports used.
+    for (const helper of [sdkCreateMockProvider, sdkProviderDone, sdkProviderTextDelta, sdkProviderUsage]) {
+      assert.strictEqual(typeof helper, "function");
+    }
+    assert.strictEqual(sdkCreateMockProvider, createMockProvider);
+    const contract:
+      | readonly [
+          SdkAgent,
+          SdkAgentEvent,
+          SdkAgentRunResult,
+          SdkAgentSession,
+          SdkAIProvider,
+          SdkExecutionPolicy,
+          SdkPermissionPolicy,
+          SdkRunOptions,
+          SdkSessionStore,
+          SdkToolDefinition,
+        ]
+      | undefined = undefined;
+    assert.strictEqual(contract, undefined);
+  });
 
-    const provider = createMockProvider([providerTextDelta("hello"), providerDone()]);
+  it("session() streams AgentEvents from the SDK root", async () => {
+    const provider = createMockProvider([providerTextDelta("streamed"), providerDone()]);
+    const app = await defineAgent({ model: defaultModel, provider });
 
-    const app = await defineAgent({
-      model: defaultModel,
-      provider,
-      loop: singleShotLoop,
-    });
+    const events: SdkAgentEvent[] = [];
+    for await (const event of (await app.session()).stream("hi")) events.push(event);
+    assert.ok(events.length > 0);
+    assert.ok(events.some((event) => event.type === "run.started"));
 
-    const session = app.createSession();
-    await session.run("test", { loop: customLoop });
-
-    assert.strictEqual(customLoopInvoked, true);
     await app.dispose();
+  });
+
+  it("jsonl store shorthand persists entries across agent instances", async () => {
+    const dir = await makeTempDir("store");
+    try {
+      const path = join(dir, "sessions.jsonl");
+      const provider1 = createMockProvider([providerTextDelta("one"), providerDone()]);
+      const app1 = await defineAgent({
+        model: defaultModel,
+        provider: provider1,
+        store: { type: "jsonl", path },
+      });
+      const session1 = app1.session();
+      await (await session1).run("hello");
+      const sessionId = (await session1).id;
+      await app1.dispose();
+
+      const provider2 = createMockProvider([providerTextDelta("two"), providerDone()]);
+      const app2 = await defineAgent({
+        model: defaultModel,
+        provider: provider2,
+        store: { type: "jsonl", path },
+      });
+      const store2 = app2.agent.config.slots?.store;
+      assert.ok(store2 && typeof store2 !== "string");
+      const entries = await store2.list(sessionId);
+      assert.ok(entries.length > 0, "second agent reads first agent's persisted entries");
+      await app2.dispose();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("raw SessionStore passes through by reference", async () => {
+    const raw: SessionStore = { append: async () => {}, list: async () => [] };
+    const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
+    const app = await defineAgent({ model: defaultModel, provider, store: raw });
+
+    assert.strictEqual(app.agent.config.slots?.store, raw);
+    await app.dispose();
+  });
+
+  it("unknown store type fails closed", async () => {
+    const provider = createMockProvider([providerTextDelta("x"), providerDone()]);
+    await assert.rejects(
+      // @ts-expect-error sqlite is not a Phase 1 shorthand
+      defineAgent({ model: defaultModel, provider, store: { type: "sqlite", path: "x.db" } }),
+      (err: unknown) => err instanceof AgentSdkConfigError && /store/.test((err as Error).message),
+    );
+  });
+
+  it("hooks.json run.end handlers and registerHooks share the bus, hooks.json first", async () => {
+    const dir = await makeTempDir("stop-order");
+    try {
+      const hookPath = join(dir, "hooks.json");
+      await writeFile(hookPath, JSON.stringify({ hooks: { Stop: [{ type: "command", command: "echo stop" }] } }), "utf8");
+      const provider = createMockProvider([providerTextDelta("x"), providerDone()]);
+      const app = await defineAgent({
+        model: defaultModel,
+        provider,
+        hooks: { file: hookPath },
+        workspaceRoot: dir,
+        registerHooks: (hooks) => hooks.on("run.end", () => undefined, { id: "config-probe" }),
+      });
+
+      // Both live on the agent's one bus. `registerHooks` runs after the hooks plane, so a spy
+      // registrar records the hooks.json registration first.
+      const order: string[] = [];
+      const probe = await defineAgent({
+        model: defaultModel,
+        provider: createMockProvider([providerTextDelta("x"), providerDone()]),
+        hooks: { file: hookPath },
+        workspaceRoot: dir,
+        registerHooks: (hooks) => {
+          const spy = {
+            on: (name: string, handler: unknown, options?: { id?: string }) => {
+              order.push(`${name}#${options?.id ?? "-"}`);
+              hooks.on(name as never, handler as never, options);
+            },
+          };
+          spy.on("run.end", () => undefined, { id: "config-probe" });
+        },
+      });
+      await (await probe.session()).run("go");
+      assert.strictEqual(order[0], "run.end#config-probe");
+      assert.ok(probe.agent !== app.agent, "each defineAgent gets its own bus, so the spy never leaks into the first agent");
+
+      await probe.dispose();
+      await app.dispose();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

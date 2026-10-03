@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { kimiCodingModels, moonshotKimiModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createMoonshotProvider } from "./moonshot.js";
 import { createKimiCodingProvider } from "./provider.js";
 
@@ -24,43 +24,30 @@ export interface KimiProviderPackageOptions {
   readonly moonshotModels?: readonly ModelConfig[];
 }
 
-export function createKimiProviderPackage(options: KimiProviderPackageOptions = {}): ProviderPackage {
+export function kimiPackage(options: KimiProviderPackageOptions = {}): PackageInstance {
   const providerId = options.id ?? "kimi-coding";
   const moonshotId = options.moonshotId ?? "moonshot";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/kimi",
-    description: "Kimi provider package for Prism.",
-    docs: { links: ["docs/providers/kimi.md"] },
-    setup(api) {
-      api.registerProvider(
-        createKimiCodingProvider({
-          id: providerId,
-          apiKey: options.kimiApiKey,
+  return vendorPackage("@arnilo/prism-providers.kimi", "Kimi provider package for Prism.", () => {
+    const providers = [
+      createKimiCodingProvider({
+        id: providerId,
+        apiKey: options.kimiApiKey,
+        fetch: options.fetch,
+        baseUrl: options.baseUrl,
+        userAgent: options.userAgent,
+      }),
+    ];
+    if (options.includeMoonshotModels) {
+      providers.push(
+        createMoonshotProvider({
+          id: moonshotId,
+          apiKey: options.moonshotApiKey ?? options.kimiApiKey,
           fetch: options.fetch,
-          baseUrl: options.baseUrl,
-          userAgent: options.userAgent,
+          baseUrl: options.moonshotBaseUrl,
         }),
       );
-      for (const model of options.models ?? kimiCodingModels) {
-        api.registerModel({ ...model, provider: providerId });
-      }
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-
-      if (options.includeMoonshotModels) {
-        api.registerProvider(
-          createMoonshotProvider({
-            id: moonshotId,
-            apiKey: options.moonshotApiKey ?? options.kimiApiKey,
-            fetch: options.fetch,
-            baseUrl: options.moonshotBaseUrl,
-          }),
-        );
-        for (const model of options.moonshotModels ?? moonshotKimiModels) {
-          api.registerModel({ ...model, provider: moonshotId });
-        }
-        api.registerAuthMethod({ kind: "api_key", provider: moonshotId, credentialName: "apiKey" });
-      }
-    },
+    }
+    return providers;
   });
 }
 

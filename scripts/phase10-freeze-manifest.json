@@ -134,8 +134,8 @@
       "check_finished",
       "task_created",
       "task_completed",
-      "compaction_started",
-      "compaction_finished"
+      "compaction.started",
+      "compaction.completed"
      ],
      "notes": "process_started/process_exited/process_killed reuse the shipped CodingProcessEvent union (no new shape). Deferred events have no consumer: checks, tasks, and compaction remain unexported until a plan adopts them."
     }

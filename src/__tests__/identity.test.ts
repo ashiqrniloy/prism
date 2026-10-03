@@ -18,7 +18,6 @@ import {
   providerDone,
   providerTextDelta,
   resolveIdentityLimits,
-  resolveRunIdentity,
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
@@ -125,7 +124,7 @@ describe("identity contracts", () => {
     );
   });
 
-  it("IdentityVerifier host seam and resolveRunIdentity reject ownership conflicts; tools see identity", async () => {
+  it("IdentityVerifier host seam verifies independently; tools see only opaque principal", async () => {
     const verifier: IdentityVerifier = {
       async verify(input) {
         const claim = input as { tenantId?: string };
@@ -134,11 +133,6 @@ describe("identity contracts", () => {
       },
     };
     const identity = await verifier.verify({ tenantId: "tenant-1" });
-    assert.equal(resolveRunIdentity(identity, undefined, ownershipFromIdentity(identity))?.tenantId, "tenant-1");
-    assert.throws(
-      () => resolveRunIdentity(identity, undefined, { tenantId: "other" }),
-      (error: unknown) => error instanceof IdentityError && error.reason === "ownership_tenant",
-    );
 
     let sawIdentity = false;
     const tool: ToolDefinition = {
@@ -146,21 +140,21 @@ describe("identity contracts", () => {
       description: "ping",
       parameters: { type: "object", properties: {} },
       execute(_args, context) {
-        sawIdentity = context.identity?.principal.id === "agent-1";
+        sawIdentity = context.principal === identity.principal;
         return { toolCallId: context.toolCallId, name: "ping", content: [{ type: "text", text: "ok" }] };
       },
     };
     const result = await dispatchToolCall({
       call: toolCallContent("call-1", "ping", {}),
       registry: createToolRegistry([tool]),
-      context: { sessionId: "s", runId: "r", toolCallId: "call-1", identity },
+      context: { sessionId: "s", runId: "r", toolCallId: "call-1", principal: identity.principal },
       ownership: ownershipFromIdentity(identity),
-      identity,
+      principal: identity.principal,
     });
     assert.equal(result.error, undefined);
     assert.equal(sawIdentity, true);
 
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
       provider: {
         id: "mock",
@@ -169,15 +163,11 @@ describe("identity contracts", () => {
           yield providerDone();
         },
       },
-      identity: verifiedIdentity(),
+      principal: identity.principal,
       ownership: ownershipFromIdentity(verifiedIdentity()),
     });
-    await assert.rejects(
-      () =>
-        agent.createSession().run("go", {
-          identity: verifiedIdentity({ expiresAt: new Date(Date.now() - 1_000).toISOString() }),
-        }),
-      (error: unknown) => error instanceof IdentityError && error.reason === "expired",
-    );
+    const run = await (await agent.session()).run("go", { principal: { kind: "user", id: "override" } });
+    assert.equal(run.text, "ok");
+    await agent.dispose();
   });
 });

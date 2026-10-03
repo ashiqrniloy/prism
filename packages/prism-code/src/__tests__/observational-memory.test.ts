@@ -1,4 +1,5 @@
 import { describe, it } from "bun:test";
+import type { ContextDraft, HookContext } from "@arnilo/prism";
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -57,19 +58,20 @@ describe("Observational Memory Coordinator", () => {
     // Worker should never have been called
     assert.strictEqual(providerCalls.length, 0);
 
-    // Delegating context provider returns [] when disabled
-    const cp = coordinator.createDelegatingContextProvider();
-    const blocks = await cp.resolve({
-      sessionId: "s1",
-      messages: [],
-    });
-    assert.strictEqual(blocks.length, 0);
+    // The delegating context.build handler abstains when the session is disabled
+    let handler: ((draft: ContextDraft, context: HookContext) => unknown) | undefined;
+    coordinator.registerDelegatingContext({
+      on: (_n: string, h: unknown) => {
+        handler = h as typeof handler;
+      },
+    } as never);
+    assert.strictEqual(await handler?.({ messages: [] }, { sessionId: "s1", runId: "r" } as HookContext), undefined);
   });
 
   it("toggle on enables session and toggle off disables", async () => {
     const coordinator = createCoordinator();
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: sessionModel,
       provider: {
         id: "mock",
@@ -78,9 +80,9 @@ describe("Observational Memory Coordinator", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     // Start off
     assert.strictEqual(coordinator.isSessionEnabled("s1"), false);
@@ -99,7 +101,7 @@ describe("Observational Memory Coordinator", () => {
   it("on/off/on does not create duplicate attachments", async () => {
     const coordinator = createCoordinator();
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: sessionModel,
       provider: {
         id: "mock",
@@ -108,9 +110,9 @@ describe("Observational Memory Coordinator", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     // Toggle on
     await coordinator.toggleSession(session, sessionModel, store, "/test");
@@ -133,7 +135,7 @@ describe("Observational Memory Coordinator", () => {
   it("getActiveSession returns wrapped session that filters recall tool when disabled", async () => {
     const coordinator = createCoordinator();
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: sessionModel,
       provider: {
         id: "mock",
@@ -142,9 +144,9 @@ describe("Observational Memory Coordinator", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     // Default disabled — getActiveSession wraps to filter recall
     const wrapped = await coordinator.getActiveSession(session, sessionModel, store);
@@ -168,7 +170,7 @@ describe("Observational Memory Coordinator", () => {
   it("/OM-model changes worker model without affecting session model", async () => {
     const coordinator = createCoordinator();
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: sessionModel,
       provider: {
         id: "mock",
@@ -177,9 +179,9 @@ describe("Observational Memory Coordinator", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     const result = await coordinator.setSessionWorkerModel(session, workerModel, sessionModel, store, "/test");
 
@@ -199,7 +201,7 @@ describe("Observational Memory Coordinator", () => {
     const credentialManager = new PrismCodeCredentialManager({ store: memoryStore });
     const coordinator = createCoordinator({ credentialManager });
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: sessionModel,
       provider: {
         id: "mock",
@@ -208,9 +210,9 @@ describe("Observational Memory Coordinator", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     // Attempt to set a model for an unauthenticated provider
     await assert.rejects(
@@ -238,7 +240,7 @@ describe("Observational Memory Coordinator", () => {
 
       // Coordinator 1: enable OM and set worker model
       const coordinator1 = createCoordinator({ store });
-      const agent1 = createAgent({
+      const agent1 = await createAgent({
         model: sessionModel,
         provider: {
           id: "mock",
@@ -247,9 +249,9 @@ describe("Observational Memory Coordinator", () => {
             yield providerDone();
           },
         },
-        store,
+        slots: { store },
       });
-      const session1 = agent1.createSession({ id: "s1" });
+      const session1 = await agent1.session({ id: "s1", create: true });
 
       await coordinator1.toggleSession(session1, sessionModel, store, "/test");
       await coordinator1.setSessionWorkerModel(session1, workerModel, sessionModel, store, "/test");
@@ -278,7 +280,7 @@ describe("Observational Memory Coordinator", () => {
     try {
       const store = createSqlitePersistence({ filename: dbPath });
       const coordinator = createCoordinator({ store });
-      const agent = createAgent({
+      const agent = await createAgent({
         model: sessionModel,
         provider: {
           id: "mock",
@@ -287,11 +289,11 @@ describe("Observational Memory Coordinator", () => {
             yield providerDone();
           },
         },
-        store,
+        slots: { store },
       });
 
       // Enable OM for session s1
-      const session1 = agent.createSession({ id: "s1" });
+      const session1 = await agent.session({ id: "s1", create: true });
       await coordinator.toggleSession(session1, sessionModel, store, "/test");
 
       // Session s2 should still be off
@@ -310,21 +312,18 @@ describe("Observational Memory Coordinator", () => {
     }
   });
 
-  it("delegating context provider returns empty when session has no attached instance", async () => {
+  it("delegating context.build handler abstains when the session has no attached instance", async () => {
     const coordinator = createCoordinator();
     // Enable the session in memory but don't attach
     (coordinator as any).sessionStates.set("s1", { enabled: true });
 
-    const cp = coordinator.createDelegatingContextProvider();
-    const blocks = await cp.resolve({ sessionId: "s1", messages: [] });
-    assert.strictEqual(blocks.length, 0);
-  });
-
-  it("delegating context provider returns empty when sessionId is missing", async () => {
-    const coordinator = createCoordinator();
-    const cp = coordinator.createDelegatingContextProvider();
-    const blocks = await cp.resolve({ messages: [] });
-    assert.strictEqual(blocks.length, 0);
+    let handler: ((draft: ContextDraft, context: HookContext) => unknown) | undefined;
+    coordinator.registerDelegatingContext({
+      on: (_n: string, h: unknown) => {
+        handler = h as typeof handler;
+      },
+    } as never);
+    assert.strictEqual(await handler?.({ messages: [] }, { sessionId: "s1", runId: "r" } as HookContext), undefined);
   });
 
   it("isFlushInFlight returns false when no instance attached", () => {
@@ -368,7 +367,7 @@ describe("Observational Memory Coordinator", () => {
   it("setSessionWorkerModel with undefined resets to session model", async () => {
     const coordinator = createCoordinator();
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: sessionModel,
       provider: {
         id: "mock",
@@ -377,9 +376,9 @@ describe("Observational Memory Coordinator", () => {
           yield providerDone();
         },
       },
-      store,
+      slots: { store },
     });
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
 
     // Set a worker model
     await coordinator.setSessionWorkerModel(session, workerModel, sessionModel, store, "/test");

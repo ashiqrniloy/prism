@@ -1,9 +1,9 @@
-import { createExtensionKernel } from "@arnilo/prism";
+import { createAgent } from "@arnilo/prism";
 import {
   createMemoryStatusCommand,
   createMemoryViewCommand,
-  createObservationalMemoryExtension,
   createRecallMemoryTool,
+  observationalMemory,
   recallObservationalMemory,
 } from "@arnilo/prism-memory/compaction/observational-memory";
 
@@ -16,14 +16,11 @@ export async function demo() {
   const tool = createRecallMemoryTool({ getEntries });
   const status = createMemoryStatusCommand({ getEntries });
   const view = createMemoryViewCommand({ getEntries });
-  const ext = createObservationalMemoryExtension({
-    registerCompactionStrategy: false,
-    recallTool: { getEntries },
-    commands: { getEntries },
+  const agent = await createAgent({
+    model: { provider: "mock", model: "memory" },
+    packages: [observationalMemory({ recallTool: { getEntries }, commands: { getEntries } })],
   });
-
-  const kernel = createExtensionKernel();
-  await kernel.load([ext]);
+  await agent.dispose();
 
   // Recall on an empty branch fails closed for an invalid id.
   const result = recallObservationalMemory([], "not-a-valid-id");

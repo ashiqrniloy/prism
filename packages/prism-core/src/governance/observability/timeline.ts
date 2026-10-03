@@ -83,6 +83,17 @@ interface MutableStep {
   metadata?: Readonly<Record<string, unknown>>;
 }
 
+/** Close the open turn step when the next turn opens or the run ends. */
+function closeTurnStep(state: { currentTurnStep?: MutableStep }): void {
+  const step = state.currentTurnStep;
+  if (!step || step.status !== "running") return;
+  const finished = new Date().toISOString();
+  step.status = "succeeded";
+  step.finishedAt = finished;
+  step.durationMs = durationMs(step.startedAt, finished);
+  state.currentTurnStep = undefined;
+}
+
 function durationMs(start: string, end: string): number | undefined {
   const s = Date.parse(start);
   const e = Date.parse(end);
@@ -216,7 +227,7 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
   const parentId = (): string | undefined => state.currentTurnStep?.id ?? state.runStep?.id;
 
   switch (event.type) {
-    case "agent_started": {
+    case "run.started": {
       state.runId = event.runId;
       state.sessionId = event.sessionId;
       state.startedAt = now();
@@ -230,9 +241,14 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
         startedAt: state.startedAt,
       };
       state.runStep = addStep(state, step);
+      // A durable resume re-opens the run and carries the restore audit.
+      if (event.resumed) {
+        if (event.restore) state.restore = event.restore;
+      }
       return;
     }
-    case "agent_finished": {
+    case "run.completed": {
+      closeTurnStep(state);
       if (state.runStep) {
         const finished = now();
         state.runStep.status = "succeeded";
@@ -241,13 +257,14 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
         state.runStep.usage = event.usage;
       }
       state.totalUsage = addUsage(state.totalUsage, event.usage);
-      state.status = event.finishReason ? `finished:${event.finishReason}` : "succeeded";
-      state.stopReason = event.finishReason;
+      state.status = event.stopReason ? `finished:${event.stopReason}` : "succeeded";
+      state.stopReason = event.stopReason;
       state.stopDetail = event.stopDetail;
       state.finishedAt = now();
       return;
     }
-    case "agent_suspended": {
+    case "run.suspended": {
+      closeTurnStep(state);
       if (state.runStep) state.runStep.status = "suspended";
       state.status = "suspended";
       addStep(state, {
@@ -261,102 +278,78 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       });
       return;
     }
-    case "agent_resumed": {
-      state.status = "running";
-      if (event.restore) state.restore = event.restore;
-      if (state.runStep) state.runStep.status = "running";
+    case "decision.resolved": {
+      if (state.runStep) state.runStep.status = "succeeded";
       return;
     }
-    case "agent_denied": {
-      if (state.runStep) state.runStep.status = "denied";
-      state.status = "denied";
-      state.finishedAt = now();
-      return;
-    }
-    case "turn_started": {
-      const step: MutableStep = {
-        id: `turn:${event.runId}:${event.turn}`,
-        parentId: state.runStep?.id,
-        kind: "turn",
-        name: `turn-${event.turn}`,
-        order: state.order++,
-        status: "running",
-        startedAt: now(),
-        metadata: { turn: event.turn },
-      };
-      state.currentTurnStep = addStep(state, step);
-      return;
-    }
-    case "turn_finished": {
-      if (state.currentTurnStep) {
-        const finished = now();
-        state.currentTurnStep.status = "succeeded";
-        state.currentTurnStep.finishedAt = finished;
-        state.currentTurnStep.durationMs = durationMs(state.currentTurnStep.startedAt, finished);
+    case "turn.started": {
+      // The loop's own start opens the turn step; a provider attempt carries `metadata` and opens
+      // the chat step under it. The turn step is opened lazily here (the loop no longer emits a
+      // separate turn event) and closed when the next turn opens or the run ends.
+      if (!state.currentTurnStep || state.currentTurnStep.metadata?.turn !== event.turn) {
+        closeTurnStep(state);
+        const step: MutableStep = {
+          id: `turn:${event.runId}:${event.turn}`,
+          parentId: state.runStep?.id,
+          kind: "turn",
+          name: `turn-${event.turn}`,
+          order: state.order++,
+          status: "running",
+          startedAt: now(),
+          metadata: { turn: event.turn },
+        };
+        state.currentTurnStep = addStep(state, step);
       }
-      state.currentTurnStep = undefined;
-      state.currentProviderStep = undefined;
-      return;
-    }
-    case "deterministic_turn": {
-      // Plan 096: host middleware answered without a provider request. No usage is ever attached —
-      // absent, never a zero-filled model turn.
-      const startedAt = now();
-      addStep(state, {
-        id: `deterministic:${event.runId}:${event.turn}`,
-        parentId: state.currentTurnStep?.id ?? state.runStep?.id,
-        kind: "deterministic",
-        name: event.middleware,
-        order: state.order++,
-        status: "succeeded",
-        startedAt,
-        finishedAt: startedAt,
-        metadata: { turn: event.turn, middleware: event.middleware },
-      });
-      return;
-    }
-    case "provider_turn_started": {
-      const modelName =
-        typeof event.metadata.model === "string" ? event.metadata.model : (event.metadata.model as { model?: string } | undefined)?.model;
+      const metadata = event.metadata;
+      const modelName = typeof metadata.model === "string" ? metadata.model : (metadata.model as { model?: string } | undefined)?.model;
       const step: MutableStep = {
-        id: `provider:${event.runId}:${event.turn}:${event.metadata.attempt ?? 0}`,
+        id: `provider:${event.runId}:${event.turn}:${metadata.attempt ?? 0}`,
         parentId: state.currentTurnStep?.id ?? state.runStep?.id,
         kind: "provider",
-        name: modelName ?? event.metadata.providerId ?? "provider",
+        name: modelName ?? metadata.providerId ?? "provider",
         order: state.order++,
         status: "running",
         startedAt: now(),
         metadata: {
-          providerId: event.metadata.providerId,
-          model: event.metadata.model,
-          attempt: event.metadata.attempt,
+          providerId: metadata.providerId,
+          model: metadata.model,
+          attempt: metadata.attempt,
+          ...(event.retry ? { attempt: event.attempt, delayMs: event.retry.delayMs } : {}),
         },
+        ...(event.retry ? { error: event.retry.error } : {}),
       };
       state.currentProviderStep = addStep(state, step);
       return;
     }
-    case "provider_turn_finished": {
-      if (state.currentProviderStep) {
+    case "turn.completed": {
+      if (event.metadata && state.currentProviderStep) {
+        const metadata = event.metadata;
         const finished = now();
         state.currentProviderStep.status = event.error ? "failed" : "succeeded";
         state.currentProviderStep.finishedAt = finished;
         state.currentProviderStep.durationMs = durationMs(state.currentProviderStep.startedAt, finished);
         state.currentProviderStep.usage = event.usage;
-        if (event.metadata.stopReason || event.metadata.budgets || event.metadata.cache) {
+        if (metadata.stopReason || metadata.budgets || metadata.cache) {
           state.currentProviderStep.metadata = {
             ...state.currentProviderStep.metadata,
-            ...(event.metadata.stopReason ? { stopReason: event.metadata.stopReason } : {}),
-            ...(event.metadata.budgets ? { budgets: event.metadata.budgets } : {}),
-            ...(event.metadata.cache ? { cache: event.metadata.cache } : {}),
+            ...(metadata.stopReason ? { stopReason: metadata.stopReason } : {}),
+            ...(metadata.budgets ? { budgets: metadata.budgets } : {}),
+            ...(metadata.cache ? { cache: metadata.cache } : {}),
           };
         }
         if (event.error) state.currentProviderStep.error = event.error;
+      } else if (state.currentTurnStep) {
+        const finished = now();
+        state.currentTurnStep.status = "succeeded";
+        state.currentTurnStep.finishedAt = finished;
+        state.currentTurnStep.durationMs = durationMs(state.currentTurnStep.startedAt, finished);
       }
       state.totalUsage = addUsage(state.totalUsage, event.usage);
       state.currentProviderStep = undefined;
+      if (!event.metadata) state.currentTurnStep = undefined;
       return;
     }
-    case "tool_execution_started": {
+    case "tool.started": {
       const { io: inputIo, wasRedacted } = prepareIo(event.call.arguments, state.content, state.redactor, state.maxIoBytes);
       if (wasRedacted) state.anyRedacted = true;
       const step: MutableStep = {
@@ -373,123 +366,127 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       addStep(state, step);
       return;
     }
-    case "tool_execution_finished": {
-      const toolCallId = event.result?.toolCallId ?? event.result?.name ?? "";
+    case "tool.completed": {
+      const toolCallId = event.toolCallId || event.result?.toolCallId || event.result?.name || "";
       const step = state.activeTools.get(toolCallId);
+      const failed = event.status === "error" || Boolean(event.error) || Boolean(event.result?.error);
+      const blocked = event.status === "blocked";
       if (step) {
         const finished = now();
-        step.status = event.result.error ? "failed" : "succeeded";
+        step.status = blocked ? "blocked" : failed ? "failed" : "succeeded";
         step.finishedAt = finished;
         step.durationMs = durationMs(step.startedAt, finished);
-        if (event.result.error) step.error = { message: event.result.error.message ?? String(event.result.error) };
-        const { io, wasRedacted } = prepareIo(event.result.value ?? event.result.content, state.content, state.redactor, state.maxIoBytes);
-        if (wasRedacted) state.anyRedacted = true;
-        if (io !== undefined) step.output = io;
-        if (event.metadata) step.metadata = { ...step.metadata, durationMs: event.metadata.durationMs };
-        state.activeTools.delete(toolCallId);
-      }
-      return;
-    }
-    case "tool_execution_error": {
-      const toolCallId = event.call?.id ?? "";
-      const step = state.activeTools.get(toolCallId);
-      if (step) {
-        const finished = now();
-        step.status = "failed";
-        step.finishedAt = finished;
-        step.durationMs = durationMs(step.startedAt, finished);
-        step.error = event.error;
-        if (event.metadata) step.metadata = { ...step.metadata, durationMs: event.metadata.durationMs };
+        if (event.error) step.error = event.error;
+        if (blocked) step.metadata = { ...step.metadata, ...(event.reason ? { reason: event.reason } : {}) };
+        else {
+          const { io, wasRedacted } = prepareIo(
+            event.result?.value ?? event.result?.content,
+            state.content,
+            state.redactor,
+            state.maxIoBytes,
+          );
+          if (wasRedacted) state.anyRedacted = true;
+          if (io !== undefined) step.output = io;
+        }
+        step.metadata = { ...step.metadata, durationMs: event.metadata.durationMs };
         state.activeTools.delete(toolCallId);
       } else {
-        // No matching start — create a standalone error step.
+        // No matching start — create a standalone outcome step.
         addStep(state, {
           id: `tool:${toolCallId || `err-${state.order}`}`,
           parentId: parentId(),
           kind: "tool",
-          name: event.call?.name ?? "unknown",
+          name: event.name ?? "unknown",
           order: state.order++,
-          status: "failed",
+          status: blocked ? "blocked" : failed ? "failed" : "succeeded",
           startedAt: now(),
-          error: event.error,
+          ...(event.error ? { error: event.error } : {}),
+          ...(blocked && event.reason ? { metadata: { reason: event.reason } } : {}),
         });
       }
       return;
     }
-    case "tool_execution_blocked": {
-      const step = state.activeTools.get(event.toolCallId);
-      if (step) {
-        step.status = "blocked";
-        step.finishedAt = now();
-        step.durationMs = durationMs(step.startedAt, step.finishedAt);
-        step.error = event.error;
-        step.metadata = { ...step.metadata, reason: event.reason };
-        state.activeTools.delete(event.toolCallId);
-      } else {
+    case "package.event": {
+      // Kernel modules ride `package.event` until their owning phase names them.
+      if (event.name === "guardrail.decision") {
+        const data = event.data as
+          | { record?: { stage?: string; action?: string; guardrail?: unknown }; toolName?: string; toolCallId?: string }
+          | undefined;
+        const record = data?.record ?? {};
         addStep(state, {
-          id: `tool:${event.toolCallId}`,
+          id: `guardrail:${event.runId}:${state.order}`,
           parentId: parentId(),
-          kind: "tool",
-          name: event.name,
+          kind: "guardrail",
+          name: record.stage ?? data?.toolName ?? "guardrail",
           order: state.order++,
-          status: "blocked",
+          status: String(record.action) === "deny" || record.action === "block" || record.action === "tripwire" ? "denied" : "succeeded",
           startedAt: now(),
-          error: event.error,
-          metadata: { reason: event.reason },
+          metadata: {
+            action: record.action ?? "unknown",
+            // Rule identity only: `metadata` stays low-cardinality, so the free-text reason is not projected (plan 092 T1).
+            ...(typeof record.guardrail === "string" ? { guardrail: record.guardrail } : {}),
+            ...(data?.toolName ? { toolName: data.toolName } : {}),
+            ...(data?.toolCallId ? { toolCallId: data.toolCallId } : {}),
+          },
         });
+        return;
+      }
+      if (event.name === "agent.step") {
+        const data = event.data as
+          | {
+              adapterId?: string;
+              stepIndex?: number;
+              subagentType?: string;
+              state?: string;
+              durationMs?: number;
+              usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+              kind?: string;
+              toolName?: string;
+            }
+          | undefined;
+        addStep(state, {
+          id: `delegation:${data?.adapterId ?? "unknown"}:${data?.stepIndex ?? 0}`,
+          parentId: parentId(),
+          kind: "delegation",
+          name: data?.subagentType ?? data?.adapterId ?? "delegation",
+          order: state.order++,
+          status: data?.state === "done" ? "succeeded" : data?.state === "error" ? "failed" : "running",
+          startedAt: now(),
+          ...(data?.durationMs !== undefined ? { durationMs: data.durationMs } : {}),
+          ...(data?.usage
+            ? {
+                usage: {
+                  inputTokens: data.usage.inputTokens,
+                  outputTokens: data.usage.outputTokens,
+                  totalTokens: data.usage.totalTokens,
+                },
+              }
+            : {}),
+          metadata: {
+            adapterId: data?.adapterId ?? "unknown",
+            kind: data?.kind ?? "unknown",
+            ...(data?.toolName ? { toolName: data.toolName } : {}),
+          },
+        });
+        return;
+      }
+      if (event.name === "attention.compiled") {
+        const data = event.data as Record<string, number | boolean> | undefined;
+        addStep(state, {
+          id: `attention:${event.sessionId}:${state.order}`,
+          parentId: parentId(),
+          kind: "attention",
+          name: "attention.compiled",
+          order: state.order++,
+          status: "succeeded",
+          startedAt: now(),
+          metadata: { ...data },
+        });
+        return;
       }
       return;
     }
-    case "guardrail_decision": {
-      addStep(state, {
-        id: `guardrail:${event.runId}:${state.order}`,
-        parentId: parentId(),
-        kind: "guardrail",
-        name: event.record.stage ?? event.toolName ?? "guardrail",
-        order: state.order++,
-        status:
-          String(event.record.action) === "deny" || event.record.action === "block" || event.record.action === "tripwire"
-            ? "denied"
-            : "succeeded",
-        startedAt: now(),
-        metadata: {
-          action: event.record.action,
-          // Rule identity only: `metadata` stays low-cardinality, so the free-text reason is not projected (plan 092 T1).
-          ...(typeof event.record.guardrail === "string" ? { guardrail: event.record.guardrail } : {}),
-          ...(event.toolName ? { toolName: event.toolName } : {}),
-          ...(event.toolCallId ? { toolCallId: event.toolCallId } : {}),
-        },
-      });
-      return;
-    }
-    case "delegated_agent_step": {
-      addStep(state, {
-        id: `delegation:${event.adapterId}:${event.stepIndex}`,
-        parentId: parentId(),
-        kind: "delegation",
-        name: event.subagentType ?? event.adapterId,
-        order: state.order++,
-        status: event.state === "done" ? "succeeded" : event.state === "error" ? "failed" : "running",
-        startedAt: now(),
-        ...(event.durationMs !== undefined ? { durationMs: event.durationMs } : {}),
-        ...(event.usage
-          ? {
-              usage: {
-                inputTokens: event.usage.inputTokens,
-                outputTokens: event.usage.outputTokens,
-                totalTokens: event.usage.totalTokens,
-              },
-            }
-          : {}),
-        metadata: {
-          adapterId: event.adapterId,
-          kind: event.kind,
-          ...(event.toolName ? { toolName: event.toolName } : {}),
-        },
-      });
-      return;
-    }
-    case "compaction_started": {
+    case "compaction.started": {
       addStep(state, {
         id: `compaction:${event.sessionId}:${state.order}`,
         parentId: state.runStep?.id,
@@ -501,7 +498,7 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       });
       return;
     }
-    case "compaction_finished": {
+    case "compaction.completed": {
       // Find the running compaction step and close it.
       const compStep = findLastStep(state.steps, (s) => s.kind === "compaction" && s.status === "running");
       if (compStep) {
@@ -511,87 +508,27 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       }
       return;
     }
-    case "attention_compiled": {
-      addStep(state, {
-        id: `attention:${event.sessionId}:${state.order}`,
-        parentId: parentId(),
-        kind: "attention",
-        name: "attention_compiled",
-        order: state.order++,
-        status: "succeeded",
-        startedAt: now(),
-        metadata: {
-          used: event.used,
-          usedAfter: event.usedAfter,
-          inputCap: event.inputCap,
-          triggerRatio: event.triggerRatio,
-          droppedThinkingTurns: event.droppedThinkingTurns,
-          stubbedToolResults: event.stubbedToolResults,
-          stubbedBytes: event.stubbedBytes,
-          truncated: event.truncated,
-        },
-      });
-      return;
-    }
-    case "retry_scheduled": {
-      addStep(state, {
-        id: `retry:${event.runId}:${event.attempt}`,
-        parentId: state.runStep?.id,
-        kind: "retry",
-        name: `retry-${event.attempt}`,
-        order: state.order++,
-        status: "running",
-        startedAt: now(),
-        error: event.error,
-        metadata: { attempt: event.attempt, delayMs: event.delayMs },
-      });
-      return;
-    }
-    case "error": {
+    case "run.failed": {
+      closeTurnStep(state);
       if (state.runStep) state.runStep.status = "failed";
       state.status = "failed";
       state.finishedAt = now();
-      return;
-    }
-    case "artifact_validation_started":
-    case "artifact_validation_finished":
-    case "artifact_revision_started":
-    case "artifact_finished":
-    case "artifact_failed": {
-      const isTerminal = event.type === "artifact_finished" || event.type === "artifact_failed";
-      addStep(state, {
-        id: `artifact:${event.runId}:${event.turn}:${event.attempt}:${event.type}`,
-        parentId: parentId(),
-        kind: "artifact",
-        name: event.type,
-        order: state.order++,
-        status: event.type === "artifact_failed" ? "failed" : isTerminal ? "succeeded" : "running",
-        startedAt: now(),
-        metadata: { turn: event.turn, attempt: event.attempt },
-      });
-      return;
-    }
-    case "run_limit_exceeded": {
-      state.breach = event.breach;
-      return;
-    }
-    case "budget_exhausted": {
-      state.attribution = {
-        limit: event.limit,
-        consumed: event.consumed,
-        closestOtherAxes: event.closestOtherAxes,
-        recentToolCalls: event.recentToolCalls,
-      };
+      if (event.limit) state.breach = event.limit;
+      if (event.attribution) {
+        state.attribution = {
+          limit: event.limit?.limit ?? "maxTurns",
+          consumed: event.attribution.consumed,
+          closestOtherAxes: event.attribution.closestOtherAxes,
+          recentToolCalls: event.attribution.recentToolCalls,
+        };
+      }
       return;
     }
     // Events that do not produce timeline steps — ignored, never thrown.
-    case "message_started":
-    case "message_delta":
-    case "message_finished":
-    case "tool_execution_progress":
-    case "queue_updated":
-    case "steer_rejected":
-    case "event_subscriber_overflow":
+    case "message.delta":
+    case "message.completed":
+    case "tool.progress":
+    case "decision.pending":
       return;
     default:
       // Unknown future event types are silently ignored per spec.
@@ -661,6 +598,16 @@ function projectExhaustion(state: FoldState): TimelineExhaustion | undefined {
 }
 
 function buildTimeline(state: FoldState): ExecutionTimeline {
+  // A turn answered deterministically still emits provider-turn events around the host-supplied
+  // stream, so any `provider` step inside a turn that also carries a `deterministic` step is dropped:
+  // the adapter was never called. Done here rather than on the event because the host emits the
+  // deterministic marker from inside the provider round, after `turn.started` has fired.
+  const answeredTurns = new Set(state.steps.filter((step) => step.kind === "deterministic").map((step) => step.parentId));
+  if (answeredTurns.size > 0) {
+    state.steps = state.steps.filter(
+      (step) => step.kind !== "provider" || step.parentId === undefined || !answeredTurns.has(step.parentId),
+    );
+  }
   const resolvedTraceId = state.traceId ?? (state.instrumentation && state.runId ? state.instrumentation.traceId(state.runId) : undefined);
   const turns = state.steps.some((step) => step.kind === "turn") ? projectTurns(state.steps) : undefined;
   const exhaustion = projectExhaustion(state);
@@ -769,6 +716,17 @@ export function projectWorkflowTimeline(
   const checkpoint = options.checkpoint;
   const content = options.content ?? "metadata";
   const redactor = content !== "metadata" ? (options.redactor ?? resolveRedactor(undefined, [])) : undefined;
+
+  // A turn answered deterministically still emits provider-turn events around the host-supplied
+  // stream, so any `provider` step inside a turn that also carries a `deterministic` step is dropped:
+  // the adapter was never called. Do it here, not on the event, because the host emits the
+  // deterministic marker from inside the provider round, after `turn.started` has fired.
+  const deterministicTurns = new Set(state.steps.filter((step) => step.kind === "deterministic").map((step) => step.parentId));
+  if (deterministicTurns.size > 0) {
+    state.steps = state.steps.filter(
+      (step) => step.kind !== "provider" || step.parentId === undefined || !deterministicTurns.has(step.parentId),
+    );
+  }
 
   // Sort by sequence for deterministic order.
   const sorted = [...events].sort((a, b) => a.sequence - b.sequence);

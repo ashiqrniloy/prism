@@ -1,7 +1,7 @@
 import {
   type CompactionEntryData,
   type CompactionResult,
-  type CompactionStrategy,
+  type Compactor,
   createSessionEntry,
   redactSecrets,
   type SessionEntry,
@@ -16,7 +16,7 @@ import { foldWorkScopeMap, SESSION_WORK_SCOPE_ID } from "./scopes.js";
 import { projectWorkMemory, type WorkScopeOutline } from "./scopes-project.js";
 import type { MemoryObservation, MemoryReflection } from "./types.js";
 
-export interface ObservationalMemoryCompactionStrategyOptions {
+export interface ObservationalMemoryCompactorOptions {
   readonly name?: string;
   readonly keepRecentEntries?: number;
   readonly observationsPoolMaxTokens?: number;
@@ -27,9 +27,7 @@ export interface ObservationalMemoryCompactionStrategyOptions {
 
 const DEFAULT_OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
 
-export function createObservationalMemoryCompactionStrategy(
-  options: ObservationalMemoryCompactionStrategyOptions = {},
-): CompactionStrategy {
+export function createObservationalMemoryCompactor(options: ObservationalMemoryCompactorOptions = {}): Compactor {
   const name = options.name ?? "observational-memory";
   return {
     name,

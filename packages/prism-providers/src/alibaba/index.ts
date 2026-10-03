@@ -1,4 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { type AlibabaProviderOptions, createAlibabaProvider } from "./provider.js";
 
 export interface AlibabaProviderPackageOptions extends AlibabaProviderOptions {
@@ -11,28 +12,21 @@ export interface AlibabaProviderPackageOptions extends AlibabaProviderOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createAlibabaProviderPackage(options: AlibabaProviderPackageOptions = {}): ProviderPackage {
+export function alibabaPackage(options: AlibabaProviderPackageOptions = {}): PackageInstance {
   const providerId = options.id ?? "alibaba";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/alibaba",
-    description: "Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider package for Prism.",
-    docs: { links: ["docs/providers/alibaba.md"] },
-    setup(api) {
-      api.registerProvider(
-        createAlibabaProvider({
-          id: providerId,
-          apiKey: options.apiKey,
-          fetch: options.fetch,
-          baseUrl: options.baseUrl,
-          preset: options.preset,
-        }),
-      );
-      for (const model of options.models ?? []) {
-        api.registerModel({ ...model, provider: providerId });
-      }
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+  return vendorPackage(
+    "@arnilo/prism-providers.alibaba",
+    "Alibaba Cloud (Model Studio / DashScope, incl. Coding Plan) provider package for Prism.",
+    () => [
+      createAlibabaProvider({
+        id: providerId,
+        apiKey: options.apiKey,
+        fetch: options.fetch,
+        baseUrl: options.baseUrl,
+        preset: options.preset,
+      }),
+    ],
+  );
 }
 
 export {

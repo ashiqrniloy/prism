@@ -108,7 +108,7 @@ export function defineOllamaModel(config: OllamaModelConfig): ModelConfig {
 
 /**
  * Caller-gated Ollama model discovery via the OpenAI-compatible `GET {base}/models`.
- * Never invoked by `createOllamaProviderPackage` — hosts call this and pass results via
+ * Never invoked by `ollamaPackage` — hosts call this and pass results via
  * `models:` (or register themselves). No hard-coded model catalog ships with the package:
  * available models vary by cloud account or local pull, so discovery is the source of
  * truth. (The native `GET {base}/api/tags` endpoint is an alternate catalog source;

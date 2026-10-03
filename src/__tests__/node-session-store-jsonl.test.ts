@@ -314,7 +314,18 @@ describe("node jsonl session store", () => {
 
   it("exports session entry kind constants and validator", () => {
     assert.equal(SESSION_ENTRY_SCHEMA_VERSION, 1);
-    assert.deepEqual(SESSION_ENTRY_KINDS, ["message", "event", "summary", "metadata", "model_change", "label", "custom", "compaction"]);
+    assert.deepEqual(SESSION_ENTRY_KINDS, [
+      "message",
+      "event",
+      "summary",
+      "metadata",
+      "model_change",
+      "label",
+      "custom",
+      "compaction",
+      "suspended_run",
+      "package_state",
+    ]);
     for (const kind of SESSION_ENTRY_KINDS) assert.equal(isSessionEntryKind(kind), true);
     assert.equal(isSessionEntryKind("future_kind"), false);
     assert.equal(isSessionEntryKind(123), false);
@@ -390,7 +401,7 @@ describe("node jsonl session store", () => {
       id: "ev1",
       sessionId: "s1",
       kind: "event",
-      event: { type: "agent_started", sessionId: "s1", runId: "r1" },
+      event: { type: "run.started", sessionId: "s1", runId: "r1" },
     });
     const metadataEntry = createSessionEntry({ id: "md1", sessionId: "s1", kind: "metadata", data: { source: "test" } });
     const store = createJsonlSessionStore(path);
@@ -455,11 +466,13 @@ describe("node jsonl session store", () => {
       }),
     );
     const before = fileReads(store);
-    const session = createAgent({
-      model: { provider: "mock", model: "m" },
-      provider: createMockProvider(),
-      store,
-    }).createSession({ id: "s1", leafId: "e1", snapshotCacheTtlMs: 0 });
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "m" },
+        provider: createMockProvider(),
+        slots: { store },
+      })
+    ).session({ id: "s1", leafId: "e1", snapshotCacheTtlMs: 0, create: true });
     const snap = await (session as unknown as { snapshot(): Promise<{ messages: readonly unknown[] }> }).snapshot();
     assert.equal(snap.messages.length, 1);
     assert.equal(fileReads(store), before);

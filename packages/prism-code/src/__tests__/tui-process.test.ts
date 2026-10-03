@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { type AIProvider, createMockProvider, type ProviderRequest, providerDone } from "@arnilo/prism";
 import { createTestRenderer } from "@opentui/core/testing";
 import { assembleAppAgent } from "../headless.js";
-import { searchRepoSessions } from "../sessions.js";
+import { configuredSessionStore, searchRepoSessions } from "../sessions.js";
 import { createPrismCodeTui } from "../tui/index.js";
 
 const tmp = () => mkdtemp(join(tmpdir(), "prism-code-process-"));
@@ -106,7 +106,7 @@ describe("TUI fatal and signal shutdown", () => {
         assert.equal(await exited, code);
         assert.equal(aborted, true);
         assert.equal(destroys(), 1);
-        const store = definition.agent.config.store;
+        const store = configuredSessionStore(definition.agent);
         assert.ok(store, "assembled agent exposes a store");
         const matches = await searchRepoSessions(store, { workspaceRoot: dir });
         assert.ok(matches.items.length > 0, "session record persisted before exit");

@@ -130,7 +130,7 @@ export function alibabaThinkingFamily(modelId: string): "thinking_type" | undefi
 
 /**
  * Caller-gated DashScope model discovery via the OpenAI-compatible `GET {base}/models`.
- * Never invoked by `createAlibabaProviderPackage` — hosts call this and pass results
+ * Never invoked by `alibabaPackage` — hosts call this and pass results
  * via `models:` (or register themselves). No hard-coded model catalog ships with the
  * package: available models vary by region/workspace/plan, so discovery is the source
  * of truth.

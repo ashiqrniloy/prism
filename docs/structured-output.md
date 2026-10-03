@@ -229,7 +229,6 @@ Key cross-seam points:
 - `systemPrompt` is loaded from `AGENTS.md`/`SYSTEM.md` via the Node loader; the runtime itself is file-name agnostic. See [System prompts](system-prompts.md).
 - The `validator`/`parser`/`repairer` callbacks are typed as `Artifact*<unknown>` at the loop boundary; the host's `ReleaseNote` type is cast inside the callback body. Prism threads an opaque value and never instantiates it.
 - Every `artifact_*` event payload is redacted through the active `SecretRedactor`, so secrets echoed in `errors[].message` or `metadata` are scrubbed before subscribers see them. See [Credentials and redaction](credentials-and-redaction.md).
-- For a runnable, network-free version that also demonstrates tool dispatch and redaction, see [`examples/host-artifact-loop.ts`](../examples/host-artifact-loop.ts).
 
 ## Extension and configuration notes
 

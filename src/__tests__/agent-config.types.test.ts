@@ -1,5 +1,5 @@
 import { describe, it } from "bun:test";
-import type { AgentConfig, CredentialResolver, Extension, SettingsProvider } from "../index.js";
+import type { AgentConfig, CredentialResolver, SettingsProvider } from "../index.js";
 
 type ExpectFalse<T extends false> = T;
 type HasKey<T, K extends PropertyKey> = K extends keyof T ? true : false;
@@ -12,16 +12,8 @@ type _AgentConfigHasNoCredentials = ExpectFalse<HasKey<AgentConfig, "credentials
 
 describe("AgentConfig host-wiring migration", () => {
   it("documents extensions/settings/credentials as host-owned outside AgentConfig", () => {
-    const extension: Extension = {
-      name: "demo",
-      setup() {
-        /* host loads via createExtensionKernel */
-      },
-    };
     const settings: SettingsProvider = { get: () => undefined };
     const credentials: CredentialResolver = { resolve: () => undefined };
-    // Host wires these into provider packages / kernels explicitly — not createAgent().
-    void extension;
     void settings;
     void credentials;
     const config = { model: { provider: "mock", model: "demo" } } satisfies AgentConfig;

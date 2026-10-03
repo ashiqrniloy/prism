@@ -1,17 +1,5 @@
-import type {
-  CacheRetention,
-  PromptCacheBreakpoint,
-  ProviderRequest,
-  ProviderRequestOptions,
-  ProviderRequestPolicy,
-  ProviderRequestPolicyResult,
-} from "./contracts.js";
+import type { PromptCacheBreakpoint, ProviderRequest, ProviderRequestOptions } from "./contracts.js";
 import { applyThinkingLevelForModel } from "./thinking.js";
-
-export interface SessionCachePolicyOptions {
-  readonly retention?: CacheRetention;
-  readonly cacheKey?: string;
-}
 
 export interface ApplyDefaultProviderRequestOptionsContext {
   readonly sessionId?: string;
@@ -79,41 +67,6 @@ export function applyDefaultProviderRequestOptions(
   return { ...request, options };
 }
 
-export function createProviderRequestPolicyChain(policies: readonly ProviderRequestPolicy[]): ProviderRequestPolicy {
-  return {
-    name: "provider-request-policy-chain",
-    async apply(context) {
-      let request = context.request;
-      const secrets: (string | undefined)[] = [];
-      for (const policy of policies) {
-        const result = await policy.apply({ ...context, request });
-        const normalized = normalizeProviderRequestPolicyResult(result);
-        request = normalized.request;
-        secrets.push(...(normalized.secrets ?? []));
-      }
-      return { request, secrets };
-    },
-  };
-}
-
-// Legacy cacheKey/cacheRetention policy; structured cache hints are merged separately.
-export function createSessionCachePolicy(options: SessionCachePolicyOptions = {}): ProviderRequestPolicy {
-  return {
-    name: "session-cache",
-    apply(context) {
-      const sessionId = context.request.options?.sessionId ?? context.sessionId;
-      return {
-        ...context.request,
-        options: mergeProviderRequestOptions(context.request.options, {
-          sessionId,
-          cacheKey: options.cacheKey ?? sessionId,
-          cacheRetention: options.retention ?? "short",
-        }),
-      };
-    },
-  };
-}
-
 export function mergeProviderRequestOptions(
   base: ProviderRequestOptions | undefined,
   patch: ProviderRequestOptions | undefined,
@@ -139,8 +92,4 @@ export function mergeProviderRequestOptions(
           : undefined,
     },
   };
-}
-
-export function normalizeProviderRequestPolicyResult(result: ProviderRequest | ProviderRequestPolicyResult): ProviderRequestPolicyResult {
-  return "request" in result ? result : { request: result };
 }

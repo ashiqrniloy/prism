@@ -6,43 +6,32 @@ import type {
   AgentDefinition,
   AgentDefinitionResolutionContext,
   AgentEvent,
-  AgentSessionCloneOptions,
-  AgentSessionForkOptions,
   AIProvider,
   AssembleProviderInputOptions,
-  AuthMethod,
   CacheUsageReport,
   CommandDefinition,
   CompactionOptions,
-  CompactionStrategy,
+  Compactor,
   ConfigLayer,
   ConfigProvider,
-  ContextProvider,
   CredentialResolver,
   DefaultInputBuildContext,
   DispatchToolCallOptions,
-  Extension,
   InputAssemblyLayout,
-  InputBuilder,
-  ManifestContributionDeclaration,
-  ManifestResourceDeclaration,
   ModelCacheCapabilities,
   OAuthLoginCallbacks,
   OAuthProvider,
-  PrismManifest,
-  PromptBuilder,
   PromptCacheHints,
   PromptCacheKind,
   PromptTemplateOptions,
-  ProviderPackage,
   ProviderRequestOptions,
-  ProviderRequestPolicy,
   ResourceLoader,
   RetryOptions,
   RetryPolicy,
   RunOptions,
   SessionContextSnapshot,
   SessionEntry,
+  SessionForkOptions,
   SessionStore,
   SettingsProvider,
   Skill,
@@ -61,22 +50,16 @@ import {
   cacheUsageReport,
   composeSystemPrompt,
   createAgent,
-  createAgentSession,
-  createContributionRegistries,
-  createDefaultCompactionStrategy,
+  createDefaultCompactor,
   createDefaultInputBuilder,
-  createDefaultPromptBuilder,
   createDefaultRetryPolicy,
   createEnvCredentialResolver,
   createExplicitCredentialResolver,
-  createExtensionKernel,
+  withContextBlocks,
   createMemorySessionStore,
-  createProviderRequestPolicyChain,
-  createSessionCachePolicy,
   createSessionEntry,
   createSkillRegistry,
   createToolRegistry,
-  defineProviderPackage,
   dispatchToolCall,
   filterTools,
   mergeProviderRequestOptions,
@@ -85,20 +68,12 @@ import {
   renderPromptTemplate,
   resolveActiveSkills,
   resolveAgentDefinition,
-  resolveContextProviders,
 } from "../index.js";
 
 const provider: AIProvider = {
   id: "mock",
   async *generate() {
     yield { type: "done" };
-  },
-};
-
-const context: ContextProvider = {
-  name: "demo-context",
-  resolve() {
-    return [{ title: "Demo", content: "Public contract example." }];
   },
 };
 
@@ -122,28 +97,16 @@ describe("public contracts", () => {
       id: "demo-agent",
       model: { provider: "mock", model: "demo-model" },
       provider,
-      context: [context],
-      skills: [skill],
-      tools: [tool],
+      skills: { add: [skill] },
+      tools: { add: [tool] },
       metadata: { example: true },
     };
 
     assert.equal(config.provider?.id, "mock");
-    assert.equal(config.context?.[0]?.name, "demo-context");
     assert.equal(Array.isArray(config.tools), true);
   });
 
-  it("host can type extension resource settings and credentials", async () => {
-    const extension: Extension = {
-      name: "demo-extension",
-      setup(api) {
-        api.registerProvider(provider);
-        api.registerContextProvider(context);
-        api.registerSkill(skill);
-        api.registerTool(tool);
-      },
-    };
-
+  it("host can type resource settings and credentials", async () => {
     const resources: ResourceLoader = {
       async load(uri) {
         return { uri, mediaType: "text/plain", text: "example" };
@@ -162,61 +125,9 @@ describe("public contracts", () => {
       },
     };
 
-    assert.equal(extension.name, "demo-extension");
     assert.equal((await resources.load("memory:demo")).text, "example");
     assert.equal(await settings.get("demo.enabled"), true);
     assert.equal(await credentials.resolve({ name: "demo" }), undefined);
-  });
-
-  it("host can type phase 11 provider package and model metadata contracts", async () => {
-    const auth: AuthMethod = { provider: "mock", kind: "api_key", credentialName: "apiKey" };
-    const requestPolicy: ProviderRequestPolicy = { name: "cache", apply: ({ request }) => request };
-    const promptContribution: SystemPromptContribution = {
-      id: "package-prompt",
-      source: "package",
-      mode: "append",
-      text: "Use package rules.",
-    };
-    const providerPackage: ProviderPackage = defineProviderPackage({
-      name: "demo-provider",
-      docs: { description: "Demo provider package." },
-      setup(api) {
-        api.registerProvider(provider);
-        api.registerModel({
-          provider: "mock",
-          model: "demo-metadata",
-          displayName: "Demo Metadata",
-          capabilities: { input: ["text"], reasoning: true, tools: true, streaming: true },
-          limits: { contextWindow: 128_000, maxOutputTokens: 8_192 },
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, currency: "USD" },
-          cache: { kind: "cache_control", maxKeyLength: 128, maxBreakpoints: 4, minCacheableTokens: 1024, longRetention: true },
-          compat: { vendorSpecific: true },
-          metadata: { safe: true },
-        });
-        api.registerAuthMethod(auth);
-        api.registerProviderRequestPolicy(requestPolicy);
-        api.registerSystemPromptContribution(promptContribution);
-      },
-    });
-    const kernel = createExtensionKernel();
-    await kernel.load([
-      {
-        name: "package-loader",
-        setup: (api) => {
-          api.registerProviderPackage(providerPackage);
-          return providerPackage.setup(api);
-        },
-      },
-    ]);
-
-    const registeredModel = kernel.registries.models.resolve("mock", "demo-metadata");
-    assert.equal(kernel.registries.providerPackages.resolve("demo-provider"), providerPackage);
-    assert.equal(registeredModel.capabilities?.reasoning, true);
-    assert.equal(registeredModel.cache?.kind, "cache_control");
-    assert.equal(registeredModel.cache?.maxBreakpoints, 4);
-    assert.equal(kernel.registries.authMethods.resolve("mock\0api_key"), auth);
-    assert.equal(kernel.registries.providerRequestPolicies.resolve("cache"), requestPolicy);
-    assert.equal(kernel.registries.systemPromptContributions.resolve("package-prompt"), promptContribution);
   });
 
   it("host can type OAuth and explicit credential resolver contracts", async () => {
@@ -227,14 +138,13 @@ describe("public contracts", () => {
       refresh: (credentials) => ({ ...credentials, access: "refreshed-token" }),
       getCredential: (credentials) => (credentials.access ? { type: "bearer", value: credentials.access } : undefined),
     };
-    const auth: AuthMethod = { provider: "mock", kind: "oauth", oauth };
     const resolver = createExplicitCredentialResolver([
       { name: "runtime", resolver: { resolve: () => undefined } },
       { name: "env", resolver: createEnvCredentialResolver({ DEMO_API_KEY: "demo-key" }, { mock: "DEMO_API_KEY" }) },
     ]);
 
     assert.equal(await callbacks.onPrompt?.("mode?"), "device");
-    assert.equal(auth.kind, "oauth");
+    assert.equal((await oauth.login()).access, "access-token");
     assert.equal((await resolver.resolve({ name: "apiKey", provider: "mock" }))?.value, "demo-key");
   });
 
@@ -294,14 +204,13 @@ describe("public contracts", () => {
       breakpoints: [{ location: "system_prompt" }, { location: "message_id", messageId: "m1", ttl: "short" }],
     };
     const options: ProviderRequestOptions = { sessionId: "s1", cacheRetention: "short", cache: hints, headers: { "x-demo": "1" } };
-    const cache = createSessionCachePolicy({ retention: "long" });
-    const chain = createProviderRequestPolicyChain([cache]);
-    const result = await chain.apply({
-      sessionId: "s1",
-      request: { model: { provider: "mock", model: "demo" }, messages: [], options },
-    });
+    const defaulted = applyDefaultProviderRequestOptions(
+      { model: { provider: "mock", model: "demo" }, messages: [], options },
+      { sessionId: "s1" },
+    );
 
-    assert.equal("request" in result ? result.request.options?.cacheRetention : result.options?.cacheRetention, "long");
+    assert.equal(defaulted.options?.sessionId, "s1");
+    assert.equal(defaulted.options?.cacheKey, "s1");
 
     const legacy = mergeProviderRequestOptions({ cacheKey: "base", cacheRetention: "short" }, { cacheRetention: "long" });
     assert.equal(legacy?.cacheKey, "base");
@@ -341,65 +250,33 @@ describe("public contracts", () => {
       name: "agent",
       create() {
         return {
+          id: "agent",
           config: { model: { provider: "mock", model: "demo" }, provider },
-          createSession() {
+          tools: [],
+          skills: [],
+          sessions: {} as never,
+          models: {} as never,
+          session() {
             throw new Error("not implemented in public contract test");
           },
+          subscribe: () => ({}) as never,
+          commands: { list: () => [], run: async () => undefined },
+          dispose: async () => {},
+          inspect: () => ({}) as never,
         };
       },
     };
-    const inputBuilder: InputBuilder = {
-      name: "input",
-      build(input) {
-        return typeof input === "string" ? [{ role: "user", content: [{ type: "text", text: input }] }] : [];
-      },
-    };
-    const promptBuilder: PromptBuilder = { name: "prompt", build: (request) => request.messages };
-    const compaction: CompactionStrategy = { name: "compact", compact: () => ({ summary: "ok" }) };
+    const compactor: Compactor = { name: "compact", compact: () => ({ summary: "ok" }) };
     const storeFactory: StoreFactory = { name: "memory", create: () => ({ append: async () => undefined, list: async () => [] }) };
 
     assert.equal(command.name, "say");
     assert.equal(agentDefinition.name, "agent");
-    assert.equal((await inputBuilder.build("hi"))[0]?.role, "user");
-    assert.equal(promptBuilder.name, "prompt");
-    assert.equal((await compaction.compact({ sessionId: "s1", entries: [] })).summary, "ok");
+    assert.equal((await compactor.compact({ sessionId: "s1", entries: [] })).summary, "ok");
     assert.equal((await storeFactory.create()).list("s1") instanceof Promise, true);
   });
 
-  it("host can type phase 3 config and manifest contracts", async () => {
-    const provider: ConfigProvider = {
-      name: "host",
-      load() {
-        return { demo: { enabled: true } };
-      },
-    };
-    const layer: ConfigLayer = { name: provider.name, config: (await provider.load()) ?? {} };
-    const contribution: ManifestContributionDeclaration = { kind: "tool", name: "demo.echo", module: "./tool.js" };
-    const resource: ManifestResourceDeclaration = { uri: "package://demo/prompt.md", purpose: "prompt" };
-    const manifest: PrismManifest = {
-      name: "demo-package",
-      configDefaults: layer.config,
-      contributions: [contribution],
-      resources: [resource],
-    };
-
-    assert.equal(manifest.name, "demo-package");
-    assert.equal(manifest.contributions?.[0]?.kind, "tool");
-    assert.equal(manifest.resources?.[0]?.uri, "package://demo/prompt.md");
-  });
-
   it("host can type phase 4 tool registry filters dispatch and contributions", async () => {
-    const contributions = createContributionRegistries();
-    const kernel = createExtensionKernel({ registries: contributions });
-    await kernel.load([
-      {
-        name: "tools",
-        setup: (api) => {
-          api.registerTool(tool);
-        },
-      },
-    ]);
-    const registry = createToolRegistry([contributions.tools.resolve("echo")]);
+    const registry = createToolRegistry([tool]);
     const filter: ToolFilter = { allow: ["echo"] };
     const validate: ToolValidator = (_tool, args) => (typeof args.text === "string" ? undefined : "text is required");
     const options: DispatchToolCallOptions = {
@@ -454,58 +331,27 @@ describe("public contracts", () => {
       model: { provider: "mock", model: "demo" },
       inputLayout: "cache_aware",
       input: "Hello",
-      contextProviders: [context],
-      promptBuilder: createDefaultPromptBuilder(),
       tools: [tool],
       skills: [skill],
     };
 
-    assert.equal((await resolveContextProviders({ providers: [context], messages: [] })).length, 1);
-    assert.equal((await assembleProviderInput(options)).model.model, "demo");
-  });
-
-  it("host can type phase 5 extension contribution wiring", async () => {
-    const extension: Extension = {
-      name: "phase5",
-      setup(api) {
-        api.registerInputBuilder({ name: "input", build: () => [{ role: "user", content: [{ type: "text", text: "from extension" }] }] });
-        api.registerPromptBuilder({ name: "prompt", build: (request) => request.messages });
-        api.registerContextProvider(context);
-        api.registerSkill(skill);
-      },
-    };
-    const kernel = createExtensionKernel();
-    await kernel.load([extension]);
-    const skillRegistry = createSkillRegistry([kernel.registries.skills.resolve("brief")]);
-    const selectedSkills = resolveActiveSkills({ registry: skillRegistry, names: ["brief"], tools: [tool] });
-    const request = await assembleProviderInput({
-      model: { provider: "mock", model: "demo" },
-      input: "Hello",
-      inputBuilder: kernel.registries.inputBuilders.resolve("input"),
-      promptBuilder: kernel.registries.promptBuilders.resolve("prompt"),
-      contextProviders: [kernel.registries.contextProviders.resolve("demo-context")],
-      skills: selectedSkills,
-      tools: [tool],
-      middleware: kernel.middleware,
-    });
-
-    assert.equal(request.context?.[0]?.title, "Demo");
+    const request = await assembleProviderInput(options);
+    assert.equal(request.model.model, "demo");
+    assert.equal(withContextBlocks({ messages: request.messages }, [{ title: "Demo", content: "demo-context" }])?.context?.length, 1);
   });
 
   it("host can create minimal phase 6 agent sessions", async () => {
     const definition: AgentDefinition = {
       name: "runtime-agent",
-      create: () => createAgent({ model: { provider: "mock", model: "demo" }, provider }),
+      create: async () => await createAgent({ model: { provider: "mock", model: "demo" }, provider }),
     };
     const agent = await definition.create!();
-    const session = createAgentSession({ agent, id: "s1", leafId: undefined });
-    const forkOptions: AgentSessionForkOptions = { leafId: undefined };
-    const cloneOptions: AgentSessionCloneOptions = { id: "s2" };
+    const session = await agent.session({ id: "s1", leafId: undefined, create: true });
+    const forkOptions: SessionForkOptions = { at: undefined };
 
     assert.equal(agent.config.provider?.id, "mock");
     assert.equal(session.id, "s1");
-    assert.equal(session.fork(forkOptions).id, "s1");
-    assert.equal((await session.clone(cloneOptions)).id, "s2");
+    assert.notEqual((await session.fork(forkOptions)).id, "s1");
   });
 
   it("AgentDefinition supports declarative requirements and create is optional", () => {
@@ -516,7 +362,6 @@ describe("public contracts", () => {
       model: "mock/demo",
       tools: ["echo"],
       skills: ["brief"],
-      context: ["demo-context"],
       instructions: "Be helpful.",
     };
     assert.equal(declarative.name, "declarative-agent");
@@ -524,7 +369,6 @@ describe("public contracts", () => {
 
     // Resolution context type is exported.
     const ctx: AgentDefinitionResolutionContext = {
-      registries: createContributionRegistries(),
       providerSource: () => provider,
       overrides: { model: { provider: "mock", model: "override" } },
     };
@@ -556,20 +400,26 @@ describe("public contracts", () => {
     assert.equal(snapshot.messages[0]?.role, "user");
   });
 
-  it("public contracts cover default compaction strategy", async () => {
-    const strategy: CompactionStrategy = createDefaultCompactionStrategy({ keepRecentEntries: 1 });
-    const options: CompactionOptions = { strategy, thresholdEntries: 10, keepRecentEntries: 1 };
+  it("public contracts cover the default compactor and the compaction slot", async () => {
+    const compactor: Compactor = createDefaultCompactor({ keepRecentEntries: 1 });
+    const options: CompactionOptions = { thresholdEntries: 10, keepRecentEntries: 1 };
     const root = createSessionEntry({
       id: "entry_1",
       sessionId: "s1",
       kind: "message",
       message: { role: "user", content: [{ type: "text", text: "Hi" }] },
     });
-    const result = await strategy.compact({ sessionId: "s1", entries: [root], trigger: "manual" });
-    const agent = createAgent({ model: { provider: "mock", model: "demo" }, provider, compaction: options });
-    const session = createAgentSession({ agent, id: "compact-contract" });
+    const result = await compactor.compact({ sessionId: "s1", entries: [root], trigger: "manual" });
+    // The implementation is the slot (roadmap §2.5); `compaction` only sizes it.
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      provider,
+      compaction: options,
+      slots: { compaction: compactor },
+    });
+    const session = await agent.session({ id: "compact-contract", create: true });
 
-    assert.equal(strategy.name, "default-compaction");
+    assert.equal(compactor.name, "default-compaction");
     assert.equal(result.entries?.[0]?.kind, "compaction");
     assert.equal((await session.compact({ keepRecentEntries: 1 })).entries?.[0]?.kind, "compaction");
   });
@@ -596,7 +446,7 @@ describe("public contracts", () => {
 
   it("agent event narrows by type", () => {
     const event: AgentEvent = {
-      type: "tool_execution_progress",
+      type: "tool.progress",
       sessionId: "s1",
       runId: "r1",
       toolCallId: "call_1",
@@ -604,7 +454,7 @@ describe("public contracts", () => {
       progress: { step: 1 },
     };
 
-    if (event.type === "tool_execution_progress") {
+    if (event.type === "tool.progress") {
       assert.equal(event.toolCallId, "call_1");
       return;
     }

@@ -202,7 +202,7 @@ export function createPrismDevInspector(options: CreatePrismDevInspectorOptions)
   // Same session construction the server performs for a bare `Agent` entry —
   // never a session the inspector invented.
   const exposure: PrismAgentExposure = {
-    sessionFactory: (_authorization: PrismServerAuthorization) => options.agent.createSession(),
+    sessionFactory: (_authorization: PrismServerAuthorization) => options.agent.session(),
     ...(options.eventSource ? { events: options.eventSource, resolveRun: options.resolveRun } : {}),
   };
   // Durable status/resume capability: composed over the host's checkpoint

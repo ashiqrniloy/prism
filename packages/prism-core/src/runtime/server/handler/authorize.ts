@@ -1,5 +1,5 @@
 /** authorize (0.2.5 plan 025 Task 1 split). Moved verbatim from handler.ts; public surface unchanged behind the barrel. */
-import type { Agent, AgentSession } from "@arnilo/prism";
+import type { Agent, Session } from "@arnilo/prism";
 import { assertIdentityActive, assertIdentityMatchesOwnership } from "@arnilo/prism";
 import type { CreatePrismHandlerOptions, PrismAgentExposure, PrismServerAuthorization, PrismServerOperation } from "../types.js";
 
@@ -51,11 +51,11 @@ function hasOwnership(value: PrismServerAuthorization["ownership"]): boolean {
 export async function createSession(
   exposure: Agent | PrismAgentExposure,
   authorization: PrismServerAuthorization,
-): Promise<{ readonly session: AgentSession; readonly runOptions?: PrismAgentExposure["runOptions"] }> {
+): Promise<{ readonly session: Session; readonly runOptions?: PrismAgentExposure["runOptions"] }> {
   if ("sessionFactory" in exposure) {
     return { session: await exposure.sessionFactory(authorization), runOptions: exposure.runOptions };
   }
-  return { session: exposure.createSession() };
+  return { session: await exposure.session() };
 }
 
 export function sameOwnership(left: PrismServerAuthorization["ownership"], right: PrismServerAuthorization["ownership"]): boolean {

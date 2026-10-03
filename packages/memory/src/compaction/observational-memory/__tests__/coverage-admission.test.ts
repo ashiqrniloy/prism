@@ -14,7 +14,7 @@ import {
 import {
   buildObservationalMemoryContextBlocks,
   createObservationalMemory,
-  createObservationalMemoryCompactionStrategy,
+  createObservationalMemoryCompactor,
   type MemoryObservation,
   OBSERVATIONS_DROPPED,
   OBSERVATIONS_RECORDED,
@@ -67,7 +67,7 @@ function observationsDropped(id: string, observationIds: readonly string[], pare
   });
 }
 
-function attachFixture(options: {
+async function attachFixture(options: {
   readonly initial?: readonly SessionEntry[];
   readonly create?: Parameters<typeof createObservationalMemory>[0];
   readonly onRequest?: (messagesJson: string) => void;
@@ -76,9 +76,9 @@ function attachFixture(options: {
   const provider = createMockProvider([providerTextDelta("ok"), providerDone()], {
     ...(options.onRequest ? { onRequest: (request) => options.onRequest?.(JSON.stringify(request.messages)) } : {}),
   });
-  const agent = createAgent({ model, provider, store });
+  const agent = await createAgent({ model, provider, slots: { store } });
   const leafId = options.initial?.at(-1)?.id;
-  const baseSession = agent.createSession({ id: "s1", ...(leafId === undefined ? {} : { leafId }) });
+  const baseSession = await agent.session({ id: "s1", ...(leafId === undefined ? {} : { leafId }), create: true });
   const attached = createObservationalMemory(options.create ?? {}).attach(baseSession, {
     appendEntry: (entry, entryOptions) => store.append(entry, entryOptions),
     sessionModel: model,
@@ -90,7 +90,7 @@ describe("observational memory coverage-safe admission", () => {
   it("workerless_render_only_compaction_retains_uncovered_sentinel", async () => {
     const sentinel = message("m1", "EVIDENCE-SENTINEL 42");
     const recent = message("m2", "recent reply", "m1");
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 1 });
     const result = await strategy.compact({ sessionId: "s1", entries: [sentinel, recent], trigger: "auto" });
     const compaction = result.entries?.[0];
     assert.ok(compaction);
@@ -107,7 +107,7 @@ describe("observational memory coverage-safe admission", () => {
     const covered = message("m1", "covered evidence");
     const recorded = observationsRecorded("om1", [observation("aaaaaaaaaaaa", "covered fact", ["m1"])], "m1", "m1");
     const uncovered = message("m2", "uncovered evidence", "om1");
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 0 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 0 });
     const result = await strategy.compact({ sessionId: "s1", entries: [covered, recorded, uncovered], trigger: "auto" });
     const compaction = result.entries?.[0];
     assert.ok(compaction);
@@ -125,7 +125,7 @@ describe("observational memory coverage-safe admission", () => {
   it("workerless_attach_defers_automatic_compaction_and_keeps_sentinel_in_next_request", async () => {
     const debug: { readonly message: string; readonly data?: unknown }[] = [];
     const requests: string[] = [];
-    const { attached } = attachFixture({
+    const { attached } = await attachFixture({
       create: {
         context: { compactAfterTokens: 1 },
         overrides: { observation: { messageTokens: 1 }, agentMaxTurns: 1 },
@@ -164,7 +164,7 @@ describe("observational memory coverage-safe admission", () => {
         yield providerDone();
       },
     };
-    const observed = attachFixture({
+    const observed = await attachFixture({
       create: {
         observation: { provider: worker, model: workerModel },
         context: { compactAfterTokens: 1 },
@@ -187,7 +187,7 @@ describe("observational memory coverage-safe admission", () => {
     assert.deepEqual((recorded.data as { observations: readonly unknown[] }).observations, []);
     assert.equal((await observed.attached.runtime.flush()).skipped, undefined);
 
-    const missing = attachFixture({
+    const missing = await attachFixture({
       create: {
         context: { compactAfterTokens: 1 },
         overrides: { observation: { messageTokens: 1 }, agentMaxTurns: 1 },
@@ -202,7 +202,7 @@ describe("observational memory coverage-safe admission", () => {
 
   it("skipped_and_errored_flushes_defer_without_coverage", async () => {
     const debug: { readonly message: string; readonly data?: unknown }[] = [];
-    const gated = attachFixture({
+    const gated = await attachFixture({
       create: {
         observation: { provider: createMockProvider([providerDone()]), model: workerModel },
         credentialRequest: { provider: "mock", name: "apiKey" },
@@ -224,7 +224,7 @@ describe("observational memory coverage-safe admission", () => {
       ),
     );
 
-    const failing = attachFixture({
+    const failing = await attachFixture({
       create: {
         observation: {
           provider: {
@@ -251,7 +251,7 @@ describe("observational memory coverage-safe admission", () => {
       ),
     );
 
-    const passive = attachFixture({
+    const passive = await attachFixture({
       create: {
         context: { compactAfterTokens: 1 },
         overrides: { passive: true, observation: { messageTokens: 1 }, agentMaxTurns: 1 },
@@ -275,10 +275,10 @@ describe("observational memory coverage-safe admission", () => {
     );
 
     const strategyEntries = [message("m1", "hello"), observationsRecorded("om1", [fact], "m1", "m1"), message("m2", "recent", "om1")];
-    const strategy = createObservationalMemoryCompactionStrategy({ advertiseRecall: false, keepRecentEntries: 1 });
+    const strategy = createObservationalMemoryCompactor({ advertiseRecall: false, keepRecentEntries: 1 });
     const result = await strategy.compact({ sessionId: "s1", entries: strategyEntries });
     assert.doesNotMatch(result.summary, /call recall/);
-    const advertisedSummary = await createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1 }).compact({
+    const advertisedSummary = await createObservationalMemoryCompactor({ keepRecentEntries: 1 }).compact({
       sessionId: "s1",
       entries: strategyEntries,
     });
@@ -300,7 +300,7 @@ describe("observational memory coverage-safe admission", () => {
       observationsDropped("om2", [revoked.id], "om1"),
       message("m2", "uncovered tail", "om2"),
     ];
-    const strategy = createObservationalMemoryCompactionStrategy({ keepRecentEntries: 0 });
+    const strategy = createObservationalMemoryCompactor({ keepRecentEntries: 0 });
     const result = await strategy.compact({ sessionId: "s1", entries, trigger: "auto" });
     const compaction = result.entries?.[0];
     assert.ok(compaction);
@@ -317,7 +317,7 @@ describe("observational memory coverage-safe admission", () => {
       message("m2", `uncovered evidence ${secret}`, "om1"),
       message("m3", "recent", "m2"),
     ];
-    const result = await createObservationalMemoryCompactionStrategy({ keepRecentEntries: 1, secrets: [secret] }).compact({
+    const result = await createObservationalMemoryCompactor({ keepRecentEntries: 1, secrets: [secret] }).compact({
       sessionId: "s1",
       entries,
       trigger: "auto",

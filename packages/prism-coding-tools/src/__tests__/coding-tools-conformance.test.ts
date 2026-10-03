@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createCodingTools, createEditTool, createReadTool, createWriteTool } from "../agent/index.js";
 import { createComputerUseLinuxTools } from "../computer-use-linux/index.js";
 import { compareInspectorRuns, createPrismDevInspector } from "../dev/index.js";
-import { createImpeccableExtension } from "../impeccable/index.js";
+import { impeccable } from "../impeccable/index.js";
 import { createOpenApiTools } from "../openapi/index.js";
 import { createCodingApprovalPolicy, createDockerSandbox, createE2BSandbox } from "../security/index.js";
 
@@ -37,7 +37,7 @@ describe("@arnilo/prism-coding-tools conformance", () => {
     assert.equal(typeof createComputerUseLinuxTools, "function");
     assert.equal(typeof createPrismDevInspector, "function");
     assert.equal(typeof compareInspectorRuns, "function");
-    assert.equal(typeof createImpeccableExtension, "function");
+    assert.equal(typeof impeccable, "function");
   });
 
   it("retains prism-dev binary", () => {

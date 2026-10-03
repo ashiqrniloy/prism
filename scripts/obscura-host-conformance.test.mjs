@@ -60,8 +60,8 @@ const fetchThen = (text) => [
   [providerTextDelta(text), providerDone()],
 ];
 
-function agentWith(provider, tools, id) {
-  return createAgent({ model: { provider: "mock", model: "demo" }, provider, tools }).createSession({ id });
+async function agentWith(provider, tools, id) {
+  return await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools })).session({ id, create: true });
 }
 
 function jsonRequest(path, body) {
@@ -89,14 +89,14 @@ async function withMcpClient(server) {
 describe("Obscura generic host conformance (plan 039 task 6)", () => {
   it("core agent session executes the same ToolDefinition[] (read + mutating, exclusive serialization)", async () => {
     const { tools, calls } = obscuraTools();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: scriptedProvider(scrapeThen(providerTextDelta("scraped"))),
       tools,
     });
-    const session = agent.createSession({ id: "core-obscura" });
+    const session = await agent.session({ id: "core-obscura", create: true });
     const result = await session.run("scrape example.com");
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.text, "scraped");
     assert.deepEqual(calls, ["obscura_scrape"]);
   });
@@ -125,7 +125,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const { tools, calls } = obscuraTools();
     const handler = createPrismHandler({
       agents: {
-        support: createAgent({
+        support: await createAgent({
           model: { provider: "mock", model: "demo" },
           provider: scriptedProvider(scrapeThen(providerTextDelta("scraped"))),
           tools,
@@ -158,9 +158,9 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const handler = createAgUiHandler({
       authorize: () => AUTHORIZATION,
       mcp,
-      sessionFactory: ({ input }) => {
+      sessionFactory: async ({ input }) => {
         selected = input.serverTools.map((tool) => tool.name);
-        return agentWith(scriptedProvider(fetchThen("fetched")), input.serverTools, "ag-ui-obscura");
+        return await agentWith(scriptedProvider(fetchThen("fetched")), input.serverTools, "ag-ui-obscura");
       },
     });
     const request = new Request("https://host.example/ag-ui", {
@@ -189,8 +189,8 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const { tools, calls } = obscuraTools();
     const acpAgent = createPrismAcpAgent({
       authorize: () => AUTHORIZATION,
-      sessionFactory: () => ({
-        session: agentWith(scriptedProvider(fetchThen("fetched")), tools, "acp-obscura"),
+      sessionFactory: async () => ({
+        session: await agentWith(scriptedProvider(fetchThen("fetched")), tools, "acp-obscura"),
         agentId: "obscura-agent",
       }),
       lifecycle: {},
@@ -224,16 +224,16 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
       },
       edges: [["fetch", "research"]],
     });
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: scriptedProvider([[providerTextDelta("summary")], [providerTextDelta("summary")]]),
       tools,
     });
     const result = await runWorkflow(workflow, "topic", {
       concurrency: 1,
-      agentFactory: async () => agent.createSession({ id: "wf-obscura" }),
+      agentFactory: async () => await agent.session({ id: "wf-obscura", create: true }),
     });
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.match(JSON.stringify(result.outputs.fetch), /Fetched https:\/\/example\.com\/page/);
     assert.equal(result.outputs.research, "summary");
     assert.ok(calls.includes("web_fetch"));
@@ -247,8 +247,8 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
       ownership: AUTHORIZATION.ownership,
       children: {
         research: {
-          createAgent: () =>
-            createAgent({
+          createAgent: async () =>
+            await createAgent({
               model: { provider: "mock", model: "test" },
               provider: scriptedProvider(scrapeThen(providerTextDelta("scraped"))),
               tools,
@@ -265,7 +265,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
       id: "lead",
       ownership: AUTHORIZATION.ownership,
       hooks: { before: () => ({ allowed: false, reason: "parent denied" }) },
-      children: { research: { createAgent: () => agentWith(scriptedProvider(scrapeThen()), tools, "denied") } },
+      children: { research: { createAgent: async () => await agentWith(scriptedProvider(scrapeThen()), tools, "denied") } },
     });
     await assert.rejects(denied.delegate({ childId: "research", input: "x" }), /parent denied/);
     assert.deepEqual(calls, ["obscura_scrape"], "denied delegation must not reach Obscura tools");
@@ -275,12 +275,12 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
   it("abort during an in-flight Obscura call settles the run and kills the child (no leaked processes)", async () => {
     const { tools } = obscuraTools({ env: { OBSCURA_FAKE: "hang" }, limits: { timeoutMs: 15000 } });
     const controller = new AbortController();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       provider: scriptedProvider(scrapeThen(providerTextDelta("never"))),
       tools,
     });
-    const session = agent.createSession({ id: "abort-obscura" });
+    const session = await agent.session({ id: "abort-obscura", create: true });
     const run = session.run("scrape", { signal: controller.signal });
     await new Promise((resolve) => setTimeout(resolve, 250));
     controller.abort(new Error("host cancelled"));

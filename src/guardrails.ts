@@ -10,9 +10,9 @@ import type {
   GuardrailRuleAction,
   GuardrailRuleContext,
   GuardrailStage,
-  Guardrails,
   GuardrailValue,
   JsonObject,
+  JsonValue,
   ToolResult,
 } from "./contracts.js";
 import { GuardrailPackError } from "./guardrail-packs/errors.js";
@@ -78,13 +78,15 @@ export class GuardrailError extends Error {
   }
 }
 
-export interface RunGuardrailsOptions<S extends GuardrailStage> {
+/** A stage run over an explicit guardrail list (the pack seams). */
+export interface RunGuardrailListOptions<S extends GuardrailStage> {
   readonly stage: S;
-  readonly guardrails?: Guardrails;
+  readonly guards: readonly Guardrail<S>[];
   readonly value: GuardrailValue<S>;
   readonly context: Omit<GuardrailContext<S>, "stage" | "value" | "signal"> & { readonly signal?: AbortSignal };
   readonly redactor?: SecretRedactor;
   readonly emit?: (event: AgentEvent) => void | Promise<void>;
+  readonly guardrailsMaxConcurrency?: number;
 }
 
 export interface GuardrailRunResult {
@@ -92,11 +94,11 @@ export interface GuardrailRunResult {
   readonly terminal?: GuardrailRecord;
 }
 
-/** Evaluate one typed stage. Default is declaration-order sequential; bounded parallel mode still reports declaration order. */
-export async function runGuardrails<S extends GuardrailStage>(options: RunGuardrailsOptions<S>): Promise<GuardrailRunResult> {
-  const guards = stageGuards(options.guardrails, options.stage);
+/** Evaluate one typed stage over an explicit guardrail list (the pack seams). */
+export async function runGuardrailList<S extends GuardrailStage>(options: RunGuardrailListOptions<S>): Promise<GuardrailRunResult> {
+  const guards = options.guards;
   if (guards.length === 0) return { records: [] };
-  const maxConcurrency = resolveConcurrency(options.guardrails?.maxConcurrency);
+  const maxConcurrency = resolveConcurrency(options.guardrailsMaxConcurrency);
   const controller = new AbortController();
   const signal = options.context.signal ? AbortSignal.any([options.context.signal, controller.signal]) : controller.signal;
   const records: (GuardrailRecord | undefined)[] = new Array(guards.length);
@@ -123,12 +125,16 @@ export async function runGuardrails<S extends GuardrailStage>(options: RunGuardr
   const normalized = records.filter((record): record is GuardrailRecord => record !== undefined);
   for (const record of normalized) {
     await options.emit?.({
-      type: "guardrail_decision",
+      type: "package.event",
       sessionId: options.context.sessionId,
       runId: options.context.runId,
-      toolCallId: options.context.toolCallId,
-      toolName: options.context.toolName,
-      record,
+      package: "kernel",
+      name: "guardrail.decision",
+      data: {
+        ...(options.context.toolCallId === undefined ? {} : { toolCallId: options.context.toolCallId }),
+        ...(options.context.toolName === undefined ? {} : { toolName: options.context.toolName }),
+        record,
+      } as unknown as JsonValue,
     });
   }
   return { records: normalized, terminal: normalized.find((record) => record.action !== "allow") };
@@ -159,16 +165,25 @@ interface GuardrailPackRefRow {
 }
 
 /** Plan 104 Task 2: a compile result that can round-trip through a durable checkpoint. */
-interface CompiledGuardrailPacks {
-  readonly guardrails: Guardrails | undefined;
+export interface CompiledGuardrailPacks {
+  /** Deny/tripwire tool-input rules, evaluated by the session's `tool.call` hook. */
+  readonly toolInput: readonly Guardrail<"tool_input">[];
+  /** Pack result observers, evaluated by the session's `tool.result` hook. */
+  readonly toolOutput: readonly Guardrail<"tool_output">[];
+  /** Plan 104 T3: `ask` rules as the durable gate — a match returns `{ ask }` from `tool.call`. */
+  readonly askGate: readonly Guardrail<"tool_input">[];
+  /** Plan 104 T3: the same rules as plain blocks, merged into a run that cannot suspend. */
+  readonly askBlocks: readonly Guardrail<"tool_input">[];
   /** Rows a durable checkpoint replays; empty when no packs are configured. */
   readonly packs: readonly GuardrailPackRefRow[];
-  /** Plan 104 T3: `ask` rules as the charge-time durable gate — a match records `interrupt`. */
-  readonly askGate?: Guardrails;
-  /** Plan 104 T3: the same rules as plain blocks, merged into a run that cannot suspend. */
-  readonly askBlocks?: Guardrails;
   /** Pack-owned state snapshot (`{ <packId>: <pack state> }`); `undefined` when nothing needs persisting. */
   readonly snapshotState: () => Record<string, Readonly<Record<string, unknown>>> | undefined;
+}
+
+/** The deny/tripwire + observe seams of a compiled pack set, for hosts that register their own hooks. */
+export interface CompiledGuardrailRules {
+  readonly toolInput: readonly Guardrail<"tool_input">[];
+  readonly toolOutput: readonly Guardrail<"tool_output">[];
 }
 
 interface ResolvedRule {
@@ -193,19 +208,29 @@ interface ResolvedPack {
   readonly inline: boolean;
 }
 
-const EMPTY_COMPILED_PACKS: CompiledGuardrailPacks = { guardrails: undefined, packs: [], snapshotState: () => undefined };
+const EMPTY_COMPILED_PACKS: CompiledGuardrailPacks = {
+  toolInput: [],
+  toolOutput: [],
+  askGate: [],
+  askBlocks: [],
+  packs: [],
+  snapshotState: () => undefined,
+};
 
 /**
- * Compiles `guardrailPacks` config onto the existing tool interception seams: one `tool_input`
- * guardrail per rule (`name = pack:<pack>/<rule>`), plus one `tool_output` recorder for packs that
- * observe results. Compiled once per session — patterns are compiled here, never per tool call.
- * Throws `GuardrailPackError` on malformed config (fail closed); returns `undefined` when unset.
+ * Compiles `guardrailPacks` config into the tool seams the session registers as hooks: one
+ * `tool_input` rule per `deny`/`tripwire` rule (`name = pack:<pack>/<rule>`) plus one `tool_output`
+ * recorder for packs that observe results. Compiled once per session — patterns are compiled here,
+ * never per tool call. Throws `GuardrailPackError` on malformed config (fail closed); returns
+ * `undefined` when unset.
  */
 export function compileGuardrailPacks(
   refs: readonly GuardrailPackRef[] | undefined,
   registry: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition> = BUILT_IN_GUARDRAIL_PACKS,
-): Guardrails | undefined {
-  return compileGuardrailPacksWithState(refs, registry).guardrails;
+): CompiledGuardrailRules | undefined {
+  const compiled = compileGuardrailPacksWithState(refs, registry);
+  if (compiled.packs.length === 0) return undefined;
+  return { toolInput: compiled.toolInput, toolOutput: compiled.toolOutput };
 }
 
 /**
@@ -229,9 +254,9 @@ export function compileGuardrailPacksWithState(
     if (pack.observe) toolOutput.push(observeGuardrail(pack, pack.observe, pack.state));
     for (const resolved of pack.rules) {
       if (resolved.action === "ask") {
-        // Plan 104 T3: `ask` is not an ordinary stage decision. A run that can suspend gates the
-        // call at charge time (`interrupt` is the record meaning "awaiting a decision"), while a run
-        // that cannot suspend evaluates the same rule as a plain block through `activeGuardrails`.
+        // Plan 104 T3: `ask` is not an ordinary stage decision. A run that can suspend returns
+        // `{ ask }` from `tool.call` (`interrupt` is the record meaning "awaiting a decision"), while
+        // a run that cannot suspend evaluates the same rule as a plain block.
         askGate.push(ruleGuardrail(pack, resolved, pack.state, "interrupt"));
         askBlocks.push(ruleGuardrail(pack, resolved, pack.state, "block"));
         continue;
@@ -240,9 +265,11 @@ export function compileGuardrailPacksWithState(
     }
   }
   return {
-    guardrails: toolOutput.length > 0 ? { toolInput, toolOutput } : { toolInput },
+    toolInput,
+    toolOutput,
+    askGate,
+    askBlocks,
     packs: packs.map((pack) => pack.row),
-    ...(askGate.length > 0 ? { askGate: { toolInput: askGate }, askBlocks: { toolInput: askBlocks } } : {}),
     snapshotState: () => {
       const state: Record<string, Readonly<Record<string, unknown>>> = {};
       for (const pack of packs) {
@@ -558,23 +585,9 @@ function pushStrings(value: unknown, out: string[], depth: number): void {
   }
 }
 
-function stageGuards<S extends GuardrailStage>(guardrails: Guardrails | undefined, stage: S): readonly Guardrail<S>[] {
-  if (!guardrails) return [];
-  switch (stage) {
-    case "input":
-      return (guardrails.input ?? []) as readonly Guardrail<S>[];
-    case "output":
-      return (guardrails.output ?? []) as readonly Guardrail<S>[];
-    case "tool_input":
-      return (guardrails.toolInput ?? []) as readonly Guardrail<S>[];
-    case "tool_output":
-      return (guardrails.toolOutput ?? []) as readonly Guardrail<S>[];
-  }
-}
-
 async function evaluate<S extends GuardrailStage>(
   guardrail: Guardrail<S>,
-  options: RunGuardrailsOptions<S>,
+  options: RunGuardrailListOptions<S>,
   signal: AbortSignal,
 ): Promise<GuardrailRecord> {
   if (

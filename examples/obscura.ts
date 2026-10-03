@@ -34,10 +34,10 @@ export async function demo() {
 
   // The same ToolDefinition[] works in every Prism host (sessions, MCP server,
   // server handler, AG-UI/ACP, workflows, and supervisors).
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "openai", model: "gpt-5.2" },
     provider: createMockProvider([providerTextDelta("demo"), providerDone()]), // replace with a real provider
-    tools: [...web.tools, ...browser, ...mcp.tools],
+    tools: { add: [...web.tools, ...browser, ...mcp.tools] },
   });
   void agent;
 

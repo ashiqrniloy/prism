@@ -30,12 +30,12 @@ describe("presets", () => {
       provider,
     });
 
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     assert.strictEqual(tools.length, 0);
 
-    const session = app.createSession();
-    const result = await session.run("test");
-    assert.strictEqual(result.status, "succeeded");
+    const session = app.session();
+    const result = await (await session).run("test");
+    assert.strictEqual(result.status, "completed");
     assert.strictEqual(result.text, "Hello from bare preset!");
 
     await app.dispose();
@@ -69,7 +69,7 @@ describe("presets", () => {
       provider,
     });
 
-    const tools = (app.agent.config.tools as ToolRegistry).list();
+    const tools = app.agent.config.tools?.add ?? [];
     // shell is removed; 8 tools remain
     assert.strictEqual(tools.length, 8);
     assert.strictEqual(

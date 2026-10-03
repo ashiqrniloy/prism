@@ -50,7 +50,7 @@ function createMockProvider(stats) {
 export async function runWorkflowLoop({ iterations = LOOP_ITERATIONS, runId = `workflow-loop-${++sequence}` } = {}) {
   const stats = { calls: 0, active: 0, peak: 0 };
   const events = [];
-  const agent = createAgent({
+  const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: createMockProvider(stats),
   });
@@ -60,7 +60,7 @@ export async function runWorkflowLoop({ iterations = LOOP_ITERATIONS, runId = `w
     nodes: {
       refine: loopNode({
         execute: async (ctx) => {
-          const result = await agent.createSession({ id: `${runId}-${ctx.iteration}` }).run("refine");
+          const result = await (await agent.session({ id: `${runId}-${ctx.iteration}`, create: true })).run("refine");
           return { iteration: ctx.iteration, draft: result.text ?? "refined" };
         },
         until: (ctx) => ctx.iteration === iterations - 1,

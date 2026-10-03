@@ -1,14 +1,6 @@
 export { resolveAgentDefinition } from "./agent-definitions.js";
 export type { AgentEventSourceErrorCode } from "./agent-event-source.js";
 export { AgentEventSourceError, createMemoryAgentEventSource, isTerminalAgentEventType } from "./agent-event-source.js";
-export {
-  dispatchToolCallsInOrder,
-  generateValidateReviseLoop,
-  isAgentLoopOptions,
-  resolveLoop,
-  resolveToolConcurrency,
-  singleShotLoop,
-} from "./agent-loops.js";
 export type {
   AgentRunLifecycle,
   AgentRunLifecycleAgent,
@@ -30,7 +22,9 @@ export {
   readCheckpointMetadata,
   resolveCheckpointMetadata,
 } from "./agent-run-state.js";
-export { createAgent, createAgentSession, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
+export { createAgent, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
+export type { SuspendedRunEntryData, SuspendedRunLoopRef } from "./suspended-run.js";
+export { loadSuspendedRunEntry, parseSuspendedRunEntry, SUSPENDED_RUN_ENTRY_SCHEMA_VERSION } from "./suspended-run.js";
 export type {
   ArtifactApproval,
   ArtifactApprovalState,
@@ -124,8 +118,8 @@ export type {
 export { CheckpointRestoreError, DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS, runCheckpointRestoreHooks } from "./checkpoint-restore.js";
 export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
 export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
-export type { DefaultCompactionStrategyOptions } from "./compaction.js";
-export { createDefaultCompactionStrategy, isCompactionEntryData } from "./compaction.js";
+export type { DefaultCompactorOptions } from "./compaction.js";
+export { createDefaultCompactor, isCompactionEntryData } from "./compaction.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
 export { assertJsonObject, isJsonObject, loadConfigLayers, mergeConfigLayers } from "./config.js";
 export type {
@@ -219,7 +213,7 @@ export type {
   ResolveShouldCompactInput,
   ResolveShouldCompactOptions,
   ResumeNestedRun,
-  RunDecision,
+  Decision,
   RunLimitCounters,
   RunLimitName,
   SecureAgentOptions,
@@ -238,11 +232,11 @@ export type {
   ToolEffectTransition,
   ToolElicitationRequest,
 } from "./contracts.js";
+export type { ToolCapabilityKind } from "./contracts.js";
 export {
   AgentDecisionError,
   AgentDelegationSuspendedError,
   AgentLoopStateError,
-  AgentRunError,
   AgentRunStateError,
   assertBatchJobsSupported,
   assertCompactionTrigger,
@@ -265,6 +259,7 @@ export {
   DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   DEFAULT_MAX_STICKY_DECISIONS,
+  DEFAULT_SESSION_LIST_LIMIT,
   DEFAULT_SESSION_SEARCH_LIMIT,
   DEFAULT_SNAPSHOT_CACHE_TTL_MS,
   EmbeddingsError,
@@ -277,6 +272,7 @@ export {
   HARD_MAX_PENDING_STEERS,
   HARD_MAX_SESSION_SEARCH_CURSOR_BYTES,
   HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES,
+  HARD_MAX_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_SEARCH_LIMIT,
   HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
   HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
@@ -290,7 +286,9 @@ export {
   isSessionAppendConflict,
   isSessionEntryKind,
   isSessionMetadataConflict,
+  isSessionNotFound,
   isSessionSearchUnsupported,
+  isUnsupportedStoreCapability,
   MAX_ACTION_CONSTRAINT_BYTES,
   MAX_ACTION_CONSTRAINTS,
   MAX_ATTRIBUTION_DEPTH,
@@ -311,25 +309,23 @@ export {
   SESSION_ENTRY_KINDS,
   SESSION_ENTRY_SCHEMA_VERSION,
   SESSION_METADATA_CONFLICT_CODE,
+  SESSION_NOT_FOUND_CODE,
   SESSION_SEARCH_UNSUPPORTED_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_MAX_LENGTH,
   SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
   SessionMetadataConflictError,
+  SessionNotFoundError,
   SessionSearchUnsupportedError,
   SpeechError,
+  UNSUPPORTED_STORE_CAPABILITY_CODE,
+  UnsupportedStoreCapabilityError,
+  toRunResultStatus,
   TranscriptionError,
   VideoGenerationError,
 } from "./contracts.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
-export type {
-  ContributionRegistries,
-  ContributionRegistriesOptions,
-  ContributionRegistry,
-  ContributionRegistryOptions,
-} from "./contributions.js";
-export { createContributionRegistries, createContributionRegistry, registerDiscoveredContributions } from "./contributions.js";
 export type {
   ConversationBranchRef,
   ConversationReplayCursor,
@@ -402,18 +398,6 @@ export { createClaimGroundingGuardrail } from "./evidence-grounding.js";
 export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
 export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
 export type {
-  ActivatedKernelConfig,
-  AgentEventBridgeOptions,
-  ExtensionErrorPolicy,
-  ExtensionEventBus,
-  ExtensionEventHandler,
-  ExtensionKernel,
-  ExtensionKernelOptions,
-  ExtensionLoadPolicy,
-  LoadedExtension,
-} from "./extensions.js";
-export { activateKernel, createExtensionEventBus, createExtensionKernel, forwardAgentEvents } from "./extensions.js";
-export type {
   MemoryRunFeedbackStoreOptions,
   PrepareRunFeedbackOptions,
   RunFeedbackLimits,
@@ -458,9 +442,11 @@ export {
 } from "./field-policy.js";
 export { BUILT_IN_GUARDRAIL_PACK_IDS } from "./guardrail-packs/index.js";
 export type {
+  CompiledGuardrailPacks,
+  CompiledGuardrailRules,
   GuardrailPackRow,
   GuardrailRunResult,
-  RunGuardrailsOptions,
+  RunGuardrailListOptions,
 } from "./guardrails.js";
 export {
   assertGuardrailsAllowed,
@@ -468,11 +454,76 @@ export {
   describeGuardrailPacks,
   GuardrailError,
   GuardrailPackError,
+  guardrailRefusalText,
   MAX_GUARDRAIL_CONCURRENCY,
   MAX_GUARDRAIL_PACK_RULES,
   MAX_GUARDRAIL_PACKS,
-  runGuardrails,
+  runGuardrailList,
 } from "./guardrails.js";
+export type {
+  AroundHook,
+  AroundHookName,
+  CompactionWhenDecision,
+  CompactionWhenPayload,
+  ContextDraft,
+  DecideHook,
+  DecideHookName,
+  HookCatalog,
+  HookContext,
+  HookDecision,
+  HookHandler,
+  HookKind,
+  HookName,
+  HookOptions,
+  HookPayload,
+  HookRegistrar,
+  HookRegistrationInfo,
+  HookRejection,
+  HookResult,
+  ModelRequestTransformResult,
+  NamedHookCatalog,
+  NamedHookName,
+  ObserveHook,
+  ObserveHookName,
+  RunEndDecision,
+  RunEndPayload,
+  ToolCallDecision,
+  ToolCallHookPayload,
+  ToolExecuteHookPayload,
+  TransformHook,
+  TransformHookName,
+  TurnBeforeDecision,
+  TurnBeforePayload,
+} from "./hooks/index.js";
+export { HOOK_CATALOG, HookError, HookRejectedError, UnknownHookError } from "./hooks/index.js";
+export { askEveryTool } from "./hooks/index.js";
+export type {
+  HostPort,
+  HostUi,
+  HostUiAnswerMap,
+  HostUiConfirmRequest,
+  HostUiInputRequest,
+  HostUiNotifyRequest,
+  HostUiOpenUrlRequest,
+  HostUiRequest,
+  HostUiRequestBase,
+  HostUiRequestKind,
+  HostUiResponse,
+  HostUiSecretRequest,
+  HostUiSelectOption,
+  HostUiSelectRequest,
+} from "./host/index.js";
+export { defaultLoop } from "./loop/index.js";
+export type { LoopStrategy, RunController, RunEndResult, RunTurnOptions, RunTurnResult } from "./loop/index.js";
+export {
+  createEnvRefCredentialResolver,
+  createSlotDefaults,
+  createSlotRegistry,
+  SlotConflictError,
+  UnknownSlotError,
+  UnknownSlotOwnerError,
+} from "./slots/index.js";
+export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js";
 export type {
   AgentIdentity,
   AssertIdentityActiveOptions,
@@ -493,43 +544,20 @@ export {
   narrowIdentity,
   ownershipFromIdentity,
   resolveIdentityLimits,
-  resolveRunIdentity,
 } from "./identity.js";
 export type {
   AgentInput,
   AssembleProviderInputOptions,
   DefaultInputBuildContext,
   DefaultInputBuilder,
-  DefaultPromptBuilder,
   InputAttachment,
   PromptInstruction,
   PromptTemplateOptions,
-  ResolveContextOptions,
 } from "./input.js";
-export {
-  assembleProviderInput,
-  createDefaultInputBuilder,
-  createDefaultPromptBuilder,
-  EMPTY_TOOL_RESULT_TEXT,
-  renderPromptTemplate,
-  resolveContextProviders,
-} from "./input.js";
-export type { ResolveInstructionInjectorsOptions } from "./instruction-injection.js";
-export { resolveInstructionInjectors, runInstructionInjectors } from "./instruction-injection.js";
+export { assembleProviderInput, createDefaultInputBuilder, EMPTY_TOOL_RESULT_TEXT, renderPromptTemplate } from "./input.js";
+export type { ContextSource } from "./context-build.js";
+export { registerContextSources, withContextBlocks } from "./context-build.js";
 export { createMemoryLeaseStore, LEASE_CONFLICT_CODE, LeaseConflictError } from "./leases.js";
-export type { ManifestContributionDeclaration, ManifestContributionKind, ManifestResourceDeclaration, PrismManifest } from "./manifests.js";
-export { definePrismManifest, parsePrismManifest } from "./manifests.js";
-export type {
-  BeforeProviderTurnPayload,
-  DeterministicTurnAnswer,
-  DeterministicTurnProvenance,
-  Middleware,
-  MiddlewareHookName,
-  MiddlewareNext,
-  MiddlewareRegistry,
-  MiddlewareRegistryOptions,
-} from "./middleware.js";
-export { createMiddlewareRegistry, DeterministicTurnError } from "./middleware.js";
 export type { MockProviderOptions } from "./mock-provider.js";
 export { createMockProvider } from "./mock-provider.js";
 export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
@@ -593,12 +621,9 @@ export {
   toolCallContent,
   toolCallFromArgumentsText,
 } from "./provider-events.js";
-export { authMethodKey, defineProviderPackage, systemPromptContributionKey } from "./provider-packages.js";
-export type { ApplyDefaultProviderRequestOptionsContext, SessionCachePolicyOptions } from "./provider-request-policy.js";
+export type { ApplyDefaultProviderRequestOptionsContext } from "./provider-request-policy.js";
 export {
   applyDefaultProviderRequestOptions,
-  createProviderRequestPolicyChain,
-  createSessionCachePolicy,
   mergeProviderRequestOptions,
   ProviderRequirementError,
 } from "./provider-request-policy.js";
@@ -619,7 +644,7 @@ export {
 } from "./redaction.js";
 export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js";
 export type { LoadBinaryResourceOptions } from "./resources.js";
-export { loadBinaryResource, loadJsonResource, loadManifestResource, loadTextResource } from "./resources.js";
+export { loadBinaryResource, loadJsonResource, loadTextResource } from "./resources.js";
 export type { DefaultRetryPolicyOptions } from "./retry.js";
 export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
 export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js";
@@ -751,6 +776,7 @@ export {
   thinkingLevelsForModel,
 } from "./thinking.js";
 export type { ToolEffectErrorCode } from "./tool-effects.js";
+export { EventSubscriber, SubscriberOverflowError } from "./agent-session/event-subscriber.js";
 export { createMemoryToolEffectStore, ToolEffectError } from "./tool-effects.js";
 export type {
   FoldToolResultsContext,
@@ -809,6 +835,7 @@ export type {
   ToolValidator,
 } from "./tools.js";
 export { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
+export { resolveToolEffects, ToolDefinitionError } from "./tools.js";
 export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 export type { ModelFamilyTokens } from "./usage-estimation.js";
 export { MODEL_FAMILY_TOKENS, resolveModelFamily } from "./usage-estimation.js";
@@ -826,3 +853,27 @@ export {
 export const name = "prism";
 export const version = "0.12.1";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";
+export { definePackage, PackageLoadError } from "./packages/index.js";
+export type {
+  Capability,
+  JsonSchema,
+  ModelClient,
+  PackageAPI,
+  PackageCommand,
+  PackageCommandContext,
+  PackageCommandInfo,
+  PackageToolOptions,
+  PackageDefinition,
+  PackageDefinitionInput,
+  PackageInput,
+  PackageInstance,
+  PackageInstanceOptions,
+  PackageLoadErrorCode,
+  PackageRequires,
+  SlotRegistrar,
+  SlotRegistrarEntry,
+} from "./packages/index.js";
+export type { SessionContext } from "./session-context.js";
+export type { AgentState, SessionState } from "./session/state.js";
+export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js";
+export type { Logger } from "./host/types.js";

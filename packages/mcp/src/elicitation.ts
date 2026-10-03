@@ -3,7 +3,7 @@
  * The wire behavior is unchanged: accepted results still require the explicit
  * `humanInteraction === true` marker, and the marker never reaches the protocol output.
  */
-import type { JsonObject, PendingDecision, RunDecision } from "@arnilo/prism";
+import type { JsonObject, PendingDecision, Decision } from "@arnilo/prism";
 import { McpBridgeError, type PrismMcpElicitationResult } from "./types.js";
 
 /** Parity with the frozen decision caps: reason 2 KiB, elicitation payload/schema 16 KiB. */
@@ -54,7 +54,7 @@ export function mcpElicitationDecision(approvalId: string, params: unknown, opti
  * fail closed unless the host proved explicit human interaction.
  */
 export function mcpElicitationResultFromDecision(
-  decision: RunDecision,
+  decision: Decision,
   options: { readonly humanInteraction?: boolean } = {},
 ): PrismMcpElicitationResult {
   if (decision.outcome === "reject_once" || decision.outcome === "reject_for_run") return { action: "decline" };

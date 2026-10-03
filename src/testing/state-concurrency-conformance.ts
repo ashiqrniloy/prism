@@ -285,9 +285,9 @@ async function approvalDeterminismProbe(checkpoints: CheckpointStore): Promise<v
 async function cursorResumeProbe(factory: StateConcurrencyEventSourceFactory): Promise<void> {
   const input = { ownership, sessionId: "concurrency-session", runId: "concurrency-run" };
   const source = await factory.create();
-  await source.append(event("event-1", "agent_started", input));
-  await source.append(event("event-2", "turn_started", input, "2026-01-01T00:00:01.000Z"));
-  await source.append(event("event-3", "agent_finished", input, "2026-01-01T00:00:02.000Z"));
+  await source.append(event("event-1", "run.started", input));
+  await source.append(event("event-2", "turn.started", input, "2026-01-01T00:00:01.000Z"));
+  await source.append(event("event-3", "run.completed", input, "2026-01-01T00:00:02.000Z"));
   const first = await source.page({ ...input, limit: 1 });
   assert.equal(first.items[0]?.record.id, "event-1", "first page must start at the head");
   const second = await source.page({ ...input, after: first.items[0]!.cursor, limit: 1 });
@@ -515,7 +515,7 @@ async function conversationMetadataCasProbe(sessions: ProductionPersistenceStore
 
 function event(
   id: string,
-  type: "agent_started" | "agent_finished" | "turn_started",
+  type: "run.started" | "run.completed" | "turn.started",
   input: {
     readonly ownership: { readonly tenantId: string; readonly accountId: string; readonly userId: string };
     readonly sessionId: string;
@@ -524,9 +524,17 @@ function event(
   timestamp = "2026-01-01T00:00:00.000Z",
 ): AgentEventRecord {
   const payload =
-    type === "turn_started"
-      ? { type, sessionId: input.sessionId, runId: input.runId, turn: 1 }
-      : { type, sessionId: input.sessionId, runId: input.runId };
+    type === "turn.started"
+      ? {
+          type,
+          sessionId: input.sessionId,
+          runId: input.runId,
+          turn: 1,
+          metadata: { providerId: "mock", model: { provider: "mock", model: "demo" } },
+        }
+      : type === "run.completed"
+        ? { type, sessionId: input.sessionId, runId: input.runId, status: "completed" as const }
+        : { type, sessionId: input.sessionId, runId: input.runId };
   return { id, ...input.ownership, sessionId: input.sessionId, runId: input.runId, type, timestamp, event: payload, redacted: true };
 }
 

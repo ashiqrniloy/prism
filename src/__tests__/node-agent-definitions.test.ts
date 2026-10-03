@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
 import type { AIProvider, ProviderRequest, Skill, ToolDefinition, ToolRegistry, TrustPolicy } from "../index.js";
-import { createContributionRegistries } from "../index.js";
 import { discoverAgentBundles, resolveAgentBundle } from "../node/agent-definitions.js";
 import { discoverContributions } from "../node/contribution-discovery.js";
 
@@ -15,14 +14,17 @@ const provider: AIProvider = {
   },
 };
 
-function toolNames(tools: ToolRegistry | readonly ToolDefinition[] | undefined): string[] {
+function toolNames(tools: { readonly add?: readonly ToolDefinition[] } | ToolRegistry | readonly ToolDefinition[] | undefined): string[] {
   if (!tools) return [];
-  return "list" in tools ? tools.list().map((t) => t.name) : tools.map((t) => t.name);
+  if ("add" in tools && tools.add) return tools.add.map((t) => t.name);
+  return "list" in tools ? tools.list().map((t) => t.name) : (tools as readonly ToolDefinition[]).map((t) => t.name);
 }
 
-function skillNames(skills: { list(): readonly Skill[] } | readonly Skill[] | undefined): string[] {
+function skillNames(skills: { readonly add?: readonly Skill[]; list?(): readonly Skill[] } | readonly Skill[] | undefined): string[] {
   if (!skills) return [];
-  return "list" in skills ? skills.list().map((s) => s.name) : skills.map((s) => s.name);
+  if ("add" in skills && skills.add) return skills.add.map((s) => s.name);
+  if ("list" in skills && typeof skills.list === "function") return skills.list().map((s) => s.name);
+  return (skills as readonly Skill[]).map((s) => s.name);
 }
 
 async function makeConfigDir(files: Record<string, string>): Promise<string> {
@@ -51,10 +53,7 @@ function dirname(path: string): string {
 }
 
 function baseContext() {
-  const registries = createContributionRegistries();
-  registries.providers.register(provider);
-  registries.models.register({ provider: "mock", model: "demo" });
-  return { registries };
+  return { providerSource: () => provider };
 }
 
 describe("discoverAgentBundles", () => {
@@ -202,8 +201,7 @@ describe("resolveAgentBundle", () => {
         yield { type: "done" };
       },
     };
-    const ctx = baseContext();
-    ctx.registries.providers.register(capturingProvider);
+    const ctx = { providerSource: () => capturingProvider };
 
     const [bundle] = await discoverAgentBundles({ configRoot });
     const agent = await resolveAgentBundle(bundle!, {
@@ -212,7 +210,7 @@ describe("resolveAgentBundle", () => {
       include: { agentPrompt: false },
     });
 
-    await agent.createSession().run("Hi");
+    await (await agent.session()).run("Hi");
 
     const text = request.messages
       .flatMap((m) => m.content)
@@ -244,8 +242,7 @@ describe("resolveAgentBundle", () => {
         yield { type: "done" };
       },
     };
-    const ctx = baseContext();
-    ctx.registries.providers.register(capturingProvider);
+    const ctx = { providerSource: () => capturingProvider };
 
     const [bundle] = await discoverAgentBundles({ configRoot });
     const agent = await resolveAgentBundle(bundle!, {
@@ -254,7 +251,7 @@ describe("resolveAgentBundle", () => {
       include,
     });
 
-    await agent.createSession().run("Hi");
+    await (await agent.session()).run("Hi");
     return request.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
@@ -297,8 +294,7 @@ describe("resolveAgentBundle", () => {
         yield { type: "done" };
       },
     };
-    const ctx = baseContext();
-    ctx.registries.providers.register(capturingProvider);
+    const ctx = { providerSource: () => capturingProvider };
 
     const [bundle] = await discoverAgentBundles({ configRoot });
 
@@ -311,7 +307,7 @@ describe("resolveAgentBundle", () => {
       workspaceRoot,
       trust: denyRepoTrust,
     });
-    await deniedRepo.createSession().run("Hi");
+    await (await deniedRepo.session()).run("Hi");
     const deniedRepoText = request.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
@@ -328,7 +324,7 @@ describe("resolveAgentBundle", () => {
       workspaceRoot,
       trust: denySystemTrust,
     });
-    await deniedSystem.createSession().run("Hi");
+    await (await deniedSystem.session()).run("Hi");
     const deniedSystemText = request.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))

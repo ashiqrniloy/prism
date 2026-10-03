@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { describe, it } from "bun:test";
 import {
+  askEveryTool,
   type Agent,
   type AgentIdentity,
   type AIProvider,
@@ -15,7 +16,6 @@ import {
   createMemorySessionStore,
   createSecretRedactor,
   createSecureAgent,
-  createStaticPermissionPolicy,
   createStaticTrustPolicy,
   type LeaseStore,
   type Message,
@@ -92,12 +92,16 @@ function trackingStore(ids: Set<string>): SessionStore {
   };
 }
 
-function agentWith(provider: AIProvider, store: SessionStore, tools: Parameters<typeof createAgent>[0]["tools"] = []): Agent {
-  return createAgent({
+async function agentWith(
+  provider: AIProvider,
+  store: SessionStore,
+  tools: Parameters<typeof createAgent>[0]["tools"] = {},
+): Promise<Agent> {
+  return await createAgent({
     id: "channel-agent",
     model: { provider: "mock", model: "demo" },
     provider,
-    store,
+    slots: { store },
     ...(tools === undefined ? {} : { tools }),
   });
 }
@@ -139,7 +143,7 @@ describe("plan 080 group and topic ownership", () => {
     const store = trackingStore(ids);
     const grants = new Set(["chat-g|77|user-1", "chat-g|88|user-1"]);
     const { runtime, delivered } = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider(calls, () => "group answer"),
         store,
       ),
@@ -203,7 +207,7 @@ describe("plan 080 Telegram draft streaming", () => {
       },
     };
     const { runtime, delivered } = harness({
-      agent: agentWith(provider, createMemorySessionStore()),
+      agent: await agentWith(provider, createMemorySessionStore()),
       checkpoints,
       redactor: createSecretRedactor(["sk-live-secret"]),
       onAssistantDelta: (delta) => {
@@ -253,7 +257,7 @@ describe("plan 080 Telegram draft streaming", () => {
       },
     };
     const { runtime, delivered } = harness({
-      agent: agentWith(provider, createMemorySessionStore()),
+      agent: await agentWith(provider, createMemorySessionStore()),
       onAssistantDelta: (delta) => previews.push(delta.text),
     });
 
@@ -274,7 +278,7 @@ describe("plan 079 channel runtime", () => {
     const ids = new Set<string>();
     const store = trackingStore(ids);
     const { runtime, delivered } = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider(calls, (turn) => `answer ${turn}`),
         store,
       ),
@@ -310,10 +314,14 @@ describe("plan 079 channel runtime", () => {
     const calls = { count: 0 };
     const toolCalls = { count: 0 };
     const store = createMemorySessionStore();
-    const agent = agentWith(
+    const agent = await agentWith(
       textProvider(calls, () => "never"),
       store,
-      [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "c", name: "write", value: ++toolCalls.count }) }],
+      {
+        add: [
+          { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "c", name: "write", value: ++toolCalls.count }) },
+        ],
+      },
     );
     let authorizeCalls = 0;
     const denied = createMessagingRuntime({
@@ -368,15 +376,14 @@ describe("plan 079 channel runtime", () => {
   it("ignores event-claimed ownership and binds the run to the host-verified identity", async () => {
     const calls = { count: 0 };
     const secureIdentity = identity();
-    const agent = createSecureAgent({
+    const agent = await createSecureAgent({
       id: "channel-secure",
       model: { provider: "mock", model: "demo" },
       provider: textProvider(calls, () => "secure answer"),
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       tools: [],
       toolArgumentValidator: { validate: () => ({ ok: true }) },
       redactor: createSecretRedactor(["secret"]),
-      permission: createStaticPermissionPolicy({ allow: [] }),
       trust: createStaticTrustPolicy(true),
       ownership: { tenantId: "tenant-1", userId: "user-1" },
       identity: secureIdentity,
@@ -400,7 +407,7 @@ describe("plan 079 channel runtime", () => {
     const calls = { count: 0 };
     const ids = new Set<string>();
     const store = trackingStore(ids);
-    const agent = agentWith(
+    const agent = await agentWith(
       textProvider(calls, () => "ok"),
       store,
     );
@@ -450,7 +457,7 @@ describe("plan 079 channel runtime", () => {
         yield providerDone();
       },
     };
-    const { runtime, delivered } = harness({ agent: agentWith(provider, store) });
+    const { runtime, delivered } = harness({ agent: await agentWith(provider, store) });
     assert.equal((await runtime.admit(event({ eventId: "1" }))).status, "accepted");
     assert.equal((await runtime.admit(event({ eventId: "2", text: "second" }))).status, "accepted");
     await delay(10);
@@ -488,7 +495,7 @@ describe("plan 079 channel runtime", () => {
         throw new Error("aborted by user");
       },
     };
-    const { runtime, delivered } = harness({ agent: agentWith(provider, store) });
+    const { runtime, delivered } = harness({ agent: await agentWith(provider, store) });
     assert.equal((await runtime.admit(event({ eventId: "1" }))).status, "accepted");
     await delay(5);
     assert.equal((await runtime.admit(event({ eventId: "2" }))).status, "accepted");
@@ -516,7 +523,7 @@ describe("plan 079 channel runtime", () => {
 
     // Idle binding: /cancel is a bounded no-op, not a deadlock or a model call.
     const idle = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider({ count: 0 }, () => "never"),
         createMemorySessionStore(),
       ),
@@ -541,7 +548,7 @@ describe("plan 079 channel runtime", () => {
       },
     };
     const { runtime, delivered } = harness({
-      agent: agentWith(provider, store),
+      agent: await agentWith(provider, store),
       redactor: createSecretRedactor(["secret-token"]),
     });
     assert.equal((await runtime.admit(event({ eventId: "1" }))).status, "accepted");
@@ -565,7 +572,7 @@ describe("plan 079 channel runtime", () => {
     const revoked = identity();
     const revokedIdentity: AgentIdentity = { ...revoked, revokedAt: new Date(1).toISOString() };
     const revokedHarness = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider(calls, () => "never"),
         store,
       ),
@@ -596,7 +603,7 @@ describe("plan 079 channel runtime", () => {
         yield providerDone();
       },
     };
-    const liveHarness = harness({ agent: agentWith(provider, store), authorization: authorization({ identity: live }) });
+    const liveHarness = harness({ agent: await agentWith(provider, store), authorization: authorization({ identity: live }) });
     assert.equal((await liveHarness.runtime.admit(event())).status, "accepted");
     await delay(5);
     revocation.revokedAt = new Date(1).toISOString();
@@ -611,17 +618,16 @@ describe("plan 079 channel runtime", () => {
   it("composes with a secure agent and contains an identity mismatch as a bounded failure", async () => {
     const calls = { count: 0 };
     const toolCalls = { count: 0 };
-    const secure = createSecureAgent({
+    const secure = await createSecureAgent({
       id: "channel-secure",
       model: { provider: "mock", model: "demo" },
       provider: textProvider(calls, () => "secure answer"),
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       tools: [
         { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "c", name: "write", value: ++toolCalls.count }) },
       ],
       toolArgumentValidator: { validate: () => ({ ok: true }) },
       redactor: createSecretRedactor(["secret"]),
-      permission: createStaticPermissionPolicy({ allow: ["write"] }),
       trust: createStaticTrustPolicy(true),
       ownership: { tenantId: "tenant-1", userId: "user-1" },
       identity: identity(),
@@ -662,7 +668,7 @@ describe("plan 079 channel runtime", () => {
         yield providerDone();
       },
     };
-    const { runtime, delivered } = harness({ agent: agentWith(provider, createMemorySessionStore()) });
+    const { runtime, delivered } = harness({ agent: await agentWith(provider, createMemorySessionStore()) });
     assert.equal((await runtime.admit(event({ eventId: "1" }))).status, "accepted");
     await delay(5);
 
@@ -691,7 +697,7 @@ describe("plan 079 channel runtime", () => {
     const calls = { count: 0 };
     const ids = new Set<string>();
     const store = trackingStore(ids);
-    const agent = agentWith(
+    const agent = await agentWith(
       textProvider(calls, (turn) => `answer ${turn}`),
       store,
     );
@@ -731,7 +737,7 @@ describe("plan 079 channel runtime", () => {
       },
     };
     const { runtime, delivered } = harness({
-      agent: agentWith(provider, createMemorySessionStore()),
+      agent: await agentWith(provider, createMemorySessionStore()),
       limits: { maxPendingPerBinding: 1, maxRoutes: 1 },
     });
     assert.equal((await runtime.admit(event({ eventId: "1" }))).status, "accepted");
@@ -765,7 +771,7 @@ describe("plan 079 channel runtime", () => {
         throw new Error("aborted by host shutdown");
       },
     };
-    const { runtime } = harness({ agent: agentWith(provider, createMemorySessionStore()), limits: { maxActiveSessions: 1 } });
+    const { runtime } = harness({ agent: await agentWith(provider, createMemorySessionStore()), limits: { maxActiveSessions: 1 } });
     // Binding A holds the single active slot; binding B waits for it; binding A also has a queued turn.
     assert.equal((await runtime.admit(event({ eventId: "a1", externalActorId: "actor-a" }))).status, "accepted");
     assert.equal((await runtime.admit(event({ eventId: "a2", externalActorId: "actor-a" }))).status, "accepted");
@@ -785,11 +791,12 @@ describe("plan 079 channel runtime", () => {
     const checkpoints = createMemoryCheckpointStore();
     const resumedPreviews: string[] = [];
     const calls = { model: 0, tool: 0 };
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "channel-approval-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate() {
@@ -803,13 +810,15 @@ describe("plan 079 channel runtime", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "write",
-          parameters: { type: "object" },
-          execute: () => ({ toolCallId: "approval-call", name: "write", value: ++calls.tool }),
-        },
-      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: { type: "object" },
+            execute: () => ({ toolCallId: "approval-call", name: "write", value: ++calls.tool }),
+          },
+        ],
+      },
     });
     let currentGrant = authorization();
     const first = harness({ agent, checkpoints, authorize: () => currentGrant });
@@ -865,11 +874,12 @@ describe("plan 079 channel runtime", () => {
   it("cancels a suspended durable run through core denial without running its tool", async () => {
     const checkpoints = createMemoryCheckpointStore();
     const calls = { model: 0, tool: 0 };
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "channel-denial-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate() {
@@ -878,13 +888,15 @@ describe("plan 079 channel runtime", () => {
           yield providerDone();
         },
       },
-      tools: [
-        {
-          name: "write",
-          parameters: { type: "object" },
-          execute: () => ({ toolCallId: "deny-call", name: "write", value: ++calls.tool }),
-        },
-      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: { type: "object" },
+            execute: () => ({ toolCallId: "deny-call", name: "write", value: ++calls.tool }),
+          },
+        ],
+      },
     });
     const { runtime, delivered } = harness({ agent, checkpoints });
     assert.equal((await runtime.admit(event())).status, "accepted");
@@ -905,11 +917,12 @@ describe("plan 079 channel runtime", () => {
       startResume = resolve;
     });
     let providerAborted = false;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "channel-abort-resume-agent",
       model: { provider: "mock", model: "demo" },
-      store: createMemorySessionStore(),
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+      slots: { store: createMemorySessionStore() },
+      runState: { checkpoints, definitionRevision: "1" },
       provider: {
         id: "mock",
         async *generate(request) {
@@ -933,9 +946,11 @@ describe("plan 079 channel runtime", () => {
           throw new Error("provider observed cancellation");
         },
       },
-      tools: [
-        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "abort-call", name: "write", value: "done" }) },
-      ],
+      tools: {
+        add: [
+          { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "abort-call", name: "write", value: "done" }) },
+        ],
+      },
     });
     const { runtime, delivered } = harness({ agent, checkpoints });
     assert.equal((await runtime.admit(event())).status, "accepted");
@@ -973,7 +988,7 @@ describe("plan 079 channel runtime", () => {
     };
     const checkpoints = createMemoryCheckpointStore();
     const first = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider({ count: 0 }, () => "first"),
         createMemorySessionStore(),
       ),
@@ -990,7 +1005,7 @@ describe("plan 079 channel runtime", () => {
     assert.deepEqual(released, [token, token]);
 
     const second = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider({ count: 0 }, () => "second"),
         createMemorySessionStore(),
       ),
@@ -1069,7 +1084,7 @@ describe("plan 080 primitive review", () => {
     const ids = new Set<string>();
     const store = trackingStore(ids);
     const { runtime } = harness({
-      agent: agentWith(
+      agent: await agentWith(
         textProvider({ count: 0 }, () => "ok"),
         store,
       ),
@@ -1105,8 +1120,8 @@ describe("plan 080 bounded attachments and voice", () => {
     };
   }
 
-  function visionAgent(provider: AIProvider, imageInput: boolean): Agent {
-    return createAgent({
+  async function visionAgent(provider: AIProvider, imageInput: boolean): Promise<Agent> {
+    return await createAgent({
       id: "channel-agent",
       model: {
         provider: "mock",
@@ -1114,7 +1129,7 @@ describe("plan 080 bounded attachments and voice", () => {
         capabilities: { input: imageInput ? ["text", "image"] : ["text"] },
       },
       provider,
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
     });
   }
 
@@ -1122,7 +1137,7 @@ describe("plan 080 bounded attachments and voice", () => {
     const captured: Array<readonly Message[]> = [];
     const fetched: ChannelAttachmentRef[] = [];
     const { runtime, delivered } = harness({
-      agent: visionAgent(capturingProvider(captured, "answer about model-chosen-file-999"), true),
+      agent: await visionAgent(capturingProvider(captured, "answer about model-chosen-file-999"), true),
       fetchAttachment: (ref) => {
         fetched.push(ref);
         return Promise.resolve({ bytes: new Uint8Array([1, 2, 3, 4]), mimeType: "image/png" });
@@ -1146,7 +1161,7 @@ describe("plan 080 bounded attachments and voice", () => {
     const captured: Array<readonly Message[]> = [];
     let fetches = 0;
     const { runtime, delivered } = harness({
-      agent: visionAgent(capturingProvider(captured), false),
+      agent: await visionAgent(capturingProvider(captured), false),
       fetchAttachment: () => {
         fetches += 1;
         return Promise.resolve({ bytes: new Uint8Array([1]) });
@@ -1168,7 +1183,7 @@ describe("plan 080 bounded attachments and voice", () => {
   it("turns an attachment the adapter could not resolve into a bounded notice without a model call", async () => {
     const captured: Array<readonly Message[]> = [];
     const { runtime, delivered } = harness({
-      agent: visionAgent(capturingProvider(captured), true),
+      agent: await visionAgent(capturingProvider(captured), true),
       fetchAttachment: () => Promise.resolve(undefined),
     });
 
@@ -1184,7 +1199,7 @@ describe("plan 080 bounded attachments and voice", () => {
     const captured: Array<readonly Message[]> = [];
     let fetches = 0;
     const { runtime, delivered } = harness({
-      agent: visionAgent(capturingProvider(captured), true),
+      agent: await visionAgent(capturingProvider(captured), true),
       fetchAttachment: () => {
         fetches += 1;
         return Promise.resolve({ bytes: new Uint8Array([1]) });
@@ -1207,7 +1222,7 @@ describe("plan 080 bounded attachments and voice", () => {
     const captured: Array<readonly Message[]> = [];
     let fetches = 0;
     const { runtime, delivered } = harness({
-      agent: visionAgent(capturingProvider(captured), false),
+      agent: await visionAgent(capturingProvider(captured), false),
       fetchAttachment: () => {
         fetches += 1;
         return Promise.resolve(undefined);
@@ -1231,7 +1246,7 @@ describe("plan 080 bounded attachments and voice", () => {
   it("rejects malformed attachment refs as malformed without touching media", async () => {
     let fetches = 0;
     const { runtime } = harness({
-      agent: visionAgent(capturingProvider([]), true),
+      agent: await visionAgent(capturingProvider([]), true),
       fetchAttachment: () => {
         fetches += 1;
         return Promise.resolve({ bytes: new Uint8Array([1]) });
@@ -1279,8 +1294,8 @@ describe("plan 080 proactive opt-in notifications", () => {
           actions.push(input.action);
           return options.authorization ?? authorization();
         }),
-      resolveAgent: () =>
-        agentWith(
+      resolveAgent: async () =>
+        await agentWith(
           textProvider(calls, () => "answer"),
           store,
         ),

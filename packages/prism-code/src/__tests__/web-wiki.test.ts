@@ -160,15 +160,10 @@ describe("wiki contributions", () => {
     const shapes: (PrismCodeWikiConfig | undefined)[] = [undefined, false, "off", { enabled: false }];
     try {
       for (const wiki of shapes) {
-        const contributions = await resolveWikiContributions({ cwd: tempDir, ...(wiki === undefined ? {} : { wiki }) });
+        const contributions = resolveWikiContributions({ cwd: tempDir, ...(wiki === undefined ? {} : { wiki }) });
         assert.strictEqual(contributions.enabled, false);
-        assert.strictEqual(
-          contributions.tools.length +
-            contributions.skills.length +
-            contributions.commands.length +
-            contributions.instructionInjectors.length,
-          0,
-        );
+        assert.strictEqual(contributions.package, undefined);
+        assert.strictEqual(contributions.commands.length, 0);
         assert.strictEqual(contributions.fetchUrl, undefined);
       }
       assert.strictEqual(resolveWikiSettings(undefined).enabled, false);
@@ -182,23 +177,33 @@ describe("wiki contributions", () => {
   it("wiki enabled registers tools, skills, commands and the instruction injector without deploying skills by default", async () => {
     const tempDir = makeTempDir("wiki-on");
     try {
-      const contributions = await resolveWikiContributions({ cwd: tempDir, wiki: true });
+      const contributions = resolveWikiContributions({ cwd: tempDir, wiki: true });
       assert.strictEqual(contributions.enabled, true);
-      assert.deepStrictEqual(contributions.tools.map((tool) => tool.name).sort(), [
-        "wiki_ingest",
-        "wiki_read_page",
-        "wiki_record_insight",
-        "wiki_search",
-      ]);
+      assert.ok(contributions.package);
       assert.deepStrictEqual(contributions.commands.map((command) => command.name).sort(), [
         "wiki-ingest",
         "wiki-init",
         "wiki-lint",
         "wiki-refresh",
       ]);
-      assert.deepStrictEqual(contributions.skills.map((skill) => skill.name).sort(), ["wiki-maintainer", "wiki-searcher"]);
-      assert.ok(contributions.instructionInjectors.some((injector) => injector.name === "wiki-guidance"));
-      assert.strictEqual(existsSync(join(tempDir, ".agents")), false, "skills must not deploy without explicit opt-in");
+      const { createAgent } = await import("@arnilo/prism");
+      const agent = await createAgent({
+        model: { provider: "mock", model: "wiki" },
+        packages: [contributions.package],
+      });
+      try {
+        const inspected = agent.inspect();
+        assert.deepStrictEqual(inspected.tools.map((tool) => tool.name).sort(), [
+          "wiki_ingest",
+          "wiki_read_page",
+          "wiki_record_insight",
+          "wiki_search",
+        ]);
+        assert.deepStrictEqual(inspected.skills.map((skill) => skill.name).sort(), ["wiki-maintainer", "wiki-searcher"]);
+        assert.strictEqual(existsSync(join(tempDir, ".agents")), false, "skills must not deploy without explicit opt-in");
+      } finally {
+        await agent.dispose();
+      }
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -207,12 +212,21 @@ describe("wiki contributions", () => {
   it("wiki skill auto-deploy happens only on explicit opt-in", async () => {
     const tempDir = makeTempDir("wiki-deploy");
     try {
-      const contributions = await resolveWikiContributions({
+      const contributions = resolveWikiContributions({
         cwd: tempDir,
         wiki: { enabled: true, autoDeploySkills: true },
       });
       assert.strictEqual(contributions.autoDeploySkills, true);
-      assert.ok(existsSync(join(tempDir, ".agents", "skills")), "opt-in deployment writes wiki skills");
+      const { createAgent } = await import("@arnilo/prism");
+      const agent = await createAgent({
+        model: { provider: "mock", model: "wiki" },
+        packages: contributions.package ? [contributions.package] : [],
+      });
+      try {
+        assert.ok(existsSync(join(tempDir, ".agents", "skills")), "opt-in deployment writes wiki skills");
+      } finally {
+        await agent.dispose();
+      }
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -250,10 +264,10 @@ describe("wiki contributions", () => {
       writeFileSync(binary, "#!/bin/sh\nexit 0\n");
       chmodSync(binary, 0o755);
       const web = await resolveWebTools({ cwd: tempDir, web: { mode: "obscura", command: binary } }, manager());
-      const contributions = await resolveWikiContributions({ cwd: tempDir, wiki: true }, { webTools: web.tools });
+      const contributions = resolveWikiContributions({ cwd: tempDir, wiki: true }, { webTools: web.tools });
       assert.ok(contributions.fetchUrl);
 
-      const noWeb = await resolveWikiContributions({ cwd: tempDir, wiki: true });
+      const noWeb = resolveWikiContributions({ cwd: tempDir, wiki: true });
       assert.strictEqual(noWeb.fetchUrl, undefined, "URL ingest fails closed without a web backend");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });

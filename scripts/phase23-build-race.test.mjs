@@ -58,7 +58,7 @@ function importerRan(r) {
   return /^ℹ pass [1-9]/m.test(r.out) || /^\s*[1-9]\d* pass\b/m.test(r.out);
 }
 // The post-consistency export check: a partial dist missing a known export fails it.
-const KNOWN_EXPORTS = ["AgentRunError", "AGENT_RUN_STATE_NAMESPACE"];
+const KNOWN_EXPORTS = ["AgentRunStateError", "AGENT_RUN_STATE_NAMESPACE"];
 const EXPORT_CHECK = [
   "-e",
   `import('@arnilo/prism').then(m=>{for(const k of ${JSON.stringify(KNOWN_EXPORTS)}){if(!(k in m)){console.error('missing export: '+k);process.exit(3)}}})`,
@@ -85,7 +85,7 @@ test("sensitivity: the consistency check catches a partial dist (deterministic p
     const dist = join(dir, "dist");
     // A module graph missing one known export — the shape a mid-emit tsc could leave behind.
     mkdirSync(dist, { recursive: true });
-    writeFileSync(join(dist, "index.js"), "export const AgentRunError = class {};\n");
+    writeFileSync(join(dist, "index.js"), "export const AgentRunStateError = class {};\n");
     const partial = await run(process.execPath, [
       "-e",
       `import('file://${join(dist, "index.js")}').then(m=>{for(const k of ${JSON.stringify(KNOWN_EXPORTS)}){if(!(k in m)){process.exit(3)}}})`,

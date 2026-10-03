@@ -36,26 +36,30 @@ describe("tool result content on provider wire", () => {
       },
     };
 
-    const session = createAgent({
-      model: { provider: "mock", model: "demo" },
-      provider,
-      tools: [
-        {
-          name: "repo_list",
-          execute: (_args, context) => ({
-            toolCallId: context.toolCallId,
-            name: "repo_list",
-            content: [{ type: "text", text: listing }],
-          }),
+    const session = await (
+      await createAgent({
+        model: { provider: "mock", model: "demo" },
+        provider,
+        tools: {
+          add: [
+            {
+              name: "repo_list",
+              execute: (_args, context) => ({
+                toolCallId: context.toolCallId,
+                name: "repo_list",
+                content: [{ type: "text", text: listing }],
+              }),
+            },
+          ],
         },
-      ],
-    }).createSession();
+      })
+    ).session();
     const pending = collect(session.subscribe());
     await session.run("list");
     const events = await pending;
 
-    const finished = events.find((event) => event.type === "tool_execution_finished");
-    assert.equal(finished?.type === "tool_execution_finished" ? finished.result.content?.[0]?.type : undefined, "text");
+    const finished = events.find((event) => event.type === "tool.completed");
+    assert.equal(finished?.type === "tool.completed" ? finished.result.content?.[0]?.type : undefined, "text");
 
     const tool = replay?.messages.find((message) => message.role === "tool");
     assert.ok(tool);

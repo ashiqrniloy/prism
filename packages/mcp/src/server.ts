@@ -3,6 +3,7 @@ import {
   AgentRunStateError,
   assertIdentityActive,
   assertIdentityMatchesOwnership,
+  assertPermission,
   createRunLimitTracker,
   createToolRegistry,
   dispatchToolCall,
@@ -104,16 +105,23 @@ export function createPrismMcpServer(options: CreatePrismMcpServerOptions): McpS
             toolCallId: requestId,
             signal,
             metadata: authorization.metadata,
-            identity: authorization.identity,
+            principal: authorization.identity?.principal,
           },
           validate: options.validate,
-          permission: options.permission,
           redactor: options.redactor,
           effectStore: options.effectStore,
           ownership: authorization.ownership,
-          identity: authorization.identity,
-          guardrails: options.guardrails,
+          principal: authorization.identity?.principal,
           limitTracker: limits,
+          // MCP dispatches outside `RunController`, so the host `tool.call` gate is applied here.
+          beforeExecute: async (call, _tool, context) => {
+            await assertPermission(options.permission, {
+              kind: "tool",
+              action: "execute",
+              target: call.name,
+              metadata: context.metadata,
+            });
+          },
         });
         return toolResult(result, maxResultBytes, options.redactor);
       } finally {

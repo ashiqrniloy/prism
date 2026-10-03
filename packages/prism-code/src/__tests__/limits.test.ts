@@ -31,7 +31,7 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
     assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxInputTokens, null);
     assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxOutputTokens, null);
     assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxTotalTokens, null);
-    assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxStopContinuations, null);
+    assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxContinuations, null);
     assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxRequestBytes, HARD_RUN_LIMITS.maxRequestBytes);
     assert.equal(PRISM_CODE_DEFAULT_LIMITS.maxResponseBytes, HARD_RUN_LIMITS.maxResponseBytes);
   });
@@ -43,13 +43,13 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
       maxToolRounds: null,
       maxCost: { amount: 5.5, currency: "USD" },
       maxRequestBytes: 16 * 1024 * 1024,
-      maxStopContinuations: 0,
+      maxContinuations: 0,
     });
     assert.equal(valid.maxTurns, 10);
     assert.equal(valid.maxToolRounds, null);
     assert.deepEqual(valid.maxCost, { amount: 5.5, currency: "USD" });
     assert.equal(valid.maxRequestBytes, 16 * 1024 * 1024);
-    assert.equal(valid.maxStopContinuations, 0);
+    assert.equal(valid.maxContinuations, 0);
 
     // Number maxCost normalizes to USD
     const numCost = validatePrismCodeLimits({ maxCost: 10 });
@@ -112,12 +112,12 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
 
       const definition = await assembleAppAgent(config, mockProvider);
       // Manually add the step_tool to the session
-      const session = definition.createSession();
+      const session = definition.session();
       // Core default limits would die at 8 tool rounds or 120s wall time.
       // Prism Code default limits have maxToolRounds: null, maxWallTimeMs: null.
       ((session as any).agent.config.tools as any).register(testTool);
 
-      const result = await session.run("start unbounded run");
+      const result = await (await session).run("start unbounded run");
       assert.equal(result.status, "succeeded");
       assert.equal(roundsCount, 100);
       assert.equal(turnCount, 101);
@@ -209,14 +209,14 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
       };
 
       const definition = await assembleAppAgent(config, mockProvider);
-      const session = definition.createSession();
+      const session = definition.session();
       ((session as any).agent.config.tools as any).register(toolDef);
 
-      const result = await session.run("test cost limit");
+      const result = await (await session).run("test cost limit");
 
       // Verify clean stop with finish reason, NOT a crash
       assert.equal(result.status, "succeeded");
-      assert.ok((result as any).finishReason === "host_policy" || result.stopReason === "host_policy");
+      assert.ok((result as any).finishReason === "hook_stop" || result.stopReason === "hook_stop");
       assert.ok(result.stopDetail?.includes("max_cost"));
       assert.equal(turn, 2, "turn 3 must not run after cost limit is reached");
     } finally {
@@ -319,8 +319,8 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
         policy: createDefaultRetryPolicy({ maxAttempts: 5, baseDelayMs: 5, maxDelayMs: 10 }),
       };
 
-      const session = definition.createSession();
-      const result = await session.run("retry prompt");
+      const session = definition.session();
+      const result = await (await session).run("retry prompt");
 
       assert.equal(result.status, "succeeded");
       assert.equal(attempts, 3, "must retry 3 times without breaching limits");
@@ -330,7 +330,7 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
     }
   });
 
-  it("loop configuration threads toolConcurrency into the agent", async () => {
+  it("loop configuration keeps custom strategies and drops the legacy option form", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "prism-limits-loop-"));
     try {
       const config: PrismCodeConfig = {
@@ -342,10 +342,14 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
         },
       };
 
+      // The 1.0 loop slot takes a `LoopStrategy`; legacy string/option forms resolve to the
+      // kernel default (tool concurrency now comes from `RunController.executeTools`).
       const definition = await assembleAppAgent(config);
-      const loop = (definition as any).loop;
-      assert.ok(loop);
-      assert.equal(loop.toolConcurrency, 4);
+      assert.equal((definition as any).loop, undefined);
+
+      const custom = { name: "custom", revision: "1", async run() {} };
+      const withCustom = await assembleAppAgent({ ...config, loop: custom as never });
+      assert.equal((withCustom as any).loop, custom);
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }

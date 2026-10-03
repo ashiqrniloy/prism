@@ -10,6 +10,7 @@ import { assembleAppAgent, runHeadless } from "../headless.js";
 import { type CommandContext, handleSlashCommand } from "../tui/commands.js";
 import { createInitialTuiState } from "../tui/reducer.js";
 import type { WikiContributions } from "../wiki.js";
+import { configuredSessionStore } from "../sessions.js";
 
 function makeWorkspace(): string {
   return mkdtempSync(join(tmpdir(), "prism-code-integration-"));
@@ -38,9 +39,10 @@ function commandContext(
 ) {
   const entries: any[] = [];
   const footers: any[] = [];
-  const session = definition.createSession({
+  const session = definition.session({
     id: "integration-session",
     metadata: { workspaceRoot: workspace, userId: "integration-user" },
+    create: true,
   });
   const context: any = {
     state: createInitialTuiState({ provider: "mock", model: "mock" }),
@@ -49,7 +51,7 @@ function commandContext(
     session,
     definition,
     config,
-    store: definition.agent.config.store,
+    store: configuredSessionStore(definition.agent),
     currentModel: { provider: "mock", model: "mock" },
     credentialManager,
     omCoordinator: (definition as unknown as { omCoordinator?: unknown }).omCoordinator,
@@ -90,8 +92,9 @@ describe("prism-code integration (offline)", () => {
         assert.ok(names.has(expected), `missing core tool ${expected}`);
       }
       assert.ok(names.has("git_status"), "git plane opted in but git_status absent");
+      const wikiNames = new Set(definition.agent.inspect().tools.map((tool) => tool.name));
       for (const wikiTool of ["wiki_search", "wiki_read_page", "wiki_record_insight", "wiki_ingest"]) {
-        assert.ok(names.has(wikiTool), `missing wiki tool ${wikiTool}`);
+        assert.ok(wikiNames.has(wikiTool), `missing wiki tool ${wikiTool}`);
       }
       assert.ok(names.has("recall"), "observational-memory recall tool absent");
       // web: "off" must be truly inert
@@ -107,7 +110,6 @@ describe("prism-code integration (offline)", () => {
         "wiki-lint",
         "wiki-refresh",
       ]);
-      assert.strictEqual(contributions?.instructionInjectors.length, 1);
       assert.ok(!existsSync(join(workspace, ".agents", "skills")), "wiki skills deployed without explicit opt-in");
     } finally {
       await definition.dispose();
@@ -249,22 +251,25 @@ describe("prism-code integration (offline)", () => {
       };
 
       const definition = await assembleAppAgent(config, provider);
-      const session = definition.createSession({
+      const session = definition.session({
         id: "identity-session",
         metadata: { workspaceRoot: workspace, userId: "integration-user" },
+        create: true,
       });
       const toolEvents: string[] = [];
+      const blockedEvents: string[] = [];
       void (async () => {
-        for await (const event of session.subscribe({ acrossRuns: true })) {
-          if (event.type.startsWith("tool_")) toolEvents.push(event.type);
+        for await (const event of (await session).subscribe({ acrossRuns: true })) {
+          if (event.type === "tool.started" || event.type === "tool.completed") toolEvents.push(event.type);
+          if (event.type === "tool.completed" && event.status === "blocked") blockedEvents.push("blocked");
         }
       })();
 
-      await session.run("change the note");
+      await (await session).run("change the note");
 
       assert.equal(readFileSync(join(workspace, "note.txt"), "utf8"), "two\n", "the edit must be applied");
-      assert.ok(toolEvents.includes("tool_execution_finished"), `expected a finished tool call, got ${toolEvents.join(",")}`);
-      assert.ok(!toolEvents.includes("tool_execution_blocked"), "the local identity must not block durable effects");
+      assert.ok(toolEvents.includes("tool.completed"), `expected a finished tool call, got ${toolEvents.join(",")}`);
+      assert.ok(!blockedEvents.includes("blocked"), "the local identity must not block durable effects");
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }

@@ -185,6 +185,7 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
   return {
     name: toolName,
     description: "Load the full instructions for an active skill by exact name.",
+    effects: ["read"],
     parameters: {
       type: "object",
       properties: {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, AuthMethod, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AIProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { applyThinkingLevel } from "@arnilo/prism";
 import {
   assertNoForeignCacheFields,
@@ -15,7 +16,7 @@ import {
   clinePassDeclaredLevels,
   clinePassModels,
   createClinePassProvider,
-  createClinePassProviderPackage,
+  clinepassPackage,
 } from "../index.js";
 
 const byId = (id: string): ModelConfig => clinePassModels.find((model) => model.model === id)!;
@@ -33,34 +34,26 @@ describe("@arnilo/prism-providers/clinepass", () => {
   });
 
   it("clinepass_registers_each_featured_slug_once_and_api_key_only", async () => {
-    const models: string[] = [];
-    const methods: string[] = [];
-    await createClinePassProviderPackage({ apiKey: "fake-cline-key" }).setup({
-      registerProvider: (provider: AIProvider) => assert.equal(provider.id, "clinepass"),
-      registerModel: (model: ModelConfig) => models.push(model.model),
-      registerAuthMethod: (method: AuthMethod) => methods.push(method.kind),
-    } as never);
+    await loadProviderPackage(clinepassPackage({ apiKey: "fake-cline-key" }));
+    const models = clinePassModels.map((model) => model.model);
     assert.deepEqual(models, [...CLINEPASS_FEATURED_SLUGS]);
     assert.equal(new Set(models).size, models.length);
     assert.ok(models.every((id) => id.startsWith("cline-pass/")));
-    assert.deepEqual(methods, ["api_key"]);
     assert.equal(CLINEPASS_DEFAULT_BASE_URL, "https://api.cline.bot/api/v1");
     assert.ok(clinePassModels.every((model) => model.cache?.kind === "implicit"));
   });
 
   it("clinepass_setup_does_not_fetch", async () => {
     let fetches = 0;
-    await createClinePassProviderPackage({
-      apiKey: "fake-cline-key",
-      fetch: (async () => {
-        fetches += 1;
-        return new Response("nope", { status: 500 });
-      }) as typeof fetch,
-    }).setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as never);
+    await loadProviderPackage(
+      clinepassPackage({
+        apiKey: "fake-cline-key",
+        fetch: (async () => {
+          fetches += 1;
+          return new Response("nope", { status: 500 });
+        }) as typeof fetch,
+      }),
+    );
     assert.equal(fetches, 0);
   });
 

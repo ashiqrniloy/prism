@@ -2,17 +2,14 @@ import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 import type {
   AgentEvent,
-  AgentSession,
+  Session,
   CommandDefinition,
   CommandDrivers,
   CommandResult,
-  InstructionInjector,
   JsonObject,
   ModelConfig,
   RunOptions,
 } from "./contracts.js";
-import type { ContributionRegistry } from "./contributions.js";
-import { resolveInstructionInjectors } from "./instruction-injection.js";
 import { errorToErrorInfo } from "./redaction.js";
 
 export type RpcCommandName =
@@ -26,7 +23,6 @@ export type RpcCommandName =
   | "compact"
   | "switchSession"
   | "forkSession"
-  | "cloneSession"
   | "checkout"
   | "command";
 
@@ -37,14 +33,11 @@ export interface RpcRequest {
 }
 
 export interface RpcSessionFactory {
-  createSession(id?: string): AgentSession | Promise<AgentSession>;
+  createSession(id?: string): Session | Promise<Session>;
   readonly commands?: readonly CommandDefinition[];
   /** Host-opt-in driver capabilities forwarded to contributed commands on the
    *  `command` execution context. Absent ⇒ context shape unchanged. */
   readonly drivers?: CommandDrivers;
-  /** Optional registry for resolving `instructionInjectors` names in `prompt`/`followUp`
-   *  params (Phase 30). Names resolve fail-closed. */
-  readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
 }
 
 export interface RpcServerOptions extends RpcSessionFactory {
@@ -53,14 +46,13 @@ export interface RpcServerOptions extends RpcSessionFactory {
 }
 
 interface RpcState {
-  current: AgentSession;
+  current: Session;
   currentHandleId: string;
   model?: ModelConfig;
-  readonly sessions: Map<string, AgentSession>;
+  readonly sessions: Map<string, Session>;
   readonly commands: Map<string, CommandDefinition>;
-  readonly createSession: (id?: string) => AgentSession | Promise<AgentSession>;
+  readonly createSession: (id?: string) => Session | Promise<Session>;
   readonly drivers?: CommandDrivers;
-  readonly instructionInjectors?: ContributionRegistry<InstructionInjector>;
 }
 
 interface ActiveRun {
@@ -77,7 +69,6 @@ export async function runRpcServer(options: RpcServerOptions): Promise<void> {
     commands: new Map((options.commands ?? []).map((command) => [command.name, command])),
     createSession: options.createSession,
     ...(options.drivers ? { drivers: options.drivers } : {}),
-    ...(options.instructionInjectors ? { instructionInjectors: options.instructionInjectors } : {}),
   };
   const activeRuns = new Map<string, ActiveRun>();
   const lines = createInterface({ input: options.stdin, crlfDelay: Infinity });
@@ -127,16 +118,22 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
         });
         return;
       }
-      // ponytail: Phase 30 — resolve run options (incl. instructionInjectors names) BEFORE opening the
+      // ponytail: resolve run options BEFORE opening the
       // event pump. A fail-closed name resolution throws here, surfaces as an error response via the
       // outer try/catch, and never strands the event subscription's for-await.
       const runOpts = runOptions(state, request.params);
       const events = pumpEvents(session, stdout, request.id);
       const promise = (async () => {
+        let result;
         try {
-          await session.run(input, runOpts);
+          result = await session.run(input, runOpts);
         } finally {
           await events;
+        }
+        if (result.status === "failed" || result.status === "aborted") {
+          const fallback = new Error(result.status === "aborted" ? "Agent run aborted" : "Agent run failed");
+          write(stdout, { id: request.id, ok: false, error: result.error ?? errorToErrorInfo(fallback) });
+          return;
         }
         write(stdout, { id: request.id, ok: true, result: { sessionId: session.id } });
       })()
@@ -206,15 +203,7 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
       break;
     }
     case "forkSession": {
-      const session = state.current.fork({ leafId: stringParam(request.params, "leafId") });
-      const handleId = registerSession(state, session);
-      state.current = session;
-      state.currentHandleId = handleId;
-      write(stdout, { id: request.id, ok: true, result: { sessionId: session.id, leafId: session.leafId, handleId } });
-      break;
-    }
-    case "cloneSession": {
-      const session = await state.current.clone({ id: stringParam(request.params, "id"), leafId: stringParam(request.params, "leafId") });
+      const session = await state.current.fork({ at: stringParam(request.params, "at") });
       const handleId = registerSession(state, session);
       state.current = session;
       state.currentHandleId = handleId;
@@ -250,7 +239,7 @@ async function handleRequest(request: RpcRequest, state: RpcState, stdout: Writa
   }
 }
 
-function pumpEvents(session: AgentSession, stdout: Writable, requestId: string | number): Promise<void> {
+function pumpEvents(session: Session, stdout: Writable, requestId: string | number): Promise<void> {
   return (async () => {
     for await (const event of session.subscribe()) write(stdout, eventEnvelope(event, requestId));
   })();
@@ -262,13 +251,10 @@ function eventEnvelope(event: AgentEvent, requestId: string | number): Record<st
   return { type: "event", id: requestId, sessionId, runId, event };
 }
 
-function registerSession(state: RpcState, session: AgentSession, preferredHandleId?: string): string {
+function registerSession(state: RpcState, session: Session, preferredHandleId?: string): string {
   const base = preferredHandleId ?? session.id;
-  // ponytail: branch handles coexist for one sessionId. fork() reuses the sessionId (it is a
-  // branch of the same session, not a copy; clone() is the copy), so on collision we mint a
-  // stable, self-describing handle id (`{sessionId}#2`, `#3`, ...). Clients switch among handles
-  // via the handleId returned by fork/clone/switch; the (sessionId, leafId) pair is read live
-  // from the session so it stays accurate as the leaf advances on append/run.
+  // A handle is the session id. `fork` copies into a new session id, so a collision only happens when a host
+  // registers the same session twice; mint a stable, self-describing handle (`{sessionId}#2`, `#3`, ...) then.
   if (!state.sessions.has(base)) {
     state.sessions.set(base, session);
     return base;
@@ -280,21 +266,17 @@ function registerSession(state: RpcState, session: AgentSession, preferredHandle
   return handleId;
 }
 
-async function makeSession(state: RpcState, id: string): Promise<AgentSession> {
+async function makeSession(state: RpcState, id: string): Promise<Session> {
   const session = await state.createSession(id);
   state.sessions.set(session.id, session);
   return session;
 }
 
 function runOptions(state: RpcState, params: Record<string, unknown> | undefined): RunOptions {
-  const names = stringArrayParam(params, "instructionInjectors");
-  // ponytail: fail-closed — unknown name throws (caller surfaces as RPC error), matching CLI.
-  const injectors = names.length ? resolveInstructionInjectors({ registry: state.instructionInjectors, names }) : undefined;
   const maxToolRounds = numberParam(params, "maxToolRounds");
   return {
     model: modelParam(params) ?? state.model,
     ...(maxToolRounds !== undefined ? { limits: { maxToolRounds } } : {}),
-    ...(injectors ? { instructionInjectors: injectors } : {}),
   };
 }
 
@@ -321,12 +303,6 @@ function objectParam(params: Record<string, unknown> | undefined, key: string): 
   return isObject(value) ? (value as Record<string, unknown>) : undefined;
 }
 
-function stringArrayParam(params: Record<string, unknown> | undefined, key: string): readonly string[] {
-  const value = params?.[key];
-  if (!Array.isArray(value)) return [];
-  return value.filter((v): v is string => typeof v === "string");
-}
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -345,7 +321,6 @@ function isCommand(value: unknown): value is RpcCommandName {
       "compact",
       "switchSession",
       "forkSession",
-      "cloneSession",
       "checkout",
       "command",
     ].includes(value)

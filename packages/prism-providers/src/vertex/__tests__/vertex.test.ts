@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
 import type { JsonObject } from "@arnilo/prism";
+import { loadProviderPackage } from "../../__tests__/load-package.js";
 import { assertAbortIsObserved, assertNoFetches, assertNoForeignCacheFields } from "@arnilo/prism/testing/provider-conformance";
-import { createVertexProvider, createVertexProviderPackage, vertexOpenApiBaseUrl } from "../index.js";
+import { createVertexProvider, vertexPackage, vertexOpenApiBaseUrl } from "../index.js";
 
 describe("@arnilo/prism-providers/vertex", () => {
   it("preserves location/project endpoint and uses ADC bearer token", async () => {
@@ -81,7 +82,7 @@ describe("@arnilo/prism-providers/vertex", () => {
 
   it("setup stays inert with zero fetch and zero credential resolution", async () => {
     const calls: unknown[] = [];
-    const pkg = createVertexProviderPackage({
+    const pkg = vertexPackage({
       projectId: "p",
       location: "us-central1",
       credential: () => {
@@ -94,11 +95,7 @@ describe("@arnilo/prism-providers/vertex", () => {
         throw new Error("should not fetch");
       }) as typeof fetch,
     });
-    await pkg.setup({
-      registerProvider: () => {},
-      registerModel: () => {},
-      registerAuthMethod: () => {},
-    } as any);
+    await loadProviderPackage(pkg);
     assertNoFetches(calls);
   });
 
@@ -153,13 +150,13 @@ describe("@arnilo/prism-providers/vertex", () => {
   });
 
   it("package stays separate from consumer google and has no runtime deps", () => {
-    const pkg = createVertexProviderPackage({
+    const pkg = vertexPackage({
       projectId: "p",
       location: "us-central1",
       credential: () => "t",
     });
-    assert.equal(pkg.name, "@arnilo/prism-providers/vertex");
-    assert.notEqual(pkg.name, "@arnilo/prism-providers/google");
+    assert.equal(pkg.definition.name, "@arnilo/prism-providers.vertex");
+    assert.notEqual(pkg.definition.name, "@arnilo/prism-providers.google");
     const google = readFileSync(new URL("../../../src/google/index.ts", import.meta.url), "utf8");
     assert.ok(!google.includes("provider-vertex"));
     const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));

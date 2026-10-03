@@ -1,4 +1,5 @@
 import type { JsonObject, ToolEffectKey, ToolEffectStore, ToolEffectTransition, ToolExecutionContext } from "@arnilo/prism";
+import { assertIdentityMatchesOwnership } from "@arnilo/prism";
 import type { McpAppResource, McpAppsBridge } from "@arnilo/prism-mcp";
 import { type AgUiMcpAppEffectContext, deriveAppEffectKey, hashJson } from "./effect-recovery.js";
 import { AgUiError } from "./errors.js";
@@ -77,9 +78,9 @@ export interface CreateAgUiMcpAppHandlerOptions<Authorization extends AgUiAuthor
   /** Optional durable claim/CAS store: records every approved UI mutation for idempotent retry (FR-4). */
   readonly effectStore?: ToolEffectStore;
   /**
-   * Optional identity/ownership for effect recording. Absent, the handler falls
-   * back to `authorization.ownership` and `context.identity`; when neither
-   * yields ownership, the call fails closed. Ignored when `effectStore` is absent.
+   * Verified identity/ownership for effect recording. Required with `effectStore`:
+   * an opaque tool principal is not verification. Absent or unavailable fails closed.
+   * Ignored when `effectStore` is absent.
    */
   readonly effectContext?: (
     input: AgUiMcpAppCallContext<Authorization> & { readonly context: ToolExecutionContext },
@@ -211,7 +212,6 @@ async function dispatchAppMessage<Authorization extends AgUiAuthorization>(
       argumentsHash,
     });
     const base: ToolEffectKey = {
-      identity: effectContext.identity,
       ownership: effectContext.ownership,
       key,
       sessionId: context.sessionId,
@@ -293,15 +293,10 @@ async function resolveEffectContext<Authorization extends AgUiAuthorization>(
   options: CreateAgUiMcpAppHandlerOptions<Authorization>,
   input: AgUiMcpAppCallContext<Authorization> & { readonly context: ToolExecutionContext },
 ): Promise<AgUiMcpAppEffectContext | false> {
-  if (options.effectContext) {
-    const resolved = await options.effectContext(input);
-    if (!resolved) return false;
-    return resolved;
-  }
-  const ownership = input.authorization.ownership;
-  const identity = input.context.identity;
-  if (!ownership || !identity) return false;
-  return { ownership, identity };
+  const resolved = await options.effectContext?.(input);
+  if (!resolved) return false;
+  assertIdentityMatchesOwnership(resolved.identity, resolved.ownership);
+  return resolved;
 }
 
 function parseEnvelope(value: unknown, serverId: string): AppEnvelope {

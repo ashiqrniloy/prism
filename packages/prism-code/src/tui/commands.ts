@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { chmodSync, existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  type AgentSession,
+  type Session,
   type AIProvider,
   type CommandDefinition,
   type CommandDrivers,
@@ -19,7 +19,7 @@ import {
   type SessionStore,
   type ToolDefinition,
 } from "@arnilo/prism";
-import type { AgentSdkDefinition } from "@arnilo/prism-agent-sdk";
+import type { Agent } from "@arnilo/prism-agent-sdk";
 import { createMcpClientAuth, createMcpOAuthFetch, type McpStreamableHttpTransport } from "@arnilo/prism-mcp";
 import { createMemoryStatusCommand, createMemoryViewCommand } from "@arnilo/prism-memory/compaction/observational-memory";
 import { PRISM_CODE_APPROVAL_MODES, type PrismCodeApprovalController, type PrismCodeApprovalMode } from "../approval.js";
@@ -67,8 +67,8 @@ export interface CommandContext {
   /** Shared provider cache: `/compact` resolves through it and `/logout` clears it. */
   providerCache?: ProviderCache;
   currentModel: ModelConfig;
-  session?: AgentSession;
-  definition?: AgentSdkDefinition;
+  session?: Session;
+  definition?: Agent;
   config: PrismCodeConfig;
   store: SessionStore;
   omCoordinator?: ObservationalMemoryCoordinator;
@@ -76,7 +76,7 @@ export interface CommandContext {
   approval?: PrismCodeApprovalController;
   onUpdateState: (patch: Partial<TuiState>) => void;
   onUpdateModel: (model: ModelConfig) => void;
-  onSwitchSession?: (session: AgentSession, initialEntries?: readonly SessionEntry[]) => Promise<void>;
+  onSwitchSession?: (session: Session, initialEntries?: readonly SessionEntry[]) => Promise<void>;
   promptSecret?: (promptText: string) => Promise<string | undefined>;
   /** Host-opt-in drivers forwarded to contributed extension commands (never model-visible). */
   commandDrivers?: CommandDrivers;
@@ -335,12 +335,7 @@ async function executePermissionsCommand(context: CommandContext, args: readonly
 
 async function executeSkillsCommand(context: CommandContext): Promise<SlashCommandResult> {
   const loadedNames = context.session?.getLoadedSkillNames ? context.session.getLoadedSkillNames() : [];
-  const skillsVal = context.definition?.agent.config.skills;
-  const activeSkills = Array.isArray(skillsVal)
-    ? skillsVal
-    : skillsVal && typeof (skillsVal as any).list === "function"
-      ? [...(skillsVal as any).list()]
-      : undefined;
+  const activeSkills = context.definition?.agent.config.skills?.add;
   const skills = await inspectSkills(context.config, {
     loadedSkillNames: loadedNames,
     activeSkills,
@@ -905,11 +900,7 @@ export function executeExitCommand(context: CommandContext): SlashCommandResult 
 
 /** Names of tools currently registered in the session (MCP session-disable removes them). */
 function activeToolNames(context: CommandContext): ReadonlySet<string> {
-  const tools = context.definition?.agent.config.tools as unknown;
-  const registry = tools && !Array.isArray(tools) ? (tools as { list?: () => readonly ToolDefinition[] }) : undefined;
-  const names = new Set<string>();
-  for (const tool of registry?.list?.() ?? []) names.add(tool.name);
-  return names;
+  return new Set((context.definition?.agent.tools ?? []).map((tool) => tool.name));
 }
 
 /** `/tools`: active inventory grouped by source, with web diagnostics from the assembly. */
@@ -1114,12 +1105,13 @@ export async function executeNewSessionCommand(context: CommandContext): Promise
     userId: context.config.userId,
   });
 
-  const newSession = context.definition.createSession({
+  const newSession = await context.definition.session({
     id: newSessionId,
     metadata: {
       [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: canonicalRoot,
       userId: context.config.userId ?? "local",
     },
+    create: true,
   });
 
   if (context.onSwitchSession) {
@@ -1272,13 +1264,14 @@ export async function executeResumeSessionCommand(context: CommandContext): Prom
   }
 
   const hit = hitsBySessionId.get(targetSessionId);
-  const resumedSession = context.definition.createSession({
+  const resumedSession = await context.definition.session({
     id: targetSessionId,
     leafId: hit?.leafId,
     metadata: {
       [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: canonicalRoot,
       userId: context.config.userId ?? "local",
     },
+    create: true,
   });
 
   const entries = await resumedSession.entries();
@@ -1298,7 +1291,7 @@ export async function executeResumeSessionCommand(context: CommandContext): Prom
 
 /**
  * /compact slash command:
- * Compacts session history using createCodingCompactionStrategy with current authenticated provider/model.
+ * Compacts session history using createCodingCompactor with current authenticated provider/model.
  * Refuses while run is active. Leaves session leaf untouched on error.
  */
 export async function executeCompactCommand(context: CommandContext): Promise<SlashCommandResult> {
@@ -1348,11 +1341,7 @@ export async function executeCompactCommand(context: CommandContext): Promise<Sl
   });
 
   try {
-    const result = await compactSession({
-      session: context.session,
-      provider,
-      model: context.currentModel,
-    });
+    const result = await compactSession({ session: context.session });
 
     context.stream.appendOrUpdate({
       id: `compact_done_${Date.now()}`,

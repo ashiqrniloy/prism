@@ -25,8 +25,8 @@ import {
 
 const ownership: OwnershipScope = { tenantId: "tenant-1", userId: "user-1" };
 
-function agent() {
-  return createAgent({
+async function agent() {
+  return await createAgent({
     model: { provider: "mock", model: "offline" },
     provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
   });
@@ -69,7 +69,7 @@ describe("server deployment seams", () => {
     const drain = createPrismDrainController();
     const rateLimit = createMemoryRateLimiter({ maxRequests: 1, windowMs: 60_000 });
     const handler = createPrismHandler({
-      agents: { support: agent() },
+      agents: { support: await agent() },
       authorize: () => ({ ownership }),
       drain,
       rateLimit,
@@ -96,7 +96,7 @@ describe("server deployment seams", () => {
     assert.ok(limited.headers.get("retry-after"));
 
     const unlimited = createPrismHandler({
-      agents: { support: agent() },
+      agents: { support: await agent() },
       authorize: () => ({ ownership }),
       drain,
     });
@@ -120,9 +120,9 @@ describe("server deployment seams", () => {
             id: "e1",
             sessionId: "s1",
             runId: "r1",
-            type: "agent_finished",
+            type: "run.completed",
             timestamp: new Date().toISOString(),
-            event: { type: "agent_finished", runId: "r1", sessionId: "s1" },
+            event: { type: "run.completed", runId: "r1", status: "completed", sessionId: "s1" },
             redacted: true,
             tenantId: "tenant-1",
             userId: "user-1",
@@ -167,9 +167,9 @@ describe("server deployment seams", () => {
       id: "durable-1",
       sessionId: "s1",
       runId: "r1",
-      type: "agent_finished",
+      type: "run.completed",
       timestamp: "2026-08-04T00:00:00.000Z",
-      event: { type: "agent_finished", runId: "r1", sessionId: "s1" },
+      event: { type: "run.completed", runId: "r1", status: "completed", sessionId: "s1" },
       redacted: true,
       ...ownership,
     });

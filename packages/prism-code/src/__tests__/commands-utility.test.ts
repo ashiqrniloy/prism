@@ -39,15 +39,11 @@ describe("TUI utility commands", () => {
       state: createInitialTuiState(),
       definition: {
         agent: {
-          config: {
-            tools: {
-              list: () => [
-                { name: "shell", description: "shell" },
-                { name: "mcp__github__search", description: "search" },
-                { name: "my_tool", description: "custom" },
-              ],
-            },
-          },
+          tools: [
+            { name: "shell", description: "shell" },
+            { name: "mcp__github__search", description: "search" },
+            { name: "my_tool", description: "custom" },
+          ],
         },
         mcp: {
           status: [{ serverId: "github", state: "connected", toolCount: 1 }],
@@ -91,7 +87,7 @@ describe("TUI utility commands", () => {
         state: createInitialTuiState(),
         config: { cwd: dir },
         store: createMemorySessionStore(),
-        definition: { createSession: () => ({ id: "session_new" }) },
+        definition: { session: () => ({ id: "session_new" }) },
         onSwitchSession: async () => {
           switched += 1;
         },

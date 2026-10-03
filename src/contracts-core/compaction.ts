@@ -3,12 +3,6 @@
 import type { ErrorInfo } from "./content.js";
 import type { SessionEntry } from "./session.js";
 
-export interface CompactionStrategy {
-  readonly name: string;
-  compact(context: CompactionContext): Promise<CompactionResult> | CompactionResult;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
 export interface CompactionContext {
   readonly sessionId: string;
   readonly entries: readonly SessionEntry[];
@@ -35,7 +29,13 @@ export interface CompactionTriggerContext {
   readonly signal?: AbortSignal;
 }
 
-/** Host-programmable compact-when gate (plan 074 C11). Omitted → `thresholdEntries` only. */
+/**
+ * Host-programmable compact-when gate, evaluated by {@link resolveShouldCompact}.
+ *
+ * Not an auto-compaction seam of its own: the session's only auto trigger is the `compaction.when`
+ * hook, and a handler composes this gate as its own policy (OM's attach loop and Prism Code's
+ * `compaction` config do). Kept because the four trigger kinds are policy no caller should re-derive.
+ */
 export type CompactionTrigger =
   | { readonly type: "threshold_entries"; readonly entries: number }
   | { readonly type: "threshold_tokens"; readonly tokens: number }
@@ -79,11 +79,14 @@ export function assertCompactionTrigger(trigger: CompactionTrigger): CompactionT
   }
 }
 
+/**
+ * Non-strategy compaction knobs. The implementation is the `compaction` slot (`AgentConfig.slots
+ * .compaction`); these only size and time it. `false` on `AgentConfig.compaction`/`RunOptions
+ * .compaction` disables compaction entirely.
+ */
 export interface CompactionOptions {
-  readonly strategy?: CompactionStrategy;
+  /** Entry-count gate for the kernel's default auto trigger; ignored when a `compaction.when` handler is registered. */
   readonly thresholdEntries?: number;
-  /** Replaces the `thresholdEntries` gate when set; omitted keeps today's entry-count gate. */
-  readonly trigger?: CompactionTrigger;
   readonly keepRecentEntries?: number;
   readonly maxSummaryChars?: number;
   readonly secrets?: readonly (string | undefined)[];
@@ -91,9 +94,9 @@ export interface CompactionOptions {
   readonly signal?: AbortSignal;
 }
 
-/** Legacy gates a compaction decision can fall back to when no `trigger` is configured. */
+/** Gates a compaction decision can fall back to when no `trigger` is configured. */
 export interface ResolveShouldCompactOptions {
-  /** Host trigger; when set it replaces the legacy gates below. */
+  /** Host trigger; when set it replaces the gates below. */
   readonly trigger?: CompactionTrigger;
   /** Session gate: compact when the branch holds more than this many entries. */
   readonly thresholdEntries?: number;
@@ -118,8 +121,8 @@ export interface ResolveShouldCompactInput {
 }
 
 /**
- * The single compact-when decision used by `autoCompact` and by host attach loops that gate their
- * own post-run compaction (plan 074 C11).
+ * The compact-when decision used by the kernel's default auto trigger and by host attach loops
+ * that gate their own post-run compaction (plan 074 C11).
  *
  * Precedence: an explicit `trigger` replaces the legacy gates. Only the token gates below a `trigger`
  * replace are lazy — a `threshold_entries` trigger, or a `custom` callback that only reads counts,
@@ -169,11 +172,6 @@ export async function resolveShouldCompact(options: ResolveShouldCompactOptions,
   }
 }
 
-export interface CompactionMiddlewarePayload {
-  readonly context: CompactionContext;
-  readonly result: CompactionResult;
-}
-
 export interface CompactionEntryData {
   readonly throughEntryId?: string;
   readonly keepEntryIds?: readonly string[];
@@ -209,9 +207,4 @@ export interface RetryOptions {
   readonly maxDelayMs?: number;
   readonly secrets?: readonly (string | undefined)[];
   readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-export interface RetryMiddlewarePayload {
-  readonly context: RetryContext;
-  readonly decision: RetryDecision;
 }

@@ -1,8 +1,8 @@
 import { createAppAgent } from "./agent.js";
 
 export async function main(prompt = "Say hello in one short sentence."): Promise<string> {
-  const agent = createAppAgent();
-  const session = agent.createSession({ id: "init-demo" });
+  const agent = await createAppAgent();
+  const session = (await agent.session());
   const result = await session.run(prompt);
   return result.text;
 }

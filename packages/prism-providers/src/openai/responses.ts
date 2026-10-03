@@ -166,7 +166,7 @@ export function createOpenAIResponsesProvider(options: OpenAIResponsesProviderOp
               // computer_call, mcp_call) are executed server-side; the assistant text that
               // follows already incorporates their effect. Recorded as provider-hosted
               // tool_calls so the transcript/telemetry shows the invocation, but the host never
-              // dispatches them or sends a tool_result (see agent-loops.dispatchableToolCalls).
+              // dispatches them or sends a tool_result (see loop/dispatch.dispatchableToolCalls).
               const hosted = event.item as { id?: string; type?: string };
               const hostedId = hosted.id ?? `hosted:${event.output_index ?? 0}`;
               yield providerToolCall({

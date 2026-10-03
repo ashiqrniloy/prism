@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T18:14:35.863Z",
+  "generatedAt": "2026-10-02T11:40:38.709Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.12.1"
@@ -16,7 +16,7 @@
     "@arnilo/prism-ag-ui": "0.12.1",
     "@arnilo/prism-web-tools": "0.12.1",
     "@arnilo/prism-acp-agent": "0.12.1",
-    "@arnilo/prism-hooks": "0.12.1",
+    "@arnilo/prism-hooks-json": "0.12.1",
     "@arnilo/prism-agent-sdk": "0.1.0",
     "@arnilo/prism-code": "0.4.1"
   },
@@ -26,8 +26,8 @@
     "provider": 22,
     "prismFamily": 4,
     "capability": 9,
-    "codeWithPeer": 12,
-    "pureManifest": 1
+    "codeWithPeer": 11,
+    "pureManifest": 2
   },
   "providers": [
     "@arnilo/prism-providers/ai-sdk",
@@ -64,7 +64,7 @@
     "@arnilo/prism-ag-ui",
     "@arnilo/prism-agent-sdk",
     "@arnilo/prism-code",
-    "@arnilo/prism-hooks",
+    "@arnilo/prism-hooks-json",
     "@arnilo/prism-mcp",
     "@arnilo/prism-memory",
     "@arnilo/prism-web-tools",

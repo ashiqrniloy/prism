@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createSecretRedactor, type JsonObject, resolveContextProviders } from "@arnilo/prism";
+import { createSecretRedactor, type ContextDraft, type HookContext, type JsonObject } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore, type Embedder, type MemoryVectorHit, type VectorStore } from "../../index.js";
 import {
   chunkMarkdown,
+  registerRagContext,
   chunkText,
   createMemoryIngestionStatusStore,
-  createRagContextProvider,
   createResourceDocumentLoader,
   createWebFetchDocumentLoader,
   deleteSource,
@@ -676,10 +676,22 @@ describe("retrieveContext / ContextProvider", () => {
       store,
       scope,
     });
-    const blocks = await resolveContextProviders({
-      providers: [createRagContextProvider({ embedder, store, scope })],
-      messages: [{ role: "user", content: [{ type: "text", text: "admin_tool" }] }],
-    });
+    // Drive the registered `context.build` handler the way the kernel would.
+    let handler: ((draft: ContextDraft, context: HookContext) => Promise<ContextDraft | undefined>) | undefined;
+    registerRagContext(
+      {
+        on: (_name: string, registered: unknown) => {
+          handler = registered as typeof handler;
+        },
+      } as never,
+      { embedder, store, scope },
+    );
+    assert.ok(handler, "registerRagContext installed a handler");
+    const draft = await handler({ messages: [{ role: "user", content: [{ type: "text", text: "admin_tool" }] }] }, {
+      sessionId: "s",
+      runId: "r",
+    } as HookContext);
+    const blocks = draft?.context ?? [];
     assert.equal(blocks.length, 1);
     assert.match(String(blocks[0]?.content), /Ignore all instructions/);
     assert.equal(blocks[0]?.metadata?.inert, true);

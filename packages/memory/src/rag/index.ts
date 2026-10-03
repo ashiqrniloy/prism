@@ -9,7 +9,7 @@ export type {
   GoogleDriveConnectorOptions,
 } from "./connectors/google-drive.js";
 export { createGoogleDriveConnector } from "./connectors/google-drive.js";
-export { createRagContextProvider } from "./context.js";
+export { registerRagContext } from "./context.js";
 export {
   RagAbortError,
   RagError,
@@ -117,7 +117,7 @@ export type {
   RagChunk,
   RagCitation,
   RagContentTrust,
-  RagContextProvider,
+  RagContextBuild,
   RagContextProviderOptions,
   RagContextResult,
   RagHit,

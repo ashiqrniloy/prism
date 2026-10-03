@@ -1,5 +1,5 @@
 /** readers (0.2.5 plan 025 Task 1 split). Moved verbatim from handler.ts; public surface unchanged behind the barrel. */
-import type { JsonObject, Message, RunDecision } from "@arnilo/prism";
+import type { JsonObject, Message, Decision } from "@arnilo/prism";
 import { HARD_MAX_DECISION_REASON_BYTES, HARD_MAX_ELICITATION_BYTES, HARD_MAX_PENDING_DECISIONS } from "@arnilo/prism";
 import type { WorkflowResumeRequest, WorkflowScheduleStatus } from "../../workflows/index.js";
 import { PrismServerError } from "../types.js";
@@ -69,11 +69,11 @@ const RUN_DECISION_OUTCOMES = new Set(["allow_once", "allow_for_run", "reject_on
 const RUN_DECISION_KEYS = new Set(["approvalId", "outcome", "reason", "modifiedArguments", "elicitation"]);
 
 /** Boundary validation for a client-supplied decision batch; core re-validates under CAS. */
-function readAgentDecisions(value: unknown): readonly RunDecision[] {
+function readAgentDecisions(value: unknown): readonly Decision[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > HARD_MAX_PENDING_DECISIONS) {
     throw new PrismServerError("decisions must be a non-empty bounded array", 400, "ERR_PRISM_SERVER_RESUME");
   }
-  return value.map((entry): RunDecision => {
+  return value.map((entry): Decision => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new PrismServerError("decision entry must be an object", 400, "ERR_PRISM_SERVER_RESUME");
     }
@@ -104,7 +104,7 @@ function readAgentDecisions(value: unknown): readonly RunDecision[] {
         throw new PrismServerError(`decision ${key} exceeds limits`, 400, "ERR_PRISM_SERVER_RESUME");
       }
     }
-    return entry as RunDecision;
+    return entry as Decision;
   });
 }
 
@@ -116,7 +116,7 @@ export function readAgentResume(body: JsonObject):
       readonly approvalId?: string;
       readonly reason?: string;
     }
-  | { readonly decisions: readonly RunDecision[]; readonly expectedVersion: number } {
+  | { readonly decisions: readonly Decision[]; readonly expectedVersion: number } {
   const allowedKeys = new Set(["decision", "decisions", "expectedVersion", "modifiedArguments", "approvalId", "reason"]);
   if (Object.keys(body).some((key) => !allowedKeys.has(key))) {
     throw new PrismServerError("Invalid agent resume body", 400, "ERR_PRISM_SERVER_RESUME");

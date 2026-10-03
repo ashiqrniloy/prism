@@ -7,9 +7,9 @@ describe("runtime redaction", () => {
   it("redacts provider requests events and stored entries when configured", async () => {
     let request: ProviderRequest | undefined;
     const store = createMemorySessionStore();
-    const agent = createAgent({
+    const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      store,
+      slots: { store },
       redactor: createSecretRedactor(["token-value"]),
       provider: {
         id: "mock",
@@ -22,7 +22,7 @@ describe("runtime redaction", () => {
       },
     });
 
-    const session = agent.createSession({ id: "s1" });
+    const session = await agent.session({ id: "s1", create: true });
     const events: unknown[] = [];
     (async () => {
       for await (const event of session.subscribe()) events.push(event);

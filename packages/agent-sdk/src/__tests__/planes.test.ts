@@ -181,7 +181,7 @@ describe("planes/hooks", () => {
     }
   });
 
-  it("compiles trusted hooks.json into guardrails, middleware, and stop hooks", async () => {
+  it("compiles trusted hooks.json into hooks and middleware", async () => {
     const hookPath = join(tempDir, "hooks.json");
     await writeFile(
       hookPath,
@@ -203,8 +203,7 @@ describe("planes/hooks", () => {
       workspaceRoot: tempDir,
     });
 
-    assert.ok(result.guardrails);
-    assert.ok(result.middleware);
+    assert.equal(result.package !== undefined, true);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { AgentRunResult, OwnershipScope, SecretRedactor } from "@arnilo/prism";
+import type { RunResult, OwnershipScope, SecretRedactor } from "@arnilo/prism";
 import { createMemoryWorkflowCheckpoints } from "../../runtime/workflows/checkpoints.js";
 import { createWorkflowEventBus } from "../../runtime/workflows/events.js";
 import { runWorkflow } from "../../runtime/workflows/run.js";
@@ -72,7 +72,7 @@ export interface RunWorkflowExperimentOptions<TInput = unknown, TExpected = unkn
   readonly toWorkflowInput?: (input: TInput) => unknown;
   readonly toEnvironment?: (
     item: DatasetItem<TInput, TExpected>,
-    result?: AgentRunResult,
+    result?: RunResult,
     timeline?: import("../observability/timeline-types.js").ExecutionTimeline,
   ) => unknown | Promise<unknown>;
   readonly metadata?: Readonly<Record<string, unknown>>;
@@ -171,12 +171,13 @@ export async function runWorkflowExperiment<TInput = unknown, TExpected = unknow
                 traceId: options.traceId,
               });
 
-        const result: AgentRunResult = {
+        const result: RunResult = {
           sessionId: runId,
           runId,
-          status: runStatus === "succeeded" ? "succeeded" : "failed",
+          status: runStatus === "succeeded" ? "completed" : "failed",
           text: checkpoint ? JSON.stringify(checkpoint) : "",
           content: [],
+          messages: [],
         };
 
         const environment = options.toEnvironment ? await options.toEnvironment(item, result, timeline) : undefined;

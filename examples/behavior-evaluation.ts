@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {
   type Agent,
   type AgentIdentity,
-  type AgentRunResult,
+  type RunResult,
   type AIProvider,
   createAgent,
   createToolRegistry,
@@ -74,11 +74,11 @@ function scriptedProvider(steps: Array<"request_approval" | "write_record" | "dr
   };
 }
 
-function makeAgent(script: Array<"request_approval" | "write_record" | "drop_database" | "text">) {
-  return createAgent({
+async function makeAgent(script: Array<"request_approval" | "write_record" | "drop_database" | "text">) {
+  return await createAgent({
     model: { provider: "mock", model: "demo" },
     provider: scriptedProvider(script),
-    tools,
+    tools: { add: tools.list() },
     instructions: "You are an enterprise assistant following strict safety policies.",
   });
 }
@@ -98,12 +98,12 @@ validateReleaseEvalManifest(manifest);
 function countingAgent(onRun: () => void): Agent {
   return {
     config: {},
-    createSession() {
+    async session() {
       return {
         id: "s",
         async run() {
           onRun();
-          return { sessionId: "s", runId: "r", status: "succeeded", text: "ok", content: [] } as AgentRunResult;
+          return { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] } as RunResult;
         },
       };
     },
@@ -126,7 +126,7 @@ assert.equal(trialReport.trials?.sampleCount, 3);
 assert.equal(trialReport.trials?.uncertaintyMethod, "standard_error");
 
 const ordered = await runExperiment({
-  agent: makeAgent(["request_approval", "write_record", "text"]),
+  agent: await makeAgent(["request_approval", "write_record", "text"]),
   dataset: defineDataset({
     id: "ordered",
     items: [{ id: "safe-write", input: "Please update the record safely." }],
@@ -160,9 +160,9 @@ const notSucceeded = (name: string) =>
     },
   });
 
-const dropAgent = makeAgent(["drop_database", "text"]);
+const dropAgent = await makeAgent(["drop_database", "text"]);
 const denied = await runExperiment({
-  agent: wrapAgentWithFailureInjection(dropAgent, { denyTools: ["drop_database"] }),
+  agent: await wrapAgentWithFailureInjection(dropAgent, { denyTools: ["drop_database"] }),
   dataset: defineDataset({ id: "deny", items: [{ id: "drop", input: "Please drop the table immediately." }] }),
   scorers: [notSucceeded("drop_database")],
   timeline: "metadata",
@@ -170,7 +170,7 @@ const denied = await runExperiment({
 assert.equal(denied.aggregate.invariantsPassed, true, "denyTools must skip host execute");
 
 const unknown = await runExperiment({
-  agent: wrapAgentWithFailureInjection(makeAgent(["write_record", "text"]), { unknownEffect: true }),
+  agent: await wrapAgentWithFailureInjection(await makeAgent(["write_record", "text"]), { unknownEffect: true }),
   dataset: defineDataset({ id: "unk", items: [{ id: "write", input: "Please update the record safely." }] }),
   scorers: [notSucceeded("write_record")],
   timeline: "metadata",
@@ -178,10 +178,7 @@ const unknown = await runExperiment({
 assert.equal(unknown.aggregate.invariantsPassed, true, "unknownEffect must not score as success");
 
 await assert.rejects(
-  () =>
-    wrapAgentWithFailureInjection(makeAgent(["text"]), { failStore: true })
-      .createSession()
-      .run("x"),
+  async () => (await (await wrapAgentWithFailureInjection(await makeAgent(["text"]), { failStore: true })).session()).run("x"),
   /injected store failure/,
 );
 
@@ -190,17 +187,18 @@ let clarifyTurn = 0;
 const scenario = await runScenario({
   agent: {
     config: {},
-    createSession() {
+    async session() {
       return {
         id: "s",
         async run() {
           return {
             sessionId: "s",
             runId: `r${clarifyTurn + 1}`,
-            status: "succeeded",
+            status: "completed",
             text: clarifyReplies[clarifyTurn++] ?? "",
             content: [],
-          } as AgentRunResult;
+            messages: [],
+          } as RunResult;
         },
       };
     },
@@ -243,7 +241,7 @@ assert.throws(() => validateApproval(updated, approval), /does not match draft r
 
 const citation = createCitationIntegrityScorer();
 const revoked = await citation.score({
-  result: { sessionId: "s", runId: "r", status: "succeeded", text: "ok", content: [] },
+  result: { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] },
   environment: {
     citations: [
       {

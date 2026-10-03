@@ -1,7 +1,7 @@
 import { type AGUIEvent, EventSchemas, EventType } from "@ag-ui/core";
 import type {
   AgentEvent,
-  DelegatedAgentStep,
+  DelegatedAgentStepData,
   ErrorInfo,
   SecretRedactor,
   ThinkingContent,
@@ -128,13 +128,13 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       },
     });
   };
-  const delegatedActivity = (event: DelegatedAgentStep): AgUiActivitySnapshot => {
+  const delegatedActivity = (event: DelegatedAgentStepData, runId: string): AgUiActivitySnapshot => {
     const durationMs = safeDelegatedNumber(event.durationMs);
     const usage = safeDelegatedUsage(event.usage);
     const detail = safeDelegatedDetail(event.detail);
     return {
       type: "snapshot",
-      messageId: id(undefined, `${event.runId}:delegated`),
+      messageId: id(undefined, `${runId}:delegated`),
       activityType: "prism.delegated_agent_step",
       content: {
         adapterId: text(event.adapterId, 512),
@@ -315,10 +315,10 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
       const event = options.redactor?.redact(input) ?? input;
       const events: AGUIEvent[] = [];
       switch (event.type) {
-        case "agent_started":
+        case "run.started":
           emit(events, { type: EventType.RUN_STARTED, threadId: thread(event.sessionId), runId: run(event.runId, event.sessionId) });
           break;
-        case "agent_finished":
+        case "run.completed":
           close(events);
           emit(events, {
             type: EventType.RUN_FINISHED,
@@ -328,35 +328,29 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           });
           terminal = true;
           break;
-        case "agent_suspended":
+        case "run.suspended":
           await close(events);
           await statusState(events, event, "suspended", event.version);
           break;
-        case "agent_resumed":
-          await statusState(events, event, "running", event.version);
+        case "run.started":
+          if (event.resumed) await statusState(events, event, "running");
           break;
-        case "agent_denied":
-          await statusState(events, event, "denied", event.version);
-          error(events, { message: "Run denied", code: "AGENT_DENIED" }, "AGENT_DENIED");
+        case "decision.resolved":
+          // A denied batch ends the run the host asked to stop; an allowed one just resumes it.
+          if (event.decisions.some((decision) => decision.outcome === "deny")) {
+            await statusState(events, event, "denied");
+            error(events, { message: "Run denied", code: "AGENT_DENIED" }, "AGENT_DENIED");
+          } else {
+            await statusState(events, event, "running");
+          }
           break;
-        case "turn_started": {
+        case "turn.started": {
           const stepName = `turn:${event.turn}`;
           activeSteps.add(stepName);
           emit(events, { type: EventType.STEP_STARTED, stepName });
           break;
         }
-        case "turn_finished": {
-          const stepName = `turn:${event.turn}`;
-          if (activeSteps.delete(stepName)) emit(events, { type: EventType.STEP_FINISHED, stepName });
-          break;
-        }
-        case "message_started":
-          if (event.message.role !== "assistant") break;
-          if (activeMessage) close(events);
-          activeMessage = id(event.message.id, `${event.runId}:message-${++messageSequence}`);
-          emit(events, { type: EventType.TEXT_MESSAGE_START, messageId: activeMessage, role: "assistant" });
-          break;
-        case "message_delta":
+        case "message.delta":
           if (event.content.type === "thinking") {
             await reasoning(events, event.content, event);
             break;
@@ -375,7 +369,7 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           messageHasDelta = true;
           emit(events, { type: EventType.TEXT_MESSAGE_CONTENT, messageId: activeMessage, delta: text(event.content.text) });
           break;
-        case "message_finished":
+        case "message.completed":
           if (event.message.role !== "assistant") break;
           if (!activeMessage) {
             activeMessage = id(event.message.id, `${event.runId}:message-${++messageSequence}`);
@@ -393,8 +387,9 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           activeMessage = undefined;
           messageHasDelta = false;
           break;
-        case "delegated_agent_step": {
-          const activity = delegatedActivity(event);
+        case "package.event": {
+          if (event.name !== "agent.step") break;
+          const activity = delegatedActivity(event.data as unknown as DelegatedAgentStepData, event.runId);
           const content = projectAgUiJson(activity.content, limits.maxActivityBytes, limits, "delegated activity");
           if (content && typeof content === "object" && !Array.isArray(content)) {
             emit(events, {
@@ -408,39 +403,41 @@ export function createAgUiEventMapper(options: AgUiEventMapperOptions = {}): AgU
           }
           break;
         }
-        case "tool_execution_started":
+        case "tool.started":
           await startTool(events, event.call);
           break;
-        case "tool_execution_progress":
+        case "tool.progress":
           await custom(events, "prism.tool_progress", {
             toolCallId: id(event.toolCallId, "tool"),
             name: text(event.name),
             status: "in_progress",
           });
           break;
-        case "tool_execution_finished":
-          await finishTool(events, event.result.toolCallId, event.result.name, "completed", event.result);
-          if (a2ui) {
+        case "tool.completed":
+          await finishTool(
+            events,
+            event.toolCallId || event.result?.toolCallId,
+            event.name || event.result?.name,
+            event.status === "blocked" ? "blocked" : event.status === "error" ? "failed" : "completed",
+            event.status === "finished" ? event.result : undefined,
+          );
+          if (a2ui && event.result) {
             for (const painted of a2ui.onToolFinished(event.result)) emit(events, painted);
           }
           break;
-        case "tool_execution_error":
-          await finishTool(events, event.call.id, event.call.name, "failed");
-          break;
-        case "tool_execution_blocked":
-          await finishTool(events, event.toolCallId, event.name, "blocked");
-          break;
-        case "provider_turn_finished":
+        case "turn.completed":
+          // The turn step closes on its own completion; the attempt's usage and error ride here too.
+          if (activeSteps.delete(`turn:${event.turn}`)) emit(events, { type: EventType.STEP_FINISHED, stepName: `turn:${event.turn}` });
           if (event.usage) await custom(events, "prism.usage", usage(event.usage));
           if (event.error) error(events, event.error);
           break;
-        case "compaction_started":
+        case "compaction.started":
           await custom(events, "prism.compaction", { status: "started" });
           break;
-        case "compaction_finished":
+        case "compaction.completed":
           await custom(events, "prism.compaction", { status: "finished" });
           break;
-        case "error":
+        case "run.failed":
           error(events, event.error);
           break;
         default:
@@ -463,7 +460,7 @@ function safeDelegatedNumber(value: number | undefined): number | undefined {
   return value !== undefined && Number.isSafeInteger(value) && value >= 0 && value <= 24 * 60 * 60 * 1000 ? value : undefined;
 }
 
-function safeDelegatedUsage(value: DelegatedAgentStep["usage"]): Record<string, number> | undefined {
+function safeDelegatedUsage(value: DelegatedAgentStepData["usage"]): Record<string, number> | undefined {
   if (!value) return undefined;
   const output: Record<string, number> = {};
   for (const key of ["inputTokens", "outputTokens", "thinkingTokens", "cacheReadTokens", "cacheWriteTokens", "totalTokens"] as const) {
@@ -473,7 +470,7 @@ function safeDelegatedUsage(value: DelegatedAgentStep["usage"]): Record<string, 
   return Object.keys(output).length > 0 ? output : undefined;
 }
 
-function safeDelegatedDetail(value: DelegatedAgentStep["detail"]): DelegatedAgentStep["detail"] | undefined {
+function safeDelegatedDetail(value: DelegatedAgentStepData["detail"]): DelegatedAgentStepData["detail"] | undefined {
   if (!value) return undefined;
   const referenceId = value.referenceId;
   const label = value.label;

@@ -453,7 +453,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
     case "session_event": {
       const event = action.event;
       switch (event.type) {
-        case "agent_started": {
+        case "run.started": {
           return {
             ...state,
             isRunning: true,
@@ -462,30 +462,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "message_started": {
-          if (event.message.role === "assistant") {
-            const id = `msg_${event.runId}_${state.entries.length}`;
-            const newEntries = [
-              ...state.entries,
-              {
-                id,
-                version: 1,
-                type: "message" as const,
-                role: "assistant" as const,
-                text: "",
-                finished: false,
-              },
-            ];
-            return {
-              ...state,
-              entries: capEntries(newEntries, state.maxEntries),
-              changedEntryIds: [id],
-            };
-          }
-          return state;
-        }
-
-        case "message_delta": {
+        case "message.delta": {
           if (event.content.type === "thinking") {
             const deltaText = event.content.text;
             const lastIndex = state.entries.length - 1;
@@ -553,7 +530,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "message_finished": {
+        case "message.completed": {
           let updated = state.entries;
           const changed: string[] = [];
           const lastIndex = updated.length - 1;
@@ -579,7 +556,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           return updated === state.entries ? state : { ...state, entries: updated, changedEntryIds: changed };
         }
 
-        case "tool_execution_started": {
+        case "tool.started": {
           const toolCallId = event.call.id;
           const patch = proposalPatch(event.call.name, event.call.arguments);
           const newEntries = [
@@ -602,7 +579,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "tool_execution_finished": {
+        case "tool.completed": {
           const toolCallId = event.result.toolCallId;
           const toolError = event.result.error;
           const status: UiToolCallStatus = toolError ? (isDeniedToolError(toolError) ? "denied" : "failure") : "success";
@@ -629,29 +606,43 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           return todos === undefined ? updated : { ...updated, todos };
         }
 
-        case "tool_execution_error": {
-          const toolCallId = event.call.id;
+        case "tool.completed": {
+          // A settled call with a non-`finished` status is the former error/blocked event.
+          if (event.status === "finished") return state;
+          const toolCallId = event.toolCallId ?? event.result?.toolCallId;
+          const entry = state.entries.find((item): item is UiToolCallEntry => item.type === "tool_call" && item.toolCallId === toolCallId);
+          if (!entry) return state;
+          if (event.status === "blocked")
+            return withEntry(state, { ...entry, status: "denied", error: event.reason, durationMs: event.metadata.durationMs });
           const denied = isDeniedToolError(event.error);
-          const entry = state.entries.find((item): item is UiToolCallEntry => item.type === "tool_call" && item.toolCallId === toolCallId);
-          return entry
-            ? withEntry(state, {
-                ...entry,
-                status: denied ? "denied" : "failure",
-                error: event.error.message,
-                durationMs: event.metadata.durationMs,
-              })
-            : state;
+          return withEntry(state, {
+            ...entry,
+            status: denied ? "denied" : "failure",
+            error: event.error?.message,
+            durationMs: event.metadata.durationMs,
+          });
         }
 
-        case "tool_execution_blocked": {
-          const toolCallId = event.toolCallId;
-          const entry = state.entries.find((item): item is UiToolCallEntry => item.type === "tool_call" && item.toolCallId === toolCallId);
-          return entry
-            ? withEntry(state, { ...entry, status: "denied", error: event.reason, durationMs: event.metadata.durationMs })
-            : state;
-        }
-
-        case "compaction_finished": {
+        case "compaction.completed": {
+          // A failure rides the same event with an `error` and no summary.
+          if (event.error) {
+            const failedEntries = [
+              ...state.entries,
+              {
+                id: `compact_err_${event.sessionId}_${state.entries.length}`,
+                version: 1,
+                type: "message" as const,
+                role: "system" as const,
+                text: `Warning: Compaction failed (${event.error.message}), continuing uncompacted`,
+                finished: true,
+              },
+            ];
+            return {
+              ...state,
+              entries: capEntries(failedEntries, state.maxEntries),
+              changedEntryIds: appendedEntryIds(failedEntries),
+            };
+          }
           const count = event.entriesCompacted ?? 0;
           const summary = event.summary?.trim();
           const text = summary ? `[Compacted history]\n${summary}` : count > 0 ? `Compacted ${count} entries` : "Compacted context";
@@ -680,26 +671,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "compaction_failed": {
-          const newEntries = [
-            ...state.entries,
-            {
-              id: `compact_err_${event.sessionId}_${state.entries.length}`,
-              version: 1,
-              type: "message" as const,
-              role: "system" as const,
-              text: `Warning: Compaction failed (${event.error.message}), continuing uncompacted`,
-              finished: true,
-            },
-          ];
-          return {
-            ...state,
-            entries: capEntries(newEntries, state.maxEntries),
-            changedEntryIds: appendedEntryIds(newEntries),
-          };
-        }
-
-        case "provider_turn_finished": {
+        case "turn.completed": {
           const usage = event.usage;
           if (!usage) return state;
           return {
@@ -718,7 +690,7 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "agent_finished": {
+        case "run.completed": {
           const usage = event.usage;
           // Per-turn usage already landed in the totals; a run that emitted none (deterministic or
           // resumed turns) contributes its run total once instead of double counting.
@@ -736,16 +708,12 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "run_limit_exceeded": {
-          const newEntries = [
-            ...state.entries,
-            {
-              id: `err_limit_${Date.now()}`,
-              version: 1,
-              type: "error" as const,
-              message: `Limit exceeded: ${event.breach.limit} (${event.breach.observed} > ${event.breach.maximum})`,
-            },
-          ];
+        case "run.failed": {
+          // One terminal failure record; a ceiling adds its breached axis to the message.
+          const message = event.limit
+            ? `Limit exceeded: ${event.limit.limit} (${event.limit.observed} > ${event.limit.maximum})`
+            : `Error: ${event.error.message ?? "run failed"}`;
+          const newEntries = [...state.entries, { id: `err_run_${Date.now()}`, version: 1, type: "error" as const, message }];
           return {
             ...state,
             isRunning: false,
@@ -755,33 +723,15 @@ export function tuiReducer(state: TuiState, action: TuiAction): TuiState {
           };
         }
 
-        case "budget_exhausted": {
-          const newEntries = [
-            ...state.entries,
-            {
-              id: `err_budget_${Date.now()}`,
-              version: 1,
-              type: "error" as const,
-              message: `Budget exhausted: ${event.limit}`,
-            },
-          ];
-          return {
-            ...state,
-            isRunning: false,
-            activeRunId: undefined,
-            entries: capEntries(newEntries, state.maxEntries),
-            changedEntryIds: appendedEntryIds(newEntries),
-          };
-        }
-
-        case "agent_denied": {
+        case "decision.resolved": {
+          if (!event.decisions.some((decision) => decision.outcome === "deny")) return state;
           const newEntries = [
             ...state.entries,
             {
               id: `err_denied_${Date.now()}`,
               version: 1,
               type: "error" as const,
-              message: `Run denied: ${event.interruption.reason}`,
+              message: "Run denied",
             },
           ];
           return {

@@ -1,6 +1,14 @@
-import type { CommandDefinition, InstructionInjector, Skill, ToolDefinition } from "@arnilo/prism";
-import { activateKernel, assertSsrfAllowedUrl, createExtensionKernel } from "@arnilo/prism";
-import { createWikiExtension, type WikiIngestFetch, type WikiIngestUrlHookInput } from "@arnilo/prism-memory/wiki";
+import type { CommandDefinition, PackageInstance, ToolDefinition } from "@arnilo/prism";
+import { assertSsrfAllowedUrl } from "@arnilo/prism";
+import {
+  createWikiIngestCommand,
+  createWikiInitCommand,
+  createWikiLintCommand,
+  createWikiRefreshCommand,
+  wiki,
+  type WikiIngestFetch,
+  type WikiIngestUrlHookInput,
+} from "@arnilo/prism-memory/wiki";
 import type { PrismCodeConfig, PrismCodeWikiConfig } from "./config.js";
 
 // ---------------------------------------------------------------------------
@@ -17,10 +25,10 @@ export interface WikiContributions {
   readonly enabled: boolean;
   readonly workspaceRoot?: string;
   readonly autoDeploySkills: boolean;
-  readonly tools: readonly ToolDefinition[];
-  readonly skills: readonly Skill[];
+  /** Bound package instance. Pass it in `createAgent({ packages })`. Absent when wiki is disabled. */
+  readonly package?: PackageInstance;
+  /** Slash-command `CommandDefinition`s. The package registers the same commands as `PackageCommand`. */
   readonly commands: readonly CommandDefinition[];
-  readonly instructionInjectors: readonly InstructionInjector[];
   /** SSRF-checked host fetch hook handed to the wiki; absent when no web_fetch backend exists. */
   readonly fetchUrl?: (input: WikiIngestUrlHookInput) => Promise<WikiIngestFetch | null>;
 }
@@ -90,50 +98,42 @@ export function createWikiFetchHook(
 }
 
 // ---------------------------------------------------------------------------
-// Extension contributions
+// Wiki package contributions
 // ---------------------------------------------------------------------------
 
 const DISABLED: WikiContributions = {
   enabled: false,
   autoDeploySkills: false,
-  tools: [],
-  skills: [],
   commands: [],
-  instructionInjectors: [],
 };
 
 /**
- * Loads `createWikiExtension` into an extension kernel and returns its inert
- * contributions. Nothing is registered or written when wiki is disabled, and skill
- * auto-deploy requires the explicit `wiki.autoDeploySkills` opt-in.
+ * Builds the wiki package for `createAgent({ packages })`. Nothing is registered or written
+ * here: setup runs when the agent loads the package. Skill auto-deploy requires the explicit
+ * `wiki.autoDeploySkills` opt-in. Slash commands stay `CommandDefinition`s so the TUI can pass
+ * host drivers; the package registers the same commands without drivers.
  */
-export async function resolveWikiContributions(
+export function resolveWikiContributions(
   config: PrismCodeConfig,
   options: { readonly webTools?: readonly ToolDefinition[] } = {},
-): Promise<WikiContributions> {
+): WikiContributions {
   const settings = resolveWikiSettings(config.wiki);
   if (!settings.enabled) return DISABLED;
 
   const workspaceRoot = settings.workspaceRoot ?? config.cwd;
   const fetchUrl = createWikiFetchHook(options.webTools ?? []);
-  const extension = createWikiExtension({
+  const bound = {
     workspaceRoot,
     autoDeploySkills: settings.autoDeploySkills,
     ...(fetchUrl ? { fetchUrl } : {}),
-  });
-
-  const kernel = createExtensionKernel({ errorPolicy: "throw" });
-  await kernel.load([extension]);
-  const activated = activateKernel(kernel);
+  };
 
   return {
     enabled: true,
     workspaceRoot,
     autoDeploySkills: settings.autoDeploySkills,
-    tools: activated.tools,
-    skills: activated.skills,
-    commands: activated.commands,
-    instructionInjectors: activated.instructionInjectors,
+    package: wiki(bound),
+    commands: [createWikiInitCommand(bound), createWikiRefreshCommand(bound), createWikiLintCommand(bound), createWikiIngestCommand(bound)],
     ...(fetchUrl ? { fetchUrl } : {}),
   };
 }

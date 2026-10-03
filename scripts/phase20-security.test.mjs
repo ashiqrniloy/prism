@@ -30,6 +30,7 @@ import { join } from "node:path";
 import { describe, it } from "bun:test";
 import {
   AgentDecisionError,
+  askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
   createMemorySessionStore,
@@ -65,10 +66,11 @@ async function suspendedRun() {
       yield providerDone();
     },
   };
-  const agent = createAgent({
+  const agent = await createAgent({
+    hooks: askEveryTool(),
     id: "phase20-demo",
     model: { provider: "mock", model: "demo" },
-    store: createMemorySessionStore(),
+    slots: { store: createMemorySessionStore() },
     provider,
     tools: [
       {
@@ -82,8 +84,8 @@ async function suspendedRun() {
     ],
   });
   const checkpoints = createMemoryCheckpointStore();
-  const first = await agent.createSession({ id: "phase20-run" }).run("go", {
-    runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+  const first = await (await agent.session({ id: "phase20-run", create: true })).run("go", {
+    runState: { checkpoints, definitionRevision: "1" },
   });
   return { agent, checkpoints, executed, first };
 }
@@ -92,7 +94,7 @@ describe("phase20 security conformance (plan 020 Task 5, built public entrypoint
   it("T1/T4 blocker: unknown durable-resume decision 'sideways' fails closed with no write and no tool call", async () => {
     const { agent, checkpoints, executed, first } = await suspendedRun();
     assert.equal(first.status, "suspended");
-    const pending = first.interruption.pendingDecisions;
+    const pending = first.pending;
     assert.equal(pending.length, 1);
     const version = first.runState.version;
     const ref = { runId: first.runId, sessionId: first.sessionId };
@@ -112,7 +114,7 @@ describe("phase20 security conformance (plan 020 Task 5, built public entrypoint
       { expectedVersion: version, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] },
       { checkpoints, definitionRevision: "1" },
     );
-    assert.equal(approved.status, "succeeded");
+    assert.equal(approved.status, "completed");
     assert.deepEqual(executed, ['call-1:{"value":"a"}']);
     blockerIds.add("resume-validation");
   });

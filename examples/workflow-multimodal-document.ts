@@ -1,6 +1,5 @@
 import {
   createAgent,
-  createAgentSession,
   createEnvCredentialResolver,
   createMockProvider,
   createSecretRedactor,
@@ -32,7 +31,7 @@ const provider = createMockProvider([
   providerDone(),
 ]);
 
-const agent = createAgent({
+const agent = await createAgent({
   model: {
     provider: "mock",
     model: "document-demo",
@@ -79,7 +78,7 @@ export async function demo() {
   const credential = await credentials.resolve({ provider: "mock", name: "apiKey" });
   const redactor = createSecretRedactor([credential?.value]);
   const result = await runWorkflow(workflow, null, {
-    agentFactory: () => createAgentSession({ agent }),
+    agentFactory: () => agent.session(),
     checkpoints: createMemoryWorkflowCheckpoints({ redactor }),
     redactor,
     ownership: { tenantId: "demo" },

@@ -1,0 +1,3 @@
+# Source package: measure this package's src, not the repo or sibling packages.
+[test]
+coveragePathIgnorePatterns = ["../../**"]

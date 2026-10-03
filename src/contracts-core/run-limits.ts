@@ -1,7 +1,7 @@
 /** Contracts-core run-limits family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
-import type { ProviderTurnResult, ToolResult } from "../contracts-protocol.js";
-import type { Message, ToolCallContent } from "./content.js";
+import type { ToolResult } from "../contracts-protocol.js";
+import type { ToolCallContent } from "./content.js";
 
 /**
  * Host-authored run limits. Policy axes accept `null` to explicitly disable the cap
@@ -21,11 +21,18 @@ export interface RunLimits {
   readonly maxTotalTokens?: number | null;
   readonly maxCost?: { readonly amount: number; readonly currency: string };
   /**
-   * Clean cap on stop-hook continuations in one run (plan 106 R1). Default 3; `0` observes stop
-   * hooks but never continues; `null` disables the cap. Layers narrow by min like every other
-   * policy axis, and the cap ends the run with `stopReason: "hook_limit"` (no limit breach).
+   * Clean cap on `run.end` continuations in one run (plan 145 Task 4; was `maxStopContinuations`).
+   * Default 3; `0` observes `run.end` but never continues; `null` disables the cap. Layers narrow by
+   * min like every other policy axis, and the cap ends the run with `stopReason: "hook_limit"`
+   * (no limit breach).
    */
-  readonly maxStopContinuations?: number | null;
+  readonly maxContinuations?: number | null;
+  /**
+   * How long `session.close()` waits for background tasks before aborting the rest (plan 146 Task 7).
+   * Default 5,000 ms; `0` aborts immediately. Agent-wide only: it applies to a session, not a run, so a
+   * per-run value is ignored and it is not a counter axis.
+   */
+  readonly backgroundSettleMs?: number;
 }
 
 /** Fully resolved limits after `resolveRunLimits`: every policy axis is a finite cap or `null` (disabled). */
@@ -41,12 +48,12 @@ export interface ResolvedRunLimits {
   readonly maxOutputTokens: number | null;
   readonly maxTotalTokens: number | null;
   readonly maxCost?: { readonly amount: number; readonly currency: string };
-  /** Stop-hook continuation cap (plan 106 R1); not a run-limit counter axis. */
-  readonly maxStopContinuations: number | null;
+  /** `run.end` continuation cap; not a run-limit counter axis. */
+  readonly maxContinuations: number | null;
 }
 
-/** Counter-backed limit axes; `maxStopContinuations` caps a clean stop instead of a breach. */
-export type RunLimitName = Exclude<keyof Required<RunLimits>, "maxStopContinuations">;
+/** Counter-backed limit axes; `maxContinuations` caps a clean stop instead of a breach. */
+export type RunLimitName = Exclude<keyof Required<RunLimits>, "maxContinuations" | "backgroundSettleMs">;
 
 export interface RunLimitCounters {
   readonly turns: number;
@@ -91,16 +98,13 @@ export interface BudgetConsumedCounters {
   readonly requestBytes: number;
 }
 
-export type GuardrailStage = "input" | "output" | "tool_input" | "tool_output";
+export type GuardrailStage = "tool_input" | "tool_output";
+/** Record stages also cover the retired input/output stages: frozen event payloads (`guardrail_decision`,
+ *  `steer_rejected`) still carry records, and a `run.input` drop is recorded as an `input` block. */
+export type GuardrailRecordStage = GuardrailStage | "input" | "output";
 export type GuardrailAction = "allow" | "block" | "tripwire" | "interrupt";
 
-export type GuardrailValue<S extends GuardrailStage> = S extends "input"
-  ? readonly Message[]
-  : S extends "output"
-    ? ProviderTurnResult
-    : S extends "tool_input"
-      ? ToolCallContent
-      : ToolResult;
+export type GuardrailValue<S extends GuardrailStage> = S extends "tool_input" ? ToolCallContent : ToolResult;
 
 export interface GuardrailContext<S extends GuardrailStage> {
   readonly stage: S;
@@ -109,8 +113,6 @@ export interface GuardrailContext<S extends GuardrailStage> {
   readonly runId: string;
   readonly toolCallId?: string;
   readonly toolName?: string;
-  /** Same-run completed host tool results, available only at the output stage. */
-  readonly toolResults?: S extends "output" ? readonly ToolResult[] : never;
   readonly metadata: Readonly<Record<string, unknown>>;
   readonly signal: AbortSignal;
 }
@@ -132,17 +134,8 @@ export interface Guardrail<S extends GuardrailStage = GuardrailStage> {
 
 export interface GuardrailRecord {
   readonly guardrail: string;
-  readonly stage: GuardrailStage;
+  readonly stage: GuardrailRecordStage;
   readonly action: GuardrailAction;
   readonly reason?: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-export interface Guardrails {
-  readonly input?: readonly Guardrail<"input">[];
-  readonly output?: readonly Guardrail<"output">[];
-  readonly toolInput?: readonly Guardrail<"tool_input">[];
-  readonly toolOutput?: readonly Guardrail<"tool_output">[];
-  /** Defaults to sequential; at most 16 stage evaluations run at once. */
-  readonly maxConcurrency?: number;
 }

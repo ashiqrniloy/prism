@@ -124,7 +124,7 @@ export function defineHyperModel(config: HyperModelConfig): ModelConfig {
 
 /**
  * Caller-gated Hyper model discovery via the public `GET /models` endpoint.
- * Never invoked by `createHyperProviderPackage` — hosts call this and pass
+ * Never invoked by `hyperPackage` — hosts call this and pass
  * results via `models:` (or register themselves). Public endpoint: no auth
  * header is emitted when no key resolves.
  * @see https://hyper.charm.land/docs

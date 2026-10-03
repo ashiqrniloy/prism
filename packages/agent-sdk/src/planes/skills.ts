@@ -1,11 +1,4 @@
-import {
-  createContributionRegistries,
-  createSkillRegistry,
-  registerDiscoveredContributions,
-  type Skill,
-  type SkillRegistry,
-  type TrustPolicy,
-} from "@arnilo/prism";
+import { createSkillRegistry, type Skill, type SkillRegistry, type TrustPolicy } from "@arnilo/prism";
 import { type DiscoveryRoot, discoverContributions } from "@arnilo/prism/node/contribution-discovery";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 
@@ -92,9 +85,7 @@ export async function assembleSkillsPlane(config?: SkillsPlaneConfig): Promise<A
       trust,
     });
 
-    const registries = createContributionRegistries();
-    registerDiscoveredContributions(registries, discovered);
-    skillsList = [...registries.skills.list()];
+    skillsList = discovered.flatMap((entry) => (entry.skill ? [entry.skill] : []));
   }
 
   if (config.exclude && config.exclude.length > 0) {

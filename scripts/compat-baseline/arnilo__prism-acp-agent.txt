@@ -4,7 +4,7 @@ MAX_MCP_ALLOW_ENTRIES	export declare const MAX_MCP_ALLOW_ENTRIES = 256
 MAX_URL_LENGTH	export declare const MAX_URL_LENGTH = 2048
 PrismAcpAgentConfig	export type { PrismAcpAgentConfig } from "./config.js"
 SUPPORTED_PROVIDERS	export declare const SUPPORTED_PROVIDERS: readonly ["mock", "openai", "anthropic", "google", "deepseek", "openrouter", "ollama", "xai", "zai", "alibaba", "kimi", "clinepass", "commandcode", "neuralwatt", "opencode-go", "hyper"]
-createSpawnableAgent	export declare function createSpawnableAgent(options: CreateSpawnableAgentOptions): AgentApp
+createSpawnableAgent	export declare function createSpawnableAgent(options: CreateSpawnableAgentOptions): Promise<AgentApp>
 loadConfig	export declare function loadConfig(path: string): PrismAcpAgentConfig
 parseAllowDestination	export declare function parseAllowDestination(entry: string): ParsedAllowDestination | null
 parseConfig	export declare function parseConfig(text: string, baseDir: string, source?: string): PrismAcpAgentConfig

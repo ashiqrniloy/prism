@@ -1,15 +1,19 @@
-import { createExtensionKernel } from "@arnilo/prism";
-import { createClinePassProviderPackage } from "@arnilo/prism-providers/clinepass";
+import { createAgent } from "@arnilo/prism";
+import { clinePassModels, clinepassPackage } from "@arnilo/prism-providers/clinepass";
 
 export async function demo() {
-  const kernel = createExtensionKernel({ errorPolicy: "throw" });
-  await kernel.load([createClinePassProviderPackage({ apiKey: () => "fake-cline-key" })]);
-  const provider = kernel.registries.providers.get("clinepass");
-  const slugs = kernel.registries.models
-    .list()
-    .filter((model) => model.provider === "clinepass")
-    .map((model) => model.model);
-  return { provider: provider?.id, slugs };
+  const agent = await createAgent({
+    model: { provider: "clinepass", model: clinePassModels[0]!.model },
+    packages: [clinepassPackage({ apiKey: () => "fake-cline-key" })],
+  });
+  try {
+    return {
+      package: agent.inspect().packages[0]?.name,
+      slugs: clinePassModels.map((model) => model.model),
+    };
+  } finally {
+    await agent.dispose();
+  }
 }
 
 export async function main() {

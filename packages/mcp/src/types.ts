@@ -2,7 +2,6 @@ import type {
   AgentIdentity,
   AgentRunLifecycle,
   CommandDefinition,
-  Guardrails,
   JsonObject,
   MediaHostnameResolver,
   OwnershipScope,
@@ -161,7 +160,6 @@ export interface CreatePrismMcpServerOptions {
   /** Optional core recovery store for registered Prism tool dispatch. */
   readonly effectStore?: ToolEffectStore;
   /** Applied only to registered Prism tools; commands remain host callbacks. */
-  readonly guardrails?: Guardrails;
   /** Per MCP tool-call ceilings. */
   readonly limits?: RunLimits;
   readonly maxResultBytes?: number;

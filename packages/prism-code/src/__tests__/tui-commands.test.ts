@@ -542,7 +542,7 @@ describe("TUI Slash Commands & Picker Filtering", () => {
 
     let switchedSession: any;
     const mockDefinition: any = {
-      createSession: (opts: any) => ({
+      session: (opts: any) => ({
         id: opts.id,
         metadata: opts.metadata,
       }),

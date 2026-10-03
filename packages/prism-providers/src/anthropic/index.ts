@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { anthropicModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createAnthropicMessagesProvider } from "./provider.js";
 
 export interface AnthropicProviderPackageOptions {
@@ -12,28 +12,17 @@ export interface AnthropicProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createAnthropicProviderPackage(options: AnthropicProviderPackageOptions = {}): ProviderPackage {
+export function anthropicPackage(options: AnthropicProviderPackageOptions = {}): PackageInstance {
   const providerId = options.id ?? "anthropic";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/anthropic",
-    description: "Anthropic Messages provider package for Prism.",
-    docs: { links: ["docs/providers/anthropic.md"] },
-    setup(api) {
-      api.registerProvider(
-        createAnthropicMessagesProvider({
-          id: providerId,
-          apiKey: options.apiKey,
-          fetch: options.fetch,
-          baseUrl: options.baseUrl,
-          userAgent: options.userAgent,
-        }),
-      );
-      for (const model of options.models ?? anthropicModels) {
-        api.registerModel({ ...model, provider: providerId });
-      }
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+  return vendorPackage("@arnilo/prism-providers.anthropic", "Anthropic Messages provider package for Prism.", () => [
+    createAnthropicMessagesProvider({
+      id: providerId,
+      apiKey: options.apiKey,
+      fetch: options.fetch,
+      baseUrl: options.baseUrl,
+      userAgent: options.userAgent,
+    }),
+  ]);
 }
 
 export {

@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { neuralWattModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createNeuralWattProvider } from "./provider.js";
 
 export interface NeuralWattProviderPackageOptions {
@@ -10,18 +10,10 @@ export interface NeuralWattProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createNeuralWattProviderPackage(options: NeuralWattProviderPackageOptions = {}): ProviderPackage {
-  const providerId = options.id ?? "neuralwatt";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/neuralwatt",
-    description: "NeuralWatt provider package for Prism.",
-    docs: { links: ["docs/providers/neuralwatt.md"] },
-    setup(api) {
-      api.registerProvider(createNeuralWattProvider(options));
-      for (const model of options.models ?? neuralWattModels) api.registerModel({ ...model, provider: providerId });
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+export function neuralwattPackage(options: NeuralWattProviderPackageOptions = {}): PackageInstance {
+  return vendorPackage("@arnilo/prism-providers.neuralwatt", "NeuralWatt provider package for Prism.", () => [
+    createNeuralWattProvider(options),
+  ]);
 }
 
 export {

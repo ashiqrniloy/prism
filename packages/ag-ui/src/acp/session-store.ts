@@ -12,7 +12,7 @@
  * - entries are keyed by ownership, never by sessionId alone: a restore whose
  *   authorization differs from a stored entry's ownership never merges it;
  * - persisted shape excludes ephemeral stream state (client/controller/budget)
- *   and pending decisions; the live AgentSession binding is re-resolved
+ *   and pending decisions; the live Session binding is re-resolved
  *   through the host sessionFactory at restore time;
  * - the store is host-owned: no integrity/tamper claims beyond the host's
  *   storage (at-least-once, no exactly-once).

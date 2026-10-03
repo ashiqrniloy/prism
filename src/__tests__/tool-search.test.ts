@@ -275,20 +275,20 @@ describe("tool-accuracy fixtures (pick correct tool among distractors, plan 041 
           yield providerDone();
         },
       };
-      const agent = createAgent({
+      const agent = await createAgent({
         id: `accuracy-${mode}-${toolCount}`,
-        store: createMemorySessionStore(),
+        slots: { store: createMemorySessionStore() },
         model: { provider: "mock", model: "demo" },
         provider,
         toolsDisclosure: mode,
         toolsSearch: { topK: 16 },
-        tools: fixtureTools(toolCount, "cap"),
+        tools: { add: fixtureTools(toolCount, "cap") },
       });
       // Pick accuracy, not budget accounting: this fixture provider reports no usage, so the
       // plan 091 fallback estimate would charge the default run input budget across subjects.
-      await agent
-        .createSession({ id: `accuracy-${mode}-${toolCount}-${subject}` })
-        .run(query, { limits: { maxInputTokens: null, maxTotalTokens: null } });
+      await (await agent.session({ id: `accuracy-${mode}-${toolCount}-${subject}`, create: true })).run(query, {
+        limits: { maxInputTokens: null, maxTotalTokens: null },
+      });
       assert.ok(picked);
     }
     return { picks, correct };
@@ -331,16 +331,16 @@ describe("progressive tool loading session run", () => {
         yield providerDone();
       },
     };
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "tool-search-demo",
-      store: createMemorySessionStore(),
+      slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
       provider,
       toolsDisclosure: "search",
       toolsSearch: { topK: 4 },
-      tools: fixtureTools(96, "cap"),
+      tools: { add: fixtureTools(96, "cap") },
     });
-    await agent.createSession({ id: "tool-search-session" }).run("Find and use fixture tool 90");
+    await (await agent.session({ id: "tool-search-session", create: true })).run("Find and use fixture tool 90");
     assert.ok(seenRequests.length >= 2);
     // Turn 1 request already carries the generated search tool and is bounded.
     const first = seenRequests[0]!;

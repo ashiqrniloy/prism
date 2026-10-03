@@ -1,33 +1,73 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createExtensionKernel } from "@arnilo/prism";
-import { createObservationalMemoryExtension } from "../index.js";
+import { createAgent, createMockProvider, providerDone } from "@arnilo/prism";
+import { observationalMemory } from "../index.js";
 
-describe("observational memory extension", () => {
-  it("observational_memory_extension_registers_inert_contributions", async () => {
-    const kernel = createExtensionKernel();
-    await kernel.load([createObservationalMemoryExtension({ keepRecentEntries: 3 })]);
-    const strategies = kernel.registries.compactionStrategies.list();
-    assert.equal(strategies.length, 1);
-    assert.equal(strategies[0]?.name, "observational-memory");
-    assert.equal(kernel.registries.tools.list().length, 0);
-    assert.equal(kernel.registries.commands.list().length, 0);
+describe("observational memory package", () => {
+  it("observational_memory_package_registers_nothing_without_options", async () => {
+    const agent = await createAgent({
+      model: { provider: "mock", model: "memory" },
+      packages: [observationalMemory()],
+    });
+    try {
+      const inspected = agent.inspect();
+      assert.equal(inspected.tools.length, 0);
+      assert.equal(inspected.commands.length, 0);
+    } finally {
+      await agent.dispose();
+    }
   });
 
-  it("observational_memory_extension_can_skip_strategy_registration", async () => {
-    const kernel = createExtensionKernel();
-    await kernel.load([createObservationalMemoryExtension({ registerCompactionStrategy: false })]);
-    assert.equal(kernel.registries.compactionStrategies.list().length, 0);
-  });
-
-  it("observational_memory_extension_registers_optional_tool_and_commands", async () => {
-    const kernel = createExtensionKernel();
+  it("om_package_registers_recall_only_when_enabled", async () => {
     const getEntries = () => [];
-    await kernel.load([createObservationalMemoryExtension({ recallTool: { getEntries }, commands: { getEntries } })]);
-    assert.equal(kernel.registries.tools.resolve("recall").name, "recall");
-    assert.deepEqual(
-      kernel.registries.commands.list().map((command) => command.name),
-      ["om:status", "om:view"],
-    );
+    const hidden = observationalMemory({ recallTool: { getEntries }, commands: { getEntries } })({ recall: false });
+    let seen: readonly string[] = [];
+    const agent = await createAgent({
+      model: { provider: "mock", model: "memory" },
+      provider: createMockProvider([providerDone()], {
+        onRequest: (request) => {
+          seen = (request.tools ?? []).map((tool) => tool.name);
+        },
+      }),
+      packages: [hidden],
+    });
+    try {
+      assert.equal(
+        agent.inspect().tools.some((tool) => tool.name === "recall"),
+        true,
+      );
+      assert.deepEqual(
+        agent
+          .inspect()
+          .commands.map((command) => command.name)
+          .sort(),
+        ["om:status", "om:view"],
+      );
+      const session = await agent.session({ id: "om", create: true });
+      await session.run("recall?");
+      await session.close();
+      assert.equal(seen.includes("recall"), false);
+    } finally {
+      await agent.dispose();
+    }
+
+    seen = [];
+    const shown = await createAgent({
+      model: { provider: "mock", model: "memory" },
+      provider: createMockProvider([providerDone()], {
+        onRequest: (request) => {
+          seen = (request.tools ?? []).map((tool) => tool.name);
+        },
+      }),
+      packages: [observationalMemory({ recallTool: { getEntries } })],
+    });
+    try {
+      const session = await shown.session({ id: "om-on", create: true });
+      await session.run("recall?");
+      await session.close();
+      assert.equal(seen.includes("recall"), true);
+    } finally {
+      await shown.dispose();
+    }
   });
 });

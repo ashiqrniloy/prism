@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { type AgentContext, client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import type { AgentRunLifecycle, AgentSession } from "@arnilo/prism";
+import type { AgentRunLifecycle, Session } from "@arnilo/prism";
 import {
   type AcpClientFilesystem,
   type AcpClientTerminals,
@@ -41,7 +41,7 @@ function wire(seams?: {
     sessionFactory: (input) => {
       captured.coding = input.coding;
       captured.sessionId = input.sessionId;
-      return { session: { id: input.sessionId ?? "host-session", async *stream() {} } as unknown as AgentSession };
+      return { session: { id: input.sessionId ?? "host-session", async *stream() {} } as unknown as Session };
     },
     lifecycle: {} as AgentRunLifecycle,
     coding: seams
@@ -134,7 +134,7 @@ describe("createPrismAcpAgent coding seams", () => {
       sessionFactory: ({ sessionId, coding }) => {
         assert.equal(coding?.filesystem, undefined);
         assert.equal(coding?.processes, undefined);
-        return { session: { id: sessionId ?? "host-session", async *stream() {} } as unknown as AgentSession };
+        return { session: { id: sessionId ?? "host-session", async *stream() {} } as unknown as Session };
       },
       lifecycle: {} as AgentRunLifecycle,
       coding: {
@@ -244,7 +244,7 @@ describe("createPrismAcpAgent coding seams", () => {
   it("rejects a sessionFactory that ignores the provided session id", async () => {
     const acpAgent = createPrismAcpAgent({
       authorize: () => authorization,
-      sessionFactory: () => ({ session: { id: "other-id", async *stream() {} } as unknown as AgentSession }),
+      sessionFactory: () => ({ session: { id: "other-id", async *stream() {} } as unknown as Session }),
       lifecycle: {} as AgentRunLifecycle,
       coding: { processes: (client, sessionId) => createAcpClientTerminals(client, sessionId) },
     });

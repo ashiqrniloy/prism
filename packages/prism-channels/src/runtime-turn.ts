@@ -1,14 +1,15 @@
 import {
   type Agent,
+  assertIdentityMatchesOwnership,
   type AgentEvent,
-  AgentRunError,
-  type AgentRunResult,
-  type AgentSession,
+  type RunResult,
+  type Session,
   type ContentBlock,
   createAgentRunLifecycle,
   type Message,
   type OwnershipScope,
   ownershipFromIdentity,
+  isSessionNotFound,
 } from "@arnilo/prism";
 import type { RuntimeCore } from "./runtime-core.js";
 import {
@@ -161,8 +162,8 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
     return `Request failed: ${boundText(redacted, MAX_ERROR_BYTES)}`;
   }
 
-  function operationStateFor(status: AgentRunResult["status"]): ChannelOperationState {
-    if (status === "succeeded") return "succeeded";
+  function operationStateFor(status: RunResult["status"]): ChannelOperationState {
+    if (status === "completed" || status === "stopped") return "succeeded";
     if (status === "aborted") return "cancelled";
     if (status === "suspended") return "suspended";
     return "failed";
@@ -362,7 +363,7 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
           },
         )) {
           preview(event);
-          if (event.type === "message_finished" && event.message.role === "assistant") {
+          if (event.type === "message.completed" && event.message.role === "assistant") {
             finalText = event.message.content
               .filter((content) => content.type === "text")
               .map((content) => content.text)
@@ -420,12 +421,13 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
     let runId: string | undefined;
     let text = "";
     return (event) => {
-      if (event.type === "message_started") {
+      // A new run resets the preview: `run.started` replaces the retired message-start event.
+      if (event.type === "run.started") {
         runId = event.runId;
         text = "";
         return;
       }
-      if (event.type !== "message_delta" || event.content.type !== "text") return;
+      if (event.type !== "message.delta" || event.content.type !== "text") return;
       if (runId !== undefined && event.runId !== runId) return;
       text += event.content.text;
       if (!isLive()) return;
@@ -480,23 +482,20 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
    * previews — the returned result always comes from the run itself.
    */
   async function runWithPreview(
-    session: AgentSession,
+    agent: Agent,
+    session: Session,
     input: string | Message | readonly Message[],
     turn: Turn,
     route: RouteState,
     controller: AbortController,
-  ): Promise<AgentRunResult> {
+  ): Promise<RunResult> {
     const subscription = session.subscribe();
-    const runPromise = session
-      .run(input, {
-        identity: turn.authorization.identity,
-        signal: controller.signal,
-        idempotencyKey: turn.operationId,
-      })
-      .catch((error: unknown) => {
-        if (error instanceof AgentRunError) return error.result;
-        throw error;
-      });
+    const runPromise = session.run(input, {
+      principal: turn.authorization.identity.principal,
+      ...(agent.config.secure ? {} : { ownership: ownershipFromIdentity(turn.authorization.identity) }),
+      signal: controller.signal,
+      idempotencyKey: turn.operationId,
+    });
     const preview = createPreview(route, () => !controller.signal.aborted && !turn.cancelled);
     for await (const event of subscription) preview(event);
     return await runPromise;
@@ -534,6 +533,7 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
         externalConversationId: route.externalConversationId,
       };
       const agent: Agent = await options.resolveAgent(resolverInput);
+      assertIdentityMatchesOwnership(turn.authorization.identity, agent.config.ownership);
       const input = await mediaTurnInput(agent, turn);
       if (input === "unsupported") {
         counters.unsupported += 1;
@@ -553,25 +553,34 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
         }
         return;
       }
-      const session = agent.createSession({
-        id: binding.sessionId,
-        ...(binding.leafId === undefined ? {} : { leafId: binding.leafId }),
-      });
+      let session: Session;
+      try {
+        session = await agent.session({
+          id: binding.sessionId,
+          ...(binding.leafId === undefined ? {} : { leafId: binding.leafId }),
+          create: true,
+        });
+      } catch (err) {
+        if (isSessionNotFound(err)) {
+          session = await agent.session();
+          (binding as { sessionId: string }).sessionId = session.id;
+        } else {
+          throw err;
+        }
+      }
       const controller = new AbortController();
       turn.controller = controller;
-      let result: AgentRunResult;
+      let result: RunResult;
       try {
         result =
           options.onAssistantDelta === undefined
             ? await session.run(input, {
-                identity: turn.authorization.identity,
+                principal: turn.authorization.identity.principal,
+                ...(agent.config.secure ? {} : { ownership: ownershipFromIdentity(turn.authorization.identity) }),
                 signal: controller.signal,
                 idempotencyKey: turn.operationId,
               })
-            : await runWithPreview(session, input, turn, route, controller);
-      } catch (error) {
-        if (error instanceof AgentRunError) result = error.result;
-        else throw error;
+            : await runWithPreview(agent, session, input, turn, route, controller);
       } finally {
         turn.controller = undefined;
       }
@@ -585,7 +594,7 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
         ...(result.error?.code === undefined ? {} : { errorCode: String(result.error.code) }),
       });
       await persistBinding(route, turn.ownership);
-      if (result.status === "succeeded") {
+      if (result.status === "completed" || result.status === "stopped") {
         counters.completed += 1;
         if (result.text.trim().length === 0) await notify(turn, "The request completed without a text answer.");
         else await sendReply(turn, redact(result.text), "final");
@@ -607,7 +616,7 @@ export function createRuntimeTurn(ctx: RuntimeContext, core: RuntimeCore) {
     } catch (error) {
       counters.failed += 1;
       await settleOperation(turn, "failed", {
-        errorCode: error instanceof AgentRunError ? String(error.result.error?.code ?? "run_failed") : "runtime_error",
+        errorCode: "runtime_error",
       });
       await notify(turn, failureNotice(error instanceof Error ? error.message : undefined));
     } finally {

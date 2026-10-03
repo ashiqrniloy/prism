@@ -25,6 +25,8 @@ export interface HostCompositionGovernance {
 
 export interface HostCompositionOptions {
   readonly profile?: HostCompositionProfile;
+  /** Verified identity for this opt-in governance check; never read by the kernel. */
+  readonly identity?: import("./identity.js").AgentIdentity;
   readonly agent?: Agent | AgentConfig | SecureAgentOptions | Partial<AgentConfig>;
   readonly store?: SessionStore | CheckpointStore | { readonly kind?: string; readonly durable?: boolean; [key: string]: unknown };
   readonly checkpoints?: CheckpointStore;
@@ -108,7 +110,7 @@ function extractTools(toolsConfig: unknown): readonly ToolDefinition[] {
   if (typeof (toolsConfig as ToolRegistry).list === "function") {
     return (toolsConfig as ToolRegistry).list();
   }
-  return [];
+  return (toolsConfig as { readonly add?: readonly ToolDefinition[] }).add ?? [];
 }
 
 function sanitizeCredentialRefs(refs: readonly string[] = [], redactor?: SecretRedactor): readonly string[] {
@@ -266,8 +268,11 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
         typeof (config as { toolArgumentValidator?: { validate?: unknown } }).toolArgumentValidator?.validate === "function"),
   );
   const isSecure = Boolean((config as { secure?: boolean } | undefined)?.secure);
+  // Roadmap §2.4: the tool gate is a `tool.call` registration. A secure agent always registers
+  // `askEveryTool`; any other host declares one through `hooks`.
+  const hasToolGate = isSecure || typeof config?.hooks === "function";
   const governance = {
-    permission: Boolean(config?.permission && typeof config.permission.check === "function"),
+    permission: hasToolGate,
     trust: Boolean(config?.trust && typeof config.trust.check === "function"),
     redactor: Boolean(redactor && typeof redactor.redact === "function"),
     validator: hasValidator,
@@ -312,7 +317,7 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
     }
 
     // Verified identity verification
-    const identity = config?.identity;
+    const identity = options.identity ?? (config && "identity" in config ? config.identity : undefined);
     if (connectedApps !== undefined && identity?.verified !== true) {
       errors.push("Business connected apps require a verified identity");
     }
@@ -346,7 +351,7 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
       errors.push("Unsupported governance configuration");
     }
     if (!governance.permission) {
-      errors.push("Business composition requires a permission policy");
+      errors.push("Business composition requires a tool gate (a `tool.call` hook)");
     }
     if (!governance.trust) {
       errors.push("Business composition requires a trust policy");

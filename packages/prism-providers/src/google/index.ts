@@ -1,5 +1,5 @@
-import { type CredentialValueSource, defineProviderPackage, type ModelConfig, type ProviderPackage } from "@arnilo/prism";
-import { googleModels } from "./models.js";
+import { type CredentialValueSource, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import { vendorPackage } from "../shared/package.js";
 import { createGoogleGenerateContentProvider } from "./provider.js";
 
 export interface GoogleProviderPackageOptions {
@@ -12,28 +12,17 @@ export interface GoogleProviderPackageOptions {
   readonly models?: readonly ModelConfig[];
 }
 
-export function createGoogleProviderPackage(options: GoogleProviderPackageOptions = {}): ProviderPackage {
+export function googlePackage(options: GoogleProviderPackageOptions = {}): PackageInstance {
   const providerId = options.id ?? "google";
-  return defineProviderPackage({
-    name: "@arnilo/prism-providers/google",
-    description: "Google Gemini generateContent provider package for Prism.",
-    docs: { links: ["docs/providers/google.md"] },
-    setup(api) {
-      api.registerProvider(
-        createGoogleGenerateContentProvider({
-          id: providerId,
-          apiKey: options.apiKey,
-          fetch: options.fetch,
-          baseUrl: options.baseUrl,
-          userAgent: options.userAgent,
-        }),
-      );
-      for (const model of options.models ?? googleModels) {
-        api.registerModel({ ...model, provider: providerId });
-      }
-      api.registerAuthMethod({ kind: "api_key", provider: providerId, credentialName: "apiKey" });
-    },
-  });
+  return vendorPackage("@arnilo/prism-providers.google", "Google Gemini generateContent provider package for Prism.", () => [
+    createGoogleGenerateContentProvider({
+      id: providerId,
+      apiKey: options.apiKey,
+      fetch: options.fetch,
+      baseUrl: options.baseUrl,
+      userAgent: options.userAgent,
+    }),
+  ]);
 }
 
 export {

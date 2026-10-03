@@ -339,11 +339,12 @@ const eventSource = await (async () => {
 })();
 const checkpoints = createMemoryCheckpointStore();
 const executed = [];
+let capturedRunId;
 let turn = 0;
-const agent = createAgent({
+const agent = await createAgent({
   id: "packed-enterprise",
   model: { provider: "mock", model: "demo" },
-  store: createMemorySessionStore(),
+  slots: { store: createMemorySessionStore() },
   provider: {
     id: "mock",
     // Durable loop runs the provider once per resume; turn 1 proposes the
@@ -366,35 +367,41 @@ const agent = createAgent({
       yield providerDone();
     },
   },
-  loop: {
-    name: "journey",
-    revision: "1",
-    snapshot: () => ({ n: executed.length }),
-    restore: () => {},
-    async run(ctx) {
-      const { calls } = await ctx.generate(await ctx.assemble([]));
-      await ctx.chargeToolRound?.(calls);
-      for (const call of calls) await ctx.dispatchToolCall(call);
-      for (const call of calls) {
-        // Deterministic timestamp: the durable loop runs twice (interrupt + resume)
-        // and re-appends the same event ids; identical records dedupe, differing
-        // timestamps would be rejected as a foreign/duplicate input.
-        await eventSource.source.append({
-          id: `evt-${call.id}`,
-          sessionId: ctx.sessionId,
-          runId: ctx.runId,
-          type: "tool_execution_started",
-          timestamp: "2026-08-09T00:00:00.000Z",
-          event: {
-            type: "tool_execution_started",
-            sessionId: ctx.sessionId,
-            runId: ctx.runId,
-            call,
-          },
-          redacted: true,
-          ...ownership,
-        });
-      }
+  hooks: (hooks) =>
+    hooks.on("tool.call", (payload) => {
+      capturedRunId = payload.runId;
+      return { ask: "Approval required" };
+    }),
+  slots: {
+    loop: {
+      name: "journey",
+      revision: "1",
+      snapshot: () => ({ n: executed.length }),
+      restore: () => {},
+      async run(run) {
+        const turnResult = await run.turn();
+        if (turnResult.toolCalls.length > 0) await run.executeTools(turnResult.toolCalls);
+        for (const call of turnResult.toolCalls) {
+          // Deterministic timestamp: the durable loop runs twice (interrupt + resume)
+          // and re-appends the same event ids; identical records dedupe, differing
+          // timestamps would be rejected as a foreign/duplicate input.
+          await eventSource.source.append({
+            id: `evt-${call.id}`,
+            sessionId: run.session.id,
+            runId: capturedRunId,
+            type: "tool.started",
+            timestamp: "2026-08-09T00:00:00.000Z",
+            event: {
+              type: "tool.started",
+              sessionId: run.session.id,
+              runId: capturedRunId,
+              call,
+            },
+            redacted: true,
+            ...ownership,
+          });
+        }
+      },
     },
   },
   tools: [
@@ -408,24 +415,24 @@ const agent = createAgent({
     },
   ],
 });
-const first = await agent.createSession({ id: "journey-s" }).run("go", {
-  runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+const first = await (await agent.session({ id: "journey-s", create: true })).run("go", {
+  runState: { checkpoints, definitionRevision: "1" },
 });
 assert.equal(first.status, "suspended");
-assert.equal(first.interruption.pendingDecisions.length, 2);
+assert.equal(first.pending.length, 2);
 const done = await resumeAgentRun(
   agent,
   { runId: first.runId, sessionId: first.sessionId },
   {
     expectedVersion: first.runState.version,
-    decisions: first.interruption.pendingDecisions.map((d) => ({
+    decisions: first.pending.map((d) => ({
       approvalId: d.approvalId,
       outcome: "allow_once",
     })),
   },
   { checkpoints, definitionRevision: "1" },
 );
-assert.equal(done.status, "succeeded");
+assert.equal(done.status, "completed");
 assert.equal(executed.length, 2, "both batched approvals executed");
 const page = await eventSource.source.page({
   ownership,
@@ -477,7 +484,8 @@ await dispatchToolCall({
     metadata: {},
   },
   effectStore,
-  identity: verified,
+  principal: verified.principal,
+  ownership,
   redactor,
 });
 assert.equal(apiRequests.length, 1);
@@ -497,7 +505,8 @@ const replayed = await dispatchToolCall({
     metadata: {},
   },
   effectStore,
-  identity: verified,
+  principal: verified.principal,
+  ownership,
   redactor,
 });
 assert.equal(apiRequests.length, 1, "replay must not re-POST the side effect");

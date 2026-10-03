@@ -1,4 +1,4 @@
-import { AgentRunError, type AgentRunResult, type Message } from "@arnilo/prism";
+import { type RunResult, type Message } from "@arnilo/prism";
 import { createTimelineFolder } from "../observability/index.js";
 import { EvalError } from "./errors.js";
 import { collectWhileRunning, mulberry32, resolveTrialsConfig, validateEvalManifest } from "./scenarios.js";
@@ -82,7 +82,7 @@ export async function runExperiment<TInput = unknown, TExpected = unknown>(
     item: DatasetItem<TInput, TExpected>,
     trialIndex: number,
   ): Promise<{
-    result?: AgentRunResult;
+    result?: RunResult;
     evaluations: readonly EvaluationRecord[];
     error?: ExperimentItemResult<TInput, TExpected>["error"];
   }> => {
@@ -91,10 +91,10 @@ export async function runExperiment<TInput = unknown, TExpected = unknown>(
       return { evaluations: [], error: toErrorInfo(options.signal.reason ?? new Error("experiment aborted")) };
     }
 
-    let result: AgentRunResult | undefined;
+    let result: RunResult | undefined;
     let error = undefined as ExperimentItemResult<TInput, TExpected>["error"];
 
-    const session = options.agent.createSession();
+    const session = await options.agent.session();
     const shouldProject = options.timeline && options.timeline !== "off";
     const folder = shouldProject ? createTimelineFolder({ content: options.timeline, redactor: options.redactor }) : undefined;
 
@@ -108,12 +108,10 @@ export async function runExperiment<TInput = unknown, TExpected = unknown>(
             redactor: options.redactor ?? options.runOptions?.redactor,
           });
         } catch (caught) {
-          if (caught instanceof AgentRunError) {
-            result = caught.result;
-            error = caught.result.error ?? toErrorInfo(caught);
-          } else {
-            error = toErrorInfo(caught);
-          }
+          error = toErrorInfo(caught);
+        }
+        if (result && (result.status === "failed" || result.status === "aborted")) {
+          error = result.error ?? toErrorInfo(new Error(result.status === "aborted" ? "Agent run aborted" : "Agent run failed"));
         }
       });
     } catch (caught) {
@@ -160,7 +158,7 @@ export async function runExperiment<TInput = unknown, TExpected = unknown>(
       concurrency,
       async (item): Promise<ExperimentItemResult<TInput, TExpected>> => {
         const evaluations: EvaluationRecord[] = [];
-        let result: AgentRunResult | undefined;
+        let result: RunResult | undefined;
         let error = undefined as ExperimentItemResult<TInput, TExpected>["error"];
         for (let trialIndex = 0; trialIndex < trialCount; trialIndex++) {
           const trial = await runTrial(item, trialIndex);

@@ -1,4 +1,4 @@
-import { type AgentRunResult, resolveRedactor } from "@arnilo/prism";
+import { type RunResult, resolveRedactor } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 import {
   DEFAULT_CANDIDATE_MAX_BYTES,
@@ -46,7 +46,7 @@ export async function runComparison<TInput = unknown, TExpected = unknown>(
     options.dataset.items,
     normalizeConcurrency(options.concurrency),
     async (item) => {
-      const results = new Map<string, AgentRunResult>();
+      const results = new Map<string, RunResult>();
       const errors = new Map<string, unknown>();
       await Promise.all(
         candidates.map(async (name) => {

@@ -7,8 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll as after, describe, it } from "bun:test";
 import {
+  askEveryTool,
   type Agent,
-  AgentRunError,
   AgentRunStateError,
   type AIProvider,
   createAgent,
@@ -57,7 +57,11 @@ function textProvider(calls: { count: number }, text: (count: number) => string)
 
 /** The plan's proposed `runBoundTurn` seam, compiled and executed. */
 async function runBoundTurn(agent: Agent, binding: { sessionId: string; leafId?: string }, text: string, operationId: string) {
-  const session = agent.createSession({ id: binding.sessionId, ...(binding.leafId === undefined ? {} : { leafId: binding.leafId }) });
+  const session = await agent.session({
+    id: binding.sessionId,
+    ...(binding.leafId === undefined ? {} : { leafId: binding.leafId }),
+    create: true,
+  });
   return session.run(text, { idempotencyKey: operationId });
 }
 
@@ -68,16 +72,26 @@ describe("plan 079 primitive review", () => {
     const provider = textProvider(calls, (count) => `answer ${count}`);
     const store = { file: filename };
     let persistence = createSqlitePersistence({ filename: store.file });
-    const agent = createAgent({ id: "review-reopen", model: { provider: "mock", model: "demo" }, provider, store: persistence });
+    const agent = await createAgent({
+      id: "review-reopen",
+      model: { provider: "mock", model: "demo" },
+      provider,
+      slots: { store: persistence },
+    });
     const first = await runBoundTurn(agent, { sessionId: "bound-session" }, "turn one", "op-1");
-    assert.equal(first.status, "succeeded");
+    assert.equal(first.status, "completed");
     assert.equal(first.text, "answer 1");
     persistence.close();
 
     persistence = createSqlitePersistence({ filename: store.file });
-    const reopened = createAgent({ id: "review-reopen", model: { provider: "mock", model: "demo" }, provider, store: persistence });
+    const reopened = await createAgent({
+      id: "review-reopen",
+      model: { provider: "mock", model: "demo" },
+      provider,
+      slots: { store: persistence },
+    });
     const second = await runBoundTurn(reopened, { sessionId: "bound-session", leafId: first.leafId }, "turn two", "op-2");
-    assert.equal(second.status, "succeeded");
+    assert.equal(second.status, "completed");
     assert.equal(second.text, "answer 2");
     assert.equal((await persistence.list("bound-session")).length, 4);
     persistence.close();
@@ -90,10 +104,10 @@ describe("plan 079 primitive review", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "review-two-objects",
       model: { provider: "mock", model: "demo" },
-      store,
+      slots: { store },
       provider: {
         id: "mock",
         async *generate() {
@@ -104,14 +118,14 @@ describe("plan 079 primitive review", () => {
         },
       },
     });
-    const first = agent.createSession({ id: "shared-id" }).run("from a");
-    const second = agent.createSession({ id: "shared-id" }).run("from b");
+    const first = (await agent.session({ id: "shared-id", create: true })).run("from a");
+    const second = (await agent.session({ id: "shared-id", create: true })).run("from b");
     await new Promise((resolve) => setTimeout(resolve, 5));
     assert.equal(calls.count, 2, "each runtime object admits its own provider turn");
     release?.();
     const results = await Promise.all([first, second]);
     assert.equal(
-      results.every((result) => result.status === "succeeded"),
+      results.every((result) => result.status === "completed"),
       true,
     );
   });
@@ -119,31 +133,30 @@ describe("plan 079 primitive review", () => {
   it("rejects per-run ownership and redactor overrides for a secure agent, including through the conversation service", async () => {
     const persistence = createSqlitePersistence({ filename: tempDb("secure") });
     const calls = { count: 0 };
-    const secure = createSecureAgent({
+    const secure = await createSecureAgent({
       id: "review-secure",
       model: { provider: "mock", model: "demo" },
       provider: textProvider(calls, () => "secure answer"),
-      store: persistence,
+      slots: { store: persistence },
       tools: [],
       toolArgumentValidator: { validate: () => ({ ok: true }) },
       redactor: createSecretRedactor(["secret"]),
-      permission: createStaticPermissionPolicy({ allow: [] }),
       trust: createStaticTrustPolicy(true),
       ownership,
       limits: { maxTurns: 2 },
       definitionRevision: "1",
       runState: { checkpoints: createMemoryCheckpointStore() },
     });
-    await assert.rejects(() => secure.createSession({ id: "override" }).run("go", { ownership }), AgentRunStateError);
+    await assert.rejects(async () => (await secure.session({ id: "override", create: true })).run("go", { ownership }), AgentRunStateError);
     assert.equal(calls.count, 0, "a rejected override never reaches the provider");
 
-    const direct = await secure.createSession({ id: "direct" }).run("go");
-    assert.equal(direct.status, "succeeded");
+    const direct = await (await secure.session({ id: "direct", create: true })).run("go");
+    assert.equal(direct.status, "completed");
     assert.equal(calls.count, 1);
 
     const service = createConversationService(persistence, {
       redactor: createSecretRedactor(["secret"]),
-      sessionFactory: ({ thread }) => secure.createSession({ id: thread.id }),
+      sessionFactory: async ({ thread }) => await secure.session({ id: thread.id, create: true }),
     });
     const thread = await service.create({ ownership });
     await assert.rejects(
@@ -177,9 +190,16 @@ describe("plan 079 primitive review", () => {
     const tools = [
       { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "call-1", name: "write", value: ++toolCalls.count }) },
     ];
-    const agent = createAgent({ id: "review-resume", model: { provider: "mock", model: "demo" }, provider, store, tools });
-    const suspended = await agent.createSession({ id: "resume-session" }).run("go", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const agent = await createAgent({
+      id: "review-resume",
+      model: { provider: "mock", model: "demo" },
+      provider,
+      slots: { store },
+      tools: { add: tools },
+      hooks: askEveryTool(),
+    });
+    const suspended = await (await agent.session({ id: "resume-session", create: true })).run("go", {
+      runState: { checkpoints, definitionRevision: "1" },
       ownership,
     });
     assert.equal(suspended.status, "suspended");
@@ -211,15 +231,17 @@ describe("plan 079 primitive review", () => {
     );
 
     // Same revision, widened tool registry: the fingerprint recheck refuses before any side effect.
-    const widened = createAgent({
+    const widened = await createAgent({
       id: "review-resume",
       model: { provider: "mock", model: "demo" },
       provider,
-      store,
-      tools: [
-        ...tools,
-        { name: "read", parameters: { type: "object" }, execute: () => ({ toolCallId: "call-2", name: "read", value: "ok" }) },
-      ],
+      slots: { store },
+      tools: {
+        add: [
+          ...tools,
+          { name: "read", parameters: { type: "object" }, execute: () => ({ toolCallId: "call-2", name: "read", value: "ok" }) },
+        ],
+      },
     });
     const drifted = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: widened, definitionRevision: "1" }) });
     await assert.rejects(
@@ -228,7 +250,7 @@ describe("plan 079 primitive review", () => {
     );
 
     const resumed = await lifecycle.resume(ref, { decision: "approve", expectedVersion: version }, { agentId: "review-resume", ownership });
-    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.status, "completed");
     assert.equal(resumed.text, "resumed answer");
     assert.equal(toolCalls.count, 1);
     assert.deepEqual(resolvedOwnership, [ownership, ownership]);
@@ -240,18 +262,21 @@ describe("plan 079 primitive review", () => {
     const toolCalls = { count: 0 };
     const resumedAbort = { seen: false };
     let requestCancel: (() => void) | undefined;
-    const makeAgent = () =>
-      createAgent({
+    const makeAgent = async () =>
+      await createAgent({
+        hooks: askEveryTool(),
         id: "review-cancel",
         model: { provider: "mock", model: "demo" },
-        store,
-        tools: [
-          {
-            name: "write",
-            parameters: { type: "object" },
-            execute: () => ({ toolCallId: "call-cancel", name: "write", value: ++toolCalls.count }),
-          },
-        ],
+        slots: { store },
+        tools: {
+          add: [
+            {
+              name: "write",
+              parameters: { type: "object" },
+              execute: () => ({ toolCallId: "call-cancel", name: "write", value: ++toolCalls.count }),
+            },
+          ],
+        },
         provider: (() => {
           let turn = 0;
           return {
@@ -285,13 +310,13 @@ describe("plan 079 primitive review", () => {
           };
         })(),
       });
-    const suspend = (agent: Agent) =>
-      agent.createSession({ id: "cancel-session" }).run("go", {
-        runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspend = async (agent: Agent) =>
+      (await agent.session({ id: "cancel-session", create: true })).run("go", {
+        runState: { checkpoints, definitionRevision: "1" },
         ownership,
       });
 
-    const preAbortedAgent = makeAgent();
+    const preAbortedAgent = await makeAgent();
     const preAborted = await suspend(preAbortedAgent);
     const preAbortedRef = { runId: preAborted.runId, sessionId: preAborted.sessionId };
     const lifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: preAbortedAgent, definitionRevision: "1" }) });
@@ -311,7 +336,7 @@ describe("plan 079 primitive review", () => {
     assert.equal(toolCalls.count, 0);
     assert.equal((await lifecycle.status(preAbortedRef, { agentId: "review-cancel", ownership })).state.status, "suspended");
 
-    const liveAgent = makeAgent();
+    const liveAgent = await makeAgent();
     const live = await suspend(liveAgent);
     const liveRef = { runId: live.runId, sessionId: live.sessionId };
     const liveVersion = live.runState?.version;
@@ -334,17 +359,16 @@ describe("plan 079 primitive review", () => {
         return error;
       }
     })();
-    assert.ok(observed instanceof AgentRunError, `expected AgentRunError, got ${String(observed)}`);
-    assert.equal(observed.result.status, "aborted");
-    assert.equal(liveEvents.includes("agent_resumed"), true);
+    assert.equal(observed, undefined, "an aborted resume ends the stream normally");
+    assert.equal(liveEvents.at(-1), "run.failed", "the terminal event closes the stream");
+    assert.equal(liveEvents.includes("run.started"), true, "the resume re-opens the run");
     assert.equal(resumedAbort.seen, true, "the abort reached the in-flight provider turn");
-    assert.equal(observed.result.text, "", "partial deltas are not promoted to final text when the run aborts");
     assert.equal(toolCalls.count, 1, "cancellation is a request: the already-approved dispatch is not rolled back");
     assert.equal((await liveLifecycle.status(liveRef, { agentId: "review-cancel", ownership })).state.status, "aborted");
 
     // Plan 080 Task 3: the non-stream resume threads the same signal, so a mid-turn
     // abort reaches the provider and persists an aborted run instead of running on.
-    const directAgent = makeAgent();
+    const directAgent = await makeAgent();
     const direct = await suspend(directAgent);
     const directRef = { runId: direct.runId, sessionId: direct.sessionId };
     const directVersion = direct.runState?.version;
@@ -352,16 +376,13 @@ describe("plan 079 primitive review", () => {
     const directLifecycle = createAgentRunLifecycle({ checkpoints, resolveAgent: () => ({ agent: directAgent, definitionRevision: "1" }) });
     const directController = new AbortController();
     requestCancel = () => directController.abort(new Error("non-stream cancel"));
-    const directOutcome = await directLifecycle
-      .resume(
-        directRef,
-        { decision: "approve", expectedVersion: directVersion },
-        { agentId: "review-cancel", ownership, signal: directController.signal },
-      )
-      .catch((error: unknown) => error);
-    assert.ok(directOutcome instanceof AgentRunError, `expected AgentRunError, got ${String(directOutcome)}`);
-    assert.equal(directOutcome.result.status, "aborted");
-    assert.equal(directOutcome.result.text, "", "partial deltas are not promoted to final text when the run aborts");
+    const directOutcome = await directLifecycle.resume(
+      directRef,
+      { decision: "approve", expectedVersion: directVersion },
+      { agentId: "review-cancel", ownership, signal: directController.signal },
+    );
+    assert.equal(directOutcome.status, "aborted");
+    assert.equal(directOutcome.text, "", "partial deltas are not promoted to final text when the run aborts");
     assert.equal(resumedAbort.seen, true, "the abort reached the in-flight provider turn of the non-stream resume");
     assert.equal(toolCalls.count, 2, "the approved dispatch still stands: abort never rolls back dispatched work");
     assert.equal((await directLifecycle.status(directRef, { agentId: "review-cancel", ownership })).state.status, "aborted");
@@ -370,30 +391,28 @@ describe("plan 079 primitive review", () => {
   it("does not treat idempotencyKey as execution deduplication at a new branch tip", async () => {
     const store = createMemorySessionStore();
     const calls = { count: 0 };
-    const agent = createAgent({
+    const agent = await createAgent({
       id: "review-idempotency",
       model: { provider: "mock", model: "demo" },
-      store,
+      slots: { store },
       provider: textProvider(calls, () => "ok"),
     });
-    const first = await agent.createSession({ id: "idem" }).run("one", { idempotencyKey: "op-1" });
+    // A reopened session continues from the branch tip, so pin the parent with a seed run.
+    const seed = await (await agent.session({ id: "idem", create: true })).run("seed");
     assert.equal(calls.count, 1);
+    const first = await (await agent.session({ id: "idem", leafId: seed.leafId })).run("one", { idempotencyKey: "op-1" });
+    assert.equal(calls.count, 2);
 
     // Exact retry at the same parent: the append deduplicates before the provider turn.
-    await assert.rejects(
-      () => agent.createSession({ id: "idem" }).run("one", { idempotencyKey: "op-1" }),
-      (error: unknown) => {
-        assert.ok(error instanceof AgentRunError);
-        assert.equal(error.result.error?.code, "session_append_conflict");
-        return true;
-      },
-    );
-    assert.equal(calls.count, 1, "duplicate append retry never reaches the provider");
+    const duplicate = await (await agent.session({ id: "idem", leafId: seed.leafId })).run("one", { idempotencyKey: "op-1" });
+    assert.equal(duplicate.status, "failed");
+    assert.equal(duplicate.error?.code, "session_append_conflict");
+    assert.equal(calls.count, 2, "duplicate append retry never reaches the provider");
 
     // Same key at the advanced tip: append dedup no longer applies and the run executes again.
-    const retry = await agent.createSession({ id: "idem", leafId: first.leafId }).run("one", { idempotencyKey: "op-1" });
-    assert.equal(retry.status, "succeeded");
-    assert.equal(calls.count, 2);
+    const retry = await (await agent.session({ id: "idem", leafId: first.leafId })).run("one", { idempotencyKey: "op-1" });
+    assert.equal(retry.status, "completed");
+    assert.equal(calls.count, 3);
     assert.notEqual(retry.runId, first.runId, "run ids are generated per call, not per operation");
   });
 
@@ -401,10 +420,11 @@ describe("plan 079 primitive review", () => {
     const store = createMemorySessionStore();
     const checkpoints = createMemoryCheckpointStore();
     let turn = 0;
-    const agent = createAgent({
+    const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "review-provenance",
       model: { provider: "mock", model: "demo" },
-      store,
+      slots: { store },
       provider: {
         id: "mock",
         async *generate() {
@@ -419,23 +439,26 @@ describe("plan 079 primitive review", () => {
           yield providerDone();
         },
       },
-      tools: [
-        { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "call-approval", name: "write", value: "effect" }) },
-      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: { type: "object" },
+            execute: () => ({ toolCallId: "call-approval", name: "write", value: "effect" }),
+          },
+        ],
+      },
     });
-    const first = await agent.createSession({ id: "provenance" }).run("one");
+    const firstSession = await agent.session({ id: "provenance", create: true });
+    const first = await firstSession.run("one");
     assert.equal(first.text, "answer 1");
 
-    const failed = await agent
-      .createSession({ id: "provenance", leafId: first.leafId })
-      .run("two")
-      .catch((error: unknown) => error);
-    assert.ok(failed instanceof AgentRunError);
-    assert.equal(failed.result.status, "failed");
-    assert.equal(failed.result.text, "answer 1", "failed result text is the previous turn's answer");
+    const failed = await (await agent.session({ id: firstSession.id, leafId: first.leafId })).run("two");
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.text, "answer 1", "failed result text is the previous turn's answer");
 
-    const suspended = await agent.createSession({ id: "provenance", leafId: first.leafId }).run("three", {
-      runState: { checkpoints, definitionRevision: "1", interruptBeforeTool: true },
+    const suspended = await (await agent.session({ id: "provenance", leafId: first.leafId, create: true })).run("three", {
+      runState: { checkpoints, definitionRevision: "1" },
     });
     assert.equal(suspended.status, "suspended");
     assert.equal(

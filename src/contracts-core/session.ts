@@ -4,7 +4,17 @@ import type { AgentEvent } from "../contracts-protocol.js";
 import type { Message, ModelConfig } from "./content.js";
 import type { OwnershipScope, PersistencePage, PersistenceQuery } from "./persistence.js";
 
-export type SessionEntryKind = "message" | "event" | "summary" | "metadata" | "model_change" | "label" | "custom" | "compaction";
+export type SessionEntryKind =
+  | "message"
+  | "event"
+  | "summary"
+  | "metadata"
+  | "model_change"
+  | "label"
+  | "custom"
+  | "compaction"
+  | "suspended_run"
+  | "package_state";
 
 export const SESSION_ENTRY_KINDS: readonly SessionEntryKind[] = [
   "message",
@@ -15,6 +25,8 @@ export const SESSION_ENTRY_KINDS: readonly SessionEntryKind[] = [
   "label",
   "custom",
   "compaction",
+  "suspended_run",
+  "package_state",
 ];
 
 const SESSION_ENTRY_KIND_SET: ReadonlySet<SessionEntryKind> = new Set(SESSION_ENTRY_KINDS);
@@ -54,11 +66,63 @@ export interface SessionStore {
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
   /**
    * Optional bounded session search. Prefer implementing this **or** returning a companion
-   * `SessionIndex` from the adapter factory — hosts must not need both. Call
+   * `SessionSearchIndex` from the adapter factory — hosts must not need both. Call
    * `resolveSessionSearchQuery` before scan/query. Memory and JSONL default to capped linear
    * search (memory `sessionSearchMode: "unsupported"` throws); DB adapters index.
    */
   searchSessions?(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
+  /**
+   * Optional store capability behind `agent.sessions.list()`: a page of session summaries, newest first by
+   * default, restricted to sessions whose every entry carries the query's ownership scope. A page never
+   * loads entries into the caller. A store without it answers `agent.sessions.list()` with
+   * `UnsupportedStoreCapabilityError`. The kernel memory store implements it; durable stores follow in Phase 6.
+   */
+  listSessions?(query: SessionListQuery): Promise<PersistencePage<SessionSummary>>;
+  /**
+   * Optional store capability behind `agent.sessions.delete()`: removes every entry of the session and resolves
+   * `true`, or resolves `false` (and removes nothing) when the session is absent or any entry is outside `scope`.
+   */
+  deleteSession?(sessionId: string, scope?: OwnershipScope): Promise<boolean>;
+}
+
+/** Bounded page request for `SessionStore.listSessions`. The scope is the agent's `ownership`. */
+export interface SessionListQuery extends PersistenceQuery, OwnershipScope {
+  readonly signal?: AbortSignal;
+}
+
+/** Safe summary of one session for listings. Never a transcript or a credential. */
+export interface SessionSummary {
+  readonly sessionId: string;
+  /** The branch tip, for `agent.session({ id, leafId })`. */
+  readonly leafId?: string;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
+  /** Count of message entries; display-only. */
+  readonly messageCount: number;
+  /** The `title` session metadata, when the host wrote one. */
+  readonly title?: string;
+  /** Safe display fields only (e.g. `workspaceRoot`). */
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+export const DEFAULT_SESSION_LIST_LIMIT = 20;
+export const HARD_MAX_SESSION_LIST_LIMIT = 100;
+
+export type SessionStoreCapability = "listSessions" | "deleteSession" | "searchSessions";
+
+export const UNSUPPORTED_STORE_CAPABILITY_CODE = "unsupported_store_capability" as const;
+
+/** Thrown by `agent.sessions` when the resolved `store` slot does not declare the capability the call needs. */
+export class UnsupportedStoreCapabilityError extends Error {
+  readonly code = UNSUPPORTED_STORE_CAPABILITY_CODE;
+  constructor(readonly capability: SessionStoreCapability) {
+    super(`The session store does not support ${capability}; agent.sessions needs a store that declares it`);
+    this.name = "UnsupportedStoreCapabilityError";
+  }
+}
+
+export function isUnsupportedStoreCapability(error: unknown): error is UnsupportedStoreCapabilityError {
+  return error instanceof Error && (error as { code?: unknown }).code === UNSUPPORTED_STORE_CAPABILITY_CODE;
 }
 
 /** Host-written `SessionRecord.metadata` / session metadata key for workspace filtering. */
@@ -136,7 +200,7 @@ export interface SessionSearchHit {
 }
 
 /** Narrow search seam; adapters may implement this instead of `SessionStore.searchSessions`. */
-export interface SessionIndex {
+export interface SessionSearchIndex {
   search(query: SessionSearchQuery): Promise<PersistencePage<SessionSearchHit>>;
 }
 
@@ -217,6 +281,24 @@ export class SessionSearchUnsupportedError extends Error {
 
 export function isSessionSearchUnsupported(error: unknown): error is SessionSearchUnsupportedError {
   return error instanceof Error && (error as { code?: unknown }).code === SESSION_SEARCH_UNSUPPORTED_CODE;
+}
+
+export const SESSION_NOT_FOUND_CODE = "session_not_found" as const;
+
+/** Thrown when `agent.session({ id, create: true })` cannot find the requested session or its branch in the store slot, or across ownership scopes. */
+export class SessionNotFoundError extends Error {
+  readonly code = SESSION_NOT_FOUND_CODE;
+  constructor(
+    readonly sessionId: string,
+    message = `Session "${sessionId}" was not found`,
+  ) {
+    super(message);
+    this.name = "SessionNotFoundError";
+  }
+}
+
+export function isSessionNotFound(error: unknown): error is SessionNotFoundError {
+  return error instanceof Error && (error as { code?: unknown }).code === SESSION_NOT_FOUND_CODE;
 }
 
 /** Query for a single branch's ancestor chain (DB-friendly: one recursive/ancestor query

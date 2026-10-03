@@ -42,7 +42,7 @@ export function createAgUiMcpAdapter<Authorization extends AgUiAuthorization = A
 ): AgUiMcpAdapter<Authorization> {
   const apps = options.bridge.apps;
   const activity = (event: AgentEvent): AgUiActivitySnapshot | undefined => {
-    if (event.type !== "tool_execution_finished" || !apps) return undefined;
+    if (event.type !== "tool.completed" || !apps) return undefined;
     const app = apps.tools.find((tool) => tool.prismName === event.result.name && tool.resourceUri !== undefined);
     if (!app?.resourceUri) return undefined;
     let result: unknown;
