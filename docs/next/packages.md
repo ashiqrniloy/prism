@@ -57,6 +57,13 @@ Hyphen ranges, `x`-ranges, bare partials (`1.2`), and dist-tags are rejected. Th
 until the 1.0 cut, so an in-tree package declares a range that admits it, for example
 `^0.12.1 || ^0.13.0-0`.
 
+### Instance provenance
+
+`PackageInstance.source` is set only by `loadManifest`: `{ kind: "manifest", scope, assigns? }`. `assigns`
+lists the slots the manifest gives this package. They merge under `AgentConfig.slots`, which wins per slot,
+so `agent.config.slots` and `inspect().slots` show the merged assignments. `PackageInstanceOptions` has no
+`source`, so a package cannot claim to come from a manifest.
+
 ### Lifecycle
 
 `createAgent` loads packages in this order, and fails closed at any step:
@@ -208,7 +215,7 @@ view.slots.loop;         // "kernel" | a package name | "host"
 
 | Field | Holds |
 | --- | --- |
-| `packages` | `{ name, version, capabilities, optional, status, configSources, config }` in load order. `status` is `loaded`, or `skipped` for an `optional` instance whose `setup` threw (it holds no contribution). `configSources` maps each key to `default`, `manifest`, or `host`. |
+| `packages` | `{ name, version, capabilities, optional, status, source, configSources, config }` in load order. `source` is `code` (the host listed it), `manifest:user`, or `manifest:project` (`loadManifest` built it). `status` is `loaded`, or `skipped` for an `optional` instance whose `setup` threw (it holds no contribution). `configSources` maps each key to `default`, `manifest`, `code`, or `host`. |
 | `tools`, `skills`, `commands` | `{ name, package }`, where `package` is `host` for the host's own. A disabled host tool or skill is not listed. |
 | `hooks` | Per hook name, registrations in execution order (`{ id, owner, priority }`). A session's own guardrail-pack hooks are not listed. |
 | `slots` | Per slot, its owner: `kernel` (the default), a package name, or `host`. |
@@ -256,11 +263,14 @@ package gets one validated, JSON-only object. It never sees another package's co
 Layers, lowest precedence first:
 
 1. schema `default` values
-2. the manifest layer (fed by the manifest loader in Phase 4)
-3. `AgentConfig.packageConfig[<package name>]`
+2. the manifest layer: the config of an instance `@arnilo/prism/manifest`'s `loadManifest` built
+3. the code layer: the config a listed instance carries (`coding({ root })`)
+4. `AgentConfig.packageConfig[<package name>]`
+
+An instance has either the manifest layer or the code layer, never both. See [manifest.md](manifest.md).
 
 Objects deep-merge and arrays and scalars replace. For each top-level key the kernel records where
-the winning value came from (`default`, `manifest`, or `host`), so `agent.inspect()` can show config
+the winning value came from (`default`, `manifest`, `code`, or `host`), so `agent.inspect()` can show config
 sources without showing values.
 
 A package with no `config` schema accepts no config: any supplied key fails closed.

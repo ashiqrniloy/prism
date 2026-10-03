@@ -80,7 +80,7 @@ CacheTelemetryOptions	export type { CacheTelemetry, CacheTelemetryOptions, Cache
 CacheTelemetryReport	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
 CacheTelemetrySample	export type { CacheTelemetry, CacheTelemetryOptions, CacheTelemetryReport, CacheTelemetrySample, } from "./cache-telemetry.js"
 CacheUsageReport	export type { ApplyCacheControlOptions, CacheControlledContentBlock, CacheControlledMessage, CacheControlValue, CacheUsageReport, } from "./cache-helpers.js"
-Capability	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+Capability	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
 CheckpointConflictError	export declare class CheckpointConflictError extends Error
 CheckpointRestoreAudit	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
 CheckpointRestoreAuditEntry	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
@@ -216,6 +216,7 @@ DispatchToolCallOptions	export type { DispatchToolCallOptions, ToolArgumentValid
 DocumentContent	export type { AudioContent, DocumentContent, FileContent } from "./content.js"
 DuplicateRegistrationOptions	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
 DuplicateRegistrationPolicy	export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js"
+EMPTY_MANIFEST	export declare const EMPTY_MANIFEST: PrismManifestV1
 EMPTY_SKILL_DESCRIPTION	export declare const EMPTY_SKILL_DESCRIPTION: "(no description)"
 EMPTY_TOOL_RESULT_TEXT	export declare const EMPTY_TOOL_RESULT_TEXT = "(tool completed with no output)"
 EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE	export declare const EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE = "ERR_PRISM_EVENT_MULTIPLEXER_SINGLE_CONSUMER"
@@ -343,12 +344,11 @@ IdentityError	export declare class IdentityError extends Error
 IdentityLimits	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 IdentityVerifier	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimits, IdentityVerifier, NarrowIdentityOptions, Principal, ResolvedIdentityLimits, } from "./identity.js"
 ImageGenerationError	export declare class ImageGenerationError extends Error
-InitUsageError	export declare class InitUsageError extends Error
 InputAttachment	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
 InspectedContribution	export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js"
 InspectedHook	export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js"
 InspectedPackage	export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js"
-JsonSchema	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+JsonSchema	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
 KERNEL_SUSPENSION_REVISION	export declare const KERNEL_SUSPENSION_REVISION = "kernel-suspension"
 KERNEL_VERSION	export declare const KERNEL_VERSION = "0.12.1"
 LEASE_CONFLICT_CODE	export declare const LEASE_CONFLICT_CODE = "ERR_PRISM_LEASE_CONFLICT"
@@ -361,6 +361,8 @@ LoadedSkillBodiesEntry	export type { CreateLoadSkillToolOptions, LoadedSkillBodi
 LoadedSkillSet	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
 Logger	export type { Logger } from "./host/types.js"
 LoopStrategy	export type { LoopStrategy, RunController, RunEndResult, RunTurnOptions, RunTurnResult } from "./loop/index.js"
+MANIFEST_COMMANDS	export declare const MANIFEST_COMMANDS: ReadonlySet<string>
+MANIFEST_V1_SCHEMA	export declare const MANIFEST_V1_SCHEMA: JsonSchema
 MAX_ACTION_CONSTRAINTS	export declare const MAX_ACTION_CONSTRAINTS = 32
 MAX_ACTION_CONSTRAINT_BYTES	export declare const MAX_ACTION_CONSTRAINT_BYTES: number
 MAX_AGENT_RUN_METADATA_BYTES	export declare const MAX_AGENT_RUN_METADATA_BYTES: number
@@ -386,9 +388,12 @@ MAX_PERSISTED_SKILL_BODY_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_BOD
 MAX_PERSISTED_SKILL_NAMES	export declare const MAX_PERSISTED_SKILL_NAMES = 64
 MAX_PERSISTED_SKILL_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_NAME_CHARS = 256
 MAX_STATE_VALUE_BYTES	export declare const MAX_STATE_VALUE_BYTES: number
+MAX_TREE_BYTES	export declare const MAX_TREE_BYTES: number
+MAX_TREE_FILES	export declare const MAX_TREE_FILES = 20000
 MODEL_FAMILY_TOKENS	export declare const MODEL_FAMILY_TOKENS: Readonly<Record<ModelFamily, ModelFamilyTokens>>
 MODEL_INPUT_CAPABILITIES	export declare const MODEL_INPUT_CAPABILITIES: readonly ["text", "image", "audio", "file", "document", "video"]
 MODERATION_CATEGORIES	export declare const MODERATION_CATEGORIES: readonly ["harassment", "harassment/threatening", "hate", "hate/threatening", "illicit", "illicit/violent", "self-harm", "self-harm/instructions", "self-harm/intent", "sexual", "sexual/minors", "violence", "violence/graphic"]
+ManifestError	export declare class ManifestError extends Error
 MediaContentBlock	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaContentBounds	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaContentError	export declare class MediaContentError extends Error
@@ -402,7 +407,7 @@ MemoryCredentialStore	export type { CredentialRecord, CredentialValueSource, Mem
 MemoryRunFeedbackStoreOptions	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbackOptions, RunFeedbackLimits, RunFeedbackRun, RunFeedbackRunResolver, } from "./feedback.js"
 MemorySessionSearchMode	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 MockProviderOptions	export type { MockProviderOptions } from "./mock-provider.js"
-ModelClient	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+ModelClient	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
 ModelFamily	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 ModelFamilyTokens	export type { ModelFamilyTokens } from "./usage-estimation.js"
 ModelInputCapability	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
@@ -421,19 +426,20 @@ ObserveHook	export type { AroundHook, AroundHookName, CompactionWhenDecision, Co
 ObserveHookName	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 PARAMETERIZED_QUERY_GUIDANCE	export declare const PARAMETERIZED_QUERY_GUIDANCE = "Bind every user-supplied value (session ids, idempotency keys, tenant ids, timestamps, JSON payloads) as a query parameter. Quote/validate schema and table identifiers only
 PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 9
-PackageAPI	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageCommand	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageCommandContext	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageCommandInfo	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageDefinition	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageDefinitionInput	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageInput	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageInstance	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageInstanceOptions	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageAPI	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageCommand	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageCommandContext	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageCommandInfo	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageDefinition	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageDefinitionInput	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageInput	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageInstance	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageInstanceOptions	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
 PackageLoadError	export declare class PackageLoadError extends Error
-PackageLoadErrorCode	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageRequires	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-PackageToolOptions	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageLoadErrorCode	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageRequires	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageSource	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+PackageToolOptions	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
 PendingDecision	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 PendingDecisionKind	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 PendingToolCall	export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js"
@@ -450,7 +456,6 @@ Principal	export type { AgentIdentity, AssertIdentityActiveOptions, IdentityLimi
 PromptInstruction	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
 PromptTemplateOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
 ProtectedFieldPolicyOptions	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
-ProviderAddUsageError	export declare class ProviderAddUsageError extends Error
 ProviderCapture	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
 ProviderCaptureEntry	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
 ProviderCaptureOptions	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
@@ -544,8 +549,8 @@ SlotConflictError	export declare class SlotConflictError extends Error
 SlotContracts	export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js"
 SlotName	export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js"
 SlotProvider	export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js"
-SlotRegistrar	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
-SlotRegistrarEntry	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+SlotRegistrar	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+SlotRegistrarEntry	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
 SlotRegistry	export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js"
 SpeechError	export declare class SpeechError extends Error
 SsrfPolicy	export type { MediaHostAddress, MediaHostnameResolver, SsrfPolicy } from "./media-types.js"
@@ -690,6 +695,7 @@ assertRunLedgerConforms	export declare function assertRunLedgerConforms(fixture:
 assertSerializedRequestCoversContent	export declare function assertSerializedRequestCoversContent(request: ProviderRequest, body: unknown, options?: SerializedContentCoverageOptions): void
 assertSessionMetadataKey	export declare function assertSessionMetadataKey(key: string): string
 assertSessionStoreConforms	export declare function assertSessionStoreConforms(store: SessionStore, options?: SessionStoreConformanceOptions): Promise<void>
+assertSlotOwners	export declare function assertSlotOwners(records: readonly
 assertSpeechSupported	export declare function assertSpeechSupported(model: ModelConfig): void
 assertSsrfAllowedUrl	export declare function assertSsrfAllowedUrl(url: string, policy?: SsrfPolicy): void
 assertStateConcurrencyConforms	export declare function assertStateConcurrencyConforms(factories: StateConcurrencyFactories): Promise<readonly string[]>
@@ -705,11 +711,13 @@ assertTrusted	export declare function assertTrusted(policy: TrustPolicy | undefi
 assertUsageAccounting	export declare function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage
 assertValidAgentRunResume	export declare function assertValidAgentRunResume(resume: AgentRunResume): void
 assertVideoGenerationSupported	export declare function assertVideoGenerationSupported(model: ModelConfig): void
+assignSlot	export declare function assignSlot(slot: SlotName, owner: string | null, options: MaintainOptions): Promise<void>
 assignedLoop	export declare function assignedLoop(agent: Agent): LoopStrategy | undefined
 attentionTriggerState	export declare function attentionTriggerState(compiler: Pick<AttentionCompiler, "inputCap" | "runInputBudget">, turn:
 authMethodKey	export declare function authMethodKey(method: AuthMethod): string
 bindChargeToolRound	export declare function bindChargeToolRound(ctx: RoundContext): (calls: readonly ToolCallContent[]) => void | Promise<void>
 bindDispatchToolCall	export declare function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent) => Promise<ToolResult>
+bindManifestInstance	export declare function bindManifestInstance(definition: PackageDefinition<any>, config: Readonly<Record<string, unknown>> | undefined, options:
 bindSessionState	export declare function bindSessionState(view: SessionContext, store: SessionStateStore): void
 boundCheckpointMetadata	export declare function boundCheckpointMetadata(metadata: AgentRunCheckpointMetadata, redactor?: SecretRedactor): AgentRunCheckpointMetadata
 boundResponse	export declare function boundResponse(response: Response, maxBytes: number, errorPrefix?: string): Response
@@ -742,6 +750,7 @@ compileAttention	export declare function compileAttention(options: AttentionComp
 compileGuardrailPacks	export declare function compileGuardrailPacks(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>): CompiledGuardrailRules | undefined
 compileGuardrailPacksWithState	export declare function compileGuardrailPacksWithState(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>, initial?: Readonly<Record<string, unknown>>): CompiledGuardrailPacks
 composeSystemPrompt	export declare function composeSystemPrompt(contributions?: SystemPromptConfig, options?: ComposeSystemPromptOptions): string | undefined
+configure	export declare function configure(name: string, patch: JsonObject, options: MaintainOptions): Promise<void>
 contentBlockInputModality	export declare function contentBlockInputModality(block: ContentBlock): ModelInputCapability | undefined
 contextMessages	export declare function contextMessages(context: readonly ContextBlock[] | undefined): Message[]
 conversationMarkerMetadata	export declare function conversationMarkerMetadata(marker:
@@ -778,7 +787,6 @@ createExtensionKernel	export declare function createExtensionKernel(options?: Ex
 createFieldEvidenceGuardrail	export declare function createFieldEvidenceGuardrail(options: FieldEvidenceGuardrailOptions): Guardrail<"tool_input">
 createHookBus	export declare function createHookBus(options?: HookBusOptions): HookBus
 createId	export declare function createId(prefix: string): string
-createInitProject	export declare function createInitProject(options: InitOptions, runtime?: InitRuntime): Promise<InitResult>
 createJsonlSessionStore	export declare function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore
 createLoadSkillTool	export declare function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDefinition
 createLoadedSkillSet	export declare function createLoadedSkillSet(): LoadedSkillSet
@@ -800,7 +808,6 @@ createPersistenceMigrationContract	export declare function createPersistenceMigr
 createPersistenceSchemaModel	export declare function createPersistenceSchemaModel(): PersistenceSchemaModel
 createProtectedFieldPolicy	export declare function createProtectedFieldPolicy(options?: ProtectedFieldPolicyOptions): FieldPolicy
 createProviderCapture	export declare function createProviderCapture(options?: ProviderCaptureOptions): ProviderCapture
-createProviderProject	export declare function createProviderProject(options: ProviderAddOptions, runtime?: ProviderAddRuntime): Promise<ProviderAddResult>
 createProviderRegistry	export declare function createProviderRegistry(providers?: readonly AIProvider[], options?: ProviderRegistryOptions): ProviderRegistry
 createProviderResolver	export declare function createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver
 createProviderTurnMetadata	export declare function createProviderTurnMetadata(request: ProviderRequest, providerId: string, fields?: Omit<ProviderTurnMetadata, "providerId" | "model">): ProviderTurnMetadata
@@ -828,13 +835,10 @@ createUsageAccumulator	export declare function createUsageAccumulator():
 decisionPrincipalRef	export declare function decisionPrincipalRef(principal: Principal | undefined): string | undefined
 decisionScopesEqual	export declare function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean
 decodeConversationReplayCursor	export declare function decodeConversationReplayCursor(encoded: string, expectedThreadId: string, maxBytes?: number): ConversationReplayCursor
-defaultGalleryRoot	export declare function defaultGalleryRoot(): string
 defaultLoadDevCli	export declare const defaultLoadDevCli: PrismDevLoader
 defaultLoop	export declare const defaultLoop: LoopStrategy
 defaultProviderFilename	export declare function defaultProviderFilename(block: MediaContentBlock, fallback: string): string
-defaultProviderTemplatesRoot	export declare function defaultProviderTemplatesRoot(): string
 defaultResolver	export declare function defaultResolver(hostname: string): Promise<readonly MediaHostAddress[]>
-defaultTemplatesRoot	export declare function defaultTemplatesRoot(): string
 defaultUserConfigPath	export declare function defaultUserConfigPath(appName?: string): string
 deferSkillCatalog	export declare function deferSkillCatalog(request: ProviderRequest, skills: readonly Skill[], context: SkillRenderContext): void
 definePackage	export declare function definePackage<C = Readonly<Record<string, never>>>(input: PackageDefinitionInput<C>): PackageDefinition<C>
@@ -880,21 +884,22 @@ generateProviderTurn	export declare function generateProviderTurn(session: Sessi
 generateValidateReviseLoop	export declare function generateValidateReviseLoop(opts:
 generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
 getContextBudgetReport	export declare function getContextBudgetReport(request: ProviderRequest): ContextBudgetReport | undefined
-getInitUsage	export declare function getInitUsage(templatesRoot?: string, galleryRoot?: string): string
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
-getProviderAddUsage	export declare function getProviderAddUsage(): string
 getSessionBranchEntries	export declare function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>
 guardrailRefusalText	export declare function guardrailRefusalText(record: GuardrailRecord, prefix?: string): string | undefined
 handleNestedSignal	export declare function handleNestedSignal(ctx: RoundContext, error: AgentDelegationSuspendedError): Promise<void>
+hashPackageTree	export declare function hashPackageTree(dir: string, context:
 httpStatusError	export declare function httpStatusError(prefix: string, response: Response, bodyText: string): Error
 identityTelemetryAttributes	export declare function identityTelemetryAttributes(identity: AgentIdentity): Readonly<Record<string, string>>
+importDefinition	export declare function importDefinition(packagesDir: string, entry:
 inferToolResultTurns	export declare function inferToolResultTurns(history: readonly Message[]): readonly number[]
-initUsage	export declare const initUsage: string
 initialAgentRunState	export declare function initialAgentRunState(input:
 inputMessages	export declare function inputMessages(input: AgentInput): Message[]
 inputToMessages	export declare function inputToMessages(input: AgentInput): Message[]
 inspectAgent	export declare function inspectAgent(agent: Agent, sources: InspectSources): AgentInspection
 inspectHostComposition	export declare function inspectHostComposition(options: HostCompositionOptions): HostCompositionReport
+install	export declare function install(spec: string, options: InstallOptions): Promise<ManifestEntry>
+installedPackageDir	export declare function installedPackageDir(packagesDir: string, name: string): string
 isAgentLoopOptions	export declare function isAgentLoopOptions(value: AgentLoopStrategy | AgentLoopOptions | undefined): value is AgentLoopOptions
 isAllowedByCidr	export declare function isAllowedByCidr(hostname: string, allowedCidrs: readonly string[] | undefined): boolean
 isAttentionBudgetError	export declare function isAttentionBudgetError(error: unknown): error is AttentionBudgetError
@@ -905,6 +910,7 @@ isCompactionEntryData	export declare function isCompactionEntryData(value: unkno
 isContextBudgetError	export declare function isContextBudgetError(error: unknown): error is ContextBudgetError
 isDurableLoop	export declare function isDurableLoop(loop: import("../loop/index.js").LoopStrategy): boolean
 isFlushableRunLedger	export declare function isFlushableRunLedger(ledger: RunLedger): ledger is FlushableRunLedger
+isInstalledEntry	export declare function isInstalledEntry(record: ManifestRecord): record is ManifestEntry
 isJsonObject	export declare function isJsonObject(value: unknown): value is JsonObject
 isLoopbackAddress	export declare function isLoopbackAddress(value: string): boolean
 isLoopbackHostname	export declare function isLoopbackHostname(value: string): boolean
@@ -932,8 +938,7 @@ isUnsupportedStoreCapability	export declare function isUnsupportedStoreCapabilit
 isValidVersion	export declare function isValidVersion(text: string): boolean
 jsonBytes	export declare function jsonBytes(value: unknown): number
 kernelEvents	export declare function kernelEvents<T = Record<string, unknown>>(events: readonly AgentEvent[], name: string): Array<T &
-listInitProviders	export declare function listInitProviders(templatesRoot?: string): readonly string[]
-listInitTemplates	export declare function listInitTemplates(galleryRoot?: string): readonly TemplateInfo[]
+list	export declare function list(location?: MaintainLocation): Promise<ListedManifest>
 listSessionBranches	export declare function listSessionBranches(entries: readonly SessionEntry[]): readonly SessionBranch[]
 loadAgentRunState	export declare function loadAgentRunState(checkpoints: CheckpointStore, ref: AgentRunRef, ownership?: OwnershipScope): Promise<
 loadBinaryResource	export declare function loadBinaryResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext, options?: LoadBinaryResourceOptions): Promise<Uint8Array>
@@ -945,14 +950,16 @@ loadInstructionInjectors	export declare function loadInstructionInjectors(contri
 loadInstructionSource	export declare function loadInstructionSource(contribution: DiscoveredContribution, options?: LoadInstructionSourceOptions): Promise<ContextSource | undefined>
 loadInstructionSources	export declare function loadInstructionSources(contributions: readonly DiscoveredContribution[], options?: LoadInstructionSourceOptions): Promise<readonly ContextSource[]>
 loadJsonResource	export declare function loadJsonResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<JsonObject>
+loadManifest	export declare function loadManifest(options?: LoadManifestOptions): Promise<PackageInput[]>
 loadPackages	export declare function loadPackages(options: LoadPackagesOptions): Promise<LoadedPackages>
-loadProvidersCatalog	export declare function loadProvidersCatalog(templatesRoot?: string): ReadonlyMap<string, ProviderSpec>
 loadSettingsFiles	export declare function loadSettingsFiles(files: readonly NodeSettingsFile[]): Promise<SettingsProvider>
 loadSkillDirectory	export declare function loadSkillDirectory(directory: string, options?: LoadSkillDirectoryOptions): Promise<readonly Skill[]>
 loadSuspendedRunEntry	export declare function loadSuspendedRunEntry(store: import("./contracts.js").SessionStore, sessionId: string, runId?: string): Promise<SuspendedRunEntryData | undefined>
 loadSystemPromptFiles	export declare function loadSystemPromptFiles(options: SystemPromptFilesOptions): Promise<readonly SystemPromptContribution[]>
 loadTextResource	export declare function loadTextResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<string>
 loopConformance	export declare function loopConformance(strategy: LoopStrategy): Promise<LoopConformanceResult>
+manifestSchemaDocument	export declare function manifestSchemaDocument(): JsonSchema &
+manifestUsage	export declare const manifestUsage: string
 mapCacheRetention	export declare function mapCacheRetention(retention: CacheRetention | undefined, model: ModelConfig): "short" | "long" | undefined
 mapOpenAIChatUsage	export declare function mapOpenAIChatUsage(usage: unknown): Usage | undefined
 mapProviderStopReason	export declare function mapProviderStopReason(native: string | null | undefined): ProviderStopReason
@@ -960,8 +967,11 @@ matchNestedSticky	export declare function matchNestedSticky(session: SessionHost
 matchStickyDecision	export declare function matchStickyDecision(session: SessionHost, call: ToolCallContent, registry: ToolRegistry): StickyDecision | undefined
 measureInputCost	export declare function measureInputCost(options: MeasureInputCostOptions):
 mediaFingerprint	export declare function mediaFingerprint(mediaType: string, bytes: Uint8Array, name?: string): string
+merge	export declare function merge(base: JsonObject, over: JsonObject): JsonObject
 mergeCompaction	export declare function mergeCompaction(agent: false | CompactionOptions | undefined, run: false | CompactionOptions | undefined): CompactionOptions | undefined
 mergeConfigLayers	export declare function mergeConfigLayers(layers: readonly ConfigLayer[]): JsonObject
+mergeManifestScopes	export declare function mergeManifestScopes(sources: MergeSources): MergedManifest
+mergeManifestSlots	export declare function mergeManifestSlots(inputs: readonly PackageInput[], direct: SlotAssignments | undefined): SlotAssignments | undefined
 mergeProviderRequestOptions	export declare function mergeProviderRequestOptions(base: ProviderRequestOptions | undefined, patch: ProviderRequestOptions | undefined): ProviderRequestOptions | undefined
 mergeRetry	export declare function mergeRetry(agent: false | RetryOptions | undefined, run: false | RetryOptions | undefined): RetryOptions | undefined
 mergeSystemPromptConfig	export declare function mergeSystemPromptConfig(config: SystemPromptConfig | undefined, override: SystemPromptConfig | undefined): SystemPromptConfig
@@ -990,10 +1000,9 @@ parseAgentFile	export declare function parseAgentFile(text: string, path: string
 parseAgentRunState	export declare function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState
 parseAttentionStickyFrontier	export declare function parseAttentionStickyFrontier(value: unknown): PersistedAttentionStickyFrontier | undefined
 parseCliArgs	export declare function parseCliArgs(argv: readonly string[]): CliOptions
-parseInitArgs	export declare function parseInitArgs(argv: readonly string[], templatesRoot?: string, galleryRoot?: string): InitOptions
 parseJsonObjectArguments	export declare function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject
+parseManifest	export declare function parseManifest(json: unknown, options: ParseManifestOptions): PrismManifestV1
 parsePrismManifest	export declare function parsePrismManifest(value: unknown): PrismManifest
-parseProviderAddArgs	export declare function parseProviderAddArgs(argv: readonly string[]): ProviderAddOptions
 parseRange	export declare function parseRange(range: string): SemVerRange
 parseRetryAfterMs	export declare function parseRetryAfterMs(value: string | null, now?: number): number | undefined
 parseRpcRequest	export declare function parseRpcRequest(value: unknown): RpcRequest
@@ -1011,7 +1020,6 @@ pinnedFetch	export declare function pinnedFetch(url: URL, init: RequestInit | un
 pollBatch	export declare function pollBatch(provider: BatchJobsProvider, jobId: string, options?: PollBatchOptions): Promise<BatchJob>
 pollDeviceCodeToken	export declare function pollDeviceCodeToken(options: PollDeviceCodeTokenOptions): Promise<OAuthCredentials>
 prepareRunFeedback	export declare function prepareRunFeedback(input: AppendRunFeedbackInput, options: PrepareRunFeedbackOptions): Promise<RunFeedbackRecord>
-providerAddUsage	export declare const providerAddUsage: string
 providerContent	export declare function providerContent(event: Extract<ProviderEvent,
 providerContentDelta	export declare function providerContentDelta(content: ContentBlock): ProviderEvent
 providerContinuationRequired	export declare function providerContinuationRequired(cursor: string, reason?: string): ProviderEvent
@@ -1032,6 +1040,7 @@ readBoundedResponseText	export declare function readBoundedResponseText(response
 readCheckpointMetadata	export declare function readCheckpointMetadata(metadata: unknown): AgentRunCheckpointMetadata | undefined
 readConfigFile	export declare function readConfigFile(path: string): Promise<ConfigLayer["config"]>
 readJsonlSessionEntries	export declare function readJsonlSessionEntries(path: string): Promise<SessionEntryReadResult>
+readManifest	export declare function readManifest(dirs: ScopeDirs): Promise<PrismManifestV1 | undefined>
 readOptionalFile	export declare function readOptionalFile(path: string): Promise<string | undefined>
 readProviderHttpStatus	export declare function readProviderHttpStatus(error?: ErrorInfo): number | undefined
 readSettingsFile	export declare function readSettingsFile(path: string): Promise<ConfigLayer["config"]>
@@ -1056,6 +1065,7 @@ registerDiscoveredContributions	export declare function registerDiscoveredContri
 registerDiscoveredInstructionInjectors	export declare function registerDiscoveredInstructionInjectors(registries: ContributionRegistries, contributions: readonly DiscoveredContribution[], options?: LoadInstructionInjectorOptions): Promise<void>
 registerSkillCatalog	export declare function registerSkillCatalog(hooks: HookRegistrar): void
 rejectProviderMediaBlock	export declare function rejectProviderMediaBlock(part: ContentBlock, capabilities: ModelCapabilities, model: ModelConfig): never
+remove	export declare function remove(name: string, options: InstallLocation): Promise<void>
 renderPromptTemplate	export declare function renderPromptTemplate(template: string, variables: JsonObject, options?: PromptTemplateOptions): string
 replayDurableNestedAndPending	export declare function replayDurableNestedAndPending(ctx: RoundContext): Promise<void>
 replayToolResult	export declare function replayToolResult(ctx: RoundContext, result: ToolResult): Promise<void>
@@ -1101,6 +1111,7 @@ resolveToolsDisclosure	export declare function resolveToolsDisclosure(run?: Tool
 resolveTurnInputCap	export declare function resolveTurnInputCap(session: SessionHost, model: ModelConfig): number | undefined
 resolveUseCaseModel	export declare function resolveUseCaseModel(input: ResolveUseCaseModelInput): ResolvedUseCaseModel | undefined
 resolveUseCaseModelBinding	export declare function resolveUseCaseModelBinding(binding: UseCaseModelBinding | undefined, sessionModel?: ModelConfig): ResolvedUseCaseModel | undefined
+resolveUserHome	export declare function resolveUserHome(env?: NodeJS.ProcessEnv): string
 restoreAttentionFoldLedger	export declare function restoreAttentionFoldLedger(value: unknown): AttentionFoldLedger | undefined
 restoreAttentionStickyFrontier	export declare function restoreAttentionStickyFrontier(persisted: PersistedAttentionStickyFrontier): AttentionStickyFrontier
 restoreRunSessionState	export declare function restoreRunSessionState(session: RunRestoreTarget, state: StoredAgentRunState, options: RunRestoreOptions): void
@@ -1116,14 +1127,13 @@ runFeedbackConformance	export declare function runFeedbackConformance(factory: R
 runFeedbackPageLimit	export declare function runFeedbackPageLimit(limit: number | undefined, maximum?: number): number
 runGuardrailList	export declare function runGuardrailList<S extends GuardrailStage>(options: RunGuardrailListOptions<S>): Promise<GuardrailRunResult>
 runImageGenerationConformance	export declare function runImageGenerationConformance(options: ImageGenerationConformanceOptions): Promise<ImageGenerationResult | undefined>
-runInitCommand	export declare function runInitCommand(argv: readonly string[], runtime: InitRuntime): Promise<number>
 runInstructionInjectors	export declare function runInstructionInjectors(injectors: readonly InstructionInjector[], ctx: InstructionContext):
 runLoopUntilSettled	export declare function runLoopUntilSettled(ctx: RoundContext): Promise<Usage | undefined>
+runManifestCommand	export declare function runManifestCommand(argv: readonly string[], runtime: ManifestCliRuntime): Promise<number>
 runModerationConformance	export declare function runModerationConformance(options: ModerationConformanceOptions): Promise<ModerationResult | undefined>
 runPrefixStabilityConformance	export declare function runPrefixStabilityConformance(options: PrefixStabilityConformanceOptions): Promise<PrefixStabilityConformanceResult>
 runPrismDevSubcommand	export declare function runPrismDevSubcommand(argv: readonly string[], runtime: PrismDevSubcommandRuntime): Promise<number>
 runPromptMode	export declare function runPromptMode(session: Session, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void>
-runProviderAddCommand	export declare function runProviderAddCommand(argv: readonly string[], runtime: ProviderAddRuntime): Promise<number>
 runRpcServer	export declare function runRpcServer(options: RpcServerOptions): Promise<void>
 runRunLedgerConformance	export declare function runRunLedgerConformance(factory: RunLedgerConformanceFactory, options?: RunLedgerConformanceOptions): Promise<void>
 runSessionStoreConformance	export declare function runSessionStoreConformance(factory: SessionStoreConformanceFactory, options?: SessionStoreConformanceOptions): Promise<void>
@@ -1134,6 +1144,7 @@ sanitizeCacheKey	export declare function sanitizeCacheKey(value: string | undefi
 satisfies	export declare function satisfies(version: SemVer, range: SemVerRange): boolean
 saveAgentRunState	export declare function saveAgentRunState(input:
 schemaDefaults	export declare function schemaDefaults(schema: JsonSchema): JsonObject
+scopeDirs	export declare function scopeDirs(location: ScopeLocation): ScopeDirs
 scorePrefixStability	export declare function scorePrefixStability(requests: readonly ProviderRequest[], options?: ScorePrefixStabilityOptions): PrefixStabilitySample
 scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
 searchLinearSessions	export declare function searchLinearSessions(bySession: Map<string, SessionEntry[]>, leafBySession: Map<string, string>, query: SessionSearchQuery, caps?: LinearSearchCaps): PersistencePage<SessionSearchHit>
@@ -1151,6 +1162,7 @@ serializeOpenAIResponsesStructuredOutput	export declare function serializeOpenAI
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
 serializePdfDocumentWireBlock	export declare function serializePdfDocumentWireBlock(options:
 serializeToolResultJson	export declare function serializeToolResultJson(message: Message): string
+setEnabled	export declare function setEnabled(name: string, enabled: boolean, options: MaintainOptions): Promise<void>
 singleShotLoop	export declare const singleShotLoop: AgentLoopStrategy
 skillCatalogDraft	export declare function skillCatalogDraft(request: ProviderRequest):
 skillHasRenderableBody	export declare function skillHasRenderableBody(skill: Skill, context?: SkillRenderContext): boolean
@@ -1177,6 +1189,7 @@ thinkingLevelsForModel	export declare function thinkingLevelsForModel(model: Pic
 throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void
 throwIfAbortedSignal	export declare function throwIfAbortedSignal(signal: AbortSignal | undefined): void
 toJsonValue	export declare function toJsonValue(value: unknown, path?: string, depth?: number):
+toPackageDefinition	export declare function toPackageDefinition(exported: unknown, context:
 toRunResultStatus	export declare function toRunResultStatus(status: AgentRunStatus, stopReason?: AgentFinishReason): RunResultStatus
 toToolResultMessage	export declare function toToolResultMessage(result: ToolResult): Message
 toolCallContent	export declare function toolCallContent(id: string, name: string, args?: JsonObject): ToolCallContent
@@ -1197,9 +1210,27 @@ type Compactor	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerErr
 type ConformanceCheck	export { type ConformanceCheck, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
 type DecideCombination	export { type DecideCombination, HOOK_CATALOG, HOOK_COMBINATION, type HookCatalogEntry, OBSERVE_HOOK_NAMES, } from "./catalog.js"
 type HookCatalogEntry	export { type DecideCombination, HOOK_CATALOG, HOOK_COMBINATION, type HookCatalogEntry, OBSERVE_HOOK_NAMES, } from "./catalog.js"
+type InstallLocation	export { type InstallLocation, type InstallOptions, install, remove } from "./install.js"
+type InstallOptions	export { type InstallLocation, type InstallOptions, install, remove } from "./install.js"
 type JsonSchema	export { type JsonSchema, type SchemaError, type SchemaErrorRule, type SchemaResult, SECRET_REF, validateJsonSchema } from "./schema.js"
+type ListedManifest	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+type ListedPackage	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+type LoadManifestOptions	export { type LoadManifestOptions, loadManifest, type ManifestTrustRequest } from "./load.js"
 type LoopConformanceOptions	export { echoTool, type LoopConformanceOptions, type LoopConformanceResult, loopConformance, textProvider, twoTurnProvider, } from "./loop-conformance.js"
 type LoopConformanceResult	export { echoTool, type LoopConformanceOptions, type LoopConformanceResult, loopConformance, textProvider, twoTurnProvider, } from "./loop-conformance.js"
+type MaintainLocation	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+type MaintainOptions	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+type ManifestConfigErrorCode	export { type ManifestConfigErrorCode, ManifestError, type ManifestErrorCode, type ManifestErrorOptions } from "./errors.js"
+type ManifestEntry	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
+type ManifestErrorCode	export { type ManifestConfigErrorCode, ManifestError, type ManifestErrorCode, type ManifestErrorOptions } from "./errors.js"
+type ManifestErrorOptions	export { type ManifestConfigErrorCode, ManifestError, type ManifestErrorCode, type ManifestErrorOptions } from "./errors.js"
+type ManifestInstall	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
+type ManifestOverride	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
+type ManifestRecord	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
+type ManifestScope	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
+type ManifestTrustRequest	export { type LoadManifestOptions, loadManifest, type ManifestTrustRequest } from "./load.js"
+type MergeSources	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
+type MergedManifest	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
 type MockProviderOptions	export { createMockProvider, type MockProviderOptions } from "../mock-provider.js"
 type OAuthTokenSuccessPayload	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
 type PackageConfigDefinition	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
@@ -1210,13 +1241,18 @@ type PackageConformanceOptions	export { type ConformanceCheck, type PackageConfo
 type PackageConformanceResult	export { type ConformanceCheck, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
 type PackageLoadErrorCode	export { PackageLoadError, type PackageLoadErrorCode, type PackageLoadErrorOptions } from "./errors.js"
 type PackageLoadErrorOptions	export { PackageLoadError, type PackageLoadErrorCode, type PackageLoadErrorOptions } from "./errors.js"
+type ParseManifestOptions	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
 type PinnedFetchOptions	export { boundResponse, defaultResolver, isLoopbackAddress, isLoopbackHostname, normalizeHostname, type PinnedFetchOptions, pinnedFetch, raceAbort, requestPinned, resolvePinnedAddress, } from "./pinned-fetch.js"
 type PollDeviceCodeTokenOptions	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
+type PrismManifestV1	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
+type ResolvedManifestEntry	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
 type ResolvedPackageConfig	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
 type RunControllerInternals	export { createRunController, type AskRequest, type AskResolution, type RunControllerInternals } from "./run-controller.js"
 type SchemaError	export { type JsonSchema, type SchemaError, type SchemaErrorRule, type SchemaResult, SECRET_REF, validateJsonSchema } from "./schema.js"
 type SchemaErrorRule	export { type JsonSchema, type SchemaError, type SchemaErrorRule, type SchemaResult, SECRET_REF, validateJsonSchema } from "./schema.js"
 type SchemaResult	export { type JsonSchema, type SchemaError, type SchemaErrorRule, type SchemaResult, SECRET_REF, validateJsonSchema } from "./schema.js"
+type ScopeDirs	export { readManifest, resolveUserHome, type ScopeDirs, type ScopeLocation, scopeDirs, writeManifest } from "./store.js"
+type ScopeLocation	export { readManifest, resolveUserHome, type ScopeDirs, type ScopeLocation, scopeDirs, writeManifest } from "./store.js"
 type ScriptedAnswer	export { createScriptedHostUi, type ScriptedAnswer, type ScriptedHostUi } from "./host-ui.js"
 type ScriptedHostUi	export { createScriptedHostUi, type ScriptedAnswer, type ScriptedHostUi } from "./host-ui.js"
 type SlotAssignments	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
@@ -1225,18 +1261,23 @@ type SlotName	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerErro
 type SlotProvider	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
 type SlotRegistry	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
 type ToolDispatchContext	export { dispatchableToolCalls, dispatchToolCallsInOrder, throwIfAborted, type ToolDispatchContext } from "./dispatch.js"
-usage	export declare const usage = "Usage: prism [--mode print|json|rpc] [-p prompt] [options]\n prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--with-workflows] [--with-evals] [--force]\n prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]\n prism dev [--port <n>] [--host <addr>] (loopback inspector
+type VerifyIssue	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+type VerifyOptions	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+type VerifyResult	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
+usage	export declare const usage: string
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
 validateDeterministicTurnAnswer	export declare function validateDeterministicTurnAnswer(value: unknown): DeterministicTurnAnswer
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
 validateJsonSchema	export declare function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult
 validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[]
-validateProviderName	export declare function validateProviderName(name: string): void
 validateRunStateOptions	export declare function validateRunStateOptions(options: AgentRunStateOptions): void
 validateStructuredOutputOptions	export declare function validateStructuredOutputOptions(options: StructuredOutputOptions): StructuredOutputOptions
 validationRespectPack	export declare const validationRespectPack: GuardrailPackDefinition
+verify	export declare function verify(options?: VerifyOptions): Promise<VerifyResult[]>
+verifyInstalled	export declare function verifyInstalled(entry:
 version	export declare const version = "0.12.1"
 waitForRetry	export declare function waitForRetry(decision: RetryDecision, signal?: AbortSignal): Promise<void>
 withContextBlocks	export declare function withContextBlocks(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft | undefined
 withoutStructuredOutput	export declare function withoutStructuredOutput(request: ProviderRequest): ProviderRequest
 withoutTrailingInput	export declare function withoutTrailingInput(messages: readonly Message[], input: readonly Message[]): Message[]
+writeManifest	export declare function writeManifest(dirs: ScopeDirs, manifest: PrismManifestV1, io?: WriteIo): Promise<void>

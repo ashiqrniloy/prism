@@ -19,6 +19,7 @@ export type {
   PackageDefinitionInput,
   PackageInput,
   PackageInstance,
+  PackageSource,
   PackageInstanceOptions,
   PackageRequires,
   SlotRegistrar,

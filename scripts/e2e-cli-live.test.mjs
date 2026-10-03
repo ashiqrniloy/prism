@@ -2,10 +2,8 @@
  * Packed-install CLI live journey (plans/064 Task 5).
  *
  * Packs the root umbrella + @arnilo/prism-providers into a fresh consumer, then
- * drives the real `prism` bin from that install: `init --provider <id>`
- * scaffold (generated offline test passes), `providers add` scaffold, and
- * print/json/rpc modes over the chosen provider's real wire. The provider is
- * the first init-catalog entry whose credential env var is present (override
+ * drives the real `prism` bin from that install: `new package` scaffold and print/json/rpc modes over the chosen provider's real wire. The provider is
+ * the first catalog entry whose credential env var is present (override
  * with PRISM_LIVE_CLI_PROVIDER); requires PRISM_LIVE_PROVIDER_TESTS=1 and at
  * least one provider key — otherwise the run skips.
  *
@@ -14,13 +12,25 @@
  */
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll as after, describe, it } from "bun:test";
-import { createPackedConsumer, repoRoot } from "./fixtures/packed-consumer.mjs";
+import { createPackedConsumer } from "./fixtures/packed-consumer.mjs";
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
-const catalog = JSON.parse(readFileSync(join(repoRoot, "templates", "init", "providers.json"), "utf8"));
+// Providers `--provider` builds (src/cli-runner.ts CLI_PROVIDERS): id, credential env var, factory.
+const catalog = Object.fromEntries(
+  [
+    ["openai", "OPENAI_API_KEY", "createOpenAIResponsesProvider"],
+    ["openrouter", "OPENROUTER_API_KEY", "createOpenRouterProvider"],
+    ["kimi", "KIMI_API_KEY", "createKimiCodingProvider"],
+    ["zai", "ZAI_API_KEY", "createZaiProvider"],
+    ["opencode-go", "OPENCODE_API_KEY", "createOpenCodeGoProvider"],
+    ["neuralwatt", "NEURALWATT_API_KEY", "createNeuralWattProvider"],
+    ["alibaba", "DASHSCOPE_API_KEY", "createAlibabaProvider"],
+    ["ollama", "OLLAMA_API_KEY", "createOllamaProvider"],
+  ].map(([id, envKey, factoryExport]) => [id, { id, envKey, factoryExport, factoryModule: `@arnilo/prism-providers/${id}` }]),
+);
 const requested = process.env.PRISM_LIVE_CLI_PROVIDER;
 const providerId =
   requested ??
@@ -34,7 +44,7 @@ if (!LIVE || !spec || !API_KEY) {
   const why = !LIVE
     ? "set PRISM_LIVE_PROVIDER_TESTS=1 plus a provider credential"
     : !spec
-      ? `PRISM_LIVE_CLI_PROVIDER=${requested} is not in the init catalog`
+      ? `PRISM_LIVE_CLI_PROVIDER=${requested} is not a --provider id`
       : `no catalog provider credential found (set one of: ${Object.values(catalog)
           .filter((e) => e.envKey)
           .map((e) => e.envKey)
@@ -80,36 +90,12 @@ function runCli(args, cwd = consumer, timeoutMs = 60_000) {
 }
 
 describe(`packed-install CLI live journey (${providerId} over the real wire)`, () => {
-  it(`prism init --provider ${providerId} scaffolds a project whose generated offline test passes`, () => {
-    const init = runCli(["init", "app", "--provider", providerId]);
-    assert.equal(init.status, 0, init.stdout + init.stderr);
-    const app = join(consumer, "app");
-    for (const rel of ["package.json", "src/agent.ts", "src/__tests__/agent.test.ts"]) {
-      assert.ok(existsSync(join(app, rel)), `scaffold missing ${rel}`);
+  it("prism new package scaffolds a package skeleton", () => {
+    const created = runCli(["new", "package", "@acme/prism-live", "--dir", "live-pkg"]);
+    assert.equal(created.status, 0, created.stdout + created.stderr);
+    for (const rel of ["package.json", "src/index.ts", "src/__tests__/package.test.ts", "README.md"]) {
+      assert.ok(existsSync(join(consumer, "live-pkg", rel)), `scaffold missing ${rel}`);
     }
-    const agentSrc = readFileSync(join(app, "src", "agent.ts"), "utf8");
-    assert.match(agentSrc, new RegExp(spec.factoryExport));
-    assert.match(agentSrc, new RegExp(`process\\.env\\.${spec.envKey}`), "scaffold must read the key from env, never inline it");
-    // Generated offline test runs against the packed install (mock provider, no network).
-    // Plan 124 Task 2: the consumer runtime is Bun, so the generated suite runs `bun test`
-    // (native TypeScript, no type-stripper child).
-    const test = record(
-      "generated test",
-      spawnSync("bun", ["test", "--timeout=0", join("app", "src", "__tests__", "agent.test.ts")], {
-        cwd: consumer,
-        encoding: "utf8",
-        timeout: 60_000,
-      }),
-    );
-    assert.equal(test.status, 0, test.stdout + test.stderr);
-  });
-
-  it("prism providers add scaffolds an adapter package", () => {
-    const add = runCli(["providers", "add", "acme", "--base-url", "https://api.acme.example/v1", "--env-key", "ACME_API_KEY"]);
-    assert.equal(add.status, 0, add.stdout + add.stderr);
-    const pkg = join(consumer, "acme");
-    assert.ok(existsSync(join(pkg, "package.json")), "providers add must write a package manifest");
-    assert.ok(existsSync(join(pkg, "src", "provider.ts")), "providers add must write the provider module");
   });
 
   it("print mode completes a real one-shot prompt", () => {

@@ -52,6 +52,7 @@ node examples/custom-builders.ts
 node examples/custom-session-store.ts
 node examples/custom-tools-skills-context.ts
 node examples/define-package.ts
+node examples/manifest.ts
 node examples/evals.ts
 node examples/evaluation-gate.ts
 node examples/execution-timeline.ts
@@ -91,6 +92,7 @@ node examples/agent-durable-approval.ts
 node examples/durable-loops-and-approvals.ts
 node examples/custom-loop.ts
 node examples/define-package.ts
+node examples/manifest.ts
 node examples/session.ts
 node examples/approval.ts
 node examples/host-hooks.ts
@@ -134,6 +136,7 @@ Each demo prints a single JSON line with its result.
 - `docker-process-session.ts` — **demo**: long-running process management inside a Docker sandbox with durable recovery, attested reconnect, and fail-closed isolation.
 - `hosted-sandbox.ts` — **demo**: fake E2B client through `createE2BSandbox` / `connectE2BSandbox` (filesystem-only pause, no auto-resume; network-free).
 - `agent-durable-approval.ts` — suspend before a tool side effect, then resume once with durable CAS approval.
+- `manifest.ts` — **demo**: `install` a `file:` fixture package, `loadManifest` it into an agent, `setEnabled(false)` and reload, then show a skipped untrusted project manifest, `configure` refusing a literal secret, and `integrity_mismatch` after one byte changes (`@arnilo/prism/manifest`, real `bun add`).
 - `define-package.ts` — **demo**: two `definePackage` packages on one agent with no host wiring — a `tool.call` deny, an observer, a status note, a config schema with an `env:` secret ref, a per-session `when` tool, a command, `package_state` session state kept across a fork and a reopen, a tracked background task, then `agent.inspect()` (which shows the ref, never the value) and `dispose()` (network-free).
 - `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
 - `session.ts` — **demo** (Phase 3): `agent.session()`, a streamed run, the `RunResult` status and the messages it appended, then the same session reopened by id through the `store` slot and listed through `agent.sessions` (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
@@ -174,6 +177,7 @@ Each demo prints a single JSON line with its result.
 - `custom-session-store.ts` — **demo**: implement the `SessionStore` contract (append + list) and assign it as the `store` slot; observe the entry kinds the runtime appends.
 - `custom-tools-skills-context.ts` — **demo**: host-owned tool + skill + context provider in one agent, with a tool-call loop (no filesystem/shell/browser coding tools).
 - `define-package.ts` — **demo**: two packages on one agent. Listing a package is the wiring.
+- `manifest.ts` — **demo**: install a local fixture package, load it, run a turn with its tool, disable and reload, then an untrusted project manifest, a literal secret, and a tampered byte all fail closed (real `bun add`, Bun only).
 - `provider-deepseek.ts` — **demo**: register DeepSeek via the extension kernel (fake key, no network).
 - `provider-xai.ts` — **demo**: register xAI Grok + api_key/oauth auth methods (fake key).
 - `provider-xai-oauth.ts` — **demo**: SuperGrok device-code login with mocked `fetch`.

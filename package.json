@@ -31,6 +31,11 @@
       "types": "./dist/providers/media.d.ts",
       "default": "./dist/providers/media.js"
     },
+    "./manifest": {
+      "types": "./dist/manifest/index.d.ts",
+      "default": "./dist/manifest/index.js"
+    },
+    "./manifest/schema.json": "./dist/manifest/packages.v1.schema.json",
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
@@ -143,7 +148,7 @@
     "packages/prism-code"
   ],
   "scripts": {
-    "build:core": "bun scripts/with-build-lock.mjs tsc",
+    "build:core": "bun scripts/with-build-lock.mjs tsc && bun scripts/emit-manifest-schema.mjs",
     "clean": "rm -rf dist packages/*/dist",
     "build": "bun run build:core && for p in @arnilo/prism-mcp @arnilo/prism-providers @arnilo/prism-memory @arnilo/prism-work @arnilo/prism-core @arnilo/prism-channels @arnilo/prism-coding-tools @arnilo/prism-ag-ui @arnilo/prism-web-tools @arnilo/prism-acp-agent @arnilo/prism-agent-sdk @arnilo/prism-code; do bun run --filter \"$p\" build || exit 1; done",
     "typecheck": "bun run build && bun run --workspaces --if-present typecheck && tsc -p examples --noEmit",

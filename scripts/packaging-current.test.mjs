@@ -87,9 +87,9 @@ for (const pkg of packages) {
   });
 
   if (pkg.isCore) {
-    test(`${pkg.name} (core): ships docs hub, CLI bin, and init templates`, () => {
+    test(`${pkg.name} (core): ships docs hub, CLI bin, and package scaffold`, () => {
       const files = packList(pkg.dir, pkg.name);
-      for (const required of ["docs/index.md", "dist/cli.js", "templates/init/package.json.tmpl", "templates/README.md"]) {
+      for (const required of ["docs/index.md", "dist/cli.js", "templates/package/package.json.tmpl", "templates/package/src/index.ts.tmpl", "templates/README.md"]) {
         assert.ok(files.includes(required), `${pkg.name} missing ${required} in pack`);
       }
     });

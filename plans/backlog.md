@@ -332,6 +332,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
 - What: Make the call in the Phase 4 manifest plan: today `optional` covers a `setup` throw only, and `kernel_range`, `missing_package`, and `missing_service` stay fatal.
 - Why: A manifest entry marked `optional: true` is meant to be skippable, and a kernel-range mismatch is the most common reason an optional package cannot load. Until it is decided, such a package fails the whole load.
+- Status: Still open after plans/150-Phase-4-Manifest-And-Installer.md; `loadManifest` skips an `optional` entry only when the package is not installed.
 
 ## Close the `search_tools` gap for `when`-hidden package tools
 - Section: Further Actions
@@ -437,3 +438,31 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
 - What: `scripts/phase8-conformance`, `phase20-security`, `phase40-security`, `obscura-host-conformance` and `phase16-freeze` pass `tools: [...]`, use `askEveryTool`, and read the old durable-resume shapes.
 - Why: They fail on shapes plans 144-148 changed, so their coverage is dark.
+
+## Fix the stale `install-smoke` assertions
+- Section: Further Actions
+- Priority: P1
+- Source: plans/150-Phase-4-Manifest-And-Installer.md
+- What: `src/__tests__/install-smoke.test.ts` checks `createCodingCompactionStrategy` from `@arnilo/prism-memory/compaction/llm` (no longer exported) and its packed integration script expects an exclusive `shell` call not to overlap siblings.
+- Why: It is the only test that installs the packed tarballs, including `prism new package`, and it is red for reasons that are not about the install.
+
+## Install lock for concurrent manifest writers
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/150-Phase-4-Manifest-And-Installer.md
+- Compromise: `install`, `remove`, `configure`, `setEnabled`, and `assignSlot` read, change, and atomically write one manifest with no lock.
+- Implications: Two concurrent writers on one scope can lose an update. No torn file.
+
+## Move the CLI `--provider` table out with the runner modes
+- Section: Further Actions
+- Priority: P2
+- Source: plans/150-Phase-4-Manifest-And-Installer.md
+- What: Delete `src/cli-providers.ts` and its `core-boundaries.test.ts` allowance when Phase 11 retires the runner modes.
+- Why: It names provider packages inside core as a temporary seam.
+
+## Update the released docs for `prism add` and `prism new package`
+- Section: Further Actions
+- Priority: P3
+- Source: plans/150-Phase-4-Manifest-And-Installer.md
+- What: `docs/cli-rpc.md`, `provider-packages.md`, `release-and-install.md`, `host-compositions.md`, `dev-inspector.md`, and the `docs.test.ts` assertions that pin them still describe `prism init` and `providers add`.
+- Why: They are 0.12.1 pages and change at the Phase 11 release.

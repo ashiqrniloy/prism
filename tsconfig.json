@@ -13,5 +13,6 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "bun-types/test.d.ts"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/__tests__/fixtures"]
 }

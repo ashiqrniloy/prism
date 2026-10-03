@@ -163,11 +163,21 @@ export interface PackageInstanceOptions {
   readonly optional?: boolean;
 }
 
+/** Where an instance came from when `@arnilo/prism/manifest` built it. Code instances carry none. */
+export interface PackageSource {
+  readonly kind: "manifest";
+  readonly scope: "user" | "project";
+  /** Slots the manifest assigns to this package. `AgentConfig.slots` overrides them per slot. */
+  readonly assigns?: readonly SlotName[];
+}
+
 /** A definition bound to its config. Pass it in `AgentConfig.packages`. */
 export interface PackageInstance {
   readonly definition: PackageDefinition<any>;
   readonly config: Readonly<Record<string, unknown>> | undefined;
   readonly optional: boolean;
+  /** Set by `loadManifest`. Its config is the `manifest` layer; a code instance's config is the `code` layer. */
+  readonly source?: PackageSource;
 }
 
 /** Callable: `coding({ root })` returns a {@link PackageInstance}. Passing the bare definition means defaults. */

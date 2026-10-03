@@ -1,0 +1,11 @@
+import { describe, expect, it } from "bun:test";
+import { packageConformance } from "@arnilo/prism/testing";
+import pkg from "../index.js";
+
+describe("{{name}}", () => {
+  it("passes the package conformance suite", async () => {
+    const result = await packageConformance(pkg);
+    expect(result.checks.filter((check) => !check.ok)).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+});

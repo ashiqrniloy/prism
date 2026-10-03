@@ -1,7 +1,7 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 
 // Architectural boundary invariants for the core package. These are deliberate
 // forbidden-string / contract-shape scans: they assert absences and seam shapes
@@ -20,8 +20,9 @@ function sourceFiles(dir: string, predicate: (path: string) => boolean): string[
 // Core runtime source excludes the openai-compatible shim (a sanctioned provider seam)
 // and the plan 091 model-family ratio table. That table is the one sanctioned home for
 // provider-family names in core: they are chars/token keys and model-id patterns, never
-// behavior branches, and every other core file stays literal-free.
-const PROVIDER_LITERAL_SEAMS = new Set(["src/contracts-core/usage.ts", "src/usage-estimation.ts"]);
+// behavior branches, and every other core file stays literal-free. `src/cli-providers.ts` is the CLI's `--provider`
+// table (package names and env keys), a second sanctioned home until the runner modes go in Phase 11.
+const PROVIDER_LITERAL_SEAMS = new Set(["src/contracts-core/usage.ts", "src/usage-estimation.ts", "src/cli-providers.ts"]);
 const runtimeFiles = sourceFiles(
   "src",
   (path) =>

@@ -72,6 +72,8 @@ export interface LoadedPackage {
   readonly capabilities: readonly Capability[];
   readonly config: JsonObject;
   readonly configSources: Readonly<Record<string, PackageConfigSource>>;
+  /** `code` for a package the host listed, `manifest:<scope>` for one `loadManifest` built. */
+  readonly source: "code" | "manifest:user" | "manifest:project";
 }
 
 export interface LoadedPackages {
@@ -230,7 +232,9 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   // 2-3. Merge and validate config.
   const entries: Entry[] = normalized.map((item) => {
     const { definition } = item;
-    const resolved = resolvePackageConfig(definition, { manifest: item.config, host: options.packageConfig?.[definition.name] });
+    const host = options.packageConfig?.[definition.name];
+    // The instance's config is the manifest layer for a `loadManifest` instance and the code layer for the rest.
+    const resolved = resolvePackageConfig(definition, item.source ? { manifest: item.config, host } : { code: item.config, host });
     return {
       ...item,
       name: definition.name,
@@ -705,6 +709,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     capabilities: [...entry.capabilities],
     config: entry.config,
     configSources: entry.configSources,
+    source: entry.source ? `manifest:${entry.source.scope}` : "code",
   });
   return {
     packages: loaded.map((entry) => describe(entry, "loaded")),

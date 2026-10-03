@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
-import type { AgentConfig, PackageAPI, PackageLoadErrorCode } from "../index.js";
+import type { AgentConfig, PackageAPI, PackageInstance, PackageLoadErrorCode, PackageSource } from "../index.js";
+import type { PackageConfigSource } from "../packages/config.js";
 import { CAPABILITIES, type Capability } from "../packages/capabilities.js";
 
 /**
@@ -75,7 +76,15 @@ const FROZEN_LOAD_ERROR_CODES: readonly PackageLoadErrorCode[] = [
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 type _codes = Equal<PackageLoadErrorCode, (typeof FROZEN_LOAD_ERROR_CODES)[number]>;
 type _capabilities = Equal<Capability, (typeof FROZEN_CAPABILITIES)[number]>;
-const _frozen: [_codes, _capabilities] = [true, true];
+/**
+ * Phase 4 (plan 150 Task 4): a code instance's config is the `code` layer, a `loadManifest` instance's is the
+ * `manifest` layer, and `PackageInstance.source` says which. Changing either fails here on purpose.
+ */
+const FROZEN_CONFIG_SOURCES = ["default", "manifest", "code", "host"] as const;
+type _sources = Equal<PackageConfigSource, (typeof FROZEN_CONFIG_SOURCES)[number]>;
+type _instance = Equal<keyof PackageInstance, "definition" | "config" | "optional" | "source">;
+type _source = Equal<keyof PackageSource, "kind" | "scope" | "assigns">;
+const _frozen: [_codes, _capabilities, _sources, _instance, _source] = [true, true, true, true, true];
 
 const RETIRED_ROOT_EXPORTS = [
   "createExtensionKernel",

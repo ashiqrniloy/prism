@@ -490,7 +490,7 @@ Prism maintains the manifest. Hosts choose whether to read it.
 {
   "version": 1,
   "packages": [
-    { "name": "@arnilo/prism-provider-anthropic", "version": "^1.0.0", "integrity": "sha512-…" },
+    { "name": "@arnilo/prism-provider-anthropic", "version": "^1.0.0", "integrity": "sha512-…", "capabilities": ["models"] },
     { "name": "@arnilo/prism-tools-coding", "version": "^1.0.0", "integrity": "sha512-…",
       "config": { "root": "." } },
     { "name": "@arnilo/prism-approval", "version": "^1.0.0", "integrity": "sha512-…",
@@ -507,6 +507,7 @@ Prism maintains the manifest. Hosts choose whether to read it.
 - **Storage.** Packages are installed with `bun add` into a Prism-managed directory: `.prism/packages/` for project scope, `~/.prism/packages/` for user scope. The loader imports from there. Integrity is checked against the recorded hash before import.
 - **Scopes merge user first, then project.** An entry is keyed by package name, and a project entry overrides the user entry's version, config, and enabled flag. Array order is load order within the dependency constraints.
 - **Project trust.** A project manifest loads only after the host's trust callback approves it. The callback receives the manifest's package names, versions, and declared capabilities. With no callback, the project scope does not load. This is the same rule as project MCP servers today.
+- **Every installed entry records `capabilities` (amended in plan 150).** `install` imports the package once and records what it declares beside `version` and `integrity`, so the project trust prompt can show capabilities before any project code is imported. The loader fails closed with `capabilities_drift` when the installed package declares something else. The sample above omits the field on all but the first entry for brevity; the format requires it with `version` and `integrity` (an override entry in project scope carries none of the three). See `docs/next/manifest.md`.
 - **Secret fields accept refs only.** Refs look like `env:NAME` or `keyring:name`. A literal value fails validation.
 - **API** (`@arnilo/prism/manifest`):
   - `loadManifest({ root?, scopes?, trustProject? }) → PackageInput[]`

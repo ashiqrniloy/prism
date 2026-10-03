@@ -4,18 +4,18 @@ import process from "node:process";
 import type { Readable, Writable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { runPrismDevSubcommand } from "./cli-dev.js";
-import { type InitRuntime, initUsage, loadProvidersCatalog, runInitCommand } from "./cli-init.js";
-import { type ProviderAddRuntime, providerAddUsage, runProviderAddCommand } from "./cli-provider-add.js";
-import type { Session, AIProvider, ContributionFileKind, ModelConfig, RunOptions, Skill, SystemPromptContribution } from "./contracts.js";
-import { createAgent, createMockProvider, providerDone, providerTextDelta, registerContextSources } from "./index.js";
-import type { PackageInput } from "./packages/api.js";
+import { MANIFEST_COMMANDS, manifestUsage, runManifestCommand } from "./cli-manifest.js";
+import { CLI_PROVIDERS } from "./cli-providers.js";
 import type { ContextSource } from "./context-build.js";
+import type { AIProvider, ContributionFileKind, ModelConfig, RunOptions, Session, Skill, SystemPromptContribution } from "./contracts.js";
+import { createAgent, createMockProvider, providerDone, providerTextDelta, registerContextSources } from "./index.js";
 import type { AgentBundle } from "./node/agent-definitions.js";
 import { discoverAgentBundles } from "./node/agent-definitions.js";
 import { discoverContributions } from "./node/contribution-discovery.js";
 import { loadInstructionSources } from "./node/instruction-sources.js";
 import { loadSystemPromptFiles } from "./node/system-project-prompts.js";
 import { createPathTrustPolicy } from "./node/trust.js";
+import type { PackageInput } from "./packages/api.js";
 import { type RpcSessionFactory, runRpcServer } from "./rpc.js";
 import { createSkillRegistry } from "./skills.js";
 
@@ -80,31 +80,19 @@ export interface CliRuntime {
   /** Optional global root for SYSTEM.md auto-load (host-controlled). No default;
    *  the CLI does not auto-touch the user's home directory. */
   readonly globalRoot?: string;
-  /** Override init template root (tests). */
-  readonly initTemplatesRoot?: string;
-  /** Override template gallery root (tests). */
-  readonly initGalleryRoot?: string;
-  /** Override version stamped by `prism init` (tests). */
-  readonly initPackageVersion?: string;
-  /** Override provider-scaffold template root (tests). */
-  readonly providerTemplatesRoot?: string;
-  /** Override version stamped by `prism providers add` (tests). */
-  readonly providerPackageVersion?: string;
-  /** Working directory for relative `prism init` destinations (tests). */
+  /** Project root for the manifest commands (tests). Defaults to `process.cwd()`. */
   readonly cwd?: string;
   /** Test injection for `prism dev`: overrides `@arnilo/prism-dev` resolution. */
   readonly loadDevCli?: () => Promise<unknown>;
 }
 
 export const usage = `Usage: prism [--mode print|json|rpc] [-p prompt] [options]
-       prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--with-workflows] [--with-evals] [--force]
-       prism providers add <name> [--base-url <url>] [--env-key <name>] [--model <id>] [--force]
-       prism dev [--port <n>] [--host <addr>]   (loopback inspector; delegates into @arnilo/prism-dev)
+${manifestUsage}       prism dev [--port <n>] [--host <addr>]   (loopback inspector; delegates into @arnilo/prism-dev)
 
 
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
-  --provider <name>          Provider id from the init provider catalog ('mock' is built in;
+  --provider <name>          Provider id ('mock' is built in;
                              real providers need their @arnilo/prism-providers package +
                              credential env var)
   --model <name>             Explicit model name
@@ -305,26 +293,12 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
       ...(runtime.loadDevCli ? { loadDevCli: runtime.loadDevCli as Parameters<typeof runPrismDevSubcommand>[1]["loadDevCli"] } : {}),
     });
   }
-  if (argv[0] === "init") {
-    const initRuntime: InitRuntime = {
+  if (argv[0] !== undefined && MANIFEST_COMMANDS.has(argv[0])) {
+    return runManifestCommand(argv, {
       stdout: runtime.stdout,
       stderr: runtime.stderr,
-      ...(runtime.initTemplatesRoot !== undefined ? { templatesRoot: runtime.initTemplatesRoot } : {}),
-      ...(runtime.initGalleryRoot !== undefined ? { galleryRoot: runtime.initGalleryRoot } : {}),
-      ...(runtime.initPackageVersion !== undefined ? { packageVersion: runtime.initPackageVersion } : {}),
       ...(runtime.cwd !== undefined ? { cwd: runtime.cwd } : {}),
-    };
-    return runInitCommand(argv.slice(1), initRuntime);
-  }
-  if (argv[0] === "providers" && argv[1] === "add") {
-    const providerRuntime: ProviderAddRuntime = {
-      stdout: runtime.stdout,
-      stderr: runtime.stderr,
-      ...(runtime.providerTemplatesRoot !== undefined ? { templatesRoot: runtime.providerTemplatesRoot } : {}),
-      ...(runtime.providerPackageVersion !== undefined ? { packageVersion: runtime.providerPackageVersion } : {}),
-      ...(runtime.cwd !== undefined ? { cwd: runtime.cwd } : {}),
-    };
-    return runProviderAddCommand(argv.slice(2), providerRuntime);
+    });
   }
 
   let options: CliOptions;
@@ -336,7 +310,7 @@ export async function runCli(argv: readonly string[], runtime: CliRuntime): Prom
   }
 
   if (options.help) {
-    write(runtime.stdout, `${usage}\n${initUsage}\n${providerAddUsage}`);
+    write(runtime.stdout, `${usage}`);
     return 0;
   }
 
@@ -448,26 +422,23 @@ export async function runPromptMode(session: Session, options: CliOptions, stdou
 
 export class CliUsageError extends Error {}
 
-/** Build the agent session for the CLI. Real providers resolve through the init
- *  provider catalog (`templates/init/providers.json`): the catalog names the
- *  factory module/export and credential env var, the CLI imports it from the
- *  consumer's node_modules — same catalog `prism init` scaffolds from, so the
- *  CLI and the scaffold never disagree about how a provider is built. */
+/** Build the agent session for the CLI. Real providers resolve through {@link CLI_PROVIDERS}: each names
+ *  the factory module/export and credential env var, imported from the consumer's node_modules. */
 async function defaultCreateSession(options: CliOptions): Promise<Session> {
   const providerId = options.provider;
   if (!providerId) {
     throw new CliUsageError(
-      "No provider configured. Pass --provider <id> (see the init provider catalog, or 'mock') or embed Prism with an explicit provider.",
+      `No provider configured. Pass --provider <id> ('mock' or one of: ${[...CLI_PROVIDERS.keys()].join(", ")}) or embed Prism with an explicit provider.`,
     );
   }
   if (providerId === "mock") return await mockSession(options);
-  const spec = loadProvidersCatalog().get(providerId);
-  if (!spec?.factoryModule || !spec.factoryExport) {
+  const spec = CLI_PROVIDERS.get(providerId);
+  if (!spec) {
     throw new CliUsageError(
-      `Unknown provider "${providerId}". Supported: ${["mock", ...loadProvidersCatalog().keys()].join(", ")} — or embed Prism with an explicit provider.`,
+      `Unknown provider "${providerId}". Supported: ${["mock", ...CLI_PROVIDERS.keys()].join(", ")} — or embed Prism with an explicit provider.`,
     );
   }
-  const envKey = spec.envKey ?? "";
+  const envKey = spec.envKey;
   if (!process.env[envKey]) throw new CliUsageError(`Provider "${providerId}" requires ${envKey} in the environment.`);
   let factory: unknown;
   try {

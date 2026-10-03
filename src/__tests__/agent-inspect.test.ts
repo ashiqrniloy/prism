@@ -132,7 +132,8 @@ describe("agent.inspect()", () => {
       const text = JSON.stringify(agent.inspect());
       assert.ok(text.includes("env:TEST_KEY"), "the ref is shown");
       assert.equal(text.includes(SECRET), false, "the env value and a secret in a non-secret field are not");
-      assert.equal(agent.inspect().packages[0]!.configSources.apiKey, "manifest");
+      assert.equal(agent.inspect().packages[0]!.configSources.apiKey, "code");
+      assert.equal(agent.inspect().packages[0]!.source, "code");
       // A value `credentials.resolve` returned is masked too.
       const resolver = pkg(
         "@acme/resolver",

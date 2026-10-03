@@ -1,8 +1,8 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join, normalize } from "node:path";
-import { describe, it } from "bun:test";
 
 const docsDir = "docs";
 
@@ -3459,6 +3459,7 @@ describe("docs", () => {
         "examples/session.ts",
         "examples/approval.ts",
         "examples/host-hooks.ts",
+        "examples/manifest.ts",
       ];
       const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
       for (const file of demos) {
@@ -3494,6 +3495,20 @@ describe("docs", () => {
           assert.deepEqual(hooks.executed, ["read_file"], "the network call was denied");
           assert.deepEqual(hooks.tools, ["fetch_url", "read_file"], "the disabled tool is gone");
         }
+        if (file === "examples/manifest.ts") {
+          assert.deepEqual(JSON.parse(out), {
+            installed: "@acme/hello@^1.0.0",
+            capabilities: ["host-ui"],
+            status: "completed",
+            greeted: "hello prism",
+            toolAfterDisable: false,
+            untrustedLoaded: 0,
+            literal: "secret_literal",
+            unchanged: true,
+            tampered: "integrity_mismatch",
+            withinBudget: true,
+          });
+        }
         if (file === "examples/open-connector-sidecar.ts") {
           assert.deepEqual(JSON.parse(out), {
             tools: ["mcp:oc:search_actions", "mcp:oc:get_action_guide", "mcp:oc:execute_action"],
@@ -3505,6 +3520,19 @@ describe("docs", () => {
       }
     } finally {
       for (const file of emitted) rmSync(join(examplesDir, file), { force: true });
+    }
+  });
+
+  it("manifest_example_imports_only_prism_manifest_and_testing", () => {
+    const source = readFileSync("examples/manifest.ts", "utf8");
+    const specifiers = [...source.matchAll(/^\s*(?:import|export)\b[^;]*?\bfrom\s+["']([^"']+)["']/gm)].map((match) => match[1]);
+    assert.ok(specifiers.some((specifier) => specifier === "@arnilo/prism/manifest"));
+    for (const specifier of specifiers) {
+      if (!specifier?.startsWith("@arnilo/")) continue;
+      assert.ok(
+        ["@arnilo/prism", "@arnilo/prism/manifest", "@arnilo/prism/testing"].includes(specifier),
+        `examples/manifest.ts imports ${specifier}`,
+      );
     }
   });
 

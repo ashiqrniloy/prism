@@ -822,6 +822,7 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "PackageInput",
   "PackageInstance",
   "PackageInstanceOptions",
+  "PackageSource",
   "PackageRequires",
   "SessionContext",
   "SessionState",

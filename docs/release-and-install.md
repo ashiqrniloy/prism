@@ -126,6 +126,8 @@ Run `npm run clean` explicitly after deleting source files or switching branches
 | `@arnilo/prism/providers/schema` | `dist/providers/schema.{js,d.ts}` |
 | `@arnilo/prism/providers/media` | `dist/providers/media.{js,d.ts}` |
 | `@arnilo/prism/testing` | `dist/testing/index.{js,d.ts}` |
+| `@arnilo/prism/manifest` | `dist/manifest/index.{js,d.ts}` (staged for 1.0; see `docs/next/manifest.md`) |
+| `@arnilo/prism/manifest/schema.json` | `dist/manifest/packages.v1.schema.json` |
 | `@arnilo/prism/testing/provider-conformance` | `dist/testing/provider-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/agent-event-source-conformance` | `dist/testing/agent-event-source-conformance.{js,d.ts}` |
 | `@arnilo/prism/testing/state-concurrency-conformance` | `dist/testing/state-concurrency-conformance.{js,d.ts}` |

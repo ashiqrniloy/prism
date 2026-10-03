@@ -12,6 +12,7 @@ import type {
 import { SessionNotFoundError } from "../contracts-core/session.js";
 import { inspectAgent } from "../agent/inspect.js";
 import { createHookBus } from "../hooks/index.js";
+import { mergeManifestSlots } from "../packages/define.js";
 import { loadPackages } from "../packages/loader.js";
 import { createSlotDefaults, createSlotRegistry } from "../slots/index.js";
 import { registerSkillCatalog } from "../skills-catalog.js";
@@ -78,7 +79,10 @@ export async function createAgentWith(config: AgentConfig, internals: CreateAgen
   registerSkillCatalog(hooks.registrar("kernel"));
   const readSkillDir = internals.readSkillDir ?? readSkillDirectory;
   // `skills.dirs` reads through the same reader as `PackageAPI.skills.addDir`, once per agent.
-  const effective = await resolveHostSkillDirs(config, readSkillDir);
+  const resolved = await resolveHostSkillDirs(config, readSkillDir);
+  // A manifest instance may assign slots to its package; `AgentConfig.slots` wins per slot.
+  const manifestSlots = mergeManifestSlots(resolved.packages ?? [], resolved.slots);
+  const effective = manifestSlots === resolved.slots ? resolved : { ...resolved, ...(manifestSlots ? { slots: manifestSlots } : {}) };
   // Loading is host code: a throwing package or host registrar fails agent creation closed, and a
   // failed load has already unwound everything it registered. `AgentConfig.hooks` is the inline
   // package `host`, loaded after every listed package.
@@ -86,7 +90,7 @@ export async function createAgentWith(config: AgentConfig, internals: CreateAgen
     inputs: config.packages ?? [],
     packageConfig: config.packageConfig,
     hostHooks: config.hooks,
-    slotAssignments: config.slots,
+    slotAssignments: effective.slots,
     bus: hooks,
     slots,
     host: config.host,

@@ -973,17 +973,11 @@ console.log("PACKED HOST COMPOSITIONS OK");
   result.hostCompositionsStatus = hostComp.status;
   result.hostCompositionsOut = hostComp.stdout + hostComp.stderr;
 
-  const initPA = run(
-    "bun",
-    ["./node_modules/@arnilo/prism/dist/cli.js", "init", "scaffold-pa", "--template", "personal-assistant"],
-    consumer,
-  );
-  assert.equal(initPA.status, 0, initPA.stdout + initPA.stderr);
-  assert.ok(existsSync(join(consumer, "scaffold-pa", "src", "agent.ts")));
-
-  const initBW = run("bun", ["./node_modules/@arnilo/prism/dist/cli.js", "init", "scaffold-bw", "--template", "business-worker"], consumer);
-  assert.equal(initBW.status, 0, initBW.stdout + initBW.stderr);
-  assert.ok(existsSync(join(consumer, "scaffold-bw", "src", "agent.ts")));
+  const scaffold = run("bun", ["./node_modules/@arnilo/prism/dist/cli.js", "new", "package", "@acme/prism-smoke", "--dir", "scaffold-pkg"], consumer);
+  assert.equal(scaffold.status, 0, scaffold.stdout + scaffold.stderr);
+  assert.ok(existsSync(join(consumer, "scaffold-pkg", "src", "index.ts")));
+  const listed = run("bun", ["./node_modules/@arnilo/prism/dist/cli.js", "list"], consumer);
+  assert.equal(listed.status, 0, listed.stdout + listed.stderr);
 
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
   // Third-party transitive deps (e.g. `diff`) may ship their own maps; we only gate Prism packages.

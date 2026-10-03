@@ -1,0 +1,14 @@
+import { definePackage } from "@arnilo/prism";
+
+export default definePackage({
+  name: "{{name}}",
+  version: "0.1.0",
+  description: "TODO: one sentence about what this package adds.",
+  requires: { prism: "^{{kernelVersion}}" },
+  // Declare every capability the package uses, for example ["network", "host-ui"]. None yet.
+  // Mark a secret field with "x-prism-secret": true; the manifest then accepts only env: or keyring: refs.
+  config: { type: "object", properties: {}, additionalProperties: false },
+  setup(_prism) {
+    // Register tools, hooks, services, or slot implementations here.
+  },
+});

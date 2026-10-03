@@ -10,13 +10,15 @@ export interface PackageConfigDefinition {
 
 /** The config layers for one package, lowest precedence first (defaults come from the schema). */
 export interface PackageConfigLayers {
-  /** The manifest layer (Phase 4 feeds it). */
+  /** The manifest layer: the config of an instance `loadManifest` built. */
   readonly manifest?: unknown;
+  /** The config a code instance carries (`coding({ root })`). */
+  readonly code?: unknown;
   /** `AgentConfig.packageConfig[name]`. */
   readonly host?: unknown;
 }
 
-export type PackageConfigSource = "default" | "manifest" | "host";
+export type PackageConfigSource = "default" | "manifest" | "code" | "host";
 
 export interface ResolvedPackageConfig {
   /** The merged, validated config with defaults applied. */
@@ -47,7 +49,7 @@ function isObject(value: JsonValue): value is JsonObject {
 }
 
 /** Deep-merges objects and replaces arrays and scalars, returning a fresh value. */
-function merge(base: JsonObject, over: JsonObject): JsonObject {
+export function merge(base: JsonObject, over: JsonObject): JsonObject {
   const out: Record<string, JsonValue> = { ...base };
   for (const [key, value] of Object.entries(over)) {
     const current = out[key];
@@ -84,6 +86,7 @@ function layerObject(name: string, label: string, value: unknown): JsonObject {
 export function resolvePackageConfig(definition: PackageConfigDefinition, layers: PackageConfigLayers = {}): ResolvedPackageConfig {
   const { name } = definition;
   const manifest = layerObject(name, "manifest", layers.manifest);
+  const code = layerObject(name, "code", layers.code);
   const host = layerObject(name, "host", layers.host);
   const schema = definition.config ?? NO_CONFIG;
   if (schema.type !== undefined && schema.type !== "object") {
@@ -103,7 +106,7 @@ export function resolvePackageConfig(definition: PackageConfigDefinition, layers
       });
     throw error;
   }
-  const merged = merge(merge(defaults, manifest), host);
+  const merged = merge(merge(merge(defaults, manifest), code), host);
   let result: ReturnType<typeof validateJsonSchema>;
   try {
     result = validateJsonSchema(schema, merged);
@@ -125,7 +128,13 @@ export function resolvePackageConfig(definition: PackageConfigDefinition, layers
   }
   const sources: Record<string, PackageConfigSource> = {};
   for (const key of Object.keys(result.value)) {
-    sources[key] = Object.hasOwn(host, key) ? "host" : Object.hasOwn(manifest, key) ? "manifest" : "default";
+    sources[key] = Object.hasOwn(host, key)
+      ? "host"
+      : Object.hasOwn(code, key)
+        ? "code"
+        : Object.hasOwn(manifest, key)
+          ? "manifest"
+          : "default";
   }
   return { config: result.value, sources };
 }

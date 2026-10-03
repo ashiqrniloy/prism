@@ -6,6 +6,7 @@ import type { Agent, AgentConfig } from "../contracts.js";
 import { skillInfos, toolInfos } from "./views.js";
 import { isSessionScopedHookId } from "../agent-session/runtime-registry.js";
 import type { HookBus } from "../hooks/index.js";
+import type { PackageConfigSource } from "../packages/config.js";
 import type { LoadedPackages } from "../packages/loader.js";
 import type { SecretRedactor } from "../redaction.js";
 import { SLOT_NAMES, type SlotName, type SlotRegistry } from "../slots/index.js";
@@ -16,8 +17,10 @@ export interface InspectedPackage {
   readonly capabilities: readonly string[];
   readonly optional: boolean;
   readonly status: "loaded" | "skipped";
+  /** `code` (the host listed it) or `manifest:user` / `manifest:project` (`loadManifest` built it). */
+  readonly source: "code" | "manifest:user" | "manifest:project";
   /** Where each config key's value came from. */
-  readonly configSources: Readonly<Record<string, "default" | "manifest" | "host">>;
+  readonly configSources: Readonly<Record<string, PackageConfigSource>>;
   /** The merged config. A secret field holds its `env:` / `keyring:` ref, never a resolved value. */
   readonly config: Readonly<Record<string, unknown>>;
 }
@@ -92,6 +95,7 @@ export function inspectAgent(agent: Agent, sources: InspectSources): AgentInspec
       capabilities: [...entry.capabilities],
       optional: entry.optional,
       status: entry.status,
+      source: entry.source,
       configSources: { ...entry.configSources },
       config: entry.config,
     })),

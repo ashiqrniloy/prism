@@ -1,4 +1,12 @@
-import type { PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageInstanceOptions } from "./api.js";
+import type { SlotAssignments, SlotName } from "../slots/index.js";
+import type {
+  PackageDefinition,
+  PackageDefinitionInput,
+  PackageInput,
+  PackageInstance,
+  PackageInstanceOptions,
+  PackageSource,
+} from "./api.js";
 import { isCapability } from "./capabilities.js";
 import { PackageLoadError } from "./errors.js";
 import { type JsonSchema, assertJsonSchemaSupported } from "./schema.js";
@@ -121,18 +129,56 @@ export function definePackage<C = Readonly<Record<string, never>>>(input: Packag
   return definition;
 }
 
+/**
+ * Binds a definition to manifest config and provenance. Only `@arnilo/prism/manifest` calls it; the public
+ * `PackageInstanceOptions` has no `source`, so a package cannot claim to come from a manifest.
+ */
+export function bindManifestInstance(
+  definition: PackageDefinition<any>,
+  config: Readonly<Record<string, unknown>> | undefined,
+  options: { readonly optional: boolean; readonly source: PackageSource },
+): PackageInstance {
+  if (!definitions.has(definition)) invalid(undefined, "a manifest instance needs a definition made by definePackage");
+  const instance: PackageInstance = Object.freeze({
+    definition,
+    config,
+    optional: options.optional,
+    source: Object.freeze({ ...options.source }),
+  });
+  instances.add(instance);
+  return instance;
+}
+
+/** `AgentConfig.slots` merged over the slots the listed manifest instances assign to their packages. */
+export function mergeManifestSlots(inputs: readonly PackageInput[], direct: SlotAssignments | undefined): SlotAssignments | undefined {
+  const assigned: Partial<Record<SlotName, string>> = {};
+  for (const input of inputs) {
+    if (typeof input !== "object" || input === null || !instances.has(input)) continue;
+    for (const slot of input.source?.assigns ?? []) assigned[slot] = input.definition.name;
+  }
+  if (Object.keys(assigned).length === 0) return direct;
+  const host = Object.fromEntries(Object.entries(direct ?? {}).filter(([, value]) => value !== undefined));
+  return { ...assigned, ...host };
+}
+
 /** A `packages` entry as the loader sees it. */
 export interface NormalizedPackage {
   readonly definition: PackageDefinition<any>;
   readonly config: Readonly<Record<string, unknown>> | undefined;
   readonly optional: boolean;
+  readonly source?: PackageSource;
 }
 
 /** Accepts a definition (defaults) or an instance, and rejects anything `definePackage` did not make. */
 export function normalizePackageInput(input: PackageInput): NormalizedPackage {
   if (typeof input === "function" && definitions.has(input)) return { definition: input, config: undefined, optional: false };
   if (typeof input === "object" && input !== null && instances.has(input)) {
-    return { definition: input.definition, config: input.config, optional: input.optional };
+    return {
+      definition: input.definition,
+      config: input.config,
+      optional: input.optional,
+      ...(input.source ? { source: input.source } : {}),
+    };
   }
   throw new PackageLoadError("definition_invalid", "A packages entry must come from definePackage(...) or a package instance.");
 }

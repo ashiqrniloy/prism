@@ -238,7 +238,7 @@ test("the bun-blocked paths stay off the stage file sets", () => {
   for (const needle of ["--test-isolation", "--experimental-test-coverage", "--test-concurrency", "npm run"]) {
     assert.ok(!stageArgs.includes(needle), `STAGES must not carry ${needle}`);
   }
-  for (const file of ["src/__tests__/cli-provider-add.test.ts", "packages/prism-channels/src/__tests__/postgres.integration.test.ts"]) {
+  for (const file of ["packages/prism-channels/src/__tests__/postgres.integration.test.ts"]) {
     assert.ok(!stageArgs.includes(file), `${file} must stay off every stage argument`);
   }
   assert.ok(

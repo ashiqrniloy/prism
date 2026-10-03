@@ -4,7 +4,7 @@ import { join } from "node:path";
 /**
  * Plan 040 Task 4 — `prism-dev` bin and the programmatic runner that
  * `prism dev` delegates into. Boots the inspector against the current
- * `prism init` scaffold's agent (`dist/agent.js` exporting `createAppAgent`)
+ * the project's agent (`dist/agent.js` exporting `createAppAgent`)
  * and serves it on loopback.
  *
  * Security posture: this process never reads `process.env` for secrets —
@@ -30,7 +30,7 @@ export interface DevCliRuntime {
 const usage = `Usage: prism-dev [--port <n>] [--host <addr>]
        prism dev    [--port <n>] [--host <addr>]   (delegates into @arnilo/prism-coding-tools/dev)
 
-Boots the loopback inspector over the current prism-init scaffold's agent
+Boots the loopback inspector over the project's agent
 (dist/agent.js → createAppAgent()). Default bind 127.0.0.1:4311. A
 non-loopback --host is refused unless remote authorization is wired
 programmatically. Credentials stay in the agent config — never read from the
@@ -43,7 +43,7 @@ function resolveScaffoldAgent(cwd: string, stderr: Writable): Promise<Agent | un
     (mod: { createAppAgent?: () => Agent | Promise<Agent>; default?: () => Agent | Promise<Agent> }) => {
       const factory = mod.createAppAgent ?? mod.default;
       if (typeof factory !== "function") {
-        stderr.write(`prism dev: ${entry} must export createAppAgent() — the prism init scaffold does this by default.\n`);
+        stderr.write(`prism dev: ${entry} must export createAppAgent() — the project's agent module must export it.\n`);
         return undefined;
       }
       return factory();

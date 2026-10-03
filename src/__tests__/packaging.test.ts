@@ -144,7 +144,7 @@ describe("packaging guard", () => {
       });
 
       if (pkg.isCore) {
-        it("ships the docs hub, CLI bin, and init templates", () => {
+        it("ships the docs hub, CLI bin, and package scaffold", () => {
           const files = getPackList(pkg.dir, pkg.name);
           assert.ok(files.includes("docs/index.md"), `${pkg.name} missing docs/index.md`);
           assert.equal(
@@ -153,16 +153,10 @@ describe("packaging guard", () => {
             `${pkg.name} must not pack staged docs/next pages`,
           );
           assert.ok(files.includes("dist/cli.js"), `${pkg.name} missing dist/cli.js`);
-          assert.ok(files.includes("templates/init/package.json.tmpl"), `${pkg.name} missing init templates`);
-          assert.ok(files.includes("templates/init/src/agent.ts.tmpl"), `${pkg.name} missing agent template`);
-          assert.ok(files.includes("templates/init/providers.json"), `${pkg.name} missing init provider catalog`);
-          assert.ok(files.includes("templates/README.md"), `${pkg.name} missing templates gallery README`);
-          assert.ok(files.includes("templates/deep-research/manifest.json"), `${pkg.name} missing deep-research manifest`);
-          assert.ok(files.includes("templates/deep-research/package.json.tmpl"), `${pkg.name} missing deep-research template`);
-          assert.ok(files.includes("templates/personal-assistant/manifest.json"), `${pkg.name} missing personal-assistant manifest`);
-          assert.ok(files.includes("templates/personal-assistant/package.json.tmpl"), `${pkg.name} missing personal-assistant template`);
-          assert.ok(files.includes("templates/business-worker/manifest.json"), `${pkg.name} missing business-worker manifest`);
-          assert.ok(files.includes("templates/business-worker/package.json.tmpl"), `${pkg.name} missing business-worker template`);
+          for (const file of ["package.json", "src/index.ts", "package.test.ts", "README.md"]) {
+            assert.ok(files.includes(`templates/package/${file}.tmpl`), `${pkg.name} missing templates/package/${file}.tmpl`);
+          }
+          assert.ok(files.includes("templates/README.md"), `${pkg.name} missing templates README`);
         });
       }
 
