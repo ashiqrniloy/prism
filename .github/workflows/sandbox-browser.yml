@@ -87,7 +87,7 @@ jobs:
           echo "0.2.0 blocker gate: Docker + native capability evidence present"
       - name: cache Playwright chromium
         if: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE == '1' }}
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           # Key follows the playwright-core that `bun ci` actually installed (the
