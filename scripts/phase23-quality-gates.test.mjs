@@ -49,7 +49,7 @@ test("timing quarantine: the racy elapsed assert is gone; kept guards carry name
         : "packages/prism-coding-tools/src/security/__tests__/native-sandbox.test.ts",
       "ponytail: wall-clock promptness guard",
     ],
-    ["packages/prism-core/src/credentials/node/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
+    ["packages/credentials/keyring/src/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
   ]) {
     const src = readFileSync(join(ROOT, file), "utf8");
     assert.ok(src.includes(needle), `${file} must document its kept timing ceiling`);

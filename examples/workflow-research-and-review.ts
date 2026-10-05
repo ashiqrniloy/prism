@@ -1,12 +1,5 @@
-import {
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  createToolRegistry,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createSecretRedactor, createToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -14,6 +7,7 @@ import {
   runWorkflow,
   type WorkflowEvent,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Sequential research → draft → review pipeline with in-memory checkpoints.
 // Three agent nodes chained: researcher gathers facts, writer produces draft,
@@ -29,7 +23,7 @@ const tools = createToolRegistry();
 async function makeAgent(_name: string, system: string) {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     tools: { add: tools.list() },
     instructions: system,
   });

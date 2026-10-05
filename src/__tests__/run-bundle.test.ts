@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
-import {
-  agentFingerprint,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  type SessionStore,
-  snapshotRunBundle,
-} from "../index.js";
+import { agentFingerprint, createAgent, createMemoryCheckpointStore, providerDone, providerTextDelta, type SessionStore, snapshotRunBundle } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 const model = { provider: "mock", model: "mock" };
 
@@ -92,15 +84,15 @@ describe("snapshotRunBundle", () => {
   });
 
   it("records_hook_registration_ids_so_a_gate_change_moves_the_digest", async () => {
-    const withoutGate = await createAgent({ model, provider: createMockProvider([providerDone()]) });
+    const withoutGate = await createAgent({ model, packages: [mockProvider([[providerDone()]])] });
     const withGate = await createAgent({
       model,
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       hooks: (hooks) => hooks.on("model.request", (request) => request),
     });
     const otherGate = await createAgent({
       model,
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       hooks: (hooks) => hooks.on("model.response", (message) => message),
     });
     const digests = [

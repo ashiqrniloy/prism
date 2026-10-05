@@ -262,20 +262,29 @@ export function measureNonNullAssertions(rootDir = process.cwd()) {
     ".",
   ]);
   const { allowlisted, enforced } = loadNonNullPolicy(rootDir);
+  // `--only` still emits non-lint diagnostics (e.g. a biome.json schema-version info), which are
+  // neither assertion sites nor comparable with the error/warning summary.
+  const diagnostics = report.diagnostics.filter((diagnostic) => diagnostic.category.startsWith("lint/"));
   const expected = report.summary.errors + report.summary.warnings;
-  if (report.diagnostics.length !== expected) {
+  if (diagnostics.length !== expected) {
     throw new Error(
-      `non-null assertion measurement truncated: ${report.diagnostics.length} of ${expected} diagnostics reported — raise NON_NULL_DIAGNOSTIC_LIMIT`,
+      `non-null assertion measurement truncated: ${diagnostics.length} of ${expected} diagnostics reported — raise NON_NULL_DIAGNOSTIC_LIMIT`,
     );
   }
+  // An allowlist entry may carry a `*` segment (`packages/providers/*/src/**`), so match with a regex.
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const dirs = allowlisted
-    .map((glob) => ({ key: glob.replace(/\/\*\*$/, ""), prefix: `${glob.replace(/\/\*\*$/, "")}/` }))
-    .sort((a, b) => b.prefix.length - a.prefix.length);
+    .map((glob) => {
+      const base = glob.replace(/\/\*\*$/, "");
+      const pattern = base.split("*").map(escape).join("[^/]+");
+      return { key: base, pattern: new RegExp(`^${pattern}/`) };
+    })
+    .sort((a, b) => b.key.length - a.key.length);
   const byPath = Object.fromEntries(dirs.map((dir) => [dir.key, 0]));
   const outside = [];
-  for (const diagnostic of report.diagnostics) {
+  for (const diagnostic of diagnostics) {
     const path = diagnostic.location.path;
-    const match = dirs.find((dir) => path.startsWith(dir.prefix));
+    const match = dirs.find((dir) => dir.pattern.test(path));
     if (match) byPath[match.key] += 1;
     else outside.push(path);
   }
@@ -286,7 +295,7 @@ export function measureNonNullAssertions(rootDir = process.cwd()) {
     enforced: enforced.map((pattern) => ({
       pattern,
       files: matchingFileCount(rootDir, pattern),
-      sites: report.diagnostics.filter((diagnostic) => diagnostic.location.path === pattern).length,
+      sites: diagnostics.filter((diagnostic) => diagnostic.location.path === pattern).length,
     })),
   };
 }

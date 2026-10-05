@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { ProviderEvent, ProviderRequest } from "../index.js";
-import { createMockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "../index.js";
+import { providerDone, providerTextDelta, providerToolCall, toolCallContent } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
 
 async function collect(provider = createMockProvider(), request: Partial<ProviderRequest> = {}) {
   const events: ProviderEvent[] = [];

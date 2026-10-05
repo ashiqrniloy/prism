@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AgentIdentity, type OAuthCredentials, pollDeviceCodeToken, revokeOAuthCredential } from "@arnilo/prism";
+import { type AgentIdentity, type OAuthCredentials, type Secret } from "@arnilo/prism";
+import { pollDeviceCodeToken, revokeOAuthCredential, secretToOAuthCredentials } from "@arnilo/prism/provider-kit";
 import {
   computeOAuth2S256Challenge,
   createGoogleWorkspaceOAuthProvider,
   createMicrosoft365OAuthProvider,
   createOAuthWorkTokenProvider,
-  type ExtendedOAuthCredentialStore,
   resolveGoogleWorkspaceScopes,
   resolveMicrosoft365Scopes,
+  type WorkTokenOAuthStore,
 } from "../index.js";
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
@@ -28,7 +29,7 @@ function identity(overrides: Partial<AgentIdentity> = {}): AgentIdentity {
 
 function memoryStore(
   initial: Record<string, OAuthCredentials> = {},
-): ExtendedOAuthCredentialStore & { dump(): Record<string, OAuthCredentials> } {
+): WorkTokenOAuthStore & { dump(): Record<string, OAuthCredentials> } {
   const map = new Map<string, OAuthCredentials>(Object.entries(initial));
   const key = (provider: string, accountId?: string) => `${provider}\u0000${accountId ?? ""}`;
   return {
@@ -43,6 +44,16 @@ function memoryStore(
     },
     dump() {
       return Object.fromEntries(map);
+    },
+  };
+}
+
+/** The provider-kit sink shape `@arnilo/prism-credentials-keyring` builds over an OAuth row store. */
+function oauthSink(store: WorkTokenOAuthStore, provider: string, accountId?: string) {
+  return {
+    store: (_ref: string, secret: Secret) => store.set(provider, secretToOAuthCredentials(secret)),
+    delete: async () => {
+      await store.delete(provider, accountId);
     },
   };
 }
@@ -159,7 +170,12 @@ describe("revokeOAuthCredential", () => {
       }) as typeof fetch,
     });
     const store = memoryStore({ "google-workspace\u0000acct-1": { access: "a", refresh: "the-refresh", accountId: "acct-1" } });
-    await revokeOAuthCredential({ provider, credentials: { access: "a", refresh: "the-refresh", accountId: "acct-1" }, store });
+    await revokeOAuthCredential({
+      provider,
+      credentials: { access: "a", refresh: "the-refresh", accountId: "acct-1" },
+      ref: "keyring:google-workspace",
+      sink: oauthSink(store, "google-workspace", "acct-1"),
+    });
     assert.equal(revokedToken, "the-refresh");
     assert.equal(await store.get("google-workspace", "acct-1"), undefined);
   });
@@ -171,7 +187,12 @@ describe("revokeOAuthCredential", () => {
       }) as typeof fetch,
     });
     const store = memoryStore({ "microsoft365\u0000acct-1": { access: "a", refresh: "r", accountId: "acct-1" } });
-    await revokeOAuthCredential({ provider, credentials: { access: "a", refresh: "r", accountId: "acct-1" }, store });
+    await revokeOAuthCredential({
+      provider,
+      credentials: { access: "a", refresh: "r", accountId: "acct-1" },
+      ref: "keyring:microsoft365",
+      sink: oauthSink(store, "microsoft365", "acct-1"),
+    });
     assert.equal(await store.get("microsoft365", "acct-1"), undefined);
   });
 });

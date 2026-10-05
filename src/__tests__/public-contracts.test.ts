@@ -6,7 +6,7 @@ import type {
   AgentDefinition,
   AgentDefinitionResolutionContext,
   AgentEvent,
-  AIProvider,
+  ModelProvider,
   AssembleProviderInputOptions,
   CacheUsageReport,
   CommandDefinition,
@@ -53,8 +53,6 @@ import {
   createDefaultCompactor,
   createDefaultInputBuilder,
   createDefaultRetryPolicy,
-  createEnvCredentialResolver,
-  createExplicitCredentialResolver,
   withContextBlocks,
   createMemorySessionStore,
   createSessionEntry,
@@ -69,8 +67,9 @@ import {
   resolveActiveSkills,
   resolveAgentDefinition,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield { type: "done" };
@@ -96,13 +95,13 @@ describe("public contracts", () => {
     const config: AgentConfig = {
       id: "demo-agent",
       model: { provider: "mock", model: "demo-model" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       skills: { add: [skill] },
       tools: { add: [tool] },
       metadata: { example: true },
     };
 
-    assert.equal(config.provider?.id, "mock");
+    assert.equal(config.packages?.length, 1);
     assert.equal(Array.isArray(config.tools), true);
   });
 
@@ -127,10 +126,10 @@ describe("public contracts", () => {
 
     assert.equal((await resources.load("memory:demo")).text, "example");
     assert.equal(await settings.get("demo.enabled"), true);
-    assert.equal(await credentials.resolve({ name: "demo" }), undefined);
+    assert.equal(await credentials.resolve("env:demo", {}), undefined);
   });
 
-  it("host can type OAuth and explicit credential resolver contracts", async () => {
+  it("host can type OAuth and credentials slot contracts", async () => {
     const callbacks: OAuthLoginCallbacks = { onPrompt: () => "device" };
     const oauth: OAuthProvider = {
       id: "mock-oauth",
@@ -138,14 +137,13 @@ describe("public contracts", () => {
       refresh: (credentials) => ({ ...credentials, access: "refreshed-token" }),
       getCredential: (credentials) => (credentials.access ? { type: "bearer", value: credentials.access } : undefined),
     };
-    const resolver = createExplicitCredentialResolver([
-      { name: "runtime", resolver: { resolve: () => undefined } },
-      { name: "env", resolver: createEnvCredentialResolver({ DEMO_API_KEY: "demo-key" }, { mock: "DEMO_API_KEY" }) },
-    ]);
+    const resolver: CredentialResolver = {
+      resolve: (ref) => (ref === "env:DEMO_API_KEY" ? { type: "api_key", value: "demo-key" } : undefined),
+    };
 
     assert.equal(await callbacks.onPrompt?.("mode?"), "device");
     assert.equal((await oauth.login()).access, "access-token");
-    assert.equal((await resolver.resolve({ name: "apiKey", provider: "mock" }))?.value, "demo-key");
+    assert.equal((await resolver.resolve("env:DEMO_API_KEY", {}))?.value, "demo-key");
   });
 
   it("host can type layered system prompt contracts", () => {
@@ -154,7 +152,7 @@ describe("public contracts", () => {
     const runOptions: RunOptions = { inputLayout: "legacy" };
     const agentConfig: AgentConfig = {
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       instructions: "Base",
       systemPrompt: config,
       inputLayout: runOptions.inputLayout,
@@ -169,7 +167,7 @@ describe("public contracts", () => {
     const cache: ModelCacheCapabilities = { kind, maxKeyLength: 64, maxBreakpoints: 0, minCacheableTokens: 1024, longRetention: true };
     const model = { provider: "mock", model: "cached", cache };
     const seen: (typeof model)[] = [];
-    const passiveProvider: AIProvider = {
+    const passiveProvider: ModelProvider = {
       id: "passive",
       async *generate(request) {
         seen.push(request.model as typeof model);
@@ -343,13 +341,12 @@ describe("public contracts", () => {
   it("host can create minimal phase 6 agent sessions", async () => {
     const definition: AgentDefinition = {
       name: "runtime-agent",
-      create: async () => await createAgent({ model: { provider: "mock", model: "demo" }, provider }),
+      create: async () => await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] }),
     };
     const agent = await definition.create!();
     const session = await agent.session({ id: "s1", leafId: undefined, create: true });
     const forkOptions: SessionForkOptions = { at: undefined };
 
-    assert.equal(agent.config.provider?.id, "mock");
     assert.equal(session.id, "s1");
     assert.notEqual((await session.fork(forkOptions)).id, "s1");
   });
@@ -369,10 +366,9 @@ describe("public contracts", () => {
 
     // Resolution context type is exported.
     const ctx: AgentDefinitionResolutionContext = {
-      providerSource: () => provider,
       overrides: { model: { provider: "mock", model: "override" } },
     };
-    assert.equal(ctx.providerSource?.({ provider: "mock", model: "demo" })?.id, "mock");
+    assert.equal(ctx.overrides?.model !== undefined, true);
 
     // Resolver is exported.
     assert.equal(typeof resolveAgentDefinition, "function");
@@ -413,7 +409,7 @@ describe("public contracts", () => {
     // The implementation is the slot (roadmap §2.5); `compaction` only sizes it.
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       compaction: options,
       slots: { compaction: compactor },
     });

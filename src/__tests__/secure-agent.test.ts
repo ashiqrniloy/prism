@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  AgentRunStateError,
-  createMemoryCheckpointStore,
-  createMockProvider,
-  createSecretRedactor,
-  createSecureAgent,
-  createStaticTrustPolicy,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-} from "../index.js";
+import { AgentRunStateError, createMemoryCheckpointStore, createSecretRedactor, createSecureAgent, createStaticTrustPolicy, providerDone, providerTextDelta, toolCallContent } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
+import { createMockProvider } from "../testing/index.js";
 
 const validator = { validate: () => ({ ok: true }) };
 const ownership = { tenantId: "tenant-1", userId: "user-1" };
@@ -19,7 +11,7 @@ function options(overrides: Record<string, unknown> = {}) {
   return {
     id: "secure-demo",
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("done"), providerDone()]),
+    packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("done"), providerDone()])])],
     tools: [{ name: "read", parameters: { type: "object" }, execute: () => ({ toolCallId: "call", name: "read", value: "ok" }) }],
     toolArgumentValidator: validator,
     redactor: createSecretRedactor(["secret"]),
@@ -90,7 +82,7 @@ describe("secure agent composition", () => {
     let calls = 0;
     const agent = await createSecureAgent(
       options({
-        provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-1", "read", {}) }, providerDone()]),
+        packages: [providerPackage("test-provider", [createMockProvider([{ type: "tool_call", call: toolCallContent("call-1", "read", {}) }, providerDone()])])],
         tools: [
           {
             name: "read",

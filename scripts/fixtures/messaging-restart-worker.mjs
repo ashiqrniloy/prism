@@ -5,7 +5,8 @@
  */
 import { createAgent } from "../../dist/index.js";
 import { createMessagingRuntime } from "../../packages/prism-channels/dist/index.js";
-import { createSqlitePersistence } from "../../packages/prism-core/dist/sessions/sqlite/index.js";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { providerPackage } from "../../dist/provider-kit/index.js";
 
 const input = JSON.parse(process.env.PRISM_CHANNELS_WORKER_INPUT ?? "null");
 if (
@@ -33,7 +34,7 @@ const persistence = createSqlitePersistence({ filename: input.filename });
 const agent = await createAgent({
   id: "channel-agent",
   model: { provider: "mock", model: "demo" },
-  provider: {
+  packages: [providerPackage("test-provider", [{
     id: "mock",
     async *generate(request) {
       await new Promise((resolve) => {
@@ -45,7 +46,7 @@ const agent = await createAgent({
       });
       throw new Error("aborted while the process was dying");
     },
-  },
+  }])],
   slots: { store: persistence },
   runLedger: persistence,
 });

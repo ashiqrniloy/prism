@@ -1,21 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentEventRecord,
-  type AIProvider,
-  createAgent,
-  createClaimGroundingGuardrail,
-  createMockProvider,
-  type HookContext,
-  type Message,
-  providerDone,
-  providerTextDelta,
-  type RunLedger,
-  type ToolResult,
-  type GuardrailRecord,
-} from "../index.js";
+import { type AgentEventRecord, type ModelProvider, createAgent, createClaimGroundingGuardrail, type HookContext, type Message, providerDone, providerTextDelta, type RunLedger, type ToolResult, type GuardrailRecord } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
 import { failedRun } from "./run-result-helpers.js";
+import { mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 function assistantMessage(text: string): Message {
   return { id: "m1", role: "assistant", content: [{ type: "text", text }] };
@@ -45,7 +34,7 @@ const TOOL_RESULTS: readonly ToolResult[] = [{ toolCallId: "sum", name: "sum", v
 describe("claim grounding model.response gate", () => {
   it("matches same-run tool results and blocks an uncited claim", async () => {
     let turns = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         if (turns++ === 0) {
@@ -64,7 +53,7 @@ describe("claim grounding model.response gate", () => {
     });
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: {
         add: [
           {
@@ -83,7 +72,7 @@ describe("claim grounding model.response gate", () => {
     latest = [];
     const blocked = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("Total is 4,320.50."), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("Total is 4,320.50."), providerDone()]])],
       hooks: (hooks) => hooks.on("model.response", grounding),
     });
     await failedRun((await blocked.session()).run("calculate"), /claim_ungrounded/);
@@ -120,7 +109,7 @@ describe("claim grounding model.response gate", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("Total is 9."), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("Total is 9."), providerDone()]])],
       hooks: (hooks) => hooks.on("model.response", createClaimGroundingGuardrail({ requireEvidenceForNumbers: true, onViolation: "flag" })),
     });
     assert.equal((await (await agent.session()).run("calculate", { runLedger: ledger })).text, "Total is 9.");

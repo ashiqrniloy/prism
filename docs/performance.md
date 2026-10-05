@@ -536,7 +536,7 @@ const store = {
 - `SessionStore.list(sessionId)` is a full-session read. It is fine for memory/JSONL development stores, but production adapters should use `readBranchPath` for provider context and branch views.
 - The JSONL store rereads/parses the file for validation/list/get and serializes appends only within one process. It has no cross-process lock, pagination, migrations, tenant isolation, or retention.
 - Recommended database indexes: session id, run id, parent id, branch leaf id, timestamps, tenant/account/user, event type, entry kind, `(run_id, sequence)` for event timelines, and `(run_id, recorded_at, id)` for usage. Allocate event `sequence` per run for stable timeline pagination.
-- Provider SSE parsing defaults: 256 KiB per completed event, 512 KiB incomplete buffer, 64 KiB error response bodies. Override per call via `BoundedStreamLimits` on `@arnilo/prism/providers/transport`.
+- Provider SSE parsing defaults: 256 KiB per completed event, 512 KiB incomplete buffer, 64 KiB error response bodies. Override per call via `BoundedStreamLimits` on `@arnilo/prism/provider-kit`.
 
 ### Provider-phase benchmark snapshot (2026-07-14)
 
@@ -647,7 +647,7 @@ Experiment concurrency is capped at 32 workers and defaults to 1. Scorers operat
 
 ### 0.0.5 Phase 6 verification (2026-07-15)
 
-Optional `@arnilo/prism-providers/ai-sdk` adapts AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
+Optional `@arnilo/prism-provider-ai-sdk` adapts AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
 
 | Surface | Result |
 | --- | --- |

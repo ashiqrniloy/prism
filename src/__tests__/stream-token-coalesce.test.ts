@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   type ProviderRequest,
@@ -11,6 +11,7 @@ import {
   providerThinkingDelta,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -24,7 +25,7 @@ describe("stream token coalesce", () => {
     const textTokens = ["hello", " world"];
     let turn = 0;
     let replay: ProviderRequest | undefined;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         turn += 1;
@@ -44,7 +45,7 @@ describe("stream token coalesce", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         slots: { store: createMemorySessionStore() },
         tools: { add: [{ name: "echo", parameters: {}, execute: () => ({ toolCallId: "c1", name: "echo", value: "ok" }) }] },
       })

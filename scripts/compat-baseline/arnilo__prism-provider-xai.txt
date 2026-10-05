@@ -1,4 +1,7 @@
+OAuthUnavailableError	export declare class OAuthUnavailableError extends Error
 XAI_CONV_ID_MAX_LENGTH	export declare const XAI_CONV_ID_MAX_LENGTH = 128
+XAI_DEFAULT_ACCESS_TOKEN_REF	export declare const XAI_DEFAULT_ACCESS_TOKEN_REF = "keyring:xai"
+XAI_DEFAULT_API_KEY_REF	export declare const XAI_DEFAULT_API_KEY_REF = "env:XAI_API_KEY"
 XAI_DEFAULT_BASE_URL	export declare const XAI_DEFAULT_BASE_URL = "https://api.x.ai/v1"
 XAI_DEFAULT_CLIENT_ID	export declare const XAI_DEFAULT_CLIENT_ID = "b1a00492-073a-47ea-816f-4c329264a828"
 XAI_DEFAULT_DEVICE_CODE_URL	export declare const XAI_DEFAULT_DEVICE_CODE_URL = "https://auth.x.ai/oauth2/device/code"
@@ -7,22 +10,26 @@ XAI_DEFAULT_REVOKE_URL	export declare const XAI_DEFAULT_REVOKE_URL = "https://au
 XAI_DEFAULT_SCOPE	export declare const XAI_DEFAULT_SCOPE = "openid profile email offline_access grok-cli:access api:access"
 XAI_DEFAULT_TOKEN_URL	export declare const XAI_DEFAULT_TOKEN_URL = "https://auth.x.ai/oauth2/token"
 XAI_REFRESH_SKEW_MS	export declare const XAI_REFRESH_SKEW_MS: number
+XAI_THINKING_LEVELS	export declare const XAI_THINKING_LEVELS: Readonly<Record<string, readonly string[]>>
 createXaiOAuthProvider	export declare function createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
-createXaiProvider	export declare function createXaiProvider(options?: XaiProviderOptions): AIProvider
-xaiPackage	export declare function xaiPackage(options?: XaiProviderPackageOptions): PackageInstance
+createXaiProvider	export declare function createXaiProvider(options?: XaiProviderOptions): ModelProvider
+default	export default
 defineXaiModel	export declare function defineXaiModel(config: XaiModelConfig): ModelConfig
 listXaiModels	export declare function listXaiModels(options?: ListXaiModelsOptions): Promise<ModelConfig[]>
 mapXaiModel	export declare function mapXaiModel(entry: XaiModelEntry, options?:
 parseXaiTokenCredentials	export declare function parseXaiTokenCredentials(json: OAuthTokenSuccessPayload, previousRefresh?: string, now?: () => number): OAuthCredentials
 toXaiMessage	export declare function toXaiMessage(message: Message, request: ProviderRequest): JsonObject
-type ListXaiModelsOptions	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, type XaiModelConfig, type XaiModelEntry, xaiModels, } from "./models.js"
-type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, type XaiModelConfig, type XaiModelEntry, xaiModels, } from "./models.js"
-type XaiModelEntry	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, type XaiModelConfig, type XaiModelEntry, xaiModels, } from "./models.js"
+type ListXaiModelsOptions	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"
+type XaiModelConfig	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"
+type XaiModelEntry	export { defineXaiModel, type ListXaiModelsOptions, listXaiModels, mapXaiModel, XAI_DEFAULT_BASE_URL, XAI_THINKING_LEVELS, type XaiModelConfig, type XaiModelEntry, xaiModels, xaiThinkingLevels, } from "./models.js"
 type XaiOAuthOptions	export { createXaiOAuthProvider, parseXaiTokenCredentials, XAI_DEFAULT_CLIENT_ID, XAI_DEFAULT_DEVICE_CODE_URL, XAI_DEFAULT_REFERRER, XAI_DEFAULT_REVOKE_URL, XAI_DEFAULT_SCOPE, XAI_DEFAULT_TOKEN_URL, XAI_REFRESH_SKEW_MS, type XaiOAuthOptions, } from "./oauth.js"
 type XaiProviderOptions	export { createXaiProvider, toXaiMessage, type XaiProviderOptions, xaiBody, xaiEvents } from "./provider.js"
 xGrokConvId	export declare function xGrokConvId(request: ProviderRequest): string | undefined
+xai	export declare function xai(options?: XaiProviderPackageOptions & XaiProviderConfig): PackageInstance
 xaiBody	export declare function xaiBody(request: ProviderRequest): JsonObject
 xaiCacheEnabled	export declare function xaiCacheEnabled(request: ProviderRequest): boolean
 xaiEvents	export declare function xaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 xaiModels	export declare const xaiModels: ModelConfig[]
+xaiReasoningEffort	export declare function xaiReasoningEffort(request: ProviderRequest): string | undefined
 xaiReplayThinking	export declare function xaiReplayThinking(request: ProviderRequest): boolean
+xaiThinkingLevels	export declare function xaiThinkingLevels(modelId: string): readonly string[] | undefined

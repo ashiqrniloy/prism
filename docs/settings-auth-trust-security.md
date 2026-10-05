@@ -9,16 +9,14 @@ Use these APIs when a host wants one explicit place to compose settings, resolve
 ## Inputs / request
 - `createStaticSettingsProvider(settings)` reads dotted keys from an in-memory JSON object.
 - `createChainedSettingsProvider(providers)` returns the first defined setting.
-- `createMemoryCredentialStore(initial?)` stores explicit credentials in memory only.
-- `createChainedCredentialResolver(resolvers)` returns the first credential found.
-- `createExplicitCredentialResolver(sources)` documents and applies named source order such as runtime override → stored → host env object → fallback.
-- `createEnvCredentialResolver(env, map)` reads only the caller-supplied object; it does not read `process.env`.
+- `createEnvRefCredentialResolver(env?)` is the kernel `credentials` slot default: it resolves `env:NAME` refs only and has no `store`, so a `secret` request fails closed.
+- A host resolver implements `CredentialResolver`: `resolve(ref, ctx)`, plus optional `store(ref, secret, ctx)` and `delete(ref, ctx)`.
 - `assertTrusted(policy, request)` and `assertPermission(policy, request)` fail closed on denial.
 - `createSecretRedactor(secrets)` redacts exact known strings.
 - Node-only subpaths: `@arnilo/prism/node/settings` for caller-named JSON settings files and `@arnilo/prism/node/trust` for explicit trusted path roots with symlink-aware realpath checks.
 
 ## Outputs / response / events
-Settings and credential helpers return existing `SettingsProvider` and `CredentialResolver` contracts. These seams are host-owned outside `AgentConfig`; `createAgent()` / `session.run()` do not call `settings.get()` or `credentials.resolve()`. Permission denial blocks tool execution, extension setup, and resource loader calls before side effects. A configured `AgentConfig.redactor` or `RunOptions.redactor` redacts provider requests, emitted `AgentEvent` payloads, stored `SessionEntry` values, and runtime `InstructionContext` input/history seen by instruction injectors.
+Settings and credential helpers return existing `SettingsProvider` and `CredentialResolver` contracts. These seams are host-owned outside `AgentConfig`; `createAgent()` / `session.run()` do not call `settings.get()` or `credentials.resolve()` on their own. Permission denial blocks tool execution, extension setup, and resource loader calls before side effects. A configured `AgentConfig.redactor` or `RunOptions.redactor` redacts provider requests, emitted `AgentEvent` payloads, stored `SessionEntry` values, and runtime `InstructionContext` input/history seen by instruction injectors.
 
 ## Request/response example
 ```ts
@@ -33,7 +31,7 @@ console.log(await settings.get("demo.enabled"));
 
 ## Implementation example
 ```ts
-import { createAgent, createMemoryCredentialStore, createSecretRedactor, resolveCredentialValue } from "@arnilo/prism";
+import { createEnvRefCredentialResolver, createSecretRedactor, type CredentialResolver } from "@arnilo/prism";
 import { loadSettingsFiles } from "@arnilo/prism/node/settings";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 import { homedir } from "node:os";
@@ -42,10 +40,16 @@ import { join } from "node:path";
 const settings = await loadSettingsFiles([
   { name: "user", path: join(homedir(), ".config", "prism", "settings.json"), optional: true },
 ]);
-const credentials = createMemoryCredentialStore();
-credentials.set({ name: "api", provider: "demo", credential: { type: "api_key", value: "token-value" } });
+const records = new Map<string, { readonly type: "api_key"; readonly value: string }>();
+const credentials: CredentialResolver = {
+  resolve: (ref) => records.get(ref),
+  store: (ref, secret) => void records.set(ref, secret),
+  delete: (ref) => void records.delete(ref),
+};
+await credentials.store?.("keyring:demo", { type: "api_key", value: "token-value" }, {});
+const envResolver = createEnvRefCredentialResolver();
 const trust = createPathTrustPolicy({ trustedRoots: [process.cwd()] });
-const apiKey = await resolveCredentialValue(credentials, { name: "api", provider: "demo" });
+const apiKey = (await credentials.resolve("keyring:demo", {}))?.value ?? (await envResolver.resolve("env:DEMO_API_KEY", {}))?.value;
 
 const agent = createAgent({
   model: { provider: "demo", model: "model" },
@@ -59,7 +63,7 @@ void agent;
 ```
 
 ## Extension and configuration notes
-Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package. For Node.js hosts, [`@arnilo/prism-core/credentials/node`](credential-storage.md) provides encrypted-file and system-keychain backends. Pass concrete settings values or credential resolvers to the provider/request edge that needs them; do not place them on `AgentConfig`.
+Root imports stay filesystem-free. Node settings files are caller-named and read once; optional missing files are skipped. Trust storage, prompts, approval UI, OAuth token storage, environment-variable selection, and persistent credentials belong in the host or an extension package. For Node.js hosts, [`@arnilo/prism-credentials-keyring`](credential-storage.md) provides encrypted-file and system-keychain backends and fills the `credentials` slot. Pass concrete settings values or credential resolvers to the provider/request edge that needs them; do not place them on `AgentConfig`.
 
 ## Security and performance notes
 Prism does not sandbox host tools or extensions. Prism does not read environment variables, keychains, user config files, package manifests, resources, settings providers, credential resolvers, or project-local extensions unless the host explicitly wires those operations. Redaction is exact known-secret replacement only; it is not secret detection. Permission and trust checks are one operation per guarded call and add no workers, watchers, retries, network, or filesystem scans.
@@ -80,7 +84,7 @@ Boundary hardening summary:
 ## Related APIs
 - [Host security guide](host-security.md): fail-closed checklist for wiring credentials, redaction, trust, permissions, persistence, extension loading, and tool validation in an embedding app.
 - `createStaticSettingsProvider`, `createChainedSettingsProvider`
-- `createMemoryCredentialStore`, `createChainedCredentialResolver`, `createExplicitCredentialResolver`, `createEnvCredentialResolver`, `refreshOAuthCredential`, `resolveCredentialValue`
+- `createEnvRefCredentialResolver`, `resolveCredentialValue`, `refreshOAuthCredential`
 - `createStaticTrustPolicy`, `assertTrusted`, `isTrusted`, `TrustDeniedError`
 - `createStaticPermissionPolicy`, `assertPermission`, `checkPermission`, `PermissionDeniedError`
 - `ExecutionPolicy`, `assertExecutionAllowed`, `checkExecution`, `ExecutionDeniedError` (core); `@arnilo/prism-coding-tools/security` for coding-tool approval adapters — see [Coding execution approval and sandboxing](coding-security.md)

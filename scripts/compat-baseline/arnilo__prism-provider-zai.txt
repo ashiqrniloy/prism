@@ -1,14 +1,20 @@
+ZAI_DEFAULT_API_KEY_REF	export declare const ZAI_DEFAULT_API_KEY_REF = "env:ZAI_API_KEY"
 ZAI_DEFAULT_BASE_URL	export declare const ZAI_DEFAULT_BASE_URL = "https://api.z.ai/api/paas/v4"
-createZaiProvider	export declare function createZaiProvider(options?: ZaiProviderOptions): AIProvider
-zaiPackage	export declare function zaiPackage(options?: ZaiProviderPackageOptions): PackageInstance
+ZAI_GLM_5_2_THINKING_LEVELS	export declare const ZAI_GLM_5_2_THINKING_LEVELS: readonly ["low", "medium", "high", "xhigh", "max"]
+ZAI_GLM_5_3_THINKING_LEVELS	export declare const ZAI_GLM_5_3_THINKING_LEVELS: readonly ["low", "high", "max"]
+createZaiProvider	export declare function createZaiProvider(options?: ZaiProviderOptions): ModelProvider
+default	export default
 defineZaiModel	export declare function defineZaiModel(config: ZaiModelConfig): ModelConfig
+isGlm52Model	export declare function isGlm52Model(modelId: string): boolean
+isGlm53Model	export declare function isGlm53Model(modelId: string): boolean
 listZaiModels	export declare function listZaiModels(options?: ListZaiModelsOptions): Promise<ModelConfig[]>
 mapZaiModel	export declare function mapZaiModel(entry: ZaiModelEntry, options?:
 toZaiMessage	export declare function toZaiMessage(message: Message, model: ModelConfig, preserveThinking?: boolean): JsonObject
-type ListZaiModelsOptions	export { defineZaiModel, type ListZaiModelsOptions, listZaiModels, mapZaiModel, type ZaiModelConfig, type ZaiModelEntry, zaiModels, } from "./models.js"
-type ZaiModelConfig	export { defineZaiModel, type ListZaiModelsOptions, listZaiModels, mapZaiModel, type ZaiModelConfig, type ZaiModelEntry, zaiModels, } from "./models.js"
-type ZaiModelEntry	export { defineZaiModel, type ListZaiModelsOptions, listZaiModels, mapZaiModel, type ZaiModelConfig, type ZaiModelEntry, zaiModels, } from "./models.js"
+type ListZaiModelsOptions	export { defineZaiModel, isGlm52Model, isGlm53Model, type ListZaiModelsOptions, listZaiModels, mapZaiModel, ZAI_GLM_5_2_THINKING_LEVELS, ZAI_GLM_5_3_THINKING_LEVELS, type ZaiModelConfig, type ZaiModelEntry, zaiModels, zaiThinkingFamily, zaiThinkingLevels, } from "./models.js"
+type ZaiModelConfig	export { defineZaiModel, isGlm52Model, isGlm53Model, type ListZaiModelsOptions, listZaiModels, mapZaiModel, ZAI_GLM_5_2_THINKING_LEVELS, ZAI_GLM_5_3_THINKING_LEVELS, type ZaiModelConfig, type ZaiModelEntry, zaiModels, zaiThinkingFamily, zaiThinkingLevels, } from "./models.js"
+type ZaiModelEntry	export { defineZaiModel, isGlm52Model, isGlm53Model, type ListZaiModelsOptions, listZaiModels, mapZaiModel, ZAI_GLM_5_2_THINKING_LEVELS, ZAI_GLM_5_3_THINKING_LEVELS, type ZaiModelConfig, type ZaiModelEntry, zaiModels, zaiThinkingFamily, zaiThinkingLevels, } from "./models.js"
 type ZaiProviderOptions	export { createZaiProvider, toZaiMessage, ZAI_DEFAULT_BASE_URL, type ZaiProviderOptions, zaiBody, zaiEvents, } from "./provider.js"
+zai	export declare function zai(options?: ZaiProviderPackageOptions & ZaiProviderConfig): PackageInstance
 zaiBody	export declare function zaiBody(request: ProviderRequest): JsonObject
 zaiClearThinking	export declare function zaiClearThinking(request: ProviderRequest): boolean | undefined
 zaiEvents	export declare function zaiEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
@@ -16,4 +22,6 @@ zaiModels	export declare const zaiModels: readonly [ModelConfig, ModelConfig, Mo
 zaiPreserveThinking	export declare function zaiPreserveThinking(request: ProviderRequest): boolean
 zaiReasoningEffort	export declare function zaiReasoningEffort(request: ProviderRequest): string | undefined
 zaiThinking	export declare function zaiThinking(request: ProviderRequest): JsonObject | undefined
+zaiThinkingFamily	export declare function zaiThinkingFamily(modelId: string): "reasoning_effort" | "thinking_type" | undefined
+zaiThinkingLevels	export declare function zaiThinkingLevels(modelId: string): readonly string[] | undefined
 zaiToolStream	export declare function zaiToolStream(request: ProviderRequest): boolean | undefined

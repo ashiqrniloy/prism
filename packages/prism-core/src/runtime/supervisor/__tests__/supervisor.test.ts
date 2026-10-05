@@ -1,26 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it, setSystemTime } from "bun:test";
-import {
-  type Agent,
-  type AgentEvent,
-  type AIProvider,
-  createAgent,
-  createMemoryToolEffectStore,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  providerUsage,
-  type ToolDefinition,
-} from "@arnilo/prism";
+import { type Agent, type AgentEvent, type ModelProvider, createAgent, createMemoryToolEffectStore, createSecretRedactor, providerDone, providerTextDelta, providerToolCall, providerUsage, type ToolDefinition } from "@arnilo/prism";
 import { createSupervisor, SupervisorDeniedError, SupervisorError, SupervisorLimitError, type SupervisorEvent } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const ownership = { tenantId: "tenant", userId: "user" };
 const doneAgent = async (text = "child", tokens = 2): Promise<Agent> =>
   await createAgent({
     model: { provider: "mock", model: "test" },
-    provider: createMockProvider([providerTextDelta(text), providerUsage({ totalTokens: tokens }), providerDone()]),
+    packages: [mockProvider([[providerTextDelta(text), providerUsage({ totalTokens: tokens }), providerDone()]])],
   });
 
 describe("createSupervisor", () => {
@@ -65,7 +54,7 @@ describe("createSupervisor", () => {
         return { toolCallId: context.toolCallId, name: "write", content: [{ type: "text", text: "ok" }] };
       },
     };
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seenInput = JSON.stringify(request.messages);
@@ -86,7 +75,7 @@ describe("createSupervisor", () => {
       permission: { check: () => ({ allowed: false, reason: "parent denied" }) },
       children: {
         child: {
-          createAgent: async () => await createAgent({ model: { provider: "mock", model: "test" }, provider, tools: { add: [tool] } }),
+          createAgent: async () => await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [tool] } }),
         },
       },
       hooks: { before: () => ({ input: "modified", permission: { check: () => ({ allowed: true }) } }) },
@@ -122,10 +111,10 @@ describe("createSupervisor", () => {
             assert.strictEqual(context.effectStore, effectStore);
             return await createAgent({
               model: { provider: "mock", model: "test" },
-              provider: createMockProvider([
+              packages: [mockProvider([[
                 providerToolCall({ type: "tool_call", id: "effect-1", name: "mutate", arguments: {} }),
                 providerDone(),
-              ]),
+              ]])],
               tools: {
                 add: [
                   {
@@ -327,11 +316,11 @@ describe("createSupervisor", () => {
     }));
     const toolAgent = await createAgent({
       model: { provider: "mock", model: "test" },
-      provider: createMockProvider([
+      packages: [mockProvider([[
         providerToolCall({ type: "tool_call", id: "1", name: "one", arguments: {} }),
         providerToolCall({ type: "tool_call", id: "2", name: "two", arguments: {} }),
         providerDone(),
-      ]),
+      ]])],
       tools: { add: tools },
     });
     const bounded = createSupervisor({ ownership, limits: { maxToolCalls: 1 }, children: { child: { createAgent: () => toolAgent } } });
@@ -466,7 +455,7 @@ describe("createSupervisor", () => {
       name: "write",
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }),
     };
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         yield providerToolCall({ type: "tool_call", id: "c1", name: "write", arguments: { secret: "canary" } });
@@ -482,7 +471,7 @@ describe("createSupervisor", () => {
           createAgent: async () =>
             await createAgent({
               model: { provider: "mock", model: "test" },
-              provider,
+              packages: [providerPackage("test-provider", [provider])],
               tools: { add: [tool] },
             }),
         },
@@ -541,20 +530,20 @@ describe("child lifetime and report policy", () => {
   const gatedAgent = async (gate: Promise<void>): Promise<Agent> =>
     await createAgent({
       model: { provider: "mock", model: "test" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           await gate;
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
     });
 
   /** One provider call per child turn; the first `turns - 1` calls request `callsPerTurn` tools. */
   const toolTurnAgent = async (turns: number, callsPerTurn = 1): Promise<Agent> => {
     let generated = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         generated += 1;
@@ -566,7 +555,7 @@ describe("child lifetime and report policy", () => {
         yield providerDone();
       },
     };
-    return await createAgent({ model: { provider: "mock", model: "test" }, provider, tools: { add: [noopTool] } });
+    return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [noopTool] } });
   };
 
   it("keeps session-lifetime children running after the caller signal aborts", async () => {
@@ -769,7 +758,7 @@ describe("child event passthrough", () => {
 
   const toolTurnAgent = async (turns: number): Promise<Agent> => {
     let generated = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         generated += 1;
@@ -779,7 +768,7 @@ describe("child event passthrough", () => {
         yield providerDone();
       },
     };
-    return await createAgent({ model: { provider: "mock", model: "test" }, provider, tools: { add: [noopTool] } });
+    return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [noopTool] } });
   };
 
   it("routes the exact tagged projection to the sink and forwards per-turn provider/tool events", async () => {
@@ -835,7 +824,7 @@ describe("child event passthrough", () => {
   });
 
   it("redacts child events before the sink sees them", async () => {
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         yield providerToolCall({ type: "tool_call", id: "c1", name: "write", arguments: { secret: "canary" } });
@@ -853,7 +842,7 @@ describe("child event passthrough", () => {
           createAgent: async () =>
             await createAgent({
               model: { provider: "mock", model: "test" },
-              provider,
+              packages: [providerPackage("test-provider", [provider])],
               tools: {
                 add: [{ name: "write", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }) }],
               },
@@ -878,7 +867,7 @@ describe("child event passthrough", () => {
       children: {
         lead: {
           createAgent: async (context) => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 await context.delegate({ childId: "writer", input: "nested" });
@@ -886,7 +875,7 @@ describe("child event passthrough", () => {
                 yield providerDone();
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         writer: { createAgent: async () => await doneAgent("nested") },
@@ -906,18 +895,18 @@ describe("child event passthrough", () => {
 
 describe("cascade and recovery telemetry", () => {
   const hangingAgent = async (): Promise<Agent> => {
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         await new Promise(() => undefined);
       },
     };
-    return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+    return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
   };
 
   const toolTurnAgent = async (): Promise<Agent> => {
     let generated = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         generated += 1;
@@ -927,7 +916,7 @@ describe("cascade and recovery telemetry", () => {
     };
     return await createAgent({
       model: { provider: "mock", model: "test" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }] },
     });
   };
@@ -1054,7 +1043,7 @@ describe("cascade and recovery telemetry", () => {
       children: {
         lead: {
           createAgent: async (context) => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
@@ -1062,7 +1051,7 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("lead exploded after the reset");
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         writer: {
@@ -1099,13 +1088,13 @@ describe("cascade and recovery telemetry", () => {
       children: {
         broken: {
           createAgent: async () => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 throw new Error("provider exploded with canary");
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         idle: { createAgent: async () => await hangingAgent() },
@@ -1142,14 +1131,14 @@ describe("cascade and recovery telemetry", () => {
       children: {
         lead: {
           createAgent: async (context) => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
                 throw new Error("lead exploded");
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         writer: { createAgent: async () => await hangingAgent() },
@@ -1178,7 +1167,7 @@ describe("cascade and recovery telemetry", () => {
         lead: {
           createAgent: async (context) => {
             const attempt = (leads += 1);
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
@@ -1189,7 +1178,7 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("second lead exploded");
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         writer: {
@@ -1224,7 +1213,7 @@ describe("cascade and recovery telemetry", () => {
       children: {
         lead: {
           createAgent: async (context) => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 await context.delegate({ childId: "researcher", input: "quick" });
@@ -1233,19 +1222,19 @@ describe("cascade and recovery telemetry", () => {
                 throw new Error("lead exploded");
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         mid: {
           createAgent: async (context) => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
                 await new Promise(() => undefined);
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         writer: {
@@ -1276,14 +1265,14 @@ describe("cascade and recovery telemetry", () => {
         watch: {
           policy: { lifetime: "session" },
           createAgent: async (context) => {
-            const provider: AIProvider = {
+            const provider: ModelProvider = {
               id: "mock",
               async *generate() {
                 context.delegate({ childId: "writer", input: "slow" }).catch(() => undefined);
                 throw new Error("watch exploded");
               },
             };
-            return await createAgent({ model: { provider: "mock", model: "test" }, provider });
+            return await createAgent({ model: { provider: "mock", model: "test" }, packages: [providerPackage("test-provider", [provider])] });
           },
         },
         writer: { createAgent: async () => await hangingAgent() },

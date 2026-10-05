@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { type AIProvider, createAgent, providerDone, providerTextDelta } from "../index.js";
+import { type ModelProvider, createAgent, providerDone, providerTextDelta } from "../index.js";
 import {
   install,
   installedPackageDir,
@@ -14,11 +14,12 @@ import {
   scopeDirs,
   writeManifest,
 } from "../manifest/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const FIXTURE = resolve("src/__tests__/fixtures/manifest/hello-package");
 const marks = globalThis as unknown as Record<string, number | undefined>;
 const MODEL = { provider: "mock", model: "demo" } as const;
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield providerTextDelta("ok");
@@ -101,7 +102,7 @@ describe("loadManifest", () => {
     await install(`file:${FIXTURE}`, { scope: "user", home });
     const inputs = await loadManifest({ home, root: await tmp("empty-root") });
     assert.equal(inputs.length, 1);
-    const agent = await createAgent({ model: MODEL, provider, packages: inputs });
+    const agent = await createAgent({ model: MODEL, packages: [...inputs, providerPackage("test-provider", [provider])] });
     const view = agent.inspect().packages[0]!;
     assert.equal(view.name, "@acme/hello");
     assert.equal(view.source, "manifest:user");
@@ -235,17 +236,17 @@ describe("loadManifest", () => {
     await install(`file:${await makePackage("@acme/c2", { capabilities: ["slot:compaction"], setup: provide })}`, { scope: "user", home });
     const root = await tmp("slots-root");
     const noAssignment = await loadManifest({ home, root });
-    await assert.rejects(createAgent({ model: MODEL, provider, packages: noAssignment }), /conflict/i);
+    await assert.rejects(createAgent({ model: MODEL, packages: [...noAssignment, providerPackage("test-provider", [provider])] }), /conflict/i);
 
     const dirs = scopeDirs({ scope: "user", home });
     const manifest = JSON.parse(await readFile(dirs.manifestPath, "utf8"));
     await writeManifest(dirs, { ...manifest, slots: { compaction: "@acme/c2" } });
     const assigned = await loadManifest({ home, root });
-    const agent = await createAgent({ model: MODEL, provider, packages: assigned });
+    const agent = await createAgent({ model: MODEL, packages: [...assigned, providerPackage("test-provider", [provider])] });
     assert.equal(agent.inspect().slots.compaction, "@acme/c2");
     await agent.dispose();
 
-    const hostWins = await createAgent({ model: MODEL, provider, packages: assigned, slots: { compaction: "@acme/c1" } });
+    const hostWins = await createAgent({ model: MODEL, packages: [...assigned, providerPackage("test-provider", [provider])], slots: { compaction: "@acme/c1" } });
     assert.equal(hostWins.inspect().slots.compaction, "@acme/c1");
     await hostWins.dispose();
   });
@@ -275,10 +276,10 @@ describe("loadManifest", () => {
       entries[0].optional = true;
     });
     const inputs = await loadManifest({ home, root: await tmp("r") });
-    const agent = await createAgent({ model: MODEL, provider, packages: inputs });
+    const agent = await createAgent({ model: MODEL, packages: [...inputs, providerPackage("test-provider", [provider])] });
     const view = agent.inspect();
     assert.deepEqual(
-      view.packages.map((p) => [p.name, p.status, p.source]),
+      view.packages.filter((p) => p.name !== "test-provider").map((p) => [p.name, p.status, p.source]),
       [["@acme/hello", "skipped", "manifest:user"]],
     );
     assert.deepEqual(
@@ -299,8 +300,8 @@ describe("loadManifest", () => {
         entries[0].config = { apiKey: "env:PRISM_TEST_MANIFEST_KEY", greeting: "hi" };
       });
       const inputs = await loadManifest({ home, root, trustProject: () => true });
-      const agent = await createAgent({ model: MODEL, provider, packages: inputs, packageConfig: { "@acme/proj": { greeting: "host" } } });
-      const packages = agent.inspect().packages;
+      const agent = await createAgent({ model: MODEL, packages: [...inputs, providerPackage("test-provider", [provider])], packageConfig: { "@acme/proj": { greeting: "host" } } });
+      const packages = agent.inspect().packages.filter((p) => p.name !== "test-provider");
       assert.deepEqual(
         packages.map((p) => [p.name, p.source]),
         [

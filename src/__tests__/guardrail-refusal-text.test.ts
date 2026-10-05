@@ -27,6 +27,7 @@ import {
   type GuardrailRecord,
 } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 type ToolBlockedEvent = Extract<AgentEvent, { readonly type: "tool.completed" }>;
 
@@ -60,7 +61,7 @@ async function writeAgent(
     slots: { store: options.store ?? createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     ...(options.redactor ? { redactor: options.redactor } : {}),
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         requests.push(1);
@@ -70,7 +71,7 @@ async function writeAgent(
             : [providerTextDelta("nothing to do"), providerDone()];
         for (const event of turn) yield event;
       },
-    },
+    }])],
     tools: { add: [...tools] },
   });
   return { agent, events, requests };

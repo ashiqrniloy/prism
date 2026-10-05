@@ -2,7 +2,8 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type AIProvider, createAgent, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 import { configure, install, installedPackageDir, loadManifest, ManifestError, scopeDirs, setEnabled } from "@arnilo/prism/manifest";
 
 /**
@@ -43,23 +44,23 @@ export async function demo(): Promise<Record<string, unknown>> {
     // 2. Load and run one turn that calls the package's tool.
     const advertised: string[][] = [];
     let greeted: unknown;
-    const provider: AIProvider = {
-      id: "mock",
-      async *generate(request) {
-        advertised.push((request.tools ?? []).map((tool) => tool.name));
-        const result = request.messages.flatMap((message) => message.content).find((block) => block.type === "tool_result");
-        if (result?.type === "tool_result") greeted = result.result;
-        if (result === undefined && advertised.at(-1)?.includes("hello_greet")) {
-          yield { type: "tool_call" as const, call: toolCallContent("c1", "hello_greet", { name: "prism" }) };
-        } else {
-          yield providerTextDelta("done");
-        }
-        yield providerDone();
+    // Turn 1 calls the package's tool; turn 2 answers. `onRequest` records what each turn advertised.
+    const provider = mockProvider(
+      [
+        [{ type: "tool_call" as const, call: toolCallContent("c1", "hello_greet", { name: "prism" }) }, providerDone()],
+        [providerTextDelta("done"), providerDone()],
+      ],
+      {
+        onRequest(request) {
+          advertised.push((request.tools ?? []).map((tool) => tool.name));
+          const result = request.messages.flatMap((message) => message.content).find((block) => block.type === "tool_result");
+          if (result?.type === "tool_result") greeted = result.result;
+        },
       },
-    };
+    );
     const trusted = { root, home, trustProject: () => true };
     const run = async (): Promise<string> => {
-      const agent = await createAgent({ id: "manifest-demo", model: MODEL, provider, packages: await loadManifest(trusted) });
+      const agent = await createAgent({ id: "manifest-demo", model: MODEL, packages: [...await loadManifest(trusted), provider] });
       try {
         return (await (await agent.session()).run("greet prism")).status;
       } finally {

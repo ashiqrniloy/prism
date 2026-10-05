@@ -8,7 +8,7 @@ Implementation is **shipped** for transport and OpenAI serialization primitives 
 
 ## When to use it
 
-- **Provider package authors** implementing or migrating a first-party adapter should import shared primitives from `@arnilo/prism/providers/transport`, `@arnilo/prism/providers/openai`, and `@arnilo/prism/providers/schema` instead of copying `sse.ts`, `safeText`, `parseArgs`, serializers, or JSON Schema key-sorting.
+- **Provider package authors** implementing or migrating a first-party adapter should import shared primitives from `@arnilo/prism/provider-kit`, `@arnilo/prism/provider-kit`, and `@arnilo/prism/provider-kit` instead of copying `sse.ts`, `safeText`, `parseArgs`, serializers, or JSON Schema key-sorting.
 - **Host apps** choose native structured output via `ProviderRequestOptions.structuredOutput` when the model declares support; otherwise they keep the artifact generate→validate→revise loop ([Structured output](structured-output.md)).
 - **Operators** enable observability through extended agent events and the optional OpenTelemetry adapter package ([Observability](observability.md)).
 
@@ -20,7 +20,7 @@ Static scan of root `src/providers/` and `packages/prism-providers/src/*/` befor
 
 | Helper | Baseline copies | Task 2 status |
 | --- | ---: | --- |
-| `readSseData` / SSE reader | 7 (6× `sse.ts` + inline openai-compatible) | **Migrated** — `@arnilo/prism/providers/transport`; local `sse.ts` deleted |
+| `readSseData` / SSE reader | 7 (6× `sse.ts` + inline openai-compatible) | **Migrated** — `@arnilo/prism/provider-kit`; local `sse.ts` deleted |
 | `readNeuralWattSseFrames` | 1 | **Migrated** — thin adapter over `readSseEvents` `comments` in `provider-neuralwatt` |
 | `safeText` | 9 | **Migrated** — `readBoundedResponseText` with optional `secrets` |
 | `parseArgs` | 8 | **Migrated** — `parseJsonObjectArguments` (typed error on malformed JSON) |
@@ -38,7 +38,7 @@ Static scan of root `src/providers/` and `packages/prism-providers/src/*/` befor
 | Shared retry HTTP plane | `packages/prism-providers/src/shared/retry-http.ts` | **Migrated (plan 070 Task 11)** — `readRetryAfterMs` (header, plus a caller-supplied body field), `parseErrorBody`, the secret-redacting `providerHttpError` builder, and `RETRYABLE_STATUSES`; hyper, NeuralWatt, and Command Code classifiers keep their own status/field decisions |
 | Quota endpoint throttling | `packages/prism-providers/src/neuralwatt/quota.ts` | Documents 1 rps limit; caller-owned cache |
 
-The `Retry-After` HTTP plane is shared inside `@arnilo/prism-providers` (`src/shared/retry-http.ts`, plan 070 Task 11), so the three classifiers cannot drift on header reading or on the redaction of provider error text. `x-request-id` extraction and a *core*-level helper for every provider do not exist yet.
+The `Retry-After` HTTP plane is shared inside the kernel's provider kit (`src/provider-kit/retry-http.ts`, plan 070 Task 11; moved there in plan 152 Task 2), so the three classifiers cannot drift on header reading or on the redaction of provider error text. `x-request-id` extraction and a *core*-level helper for every provider do not exist yet.
 
 ### Structured output
 
@@ -68,13 +68,13 @@ Primitives are **stdlib-only**, exposed as peer-importable subpaths on `@arnilo/
 | Concern | Option A | Option B | **Chosen** | Rationale |
 | --- | --- | --- | --- | --- |
 | SSE parsing | External npm SSE library | Incremental stdlib parser | **B** | Small surface; avoids dependency |
-| Transport packaging | New `@arnilo/prism-provider-transport` package | Core subpath `@arnilo/prism/providers/transport` | **Core subpath** | Matches existing `providers/openai-compatible` pattern; one peer dep |
-| OpenAI serializers | Duplicate per package | `@arnilo/prism/providers/openai` | **Core subpath** | Proven by ≥6 providers |
+| Transport packaging | New `@arnilo/prism-provider-transport` package | Core subpath `@arnilo/prism/provider-kit` | **Core subpath** | Matches existing `providers/openai-compatible` pattern; one peer dep |
+| OpenAI serializers | Duplicate per package | `@arnilo/prism/provider-kit` | **Core subpath** | Proven by ≥6 providers |
 | NeuralWatt comments | Force into generic reader | `readSseEvents` yields optional `comments[]`; NeuralWatt maps locally | **Optional comments** | Keeps generic reader used by ≥2 providers without NeuralWatt-only branches in core |
 | Structured output wire shape | Vendor fields in core contracts | Provider-neutral option + local mapper | **Neutral option** | Avoids leaking `response_format` into contracts |
 | Observability | Hard OTel in core | Extended events + optional adapter package | **Events + optional pkg** | No mandatory heavyweight dep |
 
-### `@arnilo/prism/providers/transport` — **shipped**
+### `@arnilo/prism/provider-kit` — **shipped**
 
 Import:
 
@@ -88,7 +88,7 @@ import {
   DEFAULT_MAX_EVENT_BYTES,
   DEFAULT_MAX_BUFFER_BYTES,
   DEFAULT_MAX_RESPONSE_BODY_BYTES,
-} from "@arnilo/prism/providers/transport";
+} from "@arnilo/prism/provider-kit";
 ```
 
 ```ts
@@ -159,7 +159,7 @@ export async function readBoundedResponseJson<T>(
 
 **Security:** the bounded success-body reader (added in 0.2.1) caps every non-stream JSON response: a hard UTF-8 byte ceiling (`maxResponseBodyBytes`, default 65_536) that cancels the body before full buffering, a nesting depth cap (default 32), a per-container property/element cap (default 4_096), and a caller-supplied shape gate. Malformed JSON, over-limit nesting or width, and shape mismatches all fail closed with `ProviderTransportError` code `response_body_shape`; errors are static text and never embed body content or secrets. It replaces the former unbounded `response.json()` in all ten model-discovery implementations, NeuralWatt quota, Alibaba embeddings, OpenAI uploads (0.2.1 task 6), and the shared OAuth device/token flows (0.2.1 task 5); per-adapter post-parse validation stays as defense in depth.
 
-### `@arnilo/prism/providers/openai` — **shipped**
+### `@arnilo/prism/provider-kit` — **shipped**
 
 Import:
 
@@ -169,7 +169,7 @@ import {
   serializeOpenAIChatMessage,
   mapOpenAIChatUsage,
   assertOpenAIChatMessage,
-} from "@arnilo/prism/providers/openai";
+} from "@arnilo/prism/provider-kit";
 ```
 
 ```ts
@@ -191,12 +191,12 @@ export function assertOpenAIChatMessage(message: unknown, path: string): asserts
 
 `src/providers/openai-compatible.ts` becomes a thin adapter over these helpers in Task 2.
 
-### `@arnilo/prism/providers/schema` — **shipped**
+### `@arnilo/prism/provider-kit` — **shipped**
 
 Deterministic JSON Schema clone for tool/function parameters. Sorts object keys and unordered `required` names. Leaves semantic arrays (`prefixItems`, `examples`, `enum`, tuple `items`) in caller order. Does not resolve `$ref`, mutate input, or enforce schema bounds.
 
 ```ts
-import { canonicalizeJsonSchema } from "@arnilo/prism/providers/schema";
+import { canonicalizeJsonSchema } from "@arnilo/prism/provider-kit";
 
 canonicalizeJsonSchema({ required: ["b", "a"], properties: { b: {}, a: {} } });
 // keys and required names stable; ordered schema arrays remain ordered

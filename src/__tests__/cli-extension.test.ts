@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { parseCliArgs, runCli } from "../cli-runner.js";
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "../index.js";
+import { createAgent, providerDone, providerTextDelta } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 const TEST_DIR = join(process.cwd(), "dist/__tests__/scratch-cli-extension-test");
 const FIXTURE_REL = "./dist/__tests__/scratch-cli-extension-test/fixture.js";
@@ -29,7 +30,7 @@ async function session(text = "Hello") {
   return (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta(text), providerDone()]),
+      packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
     })
   ).session();
 }

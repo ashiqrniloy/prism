@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig, ProviderEvent, ProviderRequest, Usage } from "@arnilo/prism";
 import { ModelRouterError } from "./errors.js";
 import type { ModelRouter, ModelRouterReservation, ModelRouterResolveResult, PaidWorkKind } from "./types.js";
 
@@ -33,7 +33,7 @@ export interface GovernedInvocationSettlement {
   readonly kind?: PaidWorkKind;
 }
 
-export interface GovernedProvider extends AIProvider {
+export interface GovernedProvider extends ModelProvider {
   readonly router: ModelRouter;
   readonly identity?: AgentIdentity;
   readonly model?: ModelConfig;

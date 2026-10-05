@@ -1,5 +1,5 @@
 import type {
-  AIProvider,
+  ModelProvider,
   JsonObject,
   Message,
   ModelConfig,
@@ -13,7 +13,7 @@ import { MemoryError, MemoryLimitError } from "../../errors.js";
 import { type MemoryWorkerLimitOptions, measureWorkerJson, resolveMemoryWorkerLimits, truncateWorkerText } from "./limits.js";
 
 export interface MemoryWorkerLoopOptions extends MemoryWorkerLimitOptions {
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
   readonly system: string;
   readonly prompt: string;

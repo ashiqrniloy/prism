@@ -29,6 +29,7 @@ import {
   createMessagesFromSessionProjection,
   createStateFromStoreProjection,
 } from "../packages/ag-ui/dist/index.js";
+import { providerPackage } from "../dist/provider-kit/index.js";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 
@@ -61,7 +62,7 @@ async function writeAgent(checkpoints, provider = parallelProvider(), loop, vali
     hooks: askEveryTool(),
     id: "phase8-conformance",
     model: { provider: "mock", model: "demo" },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     slots: { store: createMemorySessionStore(), ...(loop ? { loop } : {}) },
     ...(validator ? { validator } : {}),
     tools: [
@@ -85,13 +86,13 @@ describe("Phase 8 conformance", () => {
     const agent = await createAgent({
       id: "hookless",
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           providerCalls += 1;
           yield providerDone();
         },
-      },
+      }])],
       slots: {
         loop: {
           name: "bare",
@@ -354,7 +355,7 @@ describe("Phase 8 conformance", () => {
       id: "elicit",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -366,7 +367,7 @@ describe("Phase 8 conformance", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: [
         {
           name: "ask",

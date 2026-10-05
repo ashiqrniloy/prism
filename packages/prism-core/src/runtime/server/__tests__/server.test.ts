@@ -1,23 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  askEveryTool,
-  type AgentEventRecord,
-  type AIProvider,
-  createAgent,
-  createAgentRunLifecycle,
-  createMemoryAgentEventSource,
-  createMemoryCheckpointStore,
-  createMemoryLeaseStore,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-} from "@arnilo/prism";
+import { askEveryTool, type AgentEventRecord, type ModelProvider, createAgent, createAgentRunLifecycle, createMemoryAgentEventSource, createMemoryCheckpointStore, createMemoryLeaseStore, createMemorySessionStore, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { createMemoryWorkflowCheckpoints, createWorkflowSchedules, defineWorkflow, functionNode, suspend } from "../../workflows/index.js";
 import { createPrismHandler } from "../handler.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const authorization = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
 
@@ -33,7 +20,7 @@ function jsonRequest(path: string, body: unknown, init: RequestInit = {}): Reque
 async function mockAgent(text = "hello") {
   return await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: createMockProvider([providerTextDelta(text), providerDone()]),
+    packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
   });
 }
 
@@ -142,7 +129,7 @@ describe("createPrismHandler", () => {
       hooks: askEveryTool(),
       id: "support",
       model: { provider: "mock", model: "offline" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -153,7 +140,7 @@ describe("createPrismHandler", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       redactor: createSecretRedactor([secret]),
       slots: { store },
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
@@ -209,7 +196,7 @@ describe("createPrismHandler", () => {
       hooks: askEveryTool(),
       id: "batch-support",
       model: { provider: "mock", model: "offline" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -221,7 +208,7 @@ describe("createPrismHandler", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
       runState: { checkpoints, definitionRevision: "1" },
@@ -274,7 +261,7 @@ describe("createPrismHandler", () => {
       hooks: askEveryTool(),
       id: "editable-support",
       model: { provider: "mock", model: "offline" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -285,7 +272,7 @@ describe("createPrismHandler", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
       validator: (_tool: unknown, args: unknown) =>
         typeof (args as { value?: unknown }).value === "string" ? undefined : "value must be a string",
@@ -415,7 +402,7 @@ describe("createPrismHandler", () => {
       hooks: askEveryTool(),
       id: "multi-editable",
       model: { provider: "mock", model: "offline" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++multiTurn === 1) {
@@ -427,7 +414,7 @@ describe("createPrismHandler", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store: createMemorySessionStore() },
       tools: {
         add: [
@@ -701,7 +688,7 @@ describe("createPrismHandler", () => {
 
   it("bounds concurrent runs and releases the slot when an SSE consumer disconnects", async () => {
     let providerCalls = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "slow",
       async *generate(request) {
         providerCalls += 1;
@@ -722,7 +709,7 @@ describe("createPrismHandler", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ model: { provider: "slow", model: "slow" }, provider });
+    const agent = await createAgent({ model: { provider: "slow", model: "slow" }, packages: [providerPackage("test-provider", [provider])] });
     const handler = createPrismHandler({
       agents: { slow: agent },
       authorize: () => authorization,

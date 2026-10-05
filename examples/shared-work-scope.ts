@@ -1,16 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type SessionEntry,
-  type SessionStore,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, type SessionEntry, type SessionStore, toolCallContent } from "@arnilo/prism";
 import {
   createObservationalMemory,
   createRecallMemoryTool,
@@ -21,6 +10,7 @@ import {
   type SharedScopeAccessEvent,
   withWorkScope,
 } from "@arnilo/prism-memory/compaction/observational-memory";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
@@ -29,7 +19,7 @@ const PRIVATE = "release:0.9:notes";
 const memoryOverrides = { observation: { messageTokens: 1 }, reflection: { observationTokens: 1_000 }, agentMaxTurns: 1 };
 
 // Worker that records one fixed observation per turn, attributed to the turn's user message.
-function observationWorker(store: SessionStore, sessionId: string, content: string): AIProvider {
+function observationWorker(store: SessionStore, sessionId: string, content: string): ModelProvider {
   return {
     id: "memory",
     async *generate() {
@@ -46,7 +36,7 @@ function observationWorker(store: SessionStore, sessionId: string, content: stri
 
 export async function demo() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const appendEntry = (entry: SessionEntry, options?: { expectedParentId?: string }) => store.append(entry, options);
 
   // The host does not choose session ids: open the three participants first and key them by their generated ids.

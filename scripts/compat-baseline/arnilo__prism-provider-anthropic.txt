@@ -1,5 +1,8 @@
 ANTHROPIC_API_VERSION	export declare const ANTHROPIC_API_VERSION = "2023-06-01"
+ANTHROPIC_DEFAULT_API_KEY_REF	export declare const ANTHROPIC_DEFAULT_API_KEY_REF = "env:ANTHROPIC_API_KEY"
 ANTHROPIC_DEFAULT_BASE_URL	export declare const ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com/v1"
+ANTHROPIC_LEGACY_THINKING_DEFAULT_BUDGET	export declare const ANTHROPIC_LEGACY_THINKING_DEFAULT_BUDGET = 10000
+anthropic	export declare function anthropic(options?: AnthropicProviderPackageOptions & AnthropicProviderConfig): PackageInstance
 anthropicCacheEnabled	export declare function anthropicCacheEnabled(request: ProviderRequest): boolean
 anthropicEffort	export declare function anthropicEffort(request: ProviderRequest): string | undefined
 anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest): Promise<JsonObject>
@@ -8,9 +11,11 @@ anthropicModels	export declare const anthropicModels: readonly [ModelConfig, Mod
 anthropicOwnedHeaders	export declare function anthropicOwnedHeaders(token: string | undefined, options: ProviderRequestOptions | undefined, userAgent?: string): Record<string, string>
 anthropicPreserveThinking	export declare function anthropicPreserveThinking(request: ProviderRequest): boolean
 anthropicThinking	export declare function anthropicThinking(request: ProviderRequest): JsonObject | undefined
+anthropicThinkingGeneration	export declare function anthropicThinkingGeneration(modelId: string): AnthropicThinkingGeneration
+anthropicThinkingLevels	export declare function anthropicThinkingLevels(modelId: string): readonly string[] | undefined
 applyAnthropicCacheControl	export declare function applyAnthropicCacheControl(request: ProviderRequest): readonly Message[]
-createAnthropicMessagesProvider	export declare function createAnthropicMessagesProvider(options?: AnthropicMessagesProviderOptions): AIProvider
-anthropicPackage	export declare function anthropicPackage(options?: AnthropicProviderPackageOptions): PackageInstance
+createAnthropicMessagesProvider	export declare function createAnthropicMessagesProvider(options?: AnthropicMessagesProviderOptions): ModelProvider
+default	export default
 defineAnthropicModel	export declare function defineAnthropicModel(config: AnthropicModelConfig): ModelConfig
 listAnthropicModels	export declare function listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
 mapAnthropicModel	export declare function mapAnthropicModel(entry: AnthropicModelEntry, options?:

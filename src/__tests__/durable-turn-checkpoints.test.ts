@@ -14,6 +14,7 @@ import {
   resumeAgentRunStream,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /**
  * Simulates a host process dying: the checkpoint store is available up to the crash point and
@@ -72,7 +73,7 @@ async function crashOnceAgent(options: {
     id: "crash-recovery",
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         options.requests.push(request);
@@ -90,7 +91,7 @@ async function crashOnceAgent(options: {
         yield providerTextDelta("investigation complete");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {
@@ -162,7 +163,7 @@ describe("turn-boundary crash-recovery checkpoints", () => {
       id: "continue-vs-approval",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -174,7 +175,7 @@ describe("turn-boundary crash-recovery checkpoints", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -286,7 +287,7 @@ describe("turn-boundary crash-recovery checkpoints", () => {
       id: "default-policy",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -298,7 +299,7 @@ describe("turn-boundary crash-recovery checkpoints", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }] },
     });
     const result = await (await agent.session({ id: "default-session", create: true })).run("go", {

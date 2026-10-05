@@ -15,6 +15,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /** Minimal custom loop: one provider turn, dispatch any calls. */
 function customLoop(hooks: boolean, state: { turns: number; restored?: JsonValue }): LoopStrategy {
@@ -66,14 +67,14 @@ describe("durable custom loops", () => {
     const agent = await createAgent({
       id: "not-durable-loop",
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           providerCalls += 1;
           yield providerTextDelta("unreachable");
           yield providerDone();
         },
-      },
+      }])],
       slots: { loop: customLoop(false, state) },
     });
     await assert.rejects(
@@ -92,7 +93,7 @@ describe("durable custom loops", () => {
       hooks: askEveryTool(),
       id: "durable-custom-loop",
       model: { provider: "mock", model: "demo" },
-      provider: provider(),
+      packages: [providerPackage("test-provider", [provider()])],
       slots: { store: createMemorySessionStore(), loop: customLoop(true, state) },
       tools: {
         add: [
@@ -144,7 +145,7 @@ describe("durable custom loops", () => {
       hooks: askEveryTool(),
       id: "bad-snapshot",
       model: { provider: "mock", model: "demo" },
-      provider: twoTurnProvider()(),
+      packages: [providerPackage("test-provider", [twoTurnProvider()()])],
       slots: { loop },
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write" }) }] },
     });

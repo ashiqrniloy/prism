@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/clinepass` provides explicit, side-effect-free setup for
+`@arnilo/prism-provider-clinepass` provides explicit, side-effect-free setup for
 the ClinePass OpenAI-compatible Chat Completions API at
 `https://api.cline.bot/api/v1`. Requests always stream. Model ids are official
 `cline-pass/…` slugs from a static featured catalog.
@@ -19,20 +19,28 @@ or caller-gated `GET /models` (no documented OpenAI models endpoint).
 ## Inputs / request
 
 ```ts
-import { createClinePassProviderPackage } from "@arnilo/prism-providers/clinepass";
+import clinepass from "@arnilo/prism-provider-clinepass";
 
-createClinePassProviderPackage(options: ClinePassProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+clinepass(options?: ClinePassProviderPackageOptions & ClinePassProviderConfig = {}): PackageInstance
+
+// Named exports.
+createClinePassProvider(options?: ClinePassProviderOptions): ModelProvider
+defineClinePassModel(config: ClinePassModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Host-supplied ClinePass key. No env scan. |
-| `fetch` | `typeof fetch` | Optional fetch for tests/hosts. |
-| `baseUrl` | `string` | Default `https://api.cline.bot/api/v1`. |
-| `id` | `string` | Provider id (default `clinepass`). |
-| `models` | `readonly ModelConfig[]` | Overrides static `clinePassModels`. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:CLINEPASS_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://api.cline.bot/api/v1`. |
+| `models` | `ModelConfig[]` | Static catalog override. |
 
-There is no `listClinePassModels`.
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `clinepass`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it returns the curated `clinePassModels` catalog — no network call.
 
 ### Thinking / reasoning compat
 
@@ -73,11 +81,16 @@ Completion budget is `max_completion_tokens` (not `max_tokens`).
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import { createClinePassProviderPackage } from "@arnilo/prism-providers/clinepass";
+import { createAgent } from "@arnilo/prism";
+import clinepass from "@arnilo/prism-provider-clinepass";
 
-const kernel = createExtensionKernel();
-await kernel.load([createClinePassProviderPackage({ apiKey: "fake-cline-key" })]);
+const agent = await createAgent({
+  model: { provider: "clinepass", model: "cline-pass/glm-5.2" },
+  packages: [clinepass({ apiKey: "env:CLINEPASS_API_KEY" })],
+});
+
+const models = await agent.models.list(); // the curated catalog, no fetch
+await agent.dispose();
 ```
 
 Per-turn effort:

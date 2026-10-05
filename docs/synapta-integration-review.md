@@ -61,7 +61,7 @@ All changes are local, dependency-free, and include regression checks.
 **Fix:** resolve once using the configured provider id; pass that resolved value to the shared transport. Authentication and outer error redaction now use the same credential.
 
 - Implementation: `packages/prism-providers/src/shared/systemone-provider.ts:40–51`.
-- Regression: `packages/prism-providers/src/laya/__tests__/laya.test.ts`, `laya_resolves_credentials_once_with_provider_id_and_redacts_transport_failures`.
+- Regression: `packages/providers/laya/src/__tests__/laya.test.ts`, `laya_resolves_credentials_once_with_provider_id_and_redacts_transport_failures`.
 - Both Laya and TypeSafe use this shared implementation.
 
 ### F3 — Malformed System One responses became successful decisions
@@ -199,8 +199,7 @@ Executed:
 
 ```sh
 npm run build:core
-npm run build --workspace @arnilo/prism-providers
-npm test --workspace @arnilo/prism-providers
+npm test --workspace @arnilo/prism-provider-anthropic
 node --test --test-concurrency=1 \
   dist/__tests__/run-bundle.test.js \
   dist/__tests__/guardrail-packs.test.js \
@@ -228,7 +227,7 @@ These recommendations were executed as plan `plans/122-Synapta-Integration-Revie
 | §2 F3 malformed-response rejection | fixed in this tree | Answer discriminants, finite scores, probability ranges, optional confidence/distributions/legends, and token counts validated before success. |
 | §2 F4 `__proto__` choice labels | fixed in this tree | Criteria built with `Object.fromEntries`; the regression is pinned. |
 | §3 coverage-safe memory compaction | implemented (Task 2) | Eligible messages after the coverage cursor are retained past the recent window, the fold boundary stays behind an unscanned prefix, and automatic compaction defers when the observer skipped without a coverage cursor; `advertiseRecall` gates the recall hint. |
-| §3 confidence-preserving decision calls | implemented (Task 3) | `@arnilo/prism-providers/decisions` typed call preserves raw probabilities/confidence, responding model, usage, and timing, with explicit bounds, deadline/abort composition, and typed errors; calibration stays host config and timeouts never become plausible answers. |
+| §3 confidence-preserving decision calls | implemented (Task 3) | `@arnilo/prism/provider-kit` typed call preserves raw probabilities/confidence, responding model, usage, and timing, with explicit bounds, deadline/abort composition, and typed errors; calibration stays host config and timeouts never become plausible answers. |
 | §3 fixed-model aggregate budget composition | demonstrated (Task 4) | `examples/model-router-aggregate-budgets.ts` draws three sequential runs plus an auxiliary call on one task ceiling, with renewal fencing, unknown-usage liability, and aggregate-versus-context-window reporting; existing router APIs only. |
 | §3 step-loop telemetry/evals | demonstrated (Task 5) | `examples/host-step-loop-timeline.ts` correlates host action/attempt/step ids with Prism session/run ids in a metadata-only NDJSON ledger and keeps external host commit evidence outside Prism effects. |
 | §3 typed proposal provenance | implemented (Task 6) | `createFieldEvidenceGuardrail` (`tool_input`, fail-closed) verifies host-selected field paths against host-supplied evidence values, sources, and revisions. |

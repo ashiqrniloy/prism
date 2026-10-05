@@ -1,15 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type SessionStore,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
 import {
   createObservationalMemory,
   createWorkScopeController,
@@ -18,11 +8,12 @@ import {
   projectWorkMemory,
   withWorkScope,
 } from "@arnilo/prism-memory/compaction/observational-memory";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
 
-function observationProvider(store: SessionStore, sessionId: string): AIProvider {
+function observationProvider(store: SessionStore, sessionId: string): ModelProvider {
   return {
     id: "memory",
     async *generate() {
@@ -47,7 +38,7 @@ function observationProvider(store: SessionStore, sessionId: string): AIProvider
 // runWorkflow remains unaware.
 export async function demo() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const baseSession = await agent.session({ id: "work-scopes", create: true });
   const memory = createObservationalMemory({
     observation: { provider: observationProvider(store, baseSession.id), model: workerModel },

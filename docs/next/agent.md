@@ -15,7 +15,7 @@ This staged page covers the Phase 3 principal contract; later tasks add the rema
 
 | Field | Meaning |
 | --- | --- |
-| `model` | Model configuration. |
+| `model: ModelRef` | `"provider/model"` (split on the first `/`) or a `ModelSpec`. Parsed once by `createAgent`; `agent.config.model` is the parsed `ModelSpec`. See [models.md](models.md). |
 | `principal?: Principal` | Optional opaque host principal (`kind`, `id`, `displayName?`). No default identity is created. |
 | `tools?: { add?: readonly ToolDefinition[] }` | Host tools. A duplicate name (including the kernel's `load_skill`/`search_tools`) fails the run closed. |
 | `skills?: { dirs?; add?; disclosure? }` | Host skills. `dirs` reads through the same reader as `PackageAPI.skills.addDir`; `disclosure` defaults to `progressive`. |
@@ -61,7 +61,7 @@ serialized into events or session entries. Packages may explicitly emit redacted
 
 ```ts
 const principal = { kind: "user" as const, id: request.user.id };
-const agent = await createAgent({ model, provider, principal, packages: [governance()] });
+const agent = await createAgent({ model, principal, packages: [openai(), governance()] });
 const session = await agent.session();
 await session.run("hello");
 await session.run("delegated request", { principal: delegatePrincipal });
@@ -95,7 +95,7 @@ if (result.status === "suspended") {
 `agent.session(options?: SessionOptions): Promise<Session>` is the only way to open a session.
 
 ```ts
-const agent = await createAgent({ model, provider, slots: { store: myStore } });
+const agent = await createAgent({ model, packages: [openai()], slots: { store: myStore } });
 const s = await agent.session(); // a new session: no store read
 const again = await agent.session({ id: s.id }); // resumes through the store slot
 ```
@@ -163,12 +163,12 @@ Code's store do not yet; Phase 6 adds `listSessions` and `deleteSession` to them
 ### `agent.models`
 
 `list()` returns the models each registered provider declares through the optional
-`AIProvider.models()` (the existing `ModelConfig`), then the configured model if no provider declared it, so
-a provider without discovery still lists the model it serves. Only public fields are returned: `parameters`,
-`compat` and `metadata` are dropped (they can carry endpoints and headers) and the agent's redactor masks the
-rest. `resolve(ref)` returns `{ provider, model }` through the agent's provider resolution (a direct
-`provider`, the `providerSource`, then a package's provider) and throws `Unknown provider: <id>`. Phase 5
-swaps `ModelConfig` for `ModelRef` and adds discovery inside providers; the member names stay.
+`ModelProvider.models()`, then the configured model if no provider declared it, so a provider without
+discovery still lists the model it serves. Only public fields are returned: `parameters`, `compat`,
+`metadata`, `options`, `baseUrl` and `credential` are dropped (they can carry endpoints, headers or a tenant
+secret) and the agent's redactor masks the rest. `resolve(ref)` takes a `ModelRef` (a string or a
+`ModelSpec`), returns `{ provider, model }` with `model` the parsed `ModelSpec`, and throws `ModelRefError`
+(`model_ref_invalid`) on a malformed reference or `Unknown provider: <id>` when none is registered.
 
 ### `agent.tools` and `agent.skills`
 
@@ -321,7 +321,7 @@ import { createAgent, definePackage, type Session, type HostUi, type AgentEvent 
 import { createMockProvider, packageConformance, loopConformance, createScriptedHostUi } from "@arnilo/prism/testing";
 ```
 
-**Host API (roadmap §2.3):** `createAgent`, `AgentConfig`, `Agent`, `Session`, `SessionOptions`, `RunOptions`,
+**Host API (roadmap §2.3):** `createAgent`, `AgentConfig`, `Agent`, `AgentInspection`, `Session`, `SessionOptions`, `RunOptions`,
 `RunResult`, `Decision`, `PendingDecision`, `HostPort`, `HostUi`, `HostUiRequest`, `HostUiResponse`, `AgentEvent`,
 `Principal`, `RunLimits`, `ToolInfo`, `SkillInfo`, `SessionIndex`, `ModelIndex`. The roadmap's `UiRequest` and
 `UiResponse` ship as `HostUiRequest` and `HostUiResponse`; `Limits` ships as `RunLimits`.
@@ -331,14 +331,15 @@ import { createMockProvider, packageConformance, loopConformance, createScripted
 **Package authoring (§2.6):** `definePackage`, `PackageAPI`, `SessionContext`, `ToolDefinition`, `Skill`,
 `CommandDefinition`.
 
-**Test helpers:** `@arnilo/prism/testing` exports `createMockProvider`, `packageConformance`, `loopConformance`
-and `createScriptedHostUi`. The per-suite subpaths stay until their owning phases consolidate them.
+**Test helpers:** `@arnilo/prism/testing` exports `createMockProvider`, `packageConformance`, `loopConformance`,
+`storeConformance` and `createScriptedHostUi`. The per-suite subpaths stay until their owning phases consolidate them.
 
 Pinned member names:
 
 | Type | Members |
 | --- | --- |
 | `Agent` | `id`, `config`, `commands`, `tools`, `skills`, `sessions`, `models`, `session`, `subscribe`, `dispose`, `inspect` |
+| `AgentInspection` | `packages`, `tools`, `skills`, `commands`, `hooks`, `slots`, `store`, `disabled`, `statusNotes` |
 | `Session` | `id`, `run`, `stream`, `steer`, `abort`, `resume`, `messages`, `fork`, `compact`, `close`, plus the kernel members `leafId`, `guardrailPackRefs`, `entries`, `checkout`, `contextMeter`, `subscribe`, `getLoadedSkillNames`, `restoreLoadedSkills` |
 | `RunResult` | `sessionId`, `runId`, `status`, `leafId`, `text`, `content`, `message`, `messages`, `usage`, `limit`, `attribution`, `error`, `abortReason`, `stopReason`, `stopDetail`, `pending`, `runState` |
 | `RunOptions` | the 0.12 per-run overrides still carried until Phase 11's export review (`signal`, `model`, `limits`, `metadata`, `tools`, `principal`, `runState`, …); the test lists all 27 |

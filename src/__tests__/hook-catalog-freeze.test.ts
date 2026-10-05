@@ -31,7 +31,7 @@ const FROZEN_PHASE_1_NAMED_CATALOG: readonly string[] = [
 ];
 
 /**
- * The frozen 1.0 event catalog (roadmap §2.3, plan 148 Task 3): every observe hook is one
+ * The frozen 0.13.0 event catalog (roadmap §2.3, plan 148 Task 3): every observe hook is one
  * `AgentEventPayload["type"]`, and these are the only legal names. A new event type must be
  * listed here deliberately, in the same edit that widens the union.
  */

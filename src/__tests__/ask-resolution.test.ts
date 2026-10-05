@@ -1,28 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  askEveryTool,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-  type AgentConfig,
-  type AgentEvent,
-  type Session,
-  type HostUi,
-  type HostUiRequest,
-  type HostUiResponse,
-  type JsonObject,
-  loadSuspendedRunEntry,
-  resumeAgentRun,
-  type Decision,
-} from "../index.js";
+import { askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore, createSecretRedactor, providerDone, providerTextDelta, toolCallContent, type AgentConfig, type AgentEvent, type Session, type HostUi, type HostUiRequest, type HostUiResponse, type JsonObject, loadSuspendedRunEntry, resumeAgentRun, type Decision } from "../index.js";
 import { agentHookIds } from "../agent-session/runtime-registry.js";
 import { agentRuntime } from "../agent-session/create-agent.js";
+import { mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 
@@ -46,7 +28,7 @@ async function agentFor(
     model: MODEL,
     ...rest,
     ...(ask ? { hooks: (hooks: Parameters<NonNullable<AgentConfig["hooks"]>>[0]) => hooks.on("tool.call", () => ({ ask })) } : {}),
-    provider: (() => {
+    packages: [providerPackage("test-provider", [(() => {
       let turn = 0;
       return {
         id: "mock",
@@ -61,7 +43,7 @@ async function agentFor(
           yield providerDone();
         },
       };
-    })(),
+    })()])],
     tools: {
       add: [
         {
@@ -191,7 +173,7 @@ describe("ask resolution", () => {
       model: MODEL,
       slots: { store },
       hooks: askEveryTool(),
-      provider: createMockProvider([providerTextDelta("done"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("done"), providerDone()]])],
       tools: {
         add: [
           {

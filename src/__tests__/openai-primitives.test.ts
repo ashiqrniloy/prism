@@ -10,7 +10,7 @@ import {
   serializeOpenAIResponsesStructuredOutput,
   serializeOpenAITool,
   serializeToolResultJson,
-} from "../providers/openai-primitives.js";
+} from "../provider-kit/openai-primitives.js";
 
 describe("openai provider primitives", () => {
   it("canonicalizes shuffled tool schema keys and preserves semantic arrays", () => {

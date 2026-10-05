@@ -7,14 +7,13 @@ import type {
   ErrorInfo,
   Message,
   ProviderEvent,
-  RetryOptions,
   TextContent,
   ToolCallContent,
   Usage,
 } from "../contracts.js";
 import { createId } from "../ids.js";
 import type { AgentInput } from "../input.js";
-import { reconstructToolCallDeltas } from "../provider-events.js";
+import { reconstructToolCallDeltas } from "../models/events.js";
 
 export function providerContent(event: Extract<ProviderEvent, { type: "content_delta" | "tool_call" }>): ContentBlock {
   return event.type === "content_delta" ? event.content : event.call;
@@ -78,15 +77,6 @@ export function finalAssistantMessage(history: readonly Message[]): {
   }
   return { content: [], text: "" };
 }
-export function errorFromInfo(error: ErrorInfo): Error {
-  return Object.assign(new Error(error.message), {
-    name: error.name ?? "Error",
-    cause: error.cause,
-    code: error.code,
-    failureClass: error.failureClass,
-  });
-}
-
 export class ProviderTurnFailure extends Error {
   constructor(
     readonly info: ErrorInfo,
@@ -94,12 +84,6 @@ export class ProviderTurnFailure extends Error {
   ) {
     super(info.message);
   }
-}
-
-export function mergeRetry(agent: false | RetryOptions | undefined, run: false | RetryOptions | undefined): RetryOptions | undefined {
-  if (run === false) return undefined;
-  if (run) return { ...(agent || {}), ...run };
-  return agent || undefined;
 }
 
 export function mergeCompaction(

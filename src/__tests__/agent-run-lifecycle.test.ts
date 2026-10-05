@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { saveAgentRunState } from "../agent-run-state.js";
-import type { AIProvider, ProviderRequest } from "../contracts.js";
+import type { ModelProvider, ProviderRequest } from "../contracts.js";
 import {
   applyRestoredSkillBodies,
   createAgent,
@@ -20,6 +20,7 @@ import {
   validateLoadedSkillBodies,
 } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 describe("agent run lifecycle", () => {
   it("streams an authorized durable approval through the shared core path", async () => {
@@ -31,7 +32,7 @@ describe("agent run lifecycle", () => {
       id: "lifecycle-stream-demo",
       slots: { store },
       model: { provider: "mock", model: "demo" },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -46,7 +47,7 @@ describe("agent run lifecycle", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-lifecycle", name: "write", value: ++calls }) }] },
     });
     const suspended = await (await agent.session({ id: "lifecycle-session", create: true })).run("go", {
@@ -87,7 +88,7 @@ describe("agent run lifecycle", () => {
       id: "lifecycle-no-wall-demo",
       model: { provider: "mock", model: "demo" },
       slots: { store },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -102,7 +103,7 @@ describe("agent run lifecycle", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-no-wall", name: "write", value: ++calls }) }] },
     });
     const suspended = await (await agent.session({ id: "no-wall-session", create: true })).run("go", {
@@ -138,7 +139,7 @@ describe("agent run lifecycle", () => {
       id: "persist-bodies-demo",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(request: { messages: (typeof requests)[number]["messages"] }) {
           requests.push(request as never);
@@ -160,7 +161,7 @@ describe("agent run lifecycle", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       skills: { add: registry.list() },
       tools: {
         add: [
@@ -245,7 +246,7 @@ describe("agent run lifecycle", () => {
       id: "persist-bodies-off",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turns++;
@@ -264,7 +265,7 @@ describe("agent run lifecycle", () => {
           }
           yield providerDone();
         },
-      },
+      }])],
       skills: { add: registry.list() },
       tools: {
         add: [
@@ -432,7 +433,7 @@ describe("agent run lifecycle", () => {
       id: "persist-session-demo",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(request: { messages: (typeof requests)[number]["messages"] }) {
           requests.push(request as never);
@@ -454,7 +455,7 @@ describe("agent run lifecycle", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       skills: { add: registry.list() },
       tools: {
         add: [
@@ -507,7 +508,7 @@ describe("agent run lifecycle", () => {
       const checkpoints = createMemoryCheckpointStore();
       const store = createMemorySessionStore();
       const requests: ProviderRequest[] = [];
-      const provider: AIProvider = {
+      const provider: ModelProvider = {
         id: "mock",
         async *generate(request) {
           requests.push(request);
@@ -531,7 +532,7 @@ describe("agent run lifecycle", () => {
           id: "persist-attention-demo",
           slots: { store },
           model: { provider: "mock", model: "demo" },
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           attentionCompiler: { maxInputTokens: 2_000, triggerRatio, compactRatio, keepLast: 0 },
           tools: {
             add: [
@@ -602,13 +603,13 @@ describe("agent run lifecycle", () => {
       id: "persist-session-off",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield { type: "tool_call" as const, call: toolCallContent("call-write", "write", {}) };
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: "done" }) }] },
     });
     const suspended = await (await agent.session({ id: "persist-session-off", create: true })).run("go", {

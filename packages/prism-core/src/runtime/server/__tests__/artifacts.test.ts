@@ -13,7 +13,7 @@ import {
   createMemoryCheckpointStore,
   createSecretRedactor,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "../../../sessions/sqlite/index.js";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import {
   type ArtifactService,
   createArtifactHandler,

@@ -7,8 +7,10 @@ import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { Session, ProviderRequest, RunOptions, SystemPromptContribution } from "../contracts.js";
-import { createAgent, createMockProvider } from "../index.js";
+import { createAgent } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
 import { createSecretRedactor } from "../redaction.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -45,7 +47,7 @@ function capturingSession(
     return (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         instructions: options.system,
         ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),
         ...(extra.redactor ? { redactor: extra.redactor } : {}),
@@ -203,7 +205,7 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         instructions: "BASE",
         systemPrompt: fileLayers,
       })
@@ -230,7 +232,7 @@ describe("cli system/project prompt flags (Phase 31 Task 5)", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         instructions: "BASE",
         systemPrompt: fileLayers,
       })

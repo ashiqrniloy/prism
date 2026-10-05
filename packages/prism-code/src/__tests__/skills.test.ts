@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AIProvider, ProviderRequest } from "@arnilo/prism";
+import type { ModelProvider, ProviderRequest } from "@arnilo/prism";
 import { providerDone, providerTextDelta } from "@arnilo/prism";
 import { assembleAppAgent } from "../headless.js";
 import { createSkillCommands, findRepoRoot, formatSkillsList, inspectSkills, isUserOwned, resolveSkillRoots } from "../skills.js";
@@ -273,7 +273,7 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       );
 
       const recordedRequests: ProviderRequest[] = [];
-      const mockProvider: AIProvider = {
+      const mockProvider: ModelProvider = {
         id: "mock-prov",
         async *generate(req) {
           recordedRequests.push(req);
@@ -361,7 +361,7 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       );
 
       const recordedRequests: ProviderRequest[] = [];
-      const mockProvider: AIProvider = {
+      const mockProvider: ModelProvider = {
         id: "mock-prov",
         async *generate(req) {
           recordedRequests.push(req);
@@ -411,7 +411,7 @@ describe("skills plane: progressive disclosure and load_skill tool", () => {
       await createSkillFile(join(repoRoot, ".agents", "agent", "skills"), "tester", "Tester skill", "Test all things thoroughly.");
 
       const recordedRequests: ProviderRequest[] = [];
-      const mockProvider: AIProvider = {
+      const mockProvider: ModelProvider = {
         id: "mock-prov",
         async *generate(req) {
           recordedRequests.push(req);

@@ -29,7 +29,7 @@ import {
   resolveIdentityLimits,
   type SsrfPolicy,
 } from "@arnilo/prism";
-import { ProviderTransportError, readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import { ProviderTransportError, readBoundedResponseText } from "@arnilo/prism/provider-kit";
 
 /** Signature algorithms this adapter can verify. Hosts may only narrow. */
 export type OidcAlgorithm = "RS256" | "ES256";

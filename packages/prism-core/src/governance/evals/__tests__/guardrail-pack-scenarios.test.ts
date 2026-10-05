@@ -17,7 +17,7 @@ import { describe, it } from "bun:test";
 import {
   type Agent,
   type AgentSessionConfig,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   type JsonObject,
   type ProviderEvent,
@@ -29,6 +29,7 @@ import {
 } from "@arnilo/prism";
 import { runScenario, type ScenarioResult } from "../scenarios.js";
 import { createGuardrailPackScorer, DEFAULT_PACK_RULE_PREFIX } from "../trajectory.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // ─── Fixture ──────────────────────────────────────────────────────────────────
 
@@ -40,7 +41,7 @@ function toolCall(id: string, name: string, args: Record<string, unknown>): Prov
 }
 
 /** Lazily-built scripted provider: one provider turn per `generate()`, last turn repeats. */
-function scriptedProvider(script: readonly (readonly ProviderEvent[])[]): AIProvider {
+function scriptedProvider(script: readonly (readonly ProviderEvent[])[]): ModelProvider {
   let index = 0;
   return {
     id: "pack-eval-mock",
@@ -265,7 +266,7 @@ async function runPackScenario(scenario: PackScenario): Promise<PackScenarioRun>
   const executed: string[] = [];
   const agent: Agent = await createAgent({
     model: { ...MODEL },
-    provider: scriptedProvider(scenario.script),
+    packages: [providerPackage("test-provider", [scriptedProvider(scenario.script)])],
     tools: { add: [...scenario.tools(executed)] },
   });
   const result = await runScenario({

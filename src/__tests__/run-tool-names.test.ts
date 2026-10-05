@@ -3,7 +3,7 @@ import { describe, it } from "bun:test";
 import { loadAgentRunState } from "../agent-run-state.js";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
@@ -19,6 +19,7 @@ import {
 } from "../index.js";
 import { HARD_RUN_TOOL_NAMES, selectRunTools } from "../tools.js";
 import { failedRun } from "./run-result-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 function tool(name: string, executed?: string[]): ToolDefinition {
   return {
@@ -31,7 +32,7 @@ function tool(name: string, executed?: string[]): ToolDefinition {
   };
 }
 
-function providerCalls(...names: string[]): AIProvider {
+function providerCalls(...names: string[]): ModelProvider {
   let turn = 0;
   return {
     id: "mock",
@@ -104,7 +105,7 @@ describe("RunOptions.toolNames", () => {
     const executed: string[] = [];
     const echo = tool("echo", executed);
     const secret = tool("secret", executed);
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push((request.tools ?? []).map((item) => item.name));
@@ -115,7 +116,7 @@ describe("RunOptions.toolNames", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [echo, secret] },
       })
     ).session();
@@ -126,7 +127,7 @@ describe("RunOptions.toolNames", () => {
     assert.deepEqual(executed, []);
 
     const full: string[][] = [];
-    const open: AIProvider = {
+    const open: ModelProvider = {
       id: "mock",
       async *generate(request) {
         full.push((request.tools ?? []).map((item) => item.name));
@@ -137,7 +138,7 @@ describe("RunOptions.toolNames", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: open,
+          packages: [providerPackage("test-provider", [open])],
           tools: { add: [echo, secret] },
         })
       ).session()
@@ -147,7 +148,7 @@ describe("RunOptions.toolNames", () => {
 
   it("empty set sends no tools", async () => {
     const seen: Array<number | undefined> = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push(request.tools?.length);
@@ -158,7 +159,7 @@ describe("RunOptions.toolNames", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           tools: { add: [tool("echo")] },
         })
       ).session()
@@ -174,26 +175,26 @@ describe("RunOptions.toolNames", () => {
     const sessionA = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate(request) {
             seenA.push((request.tools ?? []).map((item) => item.name));
             yield providerDone();
           },
-        },
+        }])],
         tools: { add: registry.list() },
       })
     ).session();
     const sessionB = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate(request) {
             seenB.push((request.tools ?? []).map((item) => item.name));
             yield providerDone();
           },
-        },
+        }])],
         tools: { add: registry.list() },
       })
     ).session();
@@ -206,13 +207,13 @@ describe("RunOptions.toolNames", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: {
+          packages: [providerPackage("test-provider", [{
             id: "mock",
             async *generate(request) {
               seenC.push((request.tools ?? []).map((item) => item.name));
               yield providerDone();
             },
-          },
+          }])],
           tools: { add: registry.list() },
         })
       ).session()
@@ -225,12 +226,12 @@ describe("RunOptions.toolNames", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             yield providerDone();
           },
-        },
+        }])],
         tools: { add: [tool("echo"), tool("secret")] },
         skills: { add: registry.list() },
       })
@@ -246,7 +247,7 @@ describe("RunOptions.toolNames", () => {
       hooks: askEveryTool(),
       id: "narrow",
       model: { provider: "mock", model: "demo" },
-      provider: providerCalls("echo"),
+      packages: [providerPackage("test-provider", [providerCalls("echo")])],
       tools: { add: registry.list() },
       slots: { store },
     });
@@ -258,7 +259,7 @@ describe("RunOptions.toolNames", () => {
     const loaded = await loadAgentRunState(checkpoints, { runId: first.runId, sessionId: first.sessionId });
     assert.deepEqual(loaded.state.toolNames, ["echo"]);
     const seen: string[][] = [];
-    const resumeProvider: AIProvider = {
+    const resumeProvider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push((request.tools ?? []).map((item) => item.name));
@@ -266,7 +267,7 @@ describe("RunOptions.toolNames", () => {
       },
     };
     const result = await resumeAgentRun(
-      await createAgent({ ...agent.config, provider: resumeProvider }),
+      await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] }),
       { runId: first.runId, sessionId: first.sessionId },
       {
         expectedVersion: first.runState!.version!,
@@ -290,7 +291,7 @@ describe("RunOptions.toolNames", () => {
         return { toolCallId: context.toolCallId, name: "echo", value: "ok" };
       },
     });
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push((request.tools ?? []).map((item) => item.name));
@@ -303,7 +304,7 @@ describe("RunOptions.toolNames", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           tools: { add: registry.list() },
         })
       ).session()
@@ -316,7 +317,7 @@ describe("RunOptions.toolNames", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: providerCalls("echo"),
+        packages: [providerPackage("test-provider", [providerCalls("echo")])],
         tools: { add: [tool("echo")] },
         hooks: (hooks) => hooks.on("tool.call", (payload) => (payload.name === "echo" ? { deny: "revoked" } : undefined)),
       })

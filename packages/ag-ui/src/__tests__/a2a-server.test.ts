@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { AgentEvent, Session } from "@arnilo/prism";
-import { createAgent, createMemoryAgentEventSource, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, createMemoryAgentEventSource, providerDone, providerTextDelta } from "@arnilo/prism";
 import { type A2AAgentCard, type A2ATaskEvent, type A2ATaskLifecycle, createA2AClient } from "@arnilo/prism-core/runtime/supervisor";
 import { type AgUiA2AServer, createAgUiA2AServer } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const endpoint = "https://agent.example/a2a/v1";
 const ownership = { tenantId: "tenant", userId: "user" };
@@ -23,7 +24,7 @@ const localAgent = async () =>
   await (
     await createAgent({
       model: { provider: "mock", model: "test" },
-      provider: createMockProvider([providerTextDelta("hello from local agent"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello from local agent"), providerDone()]])],
     })
   ).session();
 

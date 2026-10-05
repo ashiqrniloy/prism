@@ -9,7 +9,7 @@ import {
   functionNode,
   getWorkflowRun,
 } from "@arnilo/prism-core/runtime/workflows";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 
 export async function demo(): Promise<Record<string, unknown>> {
   const dir = mkdtempSync(join(tmpdir(), "prism-coordinator-"));

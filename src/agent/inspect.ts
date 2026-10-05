@@ -2,9 +2,10 @@
  * `agent.inspect()` (roadmap §2.3): a snapshot of what loaded. Built from the loader's records at call
  * time, with no I/O. Hosts render it, and Phase 12's `doctor` serializes it.
  */
-import type { Agent, AgentConfig } from "../contracts.js";
+import type { Agent, AgentConfig, SessionStoreCapability } from "../contracts.js";
 import { skillInfos, toolInfos } from "./views.js";
 import { isSessionScopedHookId } from "../agent-session/runtime-registry.js";
+import { sessionStoreCapabilities } from "../session-stores.js";
 import type { HookBus } from "../hooks/index.js";
 import type { PackageConfigSource } from "../packages/config.js";
 import type { LoadedPackages } from "../packages/loader.js";
@@ -47,6 +48,11 @@ export interface AgentInspection {
   readonly hooks: Readonly<Record<string, readonly InspectedHook[]>>;
   /** Per slot, its owner: `kernel` (the default), a package name, or `host`. */
   readonly slots: Readonly<Record<SlotName, string>>;
+  /** The resolved `store` slot: its owner, and the optional `agent.sessions` capabilities it implements. */
+  readonly store: {
+    readonly owner: string;
+    readonly capabilities: readonly SessionStoreCapability[];
+  };
   /** Ids named in `AgentConfig.disable`. Every one took effect, or the load would have failed. */
   readonly disabled: {
     readonly tools: readonly string[];
@@ -105,6 +111,10 @@ export function inspectAgent(agent: Agent, sources: InspectSources): AgentInspec
     commands: packages.commands().map((entry) => ({ name: entry.name, package: entry.package })),
     hooks: hookMap,
     slots: Object.fromEntries(SLOT_NAMES.map((slot) => [slot, slots.ownerOf(slot, assigned[slot] as never)])) as Record<SlotName, string>,
+    store: {
+      owner: slots.ownerOf("store", assigned.store as never),
+      capabilities: [...sessionStoreCapabilities(slots.resolve("store", assigned.store as never))],
+    },
     disabled: {
       tools: [...(disable.tools ?? [])],
       skills: [...(disable.skills ?? [])],

@@ -2,13 +2,13 @@
 
 ## What it does
 
-`@arnilo/prism-providers/deepseek` provides explicit, side-effect-free setup for the
+`@arnilo/prism-provider-deepseek` provides explicit, side-effect-free setup for the
 DeepSeek Chat Completions API (`POST /chat/completions`) with official thinking
 mode, reasoning-effort mapping, tool-turn `reasoning_content` replay, and
 implicit prefix caching.
 
 The package registers a provider, featured V4 model metadata, and an `api_key`
-auth method through `createExtensionKernel().load([...])`.
+auth method when the package is listed in `createAgent({ packages: [...] })`.
 
 ## When to use it
 
@@ -22,24 +22,29 @@ discovery, setup-time catalog fetches, or real-network tests.
 ## Inputs / request
 
 ```ts
-import {
-  createDeepSeekProviderPackage,
-  defineDeepSeekModel,
-  listDeepSeekModels,
-} from "@arnilo/prism-providers/deepseek";
+import deepseek from "@arnilo/prism-provider-deepseek";
 
-createDeepSeekProviderPackage(options: DeepSeekProviderPackageOptions): ProviderPackage
-defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+deepseek(options?: DeepSeekProviderPackageOptions & DeepSeekProviderConfig = {}): PackageInstance
+
+// Named exports.
+createDeepSeekProvider(options?: DeepSeekProviderOptions): ModelProvider
 listDeepSeekModels(options?: ListDeepSeekModelsOptions): Promise<ModelConfig[]>
+defineDeepSeekModel(config: DeepSeekModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides the DeepSeek base URL (default `https://api.deepseek.com`). |
-| `id` | `string` | Overrides the provider id (default `deepseek`). |
-| `models` | `readonly ModelConfig[]` | Overrides featured `deepseekModels` defaults. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:DEEPSEEK_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://api.deepseek.com`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `deepseek`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listDeepSeekModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 ### Thinking / reasoning compat
 
@@ -83,14 +88,16 @@ Unsupported media blocks fail before fetch. Text-only input.
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import { createDeepSeekProviderPackage, listDeepSeekModels } from "@arnilo/prism-providers/deepseek";
+import { createAgent } from "@arnilo/prism";
+import deepseek from "@arnilo/prism-provider-deepseek";
 
-const kernel = createExtensionKernel();
-await kernel.load([createDeepSeekProviderPackage({ apiKey: "fake-deepseek-key" })]);
+const agent = await createAgent({
+  model: { provider: "deepseek", model: "deepseek-v4-flash" },
+  packages: [deepseek({ apiKey: "env:DEEPSEEK_API_KEY" })],
+});
 
-const live = await listDeepSeekModels({ apiKey: "fake-deepseek-key" });
-await kernel.load([createDeepSeekProviderPackage({ apiKey: "fake-deepseek-key", models: live })]);
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 Per-turn thinking override:
@@ -147,7 +154,7 @@ DeepSeek models declare `low/high/max` and stamp `reasoning_effort`; the wire ta
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   caller-gated discovery, per-turn thinking.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable
   `applyThinkingLevel` → DeepSeek `thinking.type` / `reasoning_effort`.

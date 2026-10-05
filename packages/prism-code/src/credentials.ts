@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { Credential, CredentialRecord, CredentialRequest, OAuthCredentials } from "@arnilo/prism";
+import type { Secret, CredentialRecord, CredentialRequest, OAuthCredentials } from "@arnilo/prism";
 import {
   CredentialStoreError,
   CredentialStoreUnavailableError,
@@ -9,7 +9,7 @@ import {
   openEncryptedCredentialStore,
   probeKeychainAvailability,
   type StoredCredentialStore,
-} from "@arnilo/prism-core/credentials/node";
+} from "@arnilo/prism-credentials-keyring";
 import type { PrismCodeConfig } from "./config.js";
 import type { PrismCodeCredentialStoreChoice, PrismCodeState } from "./home.js";
 import type { CredentialResolver } from "./providers.js";
@@ -30,12 +30,12 @@ export class MemoryStoredCredentialStore implements StoredCredentialStore {
     return `${provider}:${accountId ?? "default"}`;
   }
 
-  resolve(request: CredentialRequest): Credential | undefined {
+  resolve(request: CredentialRequest): Secret | undefined {
     const key = this.credKey(request.name, request.provider);
     return this.records.get(key)?.credential;
   }
 
-  get(request: Pick<CredentialRequest, "name" | "provider">): Credential | undefined {
+  get(request: Pick<CredentialRequest, "name" | "provider">): Secret | undefined {
     return this.resolve(request as CredentialRequest);
   }
 
@@ -84,10 +84,10 @@ export class UnavailableStoredCredentialStore implements StoredCredentialStore {
     throw new CredentialStoreUnavailableError(this.message);
   }
 
-  resolve(): Credential | undefined {
+  resolve(): Secret | undefined {
     this.fail();
   }
-  get(): Credential | undefined {
+  get(): Secret | undefined {
     this.fail();
   }
   set(): void {

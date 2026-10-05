@@ -43,7 +43,7 @@ import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arn
 import { createErpInvariantScorers, erpInvariantDataset, scoreRun } from "@arnilo/prism-core/governance/evals";
 import { createAuditExporter, createMemoryAuditCursorStore, verifyAuditBatch } from "@arnilo/prism-core/governance/policy";
 import { createMemoryWorkflowCheckpoints, defineSaga, resumeSaga, runSaga } from "@arnilo/prism-core/runtime/workflows";
-import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { Pool } from "pg";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;

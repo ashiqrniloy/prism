@@ -1,11 +1,11 @@
 # Release — exports, baselines, package truth, changelog, publish
 
-Export-surface gates, compat baselines, package-truth generation, packaging and tarball rules, the changelog, versioning (lockstep plus independent), and the 1.0 publish.
+Export-surface gates, compat baselines, package-truth generation, packaging and tarball rules, the changelog, versioning (lockstep plus independent), and the 0.13.0 publish.
 
 ## Target
 
-- [roadmap.md](../../../../roadmap.md) Part 3 (version targets), Phase 11 (kernel freeze and 1.0), §1.4 (Bun-native: TypeScript source published, no build step).
-- **One publish, not one per phase.** `@arnilo/prism` 1.0.0 and the native packages ship together in Phase 11. After that, each package is versioned independently.
+- [roadmap.md](../../../../roadmap.md) Part 3 (version targets), Phase 11 (kernel freeze and 0.13.0), §1.4 (Bun-native: TypeScript source published, no build step).
+- **One publish, not one per phase.** `@arnilo/prism` 0.13.0 and the native packages ship together in Phase 11, after Phases 13–16. After that, each package is versioned independently.
 - **Deprecations happen at Phase 11 only.** `@arnilo/prism-agent-sdk` and the 0.12 family packages are deprecated on npm then, not earlier.
 - **Changelog:** every phase records user-visible changes under `## [Unreleased]` in `CHANGELOG.md` as they land. The Phase 11 changelog and migration note from 0.12 is assembled from those entries.
 

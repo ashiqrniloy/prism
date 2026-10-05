@@ -17,6 +17,7 @@ import type {
   PromptVersionRef,
   ResolvedRunLimits,
   RunOptions,
+  ResolvedRunOptions,
   RunRecord,
   ToolDefinition,
   Usage,
@@ -227,7 +228,7 @@ function assertPromptVersionRef(ref: PromptVersionRef | undefined): PromptVersio
 async function assembleRoundContext(params: {
   session: SessionHost;
   input: AgentInput;
-  options: RunOptions;
+  options: ResolvedRunOptions;
   runId: string;
   resumed: ActiveDurableRun | undefined;
   controller: AbortController;
@@ -615,7 +616,7 @@ function hiddenPackageTools(session: SessionHost, tools: readonly ToolDefinition
 export async function executeRun(
   session: SessionHost,
   input: AgentInput,
-  options: RunOptions,
+  options: ResolvedRunOptions,
   runId: string,
   resumed?: ActiveDurableRun,
 ): Promise<RunResult> {

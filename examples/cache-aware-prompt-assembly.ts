@@ -1,5 +1,5 @@
 import {
-  type AIProvider,
+  type ModelProvider,
   assembleProviderInput,
   cacheHitRate,
   cacheSavings,
@@ -8,8 +8,8 @@ import {
   type ProviderRequest,
   type Usage,
 } from "@arnilo/prism";
-import { createNeuralWattProvider, defineNeuralWattModel } from "@arnilo/prism-providers/neuralwatt";
-import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-providers/openrouter";
+import { createNeuralWattProvider, defineNeuralWattModel } from "@arnilo/prism-provider-neuralwatt";
+import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
 
 const explicitCacheModel = defineOpenRouterModel({
   model: "anthropic/claude-sonnet-4",
@@ -52,7 +52,7 @@ async function assemble(model: ModelConfig): Promise<ProviderRequest> {
   });
 }
 
-async function run(provider: AIProvider, request: ProviderRequest): Promise<Usage | undefined> {
+async function run(provider: ModelProvider, request: ProviderRequest): Promise<Usage | undefined> {
   let usage: Usage | undefined;
   for await (const event of provider.generate(request)) {
     if (event.type === "usage") usage = event.usage;

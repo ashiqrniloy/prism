@@ -1,13 +1,13 @@
-import { createAgent, createMockProvider, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
-import { openaiPackage } from "@arnilo/prism-providers/openai";
+import { createAgent, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
+import { openai } from "@arnilo/prism-provider-openai";
+import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 
 // Load a provider package, then resolve a host-owned mock from host registries.
 // No network, no real credentials.
 export async function demo() {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerDone()], { id: "mock" }),
-    packages: [openaiPackage({ apiKey: () => "fake-openai-key" })],
+    packages: [openai({ apiKey: "env:OPENAI_API_KEY" }), mockProvider([[providerDone()]], { id: "mock" })],
   });
   await agent.dispose();
 

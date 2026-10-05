@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/alibaba` is a side-effect-free adapter for Alibaba Cloud
+`@arnilo/prism-provider-alibaba` is a side-effect-free adapter for Alibaba Cloud
 Model Studio / DashScope (including the Coding Plan) over the **OpenAI-compatible**
 `POST {base}/chat/completions` endpoint.
 
@@ -57,31 +57,31 @@ Sources:
 ## Inputs / request
 
 ```ts
-import {
-  createAlibabaProviderPackage,
-  createAlibabaProvider,
-  createAlibabaEmbedder,
-  listAlibabaModels,
-  defineAlibabaModel,
-  alibabaBaseUrl,
-} from "@arnilo/prism-providers/alibaba";
+import alibaba from "@arnilo/prism-provider-alibaba";
 
-createAlibabaProviderPackage(options: AlibabaProviderPackageOptions): ProviderPackage
-createAlibabaProvider(options?: AlibabaProviderOptions): AIProvider
-createAlibabaEmbedder(options: AlibabaEmbedderOptions): AlibabaEmbedder
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+alibaba(options?: AlibabaProviderPackageOptions & AlibabaProviderConfig = {}): PackageInstance
+
+// Named exports.
+createAlibabaProvider(options?: AlibabaProviderOptions): ModelProvider
 listAlibabaModels(options?: ListAlibabaModelsOptions): Promise<ModelConfig[]>
 defineAlibabaModel(config: AlibabaModelConfig): ModelConfig
-alibabaBaseUrl(options?: { baseUrl?: string; preset?: AlibabaBasePreset }): string
+createAlibabaEmbedder / createAlibabaEmbeddingsProvider / createAlibabaImageGenerationProvider / createAlibabaVideoGenerationProvider
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | DashScope API key (`DASHSCOPE_API_KEY`), region/plan-scoped. |
-| `baseUrl` | `string` | Explicit OpenAI-compatible base URL (wins over `preset`). |
-| `preset` | `AlibabaBasePreset` | `"singapore"` (default) / `"beijing"` / `"us"` / `"coding-plan"`. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `id` | `string` | Provider id (default `alibaba`). |
-| `models` | `readonly ModelConfig[]` | Host-supplied models (from `listAlibabaModels`) to register. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:DASHSCOPE_API_KEY`. A literal value is rejected. |
+| `preset` | `"singapore" \| "beijing" \| "us" \| "coding-plan"` | Named deployment preset; `baseUrl` wins over it. |
+| `baseUrl` | string | Official compatible-mode base; defaults to the `singapore` preset. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `alibaba`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listAlibabaModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 Base URLs resolved by preset:
 
@@ -104,7 +104,7 @@ verbatim via `baseUrl`.
 dependency-free).
 
 ```ts
-import { createAlibabaEmbedder } from "@arnilo/prism-providers/alibaba";
+import { createAlibabaEmbedder } from "@arnilo/prism-provider-alibaba";
 
 const embedder = createAlibabaEmbedder({
   apiKey: process.env.DASHSCOPE_API_KEY,
@@ -204,24 +204,16 @@ Usage in the final streamed chunk:
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createAlibabaProviderPackage,
-  listAlibabaModels,
-} from "@arnilo/prism-providers/alibaba";
+import { createAgent } from "@arnilo/prism";
+import alibaba from "@arnilo/prism-provider-alibaba";
 
-const kernel = createExtensionKernel();
+const agent = await createAgent({
+  model: { provider: "alibaba", model: "qwen-plus" },
+  packages: [alibaba({ apiKey: "env:DASHSCOPE_API_KEY", preset: "singapore" })],
+});
 
-// Caller-gated discovery — never runs during setup.
-const models = await listAlibabaModels({ apiKey: process.env.DASHSCOPE_API_KEY });
-
-await kernel.load([
-  createAlibabaProviderPackage({
-    apiKey: process.env.DASHSCOPE_API_KEY,
-    preset: "singapore", // or "coding-plan" with a Coding Plan key
-    models,
-  }),
-]);
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
@@ -259,7 +251,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport`
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit`
   helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
@@ -267,7 +259,7 @@ See [Provider request policies](../provider-request-policies.md).
   `Authorization: Bearer`; keys are redacted from all thrown errors (including
   discovery failures). No local filesystem paths enter request payloads.
 - Opt-in live probe (never part of `npm test`/CI):
-  `PRISM_LIVE_DASHSCOPE_KEY=… npm run test:live --workspace @arnilo/prism-providers/alibaba`
+  `PRISM_LIVE_DASHSCOPE_KEY=… npm run test:live --workspace @arnilo/prism-provider-alibaba`
   exercises an embeddings round-trip against the real endpoint (model override via
   `PRISM_LIVE_DASHSCOPE_MODEL`); absent env = documented skip, never a failure.
 - Caller-supplied `ProviderRequest.options.headers` can add non-owned headers, but
@@ -282,7 +274,7 @@ Qwen hybrid models route through the `thinking_type` family: `none` maps to `ena
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   caller-gated discovery, OpenAI-compatible routes.
 - [Provider caching](../provider-caching.md): explicit/implicit matrix.
 - [Credentials and redaction](../credentials-and-redaction.md):

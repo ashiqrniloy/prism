@@ -1,11 +1,12 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { type A2AAgentCard, createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const ownership = { tenantId: "example", userId: "operator" };
 const child = async () =>
   await createAgent({
     model: { provider: "mock", model: "research" },
-    provider: createMockProvider([providerTextDelta("verified"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("verified"), providerDone()]])],
   });
 const supervisor = createSupervisor({ ownership, children: { research: { createAgent: child } } });
 const local = await supervisor.delegate({ childId: "research", input: "Check sources" });

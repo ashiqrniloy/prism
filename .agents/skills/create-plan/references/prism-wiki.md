@@ -2,17 +2,17 @@
 
 Apply these to every Prism plan task.
 
-## Where docs go during the 1.0 train
+## Where docs go during the 0.13.0 train
 
 Three homes exist until the publish phase (roadmap Phase 11). Pick by what the task changes.
 
 | Task changes… | Document in | Rules |
 | --- | --- | --- |
 | Released 0.12.1 behavior that still ships (a fix to the current line) | `/docs/<page>.md` plus its `docs/index.md` entry | Current-contract rules below. |
-| A kernel contract (`@arnilo/prism` 1.0: agent, session, loop, hooks, slots, packages, manifest, models, tools and skills, host port, events) | `docs/next/<page>.md`, using the API page structure | Written in the same task that ships the API, never deferred to publish. Not linked from `docs/index.md`. The publish phase promotes each page into `/docs` and writes the index entries. |
+| A kernel contract (`@arnilo/prism` 0.13.0: agent, session, loop, hooks, slots, packages, manifest, models, tools and skills, host port, events) | `docs/next/<page>.md`, using the API page structure | Written in the same task that ships the API, never deferred to publish. Not linked from `docs/index.md`. The publish phase promotes each page into `/docs` and writes the index entries. |
 | A native package or host library | that package's `README.md`, using the package page structure | Written in the task that creates the package. It becomes the package's published page. |
 
-Never describe the target (`createAgent` with `packages`, `definePackage`, `loadManifest`, hooks, slots, `host.ui`) in released `/docs` pages before 1.0 ships. `src/__tests__/docs.test.ts` pins this.
+Never describe the target (`createAgent` with `packages`, `definePackage`, `loadManifest`, hooks, slots, `host.ui`) in released `/docs` pages before 0.13.0 ships. `src/__tests__/docs.test.ts` pins this.
 
 The first plan that creates `docs/next/` excludes it in the same task from:
 - the "one index link per docs page" test

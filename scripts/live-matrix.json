@@ -12,11 +12,11 @@
   "suites": [
     {
       "id": "providers/openai",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-openai",
       "status": "active",
-      "source": "packages/prism-providers/src/openai/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/openai/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/openai/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/openai",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OPENAI_API_KEY"
@@ -33,11 +33,11 @@
     },
     {
       "id": "providers/anthropic",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-anthropic",
       "status": "active",
-      "source": "packages/prism-providers/src/anthropic/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/anthropic/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/anthropic/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/anthropic",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "ANTHROPIC_API_KEY"
@@ -55,11 +55,11 @@
     },
     {
       "id": "providers/google",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-google",
       "status": "active",
-      "source": "packages/prism-providers/src/google/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/google/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/google/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/google",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS"
       ],
@@ -80,11 +80,11 @@
     },
     {
       "id": "providers/alibaba",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-alibaba",
       "status": "active",
-      "source": "packages/prism-providers/src/alibaba/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/alibaba/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/alibaba/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/alibaba",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "PRISM_LIVE_DASHSCOPE_KEY"
@@ -101,11 +101,11 @@
     },
     {
       "id": "providers/clinepass",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-clinepass",
       "status": "active",
-      "source": "packages/prism-providers/src/clinepass/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/clinepass/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/clinepass/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/clinepass",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "CLINE_API_KEY"
@@ -122,11 +122,11 @@
     },
     {
       "id": "providers/commandcode",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-commandcode",
       "status": "active",
-      "source": "packages/prism-providers/src/commandcode/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/commandcode/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/commandcode/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/commandcode",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "COMMAND_CODE_API_KEY"
@@ -153,11 +153,11 @@
     },
     {
       "id": "providers/deepseek",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-deepseek",
       "status": "active",
-      "source": "packages/prism-providers/src/deepseek/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/deepseek/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/deepseek/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/deepseek",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "DEEPSEEK_API_KEY"
@@ -174,11 +174,11 @@
     },
     {
       "id": "providers/hyper",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-hyper",
       "status": "active",
-      "source": "packages/prism-providers/src/hyper/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/hyper/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/hyper/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/hyper",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "HYPER_API_KEY"
@@ -200,11 +200,11 @@
     },
     {
       "id": "providers/kimi",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-kimi",
       "status": "active",
-      "source": "packages/prism-providers/src/kimi/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/kimi/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/kimi/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/kimi",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "KIMI_API_KEY"
@@ -222,11 +222,11 @@
     },
     {
       "id": "providers/neuralwatt",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-neuralwatt",
       "status": "active",
-      "source": "packages/prism-providers/src/neuralwatt/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/neuralwatt/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/neuralwatt/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/neuralwatt",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "NEURALWATT_API_KEY"
@@ -243,11 +243,11 @@
     },
     {
       "id": "providers/opencode-go",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-opencode-go",
       "status": "active",
-      "source": "packages/prism-providers/src/opencode-go/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/opencode-go/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/opencode-go/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/opencode-go",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OPENCODE_API_KEY"
@@ -264,11 +264,11 @@
     },
     {
       "id": "providers/openrouter",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-openrouter",
       "status": "active",
-      "source": "packages/prism-providers/src/openrouter/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/openrouter/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/openrouter/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/openrouter",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OPENROUTER_API_KEY"
@@ -285,11 +285,11 @@
     },
     {
       "id": "providers/xai",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-xai",
       "status": "active",
-      "source": "packages/prism-providers/src/xai/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/xai/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/xai/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/xai",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "XAI_API_KEY"
@@ -310,11 +310,11 @@
     },
     {
       "id": "providers/zai",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-zai",
       "status": "active",
-      "source": "packages/prism-providers/src/zai/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/zai/__tests__/live.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "packages/providers/zai/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/zai",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "ZAI_API_KEY"
@@ -467,7 +467,7 @@
       "id": "core/postgres",
       "package": "@arnilo/prism-core",
       "status": "active",
-      "source": "packages/prism-core/src/sessions/postgres/__tests__/postgres-persistence.test.ts",
+      "source": "packages/stores/postgres/src/__tests__/postgres-persistence.test.ts",
       "command": "bun run --filter @arnilo/prism-core test:postgres",
       "requires": [
         "PRISM_TEST_POSTGRES_URL"
@@ -531,11 +531,11 @@
     },
     {
       "id": "core/keychain",
-      "package": "@arnilo/prism-core",
+      "package": "@arnilo/prism-credentials-keyring",
       "status": "active",
-      "source": "packages/prism-core/src/credentials/node/__tests__/credentials-node.test.ts",
-      "command": "bun test --timeout=0 dist/credentials/node/__tests__/credentials-node.test.js",
-      "cwd": "packages/prism-core",
+      "source": "packages/credentials/keyring/src/__tests__/credentials-node.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/credentials-node.test.ts",
+      "cwd": "packages/credentials/keyring",
       "requires": [
         "PRISM_TEST_KEYCHAIN"
       ],
@@ -572,10 +572,10 @@
     },
     {
       "id": "providers/azure",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-azure",
       "status": "active",
-      "source": "packages/prism-providers/src/azure/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/azure/__tests__/live.test.js",
+      "source": "packages/providers/azure/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "AZURE_OPENAI_ENDPOINT",
@@ -593,14 +593,15 @@
         }
       ],
       "cost": "3-4 requests on the configured deployment.",
-      "thinkingProbe": "reasoning_effort acceptance probe (plan 065)"
+      "thinkingProbe": "reasoning_effort acceptance probe (plan 065)",
+      "cwd": "packages/providers/azure"
     },
     {
       "id": "providers/bedrock",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-bedrock",
       "status": "active",
-      "source": "packages/prism-providers/src/bedrock/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/bedrock/__tests__/live.test.js",
+      "source": "packages/providers/bedrock/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "AWS_ACCESS_KEY_ID",
@@ -617,14 +618,15 @@
           "wired": true
         }
       ],
-      "cost": "6-8 requests on haiku-class model (compatible SSE + native Converse/ConverseStream)."
+      "cost": "6-8 requests on haiku-class model (compatible SSE + native Converse/ConverseStream).",
+      "cwd": "packages/providers/bedrock"
     },
     {
       "id": "providers/vertex",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-vertex",
       "status": "active",
-      "source": "packages/prism-providers/src/vertex/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/vertex/__tests__/live.test.js",
+      "source": "packages/providers/vertex/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "GOOGLE_VERTEX_PROJECT",
@@ -640,14 +642,15 @@
           "wired": true
         }
       ],
-      "cost": "3-4 requests on flash-class model."
+      "cost": "3-4 requests on flash-class model.",
+      "cwd": "packages/providers/vertex"
     },
     {
       "id": "providers/ollama",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-ollama",
       "status": "active",
-      "source": "packages/prism-providers/src/ollama/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/ollama/__tests__/live.test.js",
+      "source": "packages/providers/ollama/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OLLAMA_BASE_URL"
@@ -662,14 +665,15 @@
           "wired": true
         }
       ],
-      "cost": "3-4 requests on the first locally pulled model."
+      "cost": "3-4 requests on the first locally pulled model.",
+      "cwd": "packages/providers/ollama"
     },
     {
       "id": "providers/ai-sdk",
-      "package": "@arnilo/prism-providers",
+      "package": "@arnilo/prism-provider-ai-sdk",
       "status": "active",
-      "source": "packages/prism-providers/src/ai-sdk/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/ai-sdk/__tests__/live.test.js",
+      "source": "packages/providers/ai-sdk/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS",
         "OPENAI_API_KEY"
@@ -684,14 +688,15 @@
           "wired": true
         }
       ],
-      "cost": "3 requests on gpt-5.1."
+      "cost": "3 requests on gpt-5.1.",
+      "cwd": "packages/providers/ai-sdk"
     },
     {
-      "id": "providers/model-discovery",
-      "package": "@arnilo/prism-providers",
+      "id": "providers/google-discovery",
+      "package": "@arnilo/prism-provider-google",
       "status": "active",
-      "source": "packages/prism-providers/src/model-discovery/__tests__/live.test.ts",
-      "command": "bun test --timeout=0 dist/model-discovery/__tests__/live.test.js",
+      "source": "packages/providers/google/src/__tests__/model-discovery-live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/model-discovery-live.test.ts",
       "requires": [
         "PRISM_LIVE_PROVIDER_TESTS"
       ],
@@ -702,7 +707,8 @@
       "scope": "Reuses OPENAI_API_KEY or GEMINI_API_KEY for a real listing request.",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
       "notes": "Probes the OpenAI-compatible route when OPENAI_API_KEY is set, else the Google route.",
-      "cost": "2 GET /models requests (second cached in TTL)."
+      "cost": "2 GET /models requests (second cached in TTL).",
+      "cwd": "packages/providers/google"
     },
     {
       "id": "calibration/vendor-count-tokens",
@@ -780,7 +786,7 @@
           "wired": true
         }
       ],
-      "cost": "1 rerank request per configured endpoint (\u22642 total)."
+      "cost": "1 rerank request per configured endpoint (≤2 total)."
     },
     {
       "id": "memory/local-rerank-live",
@@ -802,9 +808,9 @@
           "wired": true
         }
       ],
-      "scope": "In-process cross-encoder (transformers.js, q8/cpu) plus a semantic embedder on this machine; no service and no credential. Weights come from the documented model ids into a host cache dir; a cold run downloads a \u2248280 MB reranker and a \u224823 MB embedder.",
+      "scope": "In-process cross-encoder (transformers.js, q8/cpu) plus a semantic embedder on this machine; no service and no credential. Weights come from the documented model ids into a host cache dir; a cold run downloads a ≈280 MB reranker and a ≈23 MB embedder.",
       "notes": "Real runtime through createTransformersRerankRuntime (no stub): conformance, top-1 ordering on a fixed query, top-50 latency, offline replay with allowRemoteModels:false, and recall@5 over the inlined 24-query / 96-chunk corpus (rerank off vs on, whole-corpus pool, pool-bound rows at 20 and 32 candidates) for the deterministic hash embedder and a real semantic embedder (\"Xenova/all-MiniLM-L6-v2\", q8/cpu, identity control, local_files_only replay). Writes generated docs/_evidence/phase102-local-rerank-latency.md and docs/_evidence/phase111-reranker-semantic-recall.md rows (no paths, no secrets).",
-      "cost": "Two model downloads on a cold cache (\u2248280 MB reranker + \u224823 MB embedder); zero network after load, no API spend. \u224850 s wall clock after the cache is warm (the recall legs score 24 \u00d7 96 query/document pairs three times)."
+      "cost": "Two model downloads on a cold cache (≈280 MB reranker + ≈23 MB embedder); zero network after load, no API spend. ≈50 s wall clock after the cache is warm (the recall legs score 24 × 96 query/document pairs three times)."
     },
     {
       "id": "memory/drive-sync-live",
@@ -834,7 +840,7 @@
       ],
       "scope": "Real public OpenAPI 3.1 spec (warnely.com) + real GET tool calls; no credential.",
       "cwd": "packages/prism-coding-tools",
-      "cost": "3 HTTP requests against example.com-class public hosts (plan budget \u22645)."
+      "cost": "3 HTTP requests against example.com-class public hosts (plan budget ≤5)."
     },
     {
       "id": "coding-tools/computer-use-live",
@@ -849,7 +855,7 @@
       "scope": "Real host computer-use-linux MCP binary over stdio; real tool inventory + one bounded read-only screenshot.",
       "notes": "Headless/no-session environments skip at the screenshot probe; binary-wire contract is proven by the inventory. No network I/O in suite \u2014 screenshot bytes cannot leave the process.",
       "cwd": "packages/prism-coding-tools",
-      "cost": "Local desktop only; \u226430s ceiling."
+      "cost": "Local desktop only; ≤30s ceiling."
     },
     {
       "id": "mcp/client-smoke",
@@ -864,7 +870,7 @@
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
       "notes": "Modern+legacy handshake, tools/list, tools/call round-trip, authorize-gated denial, malformed-frame fail-closed. Server-initiated elicitation is a documented Prism boundary (scripts/mcp-conformance-2026-baseline.yaml); the bridge-side MRTR elicitation round-trip is covered over real HTTP by packages/mcp modern-bridge tests.",
       "cwd": ".",
-      "cost": "Local only; \u226430s."
+      "cost": "Local only; ≤30s."
     },
     {
       "id": "core/opa-live",
@@ -877,7 +883,7 @@
       ],
       "scope": "Operator-hosted OPA REST endpoint (optionally token-gated).",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "Real decision evaluations (\u22642 requests) + fail-closed deny probe on an unroutable endpoint. bun run test runs the whole prism-core dist suite; live files skip without their env.",
+      "notes": "Real decision evaluations (≤2 requests) + fail-closed deny probe on an unroutable endpoint. bun run test runs the whole prism-core dist suite; live files skip without their env.",
       "cwd": "packages/prism-core",
       "cost": "<=3 decision requests to the operator OPA endpoint; fail-closed probe never reaches the wire."
     },
@@ -927,7 +933,7 @@
       ],
       "scope": "Dedicated throwaway S3-compatible bucket.",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "put\u2192get hash-verified, presigned GET URL, idempotent double delete against a throwaway bucket (\u22643 requests).",
+      "notes": "put→get hash-verified, presigned GET URL, idempotent double delete against a throwaway bucket (≤3 requests).",
       "cwd": "packages/prism-core",
       "cost": "<=5 S3 requests (put/get/presign/delete x2)."
     },
@@ -1006,12 +1012,12 @@
       "notes": "Always-runnable leg (empty requires). The deployed A2A canary leg lives in canaries/deployed (PRISM_CANARY_A2A_URL/TOKEN within PRISM_LIVE_CANARIES=1)."
     },
     {
-      "id": "prism-providers/conformance",
-      "package": "@arnilo/prism-providers",
+      "id": "provider-kit/conformance",
+      "package": "@arnilo/prism",
       "status": "active",
-      "source": "packages/prism-providers/src/__tests__/thinking-conformance.test.ts",
-      "command": "bun test --timeout=0 dist/__tests__/thinking-conformance.test.js",
-      "cwd": "packages/prism-providers",
+      "source": "scripts/provider-thinking-conformance.test.mjs",
+      "command": "bun test --timeout=0 scripts/provider-thinking-conformance.test.mjs",
+      "cwd": ".",
       "requires": [],
       "scope": "Plan-065 machine-checked thinking coverage: every first-party reasoning catalog model declares capabilities.thinkingLevels + a compat.thinkingFamily stamp and emits a legal effort field on the wire (14 catalogs walked hermetically).",
       "cost": "free",
@@ -1025,8 +1031,13 @@
       "source": "packages/prism-channels/src/__tests__/telegram-live.test.ts",
       "command": "bun test --timeout=0 dist/__tests__/telegram-live.test.js",
       "cwd": "packages/prism-channels",
-      "requires": ["PRISM_LIVE_TELEGRAM", "TELEGRAM_BOT_TOKEN"],
-      "optional": ["PRISM_LIVE_TELEGRAM_CHAT_ID"],
+      "requires": [
+        "PRISM_LIVE_TELEGRAM",
+        "TELEGRAM_BOT_TOKEN"
+      ],
+      "optional": [
+        "PRISM_LIVE_TELEGRAM_CHAT_ID"
+      ],
       "scope": "Operator-owned Telegram bot token. getMe + 1s poll; send only if PRISM_LIVE_TELEGRAM_CHAT_ID names a chat you operate. Never creates contacts.",
       "cost": "1 getMe + 1 getWebhookInfo (+ optional 1 sendMessage).",
       "plan": "079 (task 8)"
@@ -1044,7 +1055,9 @@
         "PRISM_LIVE_SIGNAL_ACCOUNT",
         "PRISM_LIVE_SIGNAL_TERMS_VERSION"
       ],
-      "optional": ["PRISM_LIVE_SIGNAL_RECIPIENT_UUID"],
+      "optional": [
+        "PRISM_LIVE_SIGNAL_RECIPIENT_UUID"
+      ],
       "scope": "Existing private signal-cli v0.14.8 Unix socket and account you already operate. Never registers or links. Send only to PRISM_LIVE_SIGNAL_RECIPIENT_UUID.",
       "cost": "1 subscribeReceive + health (+ optional 1 send).",
       "plan": "079 (task 8)"

@@ -4,7 +4,7 @@ import type {
   AgentConfig,
   AgentDefinition,
   AgentDefinitionResolutionContext,
-  AIProvider,
+  ModelProvider,
   ModelConfig,
   Skill,
   ToolDefinition,
@@ -41,7 +41,6 @@ function buildBaseConfig(def: AgentDefinition, context: AgentDefinitionResolutio
   const skills = resolveSkills(def.skills, tools, context);
   return {
     model,
-    ...resolveProviderOptions(model, context),
     ...(tools !== undefined && { tools: { add: tools.list() } }),
     ...(skills !== undefined && { skills: { add: skills } }),
     ...(def.systemPrompt !== undefined && { systemPrompt: def.systemPrompt }),
@@ -61,16 +60,6 @@ function resolveModel(agentName: string, model: ModelConfig | string | undefined
   const provider = model.slice(0, slash);
   const modelId = model.slice(slash + 1);
   return { provider, model: modelId };
-}
-
-function resolveProviderOptions(
-  model: ModelConfig,
-  context: AgentDefinitionResolutionContext,
-): { provider?: AIProvider; providerSource?: (model: ModelConfig) => AIProvider | undefined } | undefined {
-  if (context.providerSource) {
-    return { providerSource: context.providerSource };
-  }
-  return undefined;
 }
 
 function resolveTools(names: readonly string[] | undefined, context: AgentDefinitionResolutionContext): ToolRegistry | undefined {

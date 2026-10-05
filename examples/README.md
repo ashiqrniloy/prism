@@ -95,7 +95,12 @@ node examples/define-package.ts
 node examples/manifest.ts
 node examples/session.ts
 node examples/approval.ts
+node examples/sqlite-resume.ts
+node examples/durable-approval.ts
 node examples/host-hooks.ts
+node examples/openai-compatible.ts # Bun-only (Bun.serve fake endpoint)
+node examples/side-call.ts
+node examples/anthropic-model-switch.ts # Bun-only (Bun.serve fake endpoint)
 node examples/durable-investigation.ts
 node examples/ag-ui-server.ts
 node examples/ag-ui-a2ui.ts
@@ -124,7 +129,7 @@ Each demo prints a single JSON line with its result.
 - `enterprise-work-connectors.ts` — **demo**: fake M365/GWS CLI adapters, shared mail normalizers, and draft-gated work tools.
 - `distributed-events-and-tool-effects.ts` — **demo**: durable event cursor resume + required tool-effect claim/replay/unknown resolve (memory reference, network-free).
 - `enterprise-postgres-state.ts` — compile-checked durable policy/evaluation/work/router composition; host provides the PostgreSQL pool and explicitly schedules cleanup.
-- `governed-provider.ts` — **demo**: opt-in governed `AIProvider` adapter with admission, atomic budget reservation, streaming, and explicit settlement (network-free).
+- `governed-provider.ts` — **demo**: opt-in governed `ModelProvider` adapter with admission, atomic budget reservation, streaming, and explicit settlement (network-free).
 - `model-router-aggregate-budgets.ts` — **demo**: one `taskId` aggregate token pool across three `session.run()` calls plus an auxiliary compaction call on a pinned model — atomic reservation, renewal fencing, and unknown-usage liability read via `router.readBudget` (network-free).
 - `server-deployment-seams.ts` — **demo**: health, drain, fair workflow admission, operator queue, rate-limit, and deployment lease (network-free).
 - `conversation-durable-replay.ts` — **demo**: durable conversation thread (sqlite `:memory:`) with mock-agent continue and reconnectable redacted replay.
@@ -141,7 +146,12 @@ Each demo prints a single JSON line with its result.
 - `durable-loops-and-approvals.ts` — **demo**: durable custom-loop snapshot + parallel batch approvals (network-free).
 - `session.ts` — **demo** (Phase 3): `agent.session()`, a streamed run, the `RunResult` status and the messages it appended, then the same session reopened by id through the `store` slot and listed through `agent.sessions` (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
 - `approval.ts` — **demo** (Phase 3): a tool gated by a host `tool.call` hook returning `{ ask }`, resolved inline by a scripted `HostUi`, then with no UI: the run suspends (`status: "suspended"`, `pending`) and a new agent over the same store finishes it with `agent.session({ id })` and `session.resume(decisions)` (network-free).
+- `sqlite-resume.ts` — **demo** (Phase 6): a session survives a process restart on `sqliteStore({ path })` — process A runs two turns and bumps a counter kept in `prism.state.session`, then spawns process B, which reopens the session with `agent.session({ id })` and reads the same messages and counter; A asserts B's output (imports only `@arnilo/prism`, `@arnilo/prism/testing`, and `@arnilo/prism-store-sqlite`, network-free).
+- `durable-approval.ts` — **demo** (Phase 6): a tool gated by an `ask` hook with no `host.ui` suspends into SQLite, process B reopens the session and calls `session.resume([{ approvalId, outcome: "allow_once" }])` (the id comes from `RunResult.pending` only), and the side effect happens only after the approval (network-free).
 - `host-hooks.ts` — **demo** (Phase 3): host hooks as an inline package — a `tool.call` deny on `network` effects, a `turn.before` budget stop, a `disable` of one tool — and `agent.inspect().hooks` (network-free).
+- `openai-compatible.ts` — **demo** (Phase 5): the kernel's built-in `openai-compatible` provider against a local `Bun.serve` fake endpoint that requires a bearer token; the `ModelSpec` object carries `baseUrl` and an `env:` credential ref, one streamed turn plus a second `RunResult`, and the endpoint asserting the token arrived (imports only `@arnilo/prism`, network-free).
+- `side-call.ts` — **demo** (Phase 5): a `models`-capability package whose tool calls `prism.models.client("side/side")` mid-turn on two `mockProvider` packages, with the side provider called exactly once (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
+- `anthropic-model-switch.ts` — **demo** (Phase 5): one `@arnilo/prism-provider-anthropic` package over a local `Bun.serve` fake Messages endpoint that requires `x-api-key`; the first turn runs the configured `anthropic/claude-sonnet-4-5` and the second switches with `RunOptions.model` to `anthropic/claude-haiku-4-5`, printing the ids the server received (imports only `@arnilo/prism` and the provider package, network-free).
 - `custom-loop.ts` — **demo**: plan-then-act `LoopStrategy` through `slots.loop` with a host `tool.call` gate denying a `network` tool, the denial reaching the model as a tool result (network-free).
 - `durable-investigation.ts` — **demo**: `checkpointPolicy: "every-turn"` turn checkpoints, simulated worker death, and `decision: "continue"` crash recovery with no tool re-dispatch (network-free).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.
@@ -186,7 +196,7 @@ Each demo prints a single JSON line with its result.
 - `provider-registration.ts` — **demo**: register a provider package via the
   extension kernel; resolve providers/models from host-owned registries.
 - `provider-resolver.ts` — **demo**: resolve an agent's provider from a mix of
-  first-party package providers and a third-party own provider via `providerSource`.
+  first-party package providers and a third-party own provider via `providerPackage`.
 - `api-key-auth.ts` — env + memory credential resolvers in host-defined order.
 - `oauth-login.ts` — PKCE OAuth login against a token endpoint (fake host).
 - `openrouter-model-cache-override.ts` — per-model routing/cache overrides.
@@ -221,7 +231,7 @@ Each demo prints a single JSON line with its result.
 - `scoped-memory.ts` — **demo**: `createScopedMemoryPolicy` scope guard, facts-block overflow, fake-provider review to candidates, recall floor/budget, promotion, GC approve, and git audit mirror (network-free).
 - `external-app-db-backed.ts` — **demo**: end-to-end external app with a DB-backed
   adapter reference mock (`SessionStore` + `RunLedger` + `ProductionPersistenceStore`
-  reads), `assertSessionStoreConforms(..., { exerciseReadBranchPath: true })`,
+  reads), `storeConformance(createDbBackedReferenceStore)`,
   explicit tools/skills, branch-handle checkout + fork, and prior-run timeline
   resume from the ledger — no real DB, no network.
 - `cli.ts` — **demo**: spawn the `prism` bin in print and json modes.

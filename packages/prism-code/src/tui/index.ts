@@ -71,7 +71,7 @@ export interface PrismCodeTuiOptions {
   readonly maxScrollback?: number;
   readonly approvalTimeoutMs?: number;
   readonly credentialManager?: PrismCodeCredentialManager;
-  /** Shared provider cache; the assembled agent's `providerSource` reads the same instances. */
+  /** Shared provider cache; the assembled agent's provider package reads the same instances. */
   readonly providerCache?: ProviderCache;
   /** Effort level remembered in `~/.prism/state.json`; clamped to the model's declared levels. */
   readonly initialEffort?: string;

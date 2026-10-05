@@ -1,6 +1,8 @@
+NEURALWATT_DEFAULT_API_KEY_REF	export declare const NEURALWATT_DEFAULT_API_KEY_REF = "env:NEURALWATT_API_KEY"
+NEURALWATT_THINKING_LEVELS	export declare const NEURALWATT_THINKING_LEVELS: readonly ["low", "medium", "high", "max"]
 classifyNeuralWattError	export declare function classifyNeuralWattError(input: NeuralWattErrorInput): NeuralWattRetryDecision
-createNeuralWattProvider	export declare function createNeuralWattProvider(options?: NeuralWattProviderOptions): AIProvider
-neuralwattPackage	export declare function neuralwattPackage(options?: NeuralWattProviderPackageOptions): PackageInstance
+createNeuralWattProvider	export declare function createNeuralWattProvider(options?: NeuralWattProviderOptions): ModelProvider
+default	export default
 defineNeuralWattModel	export declare function defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig
 getNeuralWattQuota	export declare function getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota>
 listNeuralWattModels	export declare function listNeuralWattModels(options?: ListNeuralWattModelsOptions): Promise<ModelConfig[]>
@@ -17,19 +19,20 @@ neuralWattPreserveThinking	export declare function neuralWattPreserveThinking(re
 neuralWattReasoningEffort	export declare function neuralWattReasoningEffort(request: ProviderRequest): string | undefined
 neuralWattThinkingTokenBudget	export declare function neuralWattThinkingTokenBudget(request: ProviderRequest): number | undefined
 neuralWattToolChoice	export declare function neuralWattToolChoice(request: ProviderRequest): string | JsonObject | undefined
+neuralwatt	export declare function neuralwatt(options?: NeuralWattProviderPackageOptions & NeuralWattProviderConfig): PackageInstance
 parseNeuralWattComment	export declare function parseNeuralWattComment(text: string): NeuralWattTelemetryEvent | undefined
 parseNeuralWattCost	export declare function parseNeuralWattCost(payload: string): NeuralWattCostTelemetry | undefined
 parseNeuralWattEnergy	export declare function parseNeuralWattEnergy(payload: string): NeuralWattEnergyTelemetry | undefined
 stripNeuralWattOwnedCompat	export declare function stripNeuralWattOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
 toUsage	export declare function toUsage(usage: NeuralWattUsage | undefined): Usage | undefined
 type GetNeuralWattQuotaOptions	export { type GetNeuralWattQuotaOptions, getNeuralWattQuota, type NeuralWattQuota, type NeuralWattQuotaBalance, type NeuralWattQuotaKey, type NeuralWattQuotaLimits, type NeuralWattQuotaSubscription, type NeuralWattQuotaUsage, } from "./quota.js"
-type ListNeuralWattModelsOptions	export { defineNeuralWattModel, type ListNeuralWattModelsOptions, listNeuralWattModels, mapNeuralWattModel, type NeuralWattModelConfig, type NeuralWattModelEntry, neuralWattModels, } from "./models.js"
+type ListNeuralWattModelsOptions	export { defineNeuralWattModel, type ListNeuralWattModelsOptions, listNeuralWattModels, mapNeuralWattModel, NEURALWATT_THINKING_LEVELS, type NeuralWattModelConfig, type NeuralWattModelEntry, neuralWattModels, } from "./models.js"
 type NeuralWattCostTelemetry	export { mapNeuralWattTelemetry, type NeuralWattCostTelemetry, type NeuralWattEnergyTelemetry, type NeuralWattEvent, type NeuralWattTelemetryEvent, parseNeuralWattComment, parseNeuralWattCost, parseNeuralWattEnergy, } from "./telemetry.js"
 type NeuralWattEnergyTelemetry	export { mapNeuralWattTelemetry, type NeuralWattCostTelemetry, type NeuralWattEnergyTelemetry, type NeuralWattEvent, type NeuralWattTelemetryEvent, parseNeuralWattComment, parseNeuralWattCost, parseNeuralWattEnergy, } from "./telemetry.js"
 type NeuralWattErrorInput	export { classifyNeuralWattError, type NeuralWattErrorInput, type NeuralWattRetryDecision, type NeuralWattRetryStrategy, neuralWattHttpError, } from "./retry.js"
 type NeuralWattEvent	export { mapNeuralWattTelemetry, type NeuralWattCostTelemetry, type NeuralWattEnergyTelemetry, type NeuralWattEvent, type NeuralWattTelemetryEvent, parseNeuralWattComment, parseNeuralWattCost, parseNeuralWattEnergy, } from "./telemetry.js"
-type NeuralWattModelConfig	export { defineNeuralWattModel, type ListNeuralWattModelsOptions, listNeuralWattModels, mapNeuralWattModel, type NeuralWattModelConfig, type NeuralWattModelEntry, neuralWattModels, } from "./models.js"
-type NeuralWattModelEntry	export { defineNeuralWattModel, type ListNeuralWattModelsOptions, listNeuralWattModels, mapNeuralWattModel, type NeuralWattModelConfig, type NeuralWattModelEntry, neuralWattModels, } from "./models.js"
+type NeuralWattModelConfig	export { defineNeuralWattModel, type ListNeuralWattModelsOptions, listNeuralWattModels, mapNeuralWattModel, NEURALWATT_THINKING_LEVELS, type NeuralWattModelConfig, type NeuralWattModelEntry, neuralWattModels, } from "./models.js"
+type NeuralWattModelEntry	export { defineNeuralWattModel, type ListNeuralWattModelsOptions, listNeuralWattModels, mapNeuralWattModel, NEURALWATT_THINKING_LEVELS, type NeuralWattModelConfig, type NeuralWattModelEntry, neuralWattModels, } from "./models.js"
 type NeuralWattProviderOptions	export { createNeuralWattProvider, type NeuralWattProviderOptions, type NeuralWattUsage, neuralWattBody, neuralWattEvents, neuralWattEventsWithTelemetry, toUsage, } from "./provider.js"
 type NeuralWattQuota	export { type GetNeuralWattQuotaOptions, getNeuralWattQuota, type NeuralWattQuota, type NeuralWattQuotaBalance, type NeuralWattQuotaKey, type NeuralWattQuotaLimits, type NeuralWattQuotaSubscription, type NeuralWattQuotaUsage, } from "./quota.js"
 type NeuralWattQuotaBalance	export { type GetNeuralWattQuotaOptions, getNeuralWattQuota, type NeuralWattQuota, type NeuralWattQuotaBalance, type NeuralWattQuotaKey, type NeuralWattQuotaLimits, type NeuralWattQuotaSubscription, type NeuralWattQuotaUsage, } from "./quota.js"

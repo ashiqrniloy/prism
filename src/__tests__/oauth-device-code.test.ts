@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type PollDeviceCodeTokenOptions, pollDeviceCodeToken } from "../oauth-device-code.js";
+import { type PollDeviceCodeTokenOptions, pollDeviceCodeToken } from "../provider-kit/oauth-device-code.js";
 
 const DEVICE = "https://example.test/device";
 const TOKEN = "https://example.test/token";

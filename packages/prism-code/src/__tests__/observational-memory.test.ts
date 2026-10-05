@@ -5,21 +5,22 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { MemoryStoredCredentialStore, PrismCodeCredentialManager } from "../credentials.js";
 import { ObservationalMemoryCoordinator } from "../observational-memory.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const sessionModel = { provider: "mock", model: "default" };
 const workerModel = { provider: "mock", model: "worker" };
 
-function createMockWorkerProvider(calls: ProviderRequest[] = []): AIProvider {
+function createMockWorkerProvider(calls: ProviderRequest[] = []): ModelProvider {
   return {
     id: "mock",
     async *generate(request) {
@@ -73,13 +74,13 @@ describe("Observational Memory Coordinator", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: sessionModel,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
     });
     const session = await agent.session({ id: "s1", create: true });
@@ -103,13 +104,13 @@ describe("Observational Memory Coordinator", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: sessionModel,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
     });
     const session = await agent.session({ id: "s1", create: true });
@@ -137,13 +138,13 @@ describe("Observational Memory Coordinator", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: sessionModel,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
     });
     const session = await agent.session({ id: "s1", create: true });
@@ -172,13 +173,13 @@ describe("Observational Memory Coordinator", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: sessionModel,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
     });
     const session = await agent.session({ id: "s1", create: true });
@@ -203,13 +204,13 @@ describe("Observational Memory Coordinator", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: sessionModel,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
     });
     const session = await agent.session({ id: "s1", create: true });
@@ -242,13 +243,13 @@ describe("Observational Memory Coordinator", () => {
       const coordinator1 = createCoordinator({ store });
       const agent1 = await createAgent({
         model: sessionModel,
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             yield providerTextDelta("ok");
             yield providerDone();
           },
-        },
+        }])],
         slots: { store },
       });
       const session1 = await agent1.session({ id: "s1", create: true });
@@ -282,13 +283,13 @@ describe("Observational Memory Coordinator", () => {
       const coordinator = createCoordinator({ store });
       const agent = await createAgent({
         model: sessionModel,
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             yield providerTextDelta("ok");
             yield providerDone();
           },
-        },
+        }])],
         slots: { store },
       });
 
@@ -369,13 +370,13 @@ describe("Observational Memory Coordinator", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: sessionModel,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store },
     });
     const session = await agent.session({ id: "s1", create: true });

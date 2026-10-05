@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   type AgentEvent,
   type Session,
-  type AIProvider,
+  type ModelProvider,
   type CompactionTrigger,
   createAgent,
   type HookRegistrar,
@@ -17,6 +17,7 @@ import {
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const cappedModel: ModelConfig = {
   provider: "mock",
@@ -38,7 +39,7 @@ const workTool: ToolDefinition = {
 };
 
 function multiTurnProvider(options: { readonly rounds?: number; readonly toolCallsPerRound?: number } = {}): {
-  provider: AIProvider;
+  provider: ModelProvider;
   requests: ProviderRequest[];
 } {
   const requests: ProviderRequest[] = [];
@@ -100,7 +101,7 @@ describe("Between-turn auto-compaction (mid-run)", () => {
     const { provider, requests } = multiTurnProvider({ rounds: 2 });
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [workTool] },
       compaction: { keepRecentEntries: 2 },
       hooks: whenTrigger({ type: "each_turn" }),
@@ -142,7 +143,7 @@ describe("Between-turn auto-compaction (mid-run)", () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [workTool] },
       compaction: { keepRecentEntries: 2 },
       // Very low token threshold so turn 1 tool result pushes it over
@@ -164,7 +165,7 @@ describe("Between-turn auto-compaction (mid-run)", () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [workTool] },
       compaction: { keepRecentEntries: 2 },
       // Set low ratio so turn 1 tool result crosses it
@@ -186,7 +187,7 @@ describe("Between-turn auto-compaction (mid-run)", () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [workTool] },
       compaction: {
         // keepRecentEntries = 1 would naively keep only the tool result and drop the assistant tool call
@@ -226,7 +227,7 @@ describe("Between-turn auto-compaction (mid-run)", () => {
 
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [workTool] },
       // The compactor is the `compaction` slot (roadmap §2.5); `compaction` only sizes it.
       slots: { compaction: failingStrategy },
@@ -254,7 +255,7 @@ describe("Between-turn auto-compaction (mid-run)", () => {
     const { provider } = multiTurnProvider({ rounds: 2 });
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [workTool] },
       // No compaction configured
     });

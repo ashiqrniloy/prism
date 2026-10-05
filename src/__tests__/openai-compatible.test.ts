@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { Message, ProviderEvent, ProviderRequest } from "../index.js";
-import { createOpenAICompatibleProvider } from "../providers/openai-compatible.js";
-import { assertSerializedRequestCoversContent } from "../testing/provider-conformance.js";
+import { createOpenAICompatibleProvider } from "../provider-kit/openai-compatible.js";
+import { assertSerializedRequestCoversContent } from "../provider-kit/conformance.js";
 
 function sse(lines: readonly string[]) {
   const encoder = new TextEncoder();

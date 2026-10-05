@@ -4,7 +4,7 @@ import { compileAttention, createAttentionCompiler } from "../attention-compiler
 import type { ContextBudgetMessageGroups } from "../context-budget.js";
 import {
   type Session,
-  type AIProvider,
+  type ModelProvider,
   type CompactionTrigger,
   type CompactionTriggerContext,
   createAgent,
@@ -25,11 +25,12 @@ import {
   toolCallContent,
 } from "../index.js";
 import { failedRun } from "./run-result-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const model: ModelConfig = { provider: "mock", model: "demo" };
 const cappedModel: ModelConfig = { provider: "mock", model: "demo", limits: { contextWindow: 2_000, maxOutputTokens: 0 } };
 
-function recordingProvider(): { provider: AIProvider; requests: ProviderRequest[] } {
+function recordingProvider(): { provider: ModelProvider; requests: ProviderRequest[] } {
   const requests: ProviderRequest[] = [];
   return {
     requests,
@@ -183,7 +184,7 @@ function whenTrigger(trigger: CompactionTrigger, sessionModel: ModelConfig = mod
 describe("session auto-compaction trigger", () => {
   it("keeps the legacy entry-count gate, boundary included", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, provider, compaction: { thresholdEntries: 3, keepRecentEntries: 1 } });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 3, keepRecentEntries: 1 } });
     const session = await agent.session({ id: "s1", create: true });
 
     // The run input is appended before the gate, so the second turn sees three entries: at the
@@ -198,7 +199,7 @@ describe("session auto-compaction trigger", () => {
 
   it("still skips when the run disables compaction", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, provider, compaction: { thresholdEntries: 1 } });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 } });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("first");
@@ -211,7 +212,7 @@ describe("session auto-compaction trigger", () => {
     const { provider, requests } = recordingProvider();
     const agent = await createAgent({
       model: cappedModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       instructions: "system rules",
       tools: {
         add: [
@@ -243,7 +244,7 @@ describe("session auto-compaction trigger", () => {
 
   it("does not compact on input_ratio while the estimate stays under the ratio", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model: cappedModel, provider, hooks: whenTrigger({ type: "input_ratio", ratio: 0.9 }, cappedModel) });
+    const agent = await createAgent({ model: cappedModel, packages: [providerPackage("test-provider", [provider])], hooks: whenTrigger({ type: "input_ratio", ratio: 0.9 }, cappedModel) });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("hi");
@@ -255,7 +256,7 @@ describe("session auto-compaction trigger", () => {
   it("fails loudly when an input_ratio handler cannot resolve a cap", async () => {
     const { provider } = recordingProvider();
     // `model` declares no limits, so the shared cap helper cannot resolve a window: config error.
-    const agent = await createAgent({ model, provider, hooks: whenTrigger({ type: "input_ratio", ratio: 0.5 }) });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], hooks: whenTrigger({ type: "input_ratio", ratio: 0.5 }) });
     const session = await agent.session();
 
     // The cap is resolved as soon as the handler evaluates the ratio, before any size judgement.
@@ -267,7 +268,7 @@ describe("session auto-compaction trigger", () => {
     const declined = recordingProvider();
     const declinedAgent = await createAgent({
       model,
-      provider: declined.provider,
+      packages: [providerPackage("test-provider", [declined.provider])],
       compaction: { thresholdEntries: 1 },
       hooks: whenTrigger({
         type: "custom",
@@ -293,7 +294,7 @@ describe("session auto-compaction trigger", () => {
     const accepted = recordingProvider();
     const acceptedAgent = await createAgent({
       model,
-      provider: accepted.provider,
+      packages: [providerPackage("test-provider", [accepted.provider])],
       compaction: { thresholdEntries: 1_000 },
       hooks: whenTrigger({ type: "custom", shouldCompact: async (context) => context.entryCount >= 2 }),
     });
@@ -318,7 +319,7 @@ describe("session auto-compaction trigger", () => {
 
     for (const [index, trigger] of triggers.entries()) {
       const { provider } = recordingProvider();
-      const agent = await createAgent({ model, provider, compaction: { thresholdEntries: 1 }, hooks: whenTrigger(trigger) });
+      const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 }, hooks: whenTrigger(trigger) });
       const session = await agent.session();
 
       // Both runs resolve: a failed trigger decides `false`, it never fails the run.
@@ -331,7 +332,7 @@ describe("session auto-compaction trigger", () => {
 
   it("does not compact a branch that just compacted", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, provider, compaction: { thresholdEntries: 1 } });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 } });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("first");
@@ -352,7 +353,7 @@ describe("session auto-compaction trigger", () => {
   it("refuses session.compact() while a run is active", async () => {
     const failures: string[] = [];
     let session: Session | undefined;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         const active = session;
@@ -365,7 +366,7 @@ describe("session auto-compaction trigger", () => {
         yield providerDone();
       },
     };
-    session = await (await createAgent({ model, provider, slots: { store: createMemorySessionStore() } })).session({
+    session = await (await createAgent({ model, packages: [providerPackage("test-provider", [provider])], slots: { store: createMemorySessionStore() } })).session({
       id: "s1",
       create: true,
     });
@@ -379,7 +380,7 @@ describe("session auto-compaction trigger", () => {
 describe("compaction.when hook", () => {
   it("compaction_config_trigger_decides_without_a_hook", async () => {
     const { provider } = recordingProvider();
-    const agent = await createAgent({ model, provider, compaction: { thresholdEntries: 0, keepRecentEntries: 1 } });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 0, keepRecentEntries: 1 } });
     const session = await agent.session();
 
     await session.run("first");
@@ -391,7 +392,7 @@ describe("compaction.when hook", () => {
     const { provider } = recordingProvider();
     const agent = await createAgent({
       model,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       hooks: (hooks) => hooks.on("compaction.when", () => ({ compact: true })),
     });
     const session = await agent.session();
@@ -405,7 +406,7 @@ describe("compaction.when hook", () => {
     const { provider } = recordingProvider();
     const agent = await createAgent({
       model,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       // The configured trigger would compact immediately; the registered handler owns the decision.
       compaction: { thresholdEntries: 0, keepRecentEntries: 1 },
       hooks: (hooks) => hooks.on("compaction.when", () => undefined),
@@ -421,7 +422,7 @@ describe("compaction.when hook", () => {
     const { provider } = recordingProvider();
     const agent = await createAgent({
       model,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       hooks: (hooks) =>
         hooks.on("compaction.when", () => {
           throw new Error("when boom");
@@ -446,7 +447,7 @@ describe("compiler after compaction", () => {
 
   it("never rewrites the summary and may still stub the kept tail", async () => {
     let turn = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         turn += 1;
@@ -455,7 +456,7 @@ describe("compiler after compaction", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ model, provider, tools: { add: [big] }, compaction: { thresholdEntries: 1, keepRecentEntries: 3 } });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], tools: { add: [big] }, compaction: { thresholdEntries: 1, keepRecentEntries: 3 } });
     const session = await agent.session({ id: "s1", create: true });
 
     await session.run("use the big tool");

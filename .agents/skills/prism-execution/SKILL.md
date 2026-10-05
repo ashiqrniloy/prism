@@ -1,6 +1,6 @@
 ---
 name: prism-execution
-description: Execute work in the Prism repo, which is moving from the 0.12 runtime and family packages to the `@arnilo/prism` 1.0 SDK kernel extended by native packages. Use it to implement, fix, or refactor code, execute a plan task ("do task N", "next unchecked task", "complete Task 4"), move 0.12 code into a kernel module or native package, or change Prism packages, providers, tools, memory, stores, host libraries, Prism Code, docs, or release plumbing. Do NOT use it to write a new plan document (create-plan) or to look up third-party library docs (find-docs).
+description: Execute work in the Prism repo, which is moving from the 0.12 runtime and family packages to the `@arnilo/prism` 0.13.0 SDK kernel extended by native packages. Use it to implement, fix, or refactor code, execute a plan task ("do task N", "next unchecked task", "complete Task 4"), move 0.12 code into a kernel module or native package, or change Prism packages, providers, tools, memory, stores, host libraries, Prism Code, docs, or release plumbing. Do NOT use it to write a new plan document (create-plan) or to look up third-party library docs (find-docs).
 ---
 
 # Prism Execution

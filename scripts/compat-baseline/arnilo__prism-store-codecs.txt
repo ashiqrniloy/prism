@@ -1,0 +1,28 @@
+assertCheckpointInput	export declare function assertCheckpointInput(input:
+assertHoldReason	export declare function assertHoldReason(reason: string): string
+assertLeaseInput	export declare function assertLeaseInput(namespace: string, key: string, ownerId: string, ttlMs?: number, signal?: AbortSignal, token?: string): void
+assertLifecycleOwnership	export declare function assertLifecycleOwnership(input: OwnershipScope): void
+assertOwnershipRequired	export declare function assertOwnershipRequired(input: OwnershipScope, makeError: () => Error): void
+assertOwnershipScope	export declare function assertOwnershipScope(expected: OwnershipScope, actual: OwnershipScope, makeError: () => Error): void
+canonicalSessionTimestamp	export declare function canonicalSessionTimestamp(value: string): string
+clipSearchSnippet	export declare function clipSearchSnippet(value: string | undefined): string | undefined
+createSessionRowMappers	export declare function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionRowMappers<R>
+decodeBranchCursor	export declare function decodeBranchCursor(cursor: string): number
+decodeCheckpointCursor	export declare function decodeCheckpointCursor(cursor?: string): number
+deepFreeze	export declare function deepFreeze<T>(value: T): T
+encodeBranchCursor	export declare function encodeBranchCursor(offset: number): string
+encodeCheckpointJson	export declare function encodeCheckpointJson(value: unknown, label: string): string
+entrySearchFields	export declare function entrySearchFields(entry: SessionEntry):
+lifecyclePageLimit	export declare function lifecyclePageLimit(limit?: number): number
+ownershipColumns	export declare function ownershipColumns(scope: OwnershipScope): [string, string][]
+ownershipScope	export declare function ownershipScope(input: OwnershipScope): OwnershipScope
+ownershipScopeMatches	export declare function ownershipScopeMatches(expected: OwnershipScope, actual: OwnershipScope): boolean
+parseSessionMetadata	export declare function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined
+parseStringArray	export declare function parseStringArray(value: unknown): string[]
+rowToRunFeedbackRecord	export declare function rowToRunFeedbackRecord(row: Record<string, unknown>): RunFeedbackRecord
+rowToTenantQuota	export declare function rowToTenantQuota(row: Record<string, unknown>): TenantQuota
+safeSearchMetadata	export declare function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined
+staleCheckpoint	export declare function staleCheckpoint(version: number, current?: number): CheckpointConflictError
+staleCheckpointExpected	export declare function staleCheckpointExpected(expected: number, current: number): CheckpointConflictError
+staleCheckpointFence	export declare function staleCheckpointFence(fence: number | undefined, current: number): CheckpointConflictError
+throwIfAborted	export declare function throwIfAborted(signal?: AbortSignal): void

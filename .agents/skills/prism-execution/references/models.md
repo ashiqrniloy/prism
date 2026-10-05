@@ -16,7 +16,7 @@ Kernel model communication (the `ModelProvider` contract, registry, `ModelRef`, 
 
 - Contracts: `src/contracts-core/provider.ts` (`AIProvider`, `ProviderResolver`, `ProviderRequest`), `src/providers.ts`, `src/models.ts`, `src/provider-events.ts`, `src/retry.ts`, `src/thinking.ts`, `src/usage-estimation.ts`.
 - Shared wire → `provider-kit`: `src/providers/{openai-compatible,openai-primitives,transport,schema,media}.ts`.
-- Vendors → provider packages: `packages/prism-providers/src/<vendor>/` (21 adapters, plus `shared/`, `decisions`, `model-discovery`).
+- Vendors → provider packages: `packages/providers/<vendor>/` (21 standalone `@arnilo/prism-provider-<vendor>` packages; the retired `packages/prism-providers` family is deleted in plan 152 Task 8).
 - Credentials: `src/credentials.ts`, `src/oauth-device-code.ts`, `packages/prism-core/src/credentials/`.
 - Lab resolution being deleted: `packages/prism-code/src/{providers.ts,oauth.ts,credentials.ts}`.
 - Current docs (released contract): [provider-layer.md](../../../../docs/provider-layer.md), [provider-packages.md](../../../../docs/provider-packages.md), [provider-primitives.md](../../../../docs/provider-primitives.md), [provider-request-policies.md](../../../../docs/provider-request-policies.md), [provider-caching.md](../../../../docs/provider-caching.md), [thinking-and-reasoning.md](../../../../docs/thinking-and-reasoning.md), [model-registry.md](../../../../docs/model-registry.md), [credentials-and-redaction.md](../../../../docs/credentials-and-redaction.md), [credential-storage.md](../../../../docs/credential-storage.md). Vendor pages live at `docs/providers/<vendor>.md`; read one only when the task names that vendor.
@@ -30,7 +30,7 @@ Kernel model communication (the `ModelProvider` contract, registry, `ModelRef`, 
 
 ## Tests
 
-- `packages/prism-providers/src/**/__tests__/` (run from the workspace directory)
+- `packages/providers/*/src/__tests__/` (run from the package directory); the cross-vendor conformance walks live in `scripts/provider-*.test.mjs`.
 - `src/__tests__/providers.test.ts`, `provider-request-policy.test.ts`, `thinking.test.ts`, `cache-helpers.test.ts`
 - Provider conformance: `@arnilo/prism/testing/provider-conformance` today; `provider-kit` in the target
 

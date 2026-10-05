@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { AgentEvent, ProviderRequest } from "../index.js";
-import {
-  createAgent,
-  createMockProvider,
-  createProviderTurnMetadata,
-  createToolRegistry,
-  dispatchToolCall,
-  providerDone,
-  providerTextDelta,
-  readProviderHttpStatus,
-} from "../index.js";
+import { createAgent, createProviderTurnMetadata, createToolRegistry, dispatchToolCall, providerDone, providerTextDelta, readProviderHttpStatus } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 describe("observability helpers", () => {
   it("createProviderTurnMetadata reads requestId from metadata then sessionId", () => {
@@ -65,7 +57,7 @@ describe("provider turn agent events", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: createMockProvider([providerTextDelta("hi"), providerDone({ inputTokens: 1, outputTokens: 2 })]),
+        packages: [mockProvider([[providerTextDelta("hi"), providerDone({ inputTokens: 1, outputTokens: 2 })]])],
       })
     ).session();
 

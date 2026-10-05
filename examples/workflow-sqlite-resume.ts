@@ -1,5 +1,6 @@
 import { unlinkSync } from "node:fs";
-import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   createWorkflowCheckpoints,
@@ -10,7 +11,8 @@ import {
   type WorkflowEvent,
   type WorkflowRunResult,
 } from "@arnilo/prism-core/runtime/workflows";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // SQLite durable checkpoint, abort, and resume. A two-node workflow writes
 // to a temp SQLite database; checkpoint survives the function node then
@@ -26,7 +28,7 @@ const provider = createMockProvider([
 
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
 });
 
 const echoNode = functionNode({

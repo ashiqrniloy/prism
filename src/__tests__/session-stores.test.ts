@@ -1,18 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { BranchReader, SessionEntry } from "../index.js";
-import {
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  getSessionBranchEntries,
-  isSessionAppendConflict,
-  listSessionBranches,
-  rebuildSessionContext,
-  SESSION_APPEND_CONFLICT_CODE,
-  SessionAppendConflictError,
-} from "../index.js";
+import { createAgent, createMemorySessionStore, createSessionEntry, getSessionBranchEntries, isSessionAppendConflict, listSessionBranches, rebuildSessionContext, SESSION_APPEND_CONFLICT_CODE, SessionAppendConflictError } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
@@ -529,7 +519,7 @@ describe("memory readBranchPath", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider: createMockProvider(),
+        packages: [mockProvider()],
         slots: { store: wrapped },
       })
     ).session({ id: "s1", leafId: parent, create: true });

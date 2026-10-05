@@ -1,4 +1,5 @@
-import { createMockProvider, providerDone, providerTextDelta, providerUsage, type ToolRegistry } from "@arnilo/prism";
+import { providerDone, providerTextDelta, providerUsage, type ToolRegistry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { assembleAppAgent, type PrismCodeConfig, runHeadless } from "@arnilo/prism-code";
 
 // Demonstrates the headless surface of `@arnilo/prism-code` with the offline

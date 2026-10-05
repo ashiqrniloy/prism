@@ -1,4 +1,4 @@
-import { type AgentIdentity, type AIProvider, assertIdentityActive, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
+import { type AgentIdentity, type ModelProvider, assertIdentityActive, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
 import { ModelRouterError } from "./errors.js";
 import type { ModelRouterRequestTransform } from "./types.js";
 import { createGovernedProvider } from "./invocation.js";
@@ -457,7 +457,7 @@ export function createModelRouter(options: CreateModelRouterOptions): ModelRoute
           continue;
         }
 
-        const provider: AIProvider | undefined = options.resolver(candidate);
+        const provider: ModelProvider | undefined = options.resolver(candidate);
         if (!provider) {
           await releaseReservation(reservation);
           attempts.push({ provider: candidate.provider, model: candidate.model, outcome: "miss", reason: "unknown_provider" });

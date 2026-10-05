@@ -5,10 +5,10 @@
 `EmbeddingsProvider` is the provider-neutral embeddings contract: one-shot batch
 text→vector generation with usage accounting, per-item error mapping, and
 capability-gated models. First-party adapters ship in
-[`@arnilo/prism-providers/openai`](providers/openai.md) (OpenAI-compatible
-`POST {base}/embeddings`) and [`@arnilo/prism-providers/alibaba`](providers/alibaba.md)
+[`@arnilo/prism-provider-openai`](providers/openai.md) (OpenAI-compatible
+`POST {base}/embeddings`) and [`@arnilo/prism-provider-alibaba`](providers/alibaba.md)
 (DashScope `compatible-mode/v1/embeddings`); offline conformance runs via
-`runEmbeddingsConformance` from `@arnilo/prism/testing/provider-conformance`.
+`runEmbeddingsConformance` from `@arnilo/prism/provider-kit`.
 
 ## When to use it
 
@@ -57,8 +57,8 @@ DashScope 10), `request_failed` (non-2xx, secret-redacted message),
 ## Implementation example
 
 ```ts
-import { createOpenAIEmbeddingsProvider } from "@arnilo/prism-providers/openai";
-import { runEmbeddingsConformance } from "@arnilo/prism/testing/provider-conformance";
+import { createOpenAIEmbeddingsProvider } from "@arnilo/prism-provider-openai";
+import { runEmbeddingsConformance } from "@arnilo/prism/provider-kit";
 
 const embeddings = createOpenAIEmbeddingsProvider({ apiKey: process.env.OPENAI_API_KEY });
 const result = await embeddings.embedMany({
@@ -120,4 +120,4 @@ await runEmbeddingsConformance({
 - [Provider conformance](provider-conformance.md): `runEmbeddingsConformance` and
   the offline conformance matrix this contract joins.
 - [Provider packages](provider-packages.md): subpath import rules for
-  `@arnilo/prism-providers/openai` and `@arnilo/prism-providers/alibaba`.
+  `@arnilo/prism-provider-openai` and `@arnilo/prism-provider-alibaba`.

@@ -10,6 +10,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
  * Long single-run investigation under an external orchestrator (plan 084 Task 1).
@@ -41,7 +42,7 @@ export async function demo() {
     id: "durable-investigation",
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         requests.push(request);
@@ -61,7 +62,7 @@ export async function demo() {
         yield providerTextDelta("North America leads revenue at 4,320.50 (gather-1).");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {

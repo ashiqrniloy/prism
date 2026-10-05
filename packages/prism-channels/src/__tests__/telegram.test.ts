@@ -14,6 +14,7 @@ import { createChannelStateStore } from "../state.js";
 import type { TelegramAdapterOptions } from "../telegram.js";
 import { createTelegramAdapter, createTelegramWebhookHandler } from "../telegram.js";
 import type { ChannelAdmission, ChannelAuthorization, ChannelInboundEvent, ChannelReply } from "../types.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const CONNECTION = "telegram-main";
 const OWNER = { tenantId: "telegram-service" };
@@ -115,13 +116,13 @@ describe("plan 079 Telegram adapter", () => {
       id: "telegram-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("final answer");
           yield providerDone();
         },
-      },
+      }])],
     });
     const runtime = createMessagingRuntime({
       checkpoints,
@@ -510,7 +511,7 @@ describe("plan 080 Telegram draft streaming", () => {
       id: "draft-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("first ");
@@ -518,7 +519,7 @@ describe("plan 080 Telegram draft streaming", () => {
           yield providerTextDelta("third");
           yield providerDone();
         },
-      },
+      }])],
     });
   }
 
@@ -785,13 +786,13 @@ describe("plan 080 bounded attachments and voice", () => {
       id: "telegram-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("heard you");
           yield providerDone();
         },
-      },
+      }])],
     });
     const runtime = createMessagingRuntime({
       checkpoints,

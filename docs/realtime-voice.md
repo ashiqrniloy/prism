@@ -12,7 +12,7 @@ Use it when microphone audio should drive the same tools, approvals, usage ledge
 
 ```ts
 import { resolveDevicePolicy } from "@arnilo/prism";
-import { createOpenAIRealtimeSession } from "@arnilo/prism-providers/openai";
+import { createOpenAIRealtimeSession } from "@arnilo/prism-provider-openai";
 import { createRealtimeVoiceBridge } from "@arnilo/prism-core/runtime/realtime";
 
 const policy = resolveDevicePolicy(

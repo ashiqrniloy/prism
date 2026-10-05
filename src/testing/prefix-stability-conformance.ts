@@ -5,19 +5,21 @@
 // Throws plain Error; no test runner, no network, no credentials.
 
 import assert from "node:assert/strict";
+import { parseModelRef } from "../models/ref.js";
+import { providerPackage } from "../provider-kit/package.js";
 import { createAgent } from "../agent-session/create-agent.js";
-import type { AgentConfig, Session, AIProvider, JsonObject, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
-import { providerDone, providerThinkingDelta, toolCallContent } from "../provider-events.js";
+import type { AgentConfig, Session, ModelProvider, JsonObject, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
+import { providerDone, providerThinkingDelta, toolCallContent } from "../models/events.js";
 import { createLoadSkillTool } from "../skill-load.js";
 import { createSkillRegistry } from "../skills.js";
 
 export interface PrefixStabilityConformanceOptions {
   /**
-   * The host's own agent config, minus `provider`, `providerSource`, and `skills`:
+   * The host's own agent config, minus `skills`; `model` keeps its model id but is pointed at the fixture provider:
    * the runner installs its fixture provider and fixture skill registry so the
    * scenario is deterministic and comparable across hosts.
    */
-  readonly host: Omit<AgentConfig, "provider" | "providerSource" | "skills">;
+  readonly host: Omit<AgentConfig, "skills">;
   /** Two distinct skills: the fixture loads `[0]` on the first turn and `[1]` on the second. */
   readonly skills: readonly [Skill, Skill];
   /** Progressive (default) or eager disclosure for the fixture agent. */
@@ -172,16 +174,18 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   );
   const registry = createSkillRegistry([...skills]);
   const hostTools: readonly ToolDefinition[] = host.tools?.add ?? [];
+  const fixture = fixtureProvider(
+    requests,
+    [first.name, second.name],
+    host.attentionCompiler === true || typeof host.attentionCompiler === "object",
+    foldableBytes !== undefined,
+  );
   const agent = await createAgent({
     ...host,
     skills: { add: registry.list(), disclosure: options.skillsDisclosure },
     tools: { add: [...hostTools, ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)])] },
-    provider: fixtureProvider(
-      requests,
-      [first.name, second.name],
-      host.attentionCompiler === true || typeof host.attentionCompiler === "object",
-      foldableBytes !== undefined,
-    ),
+    model: { ...parseModelRef(host.model), provider: fixture.id },
+    packages: [...(host.packages ?? []), providerPackage("prefix-stability-fixture", [fixture])],
   });
   const session = (await agent.session()) as Session & { readonly tailSegments: ReadonlyMap<string, Message> };
   const [firstInput, secondInput] = options.inputs ?? ["Prefix stability turn one", "Prefix stability turn two"];
@@ -292,7 +296,7 @@ function createFoldableToolResultTool(bytes: number): ToolDefinition {
  * carries a thinking block, so the compiler's thinking stage has real content to fold. With `bulk`
  * the same round also calls the runner-owned bulk tool, so the tool-result stage has a foldable row.
  */
-function fixtureProvider(requests: ProviderRequest[], skillNames: readonly string[], reasoning: boolean, bulk: boolean): AIProvider {
+function fixtureProvider(requests: ProviderRequest[], skillNames: readonly string[], reasoning: boolean, bulk: boolean): ModelProvider {
   let call = 0;
   return {
     id: "prefix-stability-fixture",

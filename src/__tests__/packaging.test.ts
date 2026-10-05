@@ -1,13 +1,9 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, posix } from "node:path";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  NON_ADAPTER_PROVIDER_SUBPATHS,
-  // @ts-expect-error stdlib-only package-truth helper intentionally ships as directly runnable JavaScript.
-} from "../../scripts/package-truth.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -56,10 +52,35 @@ const packages: Array<{
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
   { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json", sourceExport: true },
+  { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring", sourceExport: true },
+  { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl", sourceExport: true },
+  { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs", sourceExport: true },
+  { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite", sourceExport: true },
+  { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres", sourceExport: true },
+  { dir: "packages/providers/anthropic", name: "@arnilo/prism-provider-anthropic", sourceExport: true },
+  { dir: "packages/providers/openai", name: "@arnilo/prism-provider-openai", sourceExport: true },
+  { dir: "packages/providers/deepseek", name: "@arnilo/prism-provider-deepseek", sourceExport: true },
+  { dir: "packages/providers/xai", name: "@arnilo/prism-provider-xai", sourceExport: true },
+  { dir: "packages/providers/zai", name: "@arnilo/prism-provider-zai", sourceExport: true },
+  { dir: "packages/providers/alibaba", name: "@arnilo/prism-provider-alibaba", sourceExport: true },
+  { dir: "packages/providers/kimi", name: "@arnilo/prism-provider-kimi", sourceExport: true },
+  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter", sourceExport: true },
+  { dir: "packages/providers/ollama", name: "@arnilo/prism-provider-ollama", sourceExport: true },
+  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
+  { dir: "packages/providers/neuralwatt", name: "@arnilo/prism-provider-neuralwatt", sourceExport: true },
+  { dir: "packages/providers/clinepass", name: "@arnilo/prism-provider-clinepass", sourceExport: true },
+  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode", sourceExport: true },
+  { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper", sourceExport: true },
+  { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya", sourceExport: true },
+  { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
+  { dir: "packages/providers/google", name: "@arnilo/prism-provider-google", sourceExport: true },
+  { dir: "packages/providers/vertex", name: "@arnilo/prism-provider-vertex", sourceExport: true },
+  { dir: "packages/providers/azure", name: "@arnilo/prism-provider-azure", sourceExport: true },
+  { dir: "packages/providers/bedrock", name: "@arnilo/prism-provider-bedrock", sourceExport: true },
+  { dir: "packages/providers/ai-sdk", name: "@arnilo/prism-provider-ai-sdk", sourceExport: true },
   { dir: "packages/agent-sdk", name: "@arnilo/prism-agent-sdk" },
   { dir: "packages/prism-code", name: "@arnilo/prism-code" },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers", isSubpaths: true },
   { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },
 ];
 
@@ -332,91 +353,45 @@ describe("packaging guard", () => {
     }
   });
 
-  it("phase48 neuralwatt adapter ships in the provider family and umbrella membership is release-gated", () => {
-    const providers = packages.find((pkg) => pkg.name === "@arnilo/prism-providers");
-    assert.ok(providers, "@arnilo/prism-providers missing from packaging package list");
-    const files = getPackList(providers.dir, providers.name);
-    assert.ok(files.includes("dist/neuralwatt/index.js"), "provider family pack missing dist/neuralwatt/index.js");
-    assert.ok(files.includes("dist/neuralwatt/index.d.ts"), "provider family pack missing dist/neuralwatt/index.d.ts");
-
-    const providersManifest = readPkg(providers.dir);
-    const exports = providersManifest.exports as Record<string, Record<string, string>>;
+  it("phase48 neuralwatt adapter ships standalone and umbrella membership is release-gated", () => {
+    // Plan 152 Task 4: the neuralwatt adapter is `@arnilo/prism-provider-neuralwatt`, published as
+    // TypeScript source under packages/providers/ (no family subpath, no dist).
+    const neuralwatt = packages.find((pkg) => pkg.name === "@arnilo/prism-provider-neuralwatt");
+    assert.ok(neuralwatt, "@arnilo/prism-provider-neuralwatt missing from packaging package list");
+    const files = getPackList(neuralwatt.dir, neuralwatt.name);
+    assert.ok(files.includes("src/index.ts"), "neuralwatt pack missing src/index.ts");
+    assert.ok(files.includes("src/provider.ts"), "neuralwatt pack missing src/provider.ts");
+    const manifest = readPkg(neuralwatt.dir);
     assert.deepEqual(
-      exports["./neuralwatt"],
-      { types: "./dist/neuralwatt/index.d.ts", default: "./dist/neuralwatt/index.js" },
-      "@arnilo/prism-providers/neuralwatt subpath exports must keep JS + type declaration targets",
+      manifest.exports,
+      { ".": "./src/index.ts" },
+      "@arnilo/prism-provider-neuralwatt must export its TypeScript entrypoint",
+    );
+    assert.equal(
+      (manifest.peerDependencies as Record<string, string>)["@arnilo/prism"],
+      `^${releaseVersion()}`,
+      `@arnilo/prism-provider-neuralwatt must peer @arnilo/prism@^${releaseVersion()}`,
+    );
+    assert.equal(
+      (manifest.dependencies as Record<string, string> | undefined)?.["@arnilo/prism-providers"],
+      undefined,
+      "a standalone provider package must not depend on the family",
     );
 
-    // Plan 054 Task 8: prism-all is retired; the provider family is the only remaining umbrella.
-    assert.equal(
-      (providersManifest.peerDependencies as Record<string, string>)["@arnilo/prism"],
-      `^${releaseVersion()}`,
-      `provider family must peer @arnilo/prism@^${releaseVersion()}`,
-    );
+    // Plan 152 Task 8: the provider family workspace is deleted; every adapter is a
+    // standalone package and the repo must not carry a shim for the old name.
+    assert.ok(!existsSync(join(repoRoot, "packages/prism-providers")), "the retired @arnilo/prism-providers workspace must be deleted");
   });
 
-  it("provider family exports exactly the 22 adapter subpaths plus declared non-adapter helpers", () => {
-    const manifest = readPkg("packages/prism-providers");
-    assert.equal(manifest.dependencies, undefined, "provider family must not add runtime dependencies");
-    const exports = manifest.exports as Record<string, Record<string, string>>;
-    const adapters = [
-      "ai-sdk",
-      "alibaba",
-      "anthropic",
-      "azure",
-      "bedrock",
-      "clinepass",
-      "commandcode",
-      "deepseek",
-      "google",
-      "hyper",
-      "kimi",
-      "laya",
-      "model-discovery",
-      "neuralwatt",
-      "ollama",
-      "openai",
-      "opencode-go",
-      "openrouter",
-      "typesafe",
-      "vertex",
-      "xai",
-      "zai",
-    ];
-    assert.deepEqual(
-      Object.keys(exports).sort(),
-      [...adapters.map((a) => `./${a}`), ...NON_ADAPTER_PROVIDER_SUBPATHS].sort(),
-      "provider family exports must be exactly the 22 adapter subpaths plus the declared non-adapter helpers",
+  it("retired provider family workspace is deleted, not shimmed", () => {
+    // Plan 152 Task 8: the umbrella had no importable surface after Task 6; the last
+    // step is deleting it. `scripts/provider-*.test.mjs` and the per-package suites
+    // carry the cross-vendor conformance that used to live in its __tests__.
+    assert.ok(!existsSync(join(repoRoot, "packages/prism-providers")), "packages/prism-providers must not exist");
+    assert.ok(
+      !existsSync(join(repoRoot, "packages/prism-providers/package.json")),
+      "the retired family must not keep a manifest (no alias workspace)",
     );
-    assert.equal(exports["."], undefined, "provider family must have no root barrel: no adapter may activate at family-root import");
-    // Adapter isolation: compiled adapter code only imports its own directory and
-    // the @arnilo/prism peer — never another adapter's dist output.
-    for (const adapter of adapters) {
-      const dir = join(repoRoot, "packages/prism-providers/dist", adapter);
-      const walk = (d: string): string[] =>
-        readdirSync(d, { withFileTypes: true }).flatMap((e) =>
-          e.isDirectory() ? walk(join(d, e.name)) : e.name.endsWith(".js") ? [join(d, e.name)] : [],
-        );
-      for (const file of walk(dir)) {
-        const text = readFileSync(file, "utf8");
-        const foreign = [...text.matchAll(/from "(\.[^"]+)"/g)]
-          .map((m) => posix.normalize(posix.join(adapter, posix.dirname(file.slice(dir.length + 1)), m[1])))
-          .filter((resolved) => resolved !== adapter && !resolved.startsWith(`${adapter}/`));
-        // Plan 055 deliberate family-internal reuse: `shared/` serializers (Task 1,
-        // every adapter) and the hyper → openai Responses-machinery import (Task 8,
-        // plan-approved reuse over copying). Plan 122 Task 3 adds the non-adapter
-        // `decisions/` host helper, re-exported by the Jev/Laya subpaths only.
-        // Everything else must stay adapter-local.
-        // (Foreign paths are repo-relative to dist/, e.g. "shared/anthropic-messages.js".)
-        const allowed: readonly string[] = [
-          "shared/",
-          ...(adapter === "laya" || adapter === "typesafe" ? ["decisions/"] : []),
-          ...(adapter === "hyper" ? ["openai/"] : []),
-        ];
-        const violations = foreign.filter((resolved) => !allowed.some((prefix) => resolved.startsWith(prefix)));
-        assert.deepEqual(violations, [], `${adapter} compiled output imports outside its own adapter: ${violations.join(", ")}`);
-      }
-    }
   });
 
   it("work family exports isolated subpaths with no activating root barrel", () => {
@@ -558,10 +533,10 @@ describe("packaging guard", () => {
     assert.equal(truth.counts.publishable, packages.length, "package truth must report every packaged manifest");
   });
 
-  it("0.4 package set — 14 manifests in lockstep, no shims, family roots stay inert", () => {
+  it("0.4 package set — 39 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 14, "14 active packages including root");
+    assert.equal(names.length, 39, "39 active packages including root");
     assert.ok(names.includes("@arnilo/prism-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the app and the SDK are on their own version lines (0.4.x / 0.1.x).
@@ -576,12 +551,11 @@ describe("packaging guard", () => {
       "@arnilo/prism-sdk",
       "@arnilo/prism-all",
       "@arnilo/prism-browser",
-      "@arnilo/prism-provider-openai",
     ];
     for (const name of retired) {
       assert.ok(!names.includes(name), `retired ${name} must not be a workspace package`);
     }
-    for (const dir of ["packages/prism-providers", "packages/prism-work"]) {
+    for (const dir of ["packages/prism-work"]) {
       const exports = Object.keys((readPkg(dir).exports as Record<string, unknown>) ?? {});
       assert.ok(!exports.includes("."), `${dir} must not activate a root barrel`);
     }

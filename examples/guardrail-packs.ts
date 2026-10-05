@@ -19,7 +19,7 @@
  */
 import assert from "node:assert/strict";
 import {
-  type AIProvider,
+  type ModelProvider,
   type AgentSessionConfig,
   type ContentBlock,
   type JsonObject,
@@ -35,6 +35,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { createGuardrailPackScorer, runScenario } from "@arnilo/prism-core/governance/evals";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const MODEL = { provider: "mock", model: "guardrail-packs-demo" } as const;
 const FINISH: readonly ProviderEvent[] = [providerTextDelta("done"), providerDone()];
@@ -42,10 +43,10 @@ const FINISH: readonly ProviderEvent[] = [providerTextDelta("done"), providerDon
 const call = (id: string, name: string, args: JsonObject): ProviderEvent => providerToolCall(toolCallContent(id, name, args));
 
 /** One provider turn per `generate()`; the last script entry repeats, so every run terminates. */
-function scriptedProvider(script: readonly (readonly ProviderEvent[])[]): AIProvider {
+function scriptedProvider(script: readonly (readonly ProviderEvent[])[]): ModelProvider {
   let index = 0;
   return {
-    id: "guardrail-packs-mock",
+    id: "mock",
     async *generate() {
       // Advance before yielding: a consumer stops pulling at `providerDone()`, so anything after the loop may never run.
       const events = script[Math.min(index, script.length - 1)] ?? FINISH;
@@ -90,14 +91,14 @@ async function blockedCalls(executed: string[]): Promise<readonly { tool: string
     id: "pack-demo-block",
     model: { ...MODEL },
     slots: { store },
-    provider: scriptedProvider([
+    packages: [providerPackage("test-provider", [scriptedProvider([
       [
         call("c1", "shell", { command: "git push origin main --force" }),
         call("c2", "write", { path: "/repo/src/app.test.ts", content: "// tidy" }),
         providerDone(),
       ],
       FINISH,
-    ]),
+    ])])],
     tools: { add: [recordingTool("shell", executed), recordingTool("write", executed)] },
   });
   const sessionConfig: AgentSessionConfig = {
@@ -120,7 +121,7 @@ async function scoredScenario(executed: string[]): Promise<string> {
     id: "pack-demo-eval",
     model: { ...MODEL },
     slots: { store: createMemorySessionStore() },
-    provider: scriptedProvider([[call("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH]),
+    packages: [providerPackage("test-provider", [scriptedProvider([[call("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH])])],
     tools: { add: [recordingTool("shell", executed)] },
   });
   const scenario = await runScenario({
@@ -160,10 +161,10 @@ async function durableAsk(executed: string[]): Promise<{ rule?: string; dispatch
     id: "pack-demo-ask",
     model: { ...MODEL },
     slots: { store: createMemorySessionStore() },
-    provider: scriptedProvider([
+    packages: [providerPackage("test-provider", [scriptedProvider([
       [call("d1", "deploy", { version: "prod-7" }), providerDone()],
       [providerTextDelta("shipped"), providerDone()],
-    ]),
+    ])])],
     tools: { add: [recordingTool("deploy", executed)] },
   });
   const session = await agent.session({ guardrailPacks: [askPack] });
@@ -199,10 +200,10 @@ async function secretRefusal(executed: string[]): Promise<string> {
     id: "pack-demo-secret",
     model: { ...MODEL },
     slots: { store },
-    provider: scriptedProvider([
+    packages: [providerPackage("test-provider", [scriptedProvider([
       [call("s1", "write", { path: "/repo/.env.example", content: `TOKEN=${fakeToken}` }), providerDone()],
       FINISH,
-    ]),
+    ])])],
     tools: { add: [recordingTool("write", executed)] },
   });
   const result = await (await agent.session({ guardrailPacks: ["secrets-hygiene"] })).run("write the example env file");

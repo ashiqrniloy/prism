@@ -1,0 +1,54 @@
+{
+  "name": "@arnilo/prism-store-codecs",
+  "version": "0.12.1",
+  "description": "Row codecs, cursors, ownership-scope helpers, and SQL query semantics shared by the Prism SQL session-store adapters.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "!src/**/*.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "postinstall": "mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.12.1"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../../..",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/stores/codecs"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/stores/codecs#readme",
+  "keywords": [
+    "prism",
+    "session-store",
+    "codecs",
+    "persistence",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

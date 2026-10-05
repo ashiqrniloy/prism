@@ -12,7 +12,7 @@ import { cpus, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { Database } from "bun:sqlite";
-import { createSqlitePersistence } from "../../packages/prism-core/dist/sessions/sqlite/index.js";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 
 const SESSIONS = 200;
 const TURNS_PER_SESSION = 500;

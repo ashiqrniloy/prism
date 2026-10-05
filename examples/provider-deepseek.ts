@@ -1,10 +1,10 @@
 import { createAgent } from "@arnilo/prism";
-import { deepseekModels, deepseekPackage } from "@arnilo/prism-providers/deepseek";
+import deepseek, { deepseekModels } from "@arnilo/prism-provider-deepseek";
 
 export async function demo() {
   const agent = await createAgent({
     model: { provider: "deepseek", model: deepseekModels[0]!.model },
-    packages: [deepseekPackage({ apiKey: () => "fake-deepseek-key" })],
+    packages: [deepseek({ apiKey: "env:PRISM_TEST_DEEPSEEK_KEY" })],
   });
   try {
     return {

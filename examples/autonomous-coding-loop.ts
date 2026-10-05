@@ -1,16 +1,4 @@
-import {
-  type Agent,
-  type RunResult,
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type SessionStore,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type Agent, type RunResult, type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
 import { createAskUserDecisionResumeValidator, suspendAskUserDecision } from "@arnilo/prism-coding-tools/agent";
 import { createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
 import {
@@ -26,6 +14,7 @@ import {
   createObservationalMemoryCompactor,
   recallObservationalMemory,
 } from "@arnilo/prism-memory/compaction/observational-memory";
+import { mockProvider } from "@arnilo/prism/testing";
 
 /**
  * Conformance reference: goal → roadmap → per-task execute/validate with
@@ -60,7 +49,7 @@ interface LoopInput {
   readonly neverPass?: boolean;
 }
 
-function memoryWorkerProvider(store: SessionStore, sessionId: string): AIProvider {
+function memoryWorkerProvider(store: SessionStore, sessionId: string): ModelProvider {
   return {
     id: "memory",
     async *generate() {
@@ -81,7 +70,7 @@ async function childAgent(model: string, text: string, store: SessionStore): Pro
   // docs/supervisors.md — factory must return Agent, not a session (BUG-2)
   return await createAgent({
     model: { provider: "mock", model },
-    provider: createMockProvider([providerTextDelta(text), providerDone()]),
+    packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
     slots: { store },
   });
 }
@@ -102,7 +91,7 @@ async function buildRuntime(store: SessionStore) {
   });
   const parent = await createAgent({
     model: { provider: "mock", model: "parent" },
-    provider: createMockProvider([providerTextDelta("ack"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ack"), providerDone()]])],
     // Roadmap §2.5: the compactor is the `compaction` slot, not a per-call `compact({ strategy })`.
     slots: { store, compaction: createObservationalMemoryCompactor({ keepRecentEntries: 4 }) },
   });

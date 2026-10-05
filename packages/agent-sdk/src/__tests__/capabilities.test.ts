@@ -1,18 +1,11 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import {
-  type CommandDefinition,
-  type CompactionOptions,
-  type CompactionResult,
-  type Compactor,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  type ToolRegistry,
-} from "@arnilo/prism";
+import { type CommandDefinition, type CompactionOptions, type CompactionResult, type Compactor, providerDone, providerTextDelta, type ToolRegistry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createWikiIngestCommand, createWikiInitCommand, createWikiLintCommand, createWikiRefreshCommand } from "@arnilo/prism-memory/wiki";
 import { createObscuraWebTools } from "@arnilo/prism-web-tools/obscura";
 import { defineAgent, resolveToolPlane } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 describe("capabilities composition", () => {
   const defaultModel = { provider: "mock", model: "mock-model" };
@@ -21,7 +14,7 @@ describe("capabilities composition", () => {
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
     });
 
     assert.strictEqual(app.commands.length, 0);
@@ -50,7 +43,7 @@ describe("capabilities composition", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       commands: [myCommand],
     });
 
@@ -87,7 +80,7 @@ describe("capabilities composition", () => {
       async () => {
         await defineAgent({
           model: defaultModel,
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           commands: [cmd1, cmd2],
         });
       },
@@ -121,7 +114,7 @@ describe("capabilities composition", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: {
         planes: {
           web: obscura.tools,
@@ -150,7 +143,7 @@ describe("capabilities composition", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       commands: wikiCommands,
     });
 
@@ -186,7 +179,7 @@ describe("capabilities composition", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       compaction: compactionConfig,
       compactor: mockStrategy,
     });

@@ -102,7 +102,7 @@ Always install containing packages directly. **NPM install never accepts subpath
 
 ```bash
 # Correct — install containing published packages:
-bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-providers @arnilo/prism-work
+bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-provider-openai @arnilo/prism-work
 
 # Never install subpaths:
 # bun add @arnilo/prism-work/connectors (WRONG: fails with 404 / E404)
@@ -115,8 +115,8 @@ In your application code, import from documented subpaths:
 import { createWorkTools } from "@arnilo/prism-work/connectors";
 import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
-// Subpaths exported by @arnilo/prism-providers:
-import { createOpenAIProvider } from "@arnilo/prism-providers/openai";
+// Provider adapters are standalone packages:
+import { createOpenAIProvider } from "@arnilo/prism-provider-openai";
 ```
 
 ## Background workers

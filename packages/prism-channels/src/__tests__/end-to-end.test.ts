@@ -9,15 +9,16 @@ import { fileURLToPath } from "node:url";
 import {
   type Agent,
   type AgentIdentity,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   ownershipFromIdentity,
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { createChannelStateStore, createMessagingRuntime } from "../index.js";
 import type { ChannelAuthorization, ChannelInboundEvent, ChannelReply, MessagingRuntimeOptions } from "../types.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const CONNECTION = "e2e-1";
 const CHAT = "chat-1";
@@ -64,7 +65,7 @@ async function waitFor(check: () => boolean | Promise<boolean>, label: string): 
   throw new Error(`Timed out waiting for ${label}`);
 }
 
-function textProvider(calls: { count: number }): AIProvider {
+function textProvider(calls: { count: number }): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -75,7 +76,7 @@ function textProvider(calls: { count: number }): AIProvider {
   };
 }
 
-function hangingProvider(calls: { count: number }): AIProvider {
+function hangingProvider(calls: { count: number }): ModelProvider {
   return {
     id: "mock",
     async *generate(request) {
@@ -92,11 +93,11 @@ function hangingProvider(calls: { count: number }): AIProvider {
   };
 }
 
-async function agentWith(provider: AIProvider, persistence: ReturnType<typeof createSqlitePersistence>): Promise<Agent> {
-  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, provider, slots: { store: persistence } });
+async function agentWith(provider: ModelProvider, persistence: ReturnType<typeof createSqlitePersistence>): Promise<Agent> {
+  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store: persistence } });
 }
 
-function host(persistence: ReturnType<typeof createSqlitePersistence>, provider: AIProvider, rest: Partial<MessagingRuntimeOptions> = {}) {
+function host(persistence: ReturnType<typeof createSqlitePersistence>, provider: ModelProvider, rest: Partial<MessagingRuntimeOptions> = {}) {
   const delivered: ChannelReply[] = [];
   const runtime = createMessagingRuntime({
     authorize: () => authorization(),
@@ -174,7 +175,7 @@ describe("plan 079 channel host end-to-end", () => {
       release = resolve;
     });
     const calls = { count: 0 };
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         calls.count += 1;

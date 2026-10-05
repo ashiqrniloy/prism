@@ -3,9 +3,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "bun:test";
-import { type AIProvider, createAgent, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
-import { createSqlitePersistence, type SqlitePersistence } from "../../../sessions/sqlite/index.js";
+import { type ModelProvider, createAgent, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { createSqlitePersistence, type SqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { type ConversationService, createConversationHandler, createConversationService } from "../conversations.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const ownership = { tenantId: "tenant-1", userId: "user-1" };
 const otherOwnership = { tenantId: "tenant-1", userId: "user-2" };
@@ -25,7 +26,7 @@ function tempDbPath(name: string): string {
   return join(dir, `${name}.db`);
 }
 
-function textProvider(): AIProvider {
+function textProvider(): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -35,7 +36,7 @@ function textProvider(): AIProvider {
   };
 }
 
-function toolOnceProvider(state: { turns: number }): AIProvider {
+function toolOnceProvider(state: { turns: number }): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -51,12 +52,12 @@ function toolOnceProvider(state: { turns: number }): AIProvider {
 }
 
 async function makeService(
-  options: { provider?: AIProvider; limits?: Parameters<typeof createConversationService>[1]["limits"]; onTool?: () => void } = {},
+  options: { provider?: ModelProvider; limits?: Parameters<typeof createConversationService>[1]["limits"]; onTool?: () => void } = {},
 ): Promise<{ persistence: SqlitePersistence; service: ConversationService }> {
   const persistence = createSqlitePersistence({ filename: tempDbPath("conv") });
   const agent = await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: options.provider ?? textProvider(),
+    packages: [providerPackage("test-provider", [options.provider ?? textProvider()])],
     redactor: createSecretRedactor([SECRET]),
     slots: { store: persistence },
     runLedger: persistence,

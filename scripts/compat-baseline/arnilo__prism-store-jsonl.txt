@@ -1,0 +1,7 @@
+JSONL_BYTES_READ	export declare const JSONL_BYTES_READ: unique symbol
+JSONL_FILE_READS	export declare const JSONL_FILE_READS: unique symbol
+JsonlSessionStoreError	export declare class JsonlSessionStoreError extends Error
+createJsonlSessionStore	export declare function createJsonlSessionStore(options: JsonlSessionStoreOptions): SessionStore
+default	export default
+jsonlStore	export declare function jsonlStore(config: JsonlStoreConfig): PackageInstance
+readJsonlSessionEntries	export declare function readJsonlSessionEntries(path: string, onBytesRead?: (bytes: number) => void): Promise<SessionEntryReadResult>

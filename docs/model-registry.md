@@ -119,10 +119,12 @@ Provider packages register models through `ProviderPackageAPI.registerModel(mode
 
 ### Model-list/capability discovery with provenance
 
-`ModelDiscovery` (plan 062) is the normalized `listModels()` seam: it returns the existing `ModelConfig` contract verbatim (id = `model`, context window = `limits`, pricing hint = `cost`) plus `provenance` (`provider`, `fetchedAt` ISO timestamp, `source: "api" | "catalog"`, and `ttlMs` cache guidance). Discovery execution stays provider/host code — Prism core ships only the result types; adapters live in `@arnilo/prism-providers/model-discovery`:
+`ModelDiscovery` (plan 062) is the normalized `listModels()` seam: it returns the existing `ModelConfig` contract verbatim (id = `model`, context window = `limits`, pricing hint = `cost`) plus `provenance` (`provider`, `fetchedAt` ISO timestamp, `source: "api" | "catalog"`, and `ttlMs` cache guidance). Discovery execution stays provider/host code — Prism core ships only the result types; the provider-neutral adapters live in `@arnilo/prism/provider-kit` and the Gemini adapter ships with `@arnilo/prism-provider-google`:
 
 ```ts
-import { createOpenAiCompatibleModelDiscovery, createGoogleModelDiscovery, createFakeModelDiscovery, runModelDiscoveryConformance } from "@arnilo/prism-providers/model-discovery";
+import { createOpenAiCompatibleModelDiscovery, createFakeModelDiscovery, runModelDiscoveryConformance } from "@arnilo/prism/provider-kit";
+// The one vendor adapter (Gemini `GET <baseUrl>/v1beta/models`) ships from its provider package:
+import { createGoogleModelDiscovery } from "@arnilo/prism-provider-google";
 
 const discovery = createOpenAiCompatibleModelDiscovery({
   baseUrl: "https://gw.internal/v1", // GET <baseUrl>/models
@@ -153,11 +155,11 @@ await runModelDiscoveryConformance(() => createFakeModelDiscovery());
 
 ## Live probe (discovery adapters)
 
-The `@arnilo/prism-providers/model-discovery` adapters have an opt-in live leg that runs `runModelDiscoveryConformance` against a real listing endpoint:
+The `@arnilo/prism/provider-kit` adapters have an opt-in live leg that runs `runModelDiscoveryConformance` against a real listing endpoint:
 
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=...   # or GEMINI_API_KEY for the Google route
-bun test packages/prism-providers/dist/model-discovery/__tests__/live.test.js
+bun test packages/providers/google/src/__tests__/model-discovery-live.test.ts
 ```
 
 Chooses the OpenAI-compatible or Google route based on which key is present; neither → skip.

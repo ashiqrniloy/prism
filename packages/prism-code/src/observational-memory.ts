@@ -1,6 +1,6 @@
 import type {
   Session,
-  AIProvider,
+  ModelProvider,
   ContextDraft,
   HookContext,
   HookRegistrar,
@@ -32,21 +32,21 @@ export interface AttachedInstanceRecord {
   readonly om: ObservationalMemory;
   readonly attached: AttachedObservationalMemorySession;
   readonly workerModel: ModelConfig;
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
 }
 
 export interface ObservationalMemoryCoordinatorOptions {
   readonly config?: PrismCodeConfig;
   readonly credentialManager?: PrismCodeCredentialManager;
   readonly store?: SessionStore;
-  readonly providerResolver?: (model: ModelConfig) => Promise<AIProvider>;
+  readonly providerResolver?: (model: ModelConfig) => Promise<ModelProvider>;
 }
 
 export class ObservationalMemoryCoordinator {
   private readonly config?: PrismCodeConfig;
   private readonly credentialManager?: PrismCodeCredentialManager;
   readonly store?: SessionStore;
-  private readonly providerResolver?: (model: ModelConfig) => Promise<AIProvider>;
+  private readonly providerResolver?: (model: ModelConfig) => Promise<ModelProvider>;
 
   private readonly sessionStates = new Map<string, SessionOmState>();
   private readonly attachedInstances = new Map<string, AttachedInstanceRecord>();
@@ -241,7 +241,7 @@ export class ObservationalMemoryCoordinator {
       return existing.attached;
     }
 
-    let workerProvider: AIProvider;
+    let workerProvider: ModelProvider;
     if (this.providerResolver) {
       workerProvider = await this.providerResolver(effectiveModel);
     } else {

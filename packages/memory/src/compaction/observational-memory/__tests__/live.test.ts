@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, SessionEntry } from "@arnilo/prism";
+import type { ModelProvider, SessionEntry } from "@arnilo/prism";
 import { createMemorySessionStore } from "@arnilo/prism";
-import { createOpenAIResponsesProvider, defineOpenAIModel } from "@arnilo/prism-providers/openai";
+import { createOpenAIResponsesProvider, defineOpenAIModel } from "@arnilo/prism-provider-openai";
 import { createObservationalMemoryRuntime, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "../index.js";
 
 // Network-free by default. Protected operator gate:
@@ -36,7 +36,7 @@ const reflectorModel = defineOpenAIModel({
   compat: { api: "openai-responses" },
 });
 
-function trackedProvider(label: string, inner: AIProvider, seen: string[]): AIProvider {
+function trackedProvider(label: string, inner: ModelProvider, seen: string[]): ModelProvider {
   return {
     id: label,
     async *generate(request) {

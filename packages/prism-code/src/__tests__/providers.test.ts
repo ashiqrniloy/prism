@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ModelConfig } from "@arnilo/prism";
 import { MemoryStoredCredentialStore, PrismCodeCredentialManager } from "../credentials.js";
@@ -17,28 +17,23 @@ import {
 import { stubGlobalFetch } from "./helpers/global-fetch.js";
 
 describe("Provider Inventory and Management", () => {
-  it("every registered provider adapter in prism-providers export map has a selectable entry in SHIPPED_PROVIDERS", () => {
-    // Read packages/prism-providers/package.json
-    const rootPath = resolve(process.cwd(), "packages/prism-providers/package.json");
-    const packageJsonPath = existsSync(rootPath) ? rootPath : resolve(process.cwd(), "../../packages/prism-providers/package.json");
-    const raw = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-    const exportsMap = raw.exports as Record<string, unknown>;
+  it("every standalone provider package has a selectable entry in SHIPPED_PROVIDERS", () => {
+    // Plan 152 Task 8: adapters ship as @arnilo/prism-provider-<vendor> packages under
+    // packages/providers/, so the inventory is the directory of manifests, not a family export map.
+    const providersDir = existsSync(resolve(process.cwd(), "packages/providers"))
+      ? resolve(process.cwd(), "packages/providers")
+      : resolve(process.cwd(), "../../packages/providers");
+    const vendorKeys = readdirSync(providersDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .filter((name) => existsSync(resolve(providersDir, name, "package.json")));
+    assert.ok(vendorKeys.length > 0, "expected standalone provider packages under packages/providers");
 
-    // Filter out non-adapter exports per plan: model-discovery and decisions
-    const nonAdapterExports = new Set(["./model-discovery", "./decisions"]);
-    const adapterExportSubpaths = Object.keys(exportsMap)
-      .filter((k) => !nonAdapterExports.has(k))
-      .map((k) => k.replace("./", ""));
-
-    // Every adapter subpath must be represented in SHIPPED_PROVIDERS
-    for (const subpath of adapterExportSubpaths) {
-      const match = SHIPPED_PROVIDERS.find((p) => p.packageSubpath === subpath || p.id === subpath || p.parentPackage === subpath);
-      assert.ok(match, `Expected shipped provider inventory to cover adapter export "${subpath}", but found no matching entry`);
+    // Every adapter package must be represented in SHIPPED_PROVIDERS.
+    for (const vendor of vendorKeys) {
+      const match = SHIPPED_PROVIDERS.find((p) => p.packageSubpath === vendor || p.id === vendor || p.parentPackage === vendor);
+      assert.ok(match, `Expected shipped provider inventory to cover adapter "${vendor}", but found no matching entry`);
     }
-
-    // Verify non-adapters are NOT offered as providers
-    assert.strictEqual(getShippedProvider("model-discovery"), undefined);
-    assert.strictEqual(getShippedProvider("decisions"), undefined);
   });
 
   it("multi-ID packages (OpenAI/Codex, Kimi/Moonshot) register distinct provider entries with valid auth", () => {

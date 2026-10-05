@@ -14,6 +14,7 @@ import {
   resolveInputCap,
 } from "../index.js";
 import { createRunLimitTracker } from "../run-limits.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL: ModelConfig = { provider: "mock", model: "claude-sonnet-4.5", limits: { contextWindow: 100_000 } };
 const CAP = resolveInputCap({}, MODEL);
@@ -75,7 +76,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
       id: "usage-fallback",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: silentProvider,
+      packages: [providerPackage("test-provider", [silentProvider])],
       runLedger: ledger,
     });
     const session = await agent.session({ id: "usage-fallback-session", create: true });
@@ -125,7 +126,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ id: "usage-reported", slots: { store: createMemorySessionStore() }, model: MODEL, provider });
+    const agent = await createAgent({ id: "usage-reported", slots: { store: createMemorySessionStore() }, model: MODEL, packages: [providerPackage("test-provider", [provider])] });
     const session = await agent.session({ id: "usage-reported-session", create: true });
     const { events, meters, result, error } = await runWithMeters(session, "hi");
     assert.equal(error, undefined, String(error));
@@ -145,7 +146,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
       id: "usage-off",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: silentProvider,
+      packages: [providerPackage("test-provider", [silentProvider])],
       usageEstimation: "off",
       runLedger: ledger,
     });
@@ -173,7 +174,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
       id: "usage-estimate-cost",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: silentProvider,
+      packages: [providerPackage("test-provider", [silentProvider])],
       runLedger: ledger,
       costCatalog: {
         get: async () => {
@@ -197,7 +198,7 @@ describe("usage fallback and context meter (plan 091 T2)", () => {
       id: "usage-unknown",
       slots: { store: createMemorySessionStore() },
       model: unknown,
-      provider: silentProvider,
+      packages: [providerPackage("test-provider", [silentProvider])],
     });
     const session = await agent.session({ id: "usage-unknown-session", create: true });
     const { events, error } = await runWithMeters(session, "hi");

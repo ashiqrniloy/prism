@@ -1,8 +1,32 @@
+AwsEventStreamError	export declare class AwsEventStreamError extends Error
+BEDROCK_CONVERSE_RESPONSE_MAX_BYTES	export declare const BEDROCK_CONVERSE_RESPONSE_MAX_BYTES: number
+BEDROCK_DEFAULT_ACCESS_KEY_ID_REF	export declare const BEDROCK_DEFAULT_ACCESS_KEY_ID_REF = "env:AWS_ACCESS_KEY_ID"
+BEDROCK_DEFAULT_SECRET_ACCESS_KEY_REF	export declare const BEDROCK_DEFAULT_SECRET_ACCESS_KEY_REF = "env:AWS_SECRET_ACCESS_KEY"
+BEDROCK_DEFAULT_SESSION_TOKEN_REF	export declare const BEDROCK_DEFAULT_SESSION_TOKEN_REF = "env:AWS_SESSION_TOKEN"
+BEDROCK_THINKING_DEFAULT_BUDGET	export declare const BEDROCK_THINKING_DEFAULT_BUDGET = 10000
+DEFAULT_MAX_FRAME_BYTES	export declare const DEFAULT_MAX_FRAME_BYTES = 1048576
+HARD_MAX_FRAME_BYTES	export declare const HARD_MAX_FRAME_BYTES = 25165824
+bedrock	export declare function bedrock(options: BedrockProviderPackageOptions & BedrockProviderConfig): PackageInstance
+bedrockConverseBody	export declare function bedrockConverseBody(request: ProviderRequest): Promise<JsonObject>
+bedrockConverseResponseEvents	export declare function bedrockConverseResponseEvents(response: unknown): readonly ProviderEvent[]
+bedrockConverseStreamEvents	export declare function bedrockConverseStreamEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+bedrockPreserveThinking	export declare function bedrockPreserveThinking(request: ProviderRequest): boolean
+bedrockReasoningBlocks	export declare function bedrockReasoningBlocks(request: ProviderRequest):
 bedrockRuntimeEndpoint	export declare function bedrockRuntimeEndpoint(region: string, endpoint?: string): string
-createBedrockProvider	export declare function createBedrockProvider(options: BedrockProviderOptions): AIProvider
-bedrockPackage	export declare function bedrockPackage(options: BedrockProviderPackageOptions): PackageInstance
+crc32	export declare function crc32(bytes: Uint8Array): number
+createBedrockConverseProvider	export declare function createBedrockConverseProvider(options: BedrockConverseProviderOptions): ModelProvider
+createBedrockProvider	export declare function createBedrockProvider(options: BedrockProviderOptions): ModelProvider
+default	export default
+eventStreamHeader	export declare function eventStreamHeader(message: AwsEventStreamMessage, name: string): string | undefined
+readAwsEventStream	export declare function readAwsEventStream(body: ReadableStream<Uint8Array>, options?: ReadAwsEventStreamOptions): AsyncGenerator<AwsEventStreamMessage>
 signAwsRequest	export declare function signAwsRequest(input: SignAwsRequestInput): Record<string, string>
-type AwsCredentials	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, bedrockPackage, signAwsRequest, } from "./provider.js"
-type BedrockCredentialSource	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, bedrockPackage, signAwsRequest, } from "./provider.js"
-type BedrockProviderOptions	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, bedrockPackage, signAwsRequest, } from "./provider.js"
-type BedrockProviderPackageOptions	export { type AwsCredentials, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockProviderPackageOptions, bedrockRuntimeEndpoint, createBedrockProvider, bedrockPackage, signAwsRequest, } from "./provider.js"
+type AwsCredentials	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, type SignAwsRequestInput, signAwsRequest, } from "./provider.js"
+type AwsEventStreamErrorCode	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type AwsEventStreamHeaderValue	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type AwsEventStreamMessage	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type BedrockConverseProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, type SignAwsRequestInput, signAwsRequest, } from "./provider.js"
+type BedrockCredentialSource	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, type SignAwsRequestInput, signAwsRequest, } from "./provider.js"
+type BedrockProviderOptions	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, type SignAwsRequestInput, signAwsRequest, } from "./provider.js"
+type BedrockRoute	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, type SignAwsRequestInput, signAwsRequest, } from "./provider.js"
+type ReadAwsEventStreamOptions	export { type AwsEventStreamErrorCode, AwsEventStreamError, type AwsEventStreamHeaderValue, type AwsEventStreamMessage, crc32, DEFAULT_MAX_FRAME_BYTES, eventStreamHeader, HARD_MAX_FRAME_BYTES, type ReadAwsEventStreamOptions, readAwsEventStream, } from "./eventstream.js"
+type SignAwsRequestInput	export { type AwsCredentials, type BedrockConverseProviderOptions, BEDROCK_CONVERSE_RESPONSE_MAX_BYTES, type BedrockCredentialSource, type BedrockProviderOptions, type BedrockRoute, bedrockRuntimeEndpoint, createBedrockConverseProvider, createBedrockProvider, type SignAwsRequestInput, signAwsRequest, } from "./provider.js"

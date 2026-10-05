@@ -27,8 +27,6 @@ export interface ResolveAgentBundleOptions {
   readonly workspaceRoot?: string;
   /** Repo-level contributions from {@link discoverContributions}. */
   readonly repoContributions?: readonly DiscoveredContribution[];
-  /** Provider resolver override. */
-  readonly providerSource?: ProviderResolver;
   /** Tool scope override. */
   readonly tools?: AgentDefinitionResolutionContext["tools"];
   /** Skill registry override. */
@@ -219,7 +217,6 @@ export async function resolveAgentBundle(bundle: AgentBundle, options: ResolveAg
   };
 
   return resolveAgentDefinition(def, {
-    providerSource: options.providerSource,
     tools: tools.length > 0 ? tools : options.tools,
     skillsRegistry: skills.length > 0 ? createSkillRegistry(skills) : options.skillsRegistry,
     activateAllCapabilities: options.activateAllCapabilities,

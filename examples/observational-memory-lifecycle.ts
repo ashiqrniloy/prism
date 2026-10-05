@@ -1,14 +1,4 @@
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type SessionStore,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
 import {
   buildObservationalMemoryProjection,
   createObservationalMemory,
@@ -16,11 +6,12 @@ import {
   recallObservationalMemoryBranchPage,
   renderObservationalMemory,
 } from "@arnilo/prism-memory/compaction/observational-memory";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
 
-function memoryWorkerProvider(store: SessionStore, sessionId: string): AIProvider {
+function memoryWorkerProvider(store: SessionStore, sessionId: string): ModelProvider {
   return {
     id: "memory",
     async *generate() {
@@ -43,7 +34,7 @@ export async function demo() {
   const store = createMemorySessionStore();
   const agent = await createAgent({
     model,
-    provider: createMockProvider([providerTextDelta("ack"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ack"), providerDone()]])],
     slots: { store },
   });
   const baseSession = await agent.session({ id: "s1", create: true });

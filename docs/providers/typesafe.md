@@ -2,11 +2,11 @@
 
 ## What it does
 
-`@arnilo/prism-providers/typesafe` registers the TypeSafe Jev decision model. Jev does not generate free text, stream, or call tools. A request is valid only with `options.structuredOutput`: the JSON schema compiles to System One questions, the messages become the state, and one `POST /v1/systemone` round trip returns typed answers rendered as schema-valid JSON.
+`@arnilo/prism-provider-typesafe` registers the TypeSafe Jev decision model. Jev does not generate free text, stream, or call tools. A request is valid only with `options.structuredOutput`: the JSON schema compiles to System One questions, the messages become the state, and one `POST /v1/systemone` round trip returns typed answers rendered as schema-valid JSON.
 
-The package registers provider `typesafe`, models `jev-latest` and `jev-preview`, and an `api_key` auth method through `createExtensionKernel().load([...])`. Versioned pins (`jev-1.13.0`) go through `defineTypeSafeModel`.
+The package registers provider `typesafe`, models `jev-latest` and `jev-preview`, and an `api_key` auth method when the package is listed in `createAgent({ packages: [...] })`. Versioned pins (`jev-1.13.0`) go through `defineTypeSafeModel`.
 
-For raw probabilities, confidence, and the actual responding checkpoint instead of rendered JSON, use the shared [`decisions`](decisions.md) subpath (re-exported from this package); the adapter deliberately does not copy those values onto events.
+For raw probabilities, confidence, and the actual responding checkpoint instead of rendered JSON, use the shared [`decisions`](decisions.md) call in `@arnilo/prism/provider-kit`; the adapter deliberately does not copy those values onto events.
 
 ## When to use it
 
@@ -15,24 +15,29 @@ Use it when a host wants a hosted yes/no, pick-one, or rubric decision and alrea
 ## Inputs / request
 
 ```ts
-import {
-  createTypeSafeProvider,
-  createTypeSafeProviderPackage,
-  defineTypeSafeModel,
-  TYPESAFE_API_KEY_ENV,
-  TYPESAFE_DEFAULT_BASE_URL,
-  typeSafeModels,
-} from "@arnilo/prism-providers/typesafe";
+import typesafe from "@arnilo/prism-provider-typesafe";
+
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+typesafe(options?: TypeSafeProviderPackageOptions & TypeSafeProviderConfig = {}): PackageInstance
+
+// Named exports.
+createTypeSafeProvider(options?: TypeSafeProviderOptions): ModelProvider
+defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Bearer token. Hosts wire `TYPESAFE_API_KEY` through the credential seam. The library does not read `process.env`. |
-| `fetch` | `typeof fetch` | Optional fetch for tests and hosts. |
-| `baseUrl` | `string` | Overrides `https://api.typesafe.ai`. Trailing slashes are trimmed. `/v1/systemone` is appended per request. |
-| `id` | `string` | Overrides the provider id (default `typesafe`). |
-| `models` | `readonly ModelConfig[]` | Overrides `typeSafeModels`. |
-| `maxRetries` | `number` | Retries after the first attempt. Default 2. Forwarded to the shared client. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:TYPESAFE_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://api.typesafe.ai`. |
+| `maxRetries` | number | Retries after the first attempt; forwarded to the shared System One client (default 2). |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` returns the curated catalog. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `typesafe`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it returns the curated `typeSafeModels` catalog — no network call.
 
 `generate()` accepts a normal `ProviderRequest` with these constraints:
 
@@ -112,15 +117,16 @@ Rendered text: `{"verdict":"ask","irreversible":true}`.
 ## Implementation example
 
 ```ts
-import { createEnvCredentialResolver, createExtensionKernel } from "@arnilo/prism";
-import { createTypeSafeProviderPackage, TYPESAFE_API_KEY_ENV } from "@arnilo/prism-providers/typesafe";
+import { createAgent } from "@arnilo/prism";
+import typesafe from "@arnilo/prism-provider-typesafe";
 
-const kernel = createExtensionKernel();
-await kernel.load([
-  createTypeSafeProviderPackage({
-    apiKey: createEnvCredentialResolver(process.env, { typesafe: TYPESAFE_API_KEY_ENV }),
-  }),
-]);
+const agent = await createAgent({
+  model: { provider: "typesafe", model: "jev-latest" },
+  packages: [typesafe({ apiKey: "env:TYPESAFE_API_KEY", maxRetries: 2 })],
+});
+
+const models = await agent.models.list(); // the curated catalog, no fetch
+await agent.dispose();
 ```
 
 A request must carry `options.structuredOutput`. The answer arrives as one text delta.
@@ -145,4 +151,4 @@ A request must carry `options.structuredOutput`. The answer arrives as one text 
 - [Laya](laya.md): same wire and schema mapping against a self-hosted `laya-serve`.
 - [Structured output](../structured-output.md): `options.structuredOutput` contract this adapter requires.
 - [Provider packages](../provider-packages.md): registration and auth-method shape.
-- [Credentials and redaction](../credentials-and-redaction.md): `CredentialValueSource` and `createEnvCredentialResolver`.
+- [Credentials and redaction](../credentials-and-redaction.md): `CredentialValueSource` and `createEnvRefCredentialResolver`.

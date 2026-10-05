@@ -21,6 +21,7 @@ import {
   ToolDisclosureError,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 function fixtureTools(count: number, prefix = "tool") {
   return Array.from({ length: count }, (_, index) => ({
@@ -279,7 +280,7 @@ describe("tool-accuracy fixtures (pick correct tool among distractors, plan 041 
         id: `accuracy-${mode}-${toolCount}`,
         slots: { store: createMemorySessionStore() },
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         toolsDisclosure: mode,
         toolsSearch: { topK: 16 },
         tools: { add: fixtureTools(toolCount, "cap") },
@@ -335,7 +336,7 @@ describe("progressive tool loading session run", () => {
       id: "tool-search-demo",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       toolsDisclosure: "search",
       toolsSearch: { topK: 4 },
       tools: { add: fixtureTools(96, "cap") },

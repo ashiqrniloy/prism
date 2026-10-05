@@ -290,9 +290,8 @@ export function inspectHostComposition(options: HostCompositionOptions): HostCom
   }
 
   // Required provider or model configuration
-  const hasProvider = Boolean(config?.provider);
   const hasModel = Boolean(config?.model);
-  if (!hasProvider && !hasModel) {
+  if (!hasModel) {
     errors.push("Missing required provider or model configuration");
   }
 

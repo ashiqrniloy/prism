@@ -22,7 +22,7 @@
  */
 import { existsSync, writeFileSync } from "node:fs";
 import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
-import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { Pool } from "pg";
 
 const NS = "phase27.ha";

@@ -30,16 +30,16 @@ export { defineAgent } from "./define-agent.js";
 // stream an agent without importing `@arnilo/prism` directly. Frozen (plan 149 Task 6): the root
 // of `@arnilo/prism` is the one import now, and this list gains nothing.
 export {
-  createMockProvider,
   providerDone,
   providerTextDelta,
   providerUsage,
 } from "@arnilo/prism";
+export { createMockProvider } from "@arnilo/prism/testing";
 export type {
   AgentEvent,
   RunResult,
   Session,
-  AIProvider,
+  ModelProvider,
   ExecutionPolicy,
   PermissionPolicy,
   RunOptions,

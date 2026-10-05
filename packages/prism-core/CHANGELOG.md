@@ -1,3 +1,18 @@
+## [Unreleased]
+
+### Removed
+
+- `/sessions/postgres` (plan 153 Task 5): the PostgreSQL session store (leases, lifecycle, event source, and
+  migrations included) moved to `@arnilo/prism-store-postgres`, which declares the `pg` dependency. This
+  package drops its `@arnilo/prism-store-codecs` dependency with it — the codecs package existed here only
+  for that tree — and its `test:postgres` script now runs the remaining `enterprise/postgres` suite. The
+  `pg` peer stays: `enterprise/postgres` and the prompt registry still use it.
+- `/sessions/codecs` and `/sessions/sqlite` (plan 153 Task 4): the shared SQL codecs moved to
+  `@arnilo/prism-store-codecs` and the SQLite session store (leases, lifecycle, and migrations
+  included) moved to `@arnilo/prism-store-sqlite`, which depends on `@arnilo/prism-store-codecs`. This
+  package kept the codecs dependency until plan 153 Task 5 moved the Postgres store, then dropped it;
+  `@arnilo/prism-store-sqlite` stays a devDependency for this package's own store-backed tests.
+
 ## [0.4.0] - 2026-09-01
 
 - Plan 054: family ships as part of the 11-package 0.4 lockstep; peer `@arnilo/prism@^0.4.0`.

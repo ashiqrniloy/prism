@@ -4,15 +4,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  type AIProvider,
-  createMockProvider,
-  type ProviderRequest,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type ToolRegistry,
-} from "@arnilo/prism";
+import { type ModelProvider, type ProviderRequest, providerDone, providerTextDelta, providerToolCall, type ToolRegistry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createTestRenderer } from "@opentui/core/testing";
 import { parsePrismCodeConfigLayer } from "../config.js";
 import { MemoryStoredCredentialStore, PrismCodeCredentialManager } from "../credentials.js";
@@ -68,7 +61,7 @@ function textSink(): WritableSink & { content(): string } {
 function turnProvider(
   turns: readonly Parameters<typeof createMockProvider>[0][],
   onRequest?: (request: ProviderRequest) => void,
-): AIProvider {
+): ModelProvider {
   let turn = 0;
   return {
     id: "mock",

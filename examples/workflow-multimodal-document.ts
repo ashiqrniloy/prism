@@ -1,13 +1,5 @@
-import {
-  createAgent,
-  createEnvCredentialResolver,
-  createMockProvider,
-  createSecretRedactor,
-  type Message,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createEnvRefCredentialResolver, createSecretRedactor, type Message, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -15,6 +7,7 @@ import {
   functionNode,
   runWorkflow,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Offline multimodal document workflow. Host constructs a bounded inline PDF
 // block, passes it through a function node, then an agent node summarizes it.
@@ -22,7 +15,7 @@ import {
 // process.env. Mock provider means no credential or network is consumed.
 
 const callerEnv = { DEMO_API_KEY: "demo-workflow-key" };
-const credentials = createEnvCredentialResolver(callerEnv, { mock: "DEMO_API_KEY" });
+const credentials = createEnvRefCredentialResolver(callerEnv);
 const tinyPdfBase64 = Buffer.from("%PDF-1.4\n% offline demo\n").toString("base64");
 
 const provider = createMockProvider([
@@ -37,7 +30,7 @@ const agent = await createAgent({
     model: "document-demo",
     capabilities: { input: ["text", "document"] },
   },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
   instructions: "Summarize the supplied document without reproducing secrets.",
 });
 
@@ -75,7 +68,7 @@ const workflow = defineWorkflow({
 });
 
 export async function demo() {
-  const credential = await credentials.resolve({ provider: "mock", name: "apiKey" });
+  const credential = await credentials.resolve("env:DEMO_API_KEY", {});
   const redactor = createSecretRedactor([credential?.value]);
   const result = await runWorkflow(workflow, null, {
     agentFactory: () => agent.session(),

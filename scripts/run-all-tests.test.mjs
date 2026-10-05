@@ -7,12 +7,19 @@
 import assert from "node:assert/strict";
 import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { test } from "bun:test";
-import { readManifest } from "./package-truth.mjs";
-import { effectiveTestChain, GATE_FILES, runParallelLeaves, runStages, SQLITE_TEST_GLOB, STAGES } from "./run-all-tests.mjs";
+import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { effectiveTestChain, GATE_FILES, runParallelLeaves, runStages, STAGES } from "./run-all-tests.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
+
+/** Every workspace package dir, relative to the repo root (grouped bases included). */
+function workspaceDirs() {
+  return expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces).map((dir) =>
+    relative(ROOT, dir),
+  );
+}
 
 /**
  * Expand a package test script's file arguments the way the runner does: directory args
@@ -36,8 +43,10 @@ function scriptFiles(script, cwd) {
       .join("|")})$`,
   );
   return tail
-    .filter((arg) => arg === "dist" || arg.includes(".test.js"))
-    .flatMap((arg) => globSync(arg === "dist" ? "dist/**/*.test.js" : arg, { cwd }))
+    // A source package (`exports: "./src/index.ts"`, plan 147 Task 5) tests `src`; a
+    // dist package tests `dist`. Both are directories the runner passes straight through.
+    .filter((arg) => arg === "dist" || arg === "src" || arg.includes(".test.js"))
+    .flatMap((arg) => globSync(arg === "dist" ? "dist/**/*.test.js" : arg === "src" ? "src/**/*.test.ts" : arg, { cwd }))
     .filter((file) => ignores.length === 0 || !ignorePattern.test(file))
     .sort();
 }
@@ -107,7 +116,7 @@ test("a throwing stage counts as a failure and does not abort the run", async ()
 test("the effective chain is the package.json entry plus every stage", () => {
   const { scripts } = readManifest(join(ROOT, "package.json"));
   assert.equal(scripts.test, "bun scripts/run-all-tests.mjs", "bun test must delegate to the runner");
-  const workspaces = readManifest(join(ROOT, "package.json")).workspaces;
+  const workspaces = workspaceDirs();
   const chain = effectiveTestChain();
   for (const file of GATE_FILES) assert.ok(chain.includes(file), `effective chain missing ${file}`);
   for (const dir of workspaces) assert.ok(chain.includes(`--cwd ${dir}`), `effective chain missing workspace ${dir}`);
@@ -149,7 +158,7 @@ test("timing-sensitive stages carry the measured --parallel=4 bound", () => {
     "positive control: a copy without the bound must fail the assertion",
   );
   assertBound("gate suites", STAGES.find((stage) => stage.name === "gate suites")?.args, GATE_FILES.at(-1));
-  for (const dir of readManifest(join(ROOT, "package.json")).workspaces) {
+  for (const dir of workspaceDirs()) {
     const script = readManifest(join(ROOT, dir, "package.json")).scripts.test;
     assert.ok(script.includes("bun test"), `${dir} test must run bun test`);
     assert.ok(script.includes("--timeout=0"), `${dir} test needs --timeout=0`);
@@ -159,7 +168,7 @@ test("timing-sensitive stages carry the measured --parallel=4 bound", () => {
 
 test("the workspace test scripts declare bun test file sets that resolve on disk", () => {
   const packagesDir = join(ROOT, "packages");
-  for (const dir of readManifest(join(ROOT, "package.json")).workspaces) {
+  for (const dir of workspaceDirs()) {
     const script = readManifest(join(ROOT, dir, "package.json")).scripts?.test ?? "";
     assert.match(script, /bun test --parallel=4 --timeout=0 /, `${dir} must run a bounded bun test`);
     const files = scriptFiles(script, join(ROOT, dir));
@@ -195,7 +204,7 @@ test("every stage runs bun test with --timeout=0 and the sqlite stage owns its m
   const testStages = STAGES.filter((stage) => stage.args?.includes("test"));
   assert.deepEqual(
     testStages.map((stage) => stage.name),
-    ["performance budget", "root suites", "sqlite suites", "gate suites", "build race", "examples execution"],
+    ["performance budget", "root suites", "gate suites", "build race", "examples execution"],
     "every bun test stage must be named here (build and branch coverage run scripts, not test sets)",
   );
   for (const stage of STAGES) {
@@ -204,11 +213,9 @@ test("every stage runs bun test with --timeout=0 and the sqlite stage owns its m
   for (const stage of testStages) {
     assert.ok(stage.args.includes("--timeout=0"), `${stage.name} needs --timeout=0 (Bun's default is 5000 ms)`);
   }
-  const sqlite = STAGES.find((stage) => stage.name === "sqlite suites");
-  assert.deepEqual(sqlite.args, ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", SQLITE_TEST_GLOB]);
-  assert.equal(SQLITE_TEST_GLOB, "packages/prism-core/dist/sessions/sqlite/__tests__/*.test.js");
+  const rootSuites = STAGES.find((stage) => stage.name === "root suites");
   assert.throws(
-    () => assertBunTimeout(sqlite.args.filter((arg) => arg !== "--timeout=0")),
+    () => assertBunTimeout(rootSuites.args.filter((arg) => arg !== "--timeout=0")),
     /--timeout=0/,
     "positive control: a copy without the flag must fail the assertion",
   );
@@ -247,20 +254,14 @@ test("the bun-blocked paths stay off the stage file sets", () => {
   );
 });
 
-test("prism-core's split runs every dist test file exactly once", () => {
+test("prism-core runs every dist test file itself", () => {
+  // Plan 153 Task 4: the SQLite tests moved to @arnilo/prism-store-sqlite, so prism-core no longer
+  // needs the path-ignore split the separate SQLite stage used to balance.
   const pkgDir = join(ROOT, "packages", "prism-core");
   const script = readManifest(join(pkgDir, "package.json")).scripts.test;
-  assert.match(
-    script,
-    /--path-ignore-patterns='dist\/sessions\/sqlite\/\*\*' dist/,
-    "the default side must exclude exactly the Bun-owned SQLite dir",
-  );
+  assert.ok(!script.includes("--path-ignore-patterns"), "the default side must run every built test file");
   const all = globSync("dist/**/*.test.js", { cwd: pkgDir }).sort();
   assert.ok(all.length > 0, "build first: prism-core dist tests must exist");
-  const sqlite = globSync(SQLITE_TEST_GLOB, { cwd: ROOT }).map((file) => file.replace("packages/prism-core/", ""));
-  const nodeSide = all.filter((file) => !file.startsWith("dist/sessions/sqlite/__tests__/"));
-  assert.deepEqual([...nodeSide, ...sqlite].sort(), all, "no prism-core test file may be skipped or run twice");
-  assert.ok(nodeSide.length > 0 && sqlite.length > 0, "both sides of the split must be non-empty (build first)");
 });
 
 test("ownership, checkpoint, snapshot, and timestamp regressions stay in mandatory offline stages", () => {
@@ -268,12 +269,12 @@ test("ownership, checkpoint, snapshot, and timestamp regressions stay in mandato
     ["dist/__tests__/session-stores.test.js", "memory session store snapshots initial and appended entries before indexing"],
     ["packages/prism-core/dist/runtime/workflows/__tests__/run.test.js", "never retries effects after a post-execution checkpoint failure"],
     [
-      "packages/prism-core/dist/sessions/sqlite/__tests__/sqlite-persistence.test.js",
+      "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
       "scopes ordinary and leaf entry queries to the owning session",
     ],
-    ["packages/prism-core/dist/sessions/sqlite/__tests__/sqlite-persistence.test.js", "filters and keyset-paginates branch entry queries"],
+    ["packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts", "filters and keyset-paginates branch entry queries"],
     [
-      "packages/prism-core/dist/sessions/sqlite/__tests__/sqlite-persistence.test.js",
+      "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
       "keeps session activity monotonic across run, usage, and event writes",
     ],
   ];
@@ -284,11 +285,10 @@ test("ownership, checkpoint, snapshot, and timestamp regressions stay in mandato
   // The partition test below proves every named file is owned by exactly one mandatory stage.
 });
 
-test("every workspace test file runs exactly once: default suite, sqlite stage, or an opt-in leg", () => {
+test("every workspace test file runs exactly once: default suite or an opt-in leg", () => {
   // Plan 124 Task 2's partition rule. The default suite's declared sets must cover every built
   // workspace test file except the files a package owns through `test:postgres`/`test:live`
   // (env-gated legs that intentionally re-run a subset with real infrastructure).
-  const sqlite = new Set(globSync(SQLITE_TEST_GLOB, { cwd: ROOT }));
   const claimed = new Map();
   const claim = (file, owner) => {
     assert.ok(existsSync(join(ROOT, file)), `${owner} claims a missing file: ${file}`);
@@ -301,26 +301,27 @@ test("every workspace test file runs exactly once: default suite, sqlite stage, 
     globSync("dist/**/*.test.js", { cwd: ROOT }).length,
     "the root stage glob must cover every root dist test file",
   );
-  for (const file of sqlite) claim(file, "sqlite suites");
   for (const file of GATE_FILES) claim(file, "gate suites");
   for (const file of ["scripts/phase23-build-race.test.mjs", "scripts/budget-gate.test.mjs", "scripts/examples-execution.test.mjs"]) {
     claim(file, "stage");
   }
-  for (const dir of readManifest(join(ROOT, "package.json")).workspaces) {
+  for (const dir of workspaceDirs()) {
     const pkgDir = join(ROOT, dir);
-    const scripts = readManifest(join(pkgDir, "package.json")).scripts;
+    const manifest = readManifest(join(pkgDir, "package.json"));
+    const scripts = manifest.scripts;
     const declared = scriptFiles(scripts.test, pkgDir);
     assert.ok(declared.length > 0, `${dir} test script must declare test files`);
     for (const file of declared) claim(join(dir, file), `${dir} default suite`);
     const optIn = new Set([...scriptFiles(scripts["test:postgres"], pkgDir), ...scriptFiles(scripts["test:live"], pkgDir)]);
-    for (const file of globSync("dist/**/*.test.js", { cwd: pkgDir })) {
-      if (declared.includes(file) || sqlite.has(join(dir, file))) continue;
+    // A source package (`exports: "./src/index.ts"`) has no dist, so its built set is its sources.
+    const built =
+      manifest.exports?.["."] === "./src/index.ts"
+        ? globSync("src/**/*.test.ts", { cwd: pkgDir })
+        : globSync("dist/**/*.test.js", { cwd: pkgDir });
+    for (const file of built) {
+      if (declared.includes(file)) continue;
       assert.ok(optIn.has(file), `${dir}/${file} runs in no stage — add it to the package test script or an opt-in leg`);
     }
-    assert.ok(
-      !declared.some((file) => file.startsWith("dist/sessions/sqlite/")),
-      `${dir}: the default suite must not overlap the sqlite stage`,
-    );
   }
   assert.ok(claimed.size > 0, "the partition must be non-empty (positive control)");
 });
@@ -382,7 +383,7 @@ test("the gate list is a partition: every file distinct, present, and the split 
 
 test("the workspace stage is one shared-lock reader per package behind a bounded pool", () => {
   const stage = STAGES.find((candidate) => candidate.name === "workspace suites");
-  const workspaces = readManifest(join(ROOT, "package.json")).workspaces;
+  const workspaces = workspaceDirs();
   assert.ok(stage?.parallel, "workspace suites must be a parallel stage");
   assert.deepEqual(
     stage.parallel.map((leaf) => leaf.name),
@@ -401,6 +402,8 @@ test("the workspace stage is one shared-lock reader per package behind a bounded
   // Writers keep the exclusive default: a build never opts into reader mode.
   for (const dir of workspaces) {
     const build = readManifest(join(ROOT, dir, "package.json")).scripts.build ?? "";
+    // A source package ships `src` as its artifact, so it has no build step to lock.
+    if (build === "") continue;
     assert.ok(build.includes("with-build-lock.mjs") && !build.includes("--shared"), `${dir} build must keep the exclusive lock`);
   }
   const buildCore = readManifest(join(ROOT, "package.json")).scripts["build:core"];

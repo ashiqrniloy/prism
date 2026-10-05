@@ -2,11 +2,11 @@
 
 ## What it does
 
-The optional `@arnilo/prism-core/credentials/node` package ships host-owned credential persistence for Node.js CLI and desktop apps:
+The optional `@arnilo/prism-credentials-keyring` package ships host-owned credential persistence for Node.js CLI and desktop apps. It claims the kernel's `credentials` slot, so `keyring:` refs resolve and the `secret` host request can persist; the stores themselves also stay importable on their own (they moved out of `@arnilo/prism-core/credentials/node`, which keeps OIDC, OAuth2, workload scopes, and the work-token helper):
 
 - **Encrypted file store** — AES-256-GCM envelope with scrypt KDF, atomic rename writes, versioned on-disk format
 - **Owner-only file store** — plaintext `auth.json`, `0600`, atomic rename writes; for hosts that explicitly choose an owner-only file over the keychain (plaintext at rest)
-- **System keychain store** — cross-platform secret service via `@napi-rs/keyring@^1.3.0`
+- **System keychain store** — cross-platform secret service via `@napi-rs/keyring@^2.0.0` (imported lazily, only when the OS backend is used)
 - **Stored credential resolver** — `createStoredCredentialResolver(store)` for explicit resolver chains
 - **OAuth adapter** — extends the core `OAuthCredentialStore` seam with `get`/`delete` for refresh flows
 
@@ -19,6 +19,26 @@ Factories:
 - `createStoredCredentialResolver(store)`
 - `createOAuthCredentialStoreAdapter(store)`
 - `rotateEncryptedCredentialStorePassphrase(options)`
+
+## Slot package
+
+```ts
+import keyring from "@arnilo/prism-credentials-keyring";
+
+const agent = await createAgent({
+  model: "anthropic/claude-sonnet-4-5",
+  packages: [keyring({ backend: "os", service: "prism" }), anthropic({ apiKey: "keyring:anthropic" })],
+});
+```
+
+| key | type | default | meaning |
+| --- | --- | --- | --- |
+| `backend` | `"os"` \| `"file"` | `"os"` | `os` uses the platform keyring; `file` uses the encrypted vault at `file.path`. |
+| `service` | string | `"prism"` | OS keyring service name. |
+| `file.path` | string | — | Vault path (owner-only, created on first write). |
+| `file.keyRef` | `env:`/`keyring:` ref | — | Ref holding the vault passphrase; a literal passphrase is rejected (`secret_literal`). |
+
+The package claims the slot with `prism.slots.credentials.provide(...)`: `keyring:<name>` refs read the backend, `env:` refs delegate to `prism.slots.credentials.default`, and `store`/`delete` write the backend (the kernel's `secret` host request and a provider OAuth login persist through them). When the OS keyring is unavailable, or the encrypted file cannot be opened, setup records a `warn` status note and still claims the slot: reads answer `undefined`, writes throw `KeyringUnavailableError` (`keyring_unavailable`), and the asking package fails closed. There is never a silent plaintext fallback. The OS backend makes one native read per `resolve` (no cache); the file backend decrypts once at setup. A host that runs an OAuth login outside a run can build the same resolver with `createKeyringCredentialResolver({ store })` over a store it opened itself.
 
 The `@arnilo/prism-core/credentials/node/oidc` subpath adds the optional OIDC/JWKS identity verifier (`createOidcIdentityVerifier`) — pinned issuer/audience/JWKS verification over native `fetch` + WebCrypto (see [Agent identity](agent-identity.md)).
 
@@ -108,6 +128,7 @@ Errors are explicit and fail closed:
 | `CredentialStoreLockedError` | `credential_store_locked` | Keychain denied or locked |
 | `CredentialStoreUnavailableError` | `credential_store_unavailable` | No OS secret service |
 | `CredentialStoreTimeoutError` | `credential_store_timeout` | Keychain call exceeded `timeoutMs` |
+| `KeyringUnavailableError` | `keyring_unavailable` | `store`/`delete` with no usable backend |
 | `WeakKdfParametersError` | `weak_kdf_parameters` | scrypt work factor below minimum |
 
 ## Request/response example
@@ -220,7 +241,7 @@ import {
   createKeychainCredentialStore,
   createStoredCredentialResolver,
 } from "@arnilo/prism-core/credentials/node";
-import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
+import { createOpenAIProviderPackage } from "@arnilo/prism-provider-openai";
 
 const keychain = createKeychainCredentialStore({
   service: "com.example.my-app",

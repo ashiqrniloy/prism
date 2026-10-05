@@ -22,6 +22,7 @@ const ROOT_TYPES = [
   // §2.3 host API. `UiRequest` / `UiResponse` of the roadmap are the shipped `HostUiRequest` / `HostUiResponse`.
   "AgentConfig",
   "Agent",
+  "AgentInspection",
   "Session",
   "SessionOptions",
   "RunOptions",
@@ -51,11 +52,12 @@ const ROOT_TYPES = [
 ] as const;
 
 const ROOT_VALUES = ["createAgent", "definePackage"] as const;
-const TESTING_VALUES = ["createMockProvider", "packageConformance", "loopConformance", "createScriptedHostUi"] as const;
+const TESTING_VALUES = ["createMockProvider", "mockProvider", "packageConformance", "loopConformance", "createScriptedHostUi"] as const;
 
 /** Member names pinned for the Phase 4 build. A new or renamed member is a deliberate edit here and in the doc. */
 const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
   Agent: ["id", "config", "commands", "tools", "skills", "sessions", "models", "session", "subscribe", "dispose", "inspect"],
+  AgentInspection: ["packages", "tools", "skills", "commands", "hooks", "slots", "store", "disabled", "statusNotes"],
   Session: [
     "id",
     "guardrailPackRefs",
@@ -79,7 +81,6 @@ const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
   RunOptions: [
     "signal",
     "model",
-    "providerSource",
     "limits",
     "providerOptions",
     "thinkingLevel",

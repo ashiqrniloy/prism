@@ -35,9 +35,9 @@ if (blocked) {
 // Load the store adapters (Postgres from the session-store-postgres package, same as the 0.2.5 test:postgres profile).
 let createPostgresPersistence;
 try {
-  ({ createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres"));
+  ({ createPostgresPersistence } = await import("@arnilo/prism-store-postgres"));
 } catch (error) {
-  blockedGate("phase26-recovery-conformance", { missing: [`@arnilo/prism-core/sessions/postgres did not load: ${String(error)}`] });
+  blockedGate("phase26-recovery-conformance", { missing: [`@arnilo/prism-store-postgres did not load: ${String(error)}`] });
 }
 
 const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism");

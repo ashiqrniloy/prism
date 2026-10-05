@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AIProvider, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
+import { type ModelProvider, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import {
   agentNode,
   conditionalNode,
@@ -14,6 +14,7 @@ import {
   type WorkflowEvent,
   WorkflowSuperstepLimitError,
 } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 describe("cyclic workflow execution (Plan 130 Task 3)", () => {
   it("worker→reviewer→worker reflection terminates on idle drain with status: 'succeeded'; each activation emitted a node_started/node_finished pair with iteration populated", async () => {
@@ -87,7 +88,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
 
   it("reflection with agentNode terminates cleanly on idle drain", async () => {
     let callCount = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         callCount += 1;
@@ -96,7 +97,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ provider, model: { provider: "mock", model: "test-model" } });
+    const agent = await createAgent({ packages: [providerPackage("test-provider", [provider])], model: { provider: "mock", model: "test-model" } });
 
     const worker = functionNode({
       activation: "any",
@@ -376,7 +377,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
     let sessionAborted = false;
     const controller = new AbortController();
 
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         yield providerTextDelta("chunk1");
@@ -388,7 +389,7 @@ describe("cyclic workflow execution (Plan 130 Task 3)", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ provider, model: { provider: "mock", model: "test-model" } });
+    const agent = await createAgent({ packages: [providerPackage("test-provider", [provider])], model: { provider: "mock", model: "test-model" } });
 
     const entry = functionNode({
       activation: "any",

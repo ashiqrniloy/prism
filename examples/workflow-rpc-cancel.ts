@@ -1,4 +1,5 @@
-import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   cancelWorkflowRun,
@@ -9,6 +10,7 @@ import {
   resumeWorkflow,
   runWorkflow,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Programmatic cancel and resume (RPC/command surface). A host starts a
 // workflow, cancels it mid-flight via cancelWorkflowRun() after first node
@@ -24,7 +26,7 @@ const provider = createMockProvider([
 
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
 });
 
 // Fast first node checkpoints, then slow second node gets cancelled.

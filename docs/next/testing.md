@@ -12,9 +12,37 @@ lists every violation.
 `loopConformance(strategy)` drives a `LoopStrategy` through one scripted mock scenario and reports
 which catalog hooks fired.
 
-The subpath also re-exports `createMockProvider`, `twoTurnProvider`, `textProvider`, `echoTool`,
-`createScriptedHostUi`, and the `provider*` event helpers (`providerTextDelta`, `providerToolCall`,
-`providerToolCallDelta`, `providerUsage`, `providerDone`, `toolCallContent`).
+`storeConformance(factory, { reopen?, capabilities? })` drives a `SessionStore` through the adapter
+contract as named legs: `append-and-read`, `branch-and-fork`, `package-state`, `suspended-run`,
+`search`, `title`, `list-and-delete` and `restart` (`STORE_CONFORMANCE_STEPS`). A failure names its leg.
+
+```ts
+import { createMemorySessionStore } from "@arnilo/prism";
+import { storeConformance } from "@arnilo/prism/testing";
+
+await storeConformance(createMemorySessionStore);
+```
+
+`reopen` is a second factory over the same backing data: the `restart` leg re-reads every earlier leg's
+writes through one fresh instance. `capabilities` defaults to the optional methods the store implements
+(`listSessions`, `deleteSession`, `searchSessions`); a store that lacks one answers `agent.sessions` with
+`UnsupportedStoreCapabilityError`, which the leg asserts instead of skipping.
+
+`mockProvider(script, { id? })` is a package that registers a scripted provider (default id `mock`). Each
+`generate` call plays the next step of `script`, an array of event arrays, and the last step repeats once
+the script is exhausted, so a one-step script answers every turn alike:
+
+```ts
+import { createAgent } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
+
+const agent = await createAgent({ model: "mock/demo", packages: [mockProvider([turnA, turnB])] });
+```
+
+The subpath also re-exports `createMockProvider` (the raw `ModelProvider`, for provider unit tests), `twoTurnProvider`, `textProvider`, `echoTool`,
+`createScriptedHostUi`, `assertPersistenceSearchQueryParity` (the SQL stores' filter-only search parity check,
+against a `SessionStore & ProductionPersistenceStore`), and the `provider*` event helpers (`providerTextDelta`,
+`providerToolCall`, `providerToolCallDelta`, `providerUsage`, `providerDone`, `toolCallContent`).
 
 ## When to use it
 
@@ -30,20 +58,29 @@ in-repo harness drove.
 | --- | --- | --- |
 | `input` | `PackageInput` | A definition or an instance. A definition is called with `options.config`. |
 | `options.config` | object | Instance config, passed as the factory argument. |
-| `options.mockProvider` | `AIProvider` | Drives the mock session. Default: one text turn on the built-in mock provider. |
+| `options.mockProvider` | `ModelProvider` | Drives the mock session. Default: one text turn on the built-in mock provider. |
 
 `loopConformance(strategy | options)`. A bare `LoopStrategy` (`{ name, run }`) is `{ loop: strategy }`.
-
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `loop` | `LoopStrategy` | `defaultLoop` | The strategy under test. |
 | `hooks` | `(hooks) => void` | none | Extra host hooks, registered after the firing probes. |
 | `tools` | `readonly ToolDefinition[]` | one echo tool | Tools the scenario can call. |
-| `provider` | `AIProvider` | `twoTurnProvider` (one tool call, then text) | Scripted model. `textProvider` is one text turn. |
+| `provider` | `ModelProvider` | `twoTurnProvider` (one tool call, then text) | Scripted model. `textProvider` is one text turn. |
 | `input` | `string` | `"go"` | The run input. |
 | `probe` | `boolean` | `true` | `false` skips the auto-registered catalog probes. |
 | `emitEvents` | `readonly AgentEventType[]` | none | Extra observe events emitted through a hook during the run. |
 | `store`, `limits`, `compaction`, `host`, `runOptions`, `runState`, `sessionId` | | kernel defaults | Passed through to `createAgent` / `session.run`. |
+
+`storeConformance(factory, options?)`:
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `factory` | `() => SessionStore \| Promise<SessionStore>` | — | Builds the store under test. |
+| `options.reopen` | the same factory shape | none | A second instance over the same backing data; the `restart` leg re-reads every earlier write through it. |
+| `options.capabilities` | `readonly SessionStoreCapability[]` | the methods the store implements | Which optional `agent.sessions` legs the store claims. A claimed capability the store does not implement fails; an unclaimed one must answer `UnsupportedStoreCapabilityError`. |
+| `options.sessionId`, `options.otherSessionId` | `string` | `"conformance"`, `"<sessionId>-other"` | Fixture session ids. |
+| `options.exerciseConcurrentParentAppend` | `boolean` | `false` | Appends concurrent children of one parent (fork allowed rather than a tip CAS). |
 
 ## Outputs / response / events
 
@@ -137,8 +174,9 @@ members it records:
 | `host.ui` | `host-ui` |
 | `slots.<slot>.provide` | `slot:<slot>` |
 
-Per-suite subpaths (`@arnilo/prism/testing/provider-conformance` and the other conformance helpers)
-stay until their owning phases consolidate them. This subpath does not replace them.
+Per-suite subpaths (the conformance helpers other than `@arnilo/prism/provider-kit`, which holds provider conformance)
+stay until their owning phases consolidate them. This subpath does not replace them, and the store conformance
+moved here from the retired `./testing/session-store-conformance` subpath.
 
 ## Security and performance notes
 
@@ -160,5 +198,6 @@ imports no package.
 ## Related APIs
 
 - [Packages](packages.md): `definePackage`, `PackageAPI`, capabilities, `inspect()`.
+- [Slots](slots.md): `inspect().store`, the derived store capabilities, and what `agent.sessions` lights up.
 - [Hooks](hooks.md): catalog names `loopConformance` reports in `fired`.
 - [Loop](loop.md): `LoopStrategy` the harness drives.

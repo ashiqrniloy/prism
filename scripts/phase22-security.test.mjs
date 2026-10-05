@@ -30,7 +30,7 @@ import { describe, it } from "bun:test";
 import { createEventMultiplexer, EventMultiplexerError, SessionMetadataConflictError } from "@arnilo/prism";
 import { createMemoryModelRouterStateStore } from "@arnilo/prism-core/governance/model-router";
 import { createNatsAgentEventSource } from "@arnilo/prism-core/sessions/nats";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 
 const BLOCKER_IDS = ["budget-reservation", "conversation-metadata-cas", "single-consumer", "nats-durable"];
 const blockerIds = new Set();

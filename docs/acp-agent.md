@@ -66,7 +66,7 @@ The binary is pure wiring (~200 lines) — no protocol code lives here. It build
 - `lifecycle` — `createAgentRunLifecycle` over the same checkpoint store. Durable SQLite checkpoints enable interrupted runs and approval state to be reconstructed across restarts with the selected model and provider intact.
 - `mcp` — allow-list `select` gate with origin- and path-segment subtree checking for http/sse transports.
 - `modes` / `configOptions` — from config.
-- Provider — **fail closed before startup**. Unlike earlier releases where missing configuration silently defaulted to mock mode (Trap C), Prism 0.7.0 requires either an explicit `model` in config or an injected provider. For real providers, credentials are resolved lazily on demand via dynamic import of `@arnilo/prism-providers/<adapter>`. Offline mock mode must be explicitly specified (`model: { provider: "mock", model: "mock" }`).
+- Provider — **fail closed before startup**. Unlike earlier releases where missing configuration silently defaulted to mock mode (Trap C), Prism 0.7.0 requires either an explicit `model` in config or an injected provider. For real providers, credentials are resolved lazily on demand via dynamic import of `@arnilo/prism-provider-<adapter>`. Offline mock mode must be explicitly specified (`model: { provider: "mock", model: "mock" }`).
 
 Programmatic usage:
 

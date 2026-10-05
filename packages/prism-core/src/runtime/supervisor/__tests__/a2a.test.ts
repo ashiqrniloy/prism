@@ -1,13 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createAgent,
-  createMemoryAgentEventSource,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
+import { createAgent, createMemoryAgentEventSource, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
 import {
   type A2AAgentCard,
   A2AError,
@@ -25,6 +18,7 @@ import {
   signA2AAgentCard,
   verifyA2AAgentCard,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const endpoint = "https://agent.example/a2a/v1";
 const baseCard = (): A2AAgentCard => ({
@@ -42,7 +36,7 @@ const session = async () =>
   await (
     await createAgent({
       model: { provider: "mock", model: "test" },
-      provider: createMockProvider([providerTextDelta("answer"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("answer"), providerDone()]])],
     })
   ).session();
 const rpc = (method = "SendMessage", input = "question") => ({

@@ -11,7 +11,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - **Idempotency window**: memory and JSONL stores remember the latest 4,096 dedup keys. Replaying an older key appends a new entry instead of rejecting the write.
 - **In-memory lease sweep**: expired lease rows are deleted once the map reaches 1,024. A swept key starts its next fence at 1. A released key still in the map keeps `fencingToken + 1`. SQLite and Postgres adapters still keep the counter on the row.
 - **Shared text token estimate**: plain-text estimates use one `ceil(length/4)` helper. Message and entry estimates are unchanged.
-- **System One decision models**: `@arnilo/prism-providers/typesafe` (hosted Jev) and `@arnilo/prism-providers/laya` (self-hosted `laya-serve`) answer only `options.structuredOutput` requests, one `POST /v1/systemone` round trip, no tools or streaming; `@arnilo/prism-providers/decisions` adds a typed host call that preserves raw probabilities, confidence, the responding checkpoint, usage, and timing.
+- **System One decision models**: `@arnilo/prism-provider-typesafe` (hosted Jev) and `@arnilo/prism-provider-laya` (self-hosted `laya-serve`) answer only `options.structuredOutput` requests, one `POST /v1/systemone` round trip, no tools or streaming; `@arnilo/prism/provider-kit` adds a typed host call that preserves raw probabilities, confidence, the responding checkpoint, usage, and timing.
 - **14 publishable packages** at current **0.12.1** lockstep, with the migration guide reachable from the release section below — inventory below.
 
 ### Carried from the 0.10.0 line
@@ -134,7 +134,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - [Thinking and reasoning](thinking-and-reasoning.md): `thinkingLevel` snapping to per-model capability families with legality evidence.
 - [Use-case model selection](use-case-model-selection.md): bind models for compaction, memory, and other non-session LLM jobs.
 - [Provider request policies](provider-request-policies.md): kernel request-option defaults with host `ProviderRequestPolicy` overlays.
-- [Provider packages](provider-packages.md): all adapters as `@arnilo/prism-providers/<adapter>` subpaths; tool_result and event wire shapes stay provider-neutral.
+- [Provider packages](provider-packages.md): all adapters as standalone `@arnilo/prism-provider-<vendor>` packages; tool_result and event wire shapes stay provider-neutral.
   - First-party adapters: [`openai`](providers/openai.md), [`anthropic`](providers/anthropic.md), [`google`](providers/google.md), [`opencode-go`](providers/opencode-go.md), [`openrouter`](providers/openrouter.md), [`zai`](providers/zai.md), [`deepseek`](providers/deepseek.md), [`xai`](providers/xai.md), [`clinepass`](providers/clinepass.md), [`hyper`](providers/hyper.md), [`commandcode`](providers/commandcode.md), [`kimi`](providers/kimi.md), [`alibaba`](providers/alibaba.md), [`ollama`](providers/ollama.md), [`neuralwatt`](providers/neuralwatt.md), [`typesafe`](providers/typesafe.md), [`laya`](providers/laya.md), plus the cross-vendor `model-discovery` listing adapters on the same page.
   - [System One decisions](providers/decisions.md): typed host decision call over the shared `POST /v1/systemone` client, preserving raw probabilities/confidence/legend, the responding checkpoint, usage, and timing with pre-fetch bounds and deadline/abort composition.
   - Enterprise cloud (workload identity): [`azure`](providers/azure.md) (Entra/Foundry), [`bedrock`](providers/bedrock.md) (IAM/SigV4; OpenAI-compatible or native Converse route), [`vertex`](providers/vertex.md) (ADC/Vertex).
@@ -241,7 +241,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 - [Contribution quality budgets](contributing.md): the non-null assertion allowance, export-surface ceilings, and the rule that keeps them shrinking.
 - [Live and end-to-end testing](live-testing.md): opt-in live matrix with skip-not-fail contract and credential scoping table.
 - Provider test doubles: `createMockProvider()` and provider event helpers are documented on the canonical Provider layer page above.
-- [Provider conformance](provider-conformance.md): network-free adapter assertions from `@arnilo/prism/testing/provider-conformance`.
+- [Provider conformance](provider-conformance.md): network-free adapter assertions from `@arnilo/prism/provider-kit`.
 - [Session store conformance](session-store-conformance.md): assert append/idempotency/conflict/branch invariants for any store.
 - [Run ledger conformance](run-ledger-conformance.md): assert durable run/usage writes and reopen survival.
 - [Compaction conformance](compaction-conformance.md): assert redacted non-empty summaries and abort observation.
@@ -277,7 +277,7 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 The generated inventory below derives from [`scripts/package-truth.json`](../scripts/package-truth.json) — regenerate with `bun scripts/package-truth.mjs --emit-docs`, never hand-edit.
 
 <!-- generated:package-truth:inventory begin -->
-**14 publishable manifests** — root `@arnilo/prism` plus 13 workspace packages (4 `prism-*` family packages, 9 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**39 publishable manifests** — root `@arnilo/prism` plus 38 workspace packages (3 `prism-*` family packages, 14 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
@@ -285,14 +285,18 @@ The generated inventory below derives from [`scripts/package-truth.json`](../scr
 | `@arnilo/prism-channels` | 0.12.1 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
 | `@arnilo/prism-coding-tools` | 0.12.1 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
 | `@arnilo/prism-core` | 0.12.1 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
-| `@arnilo/prism-providers` | 0.12.1 | family — all provider adapters as `/<adapter>` subpaths |
 | `@arnilo/prism-acp-agent` | 0.12.1 | capability — ACP adapter |
 | `@arnilo/prism-ag-ui` | 0.12.1 | capability — AG-UI/A2A/A2UI adapter |
 | `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
 | `@arnilo/prism-code` | 0.4.1 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
+| `@arnilo/prism-credentials-keyring` | 0.12.1 | capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence |
 | `@arnilo/prism-hooks-json` | 0.12.1 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
 | `@arnilo/prism-mcp` | 0.12.1 | capability — MCP client/server/OAuth interop |
 | `@arnilo/prism-memory` | 0.12.1 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
+| `@arnilo/prism-store-codecs` | 0.12.1 | capability |
+| `@arnilo/prism-store-jsonl` | 0.12.1 | capability |
+| `@arnilo/prism-store-postgres` | 0.12.1 | capability |
+| `@arnilo/prism-store-sqlite` | 0.12.1 | capability |
 | `@arnilo/prism-web-tools` | 0.12.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
 | `@arnilo/prism-work` | 0.12.1 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
 <!-- generated:package-truth:inventory end -->

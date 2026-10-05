@@ -27,7 +27,7 @@ Drive **knowledge synchronization** (RAG import of file text + host-mapped ACL v
 
 ## Scoped OAuth establishment (0.0.14)
 
-Hosts establish, refresh, and revoke scoped OAuth credentials for these workloads through the existing `OAuthProvider` / credential-store seams (`@arnilo/prism-core/credentials/node`): `createMicrosoft365OAuthProvider` / `createGoogleWorkspaceOAuthProvider` (PKCE + device code), least-privilege scope bundles per capability (`resolveMicrosoft365Scopes` / `resolveGoogleWorkspaceScopes`, read vs mutation). Connectors consume a per-identity token via a late-bound `tokenProvider`: CLI adapters inject it into env and HTTP adapters send it only as `Authorization` — never argv or model context; revocation fails closed. See [Credential storage](credential-storage.md) and [Work tools](work-tools.md).
+Hosts establish, refresh, and revoke scoped OAuth credentials for these workloads through the existing `OAuthProvider` / credential-store seams (`@arnilo/prism-core/credentials/node` for the providers, `@arnilo/prism-credentials-keyring` for the stores): `createMicrosoft365OAuthProvider` / `createGoogleWorkspaceOAuthProvider` (PKCE + device code), least-privilege scope bundles per capability (`resolveMicrosoft365Scopes` / `resolveGoogleWorkspaceScopes`, read vs mutation). Connectors consume a per-identity token via a late-bound `tokenProvider`: CLI adapters inject it into env and HTTP adapters send it only as `Authorization` — never argv or model context; revocation fails closed. See [Credential storage](credential-storage.md) and [Work tools](work-tools.md).
 
 ## Out of scope
 

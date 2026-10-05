@@ -1,10 +1,10 @@
 import { createAgent } from "@arnilo/prism";
-import { xaiModels, xaiPackage } from "@arnilo/prism-providers/xai";
+import xai, { xaiModels } from "@arnilo/prism-provider-xai";
 
 export async function demo() {
   const agent = await createAgent({
     model: { provider: "xai", model: xaiModels[0]!.model },
-    packages: [xaiPackage({ apiKey: () => "fake-xai-key" })],
+    packages: [xai({ apiKey: "env:PRISM_TEST_XAI_KEY" })],
   });
   try {
     return {

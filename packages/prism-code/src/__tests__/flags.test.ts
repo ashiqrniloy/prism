@@ -1,6 +1,7 @@
 import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { defineAgent } from "@arnilo/prism-agent-sdk";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import {
   applyFlagOverlay,
   autoDetectProvider,
@@ -199,7 +200,7 @@ test("mock provider end-to-end run via defineAgent from config", async () => {
   if (!modelConfig) throw new Error("model required");
   const provider = await resolveProvider(modelConfig);
   const assembled = await defineAgent({
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     model: modelConfig,
     workspaceRoot: config.cwd,
     planes: {},

@@ -70,7 +70,7 @@ test("model selection: every provider suite reads its PRISM_LIVE_*_MODEL overrid
     "providers/vertex",
     "providers/ollama",
     "providers/ai-sdk",
-    "providers/model-discovery",
+    "providers/google-discovery",
   ]) {
     assert.equal(matrix.suites.find((s) => s.id === id).status, "active", `${id} activated by Task 4`);
   }

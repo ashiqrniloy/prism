@@ -21,6 +21,7 @@ import {
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 function verifiedIdentity(overrides: Partial<AgentIdentity> = {}): AgentIdentity {
   return {
@@ -156,13 +157,13 @@ describe("identity contracts", () => {
 
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
       principal: identity.principal,
       ownership: ownershipFromIdentity(verifiedIdentity()),
     });

@@ -28,7 +28,7 @@ import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-tru
 
 const ROOT = join(import.meta.dirname, "..");
 const INTERNAL_PACKAGE = "@arnilo/";
-const MANIFEST = /^(?:package\.json|packages\/[^/]+\/package\.json)$/;
+const MANIFEST = /^(?:package\.json|packages\/(?:[^/]+\/)*[^/]+\/package\.json)$/;
 /**
  * Packages on their own version line (plan 140 Task 1: the app `@arnilo/prism-code` continues its
  * published 0.3.x line at 0.4.0, and `@arnilo/prism-agent-sdk` starts at 0.1.0; release.mjs
@@ -106,8 +106,8 @@ function parseLock(files, path, problems) {
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 14) {
-    problems.push(`expected 14 manifests (root + 13 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  if (manifests.length !== 39) {
+    problems.push(`expected 39 manifests (root + 38 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   const parsed = new Map();
   for (const path of manifests) {

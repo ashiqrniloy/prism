@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { afterAll as after, describe, it } from "bun:test";
 import { Pool } from "pg";
-import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { blockedGate } from "./blocked-gate.mjs";
 
 /**

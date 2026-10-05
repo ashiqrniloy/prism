@@ -1,4 +1,5 @@
-import { type OAuthCredentials, type OAuthProvider, redactOAuthError, refreshOAuthCredential, revokeOAuthCredential } from "@arnilo/prism";
+import { type OAuthCredentials, type OAuthProvider } from "@arnilo/prism";
+import { redactOAuthError, refreshOAuthCredential, revokeOAuthCredential, secretToOAuthCredentials } from "@arnilo/prism/provider-kit";
 import type { PrismCodeCredentialManager } from "./credentials.js";
 import type { ShippedProviderDescriptor } from "./providers.js";
 
@@ -12,11 +13,11 @@ const inflightRefreshes = new Map<string, Promise<OAuthCredentials>>();
 export async function resolveOAuthProvider(providerId: string): Promise<OAuthProvider | undefined> {
   switch (providerId.toLowerCase()) {
     case "openai-codex": {
-      const mod = await import("@arnilo/prism-providers/openai");
+      const mod = await import("@arnilo/prism-provider-openai");
       return mod.openAICodexOAuthProvider;
     }
     case "xai": {
-      const mod = await import("@arnilo/prism-providers/xai");
+      const mod = await import("@arnilo/prism-provider-xai");
       return mod.createXaiOAuthProvider();
     }
     default:
@@ -75,7 +76,8 @@ function refreshInFlight(
     return refreshOAuthCredential({
       provider: oauthProvider,
       credentials: stored,
-      store: { set: (provider, refreshed) => credentials.setOAuth(provider, refreshed) },
+      ref: `keyring:${providerId}`,
+      sink: { store: (_ref, secret) => credentials.setOAuth(providerId, secretToOAuthCredentials(secret)) },
     });
   })().finally(() => {
     inflightRefreshes.delete(providerId);
@@ -187,9 +189,12 @@ export async function logoutProvider(
       await revokeOAuthCredential({
         provider: resolved,
         credentials: stored,
-        store: {
-          set: (provider, refreshed) => credentials.setOAuth(provider, refreshed),
-          delete: (provider, accountId) => credentials.deleteOAuth(provider, accountId),
+        ref: `keyring:${id}`,
+        sink: {
+          store: (_ref, secret) => credentials.setOAuth(id, secretToOAuthCredentials(secret)),
+          delete: async () => {
+            await credentials.deleteOAuth(id);
+          },
         },
       });
       oauthRevoked = typeof resolved.revoke === "function";

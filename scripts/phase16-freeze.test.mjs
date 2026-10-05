@@ -13,7 +13,7 @@
  *
  * PRE-SPLIT STATE (Task 0) -> BARREL INTENT (Tasks 1-2, landed): src/contracts.ts is now a
  * pure barrel re-exporting src/contracts-core.ts (JSON/content/messages/models/limits/
- * guardrails/cache/provider/AIProvider/realtime-session/agent-config/commands/context/
+ * guardrails/cache/provider/ModelProvider/realtime-session/agent-config/commands/context/
  * skills/extensions/session-stores/persistence/run-feedback/queries/compaction/retry/
  * resource/credential/loop/artifact contracts), src/contracts-run-state.ts (AgentRunStatus
  * -> AgentSession run-state/approval/decision contracts and limit constants), and

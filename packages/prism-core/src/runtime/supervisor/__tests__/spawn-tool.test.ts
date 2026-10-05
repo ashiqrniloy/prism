@@ -1,20 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type Agent,
-  type AIProvider,
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  type JsonObject,
-  type LoopStrategy,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  providerUsage,
-  type ToolDefinition,
-} from "@arnilo/prism";
+import { type Agent, type ModelProvider, createAgent, createSecretRedactor, type JsonObject, type LoopStrategy, providerDone, providerTextDelta, providerToolCall, providerUsage, type ToolDefinition } from "@arnilo/prism";
 import { createCancelAgentTool, createSpawnAgentTool, createSupervisor, createWaitAgentTool } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /** Test loop with bounded tool concurrency (the kernel default loop is sequential). */
 function concurrentLoop(concurrency: number): LoopStrategy {
@@ -40,7 +29,7 @@ const invocation = { sessionId: "parent-session", runId: "parent-run", toolCallI
 const doneAgent = async (text = "child", tokens = 2): Promise<Agent> =>
   await createAgent({
     model: { provider: "mock", model: "test" },
-    provider: createMockProvider([providerTextDelta(text), providerUsage({ totalTokens: tokens }), providerDone()]),
+    packages: [mockProvider([[providerTextDelta(text), providerUsage({ totalTokens: tokens }), providerDone()]])],
   });
 
 async function execute(tool: ToolDefinition, args: JsonObject) {
@@ -260,7 +249,7 @@ describe("createSpawnAgentTool", () => {
     const parent = await createAgent({
       model: { provider: "mock", model: "test" },
       slots: { loop: concurrentLoop(3) },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -273,7 +262,7 @@ describe("createSpawnAgentTool", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [spawn] },
     });
     const result = await (await parent.session()).run("spawn");
@@ -302,7 +291,7 @@ describe("createSpawnAgentTool", () => {
     const parent = await createAgent({
       model: { provider: "mock", model: "test" },
       slots: { loop: concurrentLoop(3) },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -315,7 +304,7 @@ describe("createSpawnAgentTool", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           createSpawnAgentTool({ supervisor }),
@@ -424,7 +413,7 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
     // model-visible value projections, which stay explicit key lists.
     const failing = async (): Promise<Agent> => {
       let generated = 0;
-      const provider: AIProvider = {
+      const provider: ModelProvider = {
         id: "mock",
         async *generate() {
           generated += 1;
@@ -433,7 +422,7 @@ describe("createSpawnAgentTool lifetime and report policy", () => {
       };
       return await createAgent({
         model: { provider: "mock", model: "test" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [{ name: "noop", execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "noop", value: "ok" }) }] },
       });
     };

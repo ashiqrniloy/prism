@@ -8,7 +8,7 @@ paged `results`, with a typed job-state union and a `pollBatch` backoff utility
 exported standalone — core never loops or awaits completion for you. The
 first-party adapter is [`createOpenAIBatchJobsProvider`](providers/openai.md)
 (Files API JSONL upload + `/v1/batches` lifecycle). Offline conformance runs via
-`runBatchJobsConformance` from `@arnilo/prism/testing/provider-conformance`.
+`runBatchJobsConformance` from `@arnilo/prism/provider-kit`.
 
 ## When to use it
 
@@ -59,9 +59,9 @@ host checks `ModelCapabilities.batchJobs`), `job_not_found`, `invalid_cursor`,
 ## Implementation example
 
 ```ts
-import { createOpenAIBatchJobsProvider } from "@arnilo/prism-providers/openai";
+import { createOpenAIBatchJobsProvider } from "@arnilo/prism-provider-openai";
 import { pollBatch, runBatchJobsConformance } from "@arnilo/prism";
-import { runBatchJobsConformance } from "@arnilo/prism/testing/provider-conformance";
+import { runBatchJobsConformance } from "@arnilo/prism/provider-kit";
 
 const batch = createOpenAIBatchJobsProvider({ apiKey: process.env.OPENAI_API_KEY });
 const job = await batch.submit({
@@ -115,6 +115,6 @@ await runBatchJobsConformance({
 - [Provider conformance](provider-conformance.md): `runBatchJobsConformance`
   and the offline conformance matrix.
 - [Provider packages](provider-packages.md): subpath import rules for
-  `@arnilo/prism-providers/openai`.
+  `@arnilo/prism-provider-openai`.
 - [Multimodal content](multimodal-content.md): sibling one-shot modality
   contracts sharing the same capability-flag and guard pattern.

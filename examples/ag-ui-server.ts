@@ -11,6 +11,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { createAgUiHandler } from "@arnilo/prism-ag-ui";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 export async function demo() {
   const checkpoints = createMemoryCheckpointStore();
@@ -21,7 +22,7 @@ export async function demo() {
   const agent = await createAgent({
     id: "approvals-agent",
     model: { provider: "mock", model: "mock" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         if (++turn === 1) {
@@ -35,7 +36,7 @@ export async function demo() {
         yield providerTextDelta("Publication complete.");
         yield providerDone();
       },
-    },
+    }])],
     slots: { store: sessionStore },
     hooks: askEveryTool(),
     tools: {

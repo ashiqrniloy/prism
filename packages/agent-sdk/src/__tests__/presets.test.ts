@@ -1,14 +1,9 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import {
-  createMockProvider,
-  type ExecutionPolicy,
-  providerDone,
-  providerTextDelta,
-  type ToolDefinition,
-  type ToolRegistry,
-} from "@arnilo/prism";
+import { type ExecutionPolicy, providerDone, providerTextDelta, type ToolDefinition, type ToolRegistry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { AgentSdkConfigError, barePreset, codingPreset, defineAgent, mergeAgentConfig } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 function stubTool(name: string, description = `stub:${name}`): ToolDefinition {
   return {
@@ -27,7 +22,7 @@ describe("presets", () => {
     const app = await defineAgent({
       ...barePreset(),
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
     });
 
     const tools = app.agent.config.tools?.add ?? [];
@@ -66,7 +61,7 @@ describe("presets", () => {
     const app = await defineAgent({
       ...merged,
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
     });
 
     const tools = app.agent.config.tools?.add ?? [];

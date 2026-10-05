@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEvent, AIProvider, ProviderRequest } from "../contracts.js";
+import type { AgentEvent, ModelProvider, ProviderRequest } from "../contracts.js";
 import type { ContextDraft, HookRegistrar } from "../hooks/index.js";
 import { createAgent, providerDone, providerTextDelta, toolCallContent } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
 import { clampTurnToolNames } from "../tools.js";
 import { failedRun } from "./run-result-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const tool = (name: string, executed?: string[]) => ({
   name,
@@ -47,7 +48,7 @@ describe("context.build tool narrowing", () => {
   it("subset is the request schema; a hidden call is still dispatched (provider view only)", async () => {
     const seen: string[][] = [];
     const executed: string[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push(schemaOf(request));
@@ -58,7 +59,7 @@ describe("context.build tool narrowing", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [tool("echo", executed), tool("secret", executed)] },
         hooks: narrowing("narrow", (ids) => ids.filter((id) => id === "echo")),
       })
@@ -73,7 +74,7 @@ describe("context.build tool narrowing", () => {
 
   it("a tool.call deny refuses a narrowed-out name, with no execution", async () => {
     const executed: string[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         yield { type: "tool_call", call: toolCallContent("c1", "secret", {}) };
@@ -83,7 +84,7 @@ describe("context.build tool narrowing", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [tool("echo", executed), tool("secret", executed)] },
         hooks: (hooks) => {
           narrowing("narrow", (ids) => ids.filter((id) => id === "echo"))(hooks);
@@ -99,7 +100,7 @@ describe("context.build tool narrowing", () => {
 
   it("identical consecutive subsets keep schema bytes identical", async () => {
     const schemas: string[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         schemas.push(JSON.stringify(request.tools ?? []));
@@ -111,7 +112,7 @@ describe("context.build tool narrowing", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           tools: { add: [tool("echo"), tool("secret")] },
           hooks: narrowing("narrow", () => ["echo"]),
         })
@@ -123,7 +124,7 @@ describe("context.build tool narrowing", () => {
 
   it("a handler throw fails the turn with no provider request", async () => {
     let calls = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         calls += 1;
@@ -133,7 +134,7 @@ describe("context.build tool narrowing", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [tool("echo")] },
         hooks: (hooks) =>
           hooks.on(
@@ -153,7 +154,7 @@ describe("context.build tool narrowing", () => {
     const seen: string[][] = [];
     let generateTurn = 0;
     let contextBuilds = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         generateTurn += 1;
@@ -169,7 +170,7 @@ describe("context.build tool narrowing", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           tools: { add: [tool("echo"), tool("secret")] },
           hooks: (hooks) =>
             hooks.on(
@@ -193,7 +194,7 @@ describe("context.build tool narrowing", () => {
 
   it("provider_turn metadata records the narrowed count and a stable idsHash", async () => {
     let generateTurn = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         generateTurn += 1;
@@ -204,7 +205,7 @@ describe("context.build tool narrowing", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [tool("echo"), tool("secret")] },
         hooks: narrowing("narrow", () => ["echo"]),
       })
@@ -242,7 +243,7 @@ describe("per-turn tool scoping through the loop", () => {
 
   it("a superset is clamped and emits tool_narrowing_clamped", async () => {
     const seen: string[][] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push(schemaOf(request));
@@ -252,7 +253,7 @@ describe("per-turn tool scoping through the loop", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [tool("echo"), tool("secret")] },
         slots: { loop: scopingLoop(["echo", "nope"]) },
       })
@@ -268,7 +269,7 @@ describe("per-turn tool scoping through the loop", () => {
   it("allowHiddenToolCalls dispatches names the turn scoping hid", async () => {
     const seen: string[][] = [];
     const executed: string[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push(schemaOf(request));
@@ -280,7 +281,7 @@ describe("per-turn tool scoping through the loop", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           tools: { add: [tool("echo", executed), tool("secret", executed)] },
           slots: { loop: scopingLoop(["echo"]) },
         })
@@ -293,7 +294,7 @@ describe("per-turn tool scoping through the loop", () => {
   it("without allowHiddenToolCalls a hidden name is denied at dispatch", async () => {
     const seen: string[][] = [];
     const executed: string[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         seen.push(schemaOf(request));
@@ -304,7 +305,7 @@ describe("per-turn tool scoping through the loop", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: { add: [tool("echo", executed), tool("secret", executed)] },
         slots: { loop: scopingLoop(["echo"]) },
       })

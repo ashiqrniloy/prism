@@ -3,7 +3,8 @@ import { Readable, Writable } from "node:stream";
 import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
-import { createAgent, createMockProvider, providerDone, providerError, providerTextDelta } from "../index.js";
+import { createAgent, providerDone, providerError, providerTextDelta } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -24,7 +25,7 @@ async function session(text = "Hello") {
   return (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta(text), providerDone()]),
+      packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
     })
   ).session();
 }
@@ -106,7 +107,7 @@ describe("cli", () => {
     const failing = (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: createMockProvider([providerError(new Error("boom"))]),
+        packages: [mockProvider([[providerError(new Error("boom"))]])],
       })
     ).session();
     const code = await runCli(["-p", "Hi"], { ...io, createSession: () => failing });

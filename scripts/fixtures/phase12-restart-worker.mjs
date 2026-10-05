@@ -36,7 +36,8 @@ import {
   toolCallContent,
 } from "../../dist/index.js";
 import { createPostgresEnterpriseState } from "../../packages/prism-core/dist/enterprise/postgres/index.js";
-import { createPostgresPersistence } from "../../packages/prism-core/dist/sessions/postgres/index.js";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
+import { providerPackage } from "../../dist/provider-kit/index.js";
 
 const input = JSON.parse(process.env.PRISM_PHASE12_WORKER_INPUT ?? "null");
 if (!input || typeof input !== "object" || !["run", "resume", "append", "warm"].includes(input.mode ?? "")) {
@@ -84,7 +85,7 @@ async function makeAgent({ store, effectStore }) {
     ownership,
     principal: identity.principal,
     effectStore,
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         turn += 1;
@@ -103,7 +104,7 @@ async function makeAgent({ store, effectStore }) {
         yield providerTextDelta("completed after restart");
         yield providerDone();
       },
-    },
+    }])],
     slots: {
       loop: {
         name: "restart",

@@ -18,15 +18,7 @@
  *
  * Offline: hash embedder, in-memory vector/session stores, no network.
  */
-import {
-  type Session,
-  type ContextBlock,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { type Session, type ContextBlock, createAgent, createMemorySessionStore, createSessionEntry, type SessionEntry } from "@arnilo/prism";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -44,6 +36,7 @@ import {
   OBSERVATIONS_RECORDED,
 } from "@arnilo/prism-memory/compaction/observational-memory";
 import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-memory/rag";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const TENANT = "t1";
 const RESOURCE = "docs";
@@ -142,7 +135,7 @@ const sessionStore = createMemorySessionStore();
 const session: Session = await (
   await createAgent({
     model: { provider: "mock", model: "revocation-demo" },
-    provider: createMockProvider([]),
+    packages: [mockProvider([[]])],
     slots: { store: sessionStore },
   })
 ).session({ id: "s-revocation", create: true });

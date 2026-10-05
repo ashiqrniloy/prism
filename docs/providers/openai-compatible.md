@@ -2,9 +2,9 @@
 
 ## What it does
 
-`@arnilo/prism/providers/openai-compatible` exports `createOpenAICompatibleProvider()` and `OpenAICompatibleProviderOptions`.
+`@arnilo/prism/provider-kit` exports `createOpenAICompatibleProvider()` and `OpenAICompatibleProviderOptions`.
 
-The adapter implements `AIProvider` for OpenAI-compatible Chat Completions streaming APIs using native or injected `fetch`. It maps streaming Server-Sent Events into Prism `ProviderEvent` values for text, thinking, tool-call fragments, final tool calls, usage, done, and errors.
+The adapter implements `ModelProvider` for OpenAI-compatible Chat Completions streaming APIs using native or injected `fetch`. It maps streaming Server-Sent Events into Prism `ProviderEvent` values for text, thinking, tool-call fragments, final tool calls, usage, done, and errors.
 
 It has no provider SDK dependency.
 
@@ -19,7 +19,7 @@ Do not use it for the OpenAI Responses API, provider-specific non-streaming APIs
 Import from the subpath:
 
 ```ts
-import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+import { createOpenAICompatibleProvider } from "@arnilo/prism/provider-kit";
 ```
 
 Options:
@@ -95,7 +95,7 @@ Example Prism events:
 ## Implementation example
 
 ```ts
-import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
+import { createOpenAICompatibleProvider } from "@arnilo/prism/provider-kit";
 
 const provider = createOpenAICompatibleProvider({
   baseUrl: "https://api.openai.com/v1",
@@ -137,7 +137,7 @@ const provider = createOpenAICompatibleProvider({
 });
 ```
 
-- Cache behavior is intentionally minimal: this Chat Completions adapter sends no `prompt_cache_key`, `prompt_cache_retention`, or `cache_control` fields. Endpoints that cache implicitly do so automatically; hosts needing OpenAI `prompt_cache_key`/`prompt_cache_retention` should use the [`@arnilo/prism-providers/openai`](openai.md) Responses package. The adapter still normalizes cache usage from `prompt_tokens_details.cached_tokens` (and `prompt_cache_hit_tokens`) into `Usage.cacheReadTokens`.
+- Cache behavior is intentionally minimal: this Chat Completions adapter sends no `prompt_cache_key`, `prompt_cache_retention`, or `cache_control` fields. Endpoints that cache implicitly do so automatically; hosts needing OpenAI `prompt_cache_key`/`prompt_cache_retention` should use the [`@arnilo/prism-provider-openai`](openai.md) Responses package. The adapter still normalizes cache usage from `prompt_tokens_details.cached_tokens` (and `prompt_cache_hit_tokens`) into `Usage.cacheReadTokens`.
 
 ## Request construction (0.5.1)
 
@@ -157,7 +157,7 @@ See [Provider request policies](../provider-request-policies.md).
 - Resolved API keys are used for the HTTP `Authorization` header and passed to error redaction; they are not stored in registries or events.
 - Redaction only removes known values supplied to the helper. Avoid logging raw provider requests/responses.
 - `fetch` receives the request `AbortSignal`.
-- SSE and HTTP error bodies are read through bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`) with configurable byte ceilings.
+- SSE and HTTP error bodies are read through bounded `@arnilo/prism/provider-kit` helpers (`readSseData`, `readBoundedResponseText`) with configurable byte ceilings.
 - **Strict completion is the shared default (since 0.2.1):** a chat stream is complete only when both `[DONE]` and a `finish_reason` were observed. EOF without either is treated as truncation and emits an `error` ("Chat stream ended without completion evidence"), never a successful `done` — a partial answer can no longer be mistaken for a completed one. Providers that legitimately omit one of the terminal markers must pass `strictCompletion: false` explicitly, accepting the truncation-detection downgrade. `done` carries the final stream usage when the stream was strict (or `doneUsage` is set).
 - Tests should use injected `fetch` and never make real network calls.
 - Tool-call arguments are accumulated as streamed text, parsed with `parseJsonObjectArguments` when the final tool call is emitted; empty argument text yields `{}`, malformed JSON yields an `error` event.
@@ -170,4 +170,4 @@ The shared OpenAI-compatible base (`createOpenAICompatibleProvider`) does **not*
 
 - [Provider layer](../provider-layer.md): registries, provider events, tool-call helpers, and mock provider.
 - [Credentials and redaction](../credentials-and-redaction.md): `resolveCredentialValue()`, `CredentialValueSource`, `redactSecrets()`, and `errorToErrorInfo()`.
-- [Public contracts](../public-contracts.md): `AIProvider`, `ProviderRequest`, `ProviderEvent`, `ToolDefinition`, `ToolCallContent`, and `Usage`.
+- [Public contracts](../public-contracts.md): `ModelProvider`, `ProviderRequest`, `ProviderEvent`, `ToolDefinition`, `ToolCallContent`, and `Usage`.

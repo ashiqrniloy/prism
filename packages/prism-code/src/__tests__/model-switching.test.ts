@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMockProvider, type ProviderRequest, providerDone, providerTextDelta } from "@arnilo/prism";
+import { type ProviderRequest, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createTestRenderer } from "@opentui/core/testing";
 import type { PrismCodeConfig } from "../config.js";
 import { MemoryStoredCredentialStore, PrismCodeCredentialManager } from "../credentials.js";
@@ -57,7 +58,7 @@ describe("Provider cache and model enrichment", () => {
     assert.strictEqual(cache.size, 0);
   });
 
-  it("run options derive model, provider source, and effort from one selection", () => {
+  it("run options derive model and effort from one selection", () => {
     const cache = createProviderCache();
     const provider = createMockProvider([providerDone()], { id: "mock" });
     cache.seed("mock", provider);
@@ -65,7 +66,6 @@ describe("Provider cache and model enrichment", () => {
 
     const options = selectionRunOptions({ model, effort: "low" }, cache, { signal: undefined });
     assert.deepEqual(options.model, model);
-    assert.strictEqual(options.providerSource?.(model), provider);
     assert.strictEqual(options.thinkingLevel, "low");
 
     // UI-only labels never reach the provider request.
@@ -105,7 +105,7 @@ describe("Provider cache and model enrichment", () => {
 });
 
 describe("Per-run model/provider/effort switching", () => {
-  it("assembles the headless agent with providerSource, so a /model switch reaches the next run", async () => {
+  it("assembles the headless agent with a provider package, so a /model switch reaches the next run", async () => {
     const dir = await makeTempDir("headless");
     const env = await createTestRenderer({ width: 80, height: 24 });
     try {
@@ -125,9 +125,8 @@ describe("Per-run model/provider/effort switching", () => {
       const config = await mockConfig(dir);
       const definition = await assembleAppAgent(config, providerA, undefined, undefined, manager, cache);
 
-      // A fixed agent-level provider would shadow every per-run override in core.
-      assert.strictEqual(definition.agent.config.provider, undefined);
-      assert.strictEqual(definition.agent.config.providerSource?.({ provider: "mock", model: "default" })?.id, "mock-a");
+      // The agent's provider is a package, so a per-run model override resolves through the registry.
+      assert.strictEqual(definition.agent.config.packages?.length ? true : false, true);
 
       const tui = createPrismCodeTui({
         renderer: env.renderer,
@@ -166,7 +165,9 @@ describe("Per-run model/provider/effort switching", () => {
       assert.strictEqual(requestsB[0]?.model.displayName, "Mock Default Model", "the run carries the selected catalog model");
 
       await waitFor(() => providerIds.length === 2, "provider turn events");
-      assert.deepEqual(providerIds, ["mock-a", "mock-b"]);
+      // The agent resolves the model's provider id through the registry, so the turn reports `mock` both times;
+      // `requestsA` / `requestsB` above prove which instance served each run.
+      assert.deepEqual(providerIds, ["mock", "mock"]);
 
       await tui.close();
     } finally {

@@ -1,15 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { agentRuntime } from "../agent-session/create-agent.js";
-import {
-  type AgentEvent,
-  type AIProvider,
-  createAgent,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-} from "../index.js";
+import { type AgentEvent, type ModelProvider, createAgent, providerDone, providerTextDelta, toolCallContent } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -17,11 +11,11 @@ async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[
   return events;
 }
 
-function textProvider(text = "ok"): AIProvider {
+function textProvider(text = "ok"): ModelProvider {
   return createMockProvider([providerTextDelta(text), providerDone()]);
 }
 
-function toolProvider(call: { id: string; name: string }): AIProvider {
+function toolProvider(call: { id: string; name: string }): ModelProvider {
   let turn = 0;
   return {
     id: "mock",
@@ -37,7 +31,7 @@ describe("agent hooks (4b wiring)", () => {
   it("host_hooks_register_under_host_owner", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(),
+      packages: [providerPackage("test-provider", [textProvider()])],
       hooks: (hooks) => {
         hooks.on("turn.before", () => undefined);
         hooks.on("message.append", (message) => message);
@@ -57,7 +51,7 @@ describe("agent hooks (4b wiring)", () => {
       async () =>
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: textProvider(),
+          packages: [providerPackage("test-provider", [textProvider()])],
           hooks: (hooks) => {
             hooks.on("turn.before", () => undefined);
             hooks.on("turn.before", () => undefined, { id: "dup" });
@@ -72,7 +66,7 @@ describe("agent hooks (4b wiring)", () => {
     const order: string[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(),
+      packages: [providerPackage("test-provider", [textProvider()])],
       hooks: (hooks) => {
         hooks.on("turn.before", () => {
           order.push("turn.before");
@@ -109,7 +103,7 @@ describe("agent hooks (4b wiring)", () => {
     let executed = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: toolProvider({ id: "c1", name: "echo" }),
+      packages: [providerPackage("test-provider", [toolProvider({ id: "c1", name: "echo" })])],
       tools: {
         add: [
           {
@@ -149,7 +143,7 @@ describe("agent hooks (4b wiring)", () => {
   it("turn_before_stop_is_clean_and_resumable", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(),
+      packages: [providerPackage("test-provider", [textProvider()])],
       hooks: (hooks) => hooks.on("turn.before", () => ({ stop: "nothing to do" })),
     });
     const session = await agent.session();
@@ -165,7 +159,7 @@ describe("agent hooks (4b wiring)", () => {
     let continuations = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(),
+      packages: [providerPackage("test-provider", [textProvider()])],
       limits: { maxContinuations: 1 },
       hooks: (hooks) =>
         hooks.on("run.end", () => {
@@ -187,7 +181,7 @@ describe("agent hooks (4b wiring)", () => {
     let executed = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: toolProvider({ id: "c1", name: "echo" }),
+      packages: [providerPackage("test-provider", [toolProvider({ id: "c1", name: "echo" })])],
       tools: {
         add: [
           {
@@ -214,7 +208,7 @@ describe("agent hooks (4b wiring)", () => {
     const seen: string[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(),
+      packages: [providerPackage("test-provider", [textProvider()])],
       hooks: (hooks) =>
         hooks.on("run.input", (messages) => {
           seen.push(...messages.map((message) => message.content.map((block) => (block.type === "text" ? block.text : "")).join("")));

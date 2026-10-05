@@ -11,6 +11,7 @@ import {
   definePackage,
 } from "../index.js";
 import { deriveToolEffectKey, toolEffectArgumentsHash } from "../tool-effects.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
   const seen: unknown[] = [];
@@ -21,14 +22,6 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
     model: { provider: "mock", model: "test" },
     principal: agentPrincipal,
     slots: { store },
-    provider: {
-      id: "mock",
-      async *generate() {
-        if (turns++ === 0) yield { type: "tool_call" as const, call: toolCallContent("call", "probe", {}) };
-        else yield providerTextDelta("done");
-        yield providerDone();
-      },
-    },
     hooks(hooks) {
       hooks.on("tool.call", (_payload, context) => {
         seen.push(context.session?.principal);
@@ -37,8 +30,7 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
         events.push(event);
       });
     },
-    packages: [
-      definePackage({
+    packages: [definePackage({
         name: "probe",
         version: "1.0.0",
         setup(api) {
@@ -50,8 +42,14 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
             },
           });
         },
-      })(),
-    ],
+      })(), providerPackage("test-provider", [{
+      id: "mock",
+      async *generate() {
+        if (turns++ === 0) yield { type: "tool_call" as const, call: toolCallContent("call", "probe", {}) };
+        else yield providerTextDelta("done");
+        yield providerDone();
+      },
+    }])],
   });
   const session = await agent.session();
   await session.run("go", { principal: runPrincipal });
@@ -81,13 +79,13 @@ test("cached_session_context_tracks_each_run_principal_without_persisting_it", a
   const agent = await createAgent({
     model: { provider: "mock", model: "test" },
     principal,
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         yield providerTextDelta("ok");
         yield providerDone();
       },
-    },
+    }])],
     hooks(hooks) {
       hooks.on("run.input", (input, ctx) => {
         seen.push(ctx.session?.principal);

@@ -1,5 +1,7 @@
 import { readFileSync } from "node:fs";
-import { type AIProvider, createMockProvider, type ModelConfig, type ProviderEvent, providerDone, providerTextDelta } from "@arnilo/prism";
+import { type ModelProvider, type ModelConfig, type PackageInstance, type ProviderEvent, providerDone, providerTextDelta } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { PROVIDER_ENV_VARS, type PrismCodeCredentialManager } from "./credentials.js";
 import { PrismCodeExecutionError } from "./errors.js";
 import { createOAuthTokenSource, resolveOAuthProvider } from "./oauth.js";
@@ -34,6 +36,7 @@ export type ProviderAuthKind = "api_key" | "oauth" | "ambient" | "host_setup";
 export interface ShippedProviderDescriptor {
   readonly id: string;
   readonly name: string;
+  /** Vendor key of the standalone `@arnilo/prism-provider-<vendor>` package that owns this descriptor. */
   readonly packageSubpath: string;
   readonly authKinds: readonly ProviderAuthKind[];
   readonly description: string;
@@ -47,13 +50,12 @@ export interface ShippedProviderDescriptor {
   /** Catalog default model; when a catalog is shipped it must contain this id. */
   readonly defaultModel?: string;
   /** Lazily imports and constructs the adapter (one literal `import()` per provider). */
-  readonly create?: (context: ProviderFactoryContext) => Promise<AIProvider>;
+  readonly create?: (context: ProviderFactoryContext) => Promise<ModelProvider>;
 }
 
 /**
  * Shipped provider adapter inventory.
- * Covers every provider adapter in `@arnilo/prism-providers` export map.
- * Explicitly excludes non-adapter `./model-discovery` and `./decisions`.
+ * Covers every provider adapter in the standalone `@arnilo/prism-provider-<vendor>` packages.
  */
 export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
   {
@@ -67,7 +69,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 10,
     defaultModel: "claude-sonnet-5",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/anthropic");
+      const mod = await import("@arnilo/prism-provider-anthropic");
       return mod.createAnthropicMessagesProvider({ apiKey });
     },
   },
@@ -82,7 +84,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 20,
     defaultModel: "gpt-5.1",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/openai");
+      const mod = await import("@arnilo/prism-provider-openai");
       return mod.createOpenAIResponsesProvider({ apiKey });
     },
     isMultiIdPackage: true,
@@ -98,7 +100,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 30,
     defaultModel: "gpt-5.1-codex",
     create: async ({ apiKey, accessToken }) => {
-      const mod = await import("@arnilo/prism-providers/openai");
+      const mod = await import("@arnilo/prism-provider-openai");
       return mod.createOpenAICodexProvider({ accessToken: accessToken ?? apiKey });
     },
     isMultiIdPackage: true,
@@ -115,7 +117,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 40,
     defaultModel: "gemini-2.5-pro",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/google");
+      const mod = await import("@arnilo/prism-provider-google");
       return mod.createGoogleGenerateContentProvider({ apiKey });
     },
   },
@@ -130,7 +132,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 70,
     defaultModel: "deepseek-v4-pro",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/deepseek");
+      const mod = await import("@arnilo/prism-provider-deepseek");
       return mod.createDeepSeekProvider({ apiKey });
     },
   },
@@ -145,7 +147,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 50,
     defaultModel: "grok-4.6",
     create: async ({ apiKey, accessToken }) => {
-      const mod = await import("@arnilo/prism-providers/xai");
+      const mod = await import("@arnilo/prism-provider-xai");
       return mod.createXaiProvider({ apiKey: accessToken ?? apiKey });
     },
   },
@@ -161,7 +163,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     // No shipped catalog (live discovery only); `openrouter/auto` is OpenRouter's own router id.
     defaultModel: "openrouter/auto",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/openrouter");
+      const mod = await import("@arnilo/prism-provider-openrouter");
       return mod.createOpenRouterProvider({ apiKey });
     },
   },
@@ -173,7 +175,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     description: "Local model runtime (default http://127.0.0.1:11434)",
     envVars: PROVIDER_ENV_VARS.ollama ?? [],
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/ollama");
+      const mod = await import("@arnilo/prism-provider-ollama");
       return mod.createOllamaProvider({ apiKey: apiKey || undefined });
     },
   },
@@ -187,7 +189,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     envVars: PROVIDER_ENV_VARS.alibaba ?? [],
     autoDetectPriority: 90,
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/alibaba");
+      const mod = await import("@arnilo/prism-provider-alibaba");
       return mod.createAlibabaProvider({ apiKey });
     },
   },
@@ -202,7 +204,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 100,
     defaultModel: "kimi-for-coding",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/kimi");
+      const mod = await import("@arnilo/prism-provider-kimi");
       return mod.createKimiCodingProvider({ apiKey });
     },
     isMultiIdPackage: true,
@@ -219,7 +221,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 110,
     defaultModel: "kimi-k2.7-code",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/kimi");
+      const mod = await import("@arnilo/prism-provider-kimi");
       return mod.createMoonshotProvider({ apiKey });
     },
     isMultiIdPackage: true,
@@ -236,7 +238,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 180,
     defaultModel: "cline-pass/glm-5.2",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/clinepass");
+      const mod = await import("@arnilo/prism-provider-clinepass");
       return mod.createClinePassProvider({ apiKey });
     },
   },
@@ -251,7 +253,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 120,
     defaultModel: "claude-opus-5",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/commandcode");
+      const mod = await import("@arnilo/prism-provider-commandcode");
       return mod.createCommandCodeProvider({ apiKey });
     },
   },
@@ -266,7 +268,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 130,
     defaultModel: "glm-5.2",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/neuralwatt");
+      const mod = await import("@arnilo/prism-provider-neuralwatt");
       return mod.createNeuralWattProvider({ apiKey });
     },
   },
@@ -281,7 +283,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 140,
     defaultModel: "grok-4.5",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/opencode-go");
+      const mod = await import("@arnilo/prism-provider-opencode-go");
       return mod.createOpenCodeGoProvider({ apiKey });
     },
   },
@@ -296,7 +298,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 150,
     defaultModel: "jev-preview",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/typesafe");
+      const mod = await import("@arnilo/prism-provider-typesafe");
       return mod.createTypeSafeProvider({ apiKey });
     },
   },
@@ -311,7 +313,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 160,
     defaultModel: "laya",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/laya");
+      const mod = await import("@arnilo/prism-provider-laya");
       return mod.createLayaProvider({ apiKey });
     },
   },
@@ -326,7 +328,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     autoDetectPriority: 80,
     defaultModel: "glm-5.2",
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/zai");
+      const mod = await import("@arnilo/prism-provider-zai");
       return mod.createZaiProvider({ apiKey });
     },
   },
@@ -340,7 +342,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
     envVars: PROVIDER_ENV_VARS.hyper ?? [],
     autoDetectPriority: 170,
     create: async ({ apiKey }) => {
-      const mod = await import("@arnilo/prism-providers/hyper");
+      const mod = await import("@arnilo/prism-provider-hyper");
       return mod.createHyperProvider({ apiKey });
     },
   },
@@ -361,7 +363,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
       if (!apiKey) {
         throw new PrismCodeExecutionError("Azure OpenAI requires AZURE_OPENAI_API_KEY (Azure resource key).");
       }
-      const mod = await import("@arnilo/prism-providers/azure");
+      const mod = await import("@arnilo/prism-provider-azure");
       return mod.createAzureOpenAIProvider({ endpoint, credential: apiKey, authStyle: "api-key" });
     },
   },
@@ -381,7 +383,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
         );
       }
       const region = process.env.AWS_REGION?.trim() ?? process.env.AWS_DEFAULT_REGION?.trim() ?? "us-east-1";
-      const mod = await import("@arnilo/prism-providers/bedrock");
+      const mod = await import("@arnilo/prism-provider-bedrock");
       return mod.createBedrockConverseProvider({
         region,
         credential: { accessKeyId, secretAccessKey, sessionToken: process.env.AWS_SESSION_TOKEN?.trim() },
@@ -401,7 +403,7 @@ export const SHIPPED_PROVIDERS: readonly ShippedProviderDescriptor[] = [
         throw new PrismCodeExecutionError("Vertex AI requires GOOGLE_PROJECT_ID (or GOOGLE_CLOUD_PROJECT) plus ADC credentials.");
       }
       const location = process.env.GOOGLE_VERTEX_LOCATION?.trim() ?? process.env.GOOGLE_CLOUD_LOCATION?.trim() ?? "us-central1";
-      const mod = await import("@arnilo/prism-providers/vertex");
+      const mod = await import("@arnilo/prism-provider-vertex");
       return mod.createVertexProvider({ projectId, location });
     },
   },
@@ -541,7 +543,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
   try {
     switch (norm) {
       case "anthropic": {
-        const mod = await import("@arnilo/prism-providers/anthropic");
+        const mod = await import("@arnilo/prism-provider-anthropic");
         if (typeof mod.listAnthropicModels === "function") {
           const models = await mod.listAnthropicModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -549,7 +551,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "openai": {
-        const mod = await import("@arnilo/prism-providers/openai");
+        const mod = await import("@arnilo/prism-provider-openai");
         if (typeof mod.listOpenAIModels === "function") {
           const models = await mod.listOpenAIModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -557,7 +559,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "google": {
-        const mod = await import("@arnilo/prism-providers/google");
+        const mod = await import("@arnilo/prism-provider-google");
         if (typeof mod.listGoogleModels === "function") {
           const models = await mod.listGoogleModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -565,7 +567,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "deepseek": {
-        const mod = await import("@arnilo/prism-providers/deepseek");
+        const mod = await import("@arnilo/prism-provider-deepseek");
         if (typeof mod.listDeepSeekModels === "function") {
           const models = await mod.listDeepSeekModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -573,7 +575,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "xai": {
-        const mod = await import("@arnilo/prism-providers/xai");
+        const mod = await import("@arnilo/prism-provider-xai");
         if (typeof mod.listXaiModels === "function") {
           const models = await mod.listXaiModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -581,7 +583,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "openrouter": {
-        const mod = await import("@arnilo/prism-providers/openrouter");
+        const mod = await import("@arnilo/prism-provider-openrouter");
         if (typeof mod.listOpenRouterModels === "function") {
           const models = await mod.listOpenRouterModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -589,7 +591,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "ollama": {
-        const mod = await import("@arnilo/prism-providers/ollama");
+        const mod = await import("@arnilo/prism-provider-ollama");
         if (typeof mod.listOllamaModels === "function") {
           const models = await mod.listOllamaModels({ signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -597,7 +599,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "alibaba": {
-        const mod = await import("@arnilo/prism-providers/alibaba");
+        const mod = await import("@arnilo/prism-provider-alibaba");
         if (typeof mod.listAlibabaModels === "function") {
           const models = await mod.listAlibabaModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -606,7 +608,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
       }
       case "kimi":
       case "kimi-coding": {
-        const mod = await import("@arnilo/prism-providers/kimi");
+        const mod = await import("@arnilo/prism-provider-kimi");
         if (typeof mod.listKimiModels === "function") {
           const models = await mod.listKimiModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -614,7 +616,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "commandcode": {
-        const mod = await import("@arnilo/prism-providers/commandcode");
+        const mod = await import("@arnilo/prism-provider-commandcode");
         if (typeof mod.listCommandCodeModels === "function") {
           const models = await mod.listCommandCodeModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -622,7 +624,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "neuralwatt": {
-        const mod = await import("@arnilo/prism-providers/neuralwatt");
+        const mod = await import("@arnilo/prism-provider-neuralwatt");
         if (typeof mod.listNeuralWattModels === "function") {
           const models = await mod.listNeuralWattModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -630,7 +632,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "opencode-go": {
-        const mod = await import("@arnilo/prism-providers/opencode-go");
+        const mod = await import("@arnilo/prism-provider-opencode-go");
         if (typeof mod.listOpenCodeGoModels === "function") {
           const models = await mod.listOpenCodeGoModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -638,7 +640,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "zai": {
-        const mod = await import("@arnilo/prism-providers/zai");
+        const mod = await import("@arnilo/prism-provider-zai");
         if (typeof mod.listZaiModels === "function") {
           const models = await mod.listZaiModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -646,7 +648,7 @@ export async function listModelsForProvider(providerId: string, options: ListMod
         break;
       }
       case "hyper": {
-        const mod = await import("@arnilo/prism-providers/hyper");
+        const mod = await import("@arnilo/prism-provider-hyper");
         if (typeof mod.listHyperModels === "function") {
           const models = await mod.listHyperModels({ apiKey, signal: options.signal });
           return models.map((m) => ({ model: m, isLive: true }));
@@ -713,68 +715,68 @@ export async function getStaticModelsForProvider(providerId: string): Promise<re
   const norm = providerId.toLowerCase();
   switch (norm) {
     case "anthropic": {
-      const mod = await import("@arnilo/prism-providers/anthropic");
+      const mod = await import("@arnilo/prism-provider-anthropic");
       return mod.anthropicModels;
     }
     case "openai": {
-      const mod = await import("@arnilo/prism-providers/openai");
+      const mod = await import("@arnilo/prism-provider-openai");
       return mod.openAIModels;
     }
     case "openai-codex": {
-      const mod = await import("@arnilo/prism-providers/openai");
+      const mod = await import("@arnilo/prism-provider-openai");
       return mod.openAICodexModels;
     }
     case "google": {
-      const mod = await import("@arnilo/prism-providers/google");
+      const mod = await import("@arnilo/prism-provider-google");
       return mod.googleModels;
     }
     case "deepseek": {
-      const mod = await import("@arnilo/prism-providers/deepseek");
+      const mod = await import("@arnilo/prism-provider-deepseek");
       return mod.deepseekModels;
     }
     case "xai": {
-      const mod = await import("@arnilo/prism-providers/xai");
+      const mod = await import("@arnilo/prism-provider-xai");
       return mod.xaiModels;
     }
     case "kimi":
     case "kimi-coding": {
-      const mod = await import("@arnilo/prism-providers/kimi");
+      const mod = await import("@arnilo/prism-provider-kimi");
       return mod.kimiCodingModels;
     }
     case "moonshot": {
-      const mod = await import("@arnilo/prism-providers/kimi");
+      const mod = await import("@arnilo/prism-provider-kimi");
       return mod.moonshotKimiModels;
     }
     case "clinepass": {
-      const mod = await import("@arnilo/prism-providers/clinepass");
+      const mod = await import("@arnilo/prism-provider-clinepass");
       return mod.clinePassModels;
     }
     case "commandcode": {
-      const mod = await import("@arnilo/prism-providers/commandcode");
+      const mod = await import("@arnilo/prism-provider-commandcode");
       return mod.commandCodeModels;
     }
     case "neuralwatt": {
-      const mod = await import("@arnilo/prism-providers/neuralwatt");
+      const mod = await import("@arnilo/prism-provider-neuralwatt");
       return mod.neuralWattModels;
     }
     case "opencode-go": {
-      const mod = await import("@arnilo/prism-providers/opencode-go");
+      const mod = await import("@arnilo/prism-provider-opencode-go");
       return mod.openCodeGoModels;
     }
     case "typesafe": {
-      const mod = await import("@arnilo/prism-providers/typesafe");
+      const mod = await import("@arnilo/prism-provider-typesafe");
       return mod.typeSafeModels;
     }
     case "laya": {
-      const mod = await import("@arnilo/prism-providers/laya");
+      const mod = await import("@arnilo/prism-provider-laya");
       return mod.layaModels;
     }
     case "zai": {
-      const mod = await import("@arnilo/prism-providers/zai");
+      const mod = await import("@arnilo/prism-provider-zai");
       return mod.zaiModels;
     }
     case "hyper": {
-      const mod = await import("@arnilo/prism-providers/hyper");
+      const mod = await import("@arnilo/prism-provider-hyper");
       return mod.hyperModels;
     }
     case "mock": {
@@ -818,7 +820,7 @@ function readMockScript(path: string): ProviderEvent[][] {
   return turns;
 }
 
-function createMockScriptProvider(turns: readonly ProviderEvent[][]): AIProvider {
+function createMockScriptProvider(turns: readonly ProviderEvent[][]): ModelProvider {
   let turn = 0;
   return {
     id: "mock",
@@ -932,7 +934,7 @@ export function validateThinkingLevel(model: Pick<ModelConfig, "capabilities">, 
 // Dynamic Provider Instantiation
 // ---------------------------------------------------------------------------
 
-export async function resolveProvider(model: ModelConfig, options: ProviderResolutionOptions = {}): Promise<AIProvider> {
+export async function resolveProvider(model: ModelConfig, options: ProviderResolutionOptions = {}): Promise<ModelProvider> {
   const providerId = model.provider.toLowerCase();
 
   if (providerId === "mock") {
@@ -984,23 +986,26 @@ export async function resolveProvider(model: ModelConfig, options: ProviderResol
  */
 export interface ProviderCache {
   /** Synchronous read for `ProviderResolver`; `undefined` until primed. */
-  get(model: Pick<ModelConfig, "provider">): AIProvider | undefined;
+  get(model: Pick<ModelConfig, "provider">): ModelProvider | undefined;
   /** Resolves (at most once per provider id, concurrent calls share one attempt) and caches. */
-  prime(model: ModelConfig): Promise<AIProvider>;
+  prime(model: ModelConfig): Promise<ModelProvider>;
   /** Host-supplied instance (tests/overrides); skips credential resolution for that id. */
-  seed(providerId: string, provider: AIProvider): void;
+  seed(providerId: string, provider: ModelProvider): void;
   /** Drops every instance and in-flight attempt (credential changes, `/logout`). */
   clear(): void;
+  /** Provider ids with an instance right now. */
+  ids(): readonly string[];
   readonly size: number;
 }
 
 /** Builds a {@link ProviderCache} over one credential source set. */
 export function createProviderCache(options: ProviderResolutionOptions = {}): ProviderCache {
-  const instances = new Map<string, AIProvider>();
-  const inflight = new Map<string, Promise<AIProvider>>();
+  const instances = new Map<string, ModelProvider>();
+  const inflight = new Map<string, Promise<ModelProvider>>();
 
   return {
     get: (model) => instances.get(model.provider),
+    ids: () => [...instances.keys()],
     get size() {
       return instances.size;
     },
@@ -1035,6 +1040,23 @@ export function createProviderCache(options: ProviderResolutionOptions = {}): Pr
       return attempt;
     },
   };
+}
+
+/**
+ * A package that registers one forwarding provider per shipped provider id (plus the ids the cache holds
+ * now and any `extraIds`), so the agent resolves a run's provider through the kernel registry while the
+ * cache keeps constructing and sharing the real instances. A forwarder primes its provider on first use.
+ */
+export function providerCachePackage(cache: ProviderCache, extraIds: readonly string[] = []): PackageInstance {
+  const ids = [...new Set([...SHIPPED_PROVIDERS.map((descriptor) => descriptor.id), ...cache.ids(), ...extraIds])];
+  const forwarders: ModelProvider[] = ids.map((id) => ({
+    id,
+    async *generate(request) {
+      const provider = cache.get(request.model) ?? (await cache.prime(request.model));
+      yield* provider.generate(request);
+    },
+  }));
+  return providerPackage("prism-code-providers", forwarders, "Prism Code provider cache");
 }
 
 // ---------------------------------------------------------------------------

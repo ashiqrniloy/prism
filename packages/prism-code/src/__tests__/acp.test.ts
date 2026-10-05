@@ -5,14 +5,15 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import { type AIProvider, createMockProvider, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { type ModelProvider, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createPrismCodeAcpAgent, createProviderCache, type PrismCodeConfig, selectMcpServers } from "../index.js";
 
 async function makeTempDir(prefix: string): Promise<string> {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
-function writeToolProvider(): AIProvider {
+function writeToolProvider(): ModelProvider {
   let turn = 0;
   return {
     id: "acp-write-provider",
@@ -121,7 +122,7 @@ describe("ACP Server (prism-code acp)", () => {
         model: { provider: "mock", model: "default" },
       };
 
-      // No `provider` option: the agent must resolve through providerSource into this cache.
+      // No `provider` option: the agent must resolve through the provider package into this cache.
       const cache = createProviderCache();
       cache.seed(
         "mock",

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { Session, ContextMeter, Message, ModelConfig } from "../index.js";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta, resolveInputCap } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL: ModelConfig = { provider: "mock", model: "claude-sonnet-4.5", limits: { contextWindow: 100_000 } };
 const CAP = resolveInputCap({}, MODEL);
@@ -25,7 +26,7 @@ async function createSession(id: string): Promise<Session> {
     id: `${id}-agent`,
     slots: { store: createMemorySessionStore() },
     model: MODEL,
-    provider: silentProvider,
+    packages: [providerPackage("test-provider", [silentProvider])],
   });
   return await agent.session({ id, create: true });
 }

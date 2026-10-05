@@ -17,8 +17,9 @@ function sourceFiles(dir: string, predicate: (path: string) => boolean): string[
   });
 }
 
-// Core runtime source excludes the openai-compatible shim (a sanctioned provider seam)
-// and the plan 091 model-family ratio table. That table is the one sanctioned home for
+// Core runtime source excludes `src/provider-kit/` — the sanctioned provider seam
+// (plan 151/152), which carries the protocol wire mappings (OpenAI-compatible,
+// Anthropic Messages, System One) by design — and the plan 091 model-family ratio table. That table is the one sanctioned home for
 // provider-family names in core: they are chars/token keys and model-id patterns, never
 // behavior branches, and every other core file stays literal-free. `src/cli-providers.ts` is the CLI's `--provider`
 // table (package names and env keys), a second sanctioned home until the runner modes go in Phase 11.
@@ -27,14 +28,14 @@ const runtimeFiles = sourceFiles(
   "src",
   (path) =>
     path.endsWith(".ts") &&
-    !path.includes("src/__tests__") &&
-    !path.includes("src/providers/openai-compatible") &&
+    !path.includes("__tests__") &&
+    !path.includes("src/provider-kit/") &&
     !PROVIDER_LITERAL_SEAMS.has(path),
 );
 const runtimeText = runtimeFiles.map((path) => readFileSync(path, "utf8")).join("\n");
 const runtimeTextLower = runtimeText.toLowerCase();
 
-const allSrcFiles = sourceFiles("src", (path) => path.endsWith(".ts") && !path.includes("src/__tests__"));
+const allSrcFiles = sourceFiles("src", (path) => path.endsWith(".ts") && !path.includes("__tests__"));
 const allSrcText = allSrcFiles.map((path) => readFileSync(path, "utf8")).join("\n");
 
 // Contracts split at 0.1.4 into contracts-core / contracts-run-state / contracts-protocol
@@ -112,7 +113,7 @@ describe("core source boundaries", () => {
 
 describe("core contract seams stay domain-agnostic", () => {
   it("provider resolver contract has no domain vocabulary", () => {
-    const providersText = readFileSync("src/providers.ts", "utf8");
+    const providersText = readFileSync("src/models/providers.ts", "utf8");
     const resolverText = [
       ...providersText.matchAll(/export[\s\S]*?(?:ProviderResolver|createProviderResolver)[\s\S]*?(?:\nexport|\n}\n|$)/g),
       ...contractsText.matchAll(/ProviderResolver[\s\S]*?(?:\nexport|\n;|\n})/g),

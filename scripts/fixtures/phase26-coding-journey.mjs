@@ -4,7 +4,7 @@
  * so every package import resolves from the consumer node_modules — never
  * workspace source paths. Every leg uses real host services:
  *
- *   provider    real LLM provider call through the Prism AIProvider contract
+ *   provider    real LLM provider call through the Prism ModelProvider contract
  *               (PRISM_CODING_PROVIDER = absolute path to a host adapter module
  *               exporting createJourneyProvider() -> { provider, request } and
  *               optionally journeySecrets() -> string[] for the leak scan)
@@ -45,7 +45,7 @@ import {
   createToolRegistry,
   dispatchToolCall,
 } from "@arnilo/prism";
-import { collectProviderEvents } from "@arnilo/prism/testing/provider-conformance";
+import { collectProviderEvents , providerPackage } from "@arnilo/prism/provider-kit";
 import { ACP_RUN_CANCEL_NAMESPACE, createAcpRunRecovery, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
 import {
   assertCodingPatchAccepted,
@@ -63,7 +63,7 @@ import {
 } from "@arnilo/prism-coding-tools/agent";
 import { createCodingApprovalPolicy, createDockerSandbox } from "@arnilo/prism-coding-tools/security";
 import { createArtifactService } from "@arnilo/prism-core/runtime/server";
-import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { createBrowserManager, createBrowserTools } from "@arnilo/prism-web-tools/browser";
 
 const env = process.env;
@@ -301,7 +301,7 @@ try {
       hooks: askEveryTool(),
       id: "journey-agent",
       model: request.model,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints: pg.checkpoints, definitionRevision: "journey-1" },
       tools,

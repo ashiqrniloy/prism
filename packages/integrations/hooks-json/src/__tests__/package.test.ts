@@ -3,8 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import { createAgent, createMockProvider, PackageLoadError, providerDone, providerTextDelta } from "@arnilo/prism";
-import { packageConformance } from "@arnilo/prism/testing";
+import { createAgent, PackageLoadError, providerDone, providerTextDelta } from "@arnilo/prism";
+import { packageConformance , mockProvider } from "@arnilo/prism/testing";
 import hooksJsonDefault, { hookCommandHash, hooksJson } from "../index.js";
 
 const node = process.execPath;
@@ -23,15 +23,12 @@ describe("@arnilo/prism-hooks-json", () => {
     try {
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
-        packages: [
-          hooksJson({
+        packages: [hooksJson({
             config: {
               SessionStart: [{ hooks: [{ type: "command", command, args }] }],
               allowCommands: { [command]: hookCommandHash({ type: "command", command, args }) },
             },
-          }),
-        ],
+          }), mockProvider([[providerTextDelta("ok"), providerDone()]])],
       });
       const session = await (await agent.session());
       await session.ready();
@@ -49,8 +46,7 @@ describe("@arnilo/prism-hooks-json", () => {
       () =>
         createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: createMockProvider([providerDone()]),
-          packages: [hooksJson({ config: { Stop: [{ hooks: [{ type: "command", command: node, args: ["-e", "0"] }] }] } })],
+          packages: [hooksJson({ config: { Stop: [{ hooks: [{ type: "command", command: node, args: ["-e", "0"] }] }] } }), mockProvider([[providerDone()]])],
         }),
       (error: unknown) => error instanceof PackageLoadError && error.code === "config_invalid",
     );
@@ -66,16 +62,13 @@ describe("@arnilo/prism-hooks-json", () => {
     try {
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
-        packages: [
-          hooksJson({
+        packages: [hooksJson({
             config: {
               env: { HOOK_SECRET: "env:HOOK_SECRET" },
               UserPromptSubmit: [{ hooks: [{ type: "command", command, args }] }],
               allowCommands: { [command]: hookCommandHash({ type: "command", command, args }) },
             },
-          }),
-        ],
+          }), mockProvider([[providerTextDelta("ok"), providerDone()]])],
       });
       const session = await (await agent.session());
       const events: unknown[] = [];

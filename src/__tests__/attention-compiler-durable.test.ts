@@ -28,6 +28,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /**
  * Durable mid-run compaction (plan 086 T3): the fold ledger is summarized once, re-applied from
@@ -107,7 +108,7 @@ async function foldingAgent(input: { readonly requests: ProviderRequest[]; reado
     id: "durable-fold",
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         input.requests.push(request);
@@ -124,7 +125,7 @@ async function foldingAgent(input: { readonly requests: ProviderRequest[]; reado
         yield providerTextDelta("investigation complete");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {

@@ -627,7 +627,7 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
   const tasks = manifest.tasks;
   const read = (f) => readFileSync(resolveFile(f), "utf8");
   if (tasks.task2.startsWith("done")) {
-    const base = read("src/providers/openai-compatible.ts");
+    const base = read("src/provider-kit/openai-compatible.ts");
     assert.ok(base.includes("strictCompletion"), "openai-compatible.ts still ships the strictCompletion option");
     assert.ok(read("src/__tests__/openai-compatible.test.ts").includes("truncated"), "base conformance covers truncated-stream rejection");
     assert.ok(
@@ -645,8 +645,8 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     }
   }
   if (tasks.task3.startsWith("done")) {
-    assert.ok(read("src/providers/transport.ts").includes("readBoundedResponseJson"), "transport.ts ships the bounded JSON reader");
-    assert.ok(read("src/providers/transport.ts").includes("response_body_shape"), "transport.ts ships the JSON-shape error code");
+    assert.ok(read("src/provider-kit/transport.ts").includes("readBoundedResponseJson"), "transport.ts ships the bounded JSON reader");
+    assert.ok(read("src/provider-kit/transport.ts").includes("response_body_shape"), "transport.ts ships the JSON-shape error code");
     for (const models of [
       "packages/prism-providers/src/alibaba/models.ts",
       "packages/prism-providers/src/anthropic/models.ts",
@@ -694,8 +694,8 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     }
   }
   if (tasks.task5.startsWith("done")) {
-    assert.ok(existsSync(url("../src/oauth-device-code.ts")), "oauth-device-code.ts exists");
-    assert.ok(read("src/oauth-device-code.ts").includes("pollDeviceCodeToken"), "oauth-device-code.ts ships the shared poll helper");
+    assert.ok(existsSync(url("../src/provider-kit/oauth-device-code.ts")), "oauth-device-code.ts exists");
+    assert.ok(read("src/provider-kit/oauth-device-code.ts").includes("pollDeviceCodeToken"), "oauth-device-code.ts ships the shared poll helper");
     assert.ok(
       read("packages/prism-providers/src/openai/oauth.ts").includes("pollDeviceCodeToken"),
       "OpenAI oauth.ts calls the shared helper",

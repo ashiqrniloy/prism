@@ -17,7 +17,7 @@ const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // name-pattern separation from capability packages (e.g. prism-mcp), so the set
 // is explicit here; the docs tests assert it against the generated artifact.
 // Plan 054 Task 8: npm profile manifests are deleted; families only.
-export const PRISM_FAMILY = ["@arnilo/prism-channels", "@arnilo/prism-coding-tools", "@arnilo/prism-core", "@arnilo/prism-providers"];
+export const PRISM_FAMILY = ["@arnilo/prism-channels", "@arnilo/prism-coding-tools", "@arnilo/prism-core"];
 
 export function expandWorkspaceDirs(root, globs) {
   const dirs = [];
@@ -142,18 +142,14 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
   const names = pkgs.map((p) => p.name).sort();
 
   const providerManifests = names.filter((n) => n.startsWith("@arnilo/prism-provider-"));
-  // Plan 054 Task 6: provider adapters may live as subpaths of the family
-  // package instead of standalone manifests; the taxonomy counts both. The
-  // shared decision-call surface is a host helper, not a model adapter, so it
-  // stays out of the adapter count and the generated adapter tables.
-  const providerSubpaths = providerAdapterSubpaths(byName.get("@arnilo/prism-providers")?.exports ?? {});
-  const providers = [...providerManifests, ...providerSubpaths].sort();
+  // Plan 152 Task 8: the provider-family workspace is deleted, so every
+  // first-party adapter is a standalone manifest and no adapter is a subpath.
+  const providers = [...providerManifests].sort();
   const family = names.filter((n) => PRISM_FAMILY.includes(n));
   const capability = names.filter((n) => !providerManifests.includes(n) && !family.includes(n));
   const codeWithPeer = names.filter((n) => byName.get(n).peerDependencies?.["@arnilo/prism"] !== undefined);
   const pureManifest = names.filter((n) => !codeWithPeer.includes(n));
 
-  const providersDeps = Object.keys(byName.get("@arnilo/prism-providers")?.dependencies ?? {}).sort();
   const internalRanges = [];
   for (const pkg of pkgs) {
     for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
@@ -180,13 +176,7 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
     providers,
     family,
     capability,
-    umbrella: {
-      "prism-providers": {
-        deps: providersDeps,
-        subpaths: providerSubpaths,
-        omitsProviders: providerManifests.filter((n) => !providersDeps.includes(n)),
-      },
-    },
+    umbrella: {},
     profiles: {},
     peerPolicy: {
       decision: independent ? "B" : "A",
@@ -210,9 +200,10 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-channels":
     "family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal",
   "@arnilo/prism-core": "family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths",
-  "@arnilo/prism-providers": "family — all provider adapters as `/<adapter>` subpaths",
   "@arnilo/prism-acp-agent": "capability — ACP adapter",
   "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
+  "@arnilo/prism-credentials-keyring":
+    "capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence",
   "@arnilo/prism-hooks-json":
     "capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end",
   "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
@@ -227,22 +218,6 @@ export const PACKAGE_NOTES = {
 
 const blockBegin = (type) => `<!-- generated:package-truth:${type} begin -->`;
 const blockEnd = (type) => `<!-- generated:package-truth:${type} end -->`;
-
-/**
- * Family subpaths that are not provider adapters. `./decisions` is the
- * host-facing typed System One decision call, not a model adapter, so it must
- * not enter the adapter count, the generated adapter tables, or the phase37
- * matrix.
- */
-export const NON_ADAPTER_PROVIDER_SUBPATHS = new Set(["./decisions"]);
-
-/** Provider-family adapters from a `package.json` exports object, as full specifiers. */
-export function providerAdapterSubpaths(exportsField) {
-  return Object.keys(exportsField ?? {})
-    .filter((key) => key !== "." && !NON_ADAPTER_PROVIDER_SUBPATHS.has(key))
-    .map((key) => `@arnilo/prism-providers${key.slice(1)}`)
-    .sort();
-}
 
 // The canonical inventory table: root + every workspace manifest, with version
 // and editorial notes. Reused byte-identical across README, docs/index.md, and
@@ -264,18 +239,18 @@ export function renderInventoryBlock(truth) {
   ].join("\n");
 }
 
-// The provider-adapter table: every first-party adapter as a subpath of the
-// providers family. Reused byte-identical on docs/release-and-install.md and
+// The provider-adapter table: every first-party adapter as its own package.
+// Reused byte-identical on docs/release-and-install.md and
 // docs/provider-packages.md.
 export function renderProvidersBlock(truth) {
-  const version = truth.versions["@arnilo/prism-providers"] ?? "?";
   return [
     blockBegin("providers"),
-    `**${truth.counts.provider} provider adapters** — first-party adapters ship as \`@arnilo/prism-providers/<adapter>\` subpaths in one tarball (importing one never evaluates another):`,
+    // Plan 152 Task 8: the family workspace is deleted, so every adapter is standalone.
+    `**${truth.counts.provider} provider adapters** — first-party adapters ship as standalone \`@arnilo/prism-provider-*\` packages (importing one never evaluates another):`,
     "",
     "| adapter package | version |",
     "| --- | --- |",
-    ...truth.providers.map((p) => `| \`${p}\` | ${version} |`),
+    ...truth.providers.map((p) => `| \`${p}\` | ${truth.versions[p] ?? "?"} |`),
     blockEnd("providers"),
   ].join("\n");
 }

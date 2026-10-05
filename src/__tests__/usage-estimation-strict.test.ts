@@ -22,6 +22,7 @@ import {
   providerError,
   providerTextDelta,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL: ModelConfig = { provider: "mock", model: "claude-sonnet-4.5", limits: { contextWindow: 100_000 } };
 const REPORTED = { inputTokens: 1_234, outputTokens: 56, totalTokens: 1_290 };
@@ -66,7 +67,7 @@ async function createStrictSession(
     id: `usage-${usageEstimation}`,
     slots: { store: createMemorySessionStore() },
     model: MODEL,
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     usageEstimation,
     runLedger: ledger,
     ...(costCatalog === undefined ? {} : { costCatalog }),
@@ -207,7 +208,7 @@ describe('usageEstimation: "strict" (plan 103 T5)', () => {
       id: "usage-bogus",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: scriptedProvider([providerDone()], { count: 0 }),
+      packages: [providerPackage("test-provider", [scriptedProvider([providerDone()], { count: 0 })])],
       usageEstimation: "sometimes" as never,
     });
     await assert.rejects(

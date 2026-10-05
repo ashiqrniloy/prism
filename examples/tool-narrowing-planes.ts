@@ -1,4 +1,5 @@
 import { type AgentEvent, createAgent, providerDone, providerTextDelta, type ContextDraft, type ToolDefinition } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 type Plane = "knowledge" | "metric" | "scenario" | "objects";
 
@@ -33,7 +34,7 @@ export async function demo() {
   let generate = 0;
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         generate += 1;
@@ -48,7 +49,7 @@ export async function demo() {
         }
         yield providerDone();
       },
-    },
+    }])],
     tools: { add: [tool("wiki.search"), tool("wiki.read"), tool("metrics.query"), tool("scenario.run"), tool("objects.list")] },
     hooks: (hooks) => {
       let plane: Plane = "objects";

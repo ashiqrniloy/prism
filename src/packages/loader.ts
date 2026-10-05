@@ -1,4 +1,24 @@
-import type { AgentConfig, AgentEvent, AIProvider, JsonObject, JsonValue, ModelConfig, Skill, ToolDefinition } from "../contracts.js";
+import type {
+  AgentConfig,
+  AgentEvent,
+  CredentialContext,
+  ModelProvider,
+  JsonObject,
+  JsonValue,
+  ModelConfig,
+  ModelRef,
+  ModelSpec,
+  ProviderEvent,
+  ProviderRequest,
+  ProviderResolver,
+  Secret,
+  Skill,
+  ToolDefinition,
+} from "../contracts.js";
+import { BUILTIN_PROVIDER_ID, createBuiltinProvider } from "../models/builtin.js";
+import { normalizeStopReason } from "../models/events.js";
+import { parseModelRef } from "../models/ref.js";
+import { mergeRetry, retryLoop } from "../models/retry.js";
 import type { HookBus, HookRegistrar } from "../hooks/index.js";
 import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, Logger } from "../host/types.js";
 import { errorToErrorInfo, redactSecrets, type SecretRedactor } from "../redaction.js";
@@ -31,9 +51,11 @@ export interface LoadPackagesOptions {
    * The host's own contributions and overrides: collision checks for tools and skills, `disable`, and the
    * provider resolution `models.client` shares with sessions. Never mutated.
    */
-  readonly hostConfig?: Partial<Pick<AgentConfig, "model" | "tools" | "skills" | "provider" | "providerSource" | "disable">>;
+  readonly hostConfig?: Partial<Pick<AgentConfig, "model" | "tools" | "skills" | "retry" | "disable">>;
   /** Values resolved through `credentials.resolve`. Shared with the hook bus so its errors are redacted too. */
   readonly secrets?: string[];
+  /** The built-in provider's `fetch`; defaults to the global. */
+  readonly fetch?: typeof fetch;
   /** Reads a `skills.addDir` directory. Only called when a package asked for one. */
   readonly readSkillDir?: (path: string) => Promise<readonly Skill[]>;
   /** Agent-scoped fan-out (`agent.subscribe()`): receives each `package.status` after it is recorded and redacted. */
@@ -91,11 +113,11 @@ export interface LoadedPackages {
   /** The same skills with the package that registered each. */
   skillEntries(): readonly { readonly owner: string; readonly skill: Skill }[];
   /** A provider a package registered for this `provider` id. */
-  provider(id: string): AIProvider | undefined;
-  /** Every provider the agent can resolve without a `providerSource`: the host's direct one, then packages' in load order. */
-  providers(): readonly { readonly owner: string; readonly provider: AIProvider }[];
-  /** The agent's provider resolution: a direct provider, the `providerSource`, then a package's. Throws `Unknown provider: <id>`. */
-  resolveProvider(model: ModelConfig): AIProvider;
+  provider(id: string): ModelProvider | undefined;
+  /** Every provider the agent can resolve: the built-in first, then packages' in load order. */
+  providers(): readonly { readonly owner: string; readonly provider: ModelProvider }[];
+  /** The agent's provider resolution: the model's provider id picks from the registry. Throws `Unknown provider: <id>`. */
+  resolveProvider(model: ModelConfig): ModelProvider;
   /** Commands packages registered, after `disable`. */
   commands(): readonly PackageCommandEntry[];
   /** Host tool and skill names `disable` removed. They stay in the host's registry and are filtered from every view. */
@@ -119,6 +141,7 @@ export interface LoadedPackages {
 }
 
 const HOST_OWNER = "host";
+const KERNEL_OWNER = "kernel";
 const MAX_STATUS_NOTES = 200;
 const MAX_NOTE_LENGTH = 1024;
 const MAX_EVENT_NAME = 128;
@@ -288,7 +311,10 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   const toolEntries = new Map<string, PackageToolEntry>();
   const packageSkills = createSkillRegistry([], { duplicate: "error" });
   const skillOwners = new Map<string, string>();
-  const providerEntries = new Map<string, { readonly owner: string; readonly provider: AIProvider }>();
+  // The kernel's own provider is entry zero, so a package registering its id fails as `provider_conflict`.
+  const providerEntries = new Map<string, { readonly owner: string; readonly provider: ModelProvider }>([
+    [BUILTIN_PROVIDER_ID, { owner: KERNEL_OWNER, provider: createBuiltinProvider({ resolveCredential: (ref) => resolveCredentialRef(ref), fetch: options.fetch }) }],
+  ]);
   const commandEntries = new Map<string, PackageCommandEntry>();
   const disabled = { tools: new Set<string>(), skills: new Set<string>() };
   let usesSessionState = false;
@@ -381,7 +407,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     if (response.status !== "answered") return response;
     const value = response.value;
     if (value !== undefined && value !== "") {
-      await resolver.store(request.ref, value);
+      await resolver.store(request.ref, { type: "api_key", value }, { package: owner });
       if (!secrets.includes(value)) secrets.push(value);
     }
     return { status: "answered", value: undefined };
@@ -441,7 +467,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     skillOwners.set(skill.name, owner);
   };
 
-  const registerProvider = (owner: string, provider: AIProvider): void => {
+  const registerProvider = (owner: string, provider: ModelProvider): void => {
     if (
       typeof provider !== "object" ||
       provider === null ||
@@ -484,12 +510,57 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     commandEntries.set(command.name, { name: command.name, description: command.description, package: owner, command });
   };
 
-  /** The agent's provider resolution without a run: a direct provider, the `providerSource`, then a package's provider. */
-  const resolveProvider = (model: ModelConfig): AIProvider => {
-    const provider = hostConfig.provider ?? hostConfig.providerSource?.(model) ?? providerEntries.get(model.provider)?.provider;
+  /** The credentials slot, resolved on use. A value it returns is redacted from everything this agent raises from then on. */
+  const resolveCredentialRef = async (ref: string, ctx: CredentialContext = {}): Promise<Secret | undefined> => {
+    const assigned = (options.slotAssignments ?? {}) as Partial<Record<SlotName, unknown>>;
+    const resolver = slots.resolve("credentials", assigned.credentials as never);
+    const secret = await resolver.resolve(ref, ctx);
+    if (secret?.value && !secrets.includes(secret.value)) secrets.push(secret.value);
+    return secret;
+  };
+
+  /** The agent's one provider resolution, shared by runs, `models.client` and `agent.models.resolve`: the model's provider id picks from the registry (the built-in first, then packages in load order). */
+  const resolveProvider = (model: ModelConfig): ModelProvider => {
+    const provider = providerEntries.get(model.provider)?.provider;
     if (!provider) throw new Error(`Unknown provider: ${model.provider}`);
     return provider;
   };
+
+  /**
+   * One `models.client` turn with the agent's `retry` policy, the same loop a run turn uses. A failure is
+   * retried only before the first event reaches the caller; after that the stream cannot be unsent, so a
+   * failure surfaces as a redacted `error` event. Stop reasons land on the closed taxonomy.
+   */
+  async function* generateWithRetry(model: ModelSpec, request: Omit<ProviderRequest, "model">): AsyncGenerator<ProviderEvent> {
+    const retry = mergeRetry(hostConfig.retry, undefined);
+    const known = (): readonly string[] => [...secrets, ...((retry?.secrets ?? []) as string[])];
+    const open = async (): Promise<{ first: IteratorResult<ProviderEvent>; iterator: AsyncIterator<ProviderEvent> }> => {
+      const iterator = resolveProvider(model).generate({ ...request, model })[Symbol.asyncIterator]();
+      const first = await iterator.next();
+      if (!first.done && first.value.type === "error") throw Object.assign(new Error(first.value.error.message), first.value.error);
+      return { first, iterator };
+    };
+    const { first, iterator } = await retryLoop(open, {
+      retry,
+      sessionId: "",
+      runId: "",
+      signal: request.signal,
+      classify: (error) => ({ info: errorToErrorInfo(error, known()) }),
+    });
+    const next = (event: ProviderEvent): ProviderEvent => {
+      if (event.type === "error") return { ...event, error: redactSecrets(event.error, known()) };
+      return event.type === "done" && event.stopReason !== undefined ? { ...event, stopReason: normalizeStopReason(event.stopReason) } : event;
+    };
+    try {
+      let step = first;
+      while (!step.done) {
+        yield next(step.value);
+        step = await iterator.next();
+      }
+    } catch (error) {
+      yield { type: "error", error: errorToErrorInfo(error, known()) };
+    }
+  }
 
   const emitPackageEvent = (owner: string, name: string, data: JsonValue): void => {
     if (typeof name !== "string" || name.length === 0 || name.length > MAX_EVENT_NAME) {
@@ -540,22 +611,18 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       providers: { register: (provider) => registerProvider(name, provider) },
       commands: { register: (command) => registerCommand(name, command) },
       models: {
-        client(ref?: ModelConfig): ModelClient {
+        client(ref?: ModelRef): ModelClient {
           requireCapability(name, entry.capabilities, "models", "models.client");
-          const model = ref ?? hostConfig.model;
-          if (!model) throw new TypeError("models.client needs a model reference: the agent has none configured");
-          return { model, generate: (request) => resolveProvider(model).generate({ ...request, model }) };
+          const configured = ref ?? hostConfig.model;
+          if (!configured) throw new TypeError("models.client needs a model reference: the agent has none configured");
+          const model = parseModelRef(configured);
+          return { model, generate: (request) => generateWithRetry(model, request) };
         },
       },
       credentials: {
-        async resolve(request) {
+        async resolve(ref: string) {
           requireCapability(name, entry.capabilities, "credentials", "credentials.resolve");
-          const assigned = (options.slotAssignments ?? {}) as Partial<Record<SlotName, unknown>>;
-          const resolver = slots.resolve("credentials", assigned.credentials as never);
-          const credential = await resolver.resolve(typeof request === "string" ? { name: request } : request);
-          // From here on the value is redacted from every event, note, log, and error this agent raises.
-          if (credential?.value && !secrets.includes(credential.value)) secrets.push(credential.value);
-          return credential;
+          return resolveCredentialRef(ref, { package: name });
         },
       },
       state: {
@@ -721,7 +788,6 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     skillEntries: () => packageSkills.list().map((skill) => ({ owner: skillOwners.get(skill.name) ?? "", skill })),
     provider: (id) => providerEntries.get(id)?.provider,
     providers: () => [
-      ...(hostConfig.provider ? [{ owner: HOST_OWNER, provider: hostConfig.provider }] : []),
       ...[...providerEntries.values()].map((entry) => ({ owner: entry.owner, provider: entry.provider })),
     ],
     resolveProvider,

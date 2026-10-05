@@ -12,6 +12,7 @@ import {
   type HookRegistrar,
   type RunEndPayload,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /**
  * Agent whose every turn answers in text. A `run.end` handler runs after the loop ends naturally;
@@ -26,14 +27,14 @@ async function textAgent(options: {
     id: "run-end",
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         options.requests.push(request);
         yield providerTextDelta(`turn ${options.requests.length}`);
         yield providerDone();
       },
-    },
+    }])],
     ...(options.onEnd ? { hooks: options.onEnd } : {}),
     ...(options.limits ? { limits: options.limits } : {}),
   });
@@ -162,14 +163,14 @@ describe("run.end continuations", () => {
       id: "run-end",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(request) {
           requests.push(request);
           yield providerTextDelta(`turn ${requests.length}`);
           yield providerDone();
         },
-      },
+      }])],
       hooks: (hooks) => {
         // A steered continuation carrying "deferred" is dropped by `run.input`.
         hooks.on("run.input", (messages) =>

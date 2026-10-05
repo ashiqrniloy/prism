@@ -132,7 +132,14 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   assert.equal(coverage.mode, "baseline", "flip to full after plans/064 Tasks 4-9 land");
   const { errors, summary } = computeCoverage(REPO_ROOT, coverage, { mode: coverage.mode });
   assert.deepEqual(errors, [], errors.join("\n"));
-  assert.equal(summary.total, 113); // 114 minus the retired extension conformance subpath (plan 147 Task 6)
+  // 114 minus the retired extension conformance subpath (plan 147 Task 6), the five `./providers/*`
+  // subpaths and `./testing/provider-conformance` (plan 151 Task 4), plus `./provider-kit` and the plan
+  // 150 `./manifest` surfaces; minus the five family subpaths plan 152 Task 5 retired
+  // (./commandcode, ./decisions, ./hyper, ./laya, ./typesafe), plus their four standalone packages;
+  // minus the six remaining family subpaths plan 152 Task 6 retired, plus the five cloud/adapter packages;
+  // plus the plan 152 Task 7 credentials-keyring package; minus the retired `./testing/session-store-conformance`
+  // subpath (plan 153 Task 2, folded into `./testing`).
+  assert.equal(summary.total, 108);
   assert.equal(summary.pending, 0, "Tasks 4-9 will re-introduce pending entries as planned suites register");
 });
 

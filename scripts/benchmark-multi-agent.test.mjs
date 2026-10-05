@@ -49,8 +49,14 @@ const ROW_NAMES = [
 function workspaceManifests() {
   const root = JSON.parse(readFileSync(join(here, "../package.json"), "utf8"));
   const names = [root.name];
+  // Grouped layout (plan 147/152): a `packages/<group>/` base holds packages one level deeper.
+  const manifests = [];
   for (const dir of readdirSync(join(here, "../packages"))) {
-    const manifest = join(here, "../packages", dir, "package.json");
+    const top = join(here, "../packages", dir);
+    if (existsSync(join(top, "package.json"))) manifests.push(join(top, "package.json"));
+    else for (const child of readdirSync(top)) manifests.push(join(top, child, "package.json"));
+  }
+  for (const manifest of manifests) {
     if (!existsSync(manifest)) continue;
     names.push(JSON.parse(readFileSync(manifest, "utf8")).name);
   }
@@ -66,7 +72,7 @@ describe("multi-agent runtime coverage and baselines", () => {
     const hasChannels = names.includes("@arnilo/prism-channels");
     const hasWorkFamily = packages.has("prism-work");
     const hasProvidersFamily = packages.has("prism-providers");
-    const expectedCount = hasWorkFamily ? 14 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
+    const expectedCount = hasWorkFamily ? 35 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
     assert.equal(names.length, expectedCount, `expected ${expectedCount} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
     for (const name of names) {
@@ -74,7 +80,27 @@ describe("multi-agent runtime coverage and baselines", () => {
       if (hasChannels && name === "@arnilo/prism-channels") continue;
       if (hasCodingTools && (name === "@arnilo/prism-coding-tools" || name === "@arnilo/prism-core")) continue;
       if (hasCore && name === "@arnilo/prism-core") continue;
-      if (name === "@arnilo/prism-hooks-json" || name === "@arnilo/prism-agent-sdk") continue; // plan 106 R4 / plan 134: covered by their own suites, not the multi-agent evidence matrix
+      // Covered by their own suites, not the frozen 0.3.3 multi-agent evidence matrix.
+      if (
+        name === "@arnilo/prism-hooks-json" ||
+        name === "@arnilo/prism-agent-sdk" ||
+        name === "@arnilo/prism-provider-anthropic" ||
+        name === "@arnilo/prism-provider-openai" ||
+        // Plan 152 Task 5: these four never shipped as a standalone 0.3 package either.
+        name === "@arnilo/prism-provider-commandcode" ||
+        name === "@arnilo/prism-provider-hyper" ||
+        name === "@arnilo/prism-provider-laya" ||
+        name === "@arnilo/prism-provider-typesafe" ||
+        // Plan 152 Task 6: same for the five cloud/adapter vendors.
+        name === "@arnilo/prism-provider-google" ||
+        name === "@arnilo/prism-provider-vertex" ||
+        name === "@arnilo/prism-provider-azure" ||
+        name === "@arnilo/prism-provider-bedrock" ||
+        name === "@arnilo/prism-provider-ai-sdk" ||
+        // Plan 152 Task 7: the keyring package never shipped as a 0.3 package either.
+        name === "@arnilo/prism-credentials-keyring"
+      )
+        continue;
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);
     }
     const classes = ["hot-path", "optional-in-run", "persistence-coordination", "setup-only"];

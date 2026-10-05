@@ -4,12 +4,12 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type AIProvider, createStaticTrustPolicy, type Message, type ProviderRequest, providerDone } from "@arnilo/prism";
+import { type ModelProvider, createStaticTrustPolicy, type Message, type ProviderRequest, providerDone } from "@arnilo/prism";
 import type { PrismCodeConfig } from "../config.js";
 import { assembleAppAgent } from "../headless.js";
 import { CODING_SYSTEM_PROMPT, resolvePrismCodeInstructions } from "../prompt.js";
 
-function createCapturingProvider(captured: ProviderRequest[]): AIProvider {
+function createCapturingProvider(captured: ProviderRequest[]): ModelProvider {
   return {
     id: "mock",
     async *generate(req: ProviderRequest) {

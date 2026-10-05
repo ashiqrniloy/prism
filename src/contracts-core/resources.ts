@@ -32,25 +32,30 @@ export interface CredentialRequest {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export interface Credential {
+/** A resolved secret (roadmap §2.5). The kernel never logs, event-stamps, or returns it to a package. */
+export interface Secret {
   readonly type: "bearer" | "api_key" | "basic" | "custom";
   readonly value: string;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export interface CredentialResolver {
-  resolve(request: CredentialRequest): Promise<Credential | undefined> | Credential | undefined;
-  /**
-   * Stores a value a host captured at an `env:`/`keyring:` ref (roadmap §2.3 `HostUi` `secret`).
-   * Optional: a resolver without it answers `unavailable` to a `secret` request, so the default
-   * `env:`-only resolver fails closed rather than holding a secret it cannot persist.
-   */
-  store?(ref: string, value: string): Promise<void> | void;
+/** Context for a credentials-slot call (roadmap §2.5). */
+export interface CredentialContext {
+  /** The package asking, when the kernel knows it. */
+  readonly package?: string;
+  /** Aborts a resolver that talks to a backend or a person. */
+  readonly signal?: AbortSignal;
 }
 
-export interface CredentialResolverSource {
-  readonly name: string;
-  readonly resolver: CredentialResolver;
+/**
+ * The `credentials` slot (roadmap §2.5): `resolve(ref, ctx)` for reads, plus optional `store` and
+ * `delete`. A resolver without `store` answers `unavailable` to a `secret` host request, so the
+ * default `env:`-only resolver fails closed rather than holding a secret it cannot persist.
+ */
+export interface CredentialResolver {
+  resolve(ref: string, ctx: CredentialContext): Promise<Secret | undefined> | Secret | undefined;
+  store?(ref: string, secret: Secret, ctx: CredentialContext): Promise<void> | void;
+  delete?(ref: string, ctx: CredentialContext): Promise<void> | void;
 }
 
 export interface OAuthLoginCallbacks {
@@ -76,10 +81,6 @@ export interface OAuthProvider {
   refresh?(credentials: OAuthCredentials): Promise<OAuthCredentials> | OAuthCredentials;
   /** Best-effort upstream revocation; the store delete is what fails closed locally. */
   revoke?(credentials: OAuthCredentials): Promise<void> | void;
-  getCredential?(credentials: OAuthCredentials): Promise<Credential | undefined> | Credential | undefined;
+  getCredential?(credentials: OAuthCredentials): Promise<Secret | undefined> | Secret | undefined;
   readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-export interface OAuthCredentialStore {
-  set(provider: string, credentials: OAuthCredentials): void | Promise<void>;
 }

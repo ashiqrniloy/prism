@@ -2,13 +2,13 @@
 
 ## What it does
 
-`@arnilo/prism-providers/openrouter` provides explicit, side-effect-free setup for the
+`@arnilo/prism-provider-openrouter` provides explicit, side-effect-free setup for the
 OpenRouter API-key provider with **app-controlled** model registration, routing
 passthrough, official `reasoning` controls, and Anthropic-style `cache_control`
 (plus sticky `session_id` routing).
 
 The package registers a provider, caller-supplied model metadata, and an
-`api_key` auth method through `createExtensionKernel().load([...])`. There is
+`api_key` auth method when the package is listed in `createAgent({ packages: [...] })`. There is
 **no bundled mega-catalog**. Optional `listOpenRouterModels()` lets hosts fetch
 the live official catalog and pass a filtered subset via `models:` — setup
 itself never fetches.
@@ -25,26 +25,31 @@ discovery, or real-network tests in CI defaults.
 ## Inputs / request
 
 ```ts
-import {
-  createOpenRouterProviderPackage,
-  defineOpenRouterModel,
-  listOpenRouterModels,
-} from "@arnilo/prism-providers/openrouter";
+import openrouter from "@arnilo/prism-provider-openrouter";
 
-createOpenRouterProviderPackage(options: OpenRouterProviderPackageOptions): ProviderPackage
-defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+openrouter(options?: OpenRouterProviderPackageOptions & OpenRouterProviderConfig = {}): PackageInstance
+
+// Named exports.
+createOpenRouterProvider(options?: OpenRouterProviderOptions): ModelProvider
 listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
-mapOpenRouterModel(entry: OpenRouterModelEntry): ModelConfig
+defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides the OpenRouter base URL. |
-| `appUrl` | `string` | App URL for attribution `HTTP-Referer` header. |
-| `appTitle` | `string` | App title for the `X-Title` attribution header. |
-| `models` | `readonly ModelConfig[]` | App-supplied model catalog (no default fetch). |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:OPENROUTER_API_KEY`. A literal value is rejected. |
+| `appUrl` | string | OpenRouter app URL (attribution header). |
+| `appTitle` | string | OpenRouter app title (attribution header). |
+| `baseUrl` | string | Official base; defaults to `https://openrouter.ai/api/v1`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `openrouter`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listOpenRouterModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 `OpenRouterModelConfig.compat.openRouterRouting` controls routing order /
 `data_collection`. `compat.reasoning` carries the official OpenRouter
@@ -78,34 +83,16 @@ Per-model routing + reasoning override:
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createOpenRouterProviderPackage,
-  defineOpenRouterModel,
-  listOpenRouterModels,
-} from "@arnilo/prism-providers/openrouter";
+import { createAgent } from "@arnilo/prism";
+import openrouter from "@arnilo/prism-provider-openrouter";
 
-// App-controlled registration (default — no fetch):
-const sonnet = defineOpenRouterModel({
-  model: "anthropic/claude-sonnet-4",
-  compat: {
-    openRouterRouting: { order: ["anthropic"], data_collection: "deny" },
-    openRouterCache: true,
-    reasoning: { effort: "medium" },
-  },
+const agent = await createAgent({
+  model: { provider: "openrouter", model: "anthropic/claude-sonnet-4" },
+  packages: [openrouter({ apiKey: "env:OPENROUTER_API_KEY", appTitle: "my-app" })],
 });
 
-// Optional live discovery — caller-gated, never run by setup:
-const live = await listOpenRouterModels({ apiKey: process.env.OPENROUTER_API_KEY });
-const filtered = live.filter((m) => m.model.startsWith("anthropic/"));
-
-const kernel = createExtensionKernel();
-await kernel.load([
-  createOpenRouterProviderPackage({
-    apiKey: process.env.OPENROUTER_API_KEY,
-    models: filtered.length ? filtered : [sonnet],
-  }),
-]);
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
@@ -165,7 +152,7 @@ await kernel.load([
 
 ```ts
 const models = await listOpenRouterModels({ apiKey, fetch, signal, baseUrl });
-createOpenRouterProviderPackage({ apiKey, models: models.filter(...) });
+openrouter({ apiKey, models: models.filter(...) });
 ```
 
 `mapOpenRouterModel` converts official per-token USD pricing to
@@ -188,7 +175,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit` helpers (`readSseData`, `readBoundedResponseText`).
 - No catalog fetch during setup; discovery is caller-gated and bounded.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and
@@ -210,7 +197,7 @@ OpenRouter models route through the `openai_reasoning` family with **API-derived
 ## Related APIs
 
 - [Model routing](../model-routing.md): optional allow-list/residency/budget/circuit facade and OpenRouter routing gate.
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   `ModelConfig`/`compat`, cache policy, caller-gated discovery.
 - [Thinking and reasoning](../thinking-and-reasoning.md): `applyThinkingLevel`
   / `openai_reasoning` family for OpenRouter.

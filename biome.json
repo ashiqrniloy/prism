@@ -1,9 +1,19 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/dist", "!**/node_modules", "!**/coverage", "!**/*.json"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/*.json"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -34,7 +44,9 @@
         "noVoidTypeReturn": "off",
         "useYield": "off"
       },
-      "complexity": { "noExcessiveCognitiveComplexity": "off" },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off"
+      },
       "style": {
         "useImportType": "off",
         "noNonNullAssertion": "error",
@@ -44,48 +56,136 @@
   },
   "overrides": [
     {
-      "includes": ["src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["examples/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "examples/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/acp-agent/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/acp-agent/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/ag-ui/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/ag-ui/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/mcp/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/mcp/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/memory/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/memory/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/prism-work/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/prism-work/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/prism-coding-tools/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/prism-coding-tools/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/prism-core/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/prism-core/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/prism-providers/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/providers/*/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
-      "includes": ["packages/web-tools/src/**"],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "off" } } }
+      "includes": [
+        "packages/web-tools/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
     },
     {
       "includes": [
@@ -98,7 +198,13 @@
         "packages/prism-coding-tools/src/security/sandbox-fs-operations.ts",
         "packages/prism-coding-tools/src/security/sandbox-tar.ts"
       ],
-      "linter": { "rules": { "style": { "noNonNullAssertion": "error" } } }
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "error"
+          }
+        }
+      }
     }
   ]
 }

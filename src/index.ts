@@ -342,16 +342,8 @@ export {
   encodeConversationReplayCursor,
   HARD_MAX_CONVERSATION_CURSOR_BYTES,
 } from "./conversations.js";
-export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js";
-export {
-  createChainedCredentialResolver,
-  createEnvCredentialResolver,
-  createExplicitCredentialResolver,
-  createMemoryCredentialStore,
-  refreshOAuthCredential,
-  resolveCredentialValue,
-  revokeOAuthCredential,
-} from "./credentials.js";
+export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js";
+export { resolveCredentialValue } from "./credentials/index.js";
 export type { DelegatedAgentStepInput } from "./delegated-agent-step.js";
 export {
   createDelegatedAgentStep,
@@ -558,18 +550,10 @@ export { assembleProviderInput, createDefaultInputBuilder, EMPTY_TOOL_RESULT_TEX
 export type { ContextSource } from "./context-build.js";
 export { registerContextSources, withContextBlocks } from "./context-build.js";
 export { createMemoryLeaseStore, LEASE_CONFLICT_CODE, LeaseConflictError } from "./leases.js";
-export type { MockProviderOptions } from "./mock-provider.js";
-export { createMockProvider } from "./mock-provider.js";
-export type { ModelRegistry, ModelRegistryOptions } from "./models.js";
-export { createModelRegistry } from "./models.js";
-export {
-  abortableSleep,
-  type OAuthTokenSuccessPayload,
-  type PollDeviceCodeTokenOptions,
-  pollDeviceCodeToken,
-  redactOAuthError,
-  throwIfAborted,
-} from "./oauth-device-code.js";
+export { ModelRefError, parseModelRef } from "./models/ref.js";
+export { CredentialUnavailableError } from "./models/builtin.js";
+export type { ModelRegistry, ModelRegistryOptions } from "./models/registry.js";
+export { createModelRegistry } from "./models/registry.js";
 export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 export type {
   ApplyRetentionInput,
@@ -620,16 +604,15 @@ export {
   providerUsage,
   toolCallContent,
   toolCallFromArgumentsText,
-} from "./provider-events.js";
+} from "./models/events.js";
 export type { ApplyDefaultProviderRequestOptionsContext } from "./provider-request-policy.js";
 export {
   applyDefaultProviderRequestOptions,
   mergeProviderRequestOptions,
   ProviderRequirementError,
 } from "./provider-request-policy.js";
-export { canonicalizeJsonSchema } from "./providers/schema.js";
-export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js";
-export { createProviderRegistry, createProviderResolver } from "./providers.js";
+export type { ProviderRegistry, ProviderRegistryOptions } from "./models/providers.js";
+export { createProviderRegistry, createProviderResolver } from "./models/providers.js";
 export type { SecretRedactor } from "./redaction.js";
 export {
   createSecretRedactor,
@@ -645,8 +628,8 @@ export {
 export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js";
 export type { LoadBinaryResourceOptions } from "./resources.js";
 export { loadBinaryResource, loadJsonResource, loadTextResource } from "./resources.js";
-export type { DefaultRetryPolicyOptions } from "./retry.js";
-export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./retry.js";
+export type { DefaultRetryPolicyOptions } from "./models/retry.js";
+export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./models/retry.js";
 export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js";
 export { RUN_BUNDLE_SCHEMA_VERSION, snapshotRunBundle } from "./run-bundle.js";
 export type { BatchedRunLedgerOptions } from "./run-ledger.js";
@@ -708,6 +691,7 @@ export {
   getSessionBranchEntries,
   listSessionBranches,
   rebuildSessionContext,
+  sessionStoreCapabilities,
 } from "./session-stores.js";
 export { createChainedSettingsProvider, createStaticSettingsProvider } from "./settings.js";
 export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js";

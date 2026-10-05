@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "bun:test";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createToolRegistry,
   dispatchToolCall,
@@ -13,6 +13,7 @@ import {
 } from "@arnilo/prism";
 import type { DelegationTelemetry } from "../instrumentation.js";
 import { createInMemoryTelemetry, createOpenTelemetryInstrumentation, wrapOpenTelemetryApi } from "../instrumentation.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 test("disabled instrumentation is a no-op", () => {
   const memory = createInMemoryTelemetry();
@@ -25,7 +26,7 @@ test("disabled instrumentation is a no-op", () => {
 test("provider_turn and tool spans record metadata without content", async () => {
   const memory = createInMemoryTelemetry();
   const telemetry = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "mock",
     async *generate() {
       yield providerToolCall(toolCallContent("call_1", "echo", { text: "hi" }));
@@ -36,7 +37,7 @@ test("provider_turn and tool spans record metadata without content", async () =>
   const session = await (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: {
         add: [
           {
@@ -182,13 +183,13 @@ test("failed and aborted agent runs leave no active spans", async () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             if (mode === "aborted") controller.abort(new Error("cancelled"));
             throw new Error(mode === "failed" ? "provider failed" : "cancelled");
           },
-        },
+        }])],
       })
     ).session();
     const detach = telemetry.attachSession(session);

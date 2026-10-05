@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { PassThrough, Readable, Writable } from "node:stream";
 import { describe, it } from "bun:test";
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "../index.js";
+import { createAgent, providerDone, providerTextDelta } from "../index.js";
 import { parseRpcRequest, runRpcServer } from "../rpc.js";
+import { mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -24,7 +26,7 @@ async function createSession(id?: string) {
   return (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("Hello"), providerDone()]])],
     })
   ).session({ id, create: true });
 }
@@ -33,7 +35,7 @@ async function createBlockingSession(id?: string) {
   return (
     await createAgent({
       model: { provider: "blocking", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "blocking",
         async *generate(request: any) {
           yield providerTextDelta("working");
@@ -42,7 +44,7 @@ async function createBlockingSession(id?: string) {
           }
           throw request.signal.reason;
         },
-      },
+      }])],
     })
   ).session({ id, create: true });
 }
@@ -52,7 +54,7 @@ async function createSoftSteerSession(id?: string) {
   return (
     await createAgent({
       model: { provider: "soft-steer", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "soft-steer",
         async *generate(request: any) {
           calls += 1;
@@ -66,7 +68,7 @@ async function createSoftSteerSession(id?: string) {
           yield providerTextDelta("steered");
           yield providerDone();
         },
-      },
+      }])],
     })
   ).session({ id, create: true });
 }
@@ -454,14 +456,14 @@ describe("rpc", () => {
       (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: {
+          packages: [providerPackage("test-provider", [{
             id: "mock",
             async *generate() {
               n++;
               yield providerTextDelta(`reply${n}`);
               yield providerDone();
             },
-          },
+          }])],
         })
       ).session({ id, create: true });
     const s = await interactive(counting());

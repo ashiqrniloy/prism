@@ -24,7 +24,7 @@
  */
 import {
   type AgentIdentity,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   type ModelConfig,
@@ -40,6 +40,7 @@ import {
   type GovernedInvocationSettlement,
   ModelRouterError,
 } from "@arnilo/prism-core/governance/model-router";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const identity: AgentIdentity = {
   tenantId: "tenant-aggregate-demo",
@@ -64,7 +65,7 @@ const auxiliaryReservationTokens = 5;
 const auxiliaryUsageTokens = 3;
 const unknownReservationTokens = 15;
 
-function mockProvider(usage?: Usage): AIProvider {
+function mockProvider(usage?: Usage): ModelProvider {
   return {
     id: "mock",
     async *generate(_request: ProviderRequest): AsyncIterable<ProviderEvent> {
@@ -104,7 +105,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "aggregate-budget-agent",
     model: pinned,
     slots: { store: createMemorySessionStore() },
-    provider: governed,
+    packages: [providerPackage("test-provider", [governed])],
   });
   const session = await agent.session({ id: "aggregate-budget-session", create: true });
 
@@ -186,7 +187,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "aggregate-budget-unknown-agent",
     model: pinned,
     slots: { store: createMemorySessionStore() },
-    provider: unknownGoverned,
+    packages: [providerPackage("test-provider", [unknownGoverned])],
   });
   const unknownRun = await (await unknownAgent.session({ id: "aggregate-budget-unknown-session", create: true })).run("step");
   const unknownBudget = await unknownRouter.readBudget({ identity, taskId: unknownTaskId });

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createAgent, createMockProvider, providerDone } from "@arnilo/prism";
+import { createAgent, providerDone } from "@arnilo/prism";
 import { observationalMemory } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 describe("observational memory package", () => {
   it("observational_memory_package_registers_nothing_without_options", async () => {
@@ -24,12 +25,11 @@ describe("observational memory package", () => {
     let seen: readonly string[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "memory" },
-      provider: createMockProvider([providerDone()], {
+      packages: [hidden, mockProvider([[providerDone()]], {
         onRequest: (request) => {
           seen = (request.tools ?? []).map((tool) => tool.name);
         },
-      }),
-      packages: [hidden],
+      })],
     });
     try {
       assert.equal(
@@ -54,12 +54,11 @@ describe("observational memory package", () => {
     seen = [];
     const shown = await createAgent({
       model: { provider: "mock", model: "memory" },
-      provider: createMockProvider([providerDone()], {
+      packages: [observationalMemory({ recallTool: { getEntries } }), mockProvider([[providerDone()]], {
         onRequest: (request) => {
           seen = (request.tools ?? []).map((tool) => tool.name);
         },
-      }),
-      packages: [observationalMemory({ recallTool: { getEntries } })],
+      })],
     });
     try {
       const session = await shown.session({ id: "om-on", create: true });

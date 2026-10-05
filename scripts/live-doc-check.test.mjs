@@ -10,7 +10,7 @@
  * Register in the root test chain next to the other static gates.
  */
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
@@ -39,7 +39,18 @@ const PEER_NETWORK = ["pg", "@nats-io/jetstream", "@nats-io/transport-node", "pl
 const unquote = (cell) => cell.trim().replace(/^`|`$/g, "").replace(/\\\|/g, "|");
 
 function workspacePackages() {
-  return readdirSync(join(ROOT, "packages"))
+  // Grouped layout (plan 147/152): `packages/<group>/` holds packages one level deeper.
+  const dirs = [];
+  for (const name of readdirSync(join(ROOT, "packages"))) {
+    if (existsSync(join(ROOT, "packages", name, "package.json"))) {
+      dirs.push(name);
+      continue;
+    }
+    for (const child of readdirSync(join(ROOT, "packages", name))) {
+      if (existsSync(join(ROOT, "packages", name, child, "package.json"))) dirs.push(`${name}/${child}`);
+    }
+  }
+  return dirs
     .map((dir) => ({ dir, manifest: JSON.parse(read(`packages/${dir}/package.json`)) }))
     .filter((entry) => typeof entry.manifest.name === "string");
 }

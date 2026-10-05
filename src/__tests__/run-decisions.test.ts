@@ -15,6 +15,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 function parallelProvider() {
   let turn = 0;
@@ -40,7 +41,7 @@ async function decisionAgent(executed: string[], provider = parallelProvider()) 
     id: "decision-demo",
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore() },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     tools: {
       add: [
         {
@@ -334,7 +335,7 @@ describe("shared pending decisions", () => {
       id: "modified-args-demo",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: parallelProvider(),
+      packages: [providerPackage("test-provider", [parallelProvider()])],
       validator: (_tool: unknown, args: unknown) =>
         typeof (args as { value?: unknown }).value === "string" ? undefined : "value must be a string",
       tools: {
@@ -458,7 +459,7 @@ describe("shared pending decisions", () => {
       id: "elicitation-demo",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -470,7 +471,7 @@ describe("shared pending decisions", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {

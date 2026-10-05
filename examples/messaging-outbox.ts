@@ -5,12 +5,13 @@
 // A real host passes a real `pg.Pool` and a real adapter (`createTelegramAdapter`, ...); the demo
 // stands in for both so it runs offline while still calling the real `outbox.append`.
 import type { AgentIdentity } from "@arnilo/prism";
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import type { ChannelReply, ChannelSendResult } from "@arnilo/prism-channels";
 import { createMessagingRuntime } from "@arnilo/prism-channels";
 import { createPostgresErpMessaging } from "@arnilo/prism-core/enterprise/postgres";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import type { Pool, PoolClient } from "pg";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const INBOUND_TEXT = "hello from the host";
 const REPLY_TEXT = "Host example reply.";
@@ -82,7 +83,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     const agent = await createAgent({
       id: "outbox-agent",
       model: { provider: "mock", model: "offline" },
-      provider: createMockProvider([providerTextDelta(REPLY_TEXT), providerDone()]),
+      packages: [mockProvider([[providerTextDelta(REPLY_TEXT), providerDone()]])],
       slots: { store: persistence },
       runLedger: persistence,
     });

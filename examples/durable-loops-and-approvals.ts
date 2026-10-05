@@ -10,6 +10,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
  * Network-free Phase 8 demo: durable custom loop snapshot + parallel batch approvals.
@@ -41,7 +42,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore(), loop },
     hooks: askEveryTool(),
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         turn += 1;
@@ -54,7 +55,7 @@ export async function demo(): Promise<Record<string, unknown>> {
         yield providerTextDelta("done");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {

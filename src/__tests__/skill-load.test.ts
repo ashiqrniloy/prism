@@ -16,6 +16,7 @@ import {
   toolCallContent,
 } from "../index.js";
 import { skillPromptText } from "../skill-disclosure.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 describe("skill load", () => {
   it("resolveSkillLoad succeeds for active registry skill", () => {
@@ -121,7 +122,7 @@ describe("skill load", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       skills: { add: registry.list() },
     });
 

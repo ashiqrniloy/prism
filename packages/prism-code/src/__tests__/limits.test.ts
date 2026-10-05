@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  type AIProvider,
+  type ModelProvider,
   createDefaultRetryPolicy,
   HARD_RUN_LIMITS,
   type ProviderRequest,
@@ -89,7 +89,7 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
       };
 
       let turnCount = 0;
-      const mockProvider: AIProvider = {
+      const mockProvider: ModelProvider = {
         id: "mock-unbounded",
         async *generate(_req: ProviderRequest) {
           turnCount++;
@@ -163,7 +163,7 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
       };
 
       let turn = 0;
-      const mockProvider: AIProvider = {
+      const mockProvider: ModelProvider = {
         id: "mock-cost",
         async *generate() {
           turn++;
@@ -229,7 +229,7 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
     const dbPath = join(tempDir, "sessions.db");
     try {
       let aborted = false;
-      const slowProvider: AIProvider = {
+      const slowProvider: ModelProvider = {
         id: "mock-slow",
         async *generate(req: ProviderRequest) {
           // Send SIGTERM while request is generating
@@ -289,7 +289,7 @@ describe("Prism Code run limits, loop concurrency, and signals", () => {
     const tempDir = await mkdtemp(join(tmpdir(), "prism-limits-retry-"));
     try {
       let attempts = 0;
-      const retryingProvider: AIProvider = {
+      const retryingProvider: ModelProvider = {
         id: "mock-retrying",
         async *generate() {
           attempts++;

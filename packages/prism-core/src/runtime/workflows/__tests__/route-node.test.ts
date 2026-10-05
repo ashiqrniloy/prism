@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AIProvider, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
+import { type ModelProvider, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { agentNode, defineWorkflow, functionNode, routeNode, runWorkflow, type WorkflowEvent, WorkflowRuntimeError } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 describe("routeNode dynamic routing (Plan 130 Task 4)", () => {
   it("routes to selected subset; other successors never run; deduplicates targets", async () => {
@@ -203,7 +204,7 @@ describe("routeNode dynamic routing (Plan 130 Task 4)", () => {
   it("async select reading agent-written state (LangGraph Command equivalence demo)", async () => {
     // Model-driven routing: agentNode runs, writes triage result into workflow state.
     // Downstream routeNode reads ctx.state.decision and selects the path.
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         // Return JSON structured decision
@@ -211,7 +212,7 @@ describe("routeNode dynamic routing (Plan 130 Task 4)", () => {
         yield providerDone();
       },
     };
-    const agent = await createAgent({ provider, model: { provider: "mock", model: "test-model" } });
+    const agent = await createAgent({ packages: [providerPackage("test-provider", [provider])], model: { provider: "mock", model: "test-model" } });
 
     const triageAgent = agentNode({
       agent: "triage",

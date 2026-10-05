@@ -1,10 +1,11 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { assertEvaluationThreshold, defineDataset, defineScorer, runExperiment } from "@arnilo/prism-core/governance/evals";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const report = await runExperiment({
   agent: await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("answer [1]"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("answer [1]"), providerDone()]])],
   }),
   dataset: defineDataset({ id: "citations", version: "1", items: [{ id: "1", input: "cite" }] }),
   scorers: [defineScorer({ id: "citation", score: ({ result }) => ({ score: result.text.includes("[") ? 1 : 0 }) })],

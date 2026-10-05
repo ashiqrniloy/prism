@@ -1,6 +1,6 @@
 /**
  * Plans/064 Task 10: full-surface packed journey test.
- * Packs all twelve first-party packages, installs the tarballs into a fresh
+ * Packs all fourteen first-party packages, installs the tarballs into a fresh
  * consumer, then runs scripts/fixtures/e2e-full-surface-journey.mjs inside
  * that consumer — public exports only, resolved against the packed
  * node_modules, never workspace source paths. Hermetic and network-free:
@@ -20,7 +20,6 @@ const packages = [
   { dir: ".", name: "@arnilo/prism" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers" },
   { dir: "packages/memory", name: "@arnilo/prism-memory" },
   { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
   { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
@@ -29,6 +28,32 @@ const packages = [
   { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
   { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
   { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
+  { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl" },
+  { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs" },
+  { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite" },
+  { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres" },
+  { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring" },
+  { dir: "packages/providers/anthropic", name: "@arnilo/prism-provider-anthropic" },
+  { dir: "packages/providers/openai", name: "@arnilo/prism-provider-openai" },
+  { dir: "packages/providers/deepseek", name: "@arnilo/prism-provider-deepseek" },
+  { dir: "packages/providers/xai", name: "@arnilo/prism-provider-xai" },
+  { dir: "packages/providers/zai", name: "@arnilo/prism-provider-zai" },
+  { dir: "packages/providers/alibaba", name: "@arnilo/prism-provider-alibaba" },
+  { dir: "packages/providers/kimi", name: "@arnilo/prism-provider-kimi" },
+  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter" },
+  { dir: "packages/providers/ollama", name: "@arnilo/prism-provider-ollama" },
+  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
+  { dir: "packages/providers/neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
+  { dir: "packages/providers/clinepass", name: "@arnilo/prism-provider-clinepass" },
+  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode" },
+  { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
+  { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
+  { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
+  { dir: "packages/providers/google", name: "@arnilo/prism-provider-google" },
+  { dir: "packages/providers/vertex", name: "@arnilo/prism-provider-vertex" },
+  { dir: "packages/providers/azure", name: "@arnilo/prism-provider-azure" },
+  { dir: "packages/providers/bedrock", name: "@arnilo/prism-provider-bedrock" },
+  { dir: "packages/providers/ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
 ];
 
 let consumer, run, hostRun;
@@ -51,7 +76,7 @@ before(() => {
 after(() => consumer?.cleanup());
 
 describe("packed-install full-surface journey", () => {
-  it("packs and installs all twelve packages at the workspace version", () => {
+  it("packs and installs all thirty-seven packages at the workspace version", () => {
     assert.equal(consumer.installStatus, 0, consumer.installOut);
     for (const pkg of packages) {
       assert.equal(

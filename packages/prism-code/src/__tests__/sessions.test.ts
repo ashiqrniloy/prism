@@ -8,13 +8,14 @@ import { join } from "node:path";
 import {
   createAgent,
   createMemorySessionStore,
-  createMockProvider,
   createSessionEntry,
   providerDone,
   providerError,
   providerTextDelta,
+  sessionStoreCapabilities,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createMockProvider } from "@arnilo/prism/testing";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import {
   compactSession,
   ensureDurableSessionRecord,
@@ -25,6 +26,7 @@ import {
   resolveSessionStore,
   searchRepoSessions,
 } from "../sessions.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 describe("Repo-Scoped Sessions & Compaction", () => {
   let tempDir: string;
@@ -151,7 +153,7 @@ describe("Repo-Scoped Sessions & Compaction", () => {
     ]);
 
     const agent = await createAgent({
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store },
       model: { provider: "mock", model: "default" },
     });
@@ -172,7 +174,7 @@ describe("Repo-Scoped Sessions & Compaction", () => {
     // 2. Simulate process recreation: recreate agent and store connection from scratch
     const recreatedStore = createSqlitePersistence({ filename: dbPath });
     const recreatedAgent = await createAgent({
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store: recreatedStore },
       model: { provider: "mock", model: "default" },
     });
@@ -202,7 +204,7 @@ describe("Repo-Scoped Sessions & Compaction", () => {
 
     // Roadmap §2.5: `/compact` runs the agent's `compaction` slot compactor.
     const agent = await createAgent({
-      provider: normalProvider,
+      packages: [providerPackage("test-provider", [normalProvider])],
       model: { provider: "mock", model: "default" },
       slots: {
         store,
@@ -246,7 +248,7 @@ describe("Repo-Scoped Sessions & Compaction", () => {
     ]);
 
     const agent = await createAgent({
-      provider: workingProvider,
+      packages: [providerPackage("test-provider", [workingProvider])],
       model: { provider: "mock", model: "default" },
       slots: {
         store,
@@ -312,6 +314,32 @@ describe("Repo-Scoped Sessions & Compaction", () => {
     assert.equal(resolveSessionDbPath({ cwd: repoA, store: { type: "sqlite" } }, home), join(home, "sessions", "sessions.db"));
     assert.equal(resolveSessionDbPath({ cwd: repoA, store: { type: "sqlite", path: "custom.db" } }, home), join(repoA, "custom.db"));
     assert.equal(resolveSessionDbPath({ cwd: repoA, store: { type: "memory" } }, home), ":memory:");
+  });
+
+  it("prism_code_session_store_comes_from_sqlite_package", async () => {
+    // Plan 153 Task 4: Prism Code's durable default is the packaged SQLite store, not a base-library copy.
+    const home = join(tempDir, "home-package-store");
+    const store = resolveSessionStore({ cwd: repoA }, home);
+
+    assert.deepEqual(sessionStoreCapabilities(store), ["listSessions", "deleteSession", "searchSessions"]);
+    const entry = createSessionEntry({
+      id: "packaged-entry",
+      sessionId: "packaged-session",
+      kind: "label",
+      label: "packaged store",
+    });
+    await store.append(entry);
+    const stored = await store.list("packaged-session");
+    assert.equal(stored.length, 1);
+    assert.equal(stored[0]?.id, "packaged-entry");
+    assert.equal(stored[0]?.kind, "label");
+    assert.equal(stored[0]?.label, "packaged store");
+    const summary = (await store.listSessions?.({ limit: 5 }))?.items[0];
+    assert.equal(summary?.sessionId, "packaged-session");
+    assert.equal(await store.deleteSession?.("packaged-session"), true);
+    assert.deepEqual(await store.list("packaged-session"), []);
+
+    assert.ok(existsSync(join(home, "sessions", "sessions.db")), "the packaged store writes the home sessions database");
   });
 
   it("default store is shared across repos under home with 0700 dir and 0600 file", async () => {

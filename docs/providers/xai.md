@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/xai` provides explicit, side-effect-free setup for the
+`@arnilo/prism-provider-xai` provides explicit, side-effect-free setup for the
 xAI Grok Chat Completions API (`POST https://api.x.ai/v1/chat/completions`)
 with implicit prefix caching via a sanitized `x-grok-conv-id` header, reasoning
 replay, and host-invoked SuperGrok / X Premium OAuth.
@@ -21,25 +21,32 @@ Do not use it for Responses-only `grok-4.5`, PKCE loopback, `cli-chat-proxy.grok
 ## Inputs / request
 
 ```ts
-import {
-  createXaiOAuthProvider,
-  createXaiProviderPackage,
-  listXaiModels,
-} from "@arnilo/prism-providers/xai";
+import xai from "@arnilo/prism-provider-xai";
 
-createXaiProviderPackage(options: XaiProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+xai(options?: XaiProviderPackageOptions & XaiProviderConfig = {}): PackageInstance
+
+// Named exports.
+createXaiProvider(options?: XaiProviderOptions): ModelProvider
 createXaiOAuthProvider(options?: XaiOAuthOptions): OAuthProvider
 listXaiModels(options?: ListXaiModelsOptions): Promise<ModelConfig[]>
+defineXaiModel(config: XaiModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | API key **or** SuperGrok access token (host wires after `login` / `refreshOAuthCredential`). |
-| `fetch` | `typeof fetch` | Optional fetch for tests/hosts. |
-| `baseUrl` | `string` | Default `https://api.x.ai/v1`. |
-| `id` | `string` | Provider id (default `xai`). |
-| `models` | `readonly ModelConfig[]` | Overrides featured `xaiModels`. |
-| `oauth` | `XaiOAuthOptions` | Optional client id / endpoints / referrer overrides. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:XAI_API_KEY`. A literal value is rejected. |
+| `accessToken` | secret ref | Ref holding the SuperGrok OAuth access token; the `auth` descriptor writes it. |
+| `baseUrl` | string | Official Chat Completions base; defaults to `https://api.x.ai/v1`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `xai`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+| `oauth` | `XaiOAuthOptions` | Test seam for the OAuth flow (`fetch`, `now`, `sleep`, endpoint overrides). |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listXaiModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup. The credential source prefers the resolved `accessToken` over `apiKey`, so SuperGrok OAuth and an API key share one provider.
 
 ### Cache header
 
@@ -83,28 +90,16 @@ Header: `x-grok-conv-id: sess-1`.
 ## Implementation example
 
 ```ts
-import { createExtensionKernel, refreshOAuthCredential } from "@arnilo/prism";
-import { createXaiOAuthProvider, createXaiProviderPackage } from "@arnilo/prism-providers/xai";
+import { createAgent } from "@arnilo/prism";
+import xai from "@arnilo/prism-provider-xai";
 
-const kernel = createExtensionKernel();
-await kernel.load([createXaiProviderPackage({ apiKey: "fake-xai-key" })]);
-
-const oauth = createXaiOAuthProvider();
-const creds = await oauth.login({
-  onDeviceCode: ({ userCode, verificationUri }) => {
-    console.log(`Open ${verificationUri} and enter ${userCode}`);
-  },
+const agent = await createAgent({
+  model: { provider: "xai", model: "grok-4.6" },
+  packages: [xai({ apiKey: "env:XAI_API_KEY" })], // or leave OAuth to the auth descriptor
 });
-await store.set("xai", creds);
 
-await kernel.load([
-  createXaiProviderPackage({
-    apiKey: async () => {
-      const current = await store.get("xai");
-      return (await refreshOAuthCredential({ provider: oauth, credentials: current, store })).access;
-    },
-  }),
-]);
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 ## Extension and configuration notes

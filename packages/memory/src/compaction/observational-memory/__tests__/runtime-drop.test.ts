@@ -1,22 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  type ProviderEvent,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, type ProviderEvent, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { createObservationalMemoryRuntime, OBSERVATIONS_DROPPED } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
 
-function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIProvider {
+function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): ModelProvider {
   let index = 0;
   return {
     id: "memory",
@@ -29,7 +20,7 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
 describe("observational memory runtime dropper", () => {
   it("runtime_can_drop_after_same_run_reflection_and_pool_pressure", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+    const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
     const session = await agent.session({ id: "s1", create: true });
     await session.run("hello world");
     const sourceId = (await session.entries())[0]!.id;

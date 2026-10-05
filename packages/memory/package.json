@@ -70,7 +70,6 @@
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@arnilo/prism-providers": "file:../prism-providers",
     "@types/pg": "^8.23.1"
   },
   "engines": {

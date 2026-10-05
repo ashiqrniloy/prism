@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { ProviderRequest } from "../index.js";
 import { createAgent, createMemorySessionStore, createSecretRedactor } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 describe("runtime redaction", () => {
   it("redacts provider requests events and stored entries when configured", async () => {
@@ -11,7 +12,7 @@ describe("runtime redaction", () => {
       model: { provider: "mock", model: "demo" },
       slots: { store },
       redactor: createSecretRedactor(["token-value"]),
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(req) {
           request = req;
@@ -19,7 +20,7 @@ describe("runtime redaction", () => {
           yield { type: "content_delta", content: { type: "text", text: "echo token-value" } };
           yield { type: "done" };
         },
-      },
+      }])],
     });
 
     const session = await agent.session({ id: "s1", create: true });

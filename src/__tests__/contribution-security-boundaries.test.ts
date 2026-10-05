@@ -6,20 +6,11 @@ import { join } from "node:path";
 import { describe, it } from "bun:test";
 import type { AgentEvent, ProviderRequest, ToolCallContent, ToolDefinition, ToolRegistry } from "../contracts.js";
 import type { ContextDraft } from "../hooks/index.js";
-import {
-  assembleProviderInput,
-  createAgent,
-  createMockProvider,
-  withContextBlocks,
-  createSecretRedactor,
-  createToolRegistry,
-  dispatchToolCall,
-  redactAgentEvent,
-  redactProviderRequest,
-} from "../index.js";
+import { assembleProviderInput, createAgent, withContextBlocks, createSecretRedactor, createToolRegistry, dispatchToolCall, redactAgentEvent, redactProviderRequest } from "../index.js";
 import { loadSystemPromptFiles } from "../node/system-project-prompts.js";
 import { createPathTrustPolicy } from "../node/trust.js";
 import { createStaticTrustPolicy } from "../security.js";
+import { mockProvider } from "../testing/index.js";
 
 // Security behavior invariants for the contribution and prompt-file seams:
 // injectors cannot grant tools/privileges or bypass validation, their output is
@@ -83,7 +74,7 @@ describe("instruction injector security boundaries", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+        packages: [mockProvider([[{ type: "done" }]], { onRequest: (request) => captured.push(request) })],
         hooks: (hooks) =>
           hooks.on("context.build", (draft) => withContextBlocks(draft, [{ id: "leak-ctx", content: `bearer ${secret}` }]), { id: "leak" }),
       })
@@ -114,7 +105,7 @@ describe("instruction injector security boundaries", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+        packages: [mockProvider([[{ type: "done" }]], { onRequest: (request) => captured.push(request) })],
         systemPrompt: { id: "host", source: "user", mode: "append", text: "host" },
         hooks: (hooks) =>
           hooks.on(

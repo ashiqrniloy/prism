@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { afterAll as after, describe, it } from "bun:test";
-import type { AgentIdentity, AIProvider, ModelConfig } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig } from "@arnilo/prism";
 import { Pool } from "pg";
 import { createModelRouter, ModelRouterError } from "../../../governance/model-router/index.js";
 import { createPostgresEnterpriseState } from "../enterprise.js";
@@ -30,7 +30,7 @@ function key(provider = "openai", model = "gpt") {
   return { tenantId: "tenant", userId: "user", principalId: "agent", provider, model };
 }
 
-function provider(id: string): AIProvider {
+function provider(id: string): ModelProvider {
   return {
     id,
     async *generate() {

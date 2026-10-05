@@ -15,17 +15,54 @@
  * `overrides` pin every packed name to its tarball: internal ranges like
  * `@arnilo/prism-core@^0.12.0` are unpublished during a readiness gate, so
  * without the pin bun resolves them from the registry and the install fails.
+ *
+ * Plan 153 Task 4: the fixtures name their entry points, and the helper packs
+ * their first-party closure too — a dependency such as
+ * `@arnilo/prism-store-sqlite` reaching `@arnilo/prism-store-codecs`, or
+ * `@arnilo/prism-core` reaching it for the Postgres tree, cannot resolve from
+ * the registry either, and a fixture should not have to re-list every internal
+ * edge a package grows.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { expandWorkspaceDirs, readManifest } from "../package-truth.mjs";
 
 export const repoRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 
-/** Pack `packages` ({dir, name}) and install into a fresh consumer dir. */
-export function createPackedConsumer(packages) {
+/**
+ * The requested packages plus every workspace package their `dependencies`/`peerDependencies`
+ * name, so a packed consumer can satisfy an internal range locally.
+ */
+export function withFirstPartyClosure(packages) {
+  const rootManifest = readManifest(join(repoRoot, "package.json"));
+  const manifests = [".", ...expandWorkspaceDirs(repoRoot, rootManifest.workspaces).map((dir) => relative(repoRoot, dir))].map(
+    (dir) => ({ dir, manifest: readManifest(join(repoRoot, dir, "package.json")) }),
+  );
+  const dirByName = new Map(manifests.map(({ dir, manifest }) => [manifest.name, dir]));
+  const seen = new Map(packages.map((pkg) => [pkg.name, pkg]));
+  const queue = [...packages];
+  while (queue.length > 0) {
+    const pkg = queue.shift();
+    const { dependencies = {}, peerDependencies = {} } = JSON.parse(readFileSync(join(repoRoot, pkg.dir, "package.json"), "utf8"));
+    for (const name of [...Object.keys(dependencies), ...Object.keys(peerDependencies)]) {
+      if (seen.has(name)) continue;
+      const dir = dirByName.get(name);
+      if (!dir) continue; // external dependency: resolved from the registry
+      const entry = { dir, name };
+      seen.set(name, entry);
+      queue.push(entry);
+    }
+  }
+  return [...seen.values()];
+}
+
+/** Pack `packages` ({dir, name}) and their first-party closure, then install into a fresh consumer dir. */
+export function createPackedConsumer(requested) {
+  const packages = withFirstPartyClosure(requested);
   const staging = mkdtempSync(join(tmpdir(), "prism-e2e-pack-"));
   const consumer = mkdtempSync(join(tmpdir(), "prism-e2e-consumer-"));
   for (const pkg of packages) {

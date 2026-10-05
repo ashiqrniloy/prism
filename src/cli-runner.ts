@@ -7,8 +7,9 @@ import { runPrismDevSubcommand } from "./cli-dev.js";
 import { MANIFEST_COMMANDS, manifestUsage, runManifestCommand } from "./cli-manifest.js";
 import { CLI_PROVIDERS } from "./cli-providers.js";
 import type { ContextSource } from "./context-build.js";
-import type { AIProvider, ContributionFileKind, ModelConfig, RunOptions, Session, Skill, SystemPromptContribution } from "./contracts.js";
-import { createAgent, createMockProvider, providerDone, providerTextDelta, registerContextSources } from "./index.js";
+import type { ModelProvider, ContributionFileKind, ModelConfig, RunOptions, Session, Skill, SystemPromptContribution } from "./contracts.js";
+import { createAgent, providerDone, providerTextDelta, registerContextSources } from "./index.js";
+import { createMockProvider } from "./testing/index.js";
 import type { AgentBundle } from "./node/agent-definitions.js";
 import { discoverAgentBundles } from "./node/agent-definitions.js";
 import { discoverContributions } from "./node/contribution-discovery.js";
@@ -18,6 +19,7 @@ import { createPathTrustPolicy } from "./node/trust.js";
 import type { PackageInput } from "./packages/api.js";
 import { type RpcSessionFactory, runRpcServer } from "./rpc.js";
 import { createSkillRegistry } from "./skills.js";
+import { providerPackage } from "./provider-kit/index.js";
 
 export type CliMode = "print" | "json" | "rpc";
 
@@ -93,7 +95,7 @@ ${manifestUsage}       prism dev [--port <n>] [--host <addr>]   (loopback inspec
 Options:
   -p, --prompt <text>        Prompt to run in print/json mode
   --provider <name>          Provider id ('mock' is built in;
-                             real providers need their @arnilo/prism-providers package +
+                             real providers need their @arnilo/prism-provider-<name> package +
                              credential env var)
   --model <name>             Explicit model name
   --session <id>             Session id
@@ -451,7 +453,7 @@ async function defaultCreateSession(options: CliOptions): Promise<Session> {
   if (typeof factory !== "function") {
     throw new CliUsageError(`Provider "${providerId}": ${spec.factoryModule} does not export ${spec.factoryExport}.`);
   }
-  const providerInstance = (factory as (opts: { apiKey: () => string | undefined }) => AIProvider)({ apiKey: () => process.env[envKey] });
+  const providerInstance = (factory as (opts: { apiKey: () => string | undefined }) => ModelProvider)({ apiKey: () => process.env[envKey] });
   const modelConfig: ModelConfig = { provider: spec.modelProvider, model: options.model ?? spec.modelName };
   return await agentSession({ ...options, providerInstance, modelConfig });
 }
@@ -466,14 +468,14 @@ async function mockSession(options: CliOptions): Promise<Session> {
 }
 
 async function agentSession(
-  options: Omit<CliOptions, "provider"> & { providerInstance: AIProvider; modelConfig: ModelConfig },
+  options: Omit<CliOptions, "provider"> & { providerInstance: ModelProvider; modelConfig: ModelConfig },
 ): Promise<Session> {
   const skills = options.discoveredSkills;
   const sources = options.resolvedInstructionInjectors;
   const packages = options.packages;
   const agent = await createAgent({
     model: options.modelConfig,
-    provider: options.providerInstance,
+    packages: [providerPackage("test-provider", [options.providerInstance])],
     instructions: options.system,
     ...(sources.length > 0 ? { hooks: (hooks) => registerContextSources(hooks, sources) } : {}),
     ...(options.systemPromptLayers.length > 0 ? { systemPrompt: options.systemPromptLayers } : {}),

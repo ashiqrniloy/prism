@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
 import type { SessionEntry } from "@arnilo/prism";
-import { createAgent, createMemorySessionStore, createMockProvider, createSessionEntry } from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, createSessionEntry } from "@arnilo/prism";
 import {
   buildObservationalMemoryProjection,
   createMemoryId,
@@ -35,6 +35,7 @@ import {
 } from "../index.js";
 import { chunkText, createRagDeletionHandler, indexChunks, type RagScope } from "../rag/index.js";
 import { createWikiDeletionHandler } from "../wiki/index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "handbook", threadId: "s1" };
 const ragScope: RagScope = { tenantId: scope.tenantId, resourceId: scope.resourceId, corpusId: scope.threadId };
@@ -153,7 +154,7 @@ describe("host wiring: one propagation, four layers", () => {
     const sessionStore = createMemorySessionStore();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([]),
+      packages: [mockProvider([[]])],
       slots: { store: sessionStore },
     });
     const session = await agent.session({ id: "s1", create: true });

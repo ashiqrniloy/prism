@@ -1,16 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type RunResult,
-  createAgent,
-  createMemoryRunFeedbackStore,
-  createMockProvider,
-  createSecretRedactor,
-  type ProductionPersistenceStore,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { type RunResult, createAgent, createMemoryRunFeedbackStore, createSecretRedactor, type ProductionPersistenceStore, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import {
   appendEvaluationFeedback,
   assertEvaluationThreshold,
@@ -27,15 +17,16 @@ import {
   scoreRunLive,
   serializeEvaluationReport,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 async function mockAgent(text: string) {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([
+    packages: [mockProvider([[
       providerTextDelta(text),
       providerUsage({ inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
       providerDone(),
-    ]),
+    ]])],
   });
 }
 
@@ -310,7 +301,7 @@ describe("runExperiment / scoreRunLive", () => {
     let maxActive = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("answer"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("answer"), providerDone()]])],
     });
     const dataset = defineDataset({
       id: "batch",

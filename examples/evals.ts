@@ -1,5 +1,6 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createMemoryEvaluationStore, defineDataset, defineScorer, runExperiment, scoreRunLive } from "@arnilo/prism-core/governance/evals";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const scorer = defineScorer({
   id: "contains-citation",
@@ -20,7 +21,7 @@ const dataset = defineDataset({
 
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([providerTextDelta("Prism is an agent harness [1]."), providerDone()]),
+  packages: [mockProvider([[providerTextDelta("Prism is an agent harness [1]."), providerDone()]])],
 });
 
 const store = createMemoryEvaluationStore();

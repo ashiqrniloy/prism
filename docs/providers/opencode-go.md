@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/opencode-go` provides explicit, side-effect-free setup for
+`@arnilo/prism-provider-opencode-go` provides explicit, side-effect-free setup for
 [OpenCode Go](https://opencode.ai/docs/go/) — a low-cost subscription gateway for
 open coding models. The package dual-routes by `ModelConfig.compat.route`:
 
@@ -33,20 +33,30 @@ real-network tests.
 ## Inputs / request
 
 ```ts
-import {
-  createOpenCodeGoProviderPackage,
-  listOpenCodeGoModels,
-} from "@arnilo/prism-providers/opencode-go";
+import opencodeGo from "@arnilo/prism-provider-opencode-go";
 
-createOpenCodeGoProviderPackage(options: OpenCodeGoProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+opencodeGo(options?: OpenCodeGoProviderPackageOptions & OpenCodeGoProviderConfig = {}): PackageInstance
+
+// Named exports.
+createOpenCodeGoProvider(options?: OpenCodeGoProviderOptions): ModelProvider
+listOpenCodeGoModels(options?: ListOpenCodeGoModelsOptions): Promise<ModelConfig[]>
+routeForOpenCodeGoModel(model): OpenCodeGoRoute
+defineOpenCodeGoModel(config: OpenCodeGoModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides official `https://opencode.ai/zen/go/v1`. |
-| `models` | `readonly ModelConfig[]` | Overrides featured `openCodeGoModels` defaults. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:OPENCODE_GO_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://opencode.ai/zen/go/v1`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `opencode-go`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listOpenCodeGoModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 `ProviderRequest.options.cacheKey` (falling back to `sessionId`) maps to the
 `x-opencode-session` header. Anthropic-route `cache_control` breakpoints and
@@ -101,30 +111,31 @@ OpenAI-route body (thinking passthrough + preserved reasoning):
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createOpenCodeGoProviderPackage,
-  listOpenCodeGoModels,
-  openCodeGoModels,
-} from "@arnilo/prism-providers/opencode-go";
+import { createAgent } from "@arnilo/prism";
+import opencodeGo from "@arnilo/prism-provider-opencode-go";
 
-const kernel = createExtensionKernel();
-await kernel.load([createOpenCodeGoProviderPackage({ apiKey: process.env.OPENCODE_API_KEY })]);
+const agent = await createAgent({
+  model: { provider: "opencode-go", model: "grok-4.5" },
+  packages: [opencodeGo({ apiKey: "env:OPENCODE_GO_API_KEY" })],
+});
+
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 Caller-gated live catalog (never runs during package setup):
 
 ```ts
 const models = await listOpenCodeGoModels({ apiKey: process.env.OPENCODE_API_KEY });
-await kernel.load([createOpenCodeGoProviderPackage({ apiKey: process.env.OPENCODE_API_KEY, models })]);
+const packages = [opencodeGo({ apiKey: process.env.OPENCODE_API_KEY, models })]; // pass to createAgent({ packages })
 ```
 
 Offline bootstrap with featured docs-verified aliases:
 
 ```ts
-await kernel.load([
-  createOpenCodeGoProviderPackage({ apiKey: "fake", models: openCodeGoModels }),
-]);
+const packages = [
+  opencodeGo({ apiKey: "fake", models: openCodeGoModels }),
+]; // pass to createAgent({ packages })
 ```
 
 ## Featured models and routes
@@ -154,7 +165,7 @@ credential-gated probe:
 
 ```sh
 PRISM_LIVE_PROVIDER_TESTS=1 OPENCODE_API_KEY=... \
-  npm run test --workspace=@arnilo/prism-providers/opencode-go
+  npm run test --workspace=@arnilo/prism-provider-opencode-go
 ```
 
 `live_json_schema_structured_output_succeeds_<model>` must pass for a model
@@ -247,7 +258,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit` helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers and
@@ -270,7 +281,7 @@ OpenCode-Go models carry level tables: `kimi-k3`/`deepseek-v4`/`glm-5.3` → `re
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   `ModelConfig`, discovery contract, request/cache policies.
 - [Thinking and reasoning](../thinking-and-reasoning.md): per-turn `ThinkingLevel` → compat families.
 - [Credentials and redaction](../credentials-and-redaction.md):

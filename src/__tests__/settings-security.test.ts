@@ -6,9 +6,7 @@ import { describe, it } from "bun:test";
 import {
   assertPermission,
   assertTrusted,
-  createChainedCredentialResolver,
   createChainedSettingsProvider,
-  createMemoryCredentialStore,
   createSecretRedactor,
   createStaticPermissionPolicy,
   createStaticSettingsProvider,
@@ -16,7 +14,7 @@ import {
   createToolRegistry,
   dispatchToolCall,
   loadTextResource,
-  resolveCredentialValue,
+  type CredentialResolver,
 } from "../index.js";
 import { loadSettingsFiles } from "../node/settings.js";
 import { createPathTrustPolicy, isPathInside, isPathInsideReal } from "../node/trust.js";
@@ -40,25 +38,18 @@ describe("settings auth trust security", () => {
     );
   });
 
-  it("resolves memory credentials and chains resolvers without env lookup", async () => {
-    const store = createMemoryCredentialStore();
-    store.set({ name: "api", provider: "demo", credential: { type: "api_key", value: "token-value" } });
-    const chained = createChainedCredentialResolver([{ resolve: () => undefined }, store]);
+  it("stores and deletes credentials through a name-keyed resolver", async () => {
+    const records = new Map<string, { readonly type: "api_key"; readonly value: string }>();
+    const store: CredentialResolver = {
+      resolve: (ref) => records.get(ref),
+      store: (ref, secret) => void records.set(ref, secret as { readonly type: "api_key"; readonly value: string }),
+      delete: (ref) => void records.delete(ref),
+    };
 
-    assert.equal(await resolveCredentialValue(chained, { name: "api", provider: "demo" }), "token-value");
-    assert.equal(store.delete({ name: "api", provider: "demo" }), true);
-    assert.equal(await resolveCredentialValue(store, { name: "api", provider: "demo" }), undefined);
-  });
-
-  it("gates the providerless credential fallback behind allowProviderFallback", async () => {
-    const record = { name: "shared", credential: { type: "api_key", value: "shared-token" } as const };
-    // Default: a providerless record is served for a provider-scoped request (backward compatible).
-    const lenient = createMemoryCredentialStore([record]);
-    assert.equal((await lenient.resolve({ name: "shared", provider: "anyone" }))?.type, "api_key");
-    // Strict: exact match only — the providerless record is not served cross-provider.
-    const strict = createMemoryCredentialStore([record], { allowProviderFallback: false });
-    assert.equal(await strict.resolve({ name: "shared", provider: "anyone" }), undefined);
-    assert.equal((await strict.resolve({ name: "shared" }))?.type, "api_key");
+    await store.store?.("keyring:demo", { type: "api_key", value: "token-value" }, {});
+    assert.equal((await store.resolve("keyring:demo", {}))?.value, "token-value");
+    await store.delete?.("keyring:demo", {});
+    assert.equal(await store.resolve("keyring:demo", {}), undefined);
   });
 
   it("denies trust permissions and resource loads before side effects", async () => {

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/ollama` is a side-effect-free adapter for Ollama — both
+`@arnilo/prism-provider-ollama` is a side-effect-free adapter for Ollama — both
 **Ollama Cloud** (`https://ollama.com`) and a **local** `ollama serve`
 (`http://localhost:11434`) — over the OpenAI-compatible
 `POST {base}/chat/completions` endpoint.
@@ -32,29 +32,31 @@ cache control (Ollama has none), or real-network tests (live tests stay opt-in).
 ## Inputs / request
 
 ```ts
-import {
-  createOllamaProviderPackage,
-  createOllamaProvider,
-  listOllamaModels,
-  defineOllamaModel,
-  ollamaBaseUrl,
-} from "@arnilo/prism-providers/ollama";
+import ollama from "@arnilo/prism-provider-ollama";
 
-createOllamaProviderPackage(options: OllamaProviderPackageOptions): ProviderPackage
-createOllamaProvider(options?: OllamaProviderOptions): AIProvider
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+ollama(options?: OllamaProviderPackageOptions & OllamaProviderConfig = {}): PackageInstance
+
+// Named exports.
+createOllamaProvider(options?: OllamaProviderOptions): ModelProvider
 listOllamaModels(options?: ListOllamaModelsOptions): Promise<ModelConfig[]>
+ollamaBaseUrl(options): string
 defineOllamaModel(config: OllamaModelConfig): ModelConfig
-ollamaBaseUrl(options?: { baseUrl?: string; preset?: OllamaBasePreset }): string
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Ollama Cloud API key; omit for unauthenticated local. |
-| `baseUrl` | `string` | Explicit OpenAI-compatible base URL (wins over `preset`). |
-| `preset` | `OllamaBasePreset` | `"cloud"` (default) / `"local"`. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `id` | `string` | Provider id (default `ollama`). |
-| `models` | `readonly ModelConfig[]` | Host-supplied models (from `listOllamaModels`) to register. |
+| `apiKey` | secret ref | Optional `env:` or `keyring:` ref (Ollama Cloud). Omit for an unauthenticated local server. |
+| `preset` | `"cloud" \| "local"` | Named deployment preset; `baseUrl` wins over it. |
+| `baseUrl` | string | Official base; defaults to the `cloud` preset (`https://ollama.com/v1`; `local` = `http://localhost:11434/v1`). |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `ollama`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listOllamaModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 Base URLs resolved by preset (each includes the `/v1` segment):
 
@@ -102,24 +104,16 @@ Usage in the final streamed chunk:
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createOllamaProviderPackage,
-  listOllamaModels,
-} from "@arnilo/prism-providers/ollama";
+import { createAgent } from "@arnilo/prism";
+import ollama from "@arnilo/prism-provider-ollama";
 
-const kernel = createExtensionKernel();
+const agent = await createAgent({
+  model: { provider: "ollama", model: "gpt-oss:20b" },
+  packages: [ollama({ preset: "local" })], // no key: unauthenticated local server
+});
 
-// Caller-gated discovery — never runs during setup.
-const models = await listOllamaModels({ apiKey: process.env.OLLAMA_API_KEY });
-
-await kernel.load([
-  createOllamaProviderPackage({
-    apiKey: process.env.OLLAMA_API_KEY, // omit for local
-    preset: "cloud", // or "local"
-    models,
-  }),
-]);
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
@@ -153,7 +147,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport`
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit`
   helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
@@ -173,7 +167,7 @@ The only credential-free live suite: points at a real Ollama server (local `olla
 
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 OLLAMA_BASE_URL=http://localhost:11434 \
-  node --test packages/prism-providers/dist/ollama/__tests__/live.test.js
+  bun test packages/providers/ollama/src/__tests__/live.test.ts
 ```
 
 A health gate lists served models and probes the first (`PRISM_LIVE_OLLAMA_MODEL` to pin one). No server or no pulled models → skip.
@@ -184,7 +178,7 @@ Ollama models stamp `reasoning_effort` and snap to declared levels: `gpt-oss*` d
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   caller-gated discovery, OpenAI-compatible routes.
 - [Provider caching](../provider-caching.md): explicit/implicit matrix (Ollama =
   implicit only).

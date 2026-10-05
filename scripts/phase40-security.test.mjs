@@ -18,19 +18,10 @@
 //     valid decision still applies with the unchanged expectedVersion.
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  askEveryTool,
-  createAgent,
-  createMemoryAgentEventSource,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-} from "@arnilo/prism";
+import { askEveryTool, createAgent, createMemoryAgentEventSource, createMemoryCheckpointStore, createMemorySessionStore, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { createPrismDevInspector } from "../packages/prism-coding-tools/dist/dev/index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const DEV_LEGS = ["bind", "replay-redaction", "ownership-replay", "decision-resume"];
 const devLegs = new Set();
@@ -40,7 +31,7 @@ const OWNERSHIP = { tenantId: "local", userId: "local" };
 async function mockAgent() {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
   });
 }
 
@@ -159,7 +150,7 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
       hooks: askEveryTool(),
       id: "dev-inspector",
       model: { provider: "mock", model: "offline" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -170,7 +161,7 @@ describe("phase40 dev-inspector security conformance (plan 040 Task 5, built pub
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store: createMemorySessionStore() },
       tools: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }],
       runState: { checkpoints, definitionRevision: "1" },

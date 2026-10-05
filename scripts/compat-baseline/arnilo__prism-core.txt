@@ -3,8 +3,6 @@ A2A_DEFAULT_LIMITS	export declare const A2A_DEFAULT_LIMITS:
 A2A_HARD_LIMITS	export declare const A2A_HARD_LIMITS:
 A2A_PROTOCOL_VERSION	export declare const A2A_PROTOCOL_VERSION = "1.0"
 ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE	export declare const ACTIVE_WORKFLOW_RUNS_OVERFLOW_CODE = "ERR_PRISM_WORKFLOW_RUN_REGISTRY_OVERFLOW"
-ADAPTER_INDEX_NAMES	export declare const ADAPTER_INDEX_NAMES: readonly ["prism_sessions_tenant_created_idx", "prism_sessions_expires_idx", "prism_branches_session_name_idx", "prism_branches_leaf_idx", "prism_session_entries_session_parent_idx", "prism_session_entries_session_kind_ts_idx", "prism_session_entries_session_run_ts_idx", "prism_session_entries_session_ts_id_idx", "prism_session_entries_session_id_idx", "prism_session_append_idempotency_unique", "prism_runs_session_started_idx", "prism_runs_branch_started
-ADAPTER_TABLE_NAMES	export declare const ADAPTER_TABLE_NAMES: readonly ["prism_tenants", "prism_accounts", "prism_users", "prism_agent_definitions", "prism_sessions", "prism_branches", "prism_session_entries", "prism_session_append_idempotency", "prism_runs", "prism_agent_events", "prism_agent_event_streams", "prism_tool_calls", "prism_usage", "prism_run_feedback", "prism_retention_policies", "prism_legal_holds", "prism_tenant_quotas", "prism_migrations"]
 APPROVAL_HARD_LIMITS	export declare const APPROVAL_HARD_LIMITS: Readonly<
 AUDIT_EXPORT_HARD_LIMITS	export declare const AUDIT_EXPORT_HARD_LIMITS:
 AUDIT_REF_PATTERN	export declare const AUDIT_REF_PATTERN: RegExp
@@ -107,11 +105,6 @@ CreatePrismHealthHandlerOptions	export type { CreatePrismHealthHandlerOptions } 
 CreatePrismOperatorHandlerOptions	export type { CreatePrismOperatorHandlerOptions, OperatorUnknownEffect, OperatorUnknownEffects, } from "./operator.js"
 CreatePrismReplayHandlerOptions	export type { CreatePrismEventReplayOptions, CreatePrismReplayHandlerOptions, PrismAgentEventReplay, PrismEventReplay, PrismEventReplayRequest, } from "./replay.js"
 CreateRagTelemetryOptions	export type { CreateRagTelemetryOptions } from "./rag-telemetry.js"
-CredentialDecryptError	export declare class CredentialDecryptError extends CredentialStoreError
-CredentialStoreError	export declare class CredentialStoreError extends Error
-CredentialStoreLockedError	export declare class CredentialStoreLockedError extends CredentialStoreError
-CredentialStoreTimeoutError	export declare class CredentialStoreTimeoutError extends CredentialStoreError
-CredentialStoreUnavailableError	export declare class CredentialStoreUnavailableError extends CredentialStoreError
 CurateResult	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
 CurateToItem	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
 CuratedItemDraft	export type { CuratedItemDraft, CuratedRun, CurateResult, CurateToItem, CurationSkip, DatasetFromRunsInput, } from "./curate.js"
@@ -132,7 +125,6 @@ DEFAULT_ARTIFACT_REQUEST_BYTES	export declare const DEFAULT_ARTIFACT_REQUEST_BYT
 DEFAULT_ARTIFACT_REVISIONS	export declare const DEFAULT_ARTIFACT_REVISIONS = 32
 DEFAULT_ARTIFACT_TITLE_BYTES	export declare const DEFAULT_ARTIFACT_TITLE_BYTES = 256
 DEFAULT_ARTIFACT_URI_BYTES	export declare const DEFAULT_ARTIFACT_URI_BYTES: number
-DEFAULT_BUSY_TIMEOUT_MS	export declare const DEFAULT_BUSY_TIMEOUT_MS = 5000
 DEFAULT_CANDIDATE_MAX_BYTES	export declare const DEFAULT_CANDIDATE_MAX_BYTES: number
 DEFAULT_CAPABILITY_TTL_MS	export declare const DEFAULT_CAPABILITY_TTL_MS: number
 DEFAULT_CIRCUIT_COOLDOWN_MS	export declare const DEFAULT_CIRCUIT_COOLDOWN_MS = 30000
@@ -156,13 +148,11 @@ DEFAULT_ENTERPRISE_SCHEMA	export declare const DEFAULT_ENTERPRISE_SCHEMA = "pris
 DEFAULT_EVALUATION_PAGE_SIZE	export declare const DEFAULT_EVALUATION_PAGE_SIZE = 100
 DEFAULT_EVENT_BUFFER	export declare const DEFAULT_EVENT_BUFFER = 2048
 DEFAULT_EXPERIMENT_CONCURRENCY	export declare const DEFAULT_EXPERIMENT_CONCURRENCY = 1
-DEFAULT_FILE_MODE	export declare const DEFAULT_FILE_MODE = 384
 DEFAULT_JUDGE_MAX_ATTEMPTS	export declare const DEFAULT_JUDGE_MAX_ATTEMPTS = 1
 DEFAULT_JUDGE_MAX_INPUT_BYTES	export declare const DEFAULT_JUDGE_MAX_INPUT_BYTES: number
 DEFAULT_JUDGE_MAX_OUTPUT_BYTES	export declare const DEFAULT_JUDGE_MAX_OUTPUT_BYTES: number
 DEFAULT_JUDGE_MAX_RUBRIC_BYTES	export declare const DEFAULT_JUDGE_MAX_RUBRIC_BYTES: number
 DEFAULT_JUDGE_TIMEOUT_MS	export declare const DEFAULT_JUDGE_TIMEOUT_MS = 30000
-DEFAULT_KEYCHAIN_TIMEOUT_MS	export declare const DEFAULT_KEYCHAIN_TIMEOUT_MS = 5000
 DEFAULT_LEASE_TTL_MS	export declare const DEFAULT_LEASE_TTL_MS = 30000
 DEFAULT_LIST_PAGE_SIZE	export declare const DEFAULT_LIST_PAGE_SIZE = 100
 DEFAULT_MAX_ACTIVE_CHILDREN	export declare const DEFAULT_MAX_ACTIVE_CHILDREN = 4
@@ -178,12 +168,10 @@ DEFAULT_MAX_DELEGATION_DEPTH	export declare const DEFAULT_MAX_DELEGATION_DEPTH =
 DEFAULT_MAX_DELEGATION_STEPS	export declare const DEFAULT_MAX_DELEGATION_STEPS = 8
 DEFAULT_MAX_DELEGATION_TOKENS	export declare const DEFAULT_MAX_DELEGATION_TOKENS = 20000
 DEFAULT_MAX_DELEGATION_TOOL_CALLS	export declare const DEFAULT_MAX_DELEGATION_TOOL_CALLS = 32
-DEFAULT_MAX_ENVELOPE_FILE_BYTES	export declare const DEFAULT_MAX_ENVELOPE_FILE_BYTES: number
 DEFAULT_MAX_EVENT_BYTES	export declare const DEFAULT_MAX_EVENT_BYTES: number
 DEFAULT_MAX_EXPECTED_CALLS	export declare const DEFAULT_MAX_EXPECTED_CALLS = 64
 DEFAULT_MAX_FAN_OUT	export declare const DEFAULT_MAX_FAN_OUT = 64
 DEFAULT_MAX_HEALTH_BYTES	export declare const DEFAULT_MAX_HEALTH_BYTES: number
-DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES	export declare const DEFAULT_MAX_KEYCHAIN_PAYLOAD_BYTES: number
 DEFAULT_MAX_NESTED_DEPTH	export declare const DEFAULT_MAX_NESTED_DEPTH = 8
 DEFAULT_MAX_NODES	export declare const DEFAULT_MAX_NODES = 1000
 DEFAULT_MAX_NODE_OUTPUT_BYTES	export declare const DEFAULT_MAX_NODE_OUTPUT_BYTES: number
@@ -203,18 +191,15 @@ DEFAULT_MAX_RESPONSE_BYTES	export declare const DEFAULT_MAX_RESPONSE_BYTES: numb
 DEFAULT_MAX_SCENARIO_TURNS	export declare const DEFAULT_MAX_SCENARIO_TURNS = 8
 DEFAULT_MAX_SCHEDULE_CLAIMS	export declare const DEFAULT_MAX_SCHEDULE_CLAIMS = 16
 DEFAULT_MAX_SCHEDULE_INPUT_BYTES	export declare const DEFAULT_MAX_SCHEDULE_INPUT_BYTES: number
-DEFAULT_MAX_SCRYPT_MEMORY_BYTES	export declare const DEFAULT_MAX_SCRYPT_MEMORY_BYTES: number
 DEFAULT_MAX_STATE_BYTES	export declare const DEFAULT_MAX_STATE_BYTES: number
 DEFAULT_MAX_STATE_HISTORY	export declare const DEFAULT_MAX_STATE_HISTORY = 32
 DEFAULT_MAX_STEP_SCORES	export declare const DEFAULT_MAX_STEP_SCORES = 32
 DEFAULT_MAX_STREAM_BYTES	export declare const DEFAULT_MAX_STREAM_BYTES: number
 DEFAULT_MAX_STREAM_EVENTS	export declare const DEFAULT_MAX_STREAM_EVENTS = 10000
 DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS	export declare const DEFAULT_MAX_SUPERVISOR_QUEUED_EVENTS = 128
-DEFAULT_MAX_VAULT_BYTES	export declare const DEFAULT_MAX_VAULT_BYTES: number
 DEFAULT_MODEL_ROUTER_LIMITS	export declare const DEFAULT_MODEL_ROUTER_LIMITS: ResolvedModelRouterLimits
 DEFAULT_PACK_RULE_PREFIX	export declare const DEFAULT_PACK_RULE_PREFIX = "pack:"
 DEFAULT_POLICY_LIMITS	export declare const DEFAULT_POLICY_LIMITS: ResolvedPolicyLimits
-DEFAULT_POOL_MAX	export declare const DEFAULT_POOL_MAX = 10
 DEFAULT_PROMPT_PAGE_SIZE	export declare const DEFAULT_PROMPT_PAGE_SIZE = 100
 DEFAULT_PROMPT_SCHEMA	export declare const DEFAULT_PROMPT_SCHEMA = "prism"
 DEFAULT_REALTIME_TRANSCRIPT_CHARS	export declare const DEFAULT_REALTIME_TRANSCRIPT_CHARS = 8192
@@ -224,11 +209,6 @@ DEFAULT_SAMPLE_RATE	export declare const DEFAULT_SAMPLE_RATE = 1
 DEFAULT_SCHEDULE_LEASE_TTL_MS	export declare const DEFAULT_SCHEDULE_LEASE_TTL_MS = 30000
 DEFAULT_SCHEDULE_PAGE_SIZE	export declare const DEFAULT_SCHEDULE_PAGE_SIZE = 100
 DEFAULT_SCHEDULE_POLL_INTERVAL_MS	export declare const DEFAULT_SCHEDULE_POLL_INTERVAL_MS = 1000
-DEFAULT_SCHEMA	export declare const DEFAULT_SCHEMA = "prism"
-DEFAULT_SCRYPT_KEY_LENGTH	export declare const DEFAULT_SCRYPT_KEY_LENGTH = 32
-DEFAULT_SCRYPT_N	export declare const DEFAULT_SCRYPT_N = 32768
-DEFAULT_SCRYPT_P	export declare const DEFAULT_SCRYPT_P = 1
-DEFAULT_SCRYPT_R	export declare const DEFAULT_SCRYPT_R = 8
 DEFAULT_TRACE_MAX_BYTES	export declare const DEFAULT_TRACE_MAX_BYTES: number
 DEFAULT_TRACE_PAGES	export declare const DEFAULT_TRACE_PAGES = 20
 DEFAULT_TRACE_PAGE_SIZE	export declare const DEFAULT_TRACE_PAGE_SIZE = 100
@@ -243,12 +223,7 @@ DelegationTelemetry	export type { DelegationTelemetry, EvaluationTelemetry, InMe
 ENTERPRISE_INDEX_NAMES	export declare const ENTERPRISE_INDEX_NAMES: readonly ["prism_policy_decisions_owner_created_idx", "prism_policy_decisions_owner_policy_created_idx", "prism_policy_decisions_owner_outcome_created_idx", "prism_evaluations_owner_created_idx", "prism_evaluations_owner_scorer_created_idx", "prism_evaluations_owner_session_created_idx", "prism_evaluations_owner_run_created_idx", "prism_evaluations_owner_experiment_created_idx", "prism_evaluations_owner_dataset_item_created_idx", "prism_work_idempoten
 ENTERPRISE_MIGRATION_LOCK_NAMESPACE	export declare const ENTERPRISE_MIGRATION_LOCK_NAMESPACE = 1701737586
 ENTERPRISE_TABLE_NAMES	export declare const ENTERPRISE_TABLE_NAMES: readonly ["prism_enterprise_migrations", "prism_policy_decisions", "prism_evaluations", "prism_work_idempotency", "prism_tool_effects", "prism_model_router_budgets", "prism_model_router_rates", "prism_model_router_circuits", "prism_erp_outbox", "prism_erp_inbox", "prism_erp_approvals"]
-ENVELOPE_VERSION	export declare const ENVELOPE_VERSION: 1
 ERP_INVARIANT_SCHEMA_VERSION	export declare const ERP_INVARIANT_SCHEMA_VERSION = 1
-EncryptedCredentialStore	export type { EncryptedCredentialStore, StoredCredentialStore } from "./encrypted-store.js"
-EncryptedCredentialStoreLimits	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
-EncryptedCredentialStoreOptions	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
-EncryptedEnvelope	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
 EnterprisePostgresError	export declare class EnterprisePostgresError extends Error
 EnterpriseStateCleanupInput	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, ErpInboxRecordInput, ErpInboxStore, ErpOutboxAppendInput, ErpOutboxClaimInput, ErpOutboxDeadLetterInput, ErpOutboxDispatcher, ErpOutboxRecord, ErpOutboxReplayInput, ErpOutboxRetryInput, ErpOutboxStatus, ErpOutboxStore, ErpOutboxTransitionInput, ErpOutboxUnknownInput, PostgresEnterpriseState, PostgresEnterpriseStateOptions, PostgresErpMessaging, PostgresErpMessagingOptions, } from "./types.js"
 EnterpriseStateCleanupResult	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, ErpInboxRecordInput, ErpInboxStore, ErpOutboxAppendInput, ErpOutboxClaimInput, ErpOutboxDeadLetterInput, ErpOutboxDispatcher, ErpOutboxRecord, ErpOutboxReplayInput, ErpOutboxRetryInput, ErpOutboxStatus, ErpOutboxStore, ErpOutboxTransitionInput, ErpOutboxUnknownInput, PostgresEnterpriseState, PostgresEnterpriseStateOptions, PostgresErpMessaging, PostgresErpMessagingOptions, } from "./types.js"
@@ -289,13 +264,9 @@ ExperimentItemResult	export type { ComparisonCandidate, ComparisonRecord, Compar
 ExperimentReport	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 ExperimentTrials	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 ExportPolicyDecisionsOptions	export type { ExportPolicyDecisionsOptions } from "./export.js"
-ExtendedOAuthCredentialStore	export type { ExtendedOAuthCredentialStore } from "./resolver.js"
 FailureInjectionOptions	export type { FailureInjectionOptions, RunScenarioOptions, ScenarioResult, ScenarioTurn, } from "./scenarios.js"
 FakeJetStream	export declare class FakeJetStream implements NatsJetStream
 FanOutNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
-FileCredentialStore	export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js"
-FileCredentialStoreLimits	export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js"
-FileCredentialStoreOptions	export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js"
 FilePolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
 FunctionNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 GOOGLE_WORKSPACE_BASE_SCOPES	export declare const GOOGLE_WORKSPACE_BASE_SCOPES: readonly ["openid", "email", "profile"]
@@ -345,7 +316,6 @@ HARD_JUDGE_MAX_INPUT_BYTES	export declare const HARD_JUDGE_MAX_INPUT_BYTES: numb
 HARD_JUDGE_MAX_OUTPUT_BYTES	export declare const HARD_JUDGE_MAX_OUTPUT_BYTES: number
 HARD_JUDGE_MAX_RUBRIC_BYTES	export declare const HARD_JUDGE_MAX_RUBRIC_BYTES: number
 HARD_JUDGE_TIMEOUT_MS	export declare const HARD_JUDGE_TIMEOUT_MS = 300000
-HARD_KEYCHAIN_TIMEOUT_MS	export declare const HARD_KEYCHAIN_TIMEOUT_MS = 60000
 HARD_LEASE_TTL_MS	export declare const HARD_LEASE_TTL_MS = 300000
 HARD_LIST_PAGE_CAP	export declare const HARD_LIST_PAGE_CAP = 500
 HARD_MAX_ACTIVE_CHILDREN	export declare const HARD_MAX_ACTIVE_CHILDREN = 32
@@ -361,12 +331,10 @@ HARD_MAX_DELEGATION_DEPTH	export declare const HARD_MAX_DELEGATION_DEPTH = 16
 HARD_MAX_DELEGATION_STEPS	export declare const HARD_MAX_DELEGATION_STEPS = 64
 HARD_MAX_DELEGATION_TOKENS	export declare const HARD_MAX_DELEGATION_TOKENS = 1000000
 HARD_MAX_DELEGATION_TOOL_CALLS	export declare const HARD_MAX_DELEGATION_TOOL_CALLS = 256
-HARD_MAX_ENVELOPE_FILE_BYTES	export declare const HARD_MAX_ENVELOPE_FILE_BYTES: number
 HARD_MAX_EVENT_BYTES	export declare const HARD_MAX_EVENT_BYTES: number
 HARD_MAX_EXPECTED_CALLS	export declare const HARD_MAX_EXPECTED_CALLS = 256
 HARD_MAX_FAN_OUT	export declare const HARD_MAX_FAN_OUT = 1024
 HARD_MAX_HEALTH_BYTES	export declare const HARD_MAX_HEALTH_BYTES: number
-HARD_MAX_KEYCHAIN_PAYLOAD_BYTES	export declare const HARD_MAX_KEYCHAIN_PAYLOAD_BYTES: number
 HARD_MAX_LOOP_ITERATIONS	export declare const HARD_MAX_LOOP_ITERATIONS = 64
 HARD_MAX_NESTED_DEPTH	export declare const HARD_MAX_NESTED_DEPTH = 32
 HARD_MAX_NODES	export declare const HARD_MAX_NODES = 10000
@@ -389,7 +357,6 @@ HARD_MAX_RESPONSE_BYTES	export declare const HARD_MAX_RESPONSE_BYTES: number
 HARD_MAX_SCENARIO_TURNS	export declare const HARD_MAX_SCENARIO_TURNS = 32
 HARD_MAX_SCHEDULE_CLAIMS	export declare const HARD_MAX_SCHEDULE_CLAIMS = 256
 HARD_MAX_SCHEDULE_INPUT_BYTES	export declare const HARD_MAX_SCHEDULE_INPUT_BYTES: number
-HARD_MAX_SCRYPT_MEMORY_BYTES	export declare const HARD_MAX_SCRYPT_MEMORY_BYTES: number
 HARD_MAX_STATE_BYTES	export declare const HARD_MAX_STATE_BYTES: number
 HARD_MAX_STATE_HISTORY	export declare const HARD_MAX_STATE_HISTORY = 128
 HARD_MAX_STEP_SCORES	export declare const HARD_MAX_STEP_SCORES = 128
@@ -398,7 +365,6 @@ HARD_MAX_STREAM_EVENTS	export declare const HARD_MAX_STREAM_EVENTS = 100000
 HARD_MAX_SUPERSTEPS	export declare const HARD_MAX_SUPERSTEPS = 256
 HARD_MAX_SUPERVISOR_QUEUED_EVENTS	export declare const HARD_MAX_SUPERVISOR_QUEUED_EVENTS = 4096
 HARD_MAX_TRIALS	export declare const HARD_MAX_TRIALS = 16
-HARD_MAX_VAULT_BYTES	export declare const HARD_MAX_VAULT_BYTES: number
 HARD_MILESTONE_EVERY_TURNS	export declare const HARD_MILESTONE_EVERY_TURNS = 10000
 HARD_MODEL_ROUTER_LIMITS	export declare const HARD_MODEL_ROUTER_LIMITS: ResolvedModelRouterLimits
 HARD_POLICY_LIMITS	export declare const HARD_POLICY_LIMITS: ResolvedPolicyLimits
@@ -412,20 +378,11 @@ HARD_SCHEDULE_PAGE_CAP	export declare const HARD_SCHEDULE_PAGE_CAP = 500
 HARD_TRACE_MAX_BYTES	export declare const HARD_TRACE_MAX_BYTES: number
 HARD_TRACE_PAGES	export declare const HARD_TRACE_PAGES = 100
 HARD_TRACE_PAGE_SIZE	export declare const HARD_TRACE_PAGE_SIZE = 1000
-HostKms	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
-HostKmsCryptoOptions	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
 ID_PATTERN	export declare const ID_PATTERN: RegExp
 InMemoryTelemetry	export type { DelegationTelemetry, EvaluationTelemetry, InMemoryTelemetry, OpenTelemetryContextApi, OpenTelemetryInstrumentation, OpenTelemetryInstrumentationOptions, OpenTelemetryTraceApi, PrismContext, PrismCounter, PrismHistogram, PrismMeter, PrismSpan, PrismSpanKind, PrismSpanStatus, PrismTracer, RecordedMetric, RecordedSpan, RunFeedbackTelemetry, TraceReference, } from "./instrumentation.js"
 JSON_HEADERS	export declare const JSON_HEADERS:
 JoinNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 JsonSchemaToolValidatorOptions	export type { JsonSchemaToolValidatorOptions } from "./json-schema.js"
-KEYCHAIN_PROBE_ACCOUNT	export declare const KEYCHAIN_PROBE_ACCOUNT = "__prism_keychain_probe__"
-KMS_ENVELOPE_VERSION	export declare const KMS_ENVELOPE_VERSION: 1
-KeychainCredentialStore	export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js"
-KeychainCredentialStoreOptions	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
-KeychainProbeOptions	export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js"
-KeychainProbeResult	export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js"
-KmsEnvelope	export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js"
 LiveScoreOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 LoopNodeConfig	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 LoopNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
@@ -440,17 +397,6 @@ MAX_SUMMARY_DISTINCT_TOOLS	export declare const MAX_SUMMARY_DISTINCT_TOOLS = 64
 MAX_WINDOW_MS	export declare const MAX_WINDOW_MS: number
 MICROSOFT365_BASE_SCOPES	export declare const MICROSOFT365_BASE_SCOPES: readonly ["openid", "profile", "offline_access", "User.Read"]
 MICROSOFT365_SCOPE_BUNDLES	export declare const MICROSOFT365_SCOPE_BUNDLES: Readonly<Record<string, WorkloadScopeBundle>>
-MIGRATION_001_INIT	export declare const MIGRATION_001_INIT = "\nCREATE TABLE IF NOT EXISTS prism_tenants (\n id TEXT NOT NULL PRIMARY KEY,\n name TEXT NOT NULL,\n created_at TEXT NOT NULL,\n metadata TEXT\n)
-MIGRATION_002_USAGE_SCOPE	export declare const MIGRATION_002_USAGE_SCOPE = "\nALTER TABLE prism_usage ADD COLUMN scope TEXT NOT NULL DEFAULT 'run_total'
-MIGRATION_003_RUN_FEEDBACK	export declare const MIGRATION_003_RUN_FEEDBACK = "\nCREATE TABLE IF NOT EXISTS prism_run_feedback (\n id TEXT NOT NULL PRIMARY KEY,\n run_id TEXT NOT NULL,\n session_id TEXT NOT NULL,\n trace_id TEXT,\n rating REAL,\n comment TEXT,\n tags TEXT NOT NULL,\n scorer_ids TEXT NOT NULL,\n evaluation_ids TEXT NOT NULL,\n created_at TEXT NOT NULL,\n created_by TEXT,\n tenant_id TEXT NOT NULL,\n account_id TEXT,\n user_id TEXT,\n metadata TEXT,\n FOREIGN KEY (run_id) REFERENCES prism_runs(id) ON DELETE 
-MIGRATION_004_SESSION_SEARCH	export declare const MIGRATION_004_SESSION_SEARCH = "\nCREATE INDEX IF NOT EXISTS prism_sessions_updated_id_idx\n ON prism_sessions (updated_at, id)
-MIGRATION_005_LIFECYCLE_HOLD_QUOTA	export declare const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = "\nCREATE TABLE IF NOT EXISTS prism_legal_holds (\n id TEXT NOT NULL PRIMARY KEY,\n tenant_id TEXT,\n account_id TEXT,\n user_id TEXT,\n resource_kind TEXT NOT NULL,\n resource_id TEXT NOT NULL,\n reason TEXT NOT NULL,\n created_at TEXT NOT NULL,\n created_by TEXT,\n metadata TEXT\n)
-MIGRATION_006_AGENT_EVENT_SOURCE	export declare const MIGRATION_006_AGENT_EVENT_SOURCE = "\nCREATE TABLE IF NOT EXISTS prism_agent_event_streams (\n session_id TEXT NOT NULL,\n run_id TEXT NOT NULL,\n next_sequence INTEGER NOT NULL,\n updated_at TEXT NOT NULL,\n PRIMARY KEY (session_id, run_id),\n FOREIGN KEY (session_id) REFERENCES prism_sessions(id)\n)
-MIGRATION_007_AGENT_EVENT_RETENTION_INDEX	export declare const MIGRATION_007_AGENT_EVENT_RETENTION_INDEX = "\nCREATE INDEX IF NOT EXISTS prism_agent_events_owner_timestamp_sequence_idx\n ON prism_agent_events (tenant_id, account_id, user_id, timestamp, sequence, id)\n WHERE redacted = 1
-MIGRATION_008_SESSION_VERSION	export declare const MIGRATION_008_SESSION_VERSION = "\nALTER TABLE prism_sessions ADD COLUMN version INTEGER NOT NULL DEFAULT 0
-MIGRATION_009_RUN_PROMPT_VERSION	export declare const MIGRATION_009_RUN_PROMPT_VERSION = "\nALTER TABLE prism_runs ADD COLUMN prompt_version TEXT
-MIGRATION_LOCK_NAMESPACE	export declare const MIGRATION_LOCK_NAMESPACE = 1886546291
-MIN_SCRYPT_N	export declare const MIN_SCRYPT_N = 16384
 MODEL_ROUTER_ERROR_CODES	export declare const MODEL_ROUTER_ERROR_CODES:
 MemoryApprovalStoreOptions	export type { ApprovalAction, ApprovalActorRef, ApprovalAuthority, ApprovalConsumeInput, ApprovalCreateInput, ApprovalDecideInput, ApprovalDecision, ApprovalDecisionValue, ApprovalGetInput, ApprovalQuery, ApprovalQueryClient, ApprovalRecord, ApprovalRequest, ApprovalRequirement, ApprovalRevokeInput, ApprovalRoleGrant, ApprovalStatus, ApprovalStore, MemoryApprovalStoreOptions, PreparedApprovalCreate, PreparedApprovalDecision, PreparedApprovalTransition, } from "./approvals.js"
 MemoryPolicyDecisionStoreOptions	export type { FilePolicyDecisionStoreOptions, MemoryPolicyDecisionStoreOptions } from "./store.js"
@@ -513,8 +459,6 @@ PostgresEnterpriseState	export type { EnterpriseStateCleanupInput, EnterpriseSta
 PostgresEnterpriseStateOptions	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, ErpInboxRecordInput, ErpInboxStore, ErpOutboxAppendInput, ErpOutboxClaimInput, ErpOutboxDeadLetterInput, ErpOutboxDispatcher, ErpOutboxRecord, ErpOutboxReplayInput, ErpOutboxRetryInput, ErpOutboxStatus, ErpOutboxStore, ErpOutboxTransitionInput, ErpOutboxUnknownInput, PostgresEnterpriseState, PostgresEnterpriseStateOptions, PostgresErpMessaging, PostgresErpMessagingOptions, } from "./types.js"
 PostgresErpMessaging	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, ErpInboxRecordInput, ErpInboxStore, ErpOutboxAppendInput, ErpOutboxClaimInput, ErpOutboxDeadLetterInput, ErpOutboxDispatcher, ErpOutboxRecord, ErpOutboxReplayInput, ErpOutboxRetryInput, ErpOutboxStatus, ErpOutboxStore, ErpOutboxTransitionInput, ErpOutboxUnknownInput, PostgresEnterpriseState, PostgresEnterpriseStateOptions, PostgresErpMessaging, PostgresErpMessagingOptions, } from "./types.js"
 PostgresErpMessagingOptions	export type { EnterpriseStateCleanupInput, EnterpriseStateCleanupResult, ErpInboxRecordInput, ErpInboxStore, ErpOutboxAppendInput, ErpOutboxClaimInput, ErpOutboxDeadLetterInput, ErpOutboxDispatcher, ErpOutboxRecord, ErpOutboxReplayInput, ErpOutboxRetryInput, ErpOutboxStatus, ErpOutboxStore, ErpOutboxTransitionInput, ErpOutboxUnknownInput, PostgresEnterpriseState, PostgresEnterpriseStateOptions, PostgresErpMessaging, PostgresErpMessagingOptions, } from "./types.js"
-PostgresPersistence	export type { PostgresPersistence } from "./persistence.js"
-PostgresPersistenceOptions	export type { PostgresPersistenceOptions } from "./types.js"
 PostgresPromptStore	export type { PostgresPromptStore, PostgresPromptStoreOptions } from "./postgres.js"
 PostgresPromptStoreOptions	export type { PostgresPromptStore, PostgresPromptStoreOptions } from "./postgres.js"
 PreparePolicyDecisionOptions	export type { PreparePolicyDecisionOptions } from "./prepare.js"
@@ -586,7 +530,6 @@ ResolvedModelRouterLimits	export type { CostLatencySelectionOptions, CreateModel
 ResolvedPolicyLimits	export type { AppendPolicyDecisionInput, PolicyActorRef, PolicyDecisionOutcome, PolicyDecisionQuery, PolicyDecisionRecord, PolicyDecisionStore, PolicyEvaluateRequest, PolicyEvaluateResult, PolicyEvaluator, PolicyExportOptions, PolicyExportSink, PolicyLimits, PolicyTarget, ResolvedPolicyLimits, } from "./types.js"
 ResolvedPrismDeploymentLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
 ResolvedPrismServerLimits	export type { PrismDeploymentLimits, PrismServerLimits, ResolvedPrismDeploymentLimits, ResolvedPrismServerLimits, } from "./limits.js"
-RotateEncryptedCredentialStoreOptions	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
 RouteNodeConfig	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 RouteNodeDefinition	export type { AgentNodeDefinition, ConditionalNodeDefinition, FanOutNodeDefinition, FunctionNodeDefinition, JoinNodeDefinition, LoopNodeConfig, LoopNodeDefinition, NestedWorkflowNodeDefinition, RouteNodeConfig, RouteNodeDefinition, RunWorkflowOptions, ToolNodeDefinition, WorkflowCheckpointAdapter, WorkflowCheckpointAdapterOptions, WorkflowCheckpointListInput, WorkflowCheckpointListPage, WorkflowCheckpointLoadInput, WorkflowCheckpointRecord, WorkflowCheckpointSaveInput, WorkflowCheckpointValue, W
 RunComparisonOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
@@ -613,14 +556,10 @@ ScoreResult	export type { ComparisonCandidate, ComparisonRecord, ComparisonRepor
 ScoreRunOptions	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 Scorer	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 ScorerInput	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
-ScryptParameters	export type { EncryptedCredentialStoreLimits, EncryptedCredentialStoreOptions, EncryptedEnvelope, KeychainCredentialStoreOptions, RotateEncryptedCredentialStoreOptions, ScryptParameters, } from "./types.js"
 SessionSummary	export type { SessionSummary, TimelineSummary, } from "./summary.js"
-SqlitePersistence	export type { SqlitePersistence } from "./persistence.js"
-SqlitePersistenceOptions	export type { SqlitePersistenceOptions } from "./types.js"
 SqlitePromptStore	export type { SqlitePromptStore, SqlitePromptStoreOptions } from "./sqlite.js"
 SqlitePromptStoreOptions	export type { SqlitePromptStore, SqlitePromptStoreOptions } from "./sqlite.js"
 StepBudgetScorerOptions	export type { ApprovalBeforeEffectScorerOptions, ErrorClassScorerOptions, GuardrailPackScorerOptions, NoLoopScorerOptions, SchemaScorerOptions, StepBudgetScorerOptions, ToolCallMatchMode, ToolCallMatchScorerOptions, ToolCallSpec, } from "./trajectory.js"
-StoredCredentialStore	export type { EncryptedCredentialStore, StoredCredentialStore } from "./encrypted-store.js"
 SupervisorDeniedError	export declare class SupervisorDeniedError extends SupervisorError
 SupervisorError	export declare class SupervisorError extends Error
 SupervisorLimitError	export declare class SupervisorLimitError extends SupervisorError
@@ -641,12 +580,10 @@ TraceLimits	export type { ComparisonCandidate, ComparisonRecord, ComparisonRepor
 TraceReference	export type { DelegationTelemetry, EvaluationTelemetry, InMemoryTelemetry, OpenTelemetryContextApi, OpenTelemetryInstrumentation, OpenTelemetryInstrumentationOptions, OpenTelemetryTraceApi, PrismContext, PrismCounter, PrismHistogram, PrismMeter, PrismSpan, PrismSpanKind, PrismSpanStatus, PrismTracer, RecordedMetric, RecordedSpan, RunFeedbackTelemetry, TraceReference, } from "./instrumentation.js"
 TraceResolver	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
 TraceResolverInput	export type { ComparisonCandidate, ComparisonRecord, ComparisonReport, Dataset, DatasetItem, DefineDatasetInput, DefineScorerInput, EvalManifest, EvaluationQuery, EvaluationRecord, EvaluationStatus, EvaluationStore, EvaluationTarget, EvaluationThresholds, EvaluationTrace, ExperimentAggregate, ExperimentItemResult, ExperimentReport, ExperimentTrials, LiveScoreOptions, ModelJudgeOptions, ModelJudgeRequest, PairwisePreference, PairwiseScoreResult, PairwiseScorer, PairwiseScorerInput, RunComparisonO
-VAULT_VERSION	export declare const VAULT_VERSION: 1
 VerifyAuditBatchInput	export type { AuditCursor, AuditCursorSaveInput, AuditCursorStore, AuditExportBatchInput, AuditExportBatchResult, AuditExporter, AuditExporterOptions, AuditExportItem, AuditPage, AuditPageSource, AuditPublicKey, AuditRedaction, AuditRedactionPolicy, AuditSiemPending, AuditSiemSink, AuditSiemStatus, AuditSiemWrite, AuditSigner, AuditWormAck, AuditWormSink, AuditWormWrite, VerifyAuditBatchInput, VerifyAuditBatchResult, } from "./audit-export.js"
 VerifyAuditBatchResult	export type { AuditCursor, AuditCursorSaveInput, AuditCursorStore, AuditExportBatchInput, AuditExportBatchResult, AuditExporter, AuditExporterOptions, AuditExportItem, AuditPage, AuditPageSource, AuditPublicKey, AuditRedaction, AuditRedactionPolicy, AuditSiemPending, AuditSiemSink, AuditSiemStatus, AuditSiemWrite, AuditSigner, AuditWormAck, AuditWormSink, AuditWormWrite, VerifyAuditBatchInput, VerifyAuditBatchResult, } from "./audit-export.js"
 WORKFLOW_CHECKPOINT_SCHEMA_VERSION	export declare const WORKFLOW_CHECKPOINT_SCHEMA_VERSION: 2
 WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION	export declare const WORKFLOW_LOOP_ITERATION_SCHEMA_VERSION: 1
-WeakKdfParametersError	export declare class WeakKdfParametersError extends CredentialStoreError
 WebhookDeliveryOptions	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
 WebhookEnvelope	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
 WebhookEventName	export type { WebhookDeliveryOptions, WebhookEnvelope, WebhookEventName, WebhookFailureRecord, WebhookNotification, WebhookNotifier, WebhookNotifierDiagnostics, WebhookNotifierLimits, WebhookNotifierOptions, WebhookTarget, } from "./webhooks.js"
@@ -718,44 +655,27 @@ appendEvaluationFeedback	export declare function appendEvaluationFeedback(input:
 applyConditionalSkip	export declare function applyConditionalSkip(state: SchedulerState, nodeId: string, passed: boolean, emit: (event: WorkflowEventInput) => void): void
 applyEnterpriseMigrations	export declare function applyEnterpriseMigrations(pool: Pool, schema: string): Promise<void>
 applyManualResolution	export declare function applyManualResolution(runtime: Runtime, resolution: SagaManualResolutionInput): Promise<SagaRunResult>
-applyPostgresMigrations	export declare function applyPostgresMigrations(pool: Pool, schema: string): Promise<readonly AppliedPersistenceMigration[]>
 applyPostgresPromptMigrations	export declare function applyPostgresPromptMigrations(pool: Pool, schema?: string): Promise<readonly AppliedPromptMigration[]>
 applyRouteSkip	export declare function applyRouteSkip(state: SchedulerState, nodeId: string, selectedTargets: readonly string[], emit: (event: WorkflowEventInput) => void): void
-applySqliteMigrations	export declare function applySqliteMigrations(db: Database): readonly AppliedPersistenceMigration[]
 applySqlitePromptMigrations	export declare function applySqlitePromptMigrations(db: Database): readonly AppliedPromptMigration[]
 asEnterprisePostgresError	export declare function asEnterprisePostgresError(error: unknown, code: EnterprisePostgresErrorCode, message: string): EnterprisePostgresError
 asTimestamp	export declare function asTimestamp(value: unknown, label: string): string
 assertBytes	export declare function assertBytes(value: string, maxBytes: number, label: string): void
-assertCheckpointInput	export declare function assertCheckpointInput(input:
 assertCompatible	export declare function assertCompatible(value: SagaCheckpointValue, definition: SagaDefinition, tenantId: string, runId: string): void
-assertCredentialFileMode	export declare function assertCredentialFileMode(mode: number): void
 assertEnterpriseMigrationHistory	export declare function assertEnterpriseMigrationHistory(applied: readonly AppliedEnterpriseMigration[]): void
 assertEnterpriseSchemaReady	export declare function assertEnterpriseSchemaReady(source: Queryable, schema: string): Promise<void>
 assertEvaluationThreshold	export declare function assertEvaluationThreshold(report: ExperimentReport | ComparisonReport, thresholds: EvaluationThresholds): void
 assertFiniteUnitInterval	export declare function assertFiniteUnitInterval(value: number, label: string): number
-assertHoldReason	export declare function assertHoldReason(reason: string): string
-assertLeaseInput	export declare function assertLeaseInput(namespace: string, key: string, ownerId: string, ttlMs?: number, signal?: AbortSignal, token?: string): void
-assertLifecycleOwnership	export declare function assertLifecycleOwnership(input: OwnershipScope): void
 assertNoUnrestrictedPayload	export declare function assertNoUnrestrictedPayload(input: object): void
 assertOwnershipForLoad	export declare function assertOwnershipForLoad(expected: WorkflowCheckpointSaveInput["ownership"] | undefined, actual: WorkflowCheckpointRecord["ownership"] | undefined): void
 assertOwnershipForSave	export declare function assertOwnershipForSave(existing: WorkflowCheckpointRecord | null | undefined, input: WorkflowCheckpointSaveInput): void
-assertOwnershipRequired	export declare function assertOwnershipRequired(input: OwnershipScope, makeError: () => Error): void
-assertOwnershipScope	export declare function assertOwnershipScope(expected: OwnershipScope, actual: OwnershipScope, makeError: () => Error): void
-assertPersistenceSearchQueryParity	export declare function assertPersistenceSearchQueryParity(store: SessionStore & ProductionPersistenceStore): Promise<void>
 assertPostgresPromptSchemaReady	export declare function assertPostgresPromptSchemaReady(client: Pick<PoolClient, "query">, schema?: string): Promise<void>
-assertPostgresSchemaReady	export declare function assertPostgresSchemaReady(source: Queryable, schema: string): Promise<void>
 assertPromptPromotion	export declare function assertPromptPromotion<TInput = unknown, TExpected = unknown>(options: AssertPromptPromotionOptions<TInput, TExpected>): Promise<PromptPromotionVerdict>
 assertProviderSourceEligible	export declare function assertProviderSourceEligible(options: CreateModelRouterOptions): void
 assertRequestPolicy	export declare function assertRequestPolicy(request: Request, hosts?: readonly string[], origins?: readonly string[]): void
-assertRestrictiveFileMode	export declare function assertRestrictiveFileMode(path: string): void
-assertScryptParameters	export declare function assertScryptParameters(params: ScryptParameters, maxMemoryBytes?: number): void
-assertScryptWorkBounds	export declare function assertScryptWorkBounds(N: number, r: number, p: number, maxMemoryBytes: number): void
 assertSqlitePromptSchemaReady	export declare function assertSqlitePromptSchemaReady(db: Database): void
-assertSqliteSchemaReady	export declare function assertSqliteSchemaReady(db: Database): void
-assertVaultEntry	export declare function assertVaultEntry(entry: unknown): asserts entry is VaultEntry
 assertVersionAdvance	export declare function assertVersionAdvance(existing: WorkflowCheckpointRecord | null | undefined, version: number): void
 assertWithinBytes	export declare function assertWithinBytes(value: unknown, maxBytes: number, label: string): void
-atomicWriteFile	export declare function atomicWriteFile(path: string, data: Buffer, mode?: number): void
 attemptCompensation	export declare function attemptCompensation(runtime: Runtime, step: SagaStep): Promise<void>
 attemptForward	export declare function attemptForward(runtime: Runtime, step: SagaStep): Promise<void>
 authorize	export declare function authorize(options: CreatePrismHandlerOptions, request: Request, operation: PrismServerOperation, capabilityId: string, timeoutMs: number): Promise<PrismServerAuthorization | false>
@@ -778,15 +698,6 @@ buildEnterpriseMigration004Ddl	export declare function buildEnterpriseMigration0
 buildEnterpriseMigration005Ddl	export declare function buildEnterpriseMigration005Ddl(schema: string): string
 buildEnterpriseMigration006Ddl	export declare function buildEnterpriseMigration006Ddl(schema: string): string
 buildGraph	export declare function buildGraph(workflow: WorkflowDefinition):
-buildMigration001Ddl	export declare function buildMigration001Ddl(schema: string): string
-buildMigration002Ddl	export declare function buildMigration002Ddl(schema: string): string
-buildMigration003Ddl	export declare function buildMigration003Ddl(schema: string): string
-buildMigration004Ddl	export declare function buildMigration004Ddl(schema: string): string
-buildMigration005Ddl	export declare function buildMigration005Ddl(schema: string): string
-buildMigration006Ddl	export declare function buildMigration006Ddl(schema: string): string
-buildMigration007Ddl	export declare function buildMigration007Ddl(schema: string): string
-buildMigration008Ddl	export declare function buildMigration008Ddl(schema: string): string
-buildMigration009Ddl	export declare function buildMigration009Ddl(schema: string): string
 buildPromptMigration001Ddl	export declare function buildPromptMigration001Ddl(schemaInput?: string): string
 buildPromptMigrationMetaDdl	export declare function buildPromptMigrationMetaDdl(schemaInput?: string): string
 buildWebhookEnvelope	export declare function buildWebhookEnvelope(event: WebhookNotification, redactor: SecretRedactor, id: string): WebhookEnvelope
@@ -795,7 +706,6 @@ canonicalHeaders	export declare function canonicalHeaders(headers: Readonly<Reco
 canonicalJson	export declare function canonicalJson(value: unknown): string
 canonicalJsonBytes	export declare function canonicalJsonBytes(value: unknown): Buffer
 canonicalQueryString	export declare function canonicalQueryString(query: Readonly<Record<string, string>>): string
-canonicalSessionTimestamp	export declare function canonicalSessionTimestamp(value: string): string
 canonicalizeA2AAgentCard	export declare function canonicalizeA2AAgentCard(card: A2AAgentCard): string
 capToolCounts	export declare function capToolCounts(rawCounts: Readonly<Record<string, number>>, maxDistinct?: number): Readonly<Record<string, number>>
 checkpointKey	export declare function checkpointKey(tenantId: string, sagaId: string, runId: string): string
@@ -805,7 +715,6 @@ cleanup	export declare function cleanup(pool: Pool, tables: RouterTables, input:
 cleanupExpiredPostgresToolEffects	export declare function cleanupExpiredPostgresToolEffects(pool: Pool, schema: string, input: CleanupScope): Promise<
 cleanupLimit	export declare function cleanupLimit(value: unknown): number
 clearSwarmEvents	export declare function clearSwarmEvents(ctx: WorkflowNodeContext): Promise<void>
-clipSearchSnippet	export declare function clipSearchSnippet(value: string | undefined): string | undefined
 cloneState	export declare function cloneState(value: JsonObject): JsonObject
 collectWhileRunning	export declare function collectWhileRunning<T>(session: Pick<Session, "subscribe">, folder: TimelineFolder | undefined, work: () => Promise<T>): Promise<T>
 collectWorkflowGraphs	export declare function collectWorkflowGraphs(root: WorkflowDefinition): ReadonlyMap<string, WorkflowGraphView>
@@ -815,7 +724,6 @@ comparePromptPosition	export declare function comparePromptPosition(name: string
 compensationContext	export declare function compensationContext(runtime: Runtime, step: SagaStepRecord): SagaCompensationContext
 computeOAuth2S256Challenge	export declare function computeOAuth2S256Challenge(verifier: string): string
 conditionalNode	export declare function conditionalNode(config: Omit<ConditionalNodeDefinition, "kind">): ConditionalNodeDefinition
-configureSqliteDatabase	export declare function configureSqliteDatabase(db: Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void
 consumeRate	export declare function consumeRate(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["consumeRate"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["consumeRate"]>>>
 createA2AAgentCard	export declare function createA2AAgentCard(card: A2AAgentCard): A2AAgentCard
 createA2AAgentEventSource	export declare function createA2AAgentEventSource(options: A2AAgentEventSourceOptions): A2AAgentEventSource
@@ -830,12 +738,9 @@ createCitationIntegrityScorer	export declare function createCitationIntegritySco
 createConversationHandler	export declare function createConversationHandler(options: CreateConversationHandlerOptions): PrismRequestHandler
 createConversationService	export declare function createConversationService(store: ConversationServiceStore, options: CreateConversationServiceOptions): ConversationService
 createCostLatencySelection	export declare function createCostLatencySelection(options?: CostLatencySelectionOptions): ModelRouterSelectionPolicy
-createEmptyVault	export declare function createEmptyVault(): CredentialVault
-createEncryptedCredentialStore	export declare function createEncryptedCredentialStore(options: EncryptedCredentialStoreOptions): EncryptedCredentialStore
 createEnterpriseStateCleanup	export declare function createEnterpriseStateCleanup(pool: Pool, schema: string): (input: EnterpriseStateCleanupInput) => Promise<EnterpriseStateCleanupResult>
 createErpInvariantScorers	export declare function createErpInvariantScorers(): readonly Scorer<unknown, unknown>[]
 createErrorClassScorer	export declare function createErrorClassScorer<TInput = unknown, TExpected = unknown>(options?: ErrorClassScorerOptions): Scorer<TInput, TExpected>
-createFileCredentialStore	export declare function createFileCredentialStore(options: FileCredentialStoreOptions): FileCredentialStore
 createFilePolicyDecisionStore	export declare function createFilePolicyDecisionStore(options: FilePolicyDecisionStoreOptions): PolicyDecisionStore
 createGoogleWorkspaceOAuthProvider	export declare function createGoogleWorkspaceOAuthProvider(options?: GoogleWorkspaceOAuthOptions): OAuthProvider
 createGovernedProvider	export declare function createGovernedProvider(options: GovernedProviderOptions): GovernedProvider
@@ -843,11 +748,9 @@ createGuardrailPackScorer	export declare function createGuardrailPackScorer<TInp
 createInMemoryTelemetry	export declare function createInMemoryTelemetry(): InMemoryTelemetry
 createJsonSchemaArgumentValidator	export declare function createJsonSchemaArgumentValidator(options?: JsonSchemaToolValidatorOptions): ToolArgumentValidator
 createJsonSchemaToolArgumentValidator	export declare function createJsonSchemaToolArgumentValidator(options?: JsonSchemaToolValidatorOptions): ToolValidator
-createKeychainCredentialStore	export declare function createKeychainCredentialStore(options: KeychainCredentialStoreOptions): KeychainCredentialStore
 createMemoryApprovalStore	export declare function createMemoryApprovalStore(options: MemoryApprovalStoreOptions): ApprovalStore
 createMemoryAuditCursorStore	export declare function createMemoryAuditCursorStore(): AuditCursorStore
 createMemoryEvaluationStore	export declare function createMemoryEvaluationStore(initial?: readonly EvaluationRecord[]): EvaluationStore
-createMemoryHostKms	export declare function createMemoryHostKms(seed?: string): HostKms
 createMemoryModelRouterStateStore	export declare function createMemoryModelRouterStateStore(): ModelRouterStateStore
 createMemoryPolicyDecisionStore	export declare function createMemoryPolicyDecisionStore(options?: MemoryPolicyDecisionStoreOptions): PolicyDecisionStore
 createMemoryPromptStore	export declare function createMemoryPromptStore(optionsOrInitial?: PromptStoreOptions | readonly PromptRecord[]): PromptStore
@@ -861,24 +764,18 @@ createNatsJetStream	export declare function createNatsJetStream(connection: Nats
 createNoLoopScorer	export declare function createNoLoopScorer<TInput = unknown, TExpected = unknown>(options?: NoLoopScorerOptions): Scorer<TInput, TExpected>
 createOAuth2PkceVerifier	export declare function createOAuth2PkceVerifier(bytes?: number): string
 createOAuth2Provider	export declare function createOAuth2Provider(config: OAuth2ProviderConfig): OAuthProvider
-createOAuthCredentialStoreAdapter	export declare function createOAuthCredentialStoreAdapter(store: StoredCredentialStore): ExtendedOAuthCredentialStore
 createOAuthWorkTokenProvider	export declare function createOAuthWorkTokenProvider(options: OAuthWorkTokenOptions): OAuthWorkTokenProvider
 createOidcIdentityVerifier	export declare function createOidcIdentityVerifier(options: OidcIdentityVerifierOptions): IdentityVerifier
 createOpaPolicyEvaluator	export declare function createOpaPolicyEvaluator(options: OpaPolicyEvaluatorOptions): PolicyEvaluator
 createOpenTelemetryInstrumentation	export declare function createOpenTelemetryInstrumentation(options?: OpenTelemetryInstrumentationOptions): OpenTelemetryInstrumentation
 createPersistenceTraceResolver	export declare function createPersistenceTraceResolver(store: ProductionPersistenceStore): TraceResolver
 createPolicyEvaluator	export declare function createPolicyEvaluator(options: CreatePolicyEvaluatorOptions): PolicyEvaluator
-createPostgresAgentEventSource	export declare function createPostgresAgentEventSource(options: PostgresAgentEventSourceOptions): ClosablePostgresAgentEventSource
 createPostgresApprovalStore	export declare function createPostgresApprovalStore(options: PostgresApprovalStoreOptions): ApprovalStore
-createPostgresCheckpointStore	export declare function createPostgresCheckpointStore(pool: Pool, schema?: string): CheckpointStore
 createPostgresEnterpriseState	export declare function createPostgresEnterpriseState(options: PostgresEnterpriseStateOptions): Promise<PostgresEnterpriseState>
 createPostgresErpMessaging	export declare function createPostgresErpMessaging(options: PostgresErpMessagingOptions): PostgresErpMessaging
 createPostgresEvaluationStore	export declare function createPostgresEvaluationStore(pool: Pool, schema: string): EvaluationStore
 createPostgresIdempotencyStore	export declare function createPostgresIdempotencyStore(pool: Pool, schema: string): IdempotencyStore
-createPostgresLeaseStore	export declare function createPostgresLeaseStore(pool: Pool, schema?: string): LeaseStore
 createPostgresModelRouterStateStore	export declare function createPostgresModelRouterStateStore(pool: Pool, schema: string): ModelRouterStateStore
-createPostgresPersistence	export declare function createPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence>
-createPostgresPersistenceLifecycle	export declare function createPostgresPersistenceLifecycle(pool: Pool, schema: string): PersistenceLifecycleStore
 createPostgresPolicyDecisionStore	export declare function createPostgresPolicyDecisionStore(pool: Pool, schema: string): PolicyDecisionStore
 createPostgresPromptStore	export declare function createPostgresPromptStore(options: PostgresPromptStoreOptions): Promise<PostgresPromptStore>
 createPostgresToolEffectStore	export declare function createPostgresToolEffectStore(pool: Pool, schema: string): ToolEffectStore
@@ -900,15 +797,9 @@ createSchemaScorer	export declare function createSchemaScorer<TInput = unknown, 
 createScopedContext	export declare function createScopedContext(ctx: WorkflowNodeContext, scopeKey: string): ScopedWorkflowNodeContext
 createScopedState	export declare function createScopedState<TScoped extends JsonObject = JsonObject>(rootState: JsonObject | undefined, scopeKey: string): TScoped
 createSession	export declare function createSession(exposure: Agent | PrismAgentExposure, authorization: PrismServerAuthorization): Promise<
-createSessionRowMappers	export declare function createSessionRowMappers<R>(redacted: RedactedCodec<R>): SessionRowMappers<R>
 createSpawnAgentTool	export declare function createSpawnAgentTool(options: CreateSpawnAgentToolOptions): ToolDefinition
-createSqliteCheckpointStore	export declare function createSqliteCheckpointStore(database: Database): CheckpointStore
-createSqliteLeaseStore	export declare function createSqliteLeaseStore(database: Database): LeaseStore
-createSqlitePersistence	export declare function createSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
-createSqlitePersistenceLifecycle	export declare function createSqlitePersistenceLifecycle(db: Database): PersistenceLifecycleStore
 createSqlitePromptStore	export declare function createSqlitePromptStore(options?: SqlitePromptStoreOptions): SqlitePromptStore
 createStepBudgetScorer	export declare function createStepBudgetScorer<TInput = unknown, TExpected = unknown>(options: StepBudgetScorerOptions): Scorer<TInput, TExpected>
-createStoredCredentialResolver	export declare function createStoredCredentialResolver(store: StoredCredentialStore): CredentialResolver
 createSupervisor	export declare function createSupervisor(options: CreateSupervisorOptions): Supervisor
 createTimelineFolder	export declare function createTimelineFolder(options?: TimelineProjectionOptions): TimelineFolder
 createToolCallMatchScorer	export declare function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>(options: ToolCallMatchScorerOptions): Scorer<TInput, TExpected>
@@ -921,16 +812,11 @@ createWorkflowEventBus	export declare function createWorkflowEventBus(options: W
 createWorkflowGraphRunFolder	export declare function createWorkflowGraphRunFolder(view: WorkflowGraphView): WorkflowGraphRunFolder
 createWorkflowSchedules	export declare function createWorkflowSchedules(options: CreateWorkflowSchedulesOptions): WorkflowSchedules
 createWorkflowTimelineFolder	export declare function createWorkflowTimelineFolder(options?: WorkflowTimelineProjectionOptions): WorkflowTimelineFolder
-credentialKey	export declare function credentialKey(name: string, provider?: string): string
 databaseNow	export declare function databaseNow(client: PoolClient): Promise<Date>
 datasetFromRuns	export declare function datasetFromRuns<TInput = unknown, TExpected = unknown>(input: DatasetFromRunsInput<TInput, TExpected>): Promise<CurateResult<TInput, TExpected>>
 decodeBoundedJson	export declare function decodeBoundedJson(value: unknown, maxBytes: number, label: string): unknown
-decodeBranchCursor	export declare function decodeBranchCursor(cursor: string): number
-decodeCheckpointCursor	export declare function decodeCheckpointCursor(cursor?: string): number
 decodePromptCursor	export declare function decodePromptCursor(encoded: string | undefined, scope: NormalizedOwnership, query: Pick<PromptListQuery, "name" | "label" | "order">, limits: PromptLimits): PromptCursor | undefined
 decodeRecordCursor	export declare function decodeRecordCursor(cursor: string, owner: StoreOwner, order: "asc" | "desc"): Pick<RecordCursor, "createdAt" | "id">
-decryptBytes	export declare function decryptBytes(input: EncryptedEnvelope, passphrase: string, limitOptions?: EncryptedCredentialStoreLimits): Promise<Buffer>
-decryptWithHostKms	export declare function decryptWithHostKms(envelope: KmsEnvelope, kms: HostKms, options?: HostKmsCryptoOptions): Promise<Buffer>
 deepFreeze	export declare function deepFreeze<T>(value: T): T
 defaultCurateToItem	export declare const defaultCurateToItem: CurateToItem
 defaultToAgentInput	export declare function defaultToAgentInput(input: unknown): string | Message | readonly Message[]
@@ -939,27 +825,19 @@ defineSaga	export declare function defineSaga(input: SagaDefinition): SagaDefini
 defineScorer	export declare function defineScorer<TInput = unknown, TExpected = unknown>(input: DefineScorerInput<TInput, TExpected>): Scorer<TInput, TExpected>
 defineSwarmWorkflow	export declare function defineSwarmWorkflow(input: DefineSwarmWorkflowInput): WorkflowDefinition
 defineWorkflow	export declare function defineWorkflow(input: DefineWorkflowInput): WorkflowDefinition
-deleteCredentialEntry	export declare function deleteCredentialEntry(vault: CredentialVault, name: string, provider?: string):
 deleteExpiredRouterRows	export declare function deleteExpiredRouterRows(pool: Pool, table: string, owner: Pick<RouterContext, "owner" | "principalId">, limit: number, order: string, extra?: string): Promise<number>
-deleteOAuthEntry	export declare function deleteOAuthEntry(vault: CredentialVault, provider: string, accountId?: string):
 deliverA2APushEvent	export declare function deliverA2APushEvent(delivery: A2APushDelivery, config: A2APushConfig, event: A2ATaskEvent, options?: DeliverA2APushEventOptions): Promise<
-deriveKey	export declare function deriveKey(passphrase: string, salt: Buffer, params: ScryptParameters, maxMemoryBytes: number): Promise<Buffer>
 deserializePendingActivations	export declare function deserializePendingActivations(pending?: Readonly<Record<string, WorkflowExecutionPendingActivation>>): Map<string,
 diffPromptRecords	export declare function diffPromptRecords(from: PromptRecord, to: PromptRecord, maxLines: number): PromptDiff
 driveSaga	export declare function driveSaga(runtime: Runtime): Promise<SagaRunResult>
 encodeBoundedJson	export declare function encodeBoundedJson(value: unknown, maxBytes: number, label: string): string
-encodeBranchCursor	export declare function encodeBranchCursor(offset: number): string
-encodeCheckpointJson	export declare function encodeCheckpointJson(value: unknown, label: string): string
 encodePromptCursor	export declare function encodePromptCursor(scope: NormalizedOwnership, query: Pick<PromptListQuery, "name" | "label" | "order">, lastName: string, lastVersion: number): string
 encodeRecordCursor	export declare function encodeRecordCursor(createdAt: string, id: string, owner: StoreOwner, order: "asc" | "desc"): string
-encryptBytes	export declare function encryptBytes(plaintext: Buffer, passphrase: string, scryptOptions?: Partial<ScryptParameters>, limitOptions?: EncryptedCredentialStoreLimits): Promise<EncryptedEnvelope>
-encryptWithHostKms	export declare function encryptWithHostKms(plaintext: Uint8Array, kms: HostKms, options?: HostKmsCryptoOptions): Promise<KmsEnvelope>
 enforceBudgetCapacity	export declare function enforceBudgetCapacity(pool: Pool, table: string, maxKeys: number | undefined, exclude: RouterContext, windowMs: number): Promise<void>
 enforceRateCapacity	export declare function enforceRateCapacity(pool: Pool, table: string, maxKeys: number | undefined, exclude: RouterContext, windowMs: number): Promise<void>
 enqueueWorkflow	export declare function enqueueWorkflow(workflow: WorkflowDefinition, input: unknown, options: EnqueueWorkflowOptions): Promise<
 ensureCircuitCapacity	export declare function ensureCircuitCapacity(client: PoolClient, table: string, maxKeys: number, now: Date): Promise<void>
 enterManual	export declare function enterManual(runtime: Runtime, stepId: string | undefined, phase: SagaPhase, error: SagaErrorRecord): Promise<void>
-entrySearchFields	export declare function entrySearchFields(entry: SessionEntry):
 erpInvariantDataset	export declare const erpInvariantDataset: Dataset<unknown, unknown>
 errorCode	export declare function errorCode(error: unknown): string | number | undefined
 errorMessage	export declare function errorMessage(error: unknown): string
@@ -981,8 +859,6 @@ forwardContext	export declare function forwardContext(runtime: Runtime, operatio
 functionNode	export declare function functionNode(config: Omit<FunctionNodeDefinition, "kind">): FunctionNodeDefinition
 getActiveSwarmEvents	export declare function getActiveSwarmEvents(ctx: WorkflowNodeContext): readonly SwarmEvent[]
 getActiveWorkflowRun	export declare function getActiveWorkflowRun(workflowId: string, runId: string, ownership?: OwnershipScope): ActiveWorkflowRun | undefined
-getCredentialEntry	export declare function getCredentialEntry(vault: CredentialVault, name: string, provider?: string): Credential | undefined
-getOAuthEntry	export declare function getOAuthEntry(vault: CredentialVault, provider: string, accountId?: string): OAuthCredentials | undefined
 getSwarmEvents	export declare function getSwarmEvents(ctx: WorkflowNodeContext): readonly SwarmEvent[]
 getWorkflowRun	export declare function getWorkflowRun(checkpoints: WorkflowCheckpointAdapter, input: WorkflowCheckpointLoadInput): Promise<WorkflowCheckpointRecord | null>
 hashPromptBody	export declare function hashPromptBody(body: string): string
@@ -992,9 +868,6 @@ integer	export declare function integer(value: unknown, label: string, min: numb
 isAbortError	export declare function isAbortError(error: unknown): boolean
 isAdmitOperation	export declare function isAdmitOperation(operation: string): boolean
 isCheckpointFailure	export declare function isCheckpointFailure(error: unknown): boolean
-isCredentialDecryptError	export declare function isCredentialDecryptError(error: unknown): error is CredentialDecryptError
-isCredentialStoreError	export declare function isCredentialStoreError(error: unknown): error is CredentialStoreError
-isCredentialStoreUnavailableError	export declare function isCredentialStoreUnavailableError(error: unknown): error is CredentialStoreUnavailableError
 isGovernedProvider	export declare function isGovernedProvider(provider: unknown): provider is GovernedProvider
 isProviderSourceEligible	export declare function isProviderSourceEligible(options: CreateModelRouterOptions): boolean
 isReconcileStatus	export declare function isReconcileStatus(value: unknown): value is SagaReconcileStatus
@@ -1006,12 +879,8 @@ isUnknownError	export declare function isUnknownError(error: unknown): boolean
 isWorkflowSuspension	export declare function isWorkflowSuspension(value: unknown): value is WorkflowSuspension
 joinNode	export declare function joinNode(config?: Omit<JoinNodeDefinition, "kind">): JoinNodeDefinition
 json	export declare function json(value: unknown, status: number, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions): Response
-keychainAccountName	export declare function keychainAccountName(namespace: string | undefined, key: string): string
-kmsBuffersEqual	export declare function kmsBuffersEqual(a: Uint8Array, b: Uint8Array): boolean
-lifecyclePageLimit	export declare function lifecyclePageLimit(limit?: number): number
 limit	export declare function limit(value: number | undefined, fallback: number, hard: number, name: string): number
 listActiveWorkflowRuns	export declare function listActiveWorkflowRuns(filter?:
-listOAuthEntries	export declare function listOAuthEntries(vault: CredentialVault): Array<
 listPostgresPromptMigrations	export declare function listPostgresPromptMigrations(client: Pick<PoolClient, "query">, table: string): Promise<AppliedPromptMigration[]>
 listSqlitePromptMigrations	export declare function listSqlitePromptMigrations(db: Database): AppliedPromptMigration[]
 listWorkflowRuns	export declare function listWorkflowRuns(checkpoints: WorkflowCheckpointAdapter, input?: WorkflowCheckpointListInput): Promise<WorkflowCheckpointListPage>
@@ -1020,7 +889,6 @@ loopNode	export declare function loopNode(config: LoopNodeConfig): LoopNodeDefin
 mapPool	export declare function mapPool<T, R>(items: readonly T[], concurrency: number, worker: (item: T, index: number) => Promise<R>, signal?: AbortSignal): Promise<R[]>
 markRemaining	export declare function markRemaining(state: SchedulerState, status: "aborted" | "skipped"): void
 matchSwarmTopic	export declare function matchSwarmTopic(pattern: string, topic: string): boolean
-maybeRestrictFileMode	export declare function maybeRestrictFileMode(filename: string, fileMode: number | undefined): void
 measureJsonBytes	export declare function measureJsonBytes(value: unknown): number
 mulberry32	export declare function mulberry32(seed: number): () => number
 narrowSupervisorLimits	export declare function narrowSupervisorLimits(parent: ResolvedSupervisorLimits, input?: SupervisorLimits): ResolvedSupervisorLimits
@@ -1034,32 +902,23 @@ normalizeSampleRate	export declare function normalizeSampleRate(sampleRate: numb
 normalizeStatuses	export declare function normalizeStatuses(status: WorkflowRunStatus | readonly WorkflowRunStatus[] | undefined): Set<WorkflowRunStatus> | undefined
 normalizeStoredPrompt	export declare function normalizeStoredPrompt(row:
 nowIso	export declare function nowIso(): string
-oauthKey	export declare function oauthKey(provider: string, accountId?: string): string
 onNodeSucceeded	export declare function onNodeSucceeded(state: SchedulerState, nodeId: string, output: unknown, result:
-openEncryptedCredentialStore	export declare function openEncryptedCredentialStore(options: EncryptedCredentialStoreOptions): Promise<EncryptedCredentialStore>
 operationId	export declare function operationId(tenantId: string, sagaId: string, runId: string, stepId: string, phase: "forward" | "compensate"): string
 optionalCursor	export declare function optionalCursor(value: unknown, limits: ResolvedA2ALimits): string | undefined
 optionalText	export declare function optionalText(value: unknown, label: string): string | undefined
 outputs	export declare function outputs(state: SagaCheckpointValue): Readonly<Record<string, unknown>>
 ownedSignal	export declare function ownedSignal(request: Request, timeoutMs: number, disconnectAborts: boolean):
 ownerParams	export declare function ownerParams(owner: StoreOwner): [string, string, string]
-ownershipColumns	export declare function ownershipColumns(scope: OwnershipScope): [string, string][]
 ownershipExactlyMatches	export declare function ownershipExactlyMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
 ownershipMatches	export declare function ownershipMatches(expected: OwnershipScope | undefined, actual: OwnershipScope | undefined): boolean
-ownershipScope	export declare function ownershipScope(input: OwnershipScope): OwnershipScope
-ownershipScopeMatches	export declare function ownershipScopeMatches(expected: OwnershipScope, actual: OwnershipScope): boolean
 packageName	export declare const packageName = "@arnilo/prism-core/validation/json-schema"
 pages	export declare function pages<T>(query: (cursor?: string) => Promise<
 parseA2AMessage	export declare function parseA2AMessage(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2AMessage>
 parseA2APart	export declare function parseA2APart(value: unknown, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2APart>
 parseAttributions	export declare function parseAttributions(value: unknown): Record<string, ModelRouterAttribution>
 parseCheckpointValue	export declare function parseCheckpointValue(value: unknown, definition: SagaDefinition | undefined, tenantId: string, runId: string, allowEmptyDefinition?: boolean): SagaCheckpointValue
-parseEncryptedEnvelope	export declare function parseEncryptedEnvelope(value: unknown, limits?: ResolvedEncryptedCredentialStoreLimits): EncryptedEnvelope
 parseRoute	export declare function parseRoute(request: Request, base: string): Route | undefined
-parseSessionMetadata	export declare function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined
 parseStateHistory	export declare function parseStateHistory(history: Readonly<Record<string, JsonObject>> | undefined, current: JsonObject): Map<number, JsonObject>
-parseStringArray	export declare function parseStringArray(value: unknown): string[]
-parseVault	export declare function parseVault(bytes: Buffer, maxBytes?: number): CredentialVault
 persist	export declare function persist(runtime: Runtime, value: SagaCheckpointValue, stepId: string | undefined, phase: SagaPhase | "manual"): Promise<void>
 persistCheckpoint	export declare function persistCheckpoint(state: SchedulerState, options: RunWorkflowOptions, emit: (event: WorkflowEventInput) => void): Promise<void>
 positiveBoundedInteger	export declare function positiveBoundedInteger(value: unknown, hardCap: number, label: string): number
@@ -1072,7 +931,6 @@ prepareCheckpointRecord	export declare function prepareCheckpointRecord(input: W
 preparePolicyDecision	export declare function preparePolicyDecision(input: AppendPolicyDecisionInput, options?: PreparePolicyDecisionOptions): PolicyDecisionRecord
 preparePrompt	export declare function preparePrompt(input: PutPromptInput, version: number, scope: NormalizedOwnership, limits: PromptLimits, now: () => number): PromptRecord
 presignV4	export declare function presignV4(input: SigV4PresignInput): Promise<string>
-probeKeychainAvailability	export declare function probeKeychainAvailability(options: KeychainProbeOptions): Promise<KeychainProbeResult>
 projectAgentTimeline	export declare function projectAgentTimeline(events: readonly AgentEvent[], options?: TimelineProjectionOptions): ExecutionTimeline
 projectTraceTimeline	export declare function projectTraceTimeline(trace: EvaluationTrace, options?: TimelineProjectionOptions): ExecutionTimeline
 projectWorkflowGraphRun	export declare function projectWorkflowGraphRun(view: WorkflowGraphView, source: WorkflowCheckpointValue | WorkflowRunTimelineSource): WorkflowGraphRunView
@@ -1083,14 +941,13 @@ publicOwnership	export declare function publicOwnership(scope: NormalizedOwnersh
 publishSwarmEvent	export declare function publishSwarmEvent<TPayload = unknown>(ctx: WorkflowNodeContext, event: SwarmEvent<TPayload>): Promise<void>
 qualifyPromptTable	export declare function qualifyPromptTable(schema: string, table: string): string
 qualifyTable	export declare function qualifyTable(schema: string, table: string): string
-quoteIdentifier	export declare function quoteIdentifier(name: string): string
+quoteIdentifier	export declare function quoteIdentifier(value: string): string
 quotePromptIdentifier	export declare function quotePromptIdentifier(value: string): string
 randomId	export declare function randomId(prefix: string): string
 rateParams	export declare function rateParams(context: RouterContext, windowMs: number): [string, string, string, string, string, string, number]
 readAgentInput	export declare function readAgentInput(value: unknown): string | Message | readonly Message[]
 readAgentResume	export declare function readAgentResume(body: JsonObject):
 readBudget	export declare function readBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["readBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["readBudget"]>>>
-readFileIfExists	export declare function readFileIfExists(path: string, maxBytes: number): Buffer | undefined
 readJsonObject	export declare function readJsonObject(request: Request, maxBytes: number, signal: AbortSignal): Promise<JsonObject>
 readOptionalId	export declare function readOptionalId(value: unknown, name: string): string | undefined
 readOptionalObject	export declare function readOptionalObject(value: unknown, name: string): JsonObject | undefined
@@ -1112,11 +969,8 @@ redactValue	export declare function redactValue<T>(value: T, redactor?: SecretRe
 registerActiveWorkflowRun	export declare function registerActiveWorkflowRun(input:
 releaseBudget	export declare function releaseBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["releaseBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["releaseBudget"]>>>
 releaseSuccessors	export declare function releaseSuccessors(state: SchedulerState, nodeId: string, emit: (event: WorkflowEventInput) => void): void
-removeFileIfExists	export declare function removeFileIfExists(path: string): void
 renewBudget	export declare function renewBudget(pool: Pool, table: string, input: Parameters<ModelRouterStateStore["renewBudget"]>[0]): Promise<Awaited<ReturnType<ModelRouterStateStore["renewBudget"]>>>
 reopenExpiredProbes	export declare function reopenExpiredProbes(pool: Pool, table: string, owner: Pick<RouterContext, "owner" | "principalId">, limit: number): Promise<number>
-reopenPostgresPersistence	export declare function reopenPostgresPersistence(options: PostgresPersistenceOptions): Promise<PostgresPersistence>
-reopenSqlitePersistence	export declare function reopenSqlitePersistence(options: SqlitePersistenceOptions): SqlitePersistence
 reopenSqlitePromptStore	export declare function reopenSqlitePromptStore(filename: string, options?: Omit<SqlitePromptStoreOptions, "filename" | "database">): SqlitePromptStore
 replayCursor	export declare function replayCursor(request: Request, maxBytes: number): string | undefined
 replayWorkflow	export declare function replayWorkflow(workflow: WorkflowDefinition, input: ReplayWorkflowInput, options: ReplayWorkflowOptions): Promise<WorkflowRunResult>
@@ -1135,7 +989,6 @@ resolveA2ALimits	export declare function resolveA2ALimits(input?: A2ALimits): Re
 resolveArtifactBodyLimits	export declare function resolveArtifactBodyLimits(input?: ArtifactBodyLimits): ResolvedArtifactBodyLimits
 resolveArtifactLimits	export declare function resolveArtifactLimits(input?: ArtifactLimits): ResolvedArtifactLimits
 resolveConversationLimits	export declare function resolveConversationLimits(input?: ConversationLimits): ResolvedConversationLimits
-resolveEncryptedCredentialStoreLimits	export declare function resolveEncryptedCredentialStoreLimits(limits?: EncryptedCredentialStoreLimits): ResolvedEncryptedCredentialStoreLimits
 resolveGoogleWorkspaceScopes	export declare function resolveGoogleWorkspaceScopes(capabilities: readonly GoogleWorkspaceCapability[], access?: WorkloadScopeAccess): string[]
 resolveListLimit	export declare function resolveListLimit(limit?: number): number
 resolveMaxFanOut	export declare function resolveMaxFanOut(workflow: WorkflowDefinition, node: WorkflowNodeDefinition): number
@@ -1146,7 +999,6 @@ resolvePrismDeploymentLimits	export declare function resolvePrismDeploymentLimit
 resolvePrismServerLimits	export declare function resolvePrismServerLimits(input?: PrismServerLimits): ResolvedPrismServerLimits
 resolvePromptLimits	export declare function resolvePromptLimits(input?: PromptLimitsInput): PromptLimits
 resolvePromptPageLimit	export declare function resolvePromptPageLimit(value: number | undefined, limits: PromptLimits): number
-resolveScryptParameters	export declare function resolveScryptParameters(partial?: Partial<ScryptParameters>, maxMemoryBytes?: number): ScryptParameters
 resolveSupervisorLimits	export declare function resolveSupervisorLimits(input?: SupervisorLimits): ResolvedSupervisorLimits
 resolveTrialsConfig	export declare function resolveTrialsConfig(trials?: number, seed?: number): Omit<ExperimentTrials, "sampleCount" | "standardError">
 resolveWorkloadScopes	export declare function resolveWorkloadScopes(map: Readonly<Record<string, WorkloadScopeBundle>>, base: readonly string[], capabilities: readonly string[], access: WorkloadScopeAccess): string[]
@@ -1155,19 +1007,15 @@ resumeSaga	export declare function resumeSaga(definition: SagaDefinition, option
 resumeWorkflow	export declare function resumeWorkflow(workflow: WorkflowDefinition, ref:
 retryDelay	export declare function retryDelay(attempt: number): Promise<void>
 retryWebhookDelivery	export declare function retryWebhookDelivery(attempt: (signal: AbortSignal) => Promise<WebhookRetryAttempt>, limits: WebhookRetryLimits, redactor: SecretRedactor, signal?: AbortSignal): Promise<WebhookDeliveryOutcome>
-rotateEncryptedCredentialStorePassphrase	export declare function rotateEncryptedCredentialStorePassphrase(options: RotateEncryptedCredentialStoreOptions): Promise<void>
 routeNode	export declare function routeNode(config: RouteNodeConfig): RouteNodeDefinition
 routerContext	export declare function routerContext(key: ModelRouterStateKey): RouterContext
 routerOwner	export declare function routerOwner(owner: ModelRouterStateOwner): Pick<RouterContext, "owner" | "principalId">
 routerParams	export declare function routerParams(context: RouterContext): [string, string, string, string, string, string]
 routerStoreError	export declare function routerStoreError(error: unknown): Error
-rowToRunFeedbackRecord	export declare function rowToRunFeedbackRecord(row: Record<string, unknown>): RunFeedbackRecord
-rowToTenantQuota	export declare function rowToTenantQuota(row: Record<string, unknown>): TenantQuota
 runCheckpointAdapterConformance	export declare function runCheckpointAdapterConformance(label: string, create: () => WorkflowCheckpointAdapter | Promise<WorkflowCheckpointAdapter>): Promise<void>
 runComparison	export declare function runComparison<TInput = unknown, TExpected = unknown>(options: RunComparisonOptions<TInput, TExpected>): Promise<ComparisonReport>
 runEnterpriseStoreConformance	export declare function runEnterpriseStoreConformance(stores: EnterpriseConformanceStores, prefix: string): Promise<void>
 runExperiment	export declare function runExperiment<TInput = unknown, TExpected = unknown>(options: RunExperimentOptions<TInput, TExpected>): Promise<ExperimentReport<TInput, TExpected>>
-runKeychainOperation	export declare function runKeychainOperation<T>(operation: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T>
 runNode	export declare function runNode(state: SchedulerState, nodeId: string, options: RunWorkflowOptions, bus: WorkflowEventBus, emit: (event: WorkflowEventInput) => void, activeSessions: Map<string, Session>): Promise<void>
 runPromptStoreConformance	export declare function runPromptStoreConformance(factory: PromptStoreConformanceFactory): Promise<void>
 runSaga	export declare function runSaga(definition: SagaDefinition, options: SagaRunOptions): Promise<SagaRunResult>
@@ -1175,7 +1023,6 @@ runScenario	export declare function runScenario(options: RunScenarioOptions): Pr
 runWorkflow	export declare function runWorkflow(workflow: WorkflowDefinition, input: unknown, options?: RunWorkflowOptions): Promise<WorkflowRunResult>
 runWorkflowExperiment	export declare function runWorkflowExperiment<TInput = unknown, TExpected = unknown>(options: RunWorkflowExperimentOptions<TInput, TExpected>): Promise<ExperimentReport<TInput, TExpected>>
 s3ObjectKey	export declare function s3ObjectKey(ref: ArtifactBodyRef): string
-safeSearchMetadata	export declare function safeSearchMetadata(metadata: Readonly<Record<string, unknown>> | undefined): Readonly<Record<string, unknown>> | undefined
 sameOwnership	export declare function sameOwnership(left: PrismServerAuthorization["ownership"], right: PrismServerAuthorization["ownership"]): boolean
 sampleValue	export declare function sampleValue(overrides?: Partial<WorkflowCheckpointValue>): WorkflowCheckpointValue
 saveCheckpoint	export declare function saveCheckpoint(options: NormalizedOptions, key: string, value: SagaCheckpointValue, expectedVersion: number, guard: LeaseGuard, lease: LeaseRecord, stepId: string | undefined, phase: SagaPhase | "manual"): Promise<SagaCheckpoint>
@@ -1184,13 +1031,11 @@ scopeKey	export declare function scopeKey(scope: NormalizedOwnership, name: stri
 scopedSubgraphNode	export declare function scopedSubgraphNode(config: ScopedSubgraphConfig): NestedWorkflowNodeDefinition
 scoreRun	export declare function scoreRun<TInput = unknown, TExpected = unknown>(options: ScoreRunOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
 scoreRunLive	export declare function scoreRunLive<TInput = unknown, TExpected = unknown>(result: RunResult, options: LiveScoreOptions<TInput, TExpected>): Promise<readonly EvaluationRecord[]>
-secureCompare	export declare function secureCompare(left: string, right: string): boolean
 selectBudget	export declare function selectBudget(client: PoolClient, table: string, context: RouterContext, windowMs: number): Promise<BudgetRow>
 selectCircuit	export declare function selectCircuit(client: PoolClient, table: string, context: RouterContext): Promise<CircuitRow | undefined>
 serializationFailure	export declare function serializationFailure(error: unknown): boolean
 serializeEvaluationReport	export declare function serializeEvaluationReport(report: unknown, options?:
 serializePendingActivations	export declare function serializePendingActivations(activations?: Map<string,
-serializeVault	export declare function serializeVault(vault: CredentialVault, maxBytes?: number): Buffer
 serializeWorkflowGraph	export declare function serializeWorkflowGraph(workflow: WorkflowDefinition): WorkflowGraphView
 sha256Hex	export declare function sha256Hex(data: Uint8Array): Promise<string>
 shouldSample	export declare function shouldSample(sampleRate: number, random?: () => number): boolean
@@ -1204,9 +1049,6 @@ sleep	export declare function sleep(ms: number, signal?: AbortSignal): Promise<v
 sse	export declare function sse(source: AsyncIterable<AgentEvent | WorkflowEvent>, owned: ReturnType<typeof ownedSignal>, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions, release: () => void): Response
 sseAgentEvents	export declare function sseAgentEvents(source: AsyncIterable<AgentEventEnvelope>, owned: ReturnType<typeof ownedSignal>, limits: ResolvedPrismServerLimits, options: CreatePrismHandlerOptions, release: () => void): Response
 stableStringify	export declare function stableStringify(value: unknown): string
-staleCheckpoint	export declare function staleCheckpoint(version: number, current?: number): CheckpointConflictError
-staleCheckpointExpected	export declare function staleCheckpointExpected(expected: number, current: number): CheckpointConflictError
-staleCheckpointFence	export declare function staleCheckpointFence(fence: number | undefined, current: number): CheckpointConflictError
 startWorkflowBackground	export declare const startWorkflowBackground: typeof enqueueWorkflow
 statusMatches	export declare function statusMatches(expected: EvaluationStatus | readonly EvaluationStatus[] | undefined, actual: EvaluationStatus): boolean
 storageWorkflowId	export declare function storageWorkflowId(key: string): string
@@ -1229,7 +1071,6 @@ type CancelWorkflowRunInput	export { type CancelWorkflowRunInput, type CancelWor
 type CancelWorkflowRunResult	export { type CancelWorkflowRunInput, type CancelWorkflowRunResult, cancelWorkflowRun, getWorkflowRun, listWorkflowRuns, } from "./status.js"
 type CapabilityActorRef	export { type CapabilityActorRef, createProactiveScheduleCapabilities, type EnableCapabilityInput, type ProactiveScheduleCapabilities, type ProactiveScheduleCapabilitiesOptions, type ScheduleCapabilityEvent, type ScheduleCapabilityToken, } from "./schedule-capabilities.js"
 type ClosableNatsAgentEventSource	export { type ClosableNatsAgentEventSource, createNatsAgentEventSource, type NatsAgentEventSourceOptions, } from "./event-source.js"
-type ClosablePostgresAgentEventSource	export { type ClosablePostgresAgentEventSource, createPostgresAgentEventSource, type PostgresAgentEventSourceOptions, } from "./event-source.js"
 type CreateWorkflowCommandsInput	export { type CreateWorkflowCommandsInput, createWorkflowCommands, } from "./commands.js"
 type CreateWorkflowScheduleInput	export { type CreateWorkflowScheduleInput, type CreateWorkflowSchedulesOptions, createWorkflowSchedules, type WorkflowScheduleCalculator, type WorkflowScheduleCalculatorInput, type WorkflowScheduleEvent, type WorkflowScheduleListInput, type WorkflowScheduleListPage, type WorkflowScheduleRecord, type WorkflowScheduleStatus, type WorkflowSchedules, } from "./schedules.js"
 type CreateWorkflowSchedulesOptions	export { type CreateWorkflowScheduleInput, type CreateWorkflowSchedulesOptions, createWorkflowSchedules, type WorkflowScheduleCalculator, type WorkflowScheduleCalculatorInput, type WorkflowScheduleEvent, type WorkflowScheduleListInput, type WorkflowScheduleListPage, type WorkflowScheduleRecord, type WorkflowScheduleStatus, type WorkflowSchedules, } from "./schedules.js"
@@ -1255,9 +1096,8 @@ type NatsJetStreamMessage	export { createNatsJetStream, type NatsJetStream, type
 type NatsJetStreamPublishAck	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
 type NatsJetStreamStoredMessage	export { createNatsJetStream, type NatsJetStream, type NatsJetStreamConsumer, type NatsJetStreamConsumerConfig, type NatsJetStreamMessage, type NatsJetStreamPublishAck, type NatsJetStreamStoredMessage, } from "./jetstream.js"
 type OAuth2ProviderConfig	export { computeOAuth2S256Challenge, createOAuth2PkceVerifier, createOAuth2Provider, type OAuth2ProviderConfig, } from "./oauth2.js"
-type OAuthWorkTokenOptions	export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider } from "./work-token.js"
-type OAuthWorkTokenProvider	export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider } from "./work-token.js"
-type PostgresAgentEventSourceOptions	export { type ClosablePostgresAgentEventSource, createPostgresAgentEventSource, type PostgresAgentEventSourceOptions, } from "./event-source.js"
+type OAuthWorkTokenOptions	export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider, type WorkTokenOAuthStore, } from "./work-token.js"
+type OAuthWorkTokenProvider	export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider, type WorkTokenOAuthStore, } from "./work-token.js"
 type ProactiveScheduleCapabilities	export { type CapabilityActorRef, createProactiveScheduleCapabilities, type EnableCapabilityInput, type ProactiveScheduleCapabilities, type ProactiveScheduleCapabilitiesOptions, type ScheduleCapabilityEvent, type ScheduleCapabilityToken, } from "./schedule-capabilities.js"
 type ProactiveScheduleCapabilitiesOptions	export { type CapabilityActorRef, createProactiveScheduleCapabilities, type EnableCapabilityInput, type ProactiveScheduleCapabilities, type ProactiveScheduleCapabilitiesOptions, type ScheduleCapabilityEvent, type ScheduleCapabilityToken, } from "./schedule-capabilities.js"
 type ReplayWorkflowInput	export { type ReplayWorkflowInput, type ReplayWorkflowOptions, replayWorkflow, } from "./replay.js"
@@ -1268,6 +1108,7 @@ type ScopedSubgraphConfig	export { createScopedContext, createScopedState, type 
 type ScopedWorkflowNodeContext	export { createScopedContext, createScopedState, type ScopedSubgraphConfig, type ScopedWorkflowNodeContext, scopedSubgraphNode, validateScopeKey, withNodeScope, } from "./scoped.js"
 type SwarmEvent	export { clearSwarmEvents, type DefineSwarmWorkflowInput, defineSwarmWorkflow, getSwarmEvents, matchSwarmTopic, publishSwarmEvent, type SwarmEvent, type SwarmRouterConfig, swarmRouterNode, } from "./swarm.js"
 type SwarmRouterConfig	export { clearSwarmEvents, type DefineSwarmWorkflowInput, defineSwarmWorkflow, getSwarmEvents, matchSwarmTopic, publishSwarmEvent, type SwarmEvent, type SwarmRouterConfig, swarmRouterNode, } from "./swarm.js"
+type WorkTokenOAuthStore	export { createOAuthWorkTokenProvider, type OAuthWorkTokenOptions, type OAuthWorkTokenProvider, type WorkTokenOAuthStore, } from "./work-token.js"
 type WorkflowAdmissionDrain	export { createWorkflowCoordinator, type EnqueueWorkflowOptions, enqueueWorkflow, startWorkflowBackground, type WorkflowAdmissionDrain, type WorkflowAdmissionMetric, type WorkflowAdmissionPolicy, type WorkflowCoordinator, type WorkflowCoordinatorOptions, } from "./coordinator.js"
 type WorkflowAdmissionMetric	export { createWorkflowCoordinator, type EnqueueWorkflowOptions, enqueueWorkflow, startWorkflowBackground, type WorkflowAdmissionDrain, type WorkflowAdmissionMetric, type WorkflowAdmissionPolicy, type WorkflowCoordinator, type WorkflowCoordinatorOptions, } from "./coordinator.js"
 type WorkflowAdmissionPolicy	export { createWorkflowCoordinator, type EnqueueWorkflowOptions, enqueueWorkflow, startWorkflowBackground, type WorkflowAdmissionDrain, type WorkflowAdmissionMetric, type WorkflowAdmissionPolicy, type WorkflowCoordinator, type WorkflowCoordinatorOptions, } from "./coordinator.js"
@@ -1297,15 +1138,12 @@ updateBudget	export declare function updateBudget(client: PoolClient, table: str
 updateCircuit	export declare function updateCircuit(client: PoolClient, table: string, context: RouterContext, row: CircuitRow): Promise<CircuitRow>
 updateStep	export declare function updateStep(state: SagaCheckpointValue, id: string, patch: Partial<SagaStepRecord>): SagaCheckpointValue
 updateWorkflowState	export declare function updateWorkflowState(state: SchedulerState, patch: JsonObject, updateOptions: import("../types.js").WorkflowStateUpdateOptions | undefined, options: RunWorkflowOptions): Promise<Readonly<JsonObject>>
-upsertCredentialEntry	export declare function upsertCredentialEntry(vault: CredentialVault, record: CredentialRecord): CredentialVault
-upsertOAuthEntry	export declare function upsertOAuthEntry(vault: CredentialVault, provider: string, credentials: OAuthCredentials, accountId?: string): CredentialVault
 usage	export declare function usage(value: unknown, label: string): number
 utf8ByteLength	export declare function utf8ByteLength(value: string): number
 validId	export declare function validId(value: string): boolean
 validateA2ATask	export declare function validateA2ATask(task: A2ATask, limits: ResolvedA2ALimits, policy?: A2APartPolicy): Promise<A2ATask>
-validateCredentialLimit	export declare function validateCredentialLimit(name: string, value: number, hardCap: number): number
 validateEvalManifest	export declare function validateEvalManifest(manifest: EvalManifest): void
-validateIdentifier	export declare function validateIdentifier(name: string): void
+validateIdentifier	export declare function validateIdentifier(value: string): void
 validatePromptIdentifier	export declare function validatePromptIdentifier(value: string, label: string): string
 validateRateRow	export declare function validateRateRow(row: Record<string, unknown>): void
 validateReleaseEvalManifest	export declare function validateReleaseEvalManifest(manifest: EvalManifest): void
@@ -1314,11 +1152,9 @@ validateScoreResult	export declare function validateScoreResult(result: ScoreRes
 validateState	export declare function validateState(state: SchedulerState, options: RunWorkflowOptions): Promise<void>
 validateWorkflowLimit	export declare function validateWorkflowLimit(name: string, value: number, hardCap: number): number
 validateWorkflowLimits	export declare function validateWorkflowLimits(limits?: WorkflowLimits): void
-vaultToCredentialRecords	export declare function vaultToCredentialRecords(vault: CredentialVault): CredentialRecord[]
 verifyA2AAgentCard	export declare function verifyA2AAgentCard(card: A2AAgentCard, options: VerifyA2AAgentCardOptions): Promise<void>
 verifyArtifactDeliveryLink	export declare function verifyArtifactDeliveryLink(link: string, secret: string, maxBytes?: number): ArtifactDeliveryToken
 verifyAuditBatch	export declare function verifyAuditBatch(input: VerifyAuditBatchInput): VerifyAuditBatchResult
-verifyMigrationIdempotency	export declare function verifyMigrationIdempotency(db: Database): void
 window	export declare function window(value: unknown): number
 withNodeScope	export declare function withNodeScope<TNode extends WorkflowNodeDefinition>(scopeKey: string, node: TNode): TNode
 withTransaction	export declare function withTransaction<T>(pool: Pool, operation: (client: PoolClient) => Promise<T>): Promise<T>
@@ -1329,4 +1165,3 @@ workflowNode	export declare function workflowNode(config: Omit<NestedWorkflowNod
 wrapAgentWithFailureInjection	export declare function wrapAgentWithFailureInjection(agent: Agent, injection: FailureInjectionOptions): Promise<Agent>
 wrapOpenTelemetryApi	export declare function wrapOpenTelemetryApi(tracer: OpenTelemetryTracer, meter?: OpenTelemetryMeter, api?:
 writeCheckpoint	export declare function writeCheckpoint(options: NormalizedOptions, key: string, value: SagaCheckpointValue, expectedVersion: number, guard: LeaseGuard, lease: LeaseRecord): Promise<WorkflowCheckpointRecord>
-zeroBuffer	export declare function zeroBuffer(buffer: Buffer): void

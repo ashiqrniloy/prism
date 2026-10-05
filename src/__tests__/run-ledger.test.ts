@@ -11,18 +11,10 @@ import type {
   ToolDefinition,
   UsageRecord,
 } from "../index.js";
-import {
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  createToolRegistry,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerToolCall,
-  redactRunLedgerRecord,
-} from "../index.js";
+import { createAgent, createSecretRedactor, createToolRegistry, providerDone, providerError, providerTextDelta, providerToolCall, redactRunLedgerRecord } from "../index.js";
 import { failedRun } from "./run-result-helpers.js";
+import { mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 type InMemoryLedger = {
   runs: Extract<RunLedgerRecord, { status?: string }>[];
@@ -165,7 +157,7 @@ describe("RunLedger runtime wiring", () => {
     const { ledger, runs, events } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello"), providerDone()]])],
       runLedger: ledger,
       ownership: { tenantId: "tenant_1", accountId: "account_1" },
       idempotencyKey: "agent-key",
@@ -203,10 +195,10 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([
+      packages: [mockProvider([[
         providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }),
         providerDone(),
-      ]),
+      ]])],
       tools: { add: [echoTool] },
       runLedger: ledger,
     });
@@ -235,10 +227,10 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([
+      packages: [mockProvider([[
         providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }),
         providerDone(),
-      ]),
+      ]])],
       tools: { add: [echoTool] },
       runLedger: ledger,
       validator: (_tool, args) => (args.text === "hi" ? "blocked by test validator" : undefined),
@@ -259,7 +251,7 @@ describe("RunLedger runtime wiring", () => {
     let calls = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           calls += 1;
@@ -271,7 +263,7 @@ describe("RunLedger runtime wiring", () => {
               : { inputTokens: 20, outputTokens: 2, totalTokens: 22 },
           );
         },
-      },
+      }])],
       tools: { add: [{ name: "echo", execute: () => ({ toolCallId: "call_1", name: "echo" }) }] },
       runLedger: ledger,
     });
@@ -308,10 +300,10 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([
+      packages: [mockProvider([[
         providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: secret } }),
         providerDone(),
-      ]),
+      ]])],
       tools: { add: [echoTool] },
       runLedger: ledger,
       redactor: createSecretRedactor([secret]),
@@ -334,7 +326,7 @@ describe("RunLedger runtime wiring", () => {
     const { ledger, events } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("one message"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("one message"), providerDone()]])],
       runLedger: ledger,
     });
     const session = await agent.session({ id: "s-once", create: true });
@@ -364,14 +356,14 @@ describe("RunLedger runtime wiring", () => {
     const controller = new AbortController();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           controller.abort("user-cancelled");
           yield providerTextDelta("never");
           yield providerDone();
         },
-      },
+      }])],
       runLedger: ledger,
     });
     const session = await agent.session({ id: "s6", create: true });
@@ -389,12 +381,12 @@ describe("RunLedger runtime wiring", () => {
     const { ledger, runs } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerError(Object.assign(new Error(`GoUsageLimitError ${secret}`), { code: 429 }), [secret]);
         },
-      },
+      }])],
       runLedger: ledger,
       redactor: createSecretRedactor([secret]),
     });
@@ -431,7 +423,7 @@ describe("RunLedger runtime wiring", () => {
     const deltas = Array.from({ length: 50 }, (_, index) => providerTextDelta(`chunk-${index}`));
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([...deltas, providerDone()]),
+      packages: [mockProvider([[...deltas, providerDone()]])],
       runLedger: ledger,
     });
 
@@ -458,7 +450,7 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("chunk-0"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("chunk-0"), providerDone()]])],
       runLedger: ledger,
     });
 
@@ -473,7 +465,7 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
     const { ledger, runs } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello"), providerDone()]])],
       runLedger: ledger,
     });
     const session = await agent.session({ id: "s-prompt", create: true });
@@ -489,7 +481,7 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
     const { ledger, runs } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello"), providerDone()]])],
       runLedger: ledger,
     });
 
@@ -506,7 +498,7 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
     const { ledger, runs } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("hello"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello"), providerDone()]])],
       runLedger: ledger,
     });
     const session = await agent.session({ id: "s-invalid", create: true });

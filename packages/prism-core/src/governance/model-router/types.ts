@@ -1,4 +1,4 @@
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequest, ProviderResolver } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig, ProviderRequest, ProviderResolver } from "@arnilo/prism";
 
 export interface ModelRouterAllowList {
   readonly providers?: readonly string[];
@@ -299,7 +299,7 @@ export interface ModelRouterDiagnostics {
 }
 
 export interface ModelRouterResolveResult {
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
   readonly diagnostics: ModelRouterDiagnostics;
   /** Pass to recordOutcome after a half-open circuit probe. */
@@ -370,7 +370,7 @@ export interface ModelRouter {
     readonly byKind?: Readonly<Record<string, ModelRouterAttribution>>;
     readonly attributions?: Readonly<Record<string, ModelRouterAttribution>>;
   }>;
-  /** Create a governed AIProvider adapter bound to this router. */
+  /** Create a governed ModelProvider adapter bound to this router. */
   createGovernedProvider(
     options?: Omit<import("./invocation.js").GovernedProviderOptions, "router">,
   ): import("./invocation.js").GovernedProvider;

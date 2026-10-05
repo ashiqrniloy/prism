@@ -2,12 +2,12 @@
 
 ## What it does
 
-`@arnilo/prism-providers/zai` provides explicit, side-effect-free setup for the Z.AI
+`@arnilo/prism-provider-zai` provides explicit, side-effect-free setup for the Z.AI
 GLM Chat Completions API (`POST /chat/completions`) with official deep-thinking,
 reasoning-effort, and tool-stream request fields.
 
 The package registers a provider, featured GLM model metadata, and an `api_key`
-auth method through `createExtensionKernel().load([...])`.
+auth method when the package is listed in `createAgent({ packages: [...] })`.
 
 ## When to use it
 
@@ -21,24 +21,29 @@ real-network tests.
 ## Inputs / request
 
 ```ts
-import {
-  createZaiProviderPackage,
-  defineZaiModel,
-  listZaiModels,
-} from "@arnilo/prism-providers/zai";
+import zai from "@arnilo/prism-provider-zai";
 
-createZaiProviderPackage(options: ZaiProviderPackageOptions): ProviderPackage
-defineZaiModel(config: ZaiModelConfig): ModelConfig
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+zai(options?: ZaiProviderPackageOptions & ZaiProviderConfig = {}): PackageInstance
+
+// Named exports.
+createZaiProvider(options?: ZaiProviderOptions): ModelProvider
 listZaiModels(options?: ListZaiModelsOptions): Promise<ModelConfig[]>
+defineZaiModel(config: ZaiModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides the Z.AI base URL (default `https://api.z.ai/api/paas/v4`). |
-| `id` | `string` | Overrides the provider id (default `zai`). |
-| `models` | `readonly ModelConfig[]` | Overrides featured `zaiModels` defaults. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:ZAI_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://api.z.ai/api/paas/v4` (China: `https://open.bigmodel.cn/api/paas/v4`). |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `zai`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listZaiModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 ### Thinking / reasoning compat
 
@@ -86,15 +91,16 @@ Example request body (official Chat Completions shape):
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import { createZaiProviderPackage, listZaiModels } from "@arnilo/prism-providers/zai";
+import { createAgent } from "@arnilo/prism";
+import zai from "@arnilo/prism-provider-zai";
 
-const kernel = createExtensionKernel();
-await kernel.load([createZaiProviderPackage({ apiKey: "fake-zai-key" })]);
+const agent = await createAgent({
+  model: { provider: "zai", model: "glm-5.2" },
+  packages: [zai({ apiKey: "env:ZAI_API_KEY" })],
+});
 
-// Optional caller-gated discovery (never runs during package setup):
-const live = await listZaiModels({ apiKey: "fake-zai-key" });
-await kernel.load([createZaiProviderPackage({ apiKey: "fake-zai-key", models: live })]);
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 Per-turn thinking override:
@@ -153,7 +159,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport`
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit`
   helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
@@ -171,7 +177,7 @@ Z.AI models are family-stamped by id. GLM-5.3/5.3-FLASH: `reasoning_effort` rest
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   caller-gated discovery, per-turn thinking.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable
   `applyThinkingLevel` → Z.AI `reasoning_effort` / `thinking.type`.

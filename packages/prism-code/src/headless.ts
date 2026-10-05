@@ -1,9 +1,10 @@
 import {
+  parseModelRef,
   type Principal,
   type RunResult,
   type Session,
   type AgentSessionConfig,
-  type AIProvider,
+  type ModelProvider,
   type ExecutionPolicy,
   type OwnershipScope,
   type ToolDefinition,
@@ -35,7 +36,7 @@ import { registerCostStop, resolveContinueOnOpenTodos, resolvePrismCodeLimits, r
 import { type McpTrustContext, resolveMcpServers } from "./mcp.js";
 import { ObservationalMemoryCoordinator } from "./observational-memory.js";
 import { createEnvironmentContextSource, resolvePrismCodeInstructions } from "./prompt.js";
-import { createProviderCache, enrichModelConfig, type ProviderCache } from "./providers.js";
+import { createProviderCache, providerCachePackage, enrichModelConfig, type ProviderCache } from "./providers.js";
 import {
   configuredSessionStore,
   deriveSessionTitle,
@@ -65,7 +66,7 @@ export interface HeadlessOptions {
   readonly continueRecent?: boolean;
   readonly stdout?: WritableSink;
   readonly stderr?: WritableSink;
-  readonly provider?: AIProvider;
+  readonly provider?: ModelProvider;
   readonly credentialManager?: PrismCodeCredentialManager;
   /** `deny` (default) refuses approval-required calls; `edits` allows in-repo edits; `all` allows everything but hard denies. */
   readonly approve?: "deny" | "edits" | "all";
@@ -84,7 +85,7 @@ export interface AppHostBindings {
 
 export async function assembleAppAgent(
   config: PrismCodeConfig,
-  overrideProvider?: AIProvider,
+  overrideProvider?: ModelProvider,
   executionPolicy?: ExecutionPolicy,
   omCoordinator?: ObservationalMemoryCoordinator,
   credentialManager?: PrismCodeCredentialManager,
@@ -96,7 +97,7 @@ export async function assembleAppAgent(
   const sessionModel = config.model ?? { provider: "mock", model: "default" };
 
   // One provider per provider id for the whole process; the agent gets a resolver, not a fixed
-  // instance, so RunOptions.model/providerSource can switch provider between runs.
+  // instance, so RunOptions.model can switch provider between runs.
   const cache =
     providerCache ??
     createProviderCache({
@@ -226,7 +227,6 @@ export async function assembleAppAgent(
 
   // 7. Merge Configuration
   const agentSdkConfig = mergeAgentConfig(basePreset, {
-    providerSource: (model) => cache.get(model),
     model: sessionModel,
     workspaceRoot: repoRoot,
     trust,
@@ -260,7 +260,7 @@ export async function assembleAppAgent(
         }
       : undefined,
     commands: [...skillCommands, ...wiki.commands],
-    ...(wiki.package ? { packages: [wiki.package] } : {}),
+    packages: [providerCachePackage(cache), ...(wiki.package ? [wiki.package] : [])],
   });
 
   const definition = await defineAgent({
@@ -302,7 +302,7 @@ export async function assembleAppAgent(
       // input cap, and a per-run model switch can hand core a bare `{ provider, model }`. The static
       // catalog (or the conservative assumed limits) is the same source the footer and TUI use.
       if (finalRunOpts?.model) {
-        finalRunOpts = { ...finalRunOpts, model: (await enrichModelConfig(finalRunOpts.model)).model };
+        finalRunOpts = { ...finalRunOpts, model: (await enrichModelConfig(parseModelRef(finalRunOpts.model))).model };
       }
       const result = await originalRun(prompt, finalRunOpts);
       // A provider-reported cost breach is still a hard limit; a `turn.before` stop that fires

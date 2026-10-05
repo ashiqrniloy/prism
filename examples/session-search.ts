@@ -3,8 +3,8 @@ import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSessionEntry, type SessionSearchHit } from "@arnilo/prism";
-import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createJsonlSessionStore } from "@arnilo/prism-store-jsonl";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 
 // Workspace session search over stored sessions (plan 095). One query API covers the indexed
 // stores (SQLite FTS5 / Postgres tsvector) and the linear-scan fallbacks (memory, JSONL): hits
@@ -77,7 +77,7 @@ async function demo(): Promise<Record<string, unknown>> {
   const entries = corpus();
   const stem = `prism-session-search-${process.pid}`;
   const dbPath = join(tmpdir(), `${stem}.db`);
-  const jsonlPath = join(tmpdir(), `${stem}.jsonl`);
+  const jsonlDir = join(tmpdir(), `${stem}-jsonl`);
   const persistence = createSqlitePersistence({ filename: dbPath });
   try {
     // SQLite: the FTS5 index is maintained at append time, so the query is an indexed lookup.
@@ -97,9 +97,9 @@ async function demo(): Promise<Record<string, unknown>> {
     const annotations = await persistence.searchSessions!({ query: "clock", kind: ["summary"], limit: 10 });
 
     // JSONL: no index - the same query scans the file (O(corpus) per query) with the same hit shape.
-    const writer = createJsonlSessionStore(jsonlPath);
+    const writer = createJsonlSessionStore({ dir: jsonlDir });
     for (const entry of entries) await writer.append(entry);
-    const linear = await createJsonlSessionStore(jsonlPath).searchSessions!({
+    const linear = await createJsonlSessionStore({ dir: jsonlDir }).searchSessions!({
       workspaceRoot: "/repo/app",
       query: "flaky auth",
       limit: 10,
@@ -123,7 +123,8 @@ async function demo(): Promise<Record<string, unknown>> {
     };
   } finally {
     persistence.close();
-    for (const file of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`, jsonlPath]) rmSync(file, { force: true });
+    for (const file of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) rmSync(file, { force: true });
+    rmSync(jsonlDir, { recursive: true, force: true });
   }
 }
 

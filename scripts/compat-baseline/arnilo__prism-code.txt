@@ -63,7 +63,7 @@ UnavailableStoredCredentialStore	export declare class UnavailableStoredCredentia
 appendPromptHistory	export declare function appendPromptHistory(cwd: string, text: string, options?:
 applyFlagOverlay	export declare function applyFlagOverlay(config: PrismCodeConfig, flags: CliFlags): PrismCodeConfig
 applyOpenTuiLibc	export declare function applyOpenTuiLibc(env?: NodeJS.ProcessEnv, platform?: NodeJS.Platform, readReport?: () => LibcReport | undefined): string | undefined
-assembleAppAgent	export declare function assembleAppAgent(config: PrismCodeConfig, overrideProvider?: AIProvider, executionPolicy?: ExecutionPolicy, omCoordinator?: ObservationalMemoryCoordinator, credentialManager?: PrismCodeCredentialManager, providerCache?: ProviderCache, trust?: TrustPolicy, hostBindings?: AppHostBindings): Promise<Agent>
+assembleAppAgent	export declare function assembleAppAgent(config: PrismCodeConfig, overrideProvider?: ModelProvider, executionPolicy?: ExecutionPolicy, omCoordinator?: ObservationalMemoryCoordinator, credentialManager?: PrismCodeCredentialManager, providerCache?: ProviderCache, trust?: TrustPolicy, hostBindings?: AppHostBindings): Promise<Agent>
 autoDetectProvider	export declare function autoDetectProvider(credentialManager: PrismCodeCredentialManager): Promise<ModelConfig | undefined>
 boundToolOutput	export declare function boundToolOutput(output: string): string
 buildFileIndex	export declare function buildFileIndex(paths: readonly string[]): FileIndexEntry[]
@@ -175,7 +175,7 @@ parsePrismCodeConfigLayer	export declare function parsePrismCodeConfigLayer(text
 permissionRulesPath	export declare function permissionRulesPath(home: string): string
 prepareSessionDbPath	export declare function prepareSessionDbPath(config: PrismCodeConfig, home?: string): string
 promptHistoryPath	export declare function promptHistoryPath(home?: string): string
-providerSourceFor	export declare function providerSourceFor(cache?: ProviderCache): ProviderResolver | undefined
+providerCachePackage	export declare function providerCachePackage(cache: ProviderCache, extraIds?: readonly string[]): PackageInstance
 readGlobalConfig	export declare function readGlobalConfig(home?: string): PrismCodeGlobalConfig | undefined
 readMcpTrust	export declare function readMcpTrust(home?: string):
 readState	export declare function readState(home?: string): PrismCodeStateReadResult
@@ -201,7 +201,7 @@ resolvePrismCodeLoop	export declare function resolvePrismCodeLoop(loopConfig?: P
 resolvePrismCodeToolResultFold	export declare function resolvePrismCodeToolResultFold(): ToolResultFoldOptions
 resolvePrismCodeVersion	export declare function resolvePrismCodeVersion(): string
 resolvePrismHome	export declare function resolvePrismHome(env?: NodeJS.ProcessEnv): string
-resolveProvider	export declare function resolveProvider(model: ModelConfig, options?: ProviderResolutionOptions): Promise<AIProvider>
+resolveProvider	export declare function resolveProvider(model: ModelConfig, options?: ProviderResolutionOptions): Promise<ModelProvider>
 resolveSessionDbPath	export declare function resolveSessionDbPath(config: PrismCodeConfig, home?: string): string
 resolveSessionStore	export declare function resolveSessionStore(config: PrismCodeConfig, home?: string): SessionStore
 resolveSkillRoots	export declare function resolveSkillRoots(config: PrismCodeConfig, home?: string, repoRoot?: string, agentsHome?: string): readonly DiscoveryRoot[]
@@ -217,7 +217,7 @@ savePermissionRules	export declare function savePermissionRules(home: string, re
 searchRepoSessions	export declare function searchRepoSessions(store: SessionStore, options: SearchRepoSessionsOptions): Promise<SearchRepoSessionsResult>
 selectCredentialStore	export declare function selectCredentialStore(options: SelectCredentialStoreOptions): Promise<CredentialStoreSelection>
 selectMcpServers	export declare function selectMcpServers(allow: readonly string[], servers: readonly McpServer[]): boolean
-selectionRunOptions	export declare function selectionRunOptions(selection: ActiveSelection, cache?: ProviderCache, base?: RunOptions): RunOptions
+selectionRunOptions	export declare function selectionRunOptions(selection: ActiveSelection, _cache?: ProviderCache, base?: RunOptions): RunOptions
 serveAcp	export declare function serveAcp(options: ServeAcpOptions): Promise<void>
 sessionEntryToUiActions	export declare function sessionEntryToUiActions(entry: SessionEntry): TuiAction[]
 sessionRecordExists	export declare function sessionRecordExists(store: SessionStore, sessionId: string): Promise<boolean>

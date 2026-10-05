@@ -15,9 +15,9 @@
 // can assert the effective chain: `effectiveTestChain()`, `STAGES`, `runStages()`.
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readManifest } from "./package-truth.mjs";
+import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 
@@ -59,6 +59,12 @@ export const GATE_FILES = [
   "scripts/phase27-ha.test.mjs",
   "scripts/phase27-erp-journey.test.mjs",
   "scripts/phase37-provider-matrix.test.mjs",
+  // Plan 152 Task 8: cross-vendor conformance walks moved out of the retired
+  // provider-family workspace into the gate stage.
+  "scripts/provider-thinking-conformance.test.mjs",
+  "scripts/provider-toolcall-conformance.test.mjs",
+  "scripts/provider-tool-result-wire.test.mjs",
+  "scripts/provider-discovery-gate.test.mjs",
   "scripts/phase26-index-benchmark.test.mjs",
   "scripts/obscura-host-conformance.test.mjs",
   "scripts/phase54-package-map.test.mjs",
@@ -106,17 +112,20 @@ function expandGlob(arg) {
 // §6.1–§6.4: root 20.0 s vs Node 18.5 s at equal file counts, gate 32.1 s vs 32.5 s, sqlite 438 ms vs
 // 470 ms, examples 3.5 s vs 10.0 s). Children spawn `bun` by name: under the Bun parent
 // `process.execPath` is Bun, and `bun --test` is a script run, not a test runner (Task 1 §1.2).
-export const SQLITE_TEST_GLOB = "packages/prism-core/dist/sessions/sqlite/__tests__/*.test.js";
+// Plan 153 Task 4: the SQLite separate stage is gone — the store moved to @arnilo/prism-store-sqlite,
+// whose own `test` script runs those files in the workspace stage.
 
 // Plan 115 Task 2: the workspace stage runs one npm process per package behind a bounded
 // pool instead of npm's serial `--workspaces` loop. Task 1 measured the lock as the real
 // bound (a concurrent executor alone recovered nothing because every leaf took the
 // exclusive lock), so each package's `test` script takes the shared reader mode and the
 // pool below overlaps them. `--if-present` keeps npm's skip-a-package-without-test rule.
-const WORKSPACE_LEAVES = readManifest(join(ROOT, "package.json")).workspaces.map((dir) => ({
-  name: dir,
+// `expandWorkspaceDirs` resolves every workspace entry form, including the grouped
+// `packages/providers/*` base (plan 147/152), so a glob never reaches `--cwd`.
+const WORKSPACE_LEAVES = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces).map((dir) => ({
+  name: relative(ROOT, dir),
   command: "bun",
-  args: ["run", "--cwd", dir, "test"],
+  args: ["run", "--cwd", relative(ROOT, dir), "test"],
 }));
 
 // The dist-consuming suites run behind the build lock (they import root dist/ via
@@ -152,15 +161,6 @@ export const STAGES = [
       "--path-ignore-patterns=packages/**",
       "dist/__tests__/*.test.js",
     ],
-  },
-  {
-    // Task 1 measured this file set `bun-ok` (the database actually opens `:memory:`). `--timeout=0`
-    // matches Node's no-default-timeout — Bun's default 5000 ms would fail a slow test Node never
-    // times out — and per-test `{ timeout }` options still fire. prism-core's own run excludes
-    // this glob, so each SQLite file runs exactly once.
-    name: "sqlite suites",
-    command: "bun",
-    args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", SQLITE_TEST_GLOB],
   },
   {
     // Bounded for the same reason as the root suites: the tool-search benchmark

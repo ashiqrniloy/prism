@@ -10,7 +10,7 @@ import {
   askEveryTool,
   type Agent,
   AgentRunStateError,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createAgentRunLifecycle,
   createMemoryCheckpointStore,
@@ -25,7 +25,8 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { createConversationService } from "../runtime/server/conversations.js";
-import { createSqlitePersistence } from "../sessions/sqlite/index.js";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const ownership: OwnershipScope = { tenantId: "tenant-1", userId: "user-1" };
 const otherOwnership: OwnershipScope = { tenantId: "tenant-1", userId: "user-2" };
@@ -44,7 +45,7 @@ function tempDb(name: string): string {
   return join(dir, `${name}.db`);
 }
 
-function textProvider(calls: { count: number }, text: (count: number) => string): AIProvider {
+function textProvider(calls: { count: number }, text: (count: number) => string): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -75,7 +76,7 @@ describe("plan 079 primitive review", () => {
     const agent = await createAgent({
       id: "review-reopen",
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store: persistence },
     });
     const first = await runBoundTurn(agent, { sessionId: "bound-session" }, "turn one", "op-1");
@@ -87,7 +88,7 @@ describe("plan 079 primitive review", () => {
     const reopened = await createAgent({
       id: "review-reopen",
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store: persistence },
     });
     const second = await runBoundTurn(reopened, { sessionId: "bound-session", leafId: first.leafId }, "turn two", "op-2");
@@ -108,7 +109,7 @@ describe("plan 079 primitive review", () => {
       id: "review-two-objects",
       model: { provider: "mock", model: "demo" },
       slots: { store },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           calls.count += 1;
@@ -116,7 +117,7 @@ describe("plan 079 primitive review", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
     });
     const first = (await agent.session({ id: "shared-id", create: true })).run("from a");
     const second = (await agent.session({ id: "shared-id", create: true })).run("from b");
@@ -136,7 +137,7 @@ describe("plan 079 primitive review", () => {
     const secure = await createSecureAgent({
       id: "review-secure",
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(calls, () => "secure answer"),
+      packages: [providerPackage("test-provider", [textProvider(calls, () => "secure answer")])],
       slots: { store: persistence },
       tools: [],
       toolArgumentValidator: { validate: () => ({ ok: true }) },
@@ -171,7 +172,7 @@ describe("plan 079 primitive review", () => {
     const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     const toolCalls = { count: 0 };
-    const provider: AIProvider = (() => {
+    const provider: ModelProvider = (() => {
       let turn = 0;
       return {
         id: "mock",
@@ -193,7 +194,7 @@ describe("plan 079 primitive review", () => {
     const agent = await createAgent({
       id: "review-resume",
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store },
       tools: { add: tools },
       hooks: askEveryTool(),
@@ -234,7 +235,7 @@ describe("plan 079 primitive review", () => {
     const widened = await createAgent({
       id: "review-resume",
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store },
       tools: {
         add: [
@@ -277,7 +278,7 @@ describe("plan 079 primitive review", () => {
             },
           ],
         },
-        provider: (() => {
+        packages: [providerPackage("test-provider", [(() => {
           let turn = 0;
           return {
             id: "mock",
@@ -308,7 +309,7 @@ describe("plan 079 primitive review", () => {
               throw request.signal?.reason instanceof Error ? request.signal.reason : new Error("aborted");
             },
           };
-        })(),
+        })()])],
       });
     const suspend = async (agent: Agent) =>
       (await agent.session({ id: "cancel-session", create: true })).run("go", {
@@ -395,7 +396,7 @@ describe("plan 079 primitive review", () => {
       id: "review-idempotency",
       model: { provider: "mock", model: "demo" },
       slots: { store },
-      provider: textProvider(calls, () => "ok"),
+      packages: [providerPackage("test-provider", [textProvider(calls, () => "ok")])],
     });
     // A reopened session continues from the branch tip, so pin the parent with a seed run.
     const seed = await (await agent.session({ id: "idem", create: true })).run("seed");
@@ -425,7 +426,7 @@ describe("plan 079 primitive review", () => {
       id: "review-provenance",
       model: { provider: "mock", model: "demo" },
       slots: { store },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -438,7 +439,7 @@ describe("plan 079 primitive review", () => {
           yield providerTextDelta(`answer ${turn}`);
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {

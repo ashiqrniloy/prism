@@ -8,6 +8,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Network-free durable approval: no tool side effect occurs before resume approval.
 export async function demo() {
@@ -19,14 +20,14 @@ export async function demo() {
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore() },
     hooks: askEveryTool(),
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("write-1", "write", { value: "approved" }) };
         else yield providerTextDelta("finished");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
     },

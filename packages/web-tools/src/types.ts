@@ -1,4 +1,4 @@
-import type { CredentialResolver, JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition } from "@arnilo/prism";
+import type { CredentialValueSource, JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition } from "@arnilo/prism";
 
 export type WebProvider = "brave" | "exa" | "firecrawl" | "obscura";
 export interface WebRateMetadata {
@@ -69,7 +69,7 @@ export interface WebLimits {
   readonly timeoutMs?: number;
 }
 export type ResolvedWebLimits = Required<WebLimits>;
-export type WebCredentialSource = string | (() => string | undefined | Promise<string | undefined>) | CredentialResolver;
+export type WebCredentialSource = CredentialValueSource;
 export interface WebAdapterOptions {
   readonly credentials: WebCredentialSource;
   readonly allowedOrigins?: readonly string[];

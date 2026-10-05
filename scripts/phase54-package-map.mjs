@@ -17,19 +17,13 @@ export const CONSOLIDATION_SPEC = {
       name: "@arnilo/prism",
       role: "root",
       type: "retained",
-      description: "Root contracts, runtime API, CLI, providers/*, testing/*, node/* exports. Dependency-free.",
+      description: "Root contracts, runtime API, CLI, provider-kit, testing/*, node/* exports. Dependency-free.",
       subpaths: [
         ".",
-        "./providers/openai-compatible",
-        "./providers/transport",
-        "./providers/openai",
-        "./providers/schema",
-        "./providers/media",
+        "./provider-kit",
         "./testing",
-        "./testing/provider-conformance",
         "./testing/agent-event-source-conformance",
         "./testing/state-concurrency-conformance",
-        "./testing/session-store-conformance",
         "./testing/compaction-conformance",
         "./testing/tool-conformance",
         "./testing/tool-effect-store-conformance",
@@ -39,7 +33,6 @@ export const CONSOLIDATION_SPEC = {
         "./node/config",
         "./node/settings",
         "./node/trust",
-        "./node/session-store-jsonl",
         "./node/contribution-discovery",
         "./node/instruction-sources",
         "./node/system-prompts",
@@ -61,9 +54,6 @@ export const CONSOLIDATION_SPEC = {
         "/runtime/realtime",
         "/runtime/supervisor",
         "/runtime/workflows",
-        "/sessions/codecs",
-        "/sessions/sqlite",
-        "/sessions/postgres",
         "/sessions/nats",
         "/governance/policy",
         "/governance/evals",
@@ -81,8 +71,7 @@ export const CONSOLIDATION_SPEC = {
       },
       optionalPeers: ["pg", "@nats-io/jetstream", "@nats-io/transport-node"],
       securityBoundaries: [
-        "/sessions/postgres & /enterprise/postgres: PostgreSQL transaction isolation, schema migrations, and parameterized query execution.",
-        "/sessions/sqlite: SQLite file locking, synchronous journal modes, and path containment.",
+        "/enterprise/postgres: PostgreSQL transaction isolation, schema migrations, and parameterized query execution.",
         "/governance/policy: Fail-closed capability admission, tool authorization, and audit log tamper detection.",
         "/governance/evals: Evaluation run isolation, dataset curation redaction, and metric integrity.",
         "/governance/prompts: Versioned prompt promotion gating, rollback protection, and evaluation score thresholds.",
@@ -926,8 +915,8 @@ export function generateMarkdown(map) {
   lines.push("");
   lines.push("| Subpath / Family | Requirement | Category | Failure Mode / Enforcement |");
   lines.push("|---|---|---|---|");
-  lines.push("| `@arnilo/prism-core/sessions/sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |");
-  lines.push("| `@arnilo/prism-core/sessions/postgres` | `pg` | Optional Peer | Fail-closed before pool connection; emits install hint |");
+  lines.push("| `@arnilo/prism-store-sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |");
+  lines.push("| `@arnilo/prism-store-postgres` | `pg` | Hard Dependency | Loaded lazily; fail-closed before pool connection |");
   lines.push(
     "| `@arnilo/prism-core/sessions/nats` | `@nats-io/jetstream`, `@nats-io/transport-node` | Optional Peer | Fail-closed before NATS client connect |",
   );
@@ -966,7 +955,7 @@ export function generateMarkdown(map) {
     "| `web-tools/obscura` | SSRF, loopback forgery, unauthorized CDP session manipulation | Strict loopback pinning, token auth, process isolation | `packages/obscura/src/__tests__/*` |",
   );
   lines.push(
-    "| `core/sessions/postgres` | SQL injection, schema corruption, multi-tenant state bleed | Parameterized queries, migration locking, transaction savepoints | `packages/session-store-postgres/src/__tests__/*` |",
+    "| `store-postgres` | SQL injection, schema corruption, multi-tenant state bleed | Parameterized queries, migration locking, transaction savepoints | `packages/stores/postgres/src/__tests__/*` |",
   );
   lines.push(
     "| `coding-tools/document-reader` | Billion laughs XML bomb, out-of-memory denial of service | Byte limits, entity expansion limits, memory-bounded parsing | `packages/document-reader/src/__tests__/*` |",

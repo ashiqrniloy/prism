@@ -1,0 +1,10 @@
+TYPESAFE_API_KEY_ENV	export declare const TYPESAFE_API_KEY_ENV = "TYPESAFE_API_KEY"
+TYPESAFE_DEFAULT_API_KEY_REF	export declare const TYPESAFE_DEFAULT_API_KEY_REF = "env:TYPESAFE_API_KEY"
+TYPESAFE_DEFAULT_BASE_URL	export declare const TYPESAFE_DEFAULT_BASE_URL = "https://api.typesafe.ai"
+createTypeSafeProvider	export declare function createTypeSafeProvider(options?: TypeSafeProviderOptions): ModelProvider
+default	export default
+defineTypeSafeModel	export declare function defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
+type TypeSafeModelConfig	export { defineTypeSafeModel, TYPESAFE_API_KEY_ENV, TYPESAFE_DEFAULT_BASE_URL, type TypeSafeModelConfig, typeSafeModels, } from "./models.js"
+type TypeSafeProviderOptions	export { createTypeSafeProvider, type TypeSafeProviderOptions } from "./provider.js"
+typeSafeModels	export declare const typeSafeModels: readonly ModelConfig[]
+typesafe	export declare function typesafe(options?: TypeSafeProviderPackageOptions & TypeSafeProviderConfig): PackageInstance

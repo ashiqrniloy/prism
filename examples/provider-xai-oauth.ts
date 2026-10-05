@@ -1,4 +1,4 @@
-import { createXaiOAuthProvider } from "@arnilo/prism-providers/xai";
+import { createXaiOAuthProvider } from "@arnilo/prism-provider-xai";
 
 export async function demo() {
   const seen: string[] = [];

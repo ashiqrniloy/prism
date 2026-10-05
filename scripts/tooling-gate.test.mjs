@@ -113,7 +113,7 @@ describe("tooling gates fail on violations", () => {
       "scripts/branch-coverage-audit.mjs",
       "packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts",
       // Plan 126 Task 2: the wrong-runtime probe must actually run on node.
-      "packages/prism-core/src/sessions/sqlite/__tests__/sqlite-persistence.test.ts",
+      "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
     ]);
     // Skip matches inside a template literal (this file's own fixture strings).
     const inTemplateLiteral = (source, index) => {
@@ -195,8 +195,8 @@ describe("tooling gates fail on violations", () => {
       "packages/prism-core/src/credentials/node/oauth2.ts",
       "packages/prism-core/src/governance/policy/audit-export.ts",
       "packages/prism-core/src/governance/prompts/util.ts",
-      "packages/prism-providers/src/bedrock/sigv4.ts",
-      "packages/prism-providers/src/openai/oauth.ts",
+      "packages/providers/bedrock/src/sigv4.ts",
+      "packages/providers/openai/src/oauth.ts",
     ];
     const BUN_NATIVE_HASH = /\bBun\s*\.\s*(?:hash|CryptoHasher)\s*\(/g;
     const count = (source) => [...source.matchAll(BUN_NATIVE_HASH)].length;

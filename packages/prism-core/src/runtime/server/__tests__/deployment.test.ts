@@ -1,16 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentEventRecord,
-  createAgent,
-  createMemoryAgentEventSource,
-  createMemoryLeaseStore,
-  createMockProvider,
-  type OwnershipScope,
-  type PersistencePage,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
+import { type AgentEventRecord, createAgent, createMemoryAgentEventSource, createMemoryLeaseStore, type OwnershipScope, type PersistencePage, providerDone, providerTextDelta } from "@arnilo/prism";
 import {
   createMemoryRateLimiter,
   createPrismAgentEventReplay,
@@ -22,13 +12,14 @@ import {
   createPrismReplayHandler,
   PRISM_DEPLOYMENT_LEASE_NAMESPACE,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const ownership: OwnershipScope = { tenantId: "tenant-1", userId: "user-1" };
 
 async function agent() {
   return await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
   });
 }
 

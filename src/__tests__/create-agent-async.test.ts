@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { agentRuntime } from "../agent-session/create-agent.js";
-import { type AgentConfig, createAgent, createMockProvider, providerDone, providerTextDelta } from "../index.js";
+import { type AgentConfig, createAgent, providerDone, providerTextDelta } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const base: AgentConfig = {
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+  packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("ok"), providerDone()])])],
 };
 
 describe("createAgent is async (plan 146 Task 2)", () => {

@@ -3,8 +3,9 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMockProvider, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { createTestRenderer } from "@opentui/core/testing";
 import { assembleAppAgent } from "../headless.js";
 import {

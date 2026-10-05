@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import { createAgent, createMockProvider, PackageLoadError, providerDone } from "@arnilo/prism";
+import { createAgent, PackageLoadError, providerDone } from "@arnilo/prism";
 import {
   compileMatcher,
   createContextQueue,
@@ -14,12 +14,12 @@ import {
   hooksJson,
   tokenizeCommand,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 async function load(config: object) {
   return createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerDone()]),
-    packages: [hooksJson({ config: { ...(config as HooksJsonConfig), allowCommands: "all" } })],
+    packages: [hooksJson({ config: { ...(config as HooksJsonConfig), allowCommands: "all" } }), mockProvider([[providerDone()]])],
   });
 }
 

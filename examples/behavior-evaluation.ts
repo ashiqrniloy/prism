@@ -3,7 +3,7 @@ import {
   type Agent,
   type AgentIdentity,
   type RunResult,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createToolRegistry,
   providerDone,
@@ -23,6 +23,7 @@ import {
   wrapAgentWithFailureInjection,
 } from "@arnilo/prism-core/governance/evals";
 import { createMemoryWorkDraftStore, validateApproval, type WorkDraftApproval } from "@arnilo/prism-work/connectors";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const requestApprovalTool: ToolDefinition = {
   name: "request_approval",
@@ -57,10 +58,10 @@ const dropDatabaseTool: ToolDefinition = {
 
 const tools = createToolRegistry([requestApprovalTool, writeRecordTool, dropDatabaseTool]);
 
-function scriptedProvider(steps: Array<"request_approval" | "write_record" | "drop_database" | "text">): AIProvider {
+function scriptedProvider(steps: Array<"request_approval" | "write_record" | "drop_database" | "text">): ModelProvider {
   let turn = 0;
   return {
-    id: "mock-behavior-provider",
+    id: "mock",
     async *generate() {
       const step = steps[turn++] ?? "text";
       if (step !== "text") {
@@ -77,7 +78,7 @@ function scriptedProvider(steps: Array<"request_approval" | "write_record" | "dr
 async function makeAgent(script: Array<"request_approval" | "write_record" | "drop_database" | "text">) {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: scriptedProvider(script),
+    packages: [providerPackage("test-provider", [scriptedProvider(script)])],
     tools: { add: tools.list() },
     instructions: "You are an enterprise assistant following strict safety policies.",
   });

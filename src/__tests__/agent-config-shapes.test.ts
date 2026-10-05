@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "bun:test";
 import { loadAgentRunState } from "../agent-run-state.js";
 import {
-  type AIProvider,
+  type ModelProvider,
   askEveryTool,
   createAgent,
   createMemoryCheckpointStore,
@@ -18,6 +18,7 @@ import {
 import { createAgentWith } from "../agent-session/create-agent.js";
 import { resolveBackgroundSettleMs, resolveRunLimits } from "../run-limits.js";
 import { failedRun } from "./run-result-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const tool: ToolDefinition = {
   name: "probe",
@@ -40,7 +41,7 @@ const model = { provider: "mock", model: "demo", capabilities: { tools: true } }
 
 test("tools_add_registers_host_tools_and_collides_fail_closed_with_package_tools", async () => {
   const seen: ProviderRequest[] = [];
-  const agent = await createAgent({ model, provider: provider(seen), tools: { add: [tool] } });
+  const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider(seen)])], tools: { add: [tool] } });
   await (await agent.session()).run("hi");
   assert.deepEqual(
     seen[0]?.tools?.map((t) => t.name),
@@ -61,7 +62,7 @@ test("skills_dirs_and_add_load_and_disclosure_defaults_to_progressive", async ()
   const seen: ProviderRequest[] = [];
   const paths: string[] = [];
   const agent = await createAgentWith(
-    { model, provider: provider(seen), skills: { add: [skill], dirs: ["skills"] } },
+    { model, packages: [providerPackage("test-provider", [provider(seen)])], skills: { add: [skill], dirs: ["skills"] } },
     {
       readSkillDir: async (path) => {
         paths.push(path);
@@ -80,11 +81,11 @@ test("skills_dirs_and_add_load_and_disclosure_defaults_to_progressive", async ()
 
 test("skills_catalog_is_a_named_kernel_context_build_registration", async () => {
   const seen: ProviderRequest[] = [];
-  const agent = await createAgent({ model, provider: provider(seen), skills: { add: [skill] } });
+  const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider(seen)])], skills: { add: [skill] } });
   assert.ok(agent.inspect().hooks["context.build"]?.some((h) => h.id === "kernel:context.build"));
   const disabled = await createAgent({
     model,
-    provider: provider(seen),
+    packages: [providerPackage("test-provider", [provider(seen)])],
     skills: { add: [skill] },
     disable: { hooks: ["kernel:context.build"] },
   });
@@ -96,7 +97,7 @@ test("run_tools_only_narrows_and_unknown_name_fails_closed", async () => {
   const seen: ProviderRequest[] = [];
   const agent = await createAgent({
     model,
-    provider: provider(seen),
+    packages: [providerPackage("test-provider", [provider(seen)])],
     tools: { add: [tool, { ...tool, name: "other" }] },
   });
   await (await agent.session()).run("hi", { tools: { only: ["probe"] } });
@@ -111,7 +112,7 @@ test("host_load_skill_collision_fails_closed_under_progressive_disclosure", asyn
   const seen: ProviderRequest[] = [];
   const agent = await createAgent({
     model,
-    provider: provider(seen),
+    packages: [providerPackage("test-provider", [provider(seen)])],
     skills: { add: [skill], disclosure: "progressive" },
     tools: { add: [{ ...tool, name: "load_skill" }] },
   });
@@ -122,7 +123,7 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
   const checkpoints = createMemoryCheckpointStore();
   const seen: string[][] = [];
   let turn = 0;
-  const gated: AIProvider = {
+  const gated: ModelProvider = {
     id: "mock",
     async *generate() {
       turn += 1;
@@ -134,7 +135,7 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
     hooks: askEveryTool(),
     id: "narrow-resume",
     model,
-    provider: gated,
+    packages: [providerPackage("test-provider", [gated])],
     slots: { store: createMemorySessionStore() },
     tools: { add: [tool, { ...tool, name: "other" }] },
   });
@@ -145,7 +146,7 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
   assert.equal(first.status, "suspended");
   const loaded = await loadAgentRunState(checkpoints, { runId: first.runId, sessionId: first.sessionId });
   assert.deepEqual(loaded.state.toolNames, ["probe"]);
-  const resumeProvider: AIProvider = {
+  const resumeProvider: ModelProvider = {
     id: "mock",
     async *generate(request) {
       seen.push((request.tools ?? []).map((item) => item.name));
@@ -153,7 +154,7 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
     },
   };
   const result = await resumeAgentRun(
-    await createAgent({ ...agent.config, provider: resumeProvider }),
+    await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] }),
     { runId: first.runId, sessionId: first.sessionId },
     {
       expectedVersion: first.runState!.version!,

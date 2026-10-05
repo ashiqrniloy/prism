@@ -1,8 +1,10 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { createMockProvider, providerDone, providerTextDelta, type ToolDefinition, type ToolRegistry } from "@arnilo/prism";
+import { providerDone, providerTextDelta, type ToolDefinition, type ToolRegistry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import type { ConnectMcpToolsOptions, McpClientAuthOptions, McpStreamableHttpTransport, McpToolBridge } from "@arnilo/prism-mcp";
 import { AgentSdkConfigError, assembleMcpPlane, buildConnectOptions, defineAgent, McpConnectError, parseAgentSdkConfig } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 function stubTool(name: string): ToolDefinition {
   return {
@@ -198,7 +200,7 @@ describe("mcp plane", () => {
     let closes = 0;
     const app = await defineAgent({
       model: { provider: "mock", model: "mock-model" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       mcp: {
         servers: [{ serverId: "flaky", command: "stub", allow: "stdio" }],
         connector: async () => {
@@ -239,7 +241,7 @@ describe("mcp plane", () => {
     let healthy = false;
     const app = await defineAgent({
       model: { provider: "mock", model: "mock-model" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       mcp: {
         servers: [{ serverId: "remote", command: "stub", allow: "stdio" }],
         connector: async (options) => {

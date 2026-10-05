@@ -31,7 +31,7 @@ import { makeTempEnvironment, ptySupported, startTui } from "./lib/pty-harness.m
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BIN = join(REPO_ROOT, "packages", "prism-code", "bin", "prism-code.ts");
-const { createFileCredentialStore } = await import(join(REPO_ROOT, "packages", "prism-core", "dist", "credentials", "node", "index.js"));
+const { createFileCredentialStore } = await import(join(REPO_ROOT, "packages", "credentials", "keyring", "src", "index.ts"));
 
 const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 const REQUESTED = process.env.PRISM_LIVE_PRISM_CODE_PROVIDER;

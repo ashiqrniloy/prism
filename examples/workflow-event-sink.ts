@@ -1,4 +1,5 @@
-import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   conditionalNode,
@@ -8,6 +9,7 @@ import {
   runWorkflow,
   type WorkflowEvent,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Observability / event sink: a workflow with a conditional path produces
 // events that the host collects and inspects. Demonstrates:
@@ -25,7 +27,7 @@ const provider = createMockProvider([
 
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
 });
 
 const research = agentNode({

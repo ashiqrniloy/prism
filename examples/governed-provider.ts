@@ -1,8 +1,8 @@
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { createModelRouter, type GovernedInvocationSettlement, isGovernedProvider } from "@arnilo/prism-core/governance/model-router";
 
 // Mock provider factory for demonstration without network or credentials
-function createMockProvider(id: string): AIProvider {
+function createMockProvider(id: string): ModelProvider {
   return {
     id,
     async *generate(_request: ProviderRequest): AsyncIterable<ProviderEvent> {

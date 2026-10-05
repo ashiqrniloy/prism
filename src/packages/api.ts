@@ -1,13 +1,13 @@
 import type {
   Agent,
-  AIProvider,
-  Credential,
-  CredentialRequest,
+  ModelProvider,
   JsonObject,
   JsonValue,
   ModelConfig,
+  ModelRef,
   ProviderEvent,
   ProviderRequest,
+  Secret,
   Skill,
   ToolDefinition,
 } from "../contracts.js";
@@ -88,8 +88,8 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
     addDir(path: string): void;
   };
   readonly providers: {
-    /** Selected by `AgentConfig.model.provider`, after a direct `provider` and the `providerSource`s. A duplicate id gives `provider_conflict`. */
-    register(provider: AIProvider): void;
+    /** Selected by `AgentConfig.model.provider`, A duplicate id gives `provider_conflict`. */
+    register(provider: ModelProvider): void;
   };
   readonly commands: {
     /** A name taken by another package gives `command_conflict`. */
@@ -98,15 +98,15 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
   /** Needs `"models"`. */
   readonly models: {
     /** A client over the agent's provider resolution. `ref` defaults to `AgentConfig.model`. */
-    client(ref?: ModelConfig): ModelClient;
+    client(ref?: ModelRef): ModelClient;
   };
   /** Needs `"credentials"`. */
   readonly credentials: {
     /**
-     * Resolves through the `credentials` slot. The value joins the agent's secret set, so it is redacted
-     * from events, notes, logs, and errors from then on.
+     * Resolves a `env:`/`keyring:` ref through the `credentials` slot. The value joins the agent's secret
+     * set, so it is redacted from events, notes, logs, and errors from then on.
      */
-    resolve(request: string | CredentialRequest): Promise<Credential | undefined>;
+    resolve(ref: string): Promise<Secret | undefined>;
   };
   readonly state: {
     /**

@@ -1,7 +1,7 @@
 /**
  * Packed-install CLI live journey (plans/064 Task 5).
  *
- * Packs the root umbrella + @arnilo/prism-providers into a fresh consumer, then
+ * Packs the root umbrella + the CLI provider packages into a fresh consumer, then
  * drives the real `prism` bin from that install: `new package` scaffold and print/json/rpc modes over the chosen provider's real wire. The provider is
  * the first catalog entry whose credential env var is present (override
  * with PRISM_LIVE_CLI_PROVIDER); requires PRISM_LIVE_PROVIDER_TESTS=1 and at
@@ -29,7 +29,7 @@ const catalog = Object.fromEntries(
     ["neuralwatt", "NEURALWATT_API_KEY", "createNeuralWattProvider"],
     ["alibaba", "DASHSCOPE_API_KEY", "createAlibabaProvider"],
     ["ollama", "OLLAMA_API_KEY", "createOllamaProvider"],
-  ].map(([id, envKey, factoryExport]) => [id, { id, envKey, factoryExport, factoryModule: `@arnilo/prism-providers/${id}` }]),
+  ].map(([id, envKey, factoryExport]) => [id, { id, envKey, factoryExport, factoryModule: `@arnilo/prism-provider-${id}` }]),
 );
 const requested = process.env.PRISM_LIVE_CLI_PROVIDER;
 const providerId =
@@ -65,7 +65,10 @@ function isCredentialRejected(text) {
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers" },
+  ...["openai", "openrouter", "kimi", "zai", "opencode-go", "neuralwatt", "alibaba", "ollama"].map((id) => ({
+    dir: `packages/providers/${id}`,
+    name: `@arnilo/prism-provider-${id}`,
+  })),
 ];
 const packed = createPackedConsumer(packages);
 after(() => packed.cleanup());

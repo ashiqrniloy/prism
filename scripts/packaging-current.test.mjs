@@ -63,7 +63,16 @@ test("package set derives from truth: workspace dirs and taxonomy agree, names u
 for (const pkg of packages) {
   test(`${pkg.name}: packs clean (no tests/maps/source/plans/workspace files)`, () => {
     const files = packList(pkg.dir, pkg.name);
-    const junk = files.filter((f) => !f.startsWith("templates/") && DENIED.some(([pattern]) => pattern.test(f)));
+    // A source package publishes `./src/index.ts` on purpose (plan 147 Task 5): its TypeScript
+    // sources are the shipped artifact, so `src/**/*.ts` is not a denied "source" entry.
+    const manifest = readManifest(join(pkg.dir, "package.json"));
+    const sourceExport = manifest.exports?.["."] === "./src/index.ts";
+    const junk = files.filter(
+      (f) =>
+        !f.startsWith("templates/") &&
+        !(sourceExport && f.startsWith("src/") && f.endsWith(".ts") && !f.includes("__tests__")) &&
+        DENIED.some(([pattern]) => pattern.test(f)),
+    );
     assert.deepEqual(junk, [], `${pkg.name} packs denied files: ${junk.join(", ")}`);
   });
 
@@ -124,10 +133,10 @@ const FAMILY_CALLS = [
   { name: "@arnilo/prism-core", spec: "@arnilo/prism-core/runtime/server", call: '(m) => m.isAdmitOperation("agent.run")', expect: true },
   { name: "@arnilo/prism-memory", spec: "@arnilo/prism-memory", call: "(m) => m.resolveMemoryLimits().topK", expect: 5 },
   {
-    name: "@arnilo/prism-providers",
-    spec: "@arnilo/prism-providers/openai",
-    call: "(m) => m.openaiPackage().definition.name",
-    expect: "@arnilo/prism-providers.openai",
+    name: "@arnilo/prism-provider-openai",
+    spec: "@arnilo/prism-provider-openai",
+    call: "(m) => m.default().definition.name",
+    expect: "@arnilo/prism-provider-openai",
   },
   {
     name: "@arnilo/prism-coding-tools",

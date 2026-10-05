@@ -1,15 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentEvent,
-  type ProviderEvent,
-  type ProviderRequest,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-} from "../index.js";
+import { type AgentEvent, type ProviderEvent, type ProviderRequest, createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -47,9 +39,9 @@ describe("host-answered turns that skip the provider", () => {
     const requests: ProviderRequest[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("model answer"), providerDone()], {
+      packages: [mockProvider([[providerTextDelta("model answer"), providerDone()]], {
         onRequest: (request) => requests.push(request),
-      }),
+      })],
       hooks: deskModelCall(),
     });
     const session = await agent.session();
@@ -78,7 +70,7 @@ describe("host-answered turns that skip the provider", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       hooks: deskModelCall(),
       slots: { store },
     });
@@ -95,7 +87,7 @@ describe("host-answered turns that skip the provider", () => {
     const run = async (withHook: boolean) => {
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+        packages: [mockProvider([[providerTextDelta("Hello"), providerDone()]])],
         ...(withHook ? { hooks: deskModelCall() } : {}),
       });
       const session = await agent.session();
@@ -121,7 +113,7 @@ describe("host-answered turns that skip the provider", () => {
     const seen: string[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       hooks: (hooks) => {
         deskModelCall()(hooks);
         hooks.on("model.response", (message) => {

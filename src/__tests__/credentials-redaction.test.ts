@@ -2,21 +2,18 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { CredentialResolver, OAuthLoginCallbacks, OAuthProvider } from "../index.js";
 import {
-  createEnvCredentialResolver,
-  createExplicitCredentialResolver,
+  createEnvRefCredentialResolver,
   createProviderRegistry,
   errorToErrorInfo,
   redactSecrets,
-  refreshOAuthCredential,
   resolveCredentialValue,
 } from "../index.js";
+import { refreshOAuthCredential } from "../provider-kit/index.js";
 
 describe("credential boundary", () => {
   it("resolves credentials from direct value callback or resolver", async () => {
-    const resolver: CredentialResolver = {
-      resolve(request) {
-        return { type: "api_key", value: `${request.provider}:token` };
-      },
+    const resolver = {
+      resolve: () => ({ type: "api_key" as const, value: "mock:token" }),
     };
 
     assert.equal(await resolveCredentialValue("literal", { name: "api" }), "literal");
@@ -46,32 +43,20 @@ describe("credential boundary", () => {
     }
   });
 
-  it("explicit credential resolver uses documented order", async () => {
-    const resolver = createExplicitCredentialResolver([
-      { name: "runtime", resolver: { resolve: () => ({ type: "api_key", value: "runtime-key" }) } },
-      { name: "stored", resolver: { resolve: () => ({ type: "api_key", value: "stored-key" }) } },
-      { name: "fallback", resolver: { resolve: () => ({ type: "api_key", value: "fallback-key" }) } },
-    ]);
-
-    assert.equal(await resolveCredentialValue(resolver, { name: "apiKey", provider: "mock" }), "runtime-key");
-  });
-
-  it("env credential resolver reads only passed env object", async () => {
+  it("env ref resolver reads only passed env object", async () => {
     process.env.PRISM_TEST_API_KEY = "real-env-is-ignored";
     try {
-      const resolver = createEnvCredentialResolver({ DEMO_API_KEY: "passed-env-key" }, { "mock:apiKey": "DEMO_API_KEY" });
+      const resolver = createEnvRefCredentialResolver({ DEMO_API_KEY: "passed-env-key" });
 
-      assert.equal(await resolveCredentialValue(resolver, { name: "apiKey", provider: "mock" }), "passed-env-key");
-      assert.equal(
-        await resolveCredentialValue(createEnvCredentialResolver({}, { mock: "PRISM_TEST_API_KEY" }), { name: "apiKey", provider: "mock" }),
-        undefined,
-      );
+      assert.equal((await resolver.resolve("env:DEMO_API_KEY", {}))?.value, "passed-env-key");
+      assert.equal(await resolver.resolve("env:PRISM_TEST_API_KEY", {}), undefined);
+      assert.equal(await resolver.resolve("DEMO_API_KEY", {}), undefined);
     } finally {
       delete process.env.PRISM_TEST_API_KEY;
     }
   });
 
-  it("oauth callbacks typecheck and refresh updates caller store", async () => {
+  it("oauth callbacks typecheck and refresh persists through the slot", async () => {
     const callbacks: OAuthLoginCallbacks = {
       onAuth(url) {
         assert.equal(url.startsWith("https://"), true);
@@ -101,20 +86,18 @@ describe("credential boundary", () => {
         return credentials.access ? { type: "bearer", value: credentials.access } : undefined;
       },
     };
-    const stored: Array<[string, string | undefined]> = [];
-    const credentials = await provider.login(callbacks);
-    const refreshed = await refreshOAuthCredential({
-      provider,
-      credentials,
-      store: {
-        set: (providerId, next) => {
-          stored.push([providerId, next.access]);
-        },
+    const stored: Array<[string, string]> = [];
+    const sink: CredentialResolver = {
+      resolve: () => undefined,
+      store: (ref, secret) => {
+        stored.push([ref, secret.value]);
       },
-    });
+    };
+    const credentials = await provider.login(callbacks);
+    const refreshed = await refreshOAuthCredential({ provider, credentials, ref: "keyring:mock-oauth", sink });
 
     assert.equal(refreshed.access, "new-access");
-    assert.deepEqual(stored, [["mock-oauth", "new-access"]]);
+    assert.deepEqual(stored, [["keyring:mock-oauth", "new-access"]]);
     assert.equal((await provider.getCredential?.(refreshed))?.value, "new-access");
   });
 });

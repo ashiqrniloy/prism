@@ -1,17 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type Agent,
-  type AgentConfig,
-  type CompactionOptions,
-  type CompactionEntryData,
-  createAgent,
-  createDefaultCompactor,
-  createMockProvider,
-  createSessionEntry,
-  providerDone,
-  rebuildSessionContext,
-} from "../index.js";
+import { type Agent, type AgentConfig, type CompactionOptions, type CompactionEntryData, createAgent, createDefaultCompactor, createSessionEntry, providerDone, rebuildSessionContext } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 const now = () => new Date("2026-01-01T00:00:00.000Z");
 
@@ -123,7 +113,7 @@ describe("compaction", () => {
     const compactor = { name: "slot", compact: () => ({ summary: "from the slot" }) };
     const agent: Agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       slots: { compaction: compactor },
     });
     const session = await agent.session({ id: "s1", create: true });

@@ -1,0 +1,31 @@
+COMMANDCODE_DEFAULT_API_KEY_REF	export declare const COMMANDCODE_DEFAULT_API_KEY_REF = "env:COMMANDCODE_API_KEY"
+COMMAND_CODE_ANTHROPIC_HOOKS	export declare const COMMAND_CODE_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks
+COMMAND_CODE_DEFAULT_BASE_URL	export declare const COMMAND_CODE_DEFAULT_BASE_URL = "https://api.commandcode.ai/provider/v1"
+applyCommandCodeCacheControl	export declare function applyCommandCodeCacheControl(request: ProviderRequest): readonly import("@arnilo/prism").Message[]
+classifyCommandCodeError	export declare function classifyCommandCodeError(input: CommandCodeErrorInput): CommandCodeRetryDecision
+commandCodeCacheEnabled	export declare function commandCodeCacheEnabled(request: ProviderRequest): boolean
+commandCodeChatBody	export declare function commandCodeChatBody(request: ProviderRequest): JsonObject
+commandCodeChatEvents	export declare function commandCodeChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+commandCodeEffort	export declare function commandCodeEffort(request: ProviderRequest): string | undefined
+commandCodeHttpError	export declare function commandCodeHttpError(decision: CommandCodeRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error
+commandCodeModels	export declare const commandCodeModels: readonly ModelConfig[]
+commandCodePreserveThinking	export declare function commandCodePreserveThinking(request: ProviderRequest): boolean
+commandCodeReasoning	export declare function commandCodeReasoning(request: ProviderRequest): JsonObject | undefined
+commandCodeThinking	export declare function commandCodeThinking(request: ProviderRequest): JsonObject | undefined
+commandCodeThinkingFamily	export declare function commandCodeThinkingFamily(modelId: string): ThinkingCompatFamily | undefined
+commandCodeThinkingLevels	export declare function commandCodeThinkingLevels(modelId: string): readonly string[] | undefined
+commandcode	export declare function commandcode(options?: CommandCodeProviderPackageOptions & CommandCodeProviderConfig): PackageInstance
+createCommandCodeProvider	export declare function createCommandCodeProvider(options?: CommandCodeProviderOptions): ModelProvider
+default	export default
+defineCommandCodeModel	export declare function defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig
+listCommandCodeModels	export declare function listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
+mapCommandCodeModel	export declare function mapCommandCodeModel(entry: CommandCodeModelEntry, options?:
+routeForCommandCodeModel	export declare function routeForCommandCodeModel(modelId: string): CommandCodeRoute
+serializeCommandCodeChatMessage	export declare function serializeCommandCodeChatMessage(message: Message, preserveThinking: boolean): JsonObject
+stripCommandCodeOwnedCompat	export declare function stripCommandCodeOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
+type CommandCodeErrorInput	export { type CommandCodeErrorInput, type CommandCodeRetryDecision, classifyCommandCodeError, commandCodeHttpError, } from "./errors.js"
+type CommandCodeModelConfig	export { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, commandCodeThinkingFamily, commandCodeThinkingLevels, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeModelEntry	export { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, commandCodeThinkingFamily, commandCodeThinkingLevels, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"
+type CommandCodeProviderOptions	export { COMMAND_CODE_ANTHROPIC_HOOKS, type CommandCodeProviderOptions, createCommandCodeProvider, } from "./provider.js"
+type CommandCodeRetryDecision	export { type CommandCodeErrorInput, type CommandCodeRetryDecision, classifyCommandCodeError, commandCodeHttpError, } from "./errors.js"
+type CommandCodeRoute	export { COMMAND_CODE_DEFAULT_BASE_URL, type CommandCodeModelConfig, type CommandCodeModelEntry, type CommandCodeRoute, commandCodeModels, commandCodeThinkingFamily, commandCodeThinkingLevels, defineCommandCodeModel, listCommandCodeModels, mapCommandCodeModel, routeForCommandCodeModel, } from "./models.js"

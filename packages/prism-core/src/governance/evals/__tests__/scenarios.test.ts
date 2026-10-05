@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { type Agent, type RunResult, type AIProvider, createAgent, providerDone, providerTextDelta, providerToolCall } from "@arnilo/prism";
+import { type Agent, type RunResult, type ModelProvider, createAgent, providerDone, providerTextDelta, providerToolCall } from "@arnilo/prism";
 import { defineDataset } from "../dataset.js";
 import { runExperiment } from "../experiment.js";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../scenarios.js";
 import { defineScorer } from "../scorer.js";
 import { createErrorClassScorer } from "../trajectory.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 function makeMockAgent(replies: string[], onRun?: () => void): Agent {
   let callIdx = 0;
@@ -44,7 +45,7 @@ function makeMockAgent(replies: string[], onRun?: () => void): Agent {
   } as unknown as Agent;
 }
 
-function oneShotToolProvider(name: string): AIProvider {
+function oneShotToolProvider(name: string): ModelProvider {
   let turn = 0;
   return {
     id: "mock",
@@ -292,7 +293,7 @@ test("denyTools skips execute and appears as failed, not succeeded", async () =>
   const agent = await wrapAgentWithFailureInjection(
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: oneShotToolProvider("refund"),
+      packages: [providerPackage("test-provider", [oneShotToolProvider("refund")])],
       tools: {
         add: [
           {
@@ -333,7 +334,7 @@ test("unknownEffect marks unknown and fails effect-success invariant", async () 
   const agent = await wrapAgentWithFailureInjection(
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: oneShotToolProvider("mutate"),
+      packages: [providerPackage("test-provider", [oneShotToolProvider("mutate")])],
       tools: {
         add: [
           {
@@ -376,13 +377,13 @@ test("timeline collector captures agent_finished without a 10ms drain", async ()
   const report = await runExperiment({
     agent: await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("hello");
           yield providerDone();
         },
-      },
+      }])],
     }),
     dataset: defineDataset({ id: "tl", items: [{ id: "i", input: "hi" }] }),
     scorers: [

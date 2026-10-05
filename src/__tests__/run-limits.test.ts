@@ -1,27 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentEvent,
-  type AIProvider,
-  createAgent,
-  askEveryTool,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  HARD_RUN_LIMITS,
-  type LoopStrategy,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  providerUsage,
-  resumeAgentRunStream,
-  type RunLimitBreach,
-  RunLimitError,
-  RunLimitTracker,
-  resolveRunLimits,
-  type ToolDefinition,
-  toolCallContent,
-} from "../index.js";
+import { type AgentEvent, type ModelProvider, createAgent, askEveryTool, createMemoryCheckpointStore, createMemorySessionStore, HARD_RUN_LIMITS, type LoopStrategy, providerDone, providerTextDelta, providerToolCall, providerUsage, resumeAgentRunStream, type RunLimitBreach, RunLimitError, RunLimitTracker, resolveRunLimits, type ToolDefinition, toolCallContent } from "../index.js";
+import { mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -166,13 +147,13 @@ describe("run limits", () => {
   it("charges UTF-8 provider events at their serialized byte length", async () => {
     const event = providerTextDelta("😀");
     const bytes = Buffer.byteLength(JSON.stringify(event), "utf8");
-    const provider: AIProvider = {
-      id: "utf8-bytes",
+    const provider: ModelProvider = {
+      id: "mock",
       async *generate() {
         yield event;
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] });
     const within = await (await agent.session()).run("hi", { limits: { maxResponseBytes: bytes } });
     assert.equal(within.status, "completed");
 
@@ -210,7 +191,7 @@ describe("run limits", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("blocked"), providerUsage({ outputTokens: 2 }), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("blocked"), providerUsage({ outputTokens: 2 }), providerDone()]])],
       slots: { loop },
     });
     const session = await agent.session();
@@ -238,7 +219,7 @@ describe("run limits", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("visible"), providerUsage({ outputTokens: 2 }), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("visible"), providerUsage({ outputTokens: 2 }), providerDone()]])],
       slots: { loop },
     });
     const session = await agent.session();
@@ -264,7 +245,7 @@ describe("run limits", () => {
 
   it("attributes a maxTurns death with counters, closest axes, and the last ten tool calls", async () => {
     let turn = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         turn += 1;
@@ -277,7 +258,7 @@ describe("run limits", () => {
       parameters: { type: "object", properties: { i: { type: "number" } } },
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
     const session = await agent.session();
     const events = collect(session.subscribe());
     const failure = await session.run("hi", { limits: { maxTurns: 12, maxToolRounds: 20, maxToolCalls: 20 } });
@@ -323,7 +304,7 @@ describe("run limits", () => {
   it("names the run input budget axis when cumulative tokens die, and hashes tool-call arguments", async () => {
     const secret = "sk-live-do-not-leak";
     let turn = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         turn += 1;
@@ -337,7 +318,7 @@ describe("run limits", () => {
       parameters: { type: "object", properties: { token: { type: "string" } } },
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools: { add: [echo] } });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
     const session = await agent.session();
     const events = collect(session.subscribe());
     {
@@ -364,7 +345,7 @@ describe("run limits", () => {
     const started = new Promise<void>((resolve) => {
       ready = resolve;
     });
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         ready?.();
@@ -373,7 +354,7 @@ describe("run limits", () => {
         );
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider, limits: { maxTurns: 4 } });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], limits: { maxTurns: 4 } });
     const controller = new AbortController();
     const run = (await agent.session()).run("hi", { signal: controller.signal });
     await started;
@@ -394,11 +375,11 @@ describe("run limits", () => {
       model: { provider: "mock", model: "demo" },
       limits: { maxToolCalls: 1 },
       slots: { store: createMemorySessionStore() },
-      provider: createMockProvider([
+      packages: [mockProvider([[
         providerToolCall(toolCallContent("call-1", "write", { v: 1 })),
         providerToolCall(toolCallContent("call-2", "write", { v: 2 })),
         providerDone(),
-      ]),
+      ]])],
       tools: {
         add: [
           { name: "write", parameters: {}, execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }) },

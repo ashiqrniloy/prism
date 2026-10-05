@@ -4,7 +4,7 @@ import { agentFingerprint, BUILT_IN_LOOP_REVISIONS } from "./agent-run-state.js"
 import type { Agent, AgentSessionConfig, GuardrailPackRef, GuardrailStage, RunOptions, Skill } from "./contracts.js";
 import { describeGuardrailPacks } from "./guardrails.js";
 import { describeStorage } from "./host-composition.js";
-import { canonicalizeJsonSchema } from "./providers/schema.js";
+import { canonicalizeJsonSchema } from "./provider-kit/schema.js";
 import type { SecretRedactor } from "./redaction.js";
 import { resolveRunLimits } from "./run-limits.js";
 import { selectRunTools } from "./tools.js";
@@ -132,7 +132,7 @@ export function snapshotRunBundle(input: RunBundleSnapshotInput): RunBundleSnaps
     limits: resolveRunLimits(config.limits, run?.limits),
     attentionCompiler: run?.attentionCompiler ?? config.attentionCompiler ?? null,
     model: {
-      provider: typeof model === "string" ? (config.provider?.id ?? null) : (model?.provider ?? null),
+      provider: typeof model === "string" ? null : (model?.provider ?? null),
       model: typeof model === "string" ? model : (model?.model ?? null),
     },
     storage: {

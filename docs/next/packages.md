@@ -54,7 +54,7 @@ status note instead of failing the load. `requires` is:
 Ranges support `^`, `~`, exact, `>=`, `>`, `<=`, `<`, space-joined comparators (AND), `||`, and
 `*`, with the node-semver prerelease rule (`^0.13.0-0` admits `0.13.0-rc.1`; `^0.12.1` does not).
 Hyphen ranges, `x`-ranges, bare partials (`1.2`), and dist-tags are rejected. The kernel is `0.12.1`
-until the 1.0 cut, so an in-tree package declares a range that admits it, for example
+until the 0.13.0 release, so an in-tree package declares a range that admits it, for example
 `^0.12.1 || ^0.13.0-0`.
 
 ### Instance provenance
@@ -100,10 +100,10 @@ agents, so an agent re-created from `{ ...agent.config }` reloads independently.
 | `slots.<slot>.provide(impl)` | Claims `loop`, `compaction`, `store`, or `credentials`. Needs `slot:<slot>`. `.default` is the kernel default. |
 | `tools.register(tool, { when? })` | Adds a tool. A name taken by another package, `AgentConfig.tools`, or the kernel names `load_skill` / `search_tools` is `tool_conflict`. |
 | `skills.register(skill)` / `skills.addDir(path)` | Adds a skill (`skill_conflict` on a taken name). `addDir` records the path and the loader reads `<dir>/<name>/SKILL.md` after `setup` returns, so a read failure fails that package's setup. |
-| `providers.register(provider)` | Adds an `AIProvider`, selected by `AgentConfig.model.provider`. A direct `AgentConfig.provider` and the `providerSource`s win. A duplicate id is `provider_conflict`. |
+| `providers.register(provider)` | Adds a `ModelProvider`, selected by `AgentConfig.model.provider`. This is the only way to give an agent a provider. A duplicate id is `provider_conflict`. |
 | `commands.register(command)` | Adds a `PackageCommand`. A duplicate name is `command_conflict`. |
 | `models.client(ref?)` | Needs `models`. A thin client over the agent's provider resolution: `generate(request)` streams one provider turn. `ref` defaults to `AgentConfig.model`. |
-| `credentials.resolve(ref)` | Needs `credentials`. Resolves through the `credentials` slot and returns a `Credential`. The value is added to the agent's secret set. |
+| `credentials.resolve(ref)` | Needs `credentials`. Resolves `env:`/`keyring:` refs through the `credentials` slot and returns a `Secret`. The value is added to the agent's secret set. |
 | `state.session(key, initial)` / `state.agent(key, initial)` | Session state persisted as `package_state` entries (needs `session-state`), and process memory. See "Session state and background work". |
 | `services.provide / consume / require` | A duplicate is `service_conflict`. `consume` returns `undefined` when absent, and a later package's service is visible at call time. `require` throws `missing_service`. |
 | `host.ui.request(...)` | Needs `host-ui`. Answers `unavailable` with no UI attached. `package` is stamped by the kernel. |

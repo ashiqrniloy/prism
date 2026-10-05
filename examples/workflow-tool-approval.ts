@@ -1,13 +1,5 @@
-import {
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  type ExecutionAction,
-  type ExecutionPolicy,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createSecretRedactor, type ExecutionAction, type ExecutionPolicy, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -18,6 +10,7 @@ import {
   type WorkflowEvent,
 } from "@arnilo/prism-core/runtime/workflows";
 import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Agent → MCP-backed tool-node chain with ExecutionPolicy approval. Public
 // mapMcpToolsToDefinitions() maps an offline fake remote tool to ToolDefinition;
@@ -59,7 +52,7 @@ const scanTool = mapMcpToolsToDefinitions(
 
 const researchAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
   instructions: "Research the repo.",
 });
 

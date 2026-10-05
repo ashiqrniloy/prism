@@ -5,8 +5,9 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { type AIProvider, createMockProvider, type ProviderRequest, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { type ModelProvider, type ProviderRequest, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { assembleAppAgent, ensureDurableSessionRecord, runHeadless, searchRepoSessions, type WritableSink } from "../index.js";
 
 class MemorySink implements WritableSink {
@@ -99,7 +100,7 @@ describe("headless runner", () => {
     try {
       const stdout = new MemorySink();
       const stderr = new MemorySink();
-      const failingProvider: AIProvider = {
+      const failingProvider: ModelProvider = {
         id: "failing-provider",
         async *generate() {
           throw new Error("Provider rate limit reached");
@@ -131,7 +132,7 @@ describe("headless runner", () => {
     try {
       const stdout = new MemorySink();
       const stderr = new MemorySink();
-      const failingProvider: AIProvider = {
+      const failingProvider: ModelProvider = {
         id: "failing-provider",
         async *generate() {
           throw new Error("Connection refused to provider");
@@ -211,7 +212,7 @@ describe("headless runner", () => {
     const sessionId = "durable-session-001";
     const recordedRequests: ProviderRequest[] = [];
 
-    const resumeProvider: AIProvider = {
+    const resumeProvider: ModelProvider = {
       id: "resume-mock",
       async *generate(request) {
         recordedRequests.push(request);

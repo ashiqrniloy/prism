@@ -17,6 +17,7 @@ import {
 } from "../index.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 import { deriveToolEffectKey, toolEffectArgumentsHash } from "../tool-effects.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const ownership = { tenantId: "tenant", accountId: "account", userId: "user" };
 const context = { sessionId: "session", runId: "run", toolCallId: "call" };
@@ -359,7 +360,7 @@ describe("tool effect dispatch", () => {
       ownership,
       slots: { store: createMemorySessionStore() },
       effectStore: store,
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turns += 1;
@@ -371,7 +372,7 @@ describe("tool effect dispatch", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [mutation(() => ({ toolCallId: "call", name: "mutate", value: ++calls }))] },
     });
     const suspended = await (await agent.session({ id: "effect-durable-session", create: true })).run("go", {

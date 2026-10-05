@@ -10,12 +10,17 @@ are four:
 | `loop` | `LoopStrategy` | `defaultLoop` |
 | `compaction` | `Compactor { compact(ctx) }` | the default is `createDefaultCompactor` |
 | `store` | `SessionStore` | in-memory |
-| `credentials` | `CredentialResolver { resolve(ref) }` | `env:NAME` only |
+| `credentials` | `CredentialResolver { resolve(ref, ctx); store?; delete? }` | `env:NAME` only |
 
 A `store` implements the baseline `append` and `list`, plus optional capabilities the kernel asks for by name:
 `readBranchPath`, `searchSessions`, and, behind `agent.sessions`, `listSessions` and `deleteSession` (see
 [agent.md](agent.md#agentsessions)). A store that omits one is still a valid `store`; the call that needs it
 fails with `UnsupportedStoreCapabilityError`.
+
+The kernel derives the capability list from method presence: `sessionStoreCapabilities(store)` returns the
+implemented names in contract order, `inspect().store` reports them together with the slot owner
+(`{ owner, capabilities }`), and `agent.sessions` lights up exactly those calls. A declared capability the
+store does not implement is an error, not a skip: `storeConformance` fails the run.
 
 A direct assignment in `AgentConfig.slots` is either an implementation or the **name of the package**
 that owns the slot, which resolves a conflict between two package providers (`slots: { compaction: "@a/x" }`).
@@ -45,8 +50,8 @@ registry.resolve("loop"); // planThenAct
 | --- | --- | --- |
 | `loop` | `AgentConfig.slots.loop` | See [loop.md](loop.md). |
 | `compaction` | `AgentConfig.slots.compaction` | Consumed when the compaction slot is wired. |
-| `store` | `AgentConfig.slots.store` | The only session-store input. Read by `agent.session()`; see [agent.md](agent.md#sessions). |
-| `credentials` | `AgentConfig.slots.credentials` | Default resolves only `env:NAME` refs. |
+| `store` | `AgentConfig.slots.store` | The only session-store input. Read by `agent.session()`; `inspect().store` reports its owner and derived capabilities. See [agent.md](agent.md#sessions). |
+| `credentials` | `AgentConfig.slots.credentials` | Default resolves only `env:NAME` refs and has no `store`. |
 
 ## Outputs / response
 
@@ -75,16 +80,61 @@ An unknown slot name throws `UnknownSlotError` (`ERR_PRISM_UNKNOWN_SLOT`).
 import { createSlotRegistry, createSlotDefaults, SlotConflictError } from "@arnilo/prism";
 
 const slots = createSlotRegistry(createSlotDefaults());
-slots.provide("credentials", "acme", { resolve: (request) => vault.get(request.name) });
+slots.provide("credentials", "acme", {
+  resolve: (ref) => vault.get(ref),
+  store: (ref, secret) => vault.set(ref, secret),
+  delete: (ref) => vault.delete(ref),
+});
 slots.resolve("credentials"); // acme resolver
 ```
+
+## Store packages
+
+Three packages fill the `store` slot with a durable implementation: each default-exports a
+`definePackage` definition whose `setup` claims the slot, and each ships an instance shorthand for
+`packages: [...]` (a manifest host instead names the package in `slots.store`, or installs it with
+`prism add` and lets the entry carry the config).
+
+| Package | Config | Implements |
+| --- | --- | --- |
+| `@arnilo/prism-store-jsonl` | `{ dir }` — one JSONL file per session | `append`, `list`, `get`, `readBranchPath`, `searchSessions`, `listSessions`, `deleteSession` |
+| `@arnilo/prism-store-sqlite` | `{ path, busyTimeoutMs? }` — `bun:sqlite`, migrations applied at load | the same seven, over one database file |
+| `@arnilo/prism-store-postgres` | `{ url, schema?, pool? }` — `url` is an `env:` / `keyring:` ref | the same seven, over a shared server |
+
+```ts
+import { createAgent } from "@arnilo/prism";
+import { sqliteStore } from "@arnilo/prism-store-sqlite";
+
+const agent = await createAgent({
+  model,
+  packages: [sqliteStore({ path: ".prism/sessions.db" })],
+});
+```
+
+Each package declares `capabilities: ["slot:store"]`; `@arnilo/prism-store-postgres` also declares
+`"credentials"`, because its `x-prism-secret` `url` is resolved through the credentials slot once at
+setup and fails closed naming the ref, never the value. The drivers stay inside their packages: an
+agent that does not list `@arnilo/prism-store-postgres` never loads `pg`, and one that does not list
+`@arnilo/prism-store-sqlite` never loads `bun:sqlite`. `@arnilo/prism-store-codecs` is the plain
+library the two SQL stores share for row, cursor, and ownership encoding — it claims no slot and no
+host lists it.
+
+`agent.sessions` reacts to what the store implements, not to which package provided it:
+`get`/`readBranchPath` back `agent.session({ id })`, `searchSessions` backs `agent.sessions.search`,
+and `listSessions`/`deleteSession` light up `agent.sessions.list`/`.delete`. The kernel's in-memory
+store implements every optional capability, so a host that lists no store package keeps a working
+`agent.sessions`; a call a store does not implement throws `UnsupportedStoreCapabilityError`, and
+`inspect().store` reports the slot owner plus the derived capability list. Every durable store passes
+the same `storeConformance` suite (`@arnilo/prism/testing`) with a `reopen` factory, so a session
+written by one process is readable by the next.
 
 ## Extension and configuration notes
 
 - `store` is the only session-store input: `AgentConfig.store` and `SessionOptions.store` no longer
   exist. It is where a suspended run writes its `suspended_run` entry, and where `agent.session({ id })`
   resumes from.
-- Until packages can provide slots, the only registrants are the kernel defaults and the host.
+- Packages provide slots through a declared capability (`slot:store`, `slot:credentials`, …): a package without
+  it cannot claim the slot, and two providers of one slot fail the load until `AgentConfig.slots` names an owner.
 - Slot conflicts fail closed at agent creation, not at first use.
 
 ## Security and performance notes
@@ -94,12 +144,15 @@ slots.resolve("credentials"); // acme resolver
 - Conflict detection names the owners so a misconfiguration is diagnosable without inspecting
   registries.
 - Resolution is O(1) per slot and allocates nothing when there is no conflict.
+- The `credentials` slot resolves per request with no kernel cache; a resolver that wants one owns
+  the cache and its invalidation. A resolved `Secret` joins the agent's secret set, so it is redacted
+  from events, `inspect()`, persisted entries, and errors from then on.
 
 ## Related APIs
 
 - `LoopStrategy` / `RunController`: the `loop` slot contract.
 - `Compactor`: the `compaction` slot contract.
-- `CredentialResolver`: the `credentials` slot contract.
+- `CredentialResolver`: the `credentials` slot contract (`resolve(ref, ctx)`, optional `store`/`delete`).
 - `createSlotDefaults`: the four kernel defaults.
 
 ## Frozen for Phase 2

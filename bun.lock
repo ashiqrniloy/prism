@@ -22,20 +22,16 @@
         "@agentclientprotocol/sdk": "1.4.0",
         "@arnilo/prism-coding-tools": "^0.12.1",
         "@arnilo/prism-core": "^0.12.1",
+        "@arnilo/prism-store-sqlite": "^0.12.1",
       },
       "devDependencies": {
         "@arnilo/prism": "file:../..",
         "@arnilo/prism-ag-ui": "file:../ag-ui",
-        "@arnilo/prism-providers": "file:../prism-providers",
       },
       "peerDependencies": {
         "@arnilo/prism": "^0.12.1",
         "@arnilo/prism-ag-ui": "^0.12.1",
-        "@arnilo/prism-providers": "^0.12.1",
       },
-      "optionalPeers": [
-        "@arnilo/prism-providers",
-      ],
     },
     "packages/ag-ui": {
       "name": "@arnilo/prism-ag-ui",
@@ -67,6 +63,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@arnilo/prism": "^0.12.0",
+        "@arnilo/prism-store-jsonl": "^0.12.1",
       },
       "devDependencies": {
         "@arnilo/prism": "file:../..",
@@ -82,6 +79,22 @@
         "@arnilo/prism-coding-tools": "^0.12.0",
         "@arnilo/prism-hooks-json": "^0.12.1",
         "@arnilo/prism-mcp": "^0.12.0",
+      },
+    },
+    "packages/credentials/keyring": {
+      "name": "@arnilo/prism-credentials-keyring",
+      "version": "0.12.1",
+      "dependencies": {
+        "@napi-rs/keyring": "^2.0.0",
+      },
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@arnilo/prism-provider-openai": "file:../../providers/openai",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
       },
     },
     "packages/integrations/hooks-json": {
@@ -122,7 +135,6 @@
       },
       "devDependencies": {
         "@arnilo/prism": "file:../..",
-        "@arnilo/prism-providers": "file:../prism-providers",
         "@types/pg": "^8.23.1",
       },
       "peerDependencies": {
@@ -135,6 +147,7 @@
       "devDependencies": {
         "@arnilo/prism": "file:../..",
         "@arnilo/prism-core": "file:../prism-core",
+        "@arnilo/prism-store-sqlite": "^0.12.1",
         "@types/pg": "^8.23.1",
         "pg": "^8.23.0",
       },
@@ -155,10 +168,11 @@
         "@arnilo/prism-agent-sdk": "^0.1.0",
         "@arnilo/prism-coding-tools": "^0.12.0",
         "@arnilo/prism-core": "^0.12.0",
+        "@arnilo/prism-credentials-keyring": "^0.12.1",
         "@arnilo/prism-hooks-json": "^0.12.1",
         "@arnilo/prism-mcp": "^0.12.0",
         "@arnilo/prism-memory": "^0.12.0",
-        "@arnilo/prism-providers": "^0.12.0",
+        "@arnilo/prism-store-sqlite": "^0.12.1",
         "@arnilo/prism-web-tools": "^0.12.0",
         "@opentui/core": "^0.5.12",
       },
@@ -168,10 +182,10 @@
         "@arnilo/prism-agent-sdk": "file:../agent-sdk",
         "@arnilo/prism-coding-tools": "file:../prism-coding-tools",
         "@arnilo/prism-core": "file:../prism-core",
+        "@arnilo/prism-credentials-keyring": "file:../credentials/keyring",
         "@arnilo/prism-hooks-json": "file:../integrations/hooks-json",
         "@arnilo/prism-mcp": "file:../mcp",
         "@arnilo/prism-memory": "file:../memory",
-        "@arnilo/prism-providers": "file:../prism-providers",
         "@arnilo/prism-web-tools": "file:../web-tools",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
@@ -209,12 +223,12 @@
       "name": "@arnilo/prism-core",
       "version": "0.12.1",
       "dependencies": {
-        "@napi-rs/keyring": "^2.0.0",
         "ajv": "^8.17.1",
       },
       "devDependencies": {
         "@arnilo/prism": "file:../..",
         "@arnilo/prism-memory": "file:../memory",
+        "@arnilo/prism-store-sqlite": "^0.12.1",
         "@arnilo/prism-work": "file:../prism-work",
         "@nats-io/jetstream": "^3.4.0",
         "@nats-io/transport-node": "^3.4.0",
@@ -235,22 +249,6 @@
         "@nats-io/jetstream",
         "@nats-io/transport-node",
         "pg",
-      ],
-    },
-    "packages/prism-providers": {
-      "name": "@arnilo/prism-providers",
-      "version": "0.12.1",
-      "devDependencies": {
-        "@ai-sdk/openai": "4.0.65",
-        "@ai-sdk/provider": "4.0.13",
-        "@arnilo/prism": "file:../..",
-      },
-      "peerDependencies": {
-        "@ai-sdk/provider": "4.0.13",
-        "@arnilo/prism": "^0.12.1",
-      },
-      "optionalPeers": [
-        "@ai-sdk/provider",
       ],
     },
     "packages/prism-work": {
@@ -282,6 +280,322 @@
         "mammoth",
         "pdf-parse",
       ],
+    },
+    "packages/providers/ai-sdk": {
+      "name": "@arnilo/prism-provider-ai-sdk",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@ai-sdk/openai": "4.0.65",
+        "@ai-sdk/provider": "4.0.13",
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@ai-sdk/provider": "4.0.13",
+        "@arnilo/prism": "^0.12.1",
+      },
+      "optionalPeers": [
+        "@ai-sdk/provider",
+      ],
+    },
+    "packages/providers/alibaba": {
+      "name": "@arnilo/prism-provider-alibaba",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/anthropic": {
+      "name": "@arnilo/prism-provider-anthropic",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/azure": {
+      "name": "@arnilo/prism-provider-azure",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/bedrock": {
+      "name": "@arnilo/prism-provider-bedrock",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/clinepass": {
+      "name": "@arnilo/prism-provider-clinepass",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/commandcode": {
+      "name": "@arnilo/prism-provider-commandcode",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/deepseek": {
+      "name": "@arnilo/prism-provider-deepseek",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/google": {
+      "name": "@arnilo/prism-provider-google",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/hyper": {
+      "name": "@arnilo/prism-provider-hyper",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/kimi": {
+      "name": "@arnilo/prism-provider-kimi",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/laya": {
+      "name": "@arnilo/prism-provider-laya",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/neuralwatt": {
+      "name": "@arnilo/prism-provider-neuralwatt",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/ollama": {
+      "name": "@arnilo/prism-provider-ollama",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/openai": {
+      "name": "@arnilo/prism-provider-openai",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/opencode-go": {
+      "name": "@arnilo/prism-provider-opencode-go",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/openrouter": {
+      "name": "@arnilo/prism-provider-openrouter",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/typesafe": {
+      "name": "@arnilo/prism-provider-typesafe",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/vertex": {
+      "name": "@arnilo/prism-provider-vertex",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/xai": {
+      "name": "@arnilo/prism-provider-xai",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/providers/zai": {
+      "name": "@arnilo/prism-provider-zai",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/stores/codecs": {
+      "name": "@arnilo/prism-store-codecs",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/stores/jsonl": {
+      "name": "@arnilo/prism-store-jsonl",
+      "version": "0.12.1",
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/stores/postgres": {
+      "name": "@arnilo/prism-store-postgres",
+      "version": "0.12.1",
+      "dependencies": {
+        "@arnilo/prism-store-codecs": "^0.12.1",
+        "pg": "^8.23.0",
+      },
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/bun": "1.4.2",
+        "@types/node": "^22.20.0",
+        "@types/pg": "^8.23.1",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
+    },
+    "packages/stores/sqlite": {
+      "name": "@arnilo/prism-store-sqlite",
+      "version": "0.12.1",
+      "dependencies": {
+        "@arnilo/prism-store-codecs": "^0.12.1",
+      },
+      "devDependencies": {
+        "@arnilo/prism": "file:../../..",
+        "@types/bun": "1.4.2",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": "^0.12.1",
+      },
     },
     "packages/web-tools": {
       "name": "@arnilo/prism-web-tools",
@@ -335,13 +649,63 @@
 
     "@arnilo/prism-core": ["@arnilo/prism-core@workspace:packages/prism-core"],
 
+    "@arnilo/prism-credentials-keyring": ["@arnilo/prism-credentials-keyring@workspace:packages/credentials/keyring"],
+
     "@arnilo/prism-hooks-json": ["@arnilo/prism-hooks-json@workspace:packages/integrations/hooks-json"],
 
     "@arnilo/prism-mcp": ["@arnilo/prism-mcp@workspace:packages/mcp"],
 
     "@arnilo/prism-memory": ["@arnilo/prism-memory@workspace:packages/memory"],
 
-    "@arnilo/prism-providers": ["@arnilo/prism-providers@workspace:packages/prism-providers"],
+    "@arnilo/prism-provider-ai-sdk": ["@arnilo/prism-provider-ai-sdk@workspace:packages/providers/ai-sdk"],
+
+    "@arnilo/prism-provider-alibaba": ["@arnilo/prism-provider-alibaba@workspace:packages/providers/alibaba"],
+
+    "@arnilo/prism-provider-anthropic": ["@arnilo/prism-provider-anthropic@workspace:packages/providers/anthropic"],
+
+    "@arnilo/prism-provider-azure": ["@arnilo/prism-provider-azure@workspace:packages/providers/azure"],
+
+    "@arnilo/prism-provider-bedrock": ["@arnilo/prism-provider-bedrock@workspace:packages/providers/bedrock"],
+
+    "@arnilo/prism-provider-clinepass": ["@arnilo/prism-provider-clinepass@workspace:packages/providers/clinepass"],
+
+    "@arnilo/prism-provider-commandcode": ["@arnilo/prism-provider-commandcode@workspace:packages/providers/commandcode"],
+
+    "@arnilo/prism-provider-deepseek": ["@arnilo/prism-provider-deepseek@workspace:packages/providers/deepseek"],
+
+    "@arnilo/prism-provider-google": ["@arnilo/prism-provider-google@workspace:packages/providers/google"],
+
+    "@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@workspace:packages/providers/hyper"],
+
+    "@arnilo/prism-provider-kimi": ["@arnilo/prism-provider-kimi@workspace:packages/providers/kimi"],
+
+    "@arnilo/prism-provider-laya": ["@arnilo/prism-provider-laya@workspace:packages/providers/laya"],
+
+    "@arnilo/prism-provider-neuralwatt": ["@arnilo/prism-provider-neuralwatt@workspace:packages/providers/neuralwatt"],
+
+    "@arnilo/prism-provider-ollama": ["@arnilo/prism-provider-ollama@workspace:packages/providers/ollama"],
+
+    "@arnilo/prism-provider-openai": ["@arnilo/prism-provider-openai@workspace:packages/providers/openai"],
+
+    "@arnilo/prism-provider-opencode-go": ["@arnilo/prism-provider-opencode-go@workspace:packages/providers/opencode-go"],
+
+    "@arnilo/prism-provider-openrouter": ["@arnilo/prism-provider-openrouter@workspace:packages/providers/openrouter"],
+
+    "@arnilo/prism-provider-typesafe": ["@arnilo/prism-provider-typesafe@workspace:packages/providers/typesafe"],
+
+    "@arnilo/prism-provider-vertex": ["@arnilo/prism-provider-vertex@workspace:packages/providers/vertex"],
+
+    "@arnilo/prism-provider-xai": ["@arnilo/prism-provider-xai@workspace:packages/providers/xai"],
+
+    "@arnilo/prism-provider-zai": ["@arnilo/prism-provider-zai@workspace:packages/providers/zai"],
+
+    "@arnilo/prism-store-codecs": ["@arnilo/prism-store-codecs@workspace:packages/stores/codecs"],
+
+    "@arnilo/prism-store-jsonl": ["@arnilo/prism-store-jsonl@workspace:packages/stores/jsonl"],
+
+    "@arnilo/prism-store-postgres": ["@arnilo/prism-store-postgres@workspace:packages/stores/postgres"],
+
+    "@arnilo/prism-store-sqlite": ["@arnilo/prism-store-sqlite@workspace:packages/stores/sqlite"],
 
     "@arnilo/prism-web-tools": ["@arnilo/prism-web-tools@workspace:packages/web-tools"],
 
@@ -727,13 +1091,63 @@
 
     "@arnilo/prism-core/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
 
-    "@arnilo/prism-hooks-json/@arnilo/prism": ["@arnilo/prism@root:", {}],
+    "@arnilo/prism-credentials-keyring/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-hooks-json/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
 
     "@arnilo/prism-mcp/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
 
     "@arnilo/prism-memory/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
 
-    "@arnilo/prism-providers/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+    "@arnilo/prism-provider-ai-sdk/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-alibaba/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-anthropic/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-azure/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-bedrock/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-clinepass/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-commandcode/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-deepseek/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-google/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-hyper/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-kimi/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-laya/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-neuralwatt/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-ollama/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-openai/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-opencode-go/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-openrouter/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-typesafe/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-vertex/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-xai/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-provider-zai/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-store-codecs/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-store-jsonl/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-store-postgres/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
+
+    "@arnilo/prism-store-sqlite/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
 
     "@arnilo/prism-web-tools/@arnilo/prism": ["@arnilo/prism@0.12.1", "", { "bin": { "prism": "dist/cli.js" } }, "sha512-gEZqLGS8Wn1CYRTF6XwO6i7TnY75EuAtDXEDFR5r/noFT5PXfJ0uJJGVTDAoLUB82/kcveKYq8vLbNxzzCO7Mw=="],
 

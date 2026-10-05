@@ -20,8 +20,9 @@ const BUN = process.platform === "win32" ? "bun.exe" : "bun";
 // Bun prints each failure twice (at its position and again in the end-of-run failure block), so
 // `counts.fail` can over-count — harmless here, because any `(fail)` line fails the leg closed.
 // `(pass)` lines print exactly once; counts sum all four leg summaries, never just the final one.
-const RESULT = /^(?:@arnilo\/prism-(?:core|memory|channels) test:postgres: )?\((pass|fail)\) /gm;
-const SUMMARY = /^(?:(@arnilo\/prism-(?:core|memory|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
+const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory|channels) test:postgres: )?\((pass|fail)\) /gm;
+const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
+// Plan 153 Task 5: the session-store integrations moved to the store package, so its leg owns them.
 const REQUIRED_POSTGRES_CASES = [
   "scopes ordinary and leaf entry queries to the owning session",
   "filters and keyset-paginates branch entry queries",
@@ -53,6 +54,7 @@ export function evidenceDocument({ gitHead, captured, output }) {
   const legs = [...output.matchAll(SUMMARY)].map((summary) => summary[1] ?? "phase conformance");
   for (const leg of [
     "@arnilo/prism-core test:postgres",
+    "@arnilo/prism-store-postgres test:postgres",
     "@arnilo/prism-memory test:postgres",
     "@arnilo/prism-channels test:postgres",
     "phase conformance",
@@ -65,7 +67,9 @@ export function evidenceDocument({ gitHead, captured, output }) {
   const lines = output.split("\n");
   for (const name of REQUIRED_POSTGRES_CASES) {
     if (
-      !lines.some((line) => line.startsWith(`@arnilo/prism-core test:postgres: (pass) createPostgresPersistence integration > ${name} [`))
+      !lines.some((line) =>
+        line.startsWith(`@arnilo/prism-store-postgres test:postgres: (pass) createPostgresPersistence integration > ${name} [`),
+      )
     ) {
       throw new Error(`required PostgreSQL regression did not pass: ${name}`);
     }

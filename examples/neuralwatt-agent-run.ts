@@ -1,11 +1,11 @@
 import { type AgentEvent, createAgent, type JsonObject, type ToolDefinition } from "@arnilo/prism";
 import {
-  neuralwattPackage,
+  neuralwatt,
   defineNeuralWattModel,
   type NeuralWattCostTelemetry,
   type NeuralWattEnergyTelemetry,
   neuralWattEventsWithTelemetry,
-} from "@arnilo/prism-providers/neuralwatt";
+} from "@arnilo/prism-provider-neuralwatt";
 
 const requestBodies: JsonObject[] = [];
 
@@ -86,7 +86,7 @@ export async function demo() {
   requestBodies.length = 0;
   const agent = await createAgent({
     model,
-    packages: [neuralwattPackage({ apiKey: () => "fake-neuralwatt-key", fetch: mockFetch })],
+    packages: [neuralwatt({ apiKey: "env:PRISM_TEST_NEURALWATT_KEY", fetch: mockFetch })],
     tools: { add: [lookup] },
     providerOptions: {
       compat: {

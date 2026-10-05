@@ -1,24 +1,8 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  assembleProviderInput,
-  createAgent,
-  createLoadedSkillSet,
-  createLoadSkillTool,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  createSkillRegistry,
-  createToolRegistry,
-  definePackage,
-  dispatchToolCall,
-  type ProviderRequest,
-  providerDone,
-  resolveActiveSkills,
-  type Skill,
-  toolCallContent,
-} from "@arnilo/prism";
+import { assembleProviderInput, createAgent, createLoadedSkillSet, createLoadSkillTool, createMemorySessionStore, createSessionEntry, createSkillRegistry, createToolRegistry, definePackage, dispatchToolCall, type ProviderRequest, providerDone, resolveActiveSkills, type Skill, toolCallContent } from "@arnilo/prism";
 import { loadSkillDirectory } from "@arnilo/prism/node/contribution-discovery";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const skillsDir = join(here, "fixtures/behavior-skills/skills");
@@ -129,11 +113,7 @@ export async function demo() {
   const captured: ProviderRequest[] = [];
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerDone()], { onRequest: (request) => captured.push(request) }),
-    packages: [
-      personaPackage({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }),
-      personaPackage({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }),
-    ],
+    packages: [personaPackage({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }), personaPackage({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }), mockProvider([[providerDone()]], { onRequest: (request) => captured.push(request) })],
   });
   await agent.commands.run("ponytail", { mode: "lite" });
   await agent.commands.run("caveman", { mode: "full" });

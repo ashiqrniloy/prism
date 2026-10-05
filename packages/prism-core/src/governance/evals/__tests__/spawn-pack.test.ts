@@ -15,24 +15,12 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type Agent,
-  type AgentIdentity,
-  type AIProvider,
-  createAgent,
-  createMockProvider,
-  type JsonObject,
-  type LoopStrategy,
-  type ProviderEvent,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type ToolDefinition,
-  type ToolResult,
-} from "@arnilo/prism";
+import { type Agent, type AgentIdentity, type ModelProvider, createAgent, type JsonObject, type LoopStrategy, type ProviderEvent, providerDone, providerTextDelta, providerToolCall, type ToolDefinition, type ToolResult } from "@arnilo/prism";
 import { createCancelAgentTool, createSpawnAgentTool, createSupervisor, createWaitAgentTool } from "../../../runtime/supervisor/index.js";
 import { runScenario, type ScenarioResult } from "../scenarios.js";
 import { defineScorer } from "../scorer.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // ─── Pack shape ───────────────────────────────────────────────────────────────
 
@@ -240,7 +228,7 @@ function parentIdentity(): AgentIdentity {
 }
 
 /** Lazily-built scripted provider: a turn is produced when the model asks for it. */
-function scriptedProvider(turns: () => readonly Turn[]): AIProvider {
+function scriptedProvider(turns: () => readonly Turn[]): ModelProvider {
   let index = 0;
   return {
     id: "spawn-eval-mock",
@@ -258,13 +246,13 @@ function toolCall(id: string, name: string, args: Record<string, unknown>): Prov
 }
 
 async function textChild(text: string): Promise<Agent> {
-  return await createAgent({ model: { ...MODEL }, provider: createMockProvider([providerTextDelta(text), providerDone()]) });
+  return await createAgent({ model: { ...MODEL }, packages: [mockProvider([[providerTextDelta(text), providerDone()]])] });
 }
 
 async function parentAgent(turns: () => readonly Turn[], tools: readonly ToolDefinition[]): Promise<Agent> {
   return await createAgent({
     model: { ...MODEL },
-    provider: scriptedProvider(turns),
+    packages: [providerPackage("test-provider", [scriptedProvider(turns)])],
     tools: { add: [...tools] },
     slots: { loop: concurrentLoop(SIZE.toolConcurrency) },
   });
@@ -436,10 +424,10 @@ async function nonWidenRun(options: { readonly vulnerable?: boolean; readonly le
     }
     return await createAgent({
       model: { ...MODEL },
-      provider: scriptedProvider(() => [
+      packages: [providerPackage("test-provider", [scriptedProvider(() => [
         [toolCall("w1", "write", { path: "src/failing.test.ts" }), providerDone()],
         [providerTextDelta("explored"), providerDone()],
-      ]),
+      ])])],
       tools: { add: tools },
     });
   };
@@ -595,10 +583,10 @@ async function criticRun(options: { readonly join: boolean }) {
           environment.ranChildren.push("critic");
           return await createAgent({
             model: { ...MODEL },
-            provider: scriptedProvider(() => [
+            packages: [providerPackage("test-provider", [scriptedProvider(() => [
               [toolCall("v1", "report_verdict", { verdict: "fail" }), providerDone()],
               [providerTextDelta("critic verdict: fail"), providerDone()],
-            ]),
+            ])])],
             tools: {
               add: [
                 {

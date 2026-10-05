@@ -27,6 +27,7 @@ import {
   validateAskUserDecisionResume,
 } from "../ask-user-decision.js";
 import { createAllTools, createCodingTools, createReadOnlyTools } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const validArgs = {
   question: "Which persistence backend should we ship first?",
@@ -562,7 +563,7 @@ test("durable gating surfaces ask_user_decision as a shared elicitation decision
     id: "ask-demo",
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore() },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         turn += 1;
@@ -574,7 +575,7 @@ test("durable gating surfaces ask_user_decision as a shared elicitation decision
         yield providerTextDelta("finished");
         yield providerDone();
       },
-    },
+    }])],
     tools: { add: [tool] },
   });
   const runState = { checkpoints, definitionRevision: "1" };

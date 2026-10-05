@@ -41,6 +41,7 @@
   "devDependencies": {
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-core": "file:../prism-core",
+    "@arnilo/prism-store-sqlite": "^0.12.1",
     "@types/pg": "^8.23.1",
     "pg": "^8.23.0"
   },

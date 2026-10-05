@@ -1,11 +1,11 @@
 # Phase 54 — 0.3.3 Package/Export Baseline & 0.4 Import Map Evidence
 
-Generated: `2026-10-02T11:40:38.743Z`
+Generated: `2026-10-05T14:37:00.739Z`
 Repository root version: `0.12.1`
 
 ## 1. Executive Summary & Counts
 
-- **Current repository manifests:** 14 (50 packages during consolidation transition)
+- **Current repository manifests:** 39 (50 packages during consolidation transition)
 - **Retired 0.3.x package names:** 55 (hard-frozen at final 0.3.x releases, deprecated with legacy tag)
 - **Retained package names:** 7 (`@arnilo/prism`, `@arnilo/prism-providers`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory`, `@arnilo/prism-mcp`, `@arnilo/prism-acp-agent`, `@arnilo/prism-ag-ui`)
 - **New family packages:** 4 (`@arnilo/prism-core`, `@arnilo/prism-channels`, `@arnilo/prism-coding-tools`, `@arnilo/prism-office`)
@@ -17,8 +17,8 @@ Repository root version: `0.12.1`
 
 | # | Active Package | Role | Status | Subpaths / Exports | Key Bins | Optional Peers / Drivers |
 |---|---|---|---|---|---|---|
-| 1 | `@arnilo/prism` | root | retained | ., ./providers/openai-compatible, ./providers/transport +22 more | `prism` | none |
-| 2 | `@arnilo/prism-core` | family | new | /runtime/server, /runtime/realtime, /runtime/supervisor +14 more | none | `pg`, `@nats-io/jetstream`, `@nats-io/transport-node` |
+| 1 | `@arnilo/prism` | root | retained | ., ./provider-kit, ./testing +15 more | `prism` | none |
+| 2 | `@arnilo/prism-core` | family | new | /runtime/server, /runtime/realtime, /runtime/supervisor +11 more | none | `pg`, `@nats-io/jetstream`, `@nats-io/transport-node` |
 | 3 | `@arnilo/prism-channels` | family | new | ., /telegram, /signal | none | none |
 | 4 | `@arnilo/prism-providers` | family | retained-converted | /ai-sdk, /alibaba, /anthropic +14 more | none | `@ai-sdk/provider` |
 | 5 | `@arnilo/prism-coding-tools` | family | new | /agent, /security, /document-reader +6 more | `prism-dev` | `mammoth`, `pdf-parse`, `@dietrichgebert/ponytail` |
@@ -32,19 +32,13 @@ Repository root version: `0.12.1`
 ### Subpath Breakdown for Active Packages
 
 #### `@arnilo/prism` (root)
-- **Description:** Root contracts, runtime API, CLI, providers/*, testing/*, node/* exports. Dependency-free.
+- **Description:** Root contracts, runtime API, CLI, provider-kit, testing/*, node/* exports. Dependency-free.
 - **Declared Subpaths:**
   - `@arnilo/prism`
-  - `@arnilo/prism/./providers/openai-compatible`
-  - `@arnilo/prism/./providers/transport`
-  - `@arnilo/prism/./providers/openai`
-  - `@arnilo/prism/./providers/schema`
-  - `@arnilo/prism/./providers/media`
+  - `@arnilo/prism/./provider-kit`
   - `@arnilo/prism/./testing`
-  - `@arnilo/prism/./testing/provider-conformance`
   - `@arnilo/prism/./testing/agent-event-source-conformance`
   - `@arnilo/prism/./testing/state-concurrency-conformance`
-  - `@arnilo/prism/./testing/session-store-conformance`
   - `@arnilo/prism/./testing/compaction-conformance`
   - `@arnilo/prism/./testing/tool-conformance`
   - `@arnilo/prism/./testing/tool-effect-store-conformance`
@@ -54,7 +48,6 @@ Repository root version: `0.12.1`
   - `@arnilo/prism/./node/config`
   - `@arnilo/prism/./node/settings`
   - `@arnilo/prism/./node/trust`
-  - `@arnilo/prism/./node/session-store-jsonl`
   - `@arnilo/prism/./node/contribution-discovery`
   - `@arnilo/prism/./node/instruction-sources`
   - `@arnilo/prism/./node/system-prompts`
@@ -70,9 +63,6 @@ Repository root version: `0.12.1`
   - `@arnilo/prism-core/runtime/realtime`
   - `@arnilo/prism-core/runtime/supervisor`
   - `@arnilo/prism-core/runtime/workflows`
-  - `@arnilo/prism-core/sessions/codecs`
-  - `@arnilo/prism-core/sessions/sqlite`
-  - `@arnilo/prism-core/sessions/postgres`
   - `@arnilo/prism-core/sessions/nats`
   - `@arnilo/prism-core/governance/policy`
   - `@arnilo/prism-core/governance/evals`
@@ -85,8 +75,7 @@ Repository root version: `0.12.1`
   - `@arnilo/prism-core/validation/json-schema`
 - **Optional Peers / Host Drivers:** `pg`, `@nats-io/jetstream`, `@nats-io/transport-node`
 - **Security & Trust Boundaries:**
-  - /sessions/postgres & /enterprise/postgres: PostgreSQL transaction isolation, schema migrations, and parameterized query execution.
-  - /sessions/sqlite: SQLite file locking, synchronous journal modes, and path containment.
+  - /enterprise/postgres: PostgreSQL transaction isolation, schema migrations, and parameterized query execution.
   - /governance/policy: Fail-closed capability admission, tool authorization, and audit log tamper detection.
   - /governance/evals: Evaluation run isolation, dataset curation redaction, and metric integrity.
   - /governance/prompts: Versioned prompt promotion gating, rollback protection, and evaluation score thresholds.
@@ -228,29 +217,29 @@ Repository root version: `0.12.1`
 | `@arnilo/prism-sdk` | profile | `0.3.3` | `@arnilo/prism-core` | 0 symbols | none |
 | `@arnilo/prism-compaction` | profile | `0.3.3` | `@arnilo/prism-memory/compaction/*` | 0 symbols | none |
 | `@arnilo/prism-all` | profile | `0.3.3` | `None (Profile Deleted)` | 0 symbols | none |
-| `@arnilo/prism-provider-ai-sdk` | provider | `0.3.3` | `@arnilo/prism-providers/ai-sdk` | 12 symbols | none |
-| `@arnilo/prism-provider-alibaba` | provider | `0.3.3` | `@arnilo/prism-providers/alibaba` | 25 symbols | none |
-| `@arnilo/prism-provider-anthropic` | provider | `0.3.3` | `@arnilo/prism-providers/anthropic` | 21 symbols | none |
-| `@arnilo/prism-provider-azure` | provider | `0.3.3` | `@arnilo/prism-providers/azure` | 7 symbols | none |
-| `@arnilo/prism-provider-bedrock` | provider | `0.3.3` | `@arnilo/prism-providers/bedrock` | 8 symbols | none |
-| `@arnilo/prism-provider-clinepass` | provider | `0.3.3` | `@arnilo/prism-providers/clinepass` | 16 symbols | none |
-| `@arnilo/prism-provider-deepseek` | provider | `0.3.3` | `@arnilo/prism-providers/deepseek` | 20 symbols | none |
-| `@arnilo/prism-provider-google` | provider | `0.3.3` | `@arnilo/prism-providers/google` | 18 symbols | none |
-| `@arnilo/prism-provider-kimi` | provider | `0.3.3` | `@arnilo/prism-providers/kimi` | 24 symbols | none |
-| `@arnilo/prism-provider-neuralwatt` | provider | `0.3.3` | `@arnilo/prism-providers/neuralwatt` | 43 symbols | none |
-| `@arnilo/prism-provider-ollama` | provider | `0.3.3` | `@arnilo/prism-providers/ollama` | 15 symbols | none |
-| `@arnilo/prism-provider-openai` | provider | `0.3.3` | `@arnilo/prism-providers/openai` | 29 symbols | none |
-| `@arnilo/prism-provider-opencode-go` | provider | `0.3.3` | `@arnilo/prism-providers/opencode-go` | 28 symbols | none |
-| `@arnilo/prism-provider-openrouter` | provider | `0.3.3` | `@arnilo/prism-providers/openrouter` | 21 symbols | none |
-| `@arnilo/prism-provider-vertex` | provider | `0.3.3` | `@arnilo/prism-providers/vertex` | 5 symbols | none |
-| `@arnilo/prism-provider-xai` | provider | `0.3.3` | `@arnilo/prism-providers/xai` | 28 symbols | none |
-| `@arnilo/prism-provider-zai` | provider | `0.3.3` | `@arnilo/prism-providers/zai` | 19 symbols | none |
+| `@arnilo/prism-provider-ai-sdk` | provider | `0.3.3` | `@arnilo/prism-providers/ai-sdk` | 0 symbols | none |
+| `@arnilo/prism-provider-alibaba` | provider | `0.3.3` | `@arnilo/prism-providers/alibaba` | 0 symbols | none |
+| `@arnilo/prism-provider-anthropic` | provider | `0.3.3` | `@arnilo/prism-providers/anthropic` | 0 symbols | none |
+| `@arnilo/prism-provider-azure` | provider | `0.3.3` | `@arnilo/prism-providers/azure` | 0 symbols | none |
+| `@arnilo/prism-provider-bedrock` | provider | `0.3.3` | `@arnilo/prism-providers/bedrock` | 0 symbols | none |
+| `@arnilo/prism-provider-clinepass` | provider | `0.3.3` | `@arnilo/prism-providers/clinepass` | 0 symbols | none |
+| `@arnilo/prism-provider-deepseek` | provider | `0.3.3` | `@arnilo/prism-providers/deepseek` | 0 symbols | none |
+| `@arnilo/prism-provider-google` | provider | `0.3.3` | `@arnilo/prism-providers/google` | 0 symbols | none |
+| `@arnilo/prism-provider-kimi` | provider | `0.3.3` | `@arnilo/prism-providers/kimi` | 0 symbols | none |
+| `@arnilo/prism-provider-neuralwatt` | provider | `0.3.3` | `@arnilo/prism-providers/neuralwatt` | 0 symbols | none |
+| `@arnilo/prism-provider-ollama` | provider | `0.3.3` | `@arnilo/prism-providers/ollama` | 0 symbols | none |
+| `@arnilo/prism-provider-openai` | provider | `0.3.3` | `@arnilo/prism-providers/openai` | 0 symbols | none |
+| `@arnilo/prism-provider-opencode-go` | provider | `0.3.3` | `@arnilo/prism-providers/opencode-go` | 0 symbols | none |
+| `@arnilo/prism-provider-openrouter` | provider | `0.3.3` | `@arnilo/prism-providers/openrouter` | 0 symbols | none |
+| `@arnilo/prism-provider-vertex` | provider | `0.3.3` | `@arnilo/prism-providers/vertex` | 0 symbols | none |
+| `@arnilo/prism-provider-xai` | provider | `0.3.3` | `@arnilo/prism-providers/xai` | 0 symbols | none |
+| `@arnilo/prism-provider-zai` | provider | `0.3.3` | `@arnilo/prism-providers/zai` | 0 symbols | none |
 | `@arnilo/prism-server` | core | `0.3.3` | `@arnilo/prism-core/runtime/server` | 217 symbols | none |
 | `@arnilo/prism-supervisor` | core | `0.3.3` | `@arnilo/prism-core/runtime/supervisor` | 48 symbols | none |
 | `@arnilo/prism-workflows` | core | `0.3.3` | `@arnilo/prism-core/runtime/workflows` | 209 symbols | none |
-| `@arnilo/prism-session-store-codecs` | core | `0.3.3` | `@arnilo/prism-core/sessions/codecs` | 22 symbols | none |
-| `@arnilo/prism-session-store-sqlite` | core | `0.3.3` | `@arnilo/prism-core/sessions/sqlite` | 24 symbols | none |
-| `@arnilo/prism-session-store-postgres` | core | `0.3.3` | `@arnilo/prism-core/sessions/postgres` | 31 symbols | none |
+| `@arnilo/prism-session-store-codecs` | core | `0.3.3` | `@arnilo/prism-core/sessions/codecs` | 0 symbols | none |
+| `@arnilo/prism-session-store-sqlite` | core | `0.3.3` | `@arnilo/prism-core/sessions/sqlite` | 0 symbols | none |
+| `@arnilo/prism-session-store-postgres` | core | `0.3.3` | `@arnilo/prism-core/sessions/postgres` | 0 symbols | none |
 | `@arnilo/prism-session-store-nats` | core | `0.3.3` | `@arnilo/prism-core/sessions/nats` | 11 symbols | none |
 | `@arnilo/prism-policy` | core | `0.3.3` | `@arnilo/prism-core/governance/policy` | 99 symbols | none |
 | `@arnilo/prism-evals` | core | `0.3.3` | `@arnilo/prism-core/governance/evals` | 106 symbols | none |
@@ -308,8 +297,8 @@ The three draft office manifests created in plans 051–053 consolidate into `@a
 
 | Subpath / Family | Requirement | Category | Failure Mode / Enforcement |
 |---|---|---|---|
-| `@arnilo/prism-core/sessions/sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |
-| `@arnilo/prism-core/sessions/postgres` | `pg` | Optional Peer | Fail-closed before pool connection; emits install hint |
+| `@arnilo/prism-store-sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |
+| `@arnilo/prism-store-postgres` | `pg` | Hard Dependency | Loaded lazily; fail-closed before pool connection |
 | `@arnilo/prism-core/sessions/nats` | `@nats-io/jetstream`, `@nats-io/transport-node` | Optional Peer | Fail-closed before NATS client connect |
 | `@arnilo/prism-core/credentials/node` | `@napi-rs/keyring` | Hard Dependency | Native keyring backend for secure token storage |
 | `@arnilo/prism-coding-tools/document-reader` | `mammoth`, `pdf-parse` | Optional Peer | Fail-closed when parsing .docx or .pdf if parser missing |
@@ -329,7 +318,7 @@ The three draft office manifests created in plans 051–053 consolidate into `@a
 | `coding-tools/security` | Host filesystem destruction, unauthorized command execution | Disposable Docker/OCI container isolation, path traversal checks, execution approval ledger | `packages/coding-security/src/__tests__/*` |
 | `web-tools/browser` | Intranet probing, data exfiltration, drive-by downloads | URL allowlist/blocklist, private IP egress block, quarantine directories for uploads/downloads | `packages/browser/src/__tests__/*` |
 | `web-tools/obscura` | SSRF, loopback forgery, unauthorized CDP session manipulation | Strict loopback pinning, token auth, process isolation | `packages/obscura/src/__tests__/*` |
-| `core/sessions/postgres` | SQL injection, schema corruption, multi-tenant state bleed | Parameterized queries, migration locking, transaction savepoints | `packages/session-store-postgres/src/__tests__/*` |
+| `store-postgres` | SQL injection, schema corruption, multi-tenant state bleed | Parameterized queries, migration locking, transaction savepoints | `packages/stores/postgres/src/__tests__/*` |
 | `coding-tools/document-reader` | Billion laughs XML bomb, out-of-memory denial of service | Byte limits, entity expansion limits, memory-bounded parsing | `packages/document-reader/src/__tests__/*` |
 | `memory/rag` | Cross-tenant document leak, vector dimension mismatch | Scope containment, strict namespace isolation, embedder ID check | `packages/rag/src/__tests__/*` |
 | `memory/graft` | Infinite recursion, command hanging | Process execution timeout, bounded stdout/stderr buffers | `packages/prism-graft/src/__tests__/*` |
@@ -569,12 +558,37 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 
 | Package Name | Declared Public Exports (dist) | Budget-Gated Exports (src) | Snapshot Baseline File |
 |---|---|---|---|
-| `@arnilo/prism` | 1234 | 1581 | `scripts/compat-baseline/arnilo__prism.txt` |
+| `@arnilo/prism` | 1343 | 1761 | `scripts/compat-baseline/arnilo__prism.txt` |
 | `@arnilo/prism-mcp` | 132 | 139 | `scripts/compat-baseline/arnilo__prism-mcp.txt` |
-| `@arnilo/prism-providers` | 552 | 590 | `scripts/compat-baseline/arnilo__prism-providers.txt` |
+| `@arnilo/prism-provider-anthropic` | 0 | 30 | `scripts/compat-baseline/arnilo__prism-provider-anthropic.txt` |
+| `@arnilo/prism-provider-openai` | 0 | 66 | `scripts/compat-baseline/arnilo__prism-provider-openai.txt` |
+| `@arnilo/prism-provider-deepseek` | 0 | 25 | `scripts/compat-baseline/arnilo__prism-provider-deepseek.txt` |
+| `@arnilo/prism-provider-xai` | 0 | 37 | `scripts/compat-baseline/arnilo__prism-provider-xai.txt` |
+| `@arnilo/prism-provider-zai` | 0 | 29 | `scripts/compat-baseline/arnilo__prism-provider-zai.txt` |
+| `@arnilo/prism-provider-alibaba` | 0 | 42 | `scripts/compat-baseline/arnilo__prism-provider-alibaba.txt` |
+| `@arnilo/prism-provider-kimi` | 0 | 33 | `scripts/compat-baseline/arnilo__prism-provider-kimi.txt` |
+| `@arnilo/prism-provider-openrouter` | 0 | 25 | `scripts/compat-baseline/arnilo__prism-provider-openrouter.txt` |
+| `@arnilo/prism-provider-ollama` | 0 | 19 | `scripts/compat-baseline/arnilo__prism-provider-ollama.txt` |
+| `@arnilo/prism-provider-opencode-go` | 0 | 34 | `scripts/compat-baseline/arnilo__prism-provider-opencode-go.txt` |
+| `@arnilo/prism-provider-neuralwatt` | 0 | 48 | `scripts/compat-baseline/arnilo__prism-provider-neuralwatt.txt` |
+| `@arnilo/prism-provider-clinepass` | 0 | 21 | `scripts/compat-baseline/arnilo__prism-provider-clinepass.txt` |
+| `@arnilo/prism-provider-commandcode` | 0 | 34 | `scripts/compat-baseline/arnilo__prism-provider-commandcode.txt` |
+| `@arnilo/prism-provider-hyper` | 0 | 36 | `scripts/compat-baseline/arnilo__prism-provider-hyper.txt` |
+| `@arnilo/prism-provider-laya` | 0 | 13 | `scripts/compat-baseline/arnilo__prism-provider-laya.txt` |
+| `@arnilo/prism-provider-typesafe` | 0 | 12 | `scripts/compat-baseline/arnilo__prism-provider-typesafe.txt` |
+| `@arnilo/prism-provider-google` | 0 | 27 | `scripts/compat-baseline/arnilo__prism-provider-google.txt` |
+| `@arnilo/prism-provider-vertex` | 0 | 9 | `scripts/compat-baseline/arnilo__prism-provider-vertex.txt` |
+| `@arnilo/prism-provider-azure` | 0 | 13 | `scripts/compat-baseline/arnilo__prism-provider-azure.txt` |
+| `@arnilo/prism-provider-bedrock` | 0 | 35 | `scripts/compat-baseline/arnilo__prism-provider-bedrock.txt` |
+| `@arnilo/prism-provider-ai-sdk` | 0 | 21 | `scripts/compat-baseline/arnilo__prism-provider-ai-sdk.txt` |
+| `@arnilo/prism-store-jsonl` | 0 | 11 | `scripts/compat-baseline/arnilo__prism-store-jsonl.txt` |
+| `@arnilo/prism-store-codecs` | 0 | 35 | `scripts/compat-baseline/arnilo__prism-store-codecs.txt` |
+| `@arnilo/prism-store-sqlite` | 0 | 28 | `scripts/compat-baseline/arnilo__prism-store-sqlite.txt` |
+| `@arnilo/prism-store-postgres` | 0 | 36 | `scripts/compat-baseline/arnilo__prism-store-postgres.txt` |
+| `@arnilo/prism-credentials-keyring` | 0 | 105 | `scripts/compat-baseline/arnilo__prism-credentials-keyring.txt` |
 | `@arnilo/prism-memory` | 785 | 864 | `scripts/compat-baseline/arnilo__prism-memory.txt` |
 | `@arnilo/prism-work` | 352 | 442 | `scripts/compat-baseline/arnilo__prism-work.txt` |
-| `@arnilo/prism-core` | 1333 | 1463 | `scripts/compat-baseline/arnilo__prism-core.txt` |
+| `@arnilo/prism-core` | 1167 | 1285 | `scripts/compat-baseline/arnilo__prism-core.txt` |
 | `@arnilo/prism-channels` | 91 | 106 | `scripts/compat-baseline/arnilo__prism-channels.txt` |
 | `@arnilo/prism-coding-tools` | 919 | 969 | `scripts/compat-baseline/arnilo__prism-coding-tools.txt` |
 | `@arnilo/prism-ag-ui` | 299 | 313 | `scripts/compat-baseline/arnilo__prism-ag-ui.txt` |
@@ -582,4 +596,4 @@ Total declared exports across all packages are frozen in `scripts/compat-baselin
 | `@arnilo/prism-acp-agent` | 13 | 20 | `scripts/compat-baseline/arnilo__prism-acp-agent.txt` |
 | `@arnilo/prism-hooks-json` | 0 | 35 | `scripts/compat-baseline/arnilo__prism-hooks-json.txt` |
 | `@arnilo/prism-agent-sdk` | 60 | 54 | `scripts/compat-baseline/arnilo__prism-agent-sdk.txt` |
-| `@arnilo/prism-code` | 337 | 373 | `scripts/compat-baseline/arnilo__prism-code.txt` |
+| `@arnilo/prism-code` | 338 | 374 | `scripts/compat-baseline/arnilo__prism-code.txt` |

@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/neuralwatt` provides explicit, side-effect-free setup for the
+`@arnilo/prism-provider-neuralwatt` provides explicit, side-effect-free setup for the
 NeuralWatt OpenAI-compatible Chat Completions provider using Prism's OpenAI-compatible
 route with NeuralWatt-specific reasoning/template escape hatches, SSE comment tolerance,
 and implicit prefix caching.
@@ -11,7 +11,7 @@ The package registers a provider, default model metadata for the featured Neural
 aliases (`glm-5.2`, `glm-5.2-fast`, `glm-5.2-short`, `glm-5.2-short-fast`,
 `gemma-4-31b`, `kimi-k2.6`, `kimi-k2.6-fast`, `kimi-k2.7-code`, `qwen3.5-397b`,
 `qwen3.5-397b-fast`, `qwen3.6-35b`, `qwen3.6-35b-fast`), and an `api_key` auth
-method through `createExtensionKernel().load([...])`.
+method when the package is listed in `createAgent({ packages: [...] })`.
 
 ## When to use it
 
@@ -24,35 +24,30 @@ Do not use it for automatic credential discovery, catalog fetches, or real-netwo
 ## Inputs / request
 
 ```ts
-import {
-  classifyNeuralWattError,
-  createNeuralWattProviderPackage,
-  defineNeuralWattModel,
-  getNeuralWattQuota,
-  listNeuralWattModels,
-  mapNeuralWattTelemetry,
-  neuralWattEventsWithTelemetry,
-  neuralWattModels,
-  parseNeuralWattComment,
-} from "@arnilo/prism-providers/neuralwatt";
+import neuralwatt from "@arnilo/prism-provider-neuralwatt";
 
-createNeuralWattProviderPackage(options: NeuralWattProviderPackageOptions): ProviderPackage
-defineNeuralWattModel(config: NeuralWattModelConfig): ModelConfig
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+neuralwatt(options?: NeuralWattProviderPackageOptions & NeuralWattProviderConfig = {}): PackageInstance
+
+// Named exports.
+createNeuralWattProvider(options?: NeuralWattProviderOptions): ModelProvider
 listNeuralWattModels(options?: ListNeuralWattModelsOptions): Promise<ModelConfig[]>
-getNeuralWattQuota(options: GetNeuralWattQuotaOptions): Promise<NeuralWattQuota>
-classifyNeuralWattError(input: NeuralWattErrorInput): NeuralWattRetryDecision
-mapNeuralWattTelemetry(body: unknown): { energy?: NeuralWattEnergyTelemetry; cost?: NeuralWattCostTelemetry }
-parseNeuralWattComment(text: string): NeuralWattTelemetryEvent | undefined
-neuralWattEventsWithTelemetry(body: ReadableStream<Uint8Array>): AsyncIterable<NeuralWattEvent>
+neuralWattEventsWithTelemetry(source): ProviderEventStream
+getNeuralWattQuota(options): Promise<NeuralWattQuota>
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides `https://api.neuralwatt.com/v1`. |
-| `id` | `string` | Overrides the provider id (default `neuralwatt`). |
-| `models` | `readonly ModelConfig[]` | Overrides `neuralWattModels` defaults. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:NEURALWATT_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://api.neuralwatt.com/v1`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `neuralwatt`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listNeuralWattModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 `listNeuralWattModels()` options:
 
@@ -122,30 +117,35 @@ Example request body (OpenAI-compatible Chat Completions shape):
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import { createNeuralWattProviderPackage } from "@arnilo/prism-providers/neuralwatt";
+import { createAgent } from "@arnilo/prism";
+import neuralwatt from "@arnilo/prism-provider-neuralwatt";
 
-const kernel = createExtensionKernel();
-await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake-neuralwatt-key" })]);
+const agent = await createAgent({
+  model: { provider: "neuralwatt", model: "glm-5.2" },
+  packages: [neuralwatt({ apiKey: "env:NEURALWATT_API_KEY" })],
+});
+
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 Override the provider id and models:
 
 ```ts
-import { createNeuralWattProviderPackage, defineNeuralWattModel, neuralWattModels } from "@arnilo/prism-providers/neuralwatt";
+import { neuralwatt, defineNeuralWattModel, neuralWattModels } from "@arnilo/prism-provider-neuralwatt";
 
-await kernel.load([
-  createNeuralWattProviderPackage({ id: "neuralwatt", apiKey: "fake", models: neuralWattModels }),
-]);
+const packages = [
+  neuralwatt({ id: "neuralwatt", apiKey: "fake", models: neuralWattModels }),
+]; // pass to createAgent({ packages })
 ```
 
 Explicit catalog discovery:
 
 ```ts
-import { listNeuralWattModels } from "@arnilo/prism-providers/neuralwatt";
+import { listNeuralWattModels } from "@arnilo/prism-provider-neuralwatt";
 
 const models = await listNeuralWattModels({ apiKey: "fake-neuralwatt-key", fetch });
-await kernel.load([createNeuralWattProviderPackage({ apiKey: "fake", models })]);
+const packages = [neuralwatt({ apiKey: "fake", models })]; // pass to createAgent({ packages })
 ```
 
 Discovery performs exactly one `GET /v1/models` call when invoked. Provider package
@@ -154,7 +154,7 @@ setup and `generate()` never call model discovery implicitly.
 Account quota:
 
 ```ts
-import { getNeuralWattQuota } from "@arnilo/prism-providers/neuralwatt";
+import { getNeuralWattQuota } from "@arnilo/prism-provider-neuralwatt";
 
 const quota = await getNeuralWattQuota({ apiKey: "fake-neuralwatt-key", fetch });
 console.log(quota.usage?.current_month?.energy_kwh, quota.balance?.balance_usd);
@@ -326,7 +326,7 @@ optional and tolerated when absent; malformed comments yield no telemetry event
 and never crash the stream.
 
 ```ts
-import { neuralWattEventsWithTelemetry } from "@arnilo/prism-providers/neuralwatt";
+import { neuralWattEventsWithTelemetry } from "@arnilo/prism-provider-neuralwatt";
 
 for await (const event of neuralWattEventsWithTelemetry(response.body)) {
   if (event.type === "neuralwatt:telemetry") {
@@ -358,7 +358,7 @@ provider. Classification is O(1) over status/headers/body and makes no extra
 provider calls.
 
 ```ts
-import { classifyNeuralWattError } from "@arnilo/prism-providers/neuralwatt";
+import { classifyNeuralWattError } from "@arnilo/prism-provider-neuralwatt";
 
 const decision = classifyNeuralWattError({ status: 429, headers: { "retry-after": "1" }, body: { error: { code: "concurrent_budget_exceeded", retry_after: 1 } } });
 // { retryable: true, code: 429, retryAfterMs: 1000, errorCode: "concurrent_budget_exceeded", strategy: undefined }
@@ -378,7 +378,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams, HTTP error bodies, and quota/model-discovery failures use bounded `@arnilo/prism/providers/transport` helpers (`readSseEvents`, `readBoundedResponseText`). NeuralWatt `: energy` / `: cost` comment frames are surfaced via `readSseEvents` `comments` and mapped locally.
+- SSE streams, HTTP error bodies, and quota/model-discovery failures use bounded `@arnilo/prism/provider-kit` helpers (`readSseEvents`, `readBoundedResponseText`). NeuralWatt `: energy` / `: cost` comment frames are surfaced via `readSseEvents` `comments` and mapped locally.
 - No network calls during import, setup, build, default tests, or generation beyond
   the explicit Chat Completions request. `listNeuralWattModels()` is opt-in and
   makes one `GET /v1/models` call per invocation; `getNeuralWattQuota()` is opt-in
@@ -402,7 +402,7 @@ NeuralWatt reasoning models declare `low/medium/high/max` and snap `reasoning_ef
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   `ModelConfig`/`compat`, thinking formats.
 - [Credentials and redaction](../credentials-and-redaction.md):
   `resolveCredentialValue`, `redactSecrets`.

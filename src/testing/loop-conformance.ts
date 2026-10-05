@@ -1,10 +1,11 @@
+import { providerPackage } from "../provider-kit/package.js";
 import type {
   Agent,
   AgentEvent,
   AgentEventType,
   RunResult,
   Session,
-  AIProvider,
+  ModelProvider,
   AroundHookName,
   CheckpointStore,
   CompactionOptions,
@@ -45,7 +46,7 @@ export interface LoopConformanceOptions {
   /** Extra host hooks, registered after the built-in firing probes. */
   readonly hooks?: (hooks: HookRegistrar) => void;
   readonly tools?: readonly ToolDefinition[];
-  readonly provider?: AIProvider;
+  readonly provider?: ModelProvider;
   readonly input?: string;
   readonly store?: SessionStore;
   readonly limits?: RunLimits;
@@ -77,7 +78,7 @@ export interface LoopConformanceResult {
 }
 
 /** Two provider turns: one tool call, then a final text answer. Resets per provider instance. */
-export function twoTurnProvider(call: { readonly id: string; readonly name: string; readonly args?: JsonObject }): AIProvider {
+export function twoTurnProvider(call: { readonly id: string; readonly name: string; readonly args?: JsonObject }): ModelProvider {
   let turn = 0;
   return {
     id: "mock",
@@ -95,7 +96,7 @@ export function twoTurnProvider(call: { readonly id: string; readonly name: stri
 }
 
 /** A single text turn. */
-export function textProvider(text = "done"): AIProvider {
+export function textProvider(text = "done"): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -167,9 +168,10 @@ export async function loopConformance(input: LoopStrategy | LoopConformanceOptio
   const fired = new Set<HookName>();
   const probe = options.probe ?? true;
   const sessionId = options.sessionId ?? "loop-conformance";
+  const provider = options.provider ?? twoTurnProvider({ id: "call-1", name: "echo" });
   const agent = await createAgent({
-    model: { provider: "mock", model: "demo" },
-    provider: options.provider ?? twoTurnProvider({ id: "call-1", name: "echo" }),
+    model: { provider: provider.id, model: "demo" },
+    packages: [providerPackage("loop-conformance-provider", [provider])],
     tools: { add: options.tools ?? [echoTool()] },
     slots: {
       store: options.store ?? createMemorySessionStore(),

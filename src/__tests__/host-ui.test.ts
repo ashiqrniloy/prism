@@ -20,6 +20,7 @@ import {
 import { loadPackages } from "../packages/loader.js";
 import { createScriptedHostUi } from "../testing/host-ui.js";
 import { packageConformance } from "../testing/package-conformance.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 const SECRET = "sk-live-0123456789abcdef";
@@ -120,8 +121,8 @@ describe("host ui", () => {
     const stored: [string, string][] = [];
     const credentials: CredentialResolver = {
       resolve: () => undefined,
-      store: (ref, value) => {
-        stored.push([ref, value]);
+      store: (ref, secret) => {
+        stored.push([ref, secret.value]);
       },
     };
     const { load, secrets, events } = harness(credentials);
@@ -267,7 +268,7 @@ async function askAgent(
     model: MODEL,
     ...(config as Partial<AgentConfig>),
     hooks: (hooks: Parameters<NonNullable<AgentConfig["hooks"]>>[0]) => hooks.on("tool.call", () => ({ ask: "Approve?" })),
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     ...(loop === "custom" ? { loop: customLoop() } : {}),
     tools: {
       add: [

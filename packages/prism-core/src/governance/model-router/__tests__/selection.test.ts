@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentIdentity, AIProvider, ModelConfig } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig } from "@arnilo/prism";
 import { createCostLatencySelection, createModelRouter, ModelRouterError } from "../index.js";
 
-function provider(id: string): AIProvider {
+function provider(id: string): ModelProvider {
   return {
     id,
     async *generate() {

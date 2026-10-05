@@ -1,12 +1,5 @@
-import {
-  type ContextDraft,
-  createAgent,
-  createMockProvider,
-  type Message,
-  providerDone,
-  providerTextDelta,
-  withContextBlocks,
-} from "@arnilo/prism";
+import { type ContextDraft, createAgent, type Message, providerDone, providerTextDelta, withContextBlocks } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 
 // A host-owned prompt composition plus a `run.input` hook: both interception
 // points a 0.12 `PromptBuilder` / `ContextProvider` pair used to occupy, now both
@@ -26,7 +19,7 @@ const preambleMessage: Message = {
 export async function demo(): Promise<readonly string[]> {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
     hooks: (hooks) => {
       hooks.on("run.input", (messages) => [
         preambleMessage,

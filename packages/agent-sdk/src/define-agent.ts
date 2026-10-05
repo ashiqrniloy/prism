@@ -4,7 +4,7 @@ import {
   type Principal,
   type Session,
   type AgentSessionConfig,
-  type AIProvider,
+  type ModelProvider,
   type CommandDefinition,
   type CompactionOptions,
   type ContextBudget,
@@ -26,7 +26,7 @@ import {
   type TrustPolicy,
   registerContextSources,
 } from "@arnilo/prism";
-import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
+import { createJsonlSessionStore } from "@arnilo/prism-store-jsonl";
 import { AgentSdkConfigError } from "./errors.js";
 import { assembleHooksPlane, type HooksPlaneConfig } from "./planes/hooks.js";
 import { assembleInstructionsPlane, type InstructionsPlaneConfig } from "./planes/instructions.js";
@@ -41,13 +41,6 @@ import { type ResolveToolPlaneOptions, resolveToolPlane } from "./tool-plane.js"
 export interface AgentSdkConfig extends ResolveToolPlaneOptions {
   /** Model configuration (provider, model name, limits, cost, capabilities). Required. */
   readonly model: ModelConfig;
-  /** Host-supplied AI provider instance. Supply this or {@link providerSource}. SDK never resolves credentials directly. */
-  readonly provider?: AIProvider;
-  /**
-   * Per-run provider resolver. When set (instead of `provider`), `AgentConfig` carries no fixed provider,
-   * so `RunOptions.providerSource` and `RunOptions.model` can switch provider/model between runs.
-   */
-  readonly providerSource?: ProviderResolver;
   /** Optional nested tools configuration. Overrides or augments top-level tool plane fields. */
   readonly tools?: ResolveToolPlaneOptions;
   /**
@@ -85,10 +78,10 @@ export interface AgentSdkConfig extends ResolveToolPlaneOptions {
   readonly mcp?: McpPlaneConfig;
   /**
    * Session store. Omitted or `"memory"` uses the runtime's in-memory default.
-   * `{ type: "jsonl", path }` builds the JSONL file store; a raw `SessionStore`
+   * `{ type: "jsonl", dir }` builds the JSONL file store; a raw `SessionStore`
    * passes through untouched. Any other shape fails closed (sqlite is a later phase).
    */
-  readonly store?: SessionStore | "memory" | { readonly type: "jsonl"; readonly path: string };
+  readonly store?: SessionStore | "memory" | { readonly type: "jsonl"; readonly dir: string };
   /** Agent loop strategy. Defaults to the kernel loop. */
   readonly loop?: LoopStrategy;
   /** Compactor for the `compaction` slot. Defaults to the kernel compactor. */
@@ -159,16 +152,16 @@ export interface Agent {
 
 /**
  * Resolves the store shorthand. `"memory"`/omitted map to the runtime default (undefined);
- * only `{ type: "jsonl", path }` is built here. Unknown shapes fail closed.
+ * only `{ type: "jsonl", dir }` is built here. Unknown shapes fail closed.
  */
 function resolveStore(store: AgentSdkConfig["store"]): SessionStore | undefined {
   if (store === undefined || store === "memory") return undefined;
   if (typeof store === "string") {
-    throw new AgentSdkConfigError(`Unknown store: "${store}" (expected "memory", { type: "jsonl", path }, or a SessionStore)`);
+    throw new AgentSdkConfigError(`Unknown store: "${store}" (expected "memory", { type: "jsonl", dir }, or a SessionStore)`);
   }
   if ("type" in store) {
-    if (store.type === "jsonl" && typeof store.path === "string" && store.path.length > 0) {
-      return createJsonlSessionStore(store.path);
+    if (store.type === "jsonl" && typeof store.dir === "string" && store.dir.length > 0) {
+      return createJsonlSessionStore({ dir: store.dir });
     }
     throw new AgentSdkConfigError(`Unknown store type: ${JSON.stringify((store as { type?: unknown }).type)} (only "jsonl" is supported)`);
   }
@@ -197,8 +190,10 @@ export async function defineAgent(config: AgentSdkConfig): Promise<Agent> {
     throw new AgentSdkConfigError("Missing required config: model");
   }
 
-  if (!config.provider && !config.providerSource) {
-    throw new AgentSdkConfigError("Missing required config: provider or providerSource");
+  for (const field of ["provider", "providerSource"]) {
+    if ((config as unknown as Record<string, unknown>)[field] !== undefined) {
+      throw new AgentSdkConfigError(`Unknown config field: ${field} (list a package that registers the provider in \`packages\`)`);
+    }
   }
 
   if ("identity" in config) throw new AgentSdkConfigError("Unknown config field: identity (use principal)");
@@ -266,8 +261,6 @@ export async function defineAgent(config: AgentSdkConfig): Promise<Agent> {
     id: config.id,
     name: config.name,
     model: config.model,
-    provider: config.provider,
-    providerSource: config.providerSource,
     tools: { add: toolList },
     instructions: instructionsPlane.instructionsText,
     systemPrompt: instructionsPlane.systemPromptLayers.length > 0 ? instructionsPlane.systemPromptLayers : undefined,

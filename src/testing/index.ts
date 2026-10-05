@@ -6,6 +6,7 @@
  */
 
 export { createMockProvider, type MockProviderOptions } from "../mock-provider.js";
+export { mockProvider, type MockProviderPackageOptions } from "./mock-provider-package.js";
 export {
   providerDone,
   providerTextDelta,
@@ -13,7 +14,7 @@ export {
   providerToolCallDelta,
   providerUsage,
   toolCallContent,
-} from "../provider-events.js";
+} from "../models/events.js";
 export { createScriptedHostUi, type ScriptedAnswer, type ScriptedHostUi } from "./host-ui.js";
 export {
   echoTool,
@@ -25,8 +26,17 @@ export {
 } from "./loop-conformance.js";
 export {
   type ConformanceCheck,
+  loadProviderPackage,
   type PackageConformanceCheckName,
   type PackageConformanceOptions,
   type PackageConformanceResult,
   packageConformance,
 } from "./package-conformance.js";
+export { assertPersistenceSearchQueryParity } from "./query-conformance.js";
+export {
+  STORE_CONFORMANCE_STEPS,
+  storeConformance,
+  type StoreConformanceFactory,
+  type StoreConformanceOptions,
+  type StoreConformanceStep,
+} from "./store-conformance.js";

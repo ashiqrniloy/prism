@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/azure` registers an Azure OpenAI / Foundry Chat Completions provider that uses host-supplied Entra workload identity (Bearer) or Azure resource keys (`api-key`). Deployment URLs keep the configured endpoint host (custom subdomain, private endpoint, or VNet FQDN).
+`@arnilo/prism-provider-azure` registers an Azure OpenAI / Foundry Chat Completions provider that uses host-supplied Entra workload identity (Bearer) or Azure resource keys (`api-key`). Deployment URLs keep the configured endpoint host (custom subdomain, private endpoint, or VNet FQDN).
 
 ## When to use it
 
@@ -11,29 +11,37 @@ Use it for enterprise Azure OpenAI / Foundry deployments with Managed Identity o
 ## Inputs / request
 
 ```ts
-import { createAzureOpenAIProviderPackage } from "@arnilo/prism-providers/azure";
+import azure from "@arnilo/prism-provider-azure";
 
-createAzureOpenAIProviderPackage({
-  endpoint: "https://my-resource.openai.azure.com",
-  deployment: "gpt-4o",
-  apiVersion: "2024-10-21",
-  credential: hostEntraToken, // late-bound
-  authStyle: "bearer",
-  models: [{ provider: "azure", model: "gpt-4o" }],
-});
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+azure(options?: AzureProviderPackageOptions & AzureProviderConfig = {}): PackageInstance
+
+// Named exports.
+createAzureOpenAIProvider(options?: AzureOpenAIProviderOptions): ModelProvider
+azureChatCompletionsUrl(config): string
+azureEndpointFromConfig(config): string
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `endpoint` | Absolute https resource URL; host preserved |
-| `deployment` | Deployment name (defaults to `model.model`) |
-| `apiVersion` | Query `api-version` (default `2024-10-21`) |
-| `credential` | `CredentialValueSource` — Entra token or resource key |
-| `authStyle` | `bearer` (default) or `api-key` |
+| Config field | Type | Purpose |
+| --- | --- | --- |
+| `resourceName` | string | Azure OpenAI resource name; derives `https://<name>.openai.azure.com`. |
+| `endpoint` | string | Full resource endpoint; must be https. Exactly one of `resourceName`/`endpoint`. |
+| `deployment` | string | Deployment name; defaults to the request model id. |
+| `apiVersion` | string | Azure API version; defaults to `2024-10-21`. |
+| `credential` | secret ref | Resolved by the credentials slot; default `env:AZURE_OPENAI_API_KEY`. A literal value is rejected. |
+| `authStyle` | `"bearer" \| "api-key"` | Entra bearer token (default) or Azure resource key. |
+| `models` | `ModelConfig[]` | Static catalog; Azure deployments are host-defined. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `azure`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set, otherwise `[]` — Azure deployments are host-defined. Pass the ids you intend to use in config.
 
 ## Outputs / response / events
 
-Reuses `@arnilo/prism/providers/openai-compatible` streaming events (text, tool deltas, usage, done, redacted errors). Missing credentials fail closed before `fetch`.
+Reuses `@arnilo/prism/provider-kit` streaming events (text, tool deltas, usage, done, redacted errors). Missing credentials fail closed before `fetch`.
 
 ## Request/response example
 
@@ -45,18 +53,29 @@ Authorization: Bearer <entra-token>
 ## Implementation example
 
 ```ts
-const provider = createAzureOpenAIProvider({
-  endpoint: process.env.AZURE_OPENAI_ENDPOINT!,
-  deployment: "gpt-4o",
-  credential: () => entra.getToken("https://cognitiveservices.azure.com/.default").then((t) => t.token),
+import { createAgent } from "@arnilo/prism";
+import azure from "@arnilo/prism-provider-azure";
+
+const agent = await createAgent({
+  model: { provider: "azure", model: "gpt-5.1" },
+  packages: [
+    azure({
+      resourceName: "my-resource",
+      deployment: "gpt-5.1",
+      credential: "env:AZURE_OPENAI_API_KEY",
+    }),
+  ],
 });
+
+const models = await agent.models.list(); // the configured catalog, no fetch
+await agent.dispose();
 ```
 
 Opt-in live canaries: inject real `fetch` + host credential behind host CI secrets — no secrets in repo.
 
 ## Extension and configuration notes
 
-Register via `createExtensionKernel().load([createAzureOpenAIProviderPackage(...)])`. Pair with `@arnilo/prism-core/governance/model-router` for residency allow-lists on Azure regions/endpoints.
+Register by listing the package in `createAgent({ packages: [azure({ ... })] })`. Pair with `@arnilo/prism-core/governance/model-router` for residency allow-lists on Azure regions/endpoints.
 
 ## Request construction (0.5.1)
 
@@ -85,7 +104,7 @@ Opt-in smoke over your real Azure OpenAI resource:
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 AZURE_OPENAI_ENDPOINT=https://<resource>.openai.azure.com \
   AZURE_OPENAI_API_KEY=... PRISM_LIVE_AZURE_MODEL=<deployment-name> \
-  node --test packages/prism-providers/dist/azure/__tests__/live.test.js
+  bun test packages/providers/azure/src/__tests__/live.test.ts
 ```
 
 The deployment name is the model knob (`AZURE_OPENAI_DEPLOYMENT` also works). Without any of these variables the suite skips — it never fails.
@@ -100,4 +119,4 @@ Azure OpenAI deployments use the OpenAI-compatible wire: the provider forwards s
 - [Provider packages](../provider-packages.md)
 - [Model routing](../model-routing.md)
 - [Credential storage](../credential-storage.md)
-- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)
+- Package README: [`@arnilo/prism-provider-azure`](../../packages/providers/azure/README.md)

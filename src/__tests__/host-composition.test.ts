@@ -1,22 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { AgentIdentity } from "../identity.js";
-import {
-  askEveryTool,
-  assertHostCompositionReadiness,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMockProvider,
-  createSecretRedactor,
-  createSecureAgent,
-  createStaticTrustPolicy,
-  HostCompositionError,
-  type HostCompositionOptions,
-  inspectHostComposition,
-  providerDone,
-  providerTextDelta,
-} from "../index.js";
+import { askEveryTool, assertHostCompositionReadiness, createAgent, createMemoryCheckpointStore, createSecretRedactor, createSecureAgent, createStaticTrustPolicy, HostCompositionError, type HostCompositionOptions, inspectHostComposition, providerDone, providerTextDelta } from "../index.js";
 import type { ToolArgumentValidator } from "../tools.js";
+import { mockProvider, createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const mockValidator: ToolArgumentValidator = {
   validate: () => ({ ok: true }),
@@ -41,7 +29,7 @@ async function validPersonalAgent(options: { redactorCanary?: string } = {}) {
         execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "test_tool", value: { ok: true } }),
       },
     ],
-    provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+    packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("ok"), providerDone()])])],
     model: { provider: "mock", model: "test" },
   });
 }
@@ -76,7 +64,7 @@ async function validBusinessAgent(options: { tenantId?: string; redactorCanary?:
         execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "biz_task", value: { ok: true } }),
       },
     ],
-    provider: createMockProvider([providerTextDelta("task done"), providerDone()]),
+    packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("task done"), providerDone()])])],
     model: { provider: "mock", model: "corp-model" },
   });
 }
@@ -168,7 +156,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
         profile: "business" as const,
         agent: await createAgent({
           model: { provider: "mock", model: "m" },
-          provider: createMockProvider([providerDone()]),
+          packages: [mockProvider([[providerDone()]])],
           redactor: createSecretRedactor([]),
           ownership: { tenantId: "tenant-acme", userId: "worker-1" },
           ...(identity === undefined ? {} : { identity }),
@@ -210,7 +198,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
           profile: "personal",
           agent: await createAgent({
             model: { provider: "mock", model: "m" },
-            provider: createMockProvider([providerDone()]),
+            packages: [mockProvider([[providerDone()]])],
             redactor: createSecretRedactor([]),
             ownership: { tenantId: "some-tenant" }, // no userId
           }),
@@ -227,7 +215,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
           profile: "business",
           agent: await createAgent({
             model: { provider: "mock", model: "m" },
-            provider: createMockProvider([providerDone()]),
+            packages: [mockProvider([[providerDone()]])],
             redactor: createSecretRedactor([]),
             ownership: { userId: "alice" }, // no tenantId
           }),
@@ -242,7 +230,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
     const redactor = createSecretRedactor([]);
     const agent = await createAgent({
       model: { provider: "mock", model: "m" },
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       redactor,
       ownership: { tenantId: "tenant-A" },
       hooks: askEveryTool(),
@@ -286,7 +274,7 @@ describe("host composition inspection and readiness (plan 073 Task 5)", () => {
   it("missing redactor rejects readiness", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "m" },
-      provider: createMockProvider([providerDone()]),
+      packages: [mockProvider([[providerDone()]])],
       ownership: { userId: "alice" },
     });
 

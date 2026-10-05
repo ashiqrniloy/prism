@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/vertex` registers a Vertex AI OpenAPI-compatible Chat Completions provider authenticated with host ADC / workload identity tokens. It is intentionally separate from `@arnilo/prism-providers/google` (consumer Gemini API keys).
+`@arnilo/prism-provider-vertex` registers a Vertex AI OpenAPI-compatible Chat Completions provider authenticated with host ADC / workload identity tokens. It is intentionally separate from `@arnilo/prism-provider-google` (consumer Gemini API keys).
 
 ## When to use it
 
@@ -11,22 +11,30 @@ Use it for GCP enterprise Vertex deployments with Application Default Credential
 ## Inputs / request
 
 ```ts
-import { createVertexProviderPackage } from "@arnilo/prism-providers/vertex";
+import vertex from "@arnilo/prism-provider-vertex";
 
-createVertexProviderPackage({
-  projectId: "my-gcp-project",
-  location: "europe-west1",
-  credential: () => hostAdcAccessToken(),
-  models: [{ provider: "vertex", model: "google/gemini-2.0-flash-001" }],
-});
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+vertex(options: VertexProviderPackageOptions & VertexProviderConfig): PackageInstance
+
+// Named exports.
+createVertexProvider(options: VertexProviderOptions): ModelProvider
+vertexOpenApiBaseUrl(options): string
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `projectId` | GCP project |
-| `location` | Vertex location / region |
-| `endpoint` | Optional full https OpenAPI base (private/custom); otherwise location-scoped default |
-| `credential` | Bearer access token source (ADC / WIF) |
+| Config field | Type | Purpose |
+| --- | --- | --- |
+| `project` | string | Google Cloud project id (checked in setup). |
+| `location` | string | Vertex location / region, e.g. `us-central1` (checked in setup). |
+| `endpoint` | string | Optional full OpenAPI-compatible base URL (private endpoint); must be https. |
+| `credential` | secret ref | Resolved by the credentials slot to a bearer access token; ADC/workload identity stays host-owned. |
+| `models` | `ModelConfig[]` | Static catalog; Vertex publishes no unauthenticated model listing. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `vertex`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set, otherwise `[]` — Vertex publishes no unauthenticated model listing. Pass the ids you intend to use in config.
 
 Default base: `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}/endpoints/openapi`.
 
@@ -44,16 +52,27 @@ Authorization: Bearer <adc-token>
 ## Implementation example
 
 ```ts
-const provider = createVertexProvider({
-  projectId: "my-gcp-project",
-  location: "us-central1",
-  credential: async () => (await GoogleAuth.getAccessToken()),
+import { createAgent } from "@arnilo/prism";
+import vertex from "@arnilo/prism-provider-vertex";
+
+const agent = await createAgent({
+  model: { provider: "vertex", model: "gemini-2.5-flash" },
+  packages: [
+    vertex({
+      project: "my-project",
+      location: "us-central1",
+      credential: "env:PRISM_VERTEX_ACCESS_TOKEN", // minted by host ADC
+    }),
+  ],
 });
+
+const models = await agent.models.list(); // the configured catalog, no fetch
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
 
-`@arnilo/prism-providers/google` remains API-key Gemini (`generativelanguage.googleapis.com`) and must not register Vertex OAuth/ADC. Load this package explicitly for Vertex.
+`@arnilo/prism-provider-google` remains API-key Gemini (`generativelanguage.googleapis.com`) and must not register Vertex OAuth/ADC. Load this package explicitly for Vertex.
 
 ## Request construction (0.5.1)
 
@@ -72,7 +91,7 @@ See [Provider request policies](../provider-request-policies.md).
 - No Google Cloud SDK dependency in the package.
 - Custom/private endpoint hosts are preserved.
 - Tokens redacted from errors; no import-time credential prefetch — the credential is resolved exactly once per request (a rotating `CredentialValueSource` is never consumed twice; the same resolved token drives the wrapper check and the inner auth header).
-- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Vertex cached-content lifecycle is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints (use `@arnilo/prism-providers/google`'s `extra.cachedContent` on that package, or manage cache resources host-side).
+- Conformance-proven (Task 6): package `setup()` performs zero fetch and zero credential resolution; an already-aborted signal fails fast; a truncated SSE stream (no `data: [DONE]`) ends in an `error` event; native Vertex cached-content lifecycle is intentionally unsupported on the OpenAI-compatible route — no cache wire fields are emitted even when the request carries Prism cache hints (use `@arnilo/prism-provider-google`'s `extra.cachedContent` on that package, or manage cache resources host-side).
 - Pair with model-router residency allow-lists on `location`.
 
 ## Live probe
@@ -82,7 +101,7 @@ Opt-in smoke against Vertex's OpenAI-compatible endpoint. The suite takes a pre-
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 GOOGLE_VERTEX_PROJECT=my-project \
   PRISM_VERTEX_ACCESS_TOKEN=$(gcloud auth print-access-token) \
-  node --test packages/prism-providers/dist/vertex/__tests__/live.test.js
+  bun test packages/providers/vertex/src/__tests__/live.test.ts
 ```
 
 `GOOGLE_VERTEX_LOCATION` (default `us-central1`) and `PRISM_LIVE_VERTEX_MODEL` (default `gemini-2.5-flash`) are optional. Missing project or token → skip.
@@ -97,4 +116,4 @@ Vertex AI OpenAI-compat chat uses the same sanitized thinking-compat forwarding 
 - [OpenAI-compatible provider](openai-compatible.md)
 - [Provider packages](../provider-packages.md)
 - [Model routing](../model-routing.md)
-- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)
+- Package README: [`@arnilo/prism-provider-vertex`](../../packages/providers/vertex/README.md)

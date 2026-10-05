@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/laya` registers the Laya decision model served by `laya-serve`. Laya speaks the same `POST /v1/systemone` wire as TypeSafe Jev. It does not generate free text, stream, or call tools. A request is valid only with `options.structuredOutput`.
+`@arnilo/prism-provider-laya` registers the Laya decision model served by `laya-serve`. Laya speaks the same `POST /v1/systemone` wire as TypeSafe Jev. It does not generate free text, stream, or call tools. A request is valid only with `options.structuredOutput`.
 
 The package registers provider `laya`, checkpoints `laya`, `laya-multilingual`, and `laya-typed-decisions`, and an optional `api_key` auth method. The server Router picks the checkpoint. The `model` field is advisory and is not a client-side force.
 
@@ -15,25 +15,30 @@ Use it when a host runs `laya-serve` locally or on another machine and wants the
 ## Inputs / request
 
 ```ts
-import {
-  createLayaProvider,
-  createLayaProviderPackage,
-  DEFAULT_LAYA_BASE_URL,
-  defineLayaModel,
-  LAYA_API_KEY_ENV,
-  layaBaseUrl,
-  layaModels,
-} from "@arnilo/prism-providers/laya";
+import laya from "@arnilo/prism-provider-laya";
+
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+laya(options?: LayaProviderPackageOptions & LayaProviderConfig = {}): PackageInstance
+
+// Named exports.
+createLayaProvider(options?: LayaProviderOptions): ModelProvider
+layaBaseUrl(options): string
+defineLayaModel(config: LayaModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Optional. Send it only when the server was started with `LAYA_API_KEY`. Absent key means no `Authorization` header. |
-| `fetch` | `typeof fetch` | Optional fetch for tests and hosts. |
-| `baseUrl` | `string` | Overrides `http://localhost:8000`. Any absolute URL wins, including `https://laya.example.com` and `https://10.0.0.5:8443`. Trailing slashes are trimmed. `layaBaseUrl({ baseUrl })` is the same resolver. |
-| `id` | `string` | Overrides the provider id (default `laya`). |
-| `models` | `readonly ModelConfig[]` | Overrides `layaModels`. |
-| `maxRetries` | `number` | Retries after the first attempt. Default 2. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:LAYA_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `http://localhost:8000`. |
+| `maxRetries` | number | Retries after the first attempt; forwarded to the shared System One client (default 2). |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` returns the curated catalog. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `laya`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it returns the curated `layaModels` catalog — no network call.
 
 Gating, schema mapping, `compat.boolean_threshold`, state rules, and the event sequence match [TypeSafe Jev](typesafe.md). Unsupported schema fields, tools, a missing schema, and an out-of-range threshold fail before any fetch.
 
@@ -70,21 +75,16 @@ The response shape matches Jev. Rendered text is the schema object, for example 
 ## Implementation example
 
 ```ts
-import { createEnvCredentialResolver, createExtensionKernel } from "@arnilo/prism";
-import { createLayaProviderPackage, LAYA_API_KEY_ENV } from "@arnilo/prism-providers/laya";
+import { createAgent } from "@arnilo/prism";
+import laya from "@arnilo/prism-provider-laya";
 
-const kernel = createExtensionKernel();
+const agent = await createAgent({
+  model: { provider: "laya", model: "laya" },
+  packages: [laya({ apiKey: "env:LAYA_API_KEY", maxRetries: 2 })],
+});
 
-// Local laya-serve, no key.
-await kernel.load([createLayaProviderPackage()]);
-
-// laya-serve on another machine.
-await kernel.load([
-  createLayaProviderPackage({
-    baseUrl: "https://laya.example.com",
-    apiKey: createEnvCredentialResolver(process.env, { laya: LAYA_API_KEY_ENV }),
-  }),
-]);
+const models = await agent.models.list(); // the curated catalog, no fetch
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
@@ -113,4 +113,4 @@ The default `http://localhost:8000` is plaintext loopback only. A non-loopback `
 - [TypeSafe Jev](typesafe.md): hosted twin. Schema mapping and event sequence are defined there.
 - [Structured output](../structured-output.md): `options.structuredOutput` contract this adapter requires.
 - [Provider packages](../provider-packages.md): registration and auth-method shape.
-- [Credentials and redaction](../credentials-and-redaction.md): `CredentialValueSource` and `createEnvCredentialResolver`.
+- [Credentials and redaction](../credentials-and-redaction.md): `CredentialValueSource` and `createEnvRefCredentialResolver`.

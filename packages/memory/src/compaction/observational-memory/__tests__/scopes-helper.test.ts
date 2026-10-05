@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createAgent, createMemorySessionStore, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createWorkScopeController, foldWorkScopeMap, SESSION_WORK_SCOPE_ID, withWorkScope } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 
 async function setup() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const session = await agent.session({ id: "scopes-helper", create: true });
   await session.run("hello");
   return { session, controller: createWorkScopeController({ session, appendEntry: (entry) => store.append(entry) }) };

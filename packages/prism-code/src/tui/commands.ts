@@ -3,7 +3,7 @@ import { chmodSync, existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   type Session,
-  type AIProvider,
+  type ModelProvider,
   type CommandDefinition,
   type CommandDrivers,
   type CommandExecutionContext,
@@ -751,11 +751,11 @@ async function runOAuthLogin(providerId: string, _subpath: string, context: Comm
   };
 
   if (providerId === "openai-codex") {
-    const mod = await import("@arnilo/prism-providers/openai");
+    const mod = await import("@arnilo/prism-provider-openai");
     const credentials = await mod.openAICodexOAuthProvider.login(callbacks);
     await context.credentialManager.setOAuth(providerId, credentials);
   } else if (providerId === "xai") {
-    const mod = await import("@arnilo/prism-providers/xai");
+    const mod = await import("@arnilo/prism-provider-xai");
     const oauthProvider = mod.createXaiOAuthProvider();
     const credentials = await oauthProvider.login(callbacks);
     await context.credentialManager.setOAuth(providerId, credentials);
@@ -1313,7 +1313,7 @@ export async function executeCompactCommand(context: CommandContext): Promise<Sl
     return { handled: true };
   }
 
-  let provider: AIProvider;
+  let provider: ModelProvider;
   try {
     provider = context.providerCache
       ? await context.providerCache.prime(context.currentModel)

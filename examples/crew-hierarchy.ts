@@ -2,7 +2,7 @@ import {
   type AgentDefinition,
   type AgentEvent,
   type Session,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createSecretRedactor,
   createToolRegistry,
@@ -25,6 +25,7 @@ import {
   joinNode,
   runWorkflow,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Hierarchical "Crew" workflow pattern on existing Prism primitives.
 //
@@ -196,7 +197,7 @@ export async function verifyNarrowing(): Promise<{
     });
 
   // 1. Specialist (researcher) attempts to invoke manager-only tool -> must be blocked
-  const specialistIllegalToolProvider: AIProvider = {
+  const specialistIllegalToolProvider: ModelProvider = {
     id: "mock",
     async *generate() {
       yield providerToolCall(toolCallContent("tc_illegal_spec", "manager/review_plan", { goal: "test" }));
@@ -206,13 +207,13 @@ export async function verifyNarrowing(): Promise<{
   };
   const researcherAgent = await resolveAgentDefinition(agentDefinitions.researcher!, {
     tools: sharedToolRegistry,
-    overrides: { provider: specialistIllegalToolProvider },
+    overrides: { packages: [providerPackage("example-provider", [specialistIllegalToolProvider])] },
   });
   const researcherSession = await researcherAgent.session();
   await Promise.all([trackBlocked(researcherSession), researcherSession.run("Attempt illegal tool call")]);
 
   // 2. Manager attempts to invoke specialist tool (research/search) directly -> must be blocked
-  const managerIllegalToolProvider: AIProvider = {
+  const managerIllegalToolProvider: ModelProvider = {
     id: "mock",
     async *generate() {
       yield providerToolCall(toolCallContent("tc_illegal_mgr", "research/search", { query: "test" }));
@@ -222,7 +223,7 @@ export async function verifyNarrowing(): Promise<{
   };
   const managerAgent = await resolveAgentDefinition(agentDefinitions.manager!, {
     tools: sharedToolRegistry,
-    overrides: { provider: managerIllegalToolProvider },
+    overrides: { packages: [providerPackage("example-provider", [managerIllegalToolProvider])] },
   });
   const managerSession = await managerAgent.session();
   await Promise.all([trackBlocked(managerSession), managerSession.run("Attempt illegal specialist tool call")]);
@@ -260,7 +261,7 @@ const fanOutNodeDef = fanOutNode({
   },
   map: async (item, _index, _ctx) => {
     const task = item as TaskItem;
-    const specialistProvider: AIProvider = {
+    const specialistProvider: ModelProvider = {
       id: "mock",
       async *generate() {
         if (task.role === "researcher") {
@@ -278,7 +279,7 @@ const fanOutNodeDef = fanOutNode({
     if (!agentDef) throw new Error(`Unknown role in task plan: ${task.role}`);
     const agent = await resolveAgentDefinition(agentDef, {
       tools: sharedToolRegistry,
-      overrides: { provider: specialistProvider },
+      overrides: { packages: [providerPackage("example-provider", [specialistProvider])] },
     });
     const session = await agent.session();
     const runResult = await session.run(task.instruction);
@@ -376,7 +377,7 @@ export async function demo(): Promise<CrewHierarchyDemoResult> {
   const checkpoints = createMemoryWorkflowCheckpoints({ redactor });
 
   // 1. Happy path run
-  const managerProvider: AIProvider = {
+  const managerProvider: ModelProvider = {
     id: "mock",
     async *generate(request) {
       const isRevision = request.messages.some((m) => m.content.some((b) => b.type === "text" && b.text.includes("Fix task plan issues")));
@@ -405,7 +406,7 @@ export async function demo(): Promise<CrewHierarchyDemoResult> {
 
   const managerAgent = await createAgent({
     model: { provider: "mock", model: "manager-demo" },
-    provider: managerProvider,
+    packages: [providerPackage("test-provider", [managerProvider])],
     tools: { add: [managerReviewTool] },
     instructions: "Decompose the goal into structured specialist tasks.",
   });

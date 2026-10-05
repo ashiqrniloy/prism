@@ -12,6 +12,7 @@ import {
 } from "@arnilo/prism";
 import { createMessagingRuntime } from "../index.js";
 import { createSignalAdapter, SIGNAL_CLI_VERSION, type SignalAdapterOptions } from "../signal.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Sanitized signal-cli v0.14.8 `subscribeReceive` notification shape from its pinned JSON-RPC manual.
 const SIGNAL_ACCOUNT = "+15550001111";
@@ -148,13 +149,13 @@ describe("plan 079 Signal adapter", () => {
       id: "signal-agent",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("final answer");
           yield providerDone();
         },
-      },
+      }])],
     });
     const runtime = createMessagingRuntime({
       checkpoints: adapterOptions.checkpoints,

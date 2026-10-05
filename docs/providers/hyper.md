@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/hyper` provides explicit, side-effect-free setup for
+`@arnilo/prism-provider-hyper` provides explicit, side-effect-free setup for
 [Charm Hyper](https://hyper.charm.land) — a pay-per-use reasoning-model gateway
 billed in Hypercredits (1 HC = $0.05). The package routes by `ModelConfig.compat.route`:
 
@@ -39,21 +39,31 @@ or real-network tests (live probes are operator-gated, see below).
 ## Inputs / request
 
 ```ts
-import {
-  createHyperProviderPackage,
-  getHyperCredits,
-  listHyperModels,
-} from "@arnilo/prism-providers/hyper";
+import hyper from "@arnilo/prism-provider-hyper";
 
-createHyperProviderPackage(options: HyperProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+hyper(options?: HyperProviderPackageOptions & HyperProviderConfig = {}): PackageInstance
+
+// Named exports.
+createHyperProvider(options?: HyperProviderOptions): ModelProvider
+listHyperModels(options?: ListHyperModelsOptions): Promise<ModelConfig[]>
+routeForHyperModel(model): HyperRoute
+getHyperCredits(options): Promise<HyperCreditsBalance>
+parseHyperUsageCost(event): HyperUsageCost | undefined
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides official `https://hyper.charm.land/v1`. |
-| `models` | `readonly ModelConfig[]` | Overrides featured `hyperModels` defaults. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:HYPER_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://hyper.charm.land/v1`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `hyper`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listHyperModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 `ProviderRequest.options.cache.breakpoints` select Anthropic-route
 `cache_control` markers as documented below; `options.compat.reasoning_effort`
@@ -122,22 +132,23 @@ are never emitted for implicit Hyper models (no documented 24h/`explicitBreakpoi
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createHyperProviderPackage,
-  getHyperCredits,
-  listHyperModels,
-} from "@arnilo/prism-providers/hyper";
+import { createAgent } from "@arnilo/prism";
+import hyper from "@arnilo/prism-provider-hyper";
 
-const kernel = createExtensionKernel();
-await kernel.load([createHyperProviderPackage({ apiKey: process.env.HYPER_API_KEY })]);
+const agent = await createAgent({
+  model: { provider: "hyper", model: "deepseek-v4-flash" },
+  packages: [hyper({ apiKey: "env:HYPER_API_KEY" })],
+});
+
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 Caller-gated live catalog (never runs during package setup):
 
 ```ts
 const models = await listHyperModels({ fetch }); // public endpoint, no auth needed
-await kernel.load([createHyperProviderPackage({ apiKey: process.env.HYPER_API_KEY, models })]);
+const packages = [hyper({ apiKey: process.env.HYPER_API_KEY, models })]; // pass to createAgent({ packages })
 ```
 
 Optional credit display (hosts poll on their own schedule; never called from
@@ -226,7 +237,7 @@ Owned compat keys (`route`, `preserveThinking`, `reasoning_effort`,
 ### Live-verified mapping (findings ledger)
 
 The following claims are encoded as operator-gated probes in
-`packages/prism-providers/src/hyper/__tests__/live.test.ts`. Each probe's
+`packages/providers/hyper/src/__tests__/live.test.ts`. Each probe's
 assertion encodes the documented claim, so a probe failure **is** the finding;
 record the outcome here and adjust the mapping. Status: **pending operator
 run** (no key in CI):
@@ -242,7 +253,7 @@ Run the gate:
 
 ```sh
 PRISM_LIVE_PROVIDER_TESTS=1 HYPER_API_KEY=sk-hyper-... \
-  npm run test --workspace=@arnilo/prism-providers/hyper
+  npm run test --workspace=@arnilo/prism-provider-hyper
 ```
 
 ## Request construction (0.5.1)
@@ -259,7 +270,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers.
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit` helpers.
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers
@@ -287,7 +298,7 @@ Hyper models derive `capabilities.thinkingLevels` from `compat.effortLevels` (th
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   `ModelConfig`, discovery contract, request/cache policies.
 - [Thinking and reasoning](../thinking-and-reasoning.md): per-turn `ThinkingLevel` → compat families.
 - [Credentials and redaction](../credentials-and-redaction.md):

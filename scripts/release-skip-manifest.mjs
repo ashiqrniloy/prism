@@ -5,8 +5,9 @@
 // (the manifest is retained and uploaded by CI).
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { auditBlockedGates, protectedGateSurfaces } from "./blocked-gate.mjs";
+import { expandWorkspaceDirs } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const MANIFEST_PATH = process.env.PRISM_RELEASE_EVIDENCE ?? join(ROOT, "scripts", "release-evidence.json");
@@ -109,10 +110,17 @@ function envsInTree(dir) {
 }
 
 function workspacePackages() {
-  return readdirSync(join(ROOT, "packages"))
-    .filter((dir) => existsSync(join(ROOT, "packages", dir, "package.json")))
-    .sort()
-    .map((dir) => ({ dir, name: JSON.parse(readFileSync(join(ROOT, "packages", dir, "package.json"), "utf8")).name }));
+  // `expandWorkspaceDirs` handles every workspace entry form, including the grouped
+  // "packages/providers/*" and "packages/integrations/*" bases (plan 147/152), so a standalone
+  // provider package can never be invisible to the live-leg scan. `dir` stays relative to
+  // `packages/` because every consumer joins it onto that root.
+  const workspaces = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).workspaces ?? [];
+  return expandWorkspaceDirs(ROOT, workspaces)
+    .map((dir) => ({
+      dir: relative(join(ROOT, "packages"), dir),
+      name: JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name,
+    }))
+    .sort((a, b) => a.dir.localeCompare(b.dir));
 }
 
 function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvidence }) {
@@ -237,18 +245,9 @@ function buildSurfaces({ baseline, artifact, thresholds, packages, postgresEvide
 
   // Protected: provider live legs (offline conformance suites cover the same
   // mapping code, so the measured offline baseline is the regression signal).
-  // Plan 054 Task 6: adapters live as subpaths of the providers family, so the
-  // scan enumerates each adapter subtree to keep every live class visible.
-  const providerScanDirs = packages.flatMap(({ dir, name }) => {
-    const familySrc = join(ROOT, "packages", dir, "src");
-    if (name === "@arnilo/prism-providers" && existsSync(familySrc)) {
-      return readdirSync(familySrc, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => ({ dir: join(dir, "src", e.name), name: `${name}/${e.name}` }));
-    }
-    return [{ dir, name }];
-  });
-  for (const { dir, name } of providerScanDirs) {
+  // Plan 152 Task 8: every adapter is a standalone package under packages/providers/,
+  // so the workspace list already enumerates each one (no family subpath scan).
+  for (const { dir, name } of packages) {
     if (envsInTree(join(ROOT, "packages", dir)).has("PRISM_LIVE_PROVIDER_TESTS")) {
       surfaces.push({
         name: `${name} live provider legs`,

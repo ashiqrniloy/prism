@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { GeneratedImage, ImageGenerationProvider, ImageGenerationResult } from "../contracts.js";
 import { assertImageGenerationSupported, ImageGenerationError, modelSupportsImageGeneration } from "../contracts.js";
-import { runImageGenerationConformance } from "../testing/provider-conformance.js";
+import { runImageGenerationConformance } from "../provider-kit/conformance.js";
 
 function fakeImage(bytes: readonly number[] = [1, 2, 3], provider = "fake"): ImageGenerationProvider {
   return {

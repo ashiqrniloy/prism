@@ -1,14 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  providerDone,
-  providerTextDelta,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
 import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
 import {
   createObservationalMemoryCompactor,
@@ -22,6 +14,7 @@ import {
   WORK_SCOPE_ENTERED,
   WORK_SCOPE_OPENED,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const now = "2026-06-20T00:00:00.000Z";
@@ -172,9 +165,9 @@ describe("observational memory compaction strategy", () => {
     const seen: string[] = [];
     const agent = await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("ok"), providerDone()], {
+      packages: [mockProvider([[providerTextDelta("ok"), providerDone()]], {
         onRequest: (request) => seen.push(JSON.stringify(request.messages)),
-      }),
+      })],
       // Roadmap §2.5: the compactor is the `compaction` slot.
       slots: { store, compaction: createObservationalMemoryCompactor({ keepRecentEntries: 2 }) },
     });

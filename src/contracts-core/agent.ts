@@ -19,11 +19,11 @@ import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import type { SlotAssignments } from "../slots/types.js";
 import type { ToolValidator } from "../tools.js";
 import type { CompactionOptions, RetryOptions } from "./compaction.js";
-import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig } from "./content.js";
+import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig, ModelRef, ModelSpec } from "./content.js";
 import type { SystemPromptConfig } from "./system-prompt.js";
 import type { GuardrailPackRef } from "./guardrail-packs.js";
 import type { OwnershipScope, PersistencePage } from "./persistence.js";
-import type { AIProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
+import type { ModelProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
 import type { ResourceLoader } from "./resources.js";
 import type { RunLimits } from "./run-limits.js";
 import type { SessionListQuery, SessionSearchHit, SessionSearchQuery, SessionStore, SessionSummary } from "./session.js";
@@ -32,7 +32,7 @@ export interface AgentDefinition {
   readonly name: string;
   readonly description?: string;
   /** Direct model config, or a `provider/model` string. */
-  readonly model?: ModelConfig | string;
+  readonly model?: ModelRef;
   /** Tool names to activate from the tool list in scope. */
   readonly tools?: readonly string[];
   /** Skill names resolved through `resolveActiveSkills()`; `toolNames` enforcement applies. */
@@ -49,7 +49,6 @@ export interface AgentDefinition {
 /** Input to {@link resolveAgentDefinition}. All fields are optional; the host
  *  controls scope by which tools, skills, and provider source it passes. */
 export interface AgentDefinitionResolutionContext {
-  readonly providerSource?: ProviderResolver;
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
   readonly skillsRegistry?: SkillRegistry;
   /** Migration-only: omitted `tools`/`skills` activate every in-scope tool/skill. Defaults to fail-closed. */
@@ -61,9 +60,7 @@ export interface AgentConfig {
   readonly id?: string;
   readonly name?: string;
   readonly instructions?: string;
-  readonly model: ModelConfig;
-  readonly provider?: AIProvider;
-  readonly providerSource?: ProviderResolver;
+  readonly model: ModelRef;
   readonly tools?: { readonly add?: readonly ToolDefinition[] };
   readonly skills?: {
     readonly dirs?: readonly string[];
@@ -223,7 +220,7 @@ export interface SessionIndex {
 
 /** The provider and model a reference resolves to. */
 export interface ResolvedModel {
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
 }
 
@@ -233,19 +230,22 @@ export interface ResolvedModel {
  */
 export interface ModelIndex {
   /**
-   * The models the registered providers declare through `AIProvider.models()`, plus the configured model
+   * The models the registered providers declare through `ModelProvider.models()`, plus the configured model
    * when no provider declared it. Only the public fields: `parameters`, `compat` and `metadata` can hold
    * endpoints or headers, so they are dropped, and the agent's redactor masks the rest.
    */
   list(): Promise<readonly ModelConfig[]>;
   /** The provider and model for `ref`. Rejects with `Unknown provider: <id>` when none is registered. */
-  resolve(ref: ModelConfig): ResolvedModel;
+  resolve(ref: ModelRef): ResolvedModel;
 }
+
+/** `AgentConfig` after `createAgent` parsed `model` into a `ModelSpec`. */
+export type ResolvedAgentConfig = Omit<AgentConfig, "model"> & { readonly model: ModelSpec };
 
 export interface Agent {
   /** `AgentConfig.id`, then `name`, else an id generated for this agent. */
   readonly id: string;
-  readonly config: AgentConfig;
+  readonly config: ResolvedAgentConfig;
   readonly commands: AgentCommands;
   /** Tools after `disable`: the host's plus every package's. Frozen; empty after `dispose()`. */
   readonly tools: readonly ToolInfo[];

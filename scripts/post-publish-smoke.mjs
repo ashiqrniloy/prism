@@ -102,6 +102,7 @@ import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMemory, createHashEmbedder } from "@arnilo/prism-memory";
 import { createMemoryFabric } from "@arnilo/prism-memory/fabric";
 import { createScopedMemoryPolicy } from "@arnilo/prism-memory/scoped";
@@ -129,7 +130,7 @@ checks.push(["scoped ledger written", readFileSync(join(scopeRoot, ".memory", "s
 const provider = { id: "mock", async *generate() { yield providerTextDelta("ok"); yield providerDone(); } };
 const agent = await createAgent({
   model: { provider: "mock", model: "smoke" },
-  provider,
+  packages: [providerPackage("smoke-provider", [provider])],
   hooks: (hooks) => hooks.on("run.end", () => undefined, { id: "smoke" }),
 });
 const session = (await agent.session({ id: "post-publish-smoke", create: true }));

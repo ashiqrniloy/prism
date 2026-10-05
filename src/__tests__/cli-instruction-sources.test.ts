@@ -7,7 +7,9 @@ import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { Session, ProviderRequest } from "../contracts.js";
-import { createAgent, createMockProvider, registerContextSources } from "../index.js";
+import { createAgent, registerContextSources } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -42,7 +44,7 @@ function capturingSession(captured: ProviderRequest[]): (options: CliOptions) =>
     return (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         ...(sources.length > 0 ? { hooks: (hooks) => registerContextSources(hooks, sources) } : {}),
       })
     ).session();

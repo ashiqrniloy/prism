@@ -12,6 +12,7 @@ import {
   projectCoWorkEvent,
   resolveAgUiLimits,
 } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const authorization = { ownership: { userId: "user-1" } };
 
@@ -154,13 +155,13 @@ describe("createAgUiHandler co-work context", () => {
     let seenContext: unknown;
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -190,13 +191,13 @@ describe("createAgUiHandler co-work context", () => {
   it("emits no co-work events when the source yields only malformed entries", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,

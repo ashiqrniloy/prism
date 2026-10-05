@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { type AIProvider, createAgent, providerDone, providerTextDelta, providerToolCallDelta, type ToolDefinition } from "@arnilo/prism";
+import { type ModelProvider, createAgent, providerDone, providerTextDelta, providerToolCallDelta, type ToolDefinition } from "@arnilo/prism";
 import { hookCommandHash, hooksJson } from "@arnilo/prism-hooks-json";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // hooks.json package: config is the file. SessionStart is session.opened. PreToolUse is tool.call.
 // The handler is a local fixture spawned with an argv array. The allow-list is a hash pin.
@@ -32,7 +33,7 @@ const write: ToolDefinition = {
 
 let turn = 0;
 const requests: unknown[] = [];
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate(request) {
     requests.push(request);
@@ -50,9 +51,8 @@ const provider: AIProvider = {
 
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
   tools: { add: [write] },
-  packages: [hooksJson({ config, onWarning: (warning) => console.log(`warning: ${warning.code} ${warning.message}`) })],
+  packages: [hooksJson({ config, onWarning: (warning) => console.log(`warning: ${warning.code} ${warning.message}`) }), providerPackage("test-provider", [provider])],
 });
 
 const session = await agent.session({ id: "hooks-json-example", create: true });

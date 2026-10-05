@@ -114,17 +114,17 @@
       },
       {
         "name": "@arnilo/prism-provider-clinepass",
-        "foldedInto": "@arnilo/prism-providers/clinepass",
+        "foldedInto": "@arnilo/prism-provider-clinepass",
         "by": "plan 054"
       },
       {
         "name": "@arnilo/prism-provider-deepseek",
-        "foldedInto": "@arnilo/prism-providers/deepseek",
+        "foldedInto": "@arnilo/prism-provider-deepseek",
         "by": "plan 054"
       },
       {
         "name": "@arnilo/prism-provider-xai",
-        "foldedInto": "@arnilo/prism-providers/xai",
+        "foldedInto": "@arnilo/prism-provider-xai",
         "by": "plan 054"
       },
       {
@@ -174,11 +174,11 @@
       }
     ],
     "lateAdditions": {
-      "@arnilo/prism-providers/hyper": "plan 055",
-      "@arnilo/prism-providers/commandcode": "plan 055",
-      "@arnilo/prism-providers/model-discovery": "plan 062",
-      "@arnilo/prism-providers/typesafe": "plan 121",
-      "@arnilo/prism-providers/laya": "plan 121"
+      "@arnilo/prism-provider-hyper": "plan 055",
+      "@arnilo/prism-provider-commandcode": "plan 055",
+      "@arnilo/prism/provider-kit": "plan 062",
+      "@arnilo/prism-provider-typesafe": "plan 121",
+      "@arnilo/prism-provider-laya": "plan 121"
     }
   },
   "compat": {

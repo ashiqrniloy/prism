@@ -6,19 +6,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  type Agent,
-  type AgentEventRecord,
-  type AgentIdentity,
-  type RunResult,
-  type AIProvider,
-  createAgent,
-  createMemoryAgentEventSource,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-} from "@arnilo/prism";
+import { type Agent, type AgentEventRecord, type AgentIdentity, type RunResult, type ModelProvider, createAgent, createMemoryAgentEventSource, providerDone, providerTextDelta, providerToolCall } from "@arnilo/prism";
 import {
   createApprovalBeforeEffectScorer,
   createCitationIntegrityScorer,
@@ -36,6 +24,8 @@ import type { ExecutionStep, ExecutionTimeline } from "@arnilo/prism-core/govern
 import { summarizeTimeline } from "@arnilo/prism-core/governance/observability";
 import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-work/connectors";
 import { compareInspectorRuns, createPrismDevInspector, parseInspectorCompareBody } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const OWNERSHIP = { tenantId: "local", userId: "local" } as const;
 const here = dirname(fileURLToPath(import.meta.url));
@@ -134,7 +124,7 @@ describe("inspector eval comparison", () => {
     const inspector = createPrismDevInspector({
       agent: await createAgent({
         model: { provider: "mock", model: "offline" },
-        provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+        packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
       }),
       port: 0,
       eventSource: events,
@@ -294,7 +284,7 @@ describe("host-journey gates over plan 072 evals", () => {
 
     const real = await createAgent({
       model: { provider: "mock", model: "offline" },
-      provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
     });
     const injected = await (await wrapAgentWithFailureInjection(real, { failStore: true })).session();
     await assert.rejects(() => injected.run("ok"), /injected store failure/);
@@ -332,7 +322,7 @@ describe("host-journey gates over plan 072 evals", () => {
   });
 });
 
-function oneShotToolProvider(name: string): AIProvider {
+function oneShotToolProvider(name: string): ModelProvider {
   let turn = 0;
   return {
     id: "mock",
@@ -396,7 +386,7 @@ describe("host-activity packs on true 072 primitives", () => {
       agent: await wrapAgentWithFailureInjection(
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: oneShotToolProvider("drop_database"),
+          packages: [providerPackage("test-provider", [oneShotToolProvider("drop_database")])],
           tools: {
             add: [
               {
@@ -434,7 +424,7 @@ describe("host-activity packs on true 072 primitives", () => {
       agent: await wrapAgentWithFailureInjection(
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: oneShotToolProvider("write_record"),
+          packages: [providerPackage("test-provider", [oneShotToolProvider("write_record")])],
           tools: {
             add: [
               {
@@ -564,7 +554,7 @@ describe("host-activity packs on true 072 primitives", () => {
       });
       const agent = await createAgent({
         model: { provider: "mock", model: "offline" },
-        provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+        packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
       });
       const toEnvironment = async (item: { expected?: { hash?: string } }) => ({
         testsPassed:

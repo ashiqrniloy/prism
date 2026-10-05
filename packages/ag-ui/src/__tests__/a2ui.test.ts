@@ -11,6 +11,7 @@ import {
   resolveAgUiLimits,
 } from "../index.js";
 import { parseAgUiInput } from "../input.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 
@@ -273,13 +274,13 @@ describe("A2UI painting middleware", () => {
       id: "a2ui-agent",
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
     });
     const handler = createAgUiHandler({
       authorize: () => ({ ownership: { userId: "u1" } }),
@@ -319,7 +320,7 @@ describe("A2UI painting middleware", () => {
       id: "paint-agent",
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -332,7 +333,7 @@ describe("A2UI painting middleware", () => {
           }
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {

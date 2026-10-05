@@ -33,7 +33,7 @@ import { appendFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createToolRegistry,
   type JsonObject,
@@ -45,6 +45,7 @@ import {
   type ToolDefinition,
 } from "@arnilo/prism";
 import { createTimelineFolder } from "@arnilo/prism-core/governance/observability";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const STEP_COUNT = 8;
 const LEGACY_TRACE_BYTES = 480;
@@ -94,7 +95,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const ledgerPath = join(ledgerDir, "host-ledger.ndjson");
 
   const turns: ProviderEvent[][] = [];
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "mock",
     async *generate(): AsyncIterable<ProviderEvent> {
       const events = turns.shift() ?? [providerTextDelta("fallback"), providerDone()];
@@ -105,7 +106,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const agent = await createAgent({
     id: "host-step-loop-agent",
     model: { provider: "mock", model: "demo" },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     tools: { add: [lookupTool] },
   });
   const session = await agent.session({ id: "host-step-loop-session", create: true });

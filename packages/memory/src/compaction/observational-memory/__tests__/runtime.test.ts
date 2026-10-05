@@ -1,18 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  type ProviderEvent,
-  type ProviderRequest,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type SessionEntry,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, type ProviderEvent, type ProviderRequest, providerDone, providerTextDelta, providerToolCall, type SessionEntry, toolCallContent } from "@arnilo/prism";
 import {
   createObservationalMemoryRuntime,
   HARD_MAX_WORKER_ARGUMENT_BYTES,
@@ -24,11 +12,12 @@ import {
   HARD_MAX_WORKER_TURNS,
   OBSERVATIONS_RECORDED,
 } from "../index.js";
+import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
 
-function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIProvider {
+function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): ModelProvider {
   let index = 0;
   return {
     id: "memory",
@@ -40,7 +29,7 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
 
 async function sessionWithMessage() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const session = await agent.session({ id: "s1", create: true });
   await session.run("hello");
   return { session, store };
@@ -50,7 +39,7 @@ describe("observational memory runtime", () => {
   it("runtime_does_not_start_workers_when_passive_not_due_in_flight_or_missing_credentials", async () => {
     const { session, store } = await sessionWithMessage();
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -123,7 +112,7 @@ describe("observational memory runtime", () => {
     const { session, store } = await sessionWithMessage();
     const before = (await session.entries()).at(-1)?.id;
     const secret = "runtime-secret";
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         throw new Error(`${secret}-${"x".repeat(100)}`);
@@ -223,7 +212,7 @@ describe("observational memory runtime", () => {
   it("runtime_falls_back_to_session_model_when_worker_model_omitted", async () => {
     const { session, store } = await sessionWithMessage();
     let seenModel: string | undefined;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate(request) {
         seenModel = `${request.model.provider}/${request.model.model}`;
@@ -257,7 +246,7 @@ describe("observational memory runtime", () => {
   it("runtime_explicit_worker_model_wins_over_session_model", async () => {
     const { session, store } = await sessionWithMessage();
     let seenModel: string | undefined;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate(request) {
         seenModel = `${request.model.provider}/${request.model.model}`;
@@ -282,7 +271,7 @@ describe("observational memory runtime", () => {
   it("runtime_requireExplicitModel_skips_without_worker_model_even_with_session_model", async () => {
     const { session, store } = await sessionWithMessage();
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -304,7 +293,7 @@ describe("observational memory runtime", () => {
   it("runtime_missing_model_when_neither_worker_nor_session_model", async () => {
     const { session, store } = await sessionWithMessage();
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -363,7 +352,7 @@ describe("observational memory runtime", () => {
   it("runtime stamps derived om session id on worker generate", async () => {
     const { session, store } = await sessionWithMessage();
     let request!: ProviderRequest;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate(input) {
         request = input;
@@ -395,7 +384,7 @@ describe("observational memory runtime", () => {
   it("runtime host providerOptions.sessionId wins over derived om id", async () => {
     const { session, store } = await sessionWithMessage();
     let request!: ProviderRequest;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate(input) {
         request = input;

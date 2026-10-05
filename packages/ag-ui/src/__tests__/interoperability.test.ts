@@ -11,6 +11,7 @@ import {
   createAgUiMcpAppHandler,
   createAgUiMcpAppSandbox,
 } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const authorization = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
 
@@ -98,14 +99,14 @@ describe("AG-UI protocol fronting", () => {
           await createAgent({
             model: { provider: "mock", model: "mock" },
             tools: { add: input.serverTools },
-            provider: {
+            packages: [providerPackage("test-provider", [{
               id: "mock",
               async *generate() {
                 if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("weather-1", "mcp:weather:get", {}) };
                 else yield providerTextDelta("forecast ready");
                 yield providerDone();
               },
-            },
+            }])],
           })
         ).session({ id: "mcp-session", create: true });
       },

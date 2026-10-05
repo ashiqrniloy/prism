@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, it } from "bun:test";
 import {
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
@@ -19,13 +16,11 @@ import {
   type SessionSearchIndex,
   type SessionSearchHit,
   type SessionSearchKind,
-  type SessionSearchQuery,
   SessionSearchUnsupportedError,
   type SessionStore,
 } from "../index.js";
-import { createJsonlSessionStore } from "../node/session-store-jsonl.js";
 import { createMemorySessionStore, createSessionEntry } from "../session-stores.js";
-import { assertSessionStoreConforms } from "../testing/session-store-conformance.js";
+import { storeConformance } from "../testing/store-conformance.js";
 
 describe("SessionSearchIndex contracts", () => {
   it("resolveSessionSearchQuery applies defaults and rejects invalid limits/queries", () => {
@@ -62,7 +57,7 @@ describe("SessionSearchIndex contracts", () => {
       searchSessions: (query) => base.searchSessions!(query),
     };
     await store.append(createSessionEntry({ sessionId: "s1", kind: "label", label: "auth" }));
-    await assertSessionStoreConforms(store, { exerciseSearchSessions: true });
+    await storeConformance(() => store);
   });
 
   it("memory linear search: hit/miss/pagination/ownership/cap", async () => {
@@ -132,7 +127,7 @@ describe("SessionSearchIndex contracts", () => {
     assert.equal(page2.items.length, 1);
     assert.notEqual(page2.items[0]?.sessionId, page1.items[0]?.sessionId);
 
-    await assertSessionStoreConforms(store, { exerciseSearchSessions: true });
+    await storeConformance(() => store);
 
     // Cap: sessions beyond DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS are not scanned.
     const capped = createMemorySessionStore();
@@ -221,59 +216,5 @@ describe("SessionSearchIndex contracts", () => {
         isSessionSearchUnsupported(error) &&
         error.code === SESSION_SEARCH_UNSUPPORTED_CODE,
     );
-  });
-
-  it("JSONL linear search returns the same hits as the memory store for the same corpus", async () => {
-    const path = join(await mkdtemp(join(tmpdir(), "prism-jsonl-search-")), "sessions.jsonl");
-    const entries = [
-      createSessionEntry({
-        id: "jsonl-root",
-        sessionId: "jsonl-session",
-        timestamp: "2026-01-01T00:00:02.000Z",
-        kind: "message",
-        label: "auth-flake",
-        summary: "flaky login",
-        message: { role: "user", content: [{ type: "text", text: "fix flaky auth test timeout" }] },
-        metadata: { workspaceRoot: "/repo", tenantId: "tenant-a" },
-      }),
-      createSessionEntry({
-        id: "jsonl-other",
-        sessionId: "jsonl-other-session",
-        timestamp: "2026-01-01T00:00:01.000Z",
-        kind: "label",
-        label: "unrelated",
-      }),
-    ];
-    const jsonl = createJsonlSessionStore(path);
-    for (const entry of entries) await jsonl.append(entry);
-    const memory = createMemorySessionStore(entries);
-
-    // One matcher, two stores: every query must produce identical pages, pointer fields included.
-    const queries: SessionSearchQuery[] = [
-      { query: "flaky auth", limit: 10 },
-      { label: "unrelated", limit: 10 },
-      { kind: "label", limit: 10 },
-      { query: "flaky auth", kind: ["label", "summary"], limit: 10 },
-      { workspaceRoot: "/repo", limit: 10 },
-      { workspaceRoot: "/elsewhere", limit: 10 },
-      { tenantId: "tenant-a", limit: 1, order: "asc" },
-    ];
-    for (const query of queries) {
-      assert.deepEqual(
-        await jsonl.searchSessions!(query),
-        await memory.searchSessions!(query),
-        `JSONL and memory search diverged for ${JSON.stringify(query)}`,
-      );
-    }
-
-    const hits = await jsonl.searchSessions!({ query: "flaky auth", limit: 10 });
-    assert.equal(hits.items[0]?.entryId, "jsonl-root");
-    assert.equal(hits.items[0]?.turn, 1);
-    assert.match(hits.items[0]?.snippet ?? "", /flaky auth/);
-
-    // Persisted corpus: a fresh instance searches the file, and the search contract conforms.
-    const reopened = createJsonlSessionStore(path);
-    assert.deepEqual(await reopened.searchSessions!({ query: "flaky auth", limit: 10 }), hits);
-    await assertSessionStoreConforms(reopened, { exerciseSearchSessions: true });
   });
 });

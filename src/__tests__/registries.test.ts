@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, ModelRegistry, ProviderRegistry } from "../index.js";
+import type { ModelProvider, ModelRegistry, ProviderRegistry } from "../index.js";
 import { createModelRegistry, createProviderRegistry } from "../index.js";
 
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield { type: "done" };
@@ -31,7 +31,7 @@ describe("provider registry", () => {
   });
 
   it("replaces duplicate providers by default", () => {
-    const replacement: AIProvider = {
+    const replacement: ModelProvider = {
       ...provider,
       generate: async function* () {
         yield { type: "done" };
@@ -100,7 +100,7 @@ describe("model registry", () => {
   it("unknown model fails before provider call", () => {
     let called = false;
     const registry = createModelRegistry([{ provider: "mock", model: "demo" }]);
-    const providerWithCallFlag: AIProvider = {
+    const providerWithCallFlag: ModelProvider = {
       id: "mock",
       async *generate() {
         called = true;

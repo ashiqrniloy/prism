@@ -7,8 +7,10 @@ import { describe, it } from "bun:test";
 import type { CliOptions } from "../cli-runner.js";
 import { parseCliArgs, runCli } from "../cli-runner.js";
 import type { Session, ProviderRequest } from "../contracts.js";
-import { createAgent, createMockProvider } from "../index.js";
+import { createAgent } from "../index.js";
 import { createSkillRegistry } from "../skills.js";
+import { mockProvider, createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 class MemoryWritable extends Writable {
   chunks: string[] = [];
@@ -47,7 +49,7 @@ function capturingSession(captured: ProviderRequest[]): (options: CliOptions) =>
     return (
       await createAgent({
         model: { provider: "mock", model: "m" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         ...(options.discoveredSkills.length > 0 ? { skills: { add: options.discoveredSkills } } : {}),
       })
     ).session();
@@ -99,7 +101,7 @@ describe("cli discovery flags", () => {
       ...io,
       createSession: async (options) => {
         seen.push(options);
-        return (await createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) })).session();
+        return (await createAgent({ model: { provider: "mock", model: "m" }, packages: [mockProvider([[{ type: "done" }]])] })).session();
       },
     });
 
@@ -139,7 +141,7 @@ describe("cli discovery flags", () => {
       workspaceRoot: root,
       createSession: async (options) => {
         seen.push(options);
-        return (await createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) })).session();
+        return (await createAgent({ model: { provider: "mock", model: "m" }, packages: [mockProvider([[{ type: "done" }]])] })).session();
       },
     });
 
@@ -159,7 +161,7 @@ describe("cli discovery flags", () => {
       workspaceRoot: root,
       createSession: async (options) => {
         seen.push(options);
-        return (await createAgent({ model: { provider: "mock", model: "m" }, provider: createMockProvider([{ type: "done" }]) })).session();
+        return (await createAgent({ model: { provider: "mock", model: "m" }, packages: [mockProvider([[{ type: "done" }]])] })).session();
       },
     });
 
@@ -182,7 +184,7 @@ describe("cli discovery flags", () => {
         return (
           await createAgent({
             model: { provider: "mock", model: "m" },
-            provider: createMockProvider([{ type: "done" }]),
+            packages: [mockProvider([[{ type: "done" }]])],
             skills: { add: options.discoveredSkills },
           })
         ).session();

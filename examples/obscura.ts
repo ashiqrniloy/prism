@@ -6,7 +6,7 @@
  * binary exists; hosts need no Obscura-specific branch because everything here is
  * a plain `ToolDefinition[]`.
  */
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismMcpServer } from "@arnilo/prism-mcp";
 import { createBrowserTools } from "@arnilo/prism-web-tools/browser";
 import {
@@ -16,6 +16,7 @@ import {
   DEFAULT_OBSCURA_PROCESS_LIMITS,
   validateObscuraCommand,
 } from "@arnilo/prism-web-tools/obscura";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const OBSCURA = "/usr/local/bin/obscura";
 
@@ -36,7 +37,7 @@ export async function demo() {
   // server handler, AG-UI/ACP, workflows, and supervisors).
   const agent = await createAgent({
     model: { provider: "openai", model: "gpt-5.2" },
-    provider: createMockProvider([providerTextDelta("demo"), providerDone()]), // replace with a real provider
+    packages: [mockProvider([[providerTextDelta("demo"), providerDone()]], { id: "openai" })], // replace with a real provider
     tools: { add: [...web.tools, ...browser, ...mcp.tools] },
   });
   void agent;

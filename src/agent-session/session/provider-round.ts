@@ -19,6 +19,7 @@ import type {
   ProviderTurnMetadata,
   ProviderTurnResult,
   RunOptions,
+  ResolvedRunOptions,
   ToolCallContent,
   ToolResult,
   TurnBudgets,
@@ -27,16 +28,14 @@ import type {
 } from "../../contracts.js";
 import { GuardrailError } from "../../guardrails.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
-import { providerError, providerToolCallDeltaContent } from "../../provider-events.js";
+import { normalizeStopReason, providerError, providerToolCallDeltaContent } from "../../models/events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
-import { createDefaultRetryPolicy, waitForRetry } from "../../retry.js";
+import { mergeRetry, retryLoop } from "../../models/retry.js";
 import { estimateTextTokensForFamily } from "../../usage-estimation.js";
 import {
   bridgeAbort,
-  errorFromInfo,
   isSteerSoftInterrupt,
   jsonBytes,
-  mergeRetry,
   ProviderTurnFailure,
   providerContent,
   randomId,
@@ -222,7 +221,7 @@ export async function generateWithRetry(
   session: SessionHost,
   request: ProviderRequest,
   runId: string,
-  options: RunOptions,
+  options: ResolvedRunOptions,
   signal: AbortSignal,
   requestSecrets: readonly (string | undefined)[] = [],
   turn = 1,
@@ -231,20 +230,21 @@ export async function generateWithRetry(
 ): Promise<ProviderTurnResult> {
   const retry = mergeRetry(session.agent.config.retry, options.retry);
   const secrets = [...requestSecrets, ...(retry?.secrets ?? [])];
-  const policy = retry?.policy ?? (retry ? createDefaultRetryPolicy(retry) : undefined);
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      return await generateProviderTurn(session, request, runId, signal, secrets, turn, attempt, recordUsage, toolResults);
-    } catch (error) {
-      if (error instanceof GuardrailError || isSteerSoftInterrupt(error)) throw error;
+  return retryLoop((attempt) => generateProviderTurn(session, request, runId, signal, secrets, turn, attempt, recordUsage, toolResults), {
+    retry,
+    sessionId: session.id,
+    runId,
+    signal,
+    passthrough: (error) => error instanceof GuardrailError || isSteerSoftInterrupt(error),
+    classify(error) {
       const failure = error instanceof ProviderTurnFailure ? error : undefined;
-      const info = failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets);
-      if (!policy || failure?.observable) throw errorFromInfo(info);
-      const context = { sessionId: session.id, runId, attempt, error: info, metadata: retry?.metadata, signal };
-      const decision = await policy.decide(context);
-      if (!decision.retry) throw errorFromInfo(info);
-      const delayMs = decision.delayMs ?? 0;
-      // A retry re-opens the turn: `turn.started` again, with the attempt and the redacted cause.
+      return {
+        info: failure ? redactSecrets(failure.info, secrets) : errorToErrorInfo(error, secrets),
+        final: failure?.observable,
+      };
+    },
+    // A retry re-opens the turn: `turn.started` again, with the attempt and the redacted cause.
+    onRetry: (info, delayMs, attempt) =>
       session.emit({
         type: "turn.started",
         sessionId: session.id,
@@ -253,10 +253,8 @@ export async function generateWithRetry(
         attempt,
         metadata: createProviderTurnMetadata(request, session.activeProvider?.id ?? request.model.provider, { attempt }),
         retry: { delayMs, error: info },
-      });
-      await waitForRetry(decision, signal);
-    }
-  }
+      }),
+  });
 }
 
 export async function generateProviderTurn(
@@ -324,7 +322,7 @@ export async function generateProviderTurn(
       if (event.type === "usage") usage = event.usage;
       if (event.type === "done") {
         usage = event.usage ?? usage;
-        nativeStopReason = event.stopReason;
+        nativeStopReason = normalizeStopReason(event.stopReason);
         break;
       }
       if (event.type === "message_start") {

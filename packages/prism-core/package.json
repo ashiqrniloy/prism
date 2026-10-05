@@ -24,18 +24,6 @@
       "types": "./dist/runtime/workflows/index.d.ts",
       "default": "./dist/runtime/workflows/index.js"
     },
-    "./sessions/codecs": {
-      "types": "./dist/sessions/codecs/index.d.ts",
-      "default": "./dist/sessions/codecs/index.js"
-    },
-    "./sessions/sqlite": {
-      "types": "./dist/sessions/sqlite/index.d.ts",
-      "default": "./dist/sessions/sqlite/index.js"
-    },
-    "./sessions/postgres": {
-      "types": "./dist/sessions/postgres/index.d.ts",
-      "default": "./dist/sessions/postgres/index.js"
-    },
     "./sessions/nats": {
       "types": "./dist/sessions/nats/index.d.ts",
       "default": "./dist/sessions/nats/index.js"
@@ -92,13 +80,12 @@
   "scripts": {
     "build": "bun ../../scripts/with-build-lock.mjs tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "test -d dist || { echo 'prism-core: build first (no dist/)' >&2; exit 1; }; bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 --path-ignore-patterns='dist/sessions/sqlite/**' dist",
-    "test:postgres": "bun ../../scripts/require-postgres-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/sessions/postgres/__tests__/*.test.js dist/enterprise/postgres/__tests__/*.test.js",
+    "test": "test -d dist || { echo 'prism-core: build first (no dist/)' >&2; exit 1; }; bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist",
+    "test:postgres": "bun ../../scripts/require-postgres-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/enterprise/postgres/__tests__/*.test.js",
     "test:nats": "bun ../../scripts/require-nats-url.mjs && bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 dist/sessions/nats/__tests__/nats.integration.test.js",
     "pack:dry-run": "npm pack --dry-run"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^2.0.0",
     "ajv": "^8.17.1"
   },
   "peerDependencies": {
@@ -125,6 +112,7 @@
   "devDependencies": {
     "@arnilo/prism": "file:../..",
     "@arnilo/prism-memory": "file:../memory",
+    "@arnilo/prism-store-sqlite": "^0.12.1",
     "@arnilo/prism-work": "file:../prism-work",
     "@nats-io/jetstream": "^3.4.0",
     "@nats-io/transport-node": "^3.4.0",

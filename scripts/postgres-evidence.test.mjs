@@ -44,6 +44,7 @@ test("the wrapper is wired into the bun chain: URL gate first, workspace legs, t
   const order = [
     "bun scripts/require-postgres-url.mjs",
     "bun run --filter @arnilo/prism-core test:postgres",
+    "bun run --filter @arnilo/prism-store-postgres test:postgres",
     "bun run --filter @arnilo/prism-memory test:postgres",
     "bun run --filter @arnilo/prism-channels test:postgres",
     "bun test --timeout=0 scripts/phase7-conformance.test.mjs",
@@ -60,14 +61,17 @@ test("the wrapper is wired into the bun chain: URL gate first, workspace legs, t
   assert.ok(!chain.includes("npm "), `test:postgres:run must stay on bun: ${chain}`);
 });
 
+// Plan 153 Task 5: the session-store integrations run in the store package's leg.
 const postgresRegressions = [
   "scopes ordinary and leaf entry queries to the owning session",
   "filters and keyset-paginates branch entry queries",
   "keeps session activity monotonic across run, usage, and event writes",
-].map((name) => `@arnilo/prism-core test:postgres: (pass) createPostgresPersistence integration > ${name} [1ms]`);
+].map((name) => `@arnilo/prism-store-postgres test:postgres: (pass) createPostgresPersistence integration > ${name} [1ms]`);
 const liveCapture = [
+  "@arnilo/prism-core test:postgres: (pass) enterprise adapters stay tenant-isolated [1ms]",
+  "@arnilo/prism-core test:postgres: Ran 1 test across 1 file. [1ms]",
   ...postgresRegressions,
-  "@arnilo/prism-core test:postgres: Ran 3 tests across 1 file. [1ms]",
+  "@arnilo/prism-store-postgres test:postgres: Ran 3 tests across 1 file. [1ms]",
   "@arnilo/prism-memory test:postgres: (pass) memory integration [1ms]",
   "@arnilo/prism-memory test:postgres: Ran 1 test across 1 file. [1ms]",
   "@arnilo/prism-channels test:postgres: (pass) channels integration [1ms]",
@@ -78,8 +82,8 @@ const liveCapture = [
 const makeDocument = (output) => evidenceDocument({ gitHead: "0".repeat(40), captured: "2026-09-25T00:00:00.000Z", output });
 
 test("service evidence counts every leg and requires live PostgreSQL regression cases", () => {
-  assert.deepEqual(parseReport(liveCapture), { tests: 6, pass: 6, fail: 0 });
-  assert.equal(makeDocument(liveCapture).counts.pass, 6);
+  assert.deepEqual(parseReport(liveCapture), { tests: 7, pass: 7, fail: 0 });
+  assert.equal(makeDocument(liveCapture).counts.pass, 7);
   for (const regression of postgresRegressions) {
     assert.throws(
       () => makeDocument(liveCapture.replace(regression, regression.replace("(pass)", "(skip)"))),
@@ -89,8 +93,20 @@ test("service evidence counts every leg and requires live PostgreSQL regression 
   assert.throws(() => makeDocument(`${PASS_LINES.join("\n")}\n${SUMMARY}`), /PostgreSQL service leg missing/);
   assert.throws(
     () =>
-      makeDocument(liveCapture.replace(postgresRegressions[0], postgresRegressions[0].replace("@arnilo/prism-core test:postgres: ", ""))),
+      makeDocument(
+        liveCapture.replace(postgresRegressions[0], postgresRegressions[0].replace("@arnilo/prism-store-postgres test:postgres: ", "")),
+      ),
     /required PostgreSQL regression did not pass/,
+  );
+  assert.throws(
+    () =>
+      makeDocument(
+        liveCapture
+          .split("\n")
+          .filter((line) => !line.startsWith("@arnilo/prism-store-postgres"))
+          .join("\n"),
+      ),
+    /PostgreSQL service leg missing/,
   );
   assert.throws(
     () =>
@@ -122,6 +138,7 @@ test("missing URL blocks PostgreSQL, and release publish depends on the live ser
   assert.match(release, /needs: \[verify, postgres-integration,/);
   const service = readFileSync(join(ROOT, ".github", "workflows", "integration-postgres.yml"), "utf8");
   assert.match(service, /run --filter @arnilo\/prism-core test:postgres/);
+  assert.match(service, /run --filter @arnilo\/prism-store-postgres test:postgres/);
 });
 
 test("a failing test never becomes evidence, and the capture text never reaches the document", () => {

@@ -9,7 +9,7 @@ import {
   SpeechError,
   TranscriptionError,
 } from "../contracts.js";
-import { runSpeechConformance, runTranscriptionConformance } from "../testing/provider-conformance.js";
+import { runSpeechConformance, runTranscriptionConformance } from "../provider-kit/conformance.js";
 
 function fakeSpeechProvider(overrides?: Partial<Pick<SpeechResult, "audio">>): SpeechProvider {
   return {

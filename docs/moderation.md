@@ -11,7 +11,7 @@ bakes in no policy: thresholds, blocking, and routing stay host-owned
 ([host security](host-security.md)). The first-party adapter is
 [`createOpenAIModerationProvider`](providers/openai.md) (`POST /v1/moderations`,
 `omni-moderation-latest`); offline conformance runs via
-`runModerationConformance` from `@arnilo/prism/testing/provider-conformance`.
+`runModerationConformance` from `@arnilo/prism/provider-kit`.
 
 ## When to use it
 
@@ -65,8 +65,8 @@ downstream).
 ## Implementation example
 
 ```ts
-import { createOpenAIModerationProvider } from "@arnilo/prism-providers/openai";
-import { runModerationConformance } from "@arnilo/prism/testing/provider-conformance";
+import { createOpenAIModerationProvider } from "@arnilo/prism-provider-openai";
+import { runModerationConformance } from "@arnilo/prism/provider-kit";
 
 const moderation = createOpenAIModerationProvider({ apiKey: process.env.OPENAI_API_KEY });
 const result = await moderation.moderate({ input: text });
@@ -114,4 +114,4 @@ await runModerationConformance({
 - [Provider conformance](provider-conformance.md): `runModerationConformance`
   and the offline conformance matrix.
 - [Provider packages](provider-packages.md): subpath import rules for
-  `@arnilo/prism-providers/openai`.
+  `@arnilo/prism-provider-openai`.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { canonicalizeJsonSchema } from "../providers/schema.js";
+import { canonicalizeJsonSchema } from "../provider-kit/schema.js";
 
 describe("canonicalizeJsonSchema", () => {
   it("sorts object keys and required names without mutating the caller", () => {

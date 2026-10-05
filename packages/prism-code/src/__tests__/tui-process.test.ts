@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type AIProvider, createMockProvider, type ProviderRequest, providerDone } from "@arnilo/prism";
+import { type ModelProvider, type ProviderRequest, providerDone } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createTestRenderer } from "@opentui/core/testing";
 import { assembleAppAgent } from "../headless.js";
 import { configuredSessionStore, searchRepoSessions } from "../sessions.js";
@@ -11,7 +12,7 @@ import { createPrismCodeTui } from "../tui/index.js";
 
 const tmp = () => mkdtemp(join(tmpdir(), "prism-code-process-"));
 
-async function setup(dir: string, provider: AIProvider, onExit: (code: number) => void) {
+async function setup(dir: string, provider: ModelProvider, onExit: (code: number) => void) {
   const env = await createTestRenderer({ width: 80, height: 24 });
   let destroys = 0;
   const destroy = env.renderer.destroy.bind(env.renderer);
@@ -82,7 +83,7 @@ describe("TUI fatal and signal shutdown", () => {
           resolveExit = resolve;
         });
         let aborted = false;
-        const provider: AIProvider = {
+        const provider: ModelProvider = {
           id: "mock-slow",
           async *generate(req: ProviderRequest) {
             resolveEntry();

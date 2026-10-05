@@ -1,4 +1,5 @@
-import { createMemorySessionStore, createMockProvider, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createLlmCompactor } from "@arnilo/prism-memory/compaction/llm";
 
 // LLM compaction with a mock summarization provider: the compactor calls the

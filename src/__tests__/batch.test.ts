@@ -10,7 +10,7 @@ import {
   modelSupportsBatchJobs,
   pollBatch,
 } from "../contracts.js";
-import { runBatchJobsConformance } from "../testing/provider-conformance.js";
+import { runBatchJobsConformance } from "../provider-kit/conformance.js";
 
 type FakeState = "queued" | "running" | "completed" | "failed" | "cancelled";
 

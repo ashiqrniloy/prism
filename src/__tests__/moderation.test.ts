@@ -7,7 +7,7 @@ import {
   type ModerationResult,
   modelSupportsModeration,
 } from "../contracts.js";
-import { runModerationConformance } from "../testing/provider-conformance.js";
+import { runModerationConformance } from "../provider-kit/conformance.js";
 
 /** Plan acceptance criterion: fake category mapping; unknown-category passthrough preserved. */
 function fakeModerator(options: { extraCategories?: Record<string, { score: number; flagged: boolean }> } = {}): ModerationProvider {

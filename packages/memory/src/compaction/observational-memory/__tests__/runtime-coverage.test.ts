@@ -1,18 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  type ProviderEvent,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type SessionEntry,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, createSessionEntry, type ProviderEvent, providerDone, providerTextDelta, providerToolCall, type SessionEntry, toolCallContent } from "@arnilo/prism";
 import {
   createMemoryId,
   createObservationalMemoryRuntime,
@@ -20,11 +8,12 @@ import {
   OBSERVATIONS_RECORDED,
   REFLECTIONS_RECORDED,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
 
-function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIProvider {
+function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): ModelProvider {
   let index = 0;
   return {
     id: "memory",
@@ -36,7 +25,7 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
 
 async function sessionWithMessage(text = "hello") {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const session = await agent.session({ id: "s1", create: true });
   await session.run(text);
   return { session, store };
@@ -58,7 +47,7 @@ describe("observational memory runtime coverage", () => {
   it("observer_receives_only_eligible_messages_and_skips_bookkeeping_in_prompt", async () => {
     const { session, store } = await sessionWithMessage();
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -81,7 +70,7 @@ describe("observational memory runtime coverage", () => {
       .filter((entry) => entry.kind === "message")
       .map((entry) => entry.id);
     let seenPrompt = "";
-    const observingProvider: AIProvider = {
+    const observingProvider: ModelProvider = {
       id: "memory",
       async *generate(request) {
         seenPrompt = JSON.stringify(request.messages);
@@ -111,7 +100,7 @@ describe("observational memory runtime coverage", () => {
   it("empty_observer_success_advances_coverage_and_second_flush_skips_worker", async () => {
     const { session, store } = await sessionWithMessage();
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -142,7 +131,7 @@ describe("observational memory runtime coverage", () => {
   it("bookkeeping_only_unscanned_range_advances_coverage_without_observer_call", async () => {
     const { session, store } = await sessionWithMessage();
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -220,7 +209,7 @@ describe("observational memory runtime coverage", () => {
     const observationContent = "first fact";
     const observationId = createMemoryId(observationContent, [sourceId]);
     const phases: string[] = [];
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate(request) {
         const observe = request.tools?.[0]?.name === "record_observation";

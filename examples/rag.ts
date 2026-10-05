@@ -1,6 +1,7 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta, withContextBlocks } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta, withContextBlocks } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
 import { chunkMarkdown, indexChunks, registerRagContext, retrieveContext } from "@arnilo/prism-memory/rag";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const embedder = createHashEmbedder();
 const store = createMemoryVectorStore();
@@ -23,7 +24,7 @@ const retrieved = await retrieveContext("execution policy approval", {
 // turn's provider view only. The session store is never touched.
 const agent = await createAgent({
   model: { provider: "mock", model: "rag-demo" },
-  provider: createMockProvider([providerTextDelta(`Policy answer ${retrieved.citations[0]?.id ?? "without citation"}`), providerDone()]),
+  packages: [mockProvider([[providerTextDelta(`Policy answer ${retrieved.citations[0]?.id ?? "without citation"}`), providerDone()]])],
   hooks: (hooks) => {
     registerRagContext(hooks, { embedder, store, scope });
     // A second handler composes on top of the retrieved blocks, in registration order.

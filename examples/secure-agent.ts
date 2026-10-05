@@ -1,12 +1,5 @@
-import {
-  createMemoryCheckpointStore,
-  createMockProvider,
-  createSecretRedactor,
-  createSecureAgent,
-  createStaticTrustPolicy,
-  providerDone,
-  providerTextDelta,
-} from "@arnilo/prism";
+import { createMemoryCheckpointStore, createSecretRedactor, createSecureAgent, createStaticTrustPolicy, providerDone, providerTextDelta } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
 
 // Network-free secure baseline. Tool calls suspend before side effects.
@@ -14,7 +7,7 @@ export async function demo() {
   const agent = await createSecureAgent({
     id: "secure-demo",
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("safe"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("safe"), providerDone()]])],
     tools: [
       {
         name: "notes/read",

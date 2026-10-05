@@ -1,4 +1,4 @@
-import type { AIProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
+import type { ModelProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
 import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
 import { estimateTextTokens } from "../tokens.js";
@@ -10,7 +10,7 @@ export const DEFAULT_REFLECTOR_INSTRUCTION =
 
 export interface RunReflectorOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
   readonly instruction?: string;

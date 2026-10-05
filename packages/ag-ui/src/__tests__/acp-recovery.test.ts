@@ -36,6 +36,7 @@ import {
   type PersistedAcpSession,
 } from "../acp/index.js";
 import { MAX_ACTIVE_RUN_REF_BYTES, type PersistedAcpRunRef, validateActiveRunRef, validatePersistedSession } from "../acp/session-store.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const iso = "2026-08-16T12:00:00.000Z";
 
@@ -408,13 +409,13 @@ describe("ACP agent wiring", () => {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
+      }])],
     });
     const makeApp = () =>
       createPrismAcpAgent<AcpAuthorization>({
@@ -539,7 +540,7 @@ describe("ACP agent wiring", () => {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(request) {
           providerEntered();
@@ -559,7 +560,7 @@ describe("ACP agent wiring", () => {
             );
           });
         },
-      },
+      }])],
     });
     const app = createPrismAcpAgent<AcpAuthorization>({
       authorize: () => ({ ownership: { userId: "user-1" } }),

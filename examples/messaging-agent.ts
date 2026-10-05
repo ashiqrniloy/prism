@@ -1,7 +1,8 @@
 // Plan 079 Task 8: network-free host composition — sqlite journal, mock agent, drain/stop.
-import { type AgentIdentity, createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { type AgentIdentity, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createMessagingRuntime } from "@arnilo/prism-channels";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const identity: AgentIdentity = {
   tenantId: "example-tenant",
@@ -18,7 +19,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     const agent = await createAgent({
       id: "channel-agent",
       model: { provider: "mock", model: "offline" },
-      provider: createMockProvider([providerTextDelta("Host example reply."), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("Host example reply."), providerDone()]])],
       slots: { store: persistence },
       runLedger: persistence,
     });

@@ -1,5 +1,6 @@
 import { createAgent, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { createAgUiHandler } from "@arnilo/prism-ag-ui";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 
@@ -8,7 +9,7 @@ export async function demo() {
   let turn = 0;
   const agent = await createAgent({
     model: { provider: "mock", model: "mock" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         if (++turn === 1) {
@@ -18,7 +19,7 @@ export async function demo() {
         }
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {

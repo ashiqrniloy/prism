@@ -1,12 +1,5 @@
-import {
-  createAgent,
-  createMockProvider,
-  createSessionEntry,
-  providerDone,
-  providerTextDelta,
-  type SessionEntry,
-  type SessionStore,
-} from "@arnilo/prism";
+import { createAgent, createSessionEntry, providerDone, providerTextDelta, type SessionEntry, type SessionStore } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 
 // Custom session store: a host implements the `SessionStore` contract
 // (append + list) and passes it as the `store` slot. The runtime appends
@@ -43,7 +36,7 @@ export async function demo(): Promise<{ appendedKinds: readonly string[]; entryC
 
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("stored"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("stored"), providerDone()]])],
   });
 
   const session = await agent.session();

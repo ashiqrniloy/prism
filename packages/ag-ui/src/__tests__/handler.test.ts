@@ -17,6 +17,7 @@ import {
   toolCallContent,
 } from "@arnilo/prism";
 import { type AgUiPreparedInput, createAgentEventSourceAgUiReplay, createAgUiHandler, createPersistenceAgUiReplay } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const authorization = { ownership: { userId: "user-1" } };
 
@@ -59,7 +60,7 @@ describe("createAgUiHandler", () => {
     const inputs: string[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(requestValue) {
           const content = requestValue.messages.at(-1)?.content[0];
@@ -67,7 +68,7 @@ describe("createAgUiHandler", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -126,13 +127,13 @@ describe("createAgUiHandler", () => {
     let prepared: AgUiPreparedInput | undefined;
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("server-authoritative");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++executed }) }] },
     });
     const handler = createAgUiHandler({
@@ -181,13 +182,13 @@ describe("createAgUiHandler", () => {
   it("answers a state-or-tools post exactly like a bare-text post under inputPolicy.ignore", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -214,13 +215,13 @@ describe("createAgUiHandler", () => {
     const makeHandler = async (inputPolicy?: { readonly clientState: "honor" | "ignore" }) => {
       const agent = await createAgent({
         model: { provider: "mock", model: "mock" },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             yield providerTextDelta("honored");
             yield providerDone();
           },
-        },
+        }])],
       });
       return createAgUiHandler({
         authorize: () => authorization,
@@ -285,13 +286,13 @@ describe("createAgUiHandler", () => {
     let session: Session | undefined;
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("continued");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "server-only", execute: () => ({ toolCallId: "never", name: "server-only", value: ++calls }) }] },
     });
     const handler = createAgUiHandler({
@@ -364,13 +365,13 @@ describe("createAgUiHandler", () => {
   it("works with official HttpAgent over SSE and publishes truthful capabilities", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "mock" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerTextDelta("http-ready");
           yield providerDone();
         },
-      },
+      }])],
     });
     const handler = createAgUiHandler({
       authorize: () => authorization,
@@ -416,14 +417,14 @@ describe("createAgUiHandler", () => {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("write-1", "write", { value: "approved" }) };
           else yield providerTextDelta("resumed");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
@@ -491,7 +492,7 @@ describe("createAgUiHandler", () => {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -502,7 +503,7 @@ describe("createAgUiHandler", () => {
           }
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-b1", name: "write", value: ++writes }) },
@@ -593,14 +594,14 @@ describe("createAgUiHandler", () => {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("write-aggregate", "write", {}) };
           else yield providerTextDelta("approved");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {

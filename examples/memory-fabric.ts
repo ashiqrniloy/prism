@@ -4,9 +4,10 @@ import {
   providerToolCall,
   resolveAgentDefinition,
   toolCallContent,
-  type AIProvider,
+  type ModelProvider,
   type AgentDefinition,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createHashEmbedder, createMemory, createMemoryVectorStore, createMemoryWorkingStore } from "@arnilo/prism-memory";
 import { createMemoryFabric } from "@arnilo/prism-memory/fabric";
 
@@ -69,7 +70,7 @@ const definition: AgentDefinition = {
 };
 
 let round = 0;
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     if (round++ === 0) {
@@ -88,8 +89,8 @@ if (recallTool === undefined) throw new Error("the fabric did not expose memory.
 // The fabric's context seam is a `context.build` handler (roadmap §2.4), installed on the agent's bus.
 const agent = await resolveAgentDefinition(definition, {
   tools: [recallTool],
-  providerSource: () => provider,
   overrides: {
+    packages: [providerPackage("example-provider", [provider])],
     hooks: (hooks) => fabric.registerContextBuild(hooks, { includeWorking: true }),
   },
 });

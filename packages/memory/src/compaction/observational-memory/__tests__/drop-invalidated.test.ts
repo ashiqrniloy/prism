@@ -11,15 +11,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type Session,
-  type SessionEntry,
-  type SessionStore,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-} from "@arnilo/prism";
+import { type Session, type SessionEntry, type SessionStore, createAgent, createMemorySessionStore, createSessionEntry } from "@arnilo/prism";
 import { type MemoryScope, createDeletionPropagator, createMemoryVectorStore } from "../../../index.js";
 import {
   OBSERVATIONS_DROPPED,
@@ -31,6 +23,7 @@ import {
   foldObservationalMemoryLedger,
   renderObservationalMemory,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const scope: Required<MemoryScope> = { tenantId: "t1", resourceId: "res1", threadId: "th1" };
 const authority = { tenantId: "t1", principalId: "p1", groupIds: ["eng"] };
@@ -68,7 +61,7 @@ async function seed(session: Session, store: SessionStore, entryId: string, obse
 
 async function setup() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider([]), slots: { store } });
+  const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [mockProvider([[]])], slots: { store } });
   const session = await agent.session({ id: "s1", create: true });
   await seed(session, store, "e1", observationX);
   await seed(session, store, "e2", observationY);

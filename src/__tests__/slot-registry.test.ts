@@ -47,13 +47,14 @@ describe("slot registry", () => {
 
   it("credentials_default_resolves_env_only", () => {
     const resolver = createEnvRefCredentialResolver({ PRISM_TEST_KEY: "s3cret" });
-    assert.deepEqual(resolver.resolve({ name: "env:PRISM_TEST_KEY" }), {
+    assert.deepEqual(resolver.resolve("env:PRISM_TEST_KEY", {}), {
       type: "api_key",
       value: "s3cret",
       metadata: { source: "env", envName: "PRISM_TEST_KEY" },
     });
-    assert.equal(resolver.resolve({ name: "PRISM_TEST_KEY" }), undefined);
-    assert.equal(resolver.resolve({ name: "env:MISSING" }), undefined);
-    assert.equal(resolver.resolve({ name: "env:" }), undefined);
+    assert.equal(resolver.resolve("PRISM_TEST_KEY", {}), undefined);
+    assert.equal(resolver.resolve("env:MISSING", {}), undefined);
+    assert.equal(resolver.resolve("env:", {}), undefined);
+    assert.equal(resolver.store, undefined);
   });
 });

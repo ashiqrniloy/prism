@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import type { AIProvider, Message, ProviderEvent, ProviderRequest, SessionEntry, ToolDefinition } from "@arnilo/prism";
+import type { ModelProvider, Message, ProviderEvent, ProviderRequest, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { MemoryError, MemoryLimitError } from "../../../errors.js";
 import { type MemoryObservation, runDropper, runObserver, runReflector } from "../index.js";
@@ -15,7 +15,7 @@ const source: SessionEntry = {
   message: { role: "user", content: [{ type: "text", text: "Keep it package-only." }] },
 };
 
-function provider(events: readonly ProviderEvent[]): AIProvider {
+function provider(events: readonly ProviderEvent[]): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -151,7 +151,7 @@ describe("observational memory workers", () => {
       (error: unknown) => error instanceof MemoryLimitError && error.code === "limit" && /tool calls per turn/.test(error.message),
     );
     let turn = 0;
-    const repeated: AIProvider = {
+    const repeated: ModelProvider = {
       id: "mock",
       async *generate() {
         yield providerToolCall(toolCallContent(`c${turn++}`, "record_observation", { content: "one", sourceEntryIds: ["m1"] }));
@@ -208,7 +208,7 @@ describe("observational memory workers", () => {
     const secret = "worker-secret";
     const requests: ProviderRequest[] = [];
     let turn = 0;
-    const memoryProvider: AIProvider = {
+    const memoryProvider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         requests.push(request);
@@ -273,7 +273,7 @@ describe("observational memory workers", () => {
   it("worker_transcript_replays_assistant_tool_call_before_tool_result", async () => {
     const requests: ProviderRequest[] = [];
     let turn = 0;
-    const memoryProvider: AIProvider = {
+    const memoryProvider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         requests.push(request);

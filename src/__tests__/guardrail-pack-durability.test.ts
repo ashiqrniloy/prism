@@ -22,6 +22,7 @@ import {
   type GuardrailRecord,
 } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /** Simulates a host process dying: every checkpoint write after the crash is rejected, so the last
  *  persisted checkpoint stays exactly as the crashed process left it. */
@@ -89,7 +90,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
       id: "pack-durability",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -120,7 +121,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -223,7 +224,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
       id: "pack-crash-recovery",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(request) {
           requests.push(request);
@@ -241,7 +242,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
           yield providerTextDelta("nothing destroyed");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -305,7 +306,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
         id: "pack-fail-closed",
         slots: { store: createMemorySessionStore() },
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             turn += 1;
@@ -317,7 +318,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
             yield providerTextDelta("done");
             yield providerDone();
           },
-        },
+        }])],
         tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: true }) }] },
       });
       const session = await agent.session({ guardrailPacks: ["validation-respect"] });
@@ -403,7 +404,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
       id: "pack-byte-shape",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         // Every run's first provider turn calls the gated tool; later turns finish.
         async *generate(request: ProviderRequest) {
@@ -416,7 +417,7 @@ describe("guardrail pack durability (plan 104 Task 2)", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-write", name: "write", value: true }) }] },
     });
 

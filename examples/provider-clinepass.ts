@@ -1,10 +1,10 @@
 import { createAgent } from "@arnilo/prism";
-import { clinePassModels, clinepassPackage } from "@arnilo/prism-providers/clinepass";
+import clinepass, { clinePassModels } from "@arnilo/prism-provider-clinepass";
 
 export async function demo() {
   const agent = await createAgent({
     model: { provider: "clinepass", model: clinePassModels[0]!.model },
-    packages: [clinepassPackage({ apiKey: () => "fake-cline-key" })],
+    packages: [clinepass({ apiKey: "env:PRISM_TEST_CLINEPASS_KEY" })],
   });
   try {
     return {

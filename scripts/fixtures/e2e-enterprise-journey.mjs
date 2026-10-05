@@ -40,6 +40,7 @@ import {
   evaluateAndAppend,
 } from "@arnilo/prism-core/governance/policy";
 import { createArtifactService, createS3ArtifactBodyStore } from "@arnilo/prism-core/runtime/server";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const SECRET = "packed-journey-secret";
 const redactor = createSecretRedactor([SECRET]);
@@ -321,7 +322,7 @@ const eventSource = await (async () => {
     // createPostgresPersistence applies the migration contract then exposes
     // the durable event source; the protected leg runs against real pg16.
     const { Pool } = await import("pg");
-    const { createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres");
+    const { createPostgresPersistence } = await import("@arnilo/prism-store-postgres");
     const pool = new Pool({
       connectionString: postgresUrl,
     });
@@ -345,7 +346,7 @@ const agent = await createAgent({
   id: "packed-enterprise",
   model: { provider: "mock", model: "demo" },
   slots: { store: createMemorySessionStore() },
-  provider: {
+  packages: [providerPackage("test-provider", [{
     id: "mock",
     // Durable loop runs the provider once per resume; turn 1 proposes the
     // batched tool calls (interrupted for approval), turn 2 completes the run.
@@ -366,7 +367,7 @@ const agent = await createAgent({
       yield providerTextDelta("done");
       yield providerDone();
     },
-  },
+  }])],
   hooks: (hooks) =>
     hooks.on("tool.call", (payload) => {
       capturedRunId = payload.runId;

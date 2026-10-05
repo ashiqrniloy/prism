@@ -20,7 +20,7 @@ A plan turns one roadmap phase, or one self-contained change, into checkable tas
    - If code reality conflicts with the roadmap, record the conflict as a finding in the review task and stop. Do not improvise around it.
 2. **Load the references.** Always read both:
    - [references/prism.md](references/prism.md): placement rules, the phase review task, the task probes, chore checklists by change type, and tooling assumptions.
-   - [references/prism-wiki.md](references/prism-wiki.md): where docs go during the 1.0 train, and page structures.
+   - [references/prism-wiki.md](references/prism-wiki.md): where docs go during the 0.13.0 train, and page structures.
 3. **Survey the code with graft before writing approaches.**
    - `graft ask "<scope bullet>" --source` to find the relevant code.
    - `graft callers <symbol> --depth all` for every symbol a task renames, moves, or deletes.

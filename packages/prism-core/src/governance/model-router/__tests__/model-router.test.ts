@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig, ProviderRequest } from "@arnilo/prism";
 import {
   assertProviderSourceEligible,
   createMemoryModelRouterStateStore,
@@ -11,7 +11,7 @@ import {
   resolveModelRouterLimits,
 } from "../index.js";
 
-function provider(id: string): AIProvider {
+function provider(id: string): ModelProvider {
   return {
     id,
     async *generate() {

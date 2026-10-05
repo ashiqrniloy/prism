@@ -1,6 +1,6 @@
 import type {
   Session,
-  AIProvider,
+  ModelProvider,
   CredentialRequest,
   CredentialValueSource,
   ModelConfig,
@@ -34,7 +34,7 @@ import { runObserver } from "./workers/observer.js";
 import { runReflector } from "./workers/reflector.js";
 
 export interface ObservationalMemoryWorkerRuntimeConfig {
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model?: ModelConfig;
   readonly credential?: CredentialValueSource;
   readonly credentialRequest?: CredentialRequest;
@@ -292,7 +292,7 @@ async function flush(
 }
 
 interface ResolvedWorker {
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
   readonly providerOptions?: ProviderRequestOptions;
   readonly thinkingLevel?: string;

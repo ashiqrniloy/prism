@@ -2,39 +2,41 @@
 
 ## What it does
 
-`@arnilo/prism-providers/anthropic` is the first-party Anthropic Messages provider for Prism (`POST /v1/messages`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Wire format is package-local (OpenCode Go / Kimi Anthropic routes are pattern-only, not a shared core serializer).
+`@arnilo/prism-provider-anthropic` is the first-party Anthropic Messages provider for Prism (`POST /v1/messages`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Wire format is package-local (OpenCode Go / Kimi Anthropic routes are pattern-only, not a shared core serializer).
 
 ## When to use it
 
 Use for native Claude Messages (tools, `cache_control`, thinking/reasoning, media, usage, abort). Prefer this over the AI SDK escape hatch when Anthropic is a primary coding host.
 
-Do **not** use for OpenCode Go Anthropic *route* hosting (`@arnilo/prism-providers/opencode-go`), automatic credential discovery, Claude Code credential-file/setup-token import, or Claude.ai subscription login/routing. This package is API-key-only.
+Do **not** use for OpenCode Go Anthropic *route* hosting (`@arnilo/prism-provider-opencode-go`), automatic credential discovery, Claude Code credential-file/setup-token import, or Claude.ai subscription login/routing. This package is API-key-only.
 
 ## Inputs / request
 
 ```ts
-import {
-  createAnthropicProviderPackage,
-  createAnthropicMessagesProvider,
-  listAnthropicModels,
-  defineAnthropicModel,
-} from "@arnilo/prism-providers/anthropic";
+import anthropic from "@arnilo/prism-provider-anthropic";
 
-createAnthropicProviderPackage(options?: AnthropicProviderPackageOptions): ProviderPackage
-createAnthropicMessagesProvider(options?): AIProvider
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+anthropic(options?: AnthropicProviderPackageOptions & AnthropicProviderConfig = {}): PackageInstance
+
+// Named exports.
+createAnthropicMessagesProvider(options?: AnthropicMessagesProviderOptions): ModelProvider
 listAnthropicModels(options?: ListAnthropicModelsOptions): Promise<ModelConfig[]>
+defineAnthropicModel(config: AnthropicModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Host-owned Anthropic API key (late-bound). |
-| `fetch` | `typeof fetch` | Optional fetch for tests/hosts. |
-| `baseUrl` | `string` | Override default `https://api.anthropic.com`. |
-| `id` | `string` | Provider id (default `anthropic`). |
-| `userAgent` | `string` | Optional User-Agent. |
-| `models` | `readonly ModelConfig[]` | Override featured offline models. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:ANTHROPIC_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official Messages base; defaults to `https://api.anthropic.com/v1`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
 
-Featured offline aliases: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-5`, `claude-fable-5`. Caller-gated discovery: `listAnthropicModels()` — never during setup.
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `anthropic`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+| `userAgent` | string | Sent as `user-agent` on every request (provider-owned). |
+
+Featured offline aliases: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-5`, `claude-fable-5`. `models()` returns the configured `models` array when set; otherwise it calls `listAnthropicModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 ## Outputs / response / events
 
@@ -59,21 +61,23 @@ Featured offline aliases: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-
 ## Implementation example
 
 ```ts
-import { createProviderRegistry, createModelRegistry } from "@arnilo/prism";
-import { createAnthropicProviderPackage, listAnthropicModels } from "@arnilo/prism-providers/anthropic";
+import { createAgent } from "@arnilo/prism";
+import anthropic from "@arnilo/prism-provider-anthropic";
 
-const api = /* ExtensionAPI or host registries */;
-api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey }));
+const agent = await createAgent({
+  model: { provider: "anthropic", model: "claude-sonnet-5" },
+  packages: [anthropic({ apiKey: "env:ANTHROPIC_API_KEY" })],
+});
 
-// Optional: caller-gated catalog refresh
-const models = await listAnthropicModels({ apiKey: hostKey });
-api.registerProviderPackage(createAnthropicProviderPackage({ apiKey: hostKey, models }));
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
 
-- Register via `defineProviderPackage` / host registries; no package auto-discovery.
-- AI SDK (`@arnilo/prism-providers/ai-sdk`) remains an escape hatch, not the primary Anthropic path.
+- Register by listing the package in `createAgent({ packages: [...] })`; there is no auto-discovery.
+- The package formerly exported `createAnthropicProviderPackage`; that helper is retired — the package now ships the default package export plus the `anthropic(...)` factory.
+- AI SDK (`@arnilo/prism-provider-ai-sdk`) remains an escape hatch, not the primary Anthropic path.
 - Live smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `ANTHROPIC_API_KEY`.
 - Anthropic says OAuth is for purchasers' ordinary Claude Code/native-app use; developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Prism therefore has no Anthropic subscription OAuth API or token-import shortcut.
 
@@ -93,8 +97,8 @@ See [Provider request policies](../provider-request-policies.md).
 
 - No network during import/setup/default tests; credentials host-owned and late-bound.
 - Provider-owned auth headers cannot be overridden by caller headers.
-- Media/SSRF bounds reuse `@arnilo/prism/providers/media` / transport helpers.
-- Offline conformance: `@arnilo/prism/testing/provider-conformance`.
+- Media/SSRF bounds reuse `@arnilo/prism/provider-kit` / transport helpers.
+- Offline conformance: `@arnilo/prism/provider-kit`.
 
 ## Thinking and reasoning
 
@@ -106,4 +110,4 @@ Anthropic models route through the `output_config_effort` family: the adapter me
 - [Provider caching](../provider-caching.md): `cache_control` breakpoints.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable thinking helpers.
 - [Provider conformance](../provider-conformance.md): network-free assertions.
-- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)
+- Package README: [`@arnilo/prism-provider-anthropic`](../../packages/providers/anthropic/README.md)

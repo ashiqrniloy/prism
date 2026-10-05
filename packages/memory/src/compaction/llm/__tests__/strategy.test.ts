@@ -1,15 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import {
-  type AIProvider,
-  createMockProvider,
-  createSessionEntry,
-  type ModelConfig,
-  type ProviderRequest,
-  providerError,
-  providerTextDelta,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { type ModelProvider, createSessionEntry, type ModelConfig, type ProviderRequest, providerError, providerTextDelta, type SessionEntry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { HARD_MAX_SUMMARY_ERROR_BYTES, HARD_MAX_SUMMARY_TOKENS, HARD_RESERVE_TOKENS } from "../limits.js";
 import { createLlmCompactor } from "../strategy.js";
 
@@ -179,7 +171,7 @@ test("llm_compaction_strategy_throws_on_provider_error_without_result", async ()
 test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_policy_budget", async () => {
   let closed = false;
   let request: ProviderRequest | undefined;
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "bounded",
     async *generate(value) {
       request = value;
@@ -215,7 +207,7 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
   assert.ok(splitUnicodeSummary.length <= 8);
 
   const secret = "provider-secret";
-  const throwing: AIProvider = {
+  const throwing: ModelProvider = {
     id: "throwing",
     async *generate() {
       throw new Error(`${secret}-${"x".repeat(100)}`);
@@ -231,7 +223,7 @@ test("llm_compaction_strategy_bounds_streamed_text_events_unicode_errors_and_pol
     (error: unknown) => error instanceof Error && !error.message.includes(secret) && Buffer.byteLength(error.message, "utf8") <= 40,
   );
 
-  const infiniteEvents: AIProvider = {
+  const infiniteEvents: ModelProvider = {
     id: "events",
     async *generate() {
       while (true) yield { type: "done" };

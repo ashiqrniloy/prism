@@ -1,22 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  askEveryTool,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  HookError,
-  loadSuspendedRunEntry,
-  providerDone,
-  providerTextDelta,
-  resumeAgentRun,
-  type Decision,
-  type RunController,
-  type SessionEntry,
-  toolCallContent,
-} from "../index.js";
-import { echoTool, loopConformance, textProvider } from "../testing/index.js";
+import { askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore, HookError, loadSuspendedRunEntry, providerDone, providerTextDelta, resumeAgentRun, type Decision, type RunController, type SessionEntry, toolCallContent } from "../index.js";
+import { echoTool, loopConformance, textProvider , mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /**
  * Phase 1 invariant tests (plan 144 Task 6). These are the security proof for the hook bus: they
@@ -193,7 +179,7 @@ describe("hook invariants", () => {
       id: "invariant-suspend",
       model,
       slots: { store },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -208,7 +194,7 @@ describe("hook invariants", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: { add: tools },
       hooks: askEveryTool(),
     });
@@ -225,7 +211,7 @@ describe("hook invariants", () => {
       id: "invariant-suspend",
       model,
       slots: { store },
-      provider: createMockProvider([providerTextDelta("finished"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("finished"), providerDone()]])],
       tools: { add: tools },
       hooks: askEveryTool(),
     });

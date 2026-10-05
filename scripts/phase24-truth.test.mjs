@@ -55,15 +55,19 @@ test("counts match manifests at the truth graph", () => {
     Number(hasSheetsPackage) +
     Number(hasDiagramsPackage);
   if (hasWorkPackage) {
-    // Current package set: delegated CLI adapter removed; provider family has 22 subpaths (plan 062 added ./model-discovery; plan 121 added ./typesafe and ./laya; plan 134 added @arnilo/prism-agent-sdk; plan 135 added @arnilo/prism-code).
-    assert.equal(t.counts.publishable, 14);
-    assert.equal(t.counts.workspace, 13);
-    assert.equal(t.counts.provider, 22);
-    assert.equal(t.counts.prismFamily, 4);
-    assert.equal(t.counts.capability, 9);
+    // Current package set: delegated CLI adapter removed; every first-party provider adapter is a
+    // standalone @arnilo/prism-provider-<vendor> package (plan 152 Tasks 3-6) and the retired
+    // @arnilo/prism-providers umbrella workspace is deleted (plan 152 Task 8).
+    assert.equal(t.counts.publishable, 39);
+    assert.equal(t.counts.workspace, 38);
+    assert.equal(t.counts.provider, 21);
+    assert.equal(t.counts.prismFamily, 3);
+    // Plan 152 Task 7: the credentials-slot keyring package is a capability package; plan 153
+    // Tasks 3-5 add the JSONL, codecs, SQLite, and Postgres store packages, so capability is 14.
+    assert.equal(t.counts.capability, 14);
     // Plan 140 Task 1: the @arnilo/prism-code app owns @arnilo/prism as a dependency, not a peer.
-    assert.equal(t.counts.codeWithPeer, 12);
-    assert.equal(t.counts.pureManifest, 1);
+    assert.equal(t.counts.codeWithPeer, 36);
+    assert.equal(t.counts.pureManifest, 2);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
     assert.equal(t.counts.workspace, 16);
@@ -99,30 +103,23 @@ test("counts match manifests at the truth graph", () => {
 
 test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
-  const providers = t.umbrella["prism-providers"];
   if (hasCodingToolsPackage) {
-    // Plan 054 Task 6 + plan 055 Task 6: the family ships its adapters as subpaths, not deps (22 since plan 121).
-    assert.deepEqual(providers.deps, []);
-    assert.equal(providers.subpaths.length, 22);
-    assert.deepEqual(providers.omitsProviders, []);
-  } else {
-    assert.equal(providers.deps.length, 14);
-    assert.deepEqual(providers.omitsProviders, [
-      "@arnilo/prism-provider-azure",
-      "@arnilo/prism-provider-bedrock",
-      "@arnilo/prism-provider-vertex",
-    ]);
-  }
-  if (hasWorkPackage) {
-    // Plan 054 Task 8: prism-all is retired; the provider family is the only umbrella.
+    // Plan 152 Task 8: the @arnilo/prism-providers workspace is deleted, so the provider family is
+    // no longer an umbrella at all — the truth graph must not resurrect it as a closure.
+    assert.equal(t.umbrella["prism-providers"], undefined, "the retired provider family must not appear as an umbrella");
     assert.equal(t.umbrella["prism-all"], undefined);
-    assert.deepEqual(providers.deps, []);
+    assert.equal(Object.keys(t.umbrella).length, 0, "no umbrella profile remains after plan 152");
     return;
   }
+  const providers = t.umbrella["prism-providers"];
+  assert.equal(providers.deps.length, 14);
+  assert.deepEqual(providers.omitsProviders, [
+    "@arnilo/prism-provider-azure",
+    "@arnilo/prism-provider-bedrock",
+    "@arnilo/prism-provider-vertex",
+  ]);
   const all = t.umbrella["prism-all"];
-  if (hasCodingToolsPackage) {
-    assert.equal(all.deps.length, 8);
-  } else if (hasCorePackage) {
+  if (hasCorePackage) {
     assert.equal(all.deps.length, 13);
   } else {
     assert.equal(all.deps.length, 21);
@@ -207,7 +204,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   // Plan 140 Task 1: the terminal app is self-sufficient on a global install.
   const app = pkgs.find((p) => p.name === "@arnilo/prism-code");
   if (app) {
-    for (const dep of ["@arnilo/prism", "@arnilo/prism-providers", "@arnilo/prism-hooks-json"]) {
+    for (const dep of ["@arnilo/prism", "@arnilo/prism-hooks-json"]) {
       assertCorePin(dep, app.dependencies?.[dep], t.root.version, "@arnilo/prism-code");
     }
     assert.equal(app.peerDependencies, undefined, "@arnilo/prism-code declares no peers");
@@ -232,7 +229,7 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
   if (hasCodingToolsPackage) {
     // Plan 054 Task 6: the provider family is now a code package with a core peer.
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui", "@arnilo/prism-providers"],
+      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
       "@arnilo/prism-agent-sdk": ["@arnilo/prism-coding-tools", "@arnilo/prism-hooks-json", "@arnilo/prism-mcp"],
       "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
@@ -336,7 +333,8 @@ test("no page claims all/every for the two umbrellas without closure proof", () 
     "docs/release-and-install.md",
     "docs/index.md",
     "docs/history/0.1.0-readiness.md",
-    "packages/prism-providers/README.md",
+    // Plan 152 Task 8: the provider family README is deleted with its workspace; the
+    // standalone package READMEs live under packages/providers/*/README.md.
     ...(existsSync(join(ROOT, "packages/prism-all/README.md")) ? ["packages/prism-all/README.md"] : []),
   ];
   // The false-claim shapes Task 1 removed; Task 4's derived tests pin the true

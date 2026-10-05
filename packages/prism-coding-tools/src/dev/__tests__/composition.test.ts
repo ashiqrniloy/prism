@@ -9,8 +9,9 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismDevInspector, inspectDevInspector } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const srcRoot = join(pkgRoot, "src/dev");
@@ -138,6 +139,6 @@ describe("composition (plan 040 Task 1)", () => {
 async function mockAgent(text = "Hello"): ReturnType<typeof createAgent> {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta(text), providerDone()]),
+    packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
   });
 }

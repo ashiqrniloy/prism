@@ -12,6 +12,8 @@ import type {
   JsonValue,
   Message,
   ModelConfig,
+  ModelRef,
+  ModelSpec,
   OwnershipScope,
   ProviderRequestOptions,
   ProviderResolver,
@@ -79,8 +81,7 @@ export interface PromptVersionRef {
 
 export interface RunOptions {
   readonly signal?: AbortSignal;
-  readonly model?: ModelConfig;
-  readonly providerSource?: ProviderResolver;
+  readonly model?: ModelRef;
   /** Run-scoped ceilings. When an agent config also sets limits, these can only narrow it. */
   readonly limits?: RunLimits;
   readonly providerOptions?: ProviderRequestOptions;
@@ -129,6 +130,9 @@ export interface RunOptions {
   /** Prompt provenance: copied verbatim onto this run's start and finish ledger records. */
   readonly promptVersion?: PromptVersionRef;
 }
+
+/** `RunOptions` after the run's edge parsed `model` into a `ModelSpec`. */
+export type ResolvedRunOptions = Omit<RunOptions, "model"> & { readonly model?: ModelSpec };
 
 export interface ProviderTurnMetadata {
   readonly providerId: string;

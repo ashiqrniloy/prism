@@ -1,0 +1,54 @@
+{
+  "name": "@arnilo/prism-provider-alibaba",
+  "version": "0.12.1",
+  "description": "Alibaba Cloud (Model Studio / DashScope) provider package for Prism: registers the alibaba provider, resolves its key from an `env:`/`keyring:` ref per request, and ships the OpenAI-compatible wire plus the embedding, image, and video providers.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "postinstall": "mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.12.1"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../../..",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/providers/alibaba"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/providers/alibaba#readme",
+  "keywords": [
+    "prism",
+    "provider",
+    "alibaba",
+    "dashscope",
+    "qwen",
+    "chat-completions"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

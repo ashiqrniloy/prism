@@ -4,7 +4,7 @@
 
 The `prism` bin is a thin adapter over `AgentSession` plus a tiny project scaffold:
 
-- `prism --provider <id> -p "prompt"`: print assistant text deltas. Provider ids come from the init provider catalog (`templates/init/providers.json`); `mock` is built in, real providers are dynamically imported from their `@arnilo/prism-providers/*` package (must be installed) and read their credential from the catalog's env var. Without `--provider` the CLI fails with a usage error.
+- `prism --provider <id> -p "prompt"`: print assistant text deltas. Provider ids come from the init provider catalog (`templates/init/providers.json`); `mock` is built in, real providers are dynamically imported from their `@arnilo/prism-provider-<id>` package (must be installed) and read their credential from the catalog's env var. Without `--provider` the CLI fails with a usage error.
 - `prism --mode json --provider <id> -p "prompt"`: write one normalized event envelope per line.
 - `prism --mode rpc --provider <id>`: read LF-delimited JSON requests from stdin and write correlated JSON responses/events to stdout.
 - `prism init <dir>`: create a minimal TypeScript project with one selected provider, `.env.example`, and one offline mock test.
@@ -48,7 +48,7 @@ prism init <dir> [--template <name>] [--list-templates] [--provider <name>] [--w
 | `--force` | Overwrite generated files when the destination already exists. |
 | `-h`, `--help` | Print init usage. |
 
-Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: the `@arnilo/prism-providers` family package (the selected adapter imports from `@arnilo/prism-providers/<id>`). Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory/rag`, `@arnilo/prism-core/runtime/workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Specifying `--template personal-assistant` scaffolds a single-user personal assistant host composition with local status tools and secret redaction. Specifying `--template business-worker` scaffolds a multi-tenant enterprise worker host composition with verified tenant identity, durable storage contracts, and strict tenant boundaries. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
+Default generation (`init` template) installs only `@arnilo/prism` (mock provider). Selecting a real provider adds exactly one dependency: that vendor's `@arnilo/prism-provider-<id>` package. Specifying `--template deep-research` scaffolds a flagship deep research agent pipeline (`@arnilo/prism`, `@arnilo/prism-web-tools`, `@arnilo/prism-memory/rag`, `@arnilo/prism-core/runtime/workflows`) with planning, attributable citations, bounded refine loops, and HITL decision clarification. Specifying `--template personal-assistant` scaffolds a single-user personal assistant host composition with local status tools and secret redaction. Specifying `--template business-worker` scaffolds a multi-tenant enterprise worker host composition with verified tenant identity, durable storage contracts, and strict tenant boundaries. Rerunning without `--force` refuses non-empty destinations and existing generated files. `.env.example` contains placeholders only; `.gitignore` excludes `.env` and local stores.
 
 
 ### `prism providers add` (0.1.7)
@@ -64,7 +64,7 @@ first-party providers), `tsconfig.json`, `README.md`, `CHANGELOG.md`,
 `src/provider.ts` (built on `createOpenAICompatibleProvider`),
 `src/models.ts` (starter `ModelConfig` list), `src/cache.ts` (cache-hint
 mapping helpers via the shared core helpers), `src/__tests__/provider.test.ts`
-(wired to `@arnilo/prism/testing/provider-conformance`), and a
+(wired to `@arnilo/prism/provider-kit`), and a
 `docs/providers/<name>.md` stub.
 
 | Flag / arg | Purpose |

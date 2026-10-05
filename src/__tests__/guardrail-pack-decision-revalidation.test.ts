@@ -26,6 +26,7 @@ import {
   resumeAgentRun,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const ASK_PACK = {
   id: "deploy-guard",
@@ -76,7 +77,7 @@ async function deployAgent(executions: string[], calls: JsonObject[]) {
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
     hooks: askEveryTool(),
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         requests.push(request);
@@ -87,7 +88,7 @@ async function deployAgent(executions: string[], calls: JsonObject[]) {
             : [providerTextDelta("shipped"), providerDone()];
         for (const event of events) yield event;
       },
-    },
+    }])],
     tools: {
       add: [
         {

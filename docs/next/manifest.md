@@ -30,9 +30,9 @@ code, or when `prism add` should be able to install, enable, and configure a pac
 {
   "version": 1,
   "packages": [
-    { "name": "@arnilo/prism-approval", "version": "^1.0.0", "integrity": "sha512-…", "capabilities": ["host-ui"],
+    { "name": "@arnilo/prism-approval", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["host-ui"],
       "config": { "mode": "ask" } },
-    { "name": "@arnilo/prism-tools-web", "version": "^1.0.0", "integrity": "sha512-…", "capabilities": [],
+    { "name": "@arnilo/prism-tools-web", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": [],
       "optional": true, "config": { "apiKey": "env:BRAVE_API_KEY" } }
   ],
   "slots": { "store": "@arnilo/prism-store-jsonl" }

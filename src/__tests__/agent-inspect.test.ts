@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createSecretRedactor,
   definePackage,
@@ -11,6 +11,7 @@ import {
   type Skill,
   type ToolDefinition,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 const SECRET = "sk-live-0123456789abcdef";
@@ -19,7 +20,7 @@ type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
   definePackage<any>({ name, version: "1.0.0", setup, ...extra });
 
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield providerTextDelta("ok");
@@ -56,17 +57,16 @@ describe("agent.inspect()", () => {
     });
     const agent = await createAgent({
       model: MODEL,
-      provider,
       tools: { add: [tool("shell"), tool("read")] },
       skills: { add: [skill("host-skill")] },
-      packages: [audit, loop, flaky({}, { optional: true })],
+      packages: [audit, loop, flaky({}, { optional: true }), providerPackage("test-provider", [provider])],
       hooks: (h) => h.on("tool.call", () => undefined, { priority: 5 }),
       disable: { tools: ["shell", "audit_drop"] },
     });
     const view = agent.inspect();
 
     assert.deepEqual(
-      view.packages.map(({ name, version, status, optional }) => [name, version, status, optional]),
+      view.packages.filter((p) => p.name !== "test-provider").map(({ name, version, status, optional }) => [name, version, status, optional]),
       [
         ["@acme/audit", "2.1.0", "loaded", false],
         ["@acme/loop", "1.0.0", "loaded", false],
@@ -103,14 +103,29 @@ describe("agent.inspect()", () => {
     await session.close();
     const direct = await createAgent({
       model: MODEL,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { loop: { name: "d", revision: "1", run: async () => {} } as never },
     });
     assert.equal(direct.inspect().slots.loop, "host");
     // `disable.hooks` removes a hook, and the listing agrees with dispatch.
-    const trimmed = await createAgent({ model: MODEL, provider, packages: [audit], disable: { hooks: ["@acme/audit:tool.call"] } });
+    const trimmed = await createAgent({ model: MODEL, packages: [audit, providerPackage("test-provider", [provider])], disable: { hooks: ["@acme/audit:tool.call"] } });
     assert.equal(trimmed.inspect().hooks["tool.call"], undefined);
     assert.deepEqual(trimmed.inspect().disabled.hooks, ["@acme/audit:tool.call"]);
+  });
+
+  it("inspect_reports_store_owner_and_capabilities", async () => {
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])] });
+    assert.deepEqual(agent.inspect().store, {
+      owner: "kernel",
+      capabilities: ["listSessions", "deleteSession", "searchSessions"],
+    });
+
+    const hosted = await createAgent({
+      model: MODEL,
+      packages: [providerPackage("test-provider", [provider])],
+      slots: { store: { append: async () => {}, list: async () => [] } as never },
+    });
+    assert.deepEqual(hosted.inspect().store, { owner: "host", capabilities: [] });
   });
 
   it("inspect_never_contains_secret_values", async () => {
@@ -123,14 +138,14 @@ describe("agent.inspect()", () => {
         },
       });
       const agent = await createAgent({
-        model: MODEL,
-        provider,
+        model: { ...MODEL, baseUrl: "https://spec-host.example/v1", credential: "env:SPEC_KEY", options: { marker: "spec-option" } },
         redactor: createSecretRedactor([SECRET]),
-        packages: [keyed({ apiKey: "env:TEST_KEY", label: `prod ${SECRET}` })],
+        packages: [keyed({ apiKey: "env:TEST_KEY", label: `prod ${SECRET}` }), providerPackage("test-provider", [provider])],
         packageConfig: {},
       });
       const text = JSON.stringify(agent.inspect());
       assert.ok(text.includes("env:TEST_KEY"), "the ref is shown");
+      for (const field of ["spec-host.example", "SPEC_KEY", "spec-option"]) assert.equal(text.includes(field), false, `ModelSpec ${field} is never listed`);
       assert.equal(text.includes(SECRET), false, "the env value and a secret in a non-secret field are not");
       assert.equal(agent.inspect().packages[0]!.configSources.apiKey, "code");
       assert.equal(agent.inspect().packages[0]!.source, "code");
@@ -142,7 +157,7 @@ describe("agent.inspect()", () => {
         },
         { capabilities: ["credentials"] },
       );
-      const resolved = await createAgent({ model: MODEL, provider, packages: [resolver, keyed({ label: `x ${SECRET}` })] });
+      const resolved = await createAgent({ model: MODEL, packages: [resolver, keyed({ label: `x ${SECRET}` }), providerPackage("test-provider", [provider])] });
       await new Promise((resolve) => setTimeout(resolve, 10));
       assert.equal(JSON.stringify(resolved.inspect()).includes(SECRET), false, "resolved credentials never surface");
     } finally {
@@ -151,7 +166,7 @@ describe("agent.inspect()", () => {
   });
 
   it("inspect_is_json_and_frozen", async () => {
-    const agent = await createAgent({ model: MODEL, provider, packages: [pkg("@acme/a", ({ status }) => status.note("info", "hi"))] });
+    const agent = await createAgent({ model: MODEL, packages: [pkg("@acme/a", ({ status }) => status.note("info", "hi")), providerPackage("test-provider", [provider])] });
     const view = agent.inspect();
     assert.deepEqual(JSON.parse(JSON.stringify(view)), view);
     for (const part of [

@@ -19,7 +19,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, providerDone, providerTextDelta } from "../../dist/index.js";
 import { createMessagingRuntime } from "../../packages/prism-channels/dist/index.js";
-import { createSqlitePersistence } from "../../packages/prism-core/dist/sessions/sqlite/index.js";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { providerPackage } from "../../dist/provider-kit/index.js";
 
 const DEFAULT_DURATION_MS = 30_000;
 const MAX_DURATION_MS = 7 * 24 * 60 * 60_000;
@@ -114,7 +115,7 @@ try {
   const agent = await createAgent({
     id: "soak-agent",
     model: { provider: "mock", model: "soak" },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     slots: { store: persistence },
     runLedger: persistence,
   });

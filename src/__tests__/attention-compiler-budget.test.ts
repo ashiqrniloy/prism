@@ -8,7 +8,7 @@ import { describe, it } from "bun:test";
 import { resolveRunAttentionCompiler } from "../attention-compiler.js";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   type AttentionReport,
   assembleProviderInput,
   createAgent,
@@ -22,6 +22,7 @@ import {
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /** The scenario, identical to the example: 1M window, 500k run budget, 24 provider turns. */
 const contextWindow = 1_000_000;
@@ -52,7 +53,7 @@ async function longRun() {
   const folds: FoldTurn[] = [];
   let requestCount = 0;
   let spent = 0;
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "mock",
     async *generate(request) {
       requests.push(request);
@@ -82,7 +83,7 @@ async function longRun() {
       keepLast,
       thinkingKeepTurns: 1,
     },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
   });
   return { agent, requests, folds, spent: () => spent, requestCount: () => requestCount };
 }

@@ -12,13 +12,15 @@ export interface CliProviderSpec {
   readonly factoryExport: string;
 }
 
-const PROVIDERS_PACKAGE = "@arnilo/prism-providers";
+/** Plan 152 Part B: each adapter ships as its own `@arnilo/prism-provider-<vendor>` package, so the
+ *  CLI names the standalone package (its raw factory is a named export of the package root). */
+const providerPackageName = (id: string): string => `@arnilo/prism-provider-${id}`;
 const cliProvider = (id: string, factoryExport: string, envKey: string, modelProvider: string, modelName: string): CliProviderSpec => ({
-  packageName: PROVIDERS_PACKAGE,
+  packageName: providerPackageName(id),
   envKey,
   modelProvider,
   modelName,
-  factoryModule: `${PROVIDERS_PACKAGE}/${id}`,
+  factoryModule: providerPackageName(id),
   factoryExport,
 });
 

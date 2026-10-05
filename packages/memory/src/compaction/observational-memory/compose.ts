@@ -1,6 +1,6 @@
 import type {
   Session,
-  AIProvider,
+  ModelProvider,
   Compactor,
   CompactionTrigger,
   CompactionTriggerContext,
@@ -44,7 +44,7 @@ import { createObservationalMemoryCompactor, type ObservationalMemoryCompactorOp
 import { estimateEntryTokens } from "./tokens.js";
 
 export interface ObservationalMemoryWorkerConfig {
-  readonly provider?: AIProvider;
+  readonly provider?: ModelProvider;
   readonly model?: ModelConfig;
   readonly instruction?: string;
   readonly thinkingLevel?: string;

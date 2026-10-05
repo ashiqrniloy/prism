@@ -7,11 +7,11 @@
 (image+mask+prompt, reusing the existing `ImageContent` binary content parts).
 Results are `Uint8Array` bytes plus provenance — hosts own persistence; no
 disk writes, no URL-only contract. Adapters ship in
-[`@arnilo/prism-providers/openai`](providers/openai.md) (`/v1/images/generations`,
+[`@arnilo/prism-provider-openai`](providers/openai.md) (`/v1/images/generations`,
 `/v1/images/edits`, always `b64_json`) and
-[`@arnilo/prism-providers/alibaba`](providers/alibaba.md) (DashScope wanx async
+[`@arnilo/prism-provider-alibaba`](providers/alibaba.md) (DashScope wanx async
 task API); offline conformance runs via `runImageGenerationConformance` from
-`@arnilo/prism/testing/provider-conformance`.
+`@arnilo/prism/provider-kit`.
 
 ## When to use it
 
@@ -65,9 +65,9 @@ when the host checks `ModelCapabilities.imageGeneration`).
 ## Implementation example
 
 ```ts
-import { createOpenAIImageGenerationProvider } from "@arnilo/prism-providers/openai";
-import { createAlibabaImageGenerationProvider } from "@arnilo/prism-providers/alibaba";
-import { runImageGenerationConformance } from "@arnilo/prism/testing/provider-conformance";
+import { createOpenAIImageGenerationProvider } from "@arnilo/prism-provider-openai";
+import { createAlibabaImageGenerationProvider } from "@arnilo/prism-provider-alibaba";
+import { runImageGenerationConformance } from "@arnilo/prism/provider-kit";
 
 const images = createOpenAIImageGenerationProvider({ apiKey: process.env.OPENAI_API_KEY });
 const { images: generated } = await images.generate({ model: "gpt-image-1", prompt: "a red cube", size: "1024x1024" });
@@ -126,4 +126,4 @@ await runImageGenerationConformance({
 - [Provider conformance](provider-conformance.md): `runImageGenerationConformance`
   and the offline conformance matrix.
 - [Provider packages](provider-packages.md): subpath import rules for
-  `@arnilo/prism-providers/openai` and `@arnilo/prism-providers/alibaba`.
+  `@arnilo/prism-provider-openai` and `@arnilo/prism-provider-alibaba`.

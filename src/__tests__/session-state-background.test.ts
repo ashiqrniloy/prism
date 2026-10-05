@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, it } from "bun:test";
 import { agentRuntime } from "../agent-session/create-agent.js";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   createSecretRedactor,
@@ -22,8 +19,7 @@ import {
   type SessionState,
   type SessionStore,
 } from "../index.js";
-import { createJsonlSessionStore } from "../node/session-store-jsonl.js";
-import { assertSessionStoreConforms } from "../testing/session-store-conformance.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 const SECRET = "sk-live-0123456789abcdef";
@@ -32,7 +28,7 @@ type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
   definePackage<any>({ name, version: "1.0.0", setup, ...extra });
 
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield providerTextDelta("ok");
@@ -86,7 +82,7 @@ function counterPackage(options: { readonly capabilities?: Loose["capabilities"]
 describe("package session state", () => {
   it("session_state_survives_fork_and_resume", async () => {
     const store = createMemorySessionStore();
-    const config = { model: MODEL, provider, packages: [counterPackage()], slots: { store } };
+    const config = { model: MODEL, packages: [counterPackage(), providerPackage("test-provider", [provider])], slots: { store } };
     const agent = await createAgent(config);
     const session = await agent.session({ id: "s", create: true });
     assert.equal(await agent.commands.run("bump", {}, { session }), 1);
@@ -123,7 +119,7 @@ describe("package session state", () => {
       },
       { capabilities: ["session-state"] },
     );
-    const agent = await createAgent({ model: MODEL, provider, packages: [raw], slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [raw, providerPackage("test-provider", [provider])], slots: { store } });
     const session = await agent.session({ id: "s", create: true });
     await agent.commands.run("grab", {}, { session });
     const cycle: Record<string, unknown> = {};
@@ -136,8 +132,7 @@ describe("package session state", () => {
     await rejects(
       createAgent({
         model: MODEL,
-        provider,
-        packages: [pkg("@acme/bad", ({ state }) => void state.session("k", (() => 1) as never), { capabilities: ["session-state"] })],
+        packages: [pkg("@acme/bad", ({ state }) => void state.session("k", (() => 1) as never), { capabilities: ["session-state"] }), providerPackage("test-provider", [provider])],
       }),
       "state_not_json",
     );
@@ -148,15 +143,14 @@ describe("package session state", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: MODEL,
-      provider,
-      packages: [counterPackage({ onState: (om) => (handle = om) })],
+      packages: [counterPackage({ onState: (om) => (handle = om) }), providerPackage("test-provider", [provider])],
       slots: { store },
     });
     const session = await agent.session({ id: "s", create: true });
     // A view the session handed out, read before the session read its branch.
     let view: SessionContext | undefined;
     const spy = pkg("@acme/spy", ({ hooks }) => hooks.on("run.started", (_event, ctx) => void (view = ctx.session)));
-    const early = await createAgent({ model: MODEL, provider, packages: [counterPackage({ onState: (om) => (handle = om) }), spy] });
+    const early = await createAgent({ model: MODEL, packages: [counterPackage({ onState: (om) => (handle = om) }), spy, providerPackage("test-provider", [provider])] });
     const earlySession = await early.session();
     await earlySession.run("hi");
     assert.ok(view, "a hook saw a session view");
@@ -181,7 +175,7 @@ describe("package session state", () => {
       },
       { capabilities: ["session-state"] },
     );
-    const agent = await createAgent({ model: MODEL, provider, packages: [counterPackage(), writer], redactor, slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [counterPackage(), writer, providerPackage("test-provider", [provider])], redactor, slots: { store } });
     const session = await agent.session({ id: "s", create: true });
     await session.run("hi");
     // Between runs: a command writes state with no run active.
@@ -195,7 +189,7 @@ describe("package session state", () => {
 
   it("package_state_does_not_enter_the_message_view", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model: MODEL, provider, packages: [counterPackage()], slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [counterPackage(), providerPackage("test-provider", [provider])], slots: { store } });
     const session = await agent.session({ id: "s", create: true });
     await session.run("hello");
     const before = rebuildSessionContext(await store.list("s"), {}).messages;
@@ -228,7 +222,7 @@ describe("package session state", () => {
       },
       { capabilities: ["session-state"] },
     );
-    const agent = await createAgent({ model: MODEL, provider, packages: [racer], slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [racer, providerPackage("test-provider", [provider])], slots: { store } });
     const session = await agent.session({ id: "s", create: true });
     await session.run("one");
     await session.run("two");
@@ -246,7 +240,7 @@ describe("package session state", () => {
 
   it("session_state_needs_its_capability", async () => {
     const undeclared = pkg("@acme/nope", ({ state }) => void state.session("k", 1));
-    const error = await rejects(createAgent({ model: MODEL, provider, packages: [undeclared] }), "capability_missing");
+    const error = await rejects(createAgent({ model: MODEL, packages: [undeclared, providerPackage("test-provider", [provider])] }), "capability_missing");
     assert.match(error.message, /state\.session/);
     assert.equal(error.package, "@acme/nope");
   });
@@ -255,8 +249,7 @@ describe("package session state", () => {
     let handle: { get(): number; set(value: number): void } | undefined;
     const agent = await createAgent({
       model: MODEL,
-      provider,
-      packages: [pkg("@acme/mem", ({ state }) => void (handle = state.agent("hits", 0)))],
+      packages: [pkg("@acme/mem", ({ state }) => void (handle = state.agent("hits", 0))), providerPackage("test-provider", [provider])],
     });
     handle!.set(5);
     assert.equal(handle!.get(), 5);
@@ -265,13 +258,10 @@ describe("package session state", () => {
     await rejects(
       createAgent({
         model: MODEL,
-        provider,
-        packages: [
-          pkg("@acme/dup", ({ state }) => {
+        packages: [pkg("@acme/dup", ({ state }) => {
             state.agent("k", 1);
             state.agent("k", 2);
-          }),
-        ],
+          }), providerPackage("test-provider", [provider])],
       }),
       "setup_failed",
     );
@@ -310,7 +300,7 @@ describe("session lifecycle events", () => {
         ...(loop ? [pkg("@acme/loop", ({ slots }) => slots.loop.provide(loop), { capabilities: ["slot:loop"] })] : []),
       ];
       const store = createMemorySessionStore();
-      const agent = await createAgent({ model: MODEL, provider, packages, slots: { store } });
+      const agent = await createAgent({ model: MODEL, packages: [...packages, providerPackage("test-provider", [provider])], slots: { store } });
       const session = await agent.session({ id: "s", create: true });
       const streamed: string[] = [];
       for await (const event of session.stream("hi")) streamed.push(event.type);
@@ -333,7 +323,7 @@ describe("session lifecycle events", () => {
       status.note("info", `connected with ${SECRET}`);
       status.note("warn", "degraded");
     });
-    const agent = await createAgent({ model: MODEL, provider, packages: [first, second], redactor: createSecretRedactor([SECRET]) });
+    const agent = await createAgent({ model: MODEL, packages: [first, second, providerPackage("test-provider", [provider])], redactor: createSecretRedactor([SECRET]) });
     const notes = events.flatMap((event) => (event.type === "package.status" ? [event] : []));
     assert.deepEqual(
       notes.map(({ package: owner, level }) => [owner, level]),
@@ -349,7 +339,7 @@ describe("session lifecycle events", () => {
   });
 
   it("session_pack_hooks_removed_on_close", async () => {
-    const agent = await createAgent({ model: MODEL, provider });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])] });
     const bus = agentRuntime(agent).hooks;
     const sessionHooks = () => bus.registrations().filter((registration) => registration.id.includes("#session-"));
     const before = sessionHooks().length;
@@ -398,8 +388,7 @@ describe("background tasks", () => {
     );
     const agent = await createAgent({
       model: MODEL,
-      provider,
-      packages: [runner],
+      packages: [runner, providerPackage("test-provider", [provider])],
       limits: { backgroundSettleMs: 40 },
       redactor: createSecretRedactor([SECRET]),
     });
@@ -433,9 +422,7 @@ describe("background tasks", () => {
   it("close_returns_at_once_when_nothing_runs_and_a_zero_bound_aborts_immediately", async () => {
     const agent = await createAgent({
       model: MODEL,
-      provider,
-      packages: [
-        pkg(
+      packages: [pkg(
           "@acme/slow",
           ({ commands }) =>
             commands.register({
@@ -448,8 +435,7 @@ describe("background tasks", () => {
                 ),
             }),
           { capabilities: ["background"] },
-        ),
-      ],
+        ), providerPackage("test-provider", [provider])],
       limits: { backgroundSettleMs: 0 },
     });
     const idle = await agent.session();
@@ -459,15 +445,8 @@ describe("background tasks", () => {
     const startedAt = performance.now();
     await busy.close();
     assert.ok(performance.now() - startedAt < 200);
-    const bad = await createAgent({ model: MODEL, provider, limits: { backgroundSettleMs: -1 } });
+    const bad = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], limits: { backgroundSettleMs: -1 } });
     await assert.rejects((await bad.session({ id: "x", create: true })).close(), /backgroundSettleMs/);
   });
 });
 
-describe("package_state in every store", () => {
-  it("stores_round_trip_package_state", async () => {
-    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseReadBranchPath: true });
-    const dir = await mkdtemp(join(tmpdir(), "prism-state-"));
-    await assertSessionStoreConforms(createJsonlSessionStore(join(dir, "sessions.jsonl")));
-  });
-});

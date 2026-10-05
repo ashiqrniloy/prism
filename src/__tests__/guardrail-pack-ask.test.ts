@@ -25,6 +25,7 @@ import {
   type GuardrailRecord,
 } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /** A kernel `guardrail.decision` package event, with its `data` merged in. */
 interface GuardrailDecisionEvent {
@@ -60,14 +61,14 @@ async function deployAgent(script: (turn: number) => readonly ProviderEvent[], e
     id: "pack-ask",
     slots: { store },
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         requests.push(request);
         turn += 1;
         for (const event of script(turn)) yield event;
       },
-    },
+    }])],
     tools: {
       add: [
         { name: "inspect", parameters: {}, execute: () => ({ toolCallId: "call-inspect", name: "inspect", value: "ok" }) },

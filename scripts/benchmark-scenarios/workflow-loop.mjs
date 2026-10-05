@@ -17,6 +17,7 @@ import {
   runWorkflow,
 } from "../../packages/prism-core/dist/runtime/workflows/index.js";
 import { loadBudgets } from "../budget-gates.mjs";
+import { mockProvider } from "../../dist/testing/index.js";
 
 export const LOOP_ITERATIONS = 5;
 export const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);
@@ -52,7 +53,7 @@ export async function runWorkflowLoop({ iterations = LOOP_ITERATIONS, runId = `w
   const events = [];
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider(stats),
+    packages: [mockProvider([stats])],
   });
   const workflow = defineWorkflow({
     id: "workflow-loop-benchmark",

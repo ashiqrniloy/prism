@@ -6,7 +6,7 @@ import { join } from "node:path";
 import {
   type AgentEvent,
   type Session,
-  type AIProvider,
+  type ModelProvider,
   type CompactionEntryData,
   type ModelConfig,
   type ProviderRequest,
@@ -52,7 +52,7 @@ const workTool: ToolDefinition = {
   },
 };
 
-function multiTurnMockProvider(options: { readonly rounds?: number } = {}): { provider: AIProvider; requests: ProviderRequest[] } {
+function multiTurnMockProvider(options: { readonly rounds?: number } = {}): { provider: ModelProvider; requests: ProviderRequest[] } {
   const requests: ProviderRequest[] = [];
   const maxRounds = options.rounds ?? 2;
   let mainTurns = 0;

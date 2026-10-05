@@ -45,6 +45,7 @@ import {
   createSandboxCodingComposition,
   resolveSandboxCapabilities,
 } from "../packages/prism-coding-tools/dist/security/index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const BLOCKER_IDS = ["resume-validation", "work-tools-env", "sandbox-capabilities"];
 const blockerIds = new Set();
@@ -71,7 +72,7 @@ async function suspendedRun() {
     id: "phase20-demo",
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore() },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     tools: [
       {
         name: "write",

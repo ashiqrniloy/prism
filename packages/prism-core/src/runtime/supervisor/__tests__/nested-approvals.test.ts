@@ -21,6 +21,7 @@ import {
   SupervisorDeniedError,
   type SupervisorEvent,
 } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const ownership = { tenantId: "tenant", userId: "user" };
 
@@ -75,7 +76,7 @@ async function harness(options?: {
       id: `child-${childId}`,
       model: { provider: "mock", model: "test" },
       slots: { store: storeFor(childId) },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           const turn = (turns.get(scopeKey) ?? 0) + 1;
@@ -93,7 +94,7 @@ async function harness(options?: {
           yield providerTextDelta(`${childId} done`);
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -132,7 +133,7 @@ async function harness(options?: {
     id: "root",
     model: { provider: "mock", model: "test" },
     slots: { store: storeFor("root-session") },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         // Shared across instances like the child counters: a rebuilt root must not replay turn 1.
@@ -147,7 +148,7 @@ async function harness(options?: {
         yield providerTextDelta("root done");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {
@@ -242,7 +243,7 @@ describe("nested-agent approval propagation", () => {
               id: "child-writer",
               model: { provider: "mock", model: "test" },
               slots: { store: writerStore },
-              provider: {
+              packages: [providerPackage("test-provider", [{
                 id: "mock",
                 async *generate() {
                   const turn = (turns.get(context.resourceId) ?? 0) + 1;
@@ -256,7 +257,7 @@ describe("nested-agent approval propagation", () => {
                   yield providerTextDelta("writer done");
                   yield providerDone();
                 },
-              },
+              }])],
               tools: {
                 add: [
                   {
@@ -278,7 +279,7 @@ describe("nested-agent approval propagation", () => {
       id: "root",
       model: { provider: "mock", model: "test" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           rootTurn += 1;
@@ -290,7 +291,7 @@ describe("nested-agent approval propagation", () => {
           yield providerTextDelta("root done");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -364,11 +365,11 @@ describe("nested-agent approval propagation", () => {
               id: "child-middle",
               model: { provider: "mock", model: "test" },
               slots: { store: childStores.middle },
-              provider: counted(
+              packages: [providerPackage("test-provider", [counted(
                 context.resourceId,
                 () => ({ type: "tool_call", call: toolCallContent("m1", "delegate_leaf", {}) }),
                 "middle done",
-              ),
+              )])],
               tools: {
                 add: [
                   {
@@ -389,11 +390,11 @@ describe("nested-agent approval propagation", () => {
               id: "child-leaf",
               model: { provider: "mock", model: "test" },
               slots: { store: childStores.leaf },
-              provider: counted(
+              packages: [providerPackage("test-provider", [counted(
                 context.resourceId,
                 () => ({ type: "tool_call", call: toolCallContent("l1", "write", { v: 9 }) }),
                 "leaf done",
-              ),
+              )])],
               tools: {
                 add: [
                   {
@@ -415,7 +416,7 @@ describe("nested-agent approval propagation", () => {
       id: "root",
       model: { provider: "mock", model: "test" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           rootTurn += 1;
@@ -427,7 +428,7 @@ describe("nested-agent approval propagation", () => {
           yield providerTextDelta("root done");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -511,13 +512,13 @@ describe("nested-agent approval propagation", () => {
         id: "child-writer",
         model: { provider: "mock", model: "test" },
         slots: { store: createMemorySessionStore() },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             yield { type: "tool_call" as const, call: toolCallContent("w1", "write", { v: 1 }) };
             yield providerDone();
           },
-        },
+        }])],
         tools: {
           add: [
             {
@@ -549,13 +550,13 @@ describe("nested-agent approval propagation", () => {
       id: "root",
       model: { provider: "mock", model: "test" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield { type: "tool_call" as const, call: toolCallContent("root-d1", "delegate", { childId: "writer" }) };
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {

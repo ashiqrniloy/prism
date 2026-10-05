@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "bun:test";
-import { createMockProvider, providerDone, providerTextDelta, providerToolCallDelta, providerUsage } from "../index.js";
+import { providerDone, providerTextDelta, providerToolCallDelta, providerUsage } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
 import {
   assertAbortIsObserved,
   assertCanonicalToolParameters,
@@ -12,7 +13,7 @@ import {
   assertToolCallDeltasReconstruct,
   assertUsageAccounting,
   collectProviderEvents,
-} from "../testing/provider-conformance.js";
+} from "../provider-kit/conformance.js";
 
 const request = {
   model: { provider: "mock", model: "demo" },
@@ -81,9 +82,10 @@ void describe("provider conformance", () => {
     assert.throws(() => assertCanonicalToolParameters({ required: ["z", "a"], type: "object" }, original), /not canonicalized/);
   });
 
-  it("testing_subpath_is_exported", () => {
+  it("conformance_ships_from_the_provider_kit_subpath", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    assert.ok(pkg.exports["./testing/provider-conformance"]);
+    assert.ok(pkg.exports["./provider-kit"]);
+    assert.equal(pkg.exports["./testing/provider-conformance"], undefined);
   });
 
   it("conformance_serialized_request_covers_text_thinking_tool_result_and_images", () => {

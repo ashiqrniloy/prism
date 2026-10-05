@@ -62,7 +62,7 @@ Explicit offline mock mode (no credentials needed):
 ### Provider Activation & Security
 
 - **Supported providers**: `openai`, `anthropic`, `google`, `deepseek`, `openrouter`, `ollama`, `xai`, `zai`, `alibaba`, `kimi`, `clinepass`, `commandcode`, `neuralwatt`, `opencode-go`, `hyper`, and `mock`.
-- **Lazy provider loading**: First-party provider adapters (`@arnilo/prism-providers/<adapter>`) are dynamically imported only on the first generation call. In mock mode, no provider package is ever evaluated.
+- **Lazy provider loading**: First-party provider adapters (`@arnilo/prism-provider-<adapter>`) are dynamically imported only on the first generation call. In mock mode, no provider package is ever evaluated.
 - **Fail closed before startup**: Missing model configurations or unresolvable credentials fail immediately before startup with `ConfigError` rather than silently falling back to mock mode.
 - **Credential safety**: Raw API keys never enter config persistence, argv, stdout protocol streams, events, or model context. Identity binds only the non-secret `credentialRef`.
 

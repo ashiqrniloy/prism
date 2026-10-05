@@ -7,9 +7,9 @@
 provider responds). `TranscriptionProvider` is audio→text via `transcribe`
 (one-shot) and `transcribeStream` (partial `TranscriptDelta` events, then one
 `done`), sharing the Realtime `transcript_delta` event naming. Adapters ship in
-[`@arnilo/prism-providers/openai`](providers/openai.md) (`/v1/audio/speech`,
+[`@arnilo/prism-provider-openai`](providers/openai.md) (`/v1/audio/speech`,
 `/v1/audio/transcriptions`); offline conformance runs via `runSpeechConformance`
-and `runTranscriptionConformance` from `@arnilo/prism/testing/provider-conformance`.
+and `runTranscriptionConformance` from `@arnilo/prism/provider-kit`.
 
 ## When to use it
 
@@ -71,8 +71,8 @@ when the host checks `ModelCapabilities.speech` / `transcription`).
 ## Implementation example
 
 ```ts
-import { createOpenAISpeechProvider, createOpenAITranscriptionProvider } from "@arnilo/prism-providers/openai";
-import { runSpeechConformance, runTranscriptionConformance } from "@arnilo/prism/testing/provider-conformance";
+import { createOpenAISpeechProvider, createOpenAITranscriptionProvider } from "@arnilo/prism-provider-openai";
+import { runSpeechConformance, runTranscriptionConformance } from "@arnilo/prism/provider-kit";
 
 const speech = createOpenAISpeechProvider({ apiKey: process.env.OPENAI_API_KEY });
 const { audio } = await speech.synthesize({ model: "tts-1", input: "hi", voice: "alloy" });
@@ -129,4 +129,4 @@ await runSpeechConformance({
 - [Provider conformance](provider-conformance.md): `runSpeechConformance` /
   `runTranscriptionConformance` and the offline conformance matrix.
 - [Provider packages](provider-packages.md): subpath import rules for
-  `@arnilo/prism-providers/openai`.
+  `@arnilo/prism-provider-openai`.

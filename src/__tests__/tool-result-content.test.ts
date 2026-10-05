@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   type ProviderRequest,
   providerDone,
@@ -10,7 +10,8 @@ import {
   toolCallContent,
 } from "../index.js";
 import { EMPTY_TOOL_RESULT_TEXT, toToolResultMessage } from "../input.js";
-import { serializeOpenAIChatMessage } from "../providers/openai-primitives.js";
+import { serializeOpenAIChatMessage } from "../provider-kit/openai-primitives.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -22,7 +23,7 @@ describe("tool result content on provider wire", () => {
   it("folds content-only tool results onto tool_result.result and serializes without null", async () => {
     let replay: ProviderRequest | undefined;
     const listing = "file AGENTS.md";
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         if (request.messages.some((message) => message.role === "tool")) {
@@ -39,7 +40,7 @@ describe("tool result content on provider wire", () => {
     const session = await (
       await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         tools: {
           add: [
             {

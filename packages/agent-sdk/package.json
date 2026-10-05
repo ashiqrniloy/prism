@@ -31,7 +31,8 @@
     "@arnilo/prism-mcp": "^0.12.0"
   },
   "dependencies": {
-    "@arnilo/prism": "^0.12.0"
+    "@arnilo/prism": "^0.12.0",
+    "@arnilo/prism-store-jsonl": "^0.12.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",

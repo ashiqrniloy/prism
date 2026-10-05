@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { type AgentDefinition, type AIProvider, providerDone, providerTextDelta, resolveAgentDefinition } from "@arnilo/prism";
+import { type AgentDefinition, type ModelProvider, providerDone, providerTextDelta, resolveAgentDefinition } from "@arnilo/prism";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -10,6 +10,7 @@ import {
   WorkflowSuperstepLimitError,
   type WorkflowEvent,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
  * Cyclic Reflection + Dynamic Routing Demo (Plan 130 Task 7).
@@ -92,7 +93,7 @@ export function draftContent(round: number, feedback?: string): string {
   );
 }
 
-export function createMockReviewerProvider(): AIProvider {
+export function createMockReviewerProvider(): ModelProvider {
   let turn = 0;
   return {
     id: "mock-reviewer",
@@ -124,9 +125,9 @@ export function createMockReviewerProvider(): AIProvider {
   };
 }
 
-export function createAlwaysRevisingProvider(): AIProvider {
+export function createAlwaysRevisingProvider(): ModelProvider {
   return {
-    id: "mock-always-revising",
+    id: "mock-reviewer",
     async *generate() {
       const critique: ReviewCritique = {
         score: 50,
@@ -268,7 +269,7 @@ export async function demo(): Promise<CyclicReflectionDemoResult> {
   console.log("\n[Run 1] Starting cyclic reflection workflow with maxSupersteps: 16...");
 
   const reviewerAgent = await resolveAgentDefinition(reviewerDef, {
-    overrides: { provider: createMockReviewerProvider() },
+    overrides: { packages: [providerPackage("example-provider", [createMockReviewerProvider()])] },
   });
 
   const events: WorkflowEvent[] = [];
@@ -314,7 +315,7 @@ export async function demo(): Promise<CyclicReflectionDemoResult> {
   console.log("\n[Run 2] Demonstrating limits.maxSupersteps fail-closed budget breach...");
   const breachWf = createCyclicReflectionWorkflow(4); // Tight superstep budget
   const alwaysRevisingAgent = await resolveAgentDefinition(reviewerDef, {
-    overrides: { provider: createAlwaysRevisingProvider() },
+    overrides: { packages: [providerPackage("example-provider", [createAlwaysRevisingProvider()])] },
   });
 
   let budgetBreachObserved = false;

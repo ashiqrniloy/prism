@@ -1,7 +1,10 @@
+AZURE_DEFAULT_CREDENTIAL_REF	export declare const AZURE_DEFAULT_CREDENTIAL_REF = "env:AZURE_OPENAI_API_KEY"
 AZURE_OPENAI_DEFAULT_API_VERSION	export declare const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21"
+azure	export declare function azure(options: AzureProviderPackageOptions & AzureProviderConfig): PackageInstance
 azureChatCompletionsUrl	export declare function azureChatCompletionsUrl(input:
-createAzureOpenAIProvider	export declare function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): AIProvider
-azurePackage	export declare function azurePackage(options: AzureOpenAIProviderPackageOptions): PackageInstance
-type AzureAuthStyle	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, azurePackage, } from "./provider.js"
-type AzureOpenAIProviderOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, azurePackage, } from "./provider.js"
-type AzureOpenAIProviderPackageOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, type AzureOpenAIProviderPackageOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, azurePackage, } from "./provider.js"
+azureEndpointFromConfig	export declare function azureEndpointFromConfig(config: Pick<AzureProviderConfig, "resourceName" | "endpoint">): string
+createAzureOpenAIProvider	export declare function createAzureOpenAIProvider(options: AzureOpenAIProviderOptions): ModelProvider
+default	export default
+requireAzureEndpoint	export declare function requireAzureEndpoint(endpoint: string | undefined): string
+type AzureAuthStyle	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, } from "./provider.js"
+type AzureOpenAIProviderOptions	export { AZURE_OPENAI_DEFAULT_API_VERSION, type AzureAuthStyle, type AzureOpenAIProviderOptions, azureChatCompletionsUrl, createAzureOpenAIProvider, } from "./provider.js"

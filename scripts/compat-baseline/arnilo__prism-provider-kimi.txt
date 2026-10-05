@@ -1,15 +1,22 @@
+KIMI_DEFAULT_API_KEY_REF	export declare const KIMI_DEFAULT_API_KEY_REF = "env:KIMI_API_KEY"
+KIMI_K3_THINKING_LEVELS	export declare const KIMI_K3_THINKING_LEVELS: readonly ["low", "high", "max"]
+MOONSHOT_DEFAULT_API_KEY_REF	export declare const MOONSHOT_DEFAULT_API_KEY_REF = "env:MOONSHOT_API_KEY"
 applyKimiAnthropicCacheControl	export declare function applyKimiAnthropicCacheControl(request: ProviderRequest): readonly Message[]
-createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): AIProvider
-kimiPackage	export declare function kimiPackage(options?: KimiProviderPackageOptions): PackageInstance
-createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): AIProvider
+createKimiCodingProvider	export declare function createKimiCodingProvider(options?: KimiCodingProviderOptions): ModelProvider
+createMoonshotProvider	export declare function createMoonshotProvider(options?: MoonshotProviderOptions): ModelProvider
+default	export default
 defineKimiModel	export declare function defineKimiModel(config: KimiModelConfig): ModelConfig
+kimi	export declare function kimi(options?: KimiProviderPackageOptions & KimiProviderConfig): PackageInstance
 kimiAnthropicBody	export declare function kimiAnthropicBody(request: ProviderRequest): Promise<JsonObject>
 kimiAnthropicCacheEnabled	export declare function kimiAnthropicCacheEnabled(request: ProviderRequest): boolean
 kimiAnthropicEvents	export declare function kimiAnthropicEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 kimiCodingModels	export declare const kimiCodingModels: readonly [ModelConfig, ModelConfig, ModelConfig]
+kimiIsK3Model	export declare function kimiIsK3Model(modelId: string): boolean
 kimiPreserveThinking	export declare function kimiPreserveThinking(request: ProviderRequest): boolean
 kimiReasoningEffort	export declare function kimiReasoningEffort(request: ProviderRequest): string | undefined
 kimiThinking	export declare function kimiThinking(request: ProviderRequest): JsonObject | undefined
+kimiThinkingFamily	export declare function kimiThinkingFamily(modelId: string): "reasoning_effort" | "thinking_type" | undefined
+kimiThinkingLevels	export declare function kimiThinkingLevels(modelId: string): readonly string[] | undefined
 listKimiModels	export declare function listKimiModels(options?: ListKimiModelsOptions): Promise<ModelConfig[]>
 mapKimiModel	export declare function mapKimiModel(entry: KimiModelEntry, options?:
 moonshotBody	export declare function moonshotBody(request: ProviderRequest): JsonObject
@@ -18,7 +25,7 @@ moonshotKimiModels	export declare const moonshotKimiModels: readonly [ModelConfi
 serializeMoonshotMessage	export declare function serializeMoonshotMessage(message: Message, capabilities?: ModelCapabilities, preserveThinking?: boolean): JsonObject
 stripKimiThinkingCompat	export declare function stripKimiThinkingCompat(compat: JsonObject | undefined): JsonObject
 type KimiCodingProviderOptions	export { createKimiCodingProvider, type KimiCodingProviderOptions, kimiAnthropicBody, kimiAnthropicEvents, } from "./provider.js"
-type KimiModelConfig	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
-type KimiModelEntry	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
-type ListKimiModelsOptions	export { defineKimiModel, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type KimiModelConfig	export { defineKimiModel, KIMI_K3_THINKING_LEVELS, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, kimiIsK3Model, kimiThinkingFamily, kimiThinkingLevels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type KimiModelEntry	export { defineKimiModel, KIMI_K3_THINKING_LEVELS, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, kimiIsK3Model, kimiThinkingFamily, kimiThinkingLevels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
+type ListKimiModelsOptions	export { defineKimiModel, KIMI_K3_THINKING_LEVELS, type KimiModelConfig, type KimiModelEntry, kimiCodingModels, kimiIsK3Model, kimiThinkingFamily, kimiThinkingLevels, type ListKimiModelsOptions, listKimiModels, mapKimiModel, moonshotKimiModels, } from "./models.js"
 type MoonshotProviderOptions	export { createMoonshotProvider, type MoonshotProviderOptions, moonshotBody, moonshotEvents, serializeMoonshotMessage, } from "./moonshot.js"

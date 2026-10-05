@@ -30,22 +30,16 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
     "@arnilo/prism-coding-tools": "^0.12.1",
-    "@arnilo/prism-core": "^0.12.1"
+    "@arnilo/prism-core": "^0.12.1",
+    "@arnilo/prism-store-sqlite": "^0.12.1"
   },
   "peerDependencies": {
     "@arnilo/prism": "^0.12.1",
-    "@arnilo/prism-ag-ui": "^0.12.1",
-    "@arnilo/prism-providers": "^0.12.1"
-  },
-  "peerDependenciesMeta": {
-    "@arnilo/prism-providers": {
-      "optional": true
-    }
+    "@arnilo/prism-ag-ui": "^0.12.1"
   },
   "devDependencies": {
     "@arnilo/prism": "file:../..",
-    "@arnilo/prism-ag-ui": "file:../ag-ui",
-    "@arnilo/prism-providers": "file:../prism-providers"
+    "@arnilo/prism-ag-ui": "file:../ag-ui"
   },
   "engines": {
     "bun": ">=1.4.2"

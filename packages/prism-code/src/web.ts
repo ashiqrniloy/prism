@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
 import { delimiter, isAbsolute, join } from "node:path";
-import { assertSsrfAllowedUrl, type CredentialResolver, type ToolDefinition } from "@arnilo/prism";
+import { assertSsrfAllowedUrl, type Secret, type ToolDefinition } from "@arnilo/prism";
 import { createBraveSearch, createFirecrawlFetch, createWebTools } from "@arnilo/prism-web-tools";
 import { createObscuraWebTools } from "@arnilo/prism-web-tools/obscura";
 import type { PrismCodeConfig, PrismCodeWebConfig } from "./config.js";
@@ -67,7 +67,7 @@ export function resolveWebMode(web: PrismCodeWebConfig | undefined): WebBackendM
   return web.mode ?? "obscura";
 }
 
-function webCredentialResolver(manager: PrismCodeCredentialManager, provider: string): CredentialResolver {
+function webCredentialResolver(manager: PrismCodeCredentialManager, provider: string): { resolve(): Promise<Secret | undefined> } {
   return {
     resolve: async () => {
       const value = await manager.getApiKey(provider);

@@ -8,28 +8,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createAgent,
-  createAttentionCompiler,
-  createAttentionTruncationTrigger,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  askEveryTool,
-  createSecretRedactor,
-  createSecureAgent,
-  createSessionEntry,
-  createStaticPermissionPolicy,
-  createStaticTrustPolicy,
-  inspectHostComposition,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  resolveDevicePolicy,
-  resolveInputCap,
-  resolveShouldCompact,
-  resumeAgentRun,
-} from "@arnilo/prism";
+import { createAgent, createAttentionCompiler, createAttentionTruncationTrigger, createMemoryCheckpointStore, createMemorySessionStore, askEveryTool, createSecretRedactor, createSecureAgent, createSessionEntry, createStaticPermissionPolicy, createStaticTrustPolicy, inspectHostComposition, providerDone, providerTextDelta, providerToolCall, resolveDevicePolicy, resolveInputCap, resolveShouldCompact, resumeAgentRun } from "@arnilo/prism";
 import { selectMcpServers } from "@arnilo/prism-acp-agent";
 import {
   createCitationIntegrityScorer,
@@ -53,6 +32,8 @@ import {
   REFLECTIONS_RECORDED,
 } from "@arnilo/prism-memory/compaction/observational-memory";
 import { createMemoryFabric } from "@arnilo/prism-memory/fabric";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const marks = [];
 let markStart = performance.now();
@@ -103,7 +84,7 @@ const personal = await createSecureAgent({
       execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "workspace_status", value: { ok: true } }),
     },
   ],
-  provider: createMockProvider([providerTextDelta("ready"), providerDone()]),
+  packages: [mockProvider([[providerTextDelta("ready"), providerDone()]])],
   model: { provider: "mock", model: "personal" },
 });
 const personalReport = inspectHostComposition({ profile: "personal", agent: personal });
@@ -130,7 +111,7 @@ const business = await createSecureAgent({
       execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "process_tenant_record", value: { ok: true } }),
     },
   ],
-  provider: createMockProvider([providerTextDelta("ready"), providerDone()]),
+  packages: [mockProvider([[providerTextDelta("ready"), providerDone()]])],
   model: { provider: "mock", model: "corp" },
 });
 const businessReport = inspectHostComposition({
@@ -232,7 +213,7 @@ await (
   await (
     await createAgent({
       model: { provider: "mock", model: "offline" },
-      provider: codingProvider(),
+      packages: [providerPackage("test-provider", [codingProvider()])],
       tools: codingTools,
     })
   ).session()
@@ -248,7 +229,7 @@ const codingConfig = {
   tools: codingTools,
 };
 const first = await (
-  await (await createAgent({ ...codingConfig, provider: codingProvider() })).session({ id: "restart-1", create: true })
+  await (await createAgent({ ...codingConfig, packages: [providerPackage("test-provider", [codingProvider()])] })).session({ id: "restart-1", create: true })
 ).run("edit", {
   toolNames: ["read", "write"],
   runState: { checkpoints, definitionRevision: "1" },
@@ -257,7 +238,7 @@ assert.equal(first.status, "suspended");
 const resumed = await resumeAgentRun(
   await createAgent({
     ...codingConfig,
-    provider: createMockProvider([providerTextDelta("done"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("done"), providerDone()]])],
   }),
   { runId: first.runId, sessionId: first.sessionId },
   {
@@ -336,7 +317,7 @@ const denied = await runExperiment({
   agent: await wrapAgentWithFailureInjection(
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: oneShot("drop_database"),
+      packages: [providerPackage("test-provider", [oneShot("drop_database")])],
       tools: [
         {
           name: "drop_database",
@@ -362,7 +343,7 @@ const unknown = await runExperiment({
   agent: await wrapAgentWithFailureInjection(
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: oneShot("move_money"),
+      packages: [providerPackage("test-provider", [oneShot("move_money")])],
       tools: [
         {
           name: "move_money",
@@ -398,7 +379,7 @@ try {
   const red = await runExperiment({
     agent: await createAgent({
       model: { provider: "mock", model: "offline" },
-      provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
     }),
     dataset: defineDataset({
       id: "oracle-red",
@@ -535,7 +516,7 @@ const scopeStore = createMemorySessionStore();
 const scopeSession = await (
   await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: createMockProvider([providerTextDelta("ready"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ready"), providerDone()]])],
     slots: { store: scopeStore },
   })
 ).session({ id: "work-scope-journey", create: true });

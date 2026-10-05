@@ -13,6 +13,7 @@ import {
   type HookRegistrar,
   type TurnBeforePayload,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 type InMemoryLedger = { runs: RunRecord[]; ledger: RunLedger };
 
@@ -68,7 +69,7 @@ async function turnGateAgent(options: {
     id: "turn-before",
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         options.requests.push(request);
@@ -82,7 +83,7 @@ async function turnGateAgent(options: {
         yield providerTextDelta(`turn ${turn} complete`);
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [
         {

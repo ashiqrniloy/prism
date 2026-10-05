@@ -1,6 +1,6 @@
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   definePackage,
@@ -8,6 +8,7 @@ import {
   providerTextDelta,
   toolCallContent,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
  * Two packages on one agent (roadmap §2.6). Listing a package is all the wiring there is.
@@ -21,7 +22,7 @@ import {
  * Run: npm run build:core && node examples/define-package.ts
  */
 
-// The kernel is 0.12.1 until the 1.0 cut, so an in-tree package declares a range that admits it.
+// The kernel is 0.12.1 until the 0.13.0 release, so an in-tree package declares a range that admits it.
 const requires = { prism: "^0.12.1 || ^0.13.0-0" } as const;
 const ENV_VALUE = "demo-only-env-value-1234";
 const finished: string[] = [];
@@ -101,7 +102,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   let current = "";
   let turn = 0;
   let sawDenial = false;
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "mock",
     async *generate(request) {
       advertised[current] = (request.tools ?? []).map((tool) => tool.name);
@@ -123,8 +124,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     const agent = await createAgent({
       id: "define-package",
       model: { provider: "mock", model: "demo" },
-      provider,
-      packages: [audit, counter({ apiKey: "env:DEMO_COUNTER_KEY", step: 1 })],
+      packages: [audit, counter({ apiKey: "env:DEMO_COUNTER_KEY", step: 1 }), providerPackage("test-provider", [provider])],
     });
 
     current = "main";

@@ -9,7 +9,7 @@ import {
   askEveryTool,
   type Agent,
   type AgentIdentity,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
@@ -38,6 +38,7 @@ import type {
   MessagingRuntime,
   MessagingRuntimeOptions,
 } from "../types.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const CONNECTION = "tg-1";
 const CHAT = "chat-1";
@@ -69,7 +70,7 @@ function event(overrides: Partial<ChannelInboundEvent> = {}): ChannelInboundEven
   };
 }
 
-function textProvider(calls: { count: number }, text: (turn: number) => string): AIProvider {
+function textProvider(calls: { count: number }, text: (turn: number) => string): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -93,14 +94,14 @@ function trackingStore(ids: Set<string>): SessionStore {
 }
 
 async function agentWith(
-  provider: AIProvider,
+  provider: ModelProvider,
   store: SessionStore,
   tools: Parameters<typeof createAgent>[0]["tools"] = {},
 ): Promise<Agent> {
   return await createAgent({
     id: "channel-agent",
     model: { provider: "mock", model: "demo" },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     slots: { store },
     ...(tools === undefined ? {} : { tools }),
   });
@@ -195,7 +196,7 @@ describe("plan 080 Telegram draft streaming", () => {
   it("forwards redacted cumulative previews while journaling only the terminal reply", async () => {
     const previews: Array<{ text: string; chat: string; threadId?: string }> = [];
     const checkpoints = createMemoryCheckpointStore();
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         yield providerTextDelta("answer ");
@@ -241,7 +242,7 @@ describe("plan 080 Telegram draft streaming", () => {
 
   it("stops previewing after cancellation and never delivers a final reply for an aborted run", async () => {
     const previews: string[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         yield providerTextDelta("partial");
@@ -379,7 +380,7 @@ describe("plan 079 channel runtime", () => {
     const agent = await createSecureAgent({
       id: "channel-secure",
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(calls, () => "secure answer"),
+      packages: [providerPackage("test-provider", [textProvider(calls, () => "secure answer")])],
       slots: { store: createMemorySessionStore() },
       tools: [],
       toolArgumentValidator: { validate: () => ({ ok: true }) },
@@ -445,7 +446,7 @@ describe("plan 079 channel runtime", () => {
     let peak = 0;
     const ids = new Set<string>();
     const store = trackingStore(ids);
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         calls.count += 1;
@@ -480,7 +481,7 @@ describe("plan 079 channel runtime", () => {
   it("cancels queued work and active work through control commands", async () => {
     const calls = { count: 0 };
     const store = createMemorySessionStore();
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         calls.count += 1;
@@ -538,7 +539,7 @@ describe("plan 079 channel runtime", () => {
   it("never reuses a previous turn's text on failure and redacts the failure notice", async () => {
     const store = createMemorySessionStore();
     let turn = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         turn += 1;
@@ -594,7 +595,7 @@ describe("plan 079 channel runtime", () => {
         return revocation.revokedAt;
       },
     };
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         calls.count += 1;
@@ -621,7 +622,7 @@ describe("plan 079 channel runtime", () => {
     const secure = await createSecureAgent({
       id: "channel-secure",
       model: { provider: "mock", model: "demo" },
-      provider: textProvider(calls, () => "secure answer"),
+      packages: [providerPackage("test-provider", [textProvider(calls, () => "secure answer")])],
       slots: { store: createMemorySessionStore() },
       tools: [
         { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "c", name: "write", value: ++toolCalls.count }) },
@@ -659,7 +660,7 @@ describe("plan 079 channel runtime", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         calls.count += 1;
@@ -727,7 +728,7 @@ describe("plan 079 channel runtime", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         calls.count += 1;
@@ -757,7 +758,7 @@ describe("plan 079 channel runtime", () => {
 
   it("stops bounded with an active run and queued or slot-waiting work", async () => {
     const calls = { count: 0 };
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         calls.count += 1;
@@ -797,7 +798,7 @@ describe("plan 079 channel runtime", () => {
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           calls.model += 1;
@@ -809,7 +810,7 @@ describe("plan 079 channel runtime", () => {
           yield providerTextDelta("resumed answer");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -880,14 +881,14 @@ describe("plan 079 channel runtime", () => {
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           calls.model += 1;
           yield providerToolCall(toolCallContent("deny-call", "write", {}));
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -923,7 +924,7 @@ describe("plan 079 channel runtime", () => {
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate(request) {
           turns += 1;
@@ -945,7 +946,7 @@ describe("plan 079 channel runtime", () => {
           });
           throw new Error("provider observed cancellation");
         },
-      },
+      }])],
       tools: {
         add: [
           { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "abort-call", name: "write", value: "done" }) },
@@ -1109,7 +1110,7 @@ describe("plan 080 bounded attachments and voice", () => {
   const IMAGE: ChannelAttachmentRef = { kind: "image", transportFileId: "telegram-file-1", byteLength: 4 };
 
   /** Provider that records the messages it was asked to answer. */
-  function capturingProvider(captured: Array<readonly Message[]>, answer = "answer"): AIProvider {
+  function capturingProvider(captured: Array<readonly Message[]>, answer = "answer"): ModelProvider {
     return {
       id: "mock",
       async *generate(request: ProviderRequest) {
@@ -1120,7 +1121,7 @@ describe("plan 080 bounded attachments and voice", () => {
     };
   }
 
-  async function visionAgent(provider: AIProvider, imageInput: boolean): Promise<Agent> {
+  async function visionAgent(provider: ModelProvider, imageInput: boolean): Promise<Agent> {
     return await createAgent({
       id: "channel-agent",
       model: {
@@ -1128,7 +1129,7 @@ describe("plan 080 bounded attachments and voice", () => {
         model: imageInput ? "vision" : "text-only",
         capabilities: { input: imageInput ? ["text", "image"] : ["text"] },
       },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store: createMemorySessionStore() },
     });
   }

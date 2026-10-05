@@ -1,16 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  providerDone,
-  providerTextDelta,
-  rebuildSessionContext,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta, rebuildSessionContext, type SessionEntry } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   buildObservationalMemoryContextBlocks,
   createObservationalMemory,
@@ -20,6 +11,7 @@ import {
   OBSERVATIONS_RECORDED,
   renderObservationalMemory,
 } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
@@ -76,7 +68,7 @@ async function attachFixture(options: {
   const provider = createMockProvider([providerTextDelta("ok"), providerDone()], {
     ...(options.onRequest ? { onRequest: (request) => options.onRequest?.(JSON.stringify(request.messages)) } : {}),
   });
-  const agent = await createAgent({ model, provider, slots: { store } });
+  const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], slots: { store } });
   const leafId = options.initial?.at(-1)?.id;
   const baseSession = await agent.session({ id: "s1", ...(leafId === undefined ? {} : { leafId }), create: true });
   const attached = createObservationalMemory(options.create ?? {}).attach(baseSession, {
@@ -158,7 +150,7 @@ describe("observational memory coverage-safe admission", () => {
   });
 
   it("successful_empty_observation_pass_compacts_while_missing_worker_defers", async () => {
-    const worker: AIProvider = {
+    const worker: ModelProvider = {
       id: "memory",
       async *generate() {
         yield providerDone();

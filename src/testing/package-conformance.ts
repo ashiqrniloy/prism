@@ -5,9 +5,10 @@
  * kernel's own modules.
  */
 
+import { providerPackage } from "../provider-kit/package.js";
 import type { AgentInspection } from "../agent/inspect.js";
 import { createAgent } from "../agent-session/create-agent.js";
-import type { AgentConfig, AIProvider, JsonObject } from "../contracts.js";
+import type { AgentConfig, ModelProvider, JsonObject } from "../contracts.js";
 import type { HostPort } from "../host/types.js";
 import { createMockProvider } from "../mock-provider.js";
 import type { PackageAPI, PackageDefinition, PackageInput, PackageInstance } from "../packages/api.js";
@@ -15,7 +16,7 @@ import type { Capability } from "../packages/capabilities.js";
 import { definePackage } from "../packages/define.js";
 import { PackageLoadError } from "../packages/errors.js";
 import { assertJsonSchemaSupported, type JsonSchema, SECRET_REF, schemaDefaults, validateJsonSchema } from "../packages/schema.js";
-import { providerDone, providerTextDelta } from "../provider-events.js";
+import { providerDone, providerTextDelta } from "../models/events.js";
 import { createMemorySessionStore } from "../session-stores.js";
 import { SLOT_NAMES } from "../slots/index.js";
 import { createScriptedHostUi } from "./host-ui.js";
@@ -39,7 +40,7 @@ export interface PackageConformanceOptions {
   /** Instance config for the definition under test. Validated against the definition's schema. */
   readonly config?: Readonly<Record<string, unknown>>;
   /** Drives the mock session. Defaults to one text turn on the built-in mock provider. */
-  readonly mockProvider?: AIProvider;
+  readonly mockProvider?: ModelProvider;
 }
 
 export interface PackageConformanceResult {
@@ -59,6 +60,18 @@ function asInstance(input: PackageInput, config: Readonly<Record<string, unknown
   if (typeof input === "function") return input(config as never);
   if (config !== undefined) return (input as { definition: PackageDefinition }).definition(config as never);
   return input;
+}
+
+/**
+ * Loads one package the way a host does, then disposes. Setup must register and must not touch the
+ * network: a provider package that fetches here has put discovery in the wrong place.
+ */
+export async function loadProviderPackage(instance: PackageInstance): Promise<void> {
+  const agent = await createAgent({
+    model: { provider: "probe", model: "probe" },
+    packages: [instance],
+  });
+  await agent.dispose();
 }
 
 /**
@@ -201,12 +214,12 @@ export async function packageConformance(input: PackageInput, options: PackageCo
   const { names: secretNames, restore } = setSentinels(fields);
 
   const used = new Set<string>();
+  const modelProvider = options.mockProvider ?? createMockProvider([providerTextDelta("conformance"), providerDone()]);
   const agentConfig = (host?: HostPort): AgentConfig => ({
-    model: { provider: "mock", model: "conformance" },
-    provider: options.mockProvider ?? createMockProvider([providerTextDelta("conformance"), providerDone()]),
+    model: { provider: modelProvider.id, model: "conformance" },
     slots: { store: createMemorySessionStore() },
     ...(host ? { host } : {}),
-    packages: [recordingInstance(instance, used)],
+    packages: [providerPackage("conformance-provider", [modelProvider]), recordingInstance(instance, used)],
   });
 
   let inspectBefore: AgentInspection | undefined;

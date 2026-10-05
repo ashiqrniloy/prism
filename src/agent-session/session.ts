@@ -1,5 +1,6 @@
 /** session (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 
+import { resolveRunOptions } from "../models/ref.js";
 import { ActiveDurableRun, ActiveDurableRunExtras, pendingDecisionsOf, resolveRunDecisions } from "../agent-approval.js";
 import { restoreRunSessionState } from "../agent-run-restore.js";
 import { createMemoryCheckpointStore } from "../checkpoints.js";
@@ -31,7 +32,7 @@ import type {
   Session,
   AgentSessionConfig,
   SessionOptions,
-  AIProvider,
+  ModelProvider,
   CompactionOptions,
   CompactionResult,
   ContextMeter,
@@ -44,6 +45,7 @@ import type {
   ProviderRequest,
   RunLedger,
   RunOptions,
+  ResolvedRunOptions,
   SessionBranchRead,
   SessionEntry,
   SessionForkOptions,
@@ -154,7 +156,7 @@ export class RuntimeAgentSession implements Session {
   private pendingSteers: Message[] = [];
   private pendingSteerBytes = 0;
   private activeRedactor?: SecretRedactor;
-  activeProvider?: AIProvider;
+  activeProvider?: ModelProvider;
   private activeLedger?: RunLedger;
   activeEffectStore?: ToolEffectStore;
   private activeOwnership?: OwnershipScope;
@@ -666,7 +668,7 @@ export class RuntimeAgentSession implements Session {
   }
 
   async run(input: AgentInput, options: RunOptions = {}): Promise<RunResult> {
-    return this.runInternal(input, options, randomId("run"));
+    return this.runInternal(input, resolveRunOptions(options), randomId("run"));
   }
 
   steer(input: AgentInput, options: SteerOptions = {}): void {
@@ -702,7 +704,7 @@ export class RuntimeAgentSession implements Session {
     signal?: AbortSignal,
     decisions?: ReadonlyMap<string, Decision>,
     extras?: ActiveDurableRunExtras,
-    runOptions: RunOptions = {},
+    runOptions: ResolvedRunOptions = {},
     /** The suspension's pending decisions: the claimed state no longer carries them. */
     pending?: readonly PendingDecision[],
   ): Promise<RunResult> {
@@ -779,7 +781,8 @@ export class RuntimeAgentSession implements Session {
   }
 
   async *resume(decisions: readonly Decision[], options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
-    const { maxQueuedEvents, overflow, ...runOptions } = options;
+    const { maxQueuedEvents, overflow, ...rawRunOptions } = options;
+    const runOptions = resolveRunOptions(rawRunOptions);
     // Everything that can reject (no suspension, bad or incomplete decisions, drift, a stale claim)
     // happens here, before a subscriber exists or a single event is emitted.
     const prepared = await this.prepareResume(decisions, runOptions);
@@ -821,7 +824,7 @@ export class RuntimeAgentSession implements Session {
    */
   private async prepareResume(
     decisions: readonly Decision[],
-    runOptions: RunOptions,
+    runOptions: ResolvedRunOptions,
   ): Promise<{
     readonly state: StoredAgentRunState;
     readonly runState: AgentRunStateOptions;
@@ -878,7 +881,7 @@ export class RuntimeAgentSession implements Session {
     return { state: claimed.state, runState, decisions: resolved.decisionsById, pending: pendingDecisionsOf(stored) ?? [] };
   }
 
-  private async runInternal(input: AgentInput, options: RunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult> {
+  private async runInternal(input: AgentInput, options: ResolvedRunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult> {
     // Only a session that needs its branch read waits: the rest start the run in the same tick, as before.
     if (this.needsOpening()) await this.ready();
     return executeRun(asSessionHost(this), input, options, runId, resumed);
@@ -1054,17 +1057,13 @@ export class RuntimeAgentSession implements Session {
     return tryAgentRuntime(this.agent)?.packages.redactor(base) ?? base;
   }
 
-  resolveRunProvider(options: RunOptions): void {
+  resolveRunProvider(options: ResolvedRunOptions): void {
     const model = options.model ?? this.agent.config.model;
-    // Provider precedence: an explicit `AgentConfig.provider` wins and bypasses
-    // the resolver entirely; otherwise `RunOptions.providerSource` overrides
-    // `AgentConfig.providerSource` for this run. A miss on every source fails
-    // closed with `Unknown provider: ${model.provider}` before any provider turn.
-    const provider =
-      this.agent.config.provider ??
-      options.providerSource?.(model) ??
-      this.agent.config.providerSource?.(model) ??
-      tryAgentRuntime(this.agent)?.packages.provider(model.provider);
+    // One resolution shared with `models.client` and `agent.models`: the run's model picks its provider, so a
+    // fixed `AgentConfig.provider` never shadows a `RunOptions.model` on another id. A miss on every source
+    // fails closed with `Unknown provider: ${model.provider}` before any provider turn.
+    const runtime = tryAgentRuntime(this.agent);
+    const provider = runtime?.packages.resolveProvider(model);
     if (!provider) throw new Error(`Unknown provider: ${model.provider}`);
     this.activeProvider = provider;
   }
@@ -1207,7 +1206,7 @@ export class RuntimeAgentSession implements Session {
     await this.appendEntry(createSessionEntry({ sessionId: this.id, parentId: this.currentLeafId, runId, kind: "message", message }));
   }
 
-  async autoCompact(runId: string, options: RunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
+  async autoCompact(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
     const resolved = await this.resolveAutoCompact(runId, options, signal, undefined);
     if (!resolved) return;
     await this.compactBranchResilient(resolved, runId, signal, "auto");
@@ -1215,7 +1214,7 @@ export class RuntimeAgentSession implements Session {
     this.replaceHistory(withoutTrailingInput(compacted.messages, inputMessages));
   }
 
-  async autoCompactTurn(runId: string, options: RunOptions, signal: AbortSignal, turn: number): Promise<void> {
+  async autoCompactTurn(runId: string, options: ResolvedRunOptions, signal: AbortSignal, turn: number): Promise<void> {
     const resolved = await this.resolveAutoCompact(runId, options, signal, turn);
     if (!resolved) return;
     await this.compactBranchResilient(resolved, runId, signal, "auto");
@@ -1228,7 +1227,7 @@ export class RuntimeAgentSession implements Session {
    */
   private async resolveAutoCompact(
     runId: string,
-    options: RunOptions,
+    options: ResolvedRunOptions,
     signal: AbortSignal,
     turn: number | undefined,
   ): Promise<CompactionOptions | undefined> {

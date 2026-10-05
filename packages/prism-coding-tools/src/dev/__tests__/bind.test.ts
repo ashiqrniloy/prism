@@ -5,13 +5,14 @@
 
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createPrismDevInspector, DevInspectorError } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 async function mockAgent(): ReturnType<typeof createAgent> {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
   });
 }
 

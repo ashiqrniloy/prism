@@ -1,14 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  providerDone,
-  providerTextDelta,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
 import {
   createWorkScopeController,
   foldObservationalMemoryLedger,
@@ -25,6 +17,7 @@ import {
   type MemoryObservation,
   type MemoryReflection,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const observation: MemoryObservation = {
@@ -44,7 +37,7 @@ const reflection: MemoryReflection = {
 
 async function setup() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const session = await agent.session({ id: "scopes", create: true });
   await session.run("hello");
   return { session, store, controller: createWorkScopeController({ session, appendEntry: (entry) => store.append(entry) }) };

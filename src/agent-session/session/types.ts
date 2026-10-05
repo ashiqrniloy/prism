@@ -14,7 +14,7 @@ import type {
   AgentFinishReason,
   AgentRunStatus,
   RunResult,
-  AIProvider,
+  ModelProvider,
   ErrorInfo,
   Guardrail,
   GuardrailRecord,
@@ -26,6 +26,7 @@ import type {
   ProviderRequest,
   RunLedger,
   RunOptions,
+  ResolvedRunOptions,
   SessionEntry,
   SessionStore,
   Skill,
@@ -65,7 +66,7 @@ export type SessionHost = {
   pendingSteers: Message[];
   pendingSteerBytes: number;
   activeRedactor?: SecretRedactor;
-  activeProvider?: AIProvider;
+  activeProvider?: ModelProvider;
   activeLedger?: RunLedger;
   activeEffectStore?: ToolEffectStore;
   activeOwnership?: OwnershipScope;
@@ -124,7 +125,7 @@ export type SessionHost = {
   hooks(): HookBus;
   /** Slot registry for this agent (roadmap §2.5). */
   slots(): SlotRegistry;
-  resolveRunProvider(options: RunOptions): void;
+  resolveRunProvider(options: ResolvedRunOptions): void;
   emit(event: AgentEvent): void;
   rebuildHistory(): Promise<void>;
   resolveRunSkills(tools: readonly ToolDefinition[]): readonly Skill[];
@@ -135,8 +136,8 @@ export type SessionHost = {
   appendEntry(entry: SessionEntry): Promise<void>;
   redact<T>(value: T): T;
   appendMessage(message: Message, runId: string): Promise<void>;
-  autoCompact(runId: string, options: RunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void>;
-  autoCompactTurn(runId: string, options: RunOptions, signal: AbortSignal, turn: number): Promise<void>;
+  autoCompact(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void>;
+  autoCompactTurn(runId: string, options: ResolvedRunOptions, signal: AbortSignal, turn: number): Promise<void>;
   activeLoopHistory?: Message[];
   applyPendingSteers(runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean>;
   redactProviderRequest(request: ProviderRequest): ProviderRequest;
@@ -169,7 +170,7 @@ export function asSessionHost(session: unknown): SessionHost {
 export type RoundContext = {
   session: SessionHost;
   input: AgentInput;
-  options: RunOptions;
+  options: ResolvedRunOptions;
   runId: string;
   resumed: ActiveDurableRun | undefined;
   controller: AbortController;

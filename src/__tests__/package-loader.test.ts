@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, it } from "bun:test";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createSecretRedactor,
   createSlotDefaults,
@@ -28,6 +28,7 @@ import { agentRuntime } from "../agent-session/create-agent.js";
 import { loadPackages } from "../packages/loader.js";
 import { isValidVersion, parseRange, parseVersion, satisfies } from "../packages/semver.js";
 import { KERNEL_VERSION } from "../version.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 const SECRET = "sk-live-0123456789abcdef";
@@ -57,7 +58,7 @@ async function loadError(promise: Promise<unknown>, code: string): Promise<Packa
   return assert.fail(`expected PackageLoadError ${code}`);
 }
 
-function textProvider(): AIProvider {
+function textProvider(): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -194,7 +195,15 @@ describe("package loader", () => {
     let turn = 0;
     const agent = await createAgent({
       model: MODEL,
-      packages: [gate],
+      packages: [gate, providerPackage("test-provider", [{
+        id: "mock",
+        async *generate() {
+          turn += 1;
+          if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c1", "danger", {}) };
+          else yield providerTextDelta("done");
+          yield providerDone();
+        },
+      }])],
       tools: {
         add: [
           {
@@ -203,15 +212,6 @@ describe("package loader", () => {
             execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "danger", value: "ran" }),
           },
         ],
-      },
-      provider: {
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c1", "danger", {}) };
-          else yield providerTextDelta("done");
-          yield providerDone();
-        },
       },
     });
     const result = await (await agent.session()).run("go");
@@ -398,13 +398,12 @@ describe("package loader", () => {
     // Through createAgent the assignment is `AgentConfig.slots`.
     const agent = await createAgent({
       model: MODEL,
-      provider: textProvider(),
-      packages: [claim("@a/x"), claim("@b/y")],
+      packages: [claim("@a/x"), claim("@b/y"), providerPackage("test-provider", [textProvider()])],
       slots: { compaction: "@b/y" },
     });
     assert.equal(agentRuntime(agent).slots.ownerOf("compaction", "@b/y"), "@b/y");
     await assert.rejects(
-      () => createAgent({ model: MODEL, provider: textProvider(), packages: [claim("@a/x"), claim("@b/y")] }),
+      () => createAgent({ model: MODEL, packages: [claim("@a/x"), claim("@b/y"), providerPackage("test-provider", [textProvider()])] }),
       SlotConflictError,
     );
   });
@@ -435,14 +434,7 @@ describe("package loader", () => {
     let turn = 0;
     const agent = await createAgent({
       model: MODEL,
-      packages: [owner, audit],
-      tools: {
-        add: [
-          { name: "net", parameters: {}, execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "net", value: 1 }) },
-          { name: "local", parameters: {}, execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "local", value: 1 }) },
-        ],
-      },
-      provider: {
+      packages: [owner, audit, providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -452,6 +444,12 @@ describe("package loader", () => {
           } else yield providerTextDelta("verified");
           yield providerDone();
         },
+      }])],
+      tools: {
+        add: [
+          { name: "net", parameters: {}, execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "net", value: 1 }) },
+          { name: "local", parameters: {}, execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "local", value: 1 }) },
+        ],
       },
     });
     const result = await (await agent.session()).run("go");
@@ -465,12 +463,8 @@ describe("package loader", () => {
     const order: string[] = [];
     const agent = await createAgent({
       model: MODEL,
-      provider: textProvider(),
       hooks: (hooks) => hooks.on("run.input", (m) => (order.push("host"), m)),
-      packages: [
-        pkg("a", ({ hooks }) => hooks.on("run.input", (m) => (order.push("a"), m))),
-        pkg("b", ({ hooks }) => hooks.on("run.input", (m) => (order.push("b"), m))),
-      ],
+      packages: [pkg("a", ({ hooks }) => hooks.on("run.input", (m) => (order.push("a"), m))), pkg("b", ({ hooks }) => hooks.on("run.input", (m) => (order.push("b"), m))), providerPackage("test-provider", [textProvider()])],
     });
     await (await agent.session()).run("hi");
     assert.deepEqual(order, ["a", "b", "host"], "equal priority: packages in load order, then the host");
@@ -525,7 +519,7 @@ describe("package loader", () => {
     await loaded.dispose();
     assert.equal(order.length, 6, "a second dispose is a no-op");
 
-    const agent = await createAgent({ model: MODEL, provider: textProvider(), packages: [track("x")] });
+    const agent = await createAgent({ model: MODEL, packages: [track("x"), providerPackage("test-provider", [textProvider()])] });
     await agent.dispose();
     await agent.dispose();
     assert.deepEqual(agentRuntime(agent).hooks.registrations(), []);
@@ -566,8 +560,8 @@ describe("package loader", () => {
       hooks.on("run.input", (m) => (void state, m));
     });
     const instance = shared({});
-    const one = await createAgent({ model: MODEL, provider: textProvider(), packages: [instance] });
-    const two = await createAgent({ model: MODEL, provider: textProvider(), packages: [instance] });
+    const one = await createAgent({ model: MODEL, packages: [instance, providerPackage("test-provider", [textProvider()])] });
+    const two = await createAgent({ model: MODEL, packages: [instance, providerPackage("test-provider", [textProvider()])] });
     assert.equal(setups, 2);
     assert.notEqual(live[0], live[1]);
     await one.dispose();
@@ -707,8 +701,7 @@ describe("session context", () => {
       );
     const agent = await createAgent({
       model: MODEL,
-      provider: textProvider(),
-      packages: [probe("with-bg", ["background"]), probe("without-bg", undefined)],
+      packages: [probe("with-bg", ["background"]), probe("without-bg", undefined), providerPackage("test-provider", [textProvider()])],
       hooks: (hooks) =>
         hooks.on("turn.before", (_payload, context) => {
           outcomes.host = context.session?.id;

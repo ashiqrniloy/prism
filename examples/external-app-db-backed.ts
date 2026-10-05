@@ -1,34 +1,6 @@
-import {
-  type AgentEvent,
-  type AgentEventRecord,
-  createAgent,
-  createMockProvider,
-  createProviderResolver,
-  createSecretRedactor,
-  createSkillRegistry,
-  createToolRegistry,
-  type ModelConfig,
-  type PersistencePage,
-  type ProductionPersistenceStore,
-  providerDone,
-  registerContextSources,
-  providerTextDelta,
-  providerToolCall,
-  providerUsage,
-  type RunLedger,
-  type RunRecord,
-  SessionAppendConflictError,
-  type SessionAppendOptions,
-  type SessionBranchRead,
-  type SessionEntry,
-  type SessionStore,
-  type Skill,
-  type ToolCallRecord,
-  type ToolDefinition,
-  type ToolResult,
-  type UsageRecord,
-} from "@arnilo/prism";
-import { assertSessionStoreConforms } from "@arnilo/prism/testing/session-store-conformance";
+import { type AgentEvent, type AgentEventRecord, createAgent, createSecretRedactor, createSkillRegistry, createToolRegistry, type ModelConfig, type PersistencePage, type ProductionPersistenceStore, providerDone, registerContextSources, providerTextDelta, providerToolCall, providerUsage, type RunLedger, type RunRecord, SessionAppendConflictError, type SessionAppendOptions, type SessionBranchRead, type SessionEntry, type SessionStore, type Skill, type ToolCallRecord, type ToolDefinition, type ToolResult, type UsageRecord } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createMockProvider, storeConformance } from "@arnilo/prism/testing";
 
 // Phase 41 — End-to-end external-app example with a DB-backed adapter
 // reference mock.
@@ -237,7 +209,7 @@ export async function demo(): Promise<{
   credentialNeverLogged: boolean;
   conformancePassed: boolean;
 }> {
-  await assertSessionStoreConforms(createDbBackedReferenceStore(), { exerciseReadBranchPath: true });
+  await storeConformance(createDbBackedReferenceStore);
   const conformancePassed = true;
   const store = createDbBackedReferenceStore();
 
@@ -254,7 +226,7 @@ export async function demo(): Promise<{
 
   const agent = await createAgent({
     model,
-    providerSource: createProviderResolver([provider]),
+    packages: [providerPackage("example-provider", [provider])],
     instructions: "You are a concise assistant.",
     tools: { add: [saveNoteTool] },
     skills: { add: [summarizeSkill] },

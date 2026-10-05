@@ -4,7 +4,7 @@ import { describe, it } from "bun:test";
 import { createAgent } from "../agent-session/create-agent.js";
 import type { HookRegistrar } from "../hooks/index.js";
 import type { Session, Message, ProviderRequest, Skill } from "../contracts.js";
-import { providerDone, toolCallContent } from "../provider-events.js";
+import { providerDone, toolCallContent } from "../models/events.js";
 import { createLoadSkillTool } from "../skill-load.js";
 import { createSkillRegistry } from "../skills.js";
 import { withContextBlocks } from "../context-build.js";
@@ -13,6 +13,7 @@ import {
   runPrefixStabilityConformance,
   scorePrefixStability,
 } from "../testing/prefix-stability-conformance.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 type Host = PrefixStabilityConformanceOptions["host"];
 
@@ -340,8 +341,8 @@ async function captureFixture(hostConfig: Host, skills: readonly [Skill, Skill],
     ...hostConfig,
     skills: { add: registry.list(), disclosure },
     tools: { add: [...hostTools, createLoadSkillTool({ registry })] },
-    provider: {
-      id: "prefix-stability-fixture",
+    packages: [providerPackage("test-provider", [{
+      id: "mock",
       async *generate(request) {
         requests.push(request);
         const index = call;
@@ -353,7 +354,7 @@ async function captureFixture(hostConfig: Host, skills: readonly [Skill, Skill],
         }
         yield providerDone();
       },
-    },
+    }])],
   });
   const session = (await agent.session()) as Session & { readonly tailSegments: ReadonlyMap<string, Message> };
   const runOptions = { activeSkills: [skills[0].name, skills[1].name], limits: { maxToolRounds: 1 } } as const;

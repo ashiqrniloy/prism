@@ -1,4 +1,5 @@
-export { createEnvRefCredentialResolver, createSlotDefaults } from "./defaults.js";
+export { createEnvRefCredentialResolver } from "../credentials/index.js";
+export { createSlotDefaults } from "./defaults.js";
 export { createSlotRegistry, SLOT_NAMES } from "./registry.js";
 export {
   SlotConflictError,

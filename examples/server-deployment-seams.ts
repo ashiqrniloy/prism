@@ -1,4 +1,4 @@
-import { createAgent, createMemoryLeaseStore, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, createMemoryLeaseStore, providerDone, providerTextDelta } from "@arnilo/prism";
 import {
   createMemoryRateLimiter,
   createPrismDeploymentLease,
@@ -14,6 +14,7 @@ import {
   enqueueWorkflow,
   functionNode,
 } from "@arnilo/prism-core/runtime/workflows";
+import { mockProvider } from "@arnilo/prism/testing";
 
 /** Network-free deployment seam demo: health + drain + fair worker + operator queue. */
 export async function demo(): Promise<Record<string, unknown>> {
@@ -22,7 +23,7 @@ export async function demo(): Promise<Record<string, unknown>> {
   const ownership = { tenantId: "demo", userId: "ops" };
   const agent = await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: createMockProvider([providerTextDelta("deployed"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("deployed"), providerDone()]])],
   });
   const api = createPrismHandler({
     agents: { support: agent },

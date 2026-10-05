@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentIdentity, AIProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { AgentIdentity, ModelProvider, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { ModelRouterError } from "../errors.js";
 import { createModelRouter } from "../router.js";
 import type { ModelRouterDiagnostics } from "../types.js";
@@ -24,7 +24,7 @@ function model(providerId: string, modelId: string, cost?: { input?: number; out
   };
 }
 
-function mockProvider(id: string): AIProvider {
+function mockProvider(id: string): ModelProvider {
   return {
     id,
     async *generate(_request: ProviderRequest): AsyncIterable<ProviderEvent> {

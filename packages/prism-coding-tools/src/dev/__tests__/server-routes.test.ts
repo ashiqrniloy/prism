@@ -6,27 +6,17 @@
 
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import {
-  askEveryTool,
-  type AgentEventRecord,
-  createAgent,
-  createMemoryAgentEventSource,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  providerTextDelta,
-  toolCallContent,
-} from "@arnilo/prism";
+import { askEveryTool, type AgentEventRecord, createAgent, createMemoryAgentEventSource, createMemoryCheckpointStore, createMemorySessionStore, createSecretRedactor, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { createPrismDevInspector } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const OWNERSHIP = { tenantId: "local", userId: "local" } as const;
 
 async function simpleAgent(text = "done"): ReturnType<typeof createAgent> {
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta(text), providerDone()]),
+    packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
   });
 }
 
@@ -239,7 +229,7 @@ describe("inspector routes (plan 040 Task 2)", () => {
       hooks: askEveryTool(),
       id: "dev-inspector",
       model: { provider: "mock", model: "offline" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) {
@@ -250,7 +240,7 @@ describe("inspector routes (plan 040 Task 2)", () => {
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       slots: { store: createMemorySessionStore() },
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
       runState: { checkpoints, definitionRevision: "1" },

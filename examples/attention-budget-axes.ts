@@ -23,6 +23,7 @@ import {
   toolCallContent,
   type Usage,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /** The scenario: 1M window, 500k run input budget, 24 provider turns. */
 const contextWindow = 1_000_000;
@@ -65,7 +66,7 @@ const agent = await createAgent({
     keepLast,
     thinkingKeepTurns: 1,
   },
-  provider: {
+  packages: [providerPackage("test-provider", [{
     id: "mock",
     async *generate(request) {
       requests.push(request);
@@ -77,7 +78,7 @@ const agent = await createAgent({
       else yield providerTextDelta("investigation complete");
       yield providerDone(usage);
     },
-  },
+  }])],
 });
 
 const session = await agent.session({ id: "budget-axes-session", create: true });

@@ -4,7 +4,7 @@
 
 Provider conformance helpers are dependency-free assertions for provider package tests. They exercise normalized Prism `AIProvider` streams without live network or credentials.
 
-Exported from `@arnilo/prism/testing/provider-conformance`:
+Exported from `@arnilo/prism/provider-kit`:
 
 - `collectProviderEvents(provider, request)`
 - `assertProviderStreamConforms(options)`
@@ -17,6 +17,8 @@ Exported from `@arnilo/prism/testing/provider-conformance`:
 - `assertNoFetches(calls)`
 - `assertProviderOwnedHeadersWin(captured, options)`
 - `assertNoSecretLeak(events, secrets)`
+- `assertModelsListValid(provider)` and `assertAuthDescriptorsWellFormed(provider)`
+- `providerConformance(factory, options)`: the composed run (stream shape, abort, tool-call deltas, header ownership, secret leak, usage, `models()`, `auth`). The secret-leak and header-ownership checks always run.
 
 ## When to use it
 
@@ -51,7 +53,7 @@ All rows must retain bounded request/response fixtures, abort propagation, provi
 
 ## Modality conformance matrix (plan 061)
 
-One provider-neutral contract per modality, each with a capability flag, a typed error family, and an offline conformance runner from `@arnilo/prism/testing/provider-conformance`. Fake transports prove Prism mapping and typed-cap behavior only — never account entitlement or vendor availability.
+One provider-neutral contract per modality, each with a capability flag, a typed error family, and an offline conformance runner from `@arnilo/prism/provider-kit`. Fake transports prove Prism mapping and typed-cap behavior only — never account entitlement or vendor availability.
 
 | Contract / runner | Offline evidence (fake transport) | Live probe |
 | --- | --- | --- |
@@ -72,7 +74,7 @@ Failure/cancel terminal transitions for long-running contracts (video, batch) ar
 ## Inputs / request
 
 ```ts
-import { assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
+import { assertProviderStreamConforms } from "@arnilo/prism/provider-kit";
 
 await assertProviderStreamConforms({
   provider,
@@ -113,7 +115,7 @@ Helpers accept normal `AIProvider`, `ProviderRequest`, `ProviderEvent`, `Usage`,
 Tool-call delta reconstruction example:
 
 ```ts
-import { assertToolCallDeltasReconstruct } from "@arnilo/prism/testing/provider-conformance";
+import { assertToolCallDeltasReconstruct } from "@arnilo/prism/provider-kit";
 
 assertToolCallDeltasReconstruct([
   { type: "tool_call_delta", index: 0, id: "call_1", name: "lookup", argumentsText: "{\"q\":" },
@@ -125,7 +127,7 @@ assertToolCallDeltasReconstruct([
 Content-preservation example:
 
 ```ts
-import { assertSerializedRequestCoversContent } from "@arnilo/prism/testing/provider-conformance";
+import { assertSerializedRequestCoversContent } from "@arnilo/prism/provider-kit";
 
 const request = {
   model: { provider: "demo", model: "demo-model" },
@@ -162,7 +164,7 @@ Pass `unsupported` only for modalities the provider deliberately omits from the 
 Protected header-ownership example:
 
 ```ts
-import { assertProviderOwnedHeadersWin } from "@arnilo/prism/testing/provider-conformance";
+import { assertProviderOwnedHeadersWin } from "@arnilo/prism/provider-kit";
 
 assertProviderOwnedHeadersWin(capturedHeaders, {
   owned: { authorization: "Bearer provider-key", "content-type": "application/json" },
@@ -174,7 +176,7 @@ assertProviderOwnedHeadersWin(capturedHeaders, {
 
 ```ts
 import { createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
-import { assertProviderStreamConforms } from "@arnilo/prism/testing/provider-conformance";
+import { assertProviderStreamConforms } from "@arnilo/prism/provider-kit";
 
 await assertProviderStreamConforms({
   provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
@@ -211,7 +213,7 @@ Canonical contract: [Thinking and reasoning](thinking-and-reasoning.md).
 
 ## AI SDK adapter checklist
 
-`@arnilo/prism-providers/ai-sdk` is a host-owned `LanguageModelV4` bridge. It does not participate in the discovery or thinking/reasoning checklists above. Cover instead:
+`@arnilo/prism-provider-ai-sdk` is a host-owned `LanguageModelV4` bridge. It does not participate in the discovery or thinking/reasoning checklists above. Cover instead:
 
 1. **No catalog / no setup fetch** — package exports no `list*Models()`; `createAiSdkProvider` wraps a host model only.
 2. **Version + specification gate** — exact `@ai-sdk/provider` matrix version is verified at setup; rejects version skew, non-v4 models (`specificationVersion !== "v4"`), or missing `doStream`.
@@ -249,7 +251,7 @@ The helpers are a testing subpath only. Provider packages can use them with thei
 - Use fake credentials only in fixtures.
 - The helpers collect one stream into memory; keep conformance fixtures small.
 - Redaction remains the provider/runtime boundary's job. Use `assertNoSecretLeak()` with known fake secrets to catch regressions, not as a general secret scanner.
-- First-party providers read SSE streams and HTTP error bodies through bounded helpers from `@arnilo/prism/providers/transport` (`readSseEvents` / `readSseData`, `readBoundedResponseText`). Oversized remote input terminates with `ProviderTransportError` instead of unbounded buffering.
+- First-party providers read SSE streams and HTTP error bodies through bounded helpers from `@arnilo/prism/provider-kit` (`readSseEvents` / `readSseData`, `readBoundedResponseText`). Oversized remote input terminates with `ProviderTransportError` instead of unbounded buffering.
 
 ## Related APIs
 

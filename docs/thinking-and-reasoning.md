@@ -79,23 +79,23 @@ Core maps only shapes shared by ≥2 packages (or an explicit no-op). Unique kno
 
 | Package | Family / behavior |
 | --- | --- |
-| `@arnilo/prism-providers/openai` | `openai_reasoning`; per-family effort tables, Responses-side clamp, `summary` preserved |
-| `@arnilo/prism-providers/openrouter` | `openai_reasoning`; API-derived `supported_efforts` levels; `preserveThinking` replays as body `reasoning` / `reasoning_content` |
-| `@arnilo/prism-providers/anthropic` | `output_config_effort`; generation-aware `adaptive`/legacy thinking |
-| `@arnilo/prism-providers/google` | `google`; 3.x `thinkingLevel` sets, 2.5 budget ranges |
-| `@arnilo/prism-providers/zai` | `reasoning_effort` (GLM-5.2/5.3 snap tables) + `thinking_type` toggle; Preserved Thinking via `reasoning_content` |
-| `@arnilo/prism-providers/kimi` | K3: `reasoning_effort` (`low/high/max`); K2.x: `thinking_type` |
-| `@arnilo/prism-providers/deepseek` | `reasoning_effort` (`low/high/max`) + `thinking_type` toggle; thinking on by default; tool turns must replay `reasoning_content` or the API returns 400 |
-| `@arnilo/prism-providers/xai` | `reasoning_effort` with declared per-model ladders; `reasoning_content` replay still required |
-| `@arnilo/prism-providers/clinepass` | `reasoning_effort` through per-model slot maps (`compat.thinkingLevelMap`); GLM `xhigh` passthrough, never `max` |
-| `@arnilo/prism-providers/neuralwatt` | `reasoning_effort` (`low/medium/high/max`); budgets + preserve/clear thinking stay package-local |
-| `@arnilo/prism-providers/hyper` | `reasoning_effort` derived from live `effort_levels`; snap instead of drop; Anthropic route emits `output_config.effort` |
-| `@arnilo/prism-providers/commandcode` / `@arnilo/prism-providers/opencode-go` | Gateway level tables (`claude-*` → `output_config_effort`, `gpt-5.6*` → `openai_reasoning`, K3/DeepSeek/GLM → `reasoning_effort`, K2.x/MiniMax/Qwen → `thinking_type`) |
-| `@arnilo/prism-providers/alibaba` | `thinking_type` mapped onto Qwen `enable_thinking` (toggle, no effort levels) |
-| `@arnilo/prism-providers/ollama` | `reasoning_effort`; `gpt-oss*` declares `low/medium/high`; native `think` field never mixed in |
-| `@arnilo/prism-providers/azure` / `.../vertex` / `.../bedrock` (compatible route) | OpenAI-compat sanitized forwarder (`reasoning_effort` / `reasoning` object), snapped to declared levels |
-| `@arnilo/prism-providers/bedrock` (native `converse` route) | Anthropic family: `additionalModelRequestFields.thinking` (`enabled`/`disabled`/`adaptive`, default budget injected); OpenAI family: `reasoning_effort` snapped to declared levels |
-| `@arnilo/prism-providers/ai-sdk` | `noop` — host `LanguageModelV4` owns reasoning settings |
+| `@arnilo/prism-provider-openai` (formerly `@arnilo/prism-providers/openai`) | `openai_reasoning`; per-family effort tables, Responses-side clamp, `summary` preserved |
+| `@arnilo/prism-provider-openrouter` (formerly `@arnilo/prism-providers/openrouter`) | `openai_reasoning`; API-derived `supported_efforts` levels; `preserveThinking` replays as body `reasoning` / `reasoning_content` |
+| `@arnilo/prism-provider-anthropic` (formerly `@arnilo/prism-providers/anthropic`) | `output_config_effort`; generation-aware `adaptive`/legacy thinking |
+| `@arnilo/prism-provider-google` | `google`; 3.x `thinkingLevel` sets, 2.5 budget ranges |
+| `@arnilo/prism-provider-zai` (formerly `@arnilo/prism-providers/zai`) | `reasoning_effort` (GLM-5.2/5.3 snap tables) + `thinking_type` toggle; Preserved Thinking via `reasoning_content` |
+| `@arnilo/prism-provider-kimi` (formerly `@arnilo/prism-providers/kimi`) | K3: `reasoning_effort` (`low/high/max`); K2.x: `thinking_type` |
+| `@arnilo/prism-provider-deepseek` (formerly `@arnilo/prism-providers/deepseek`) | `reasoning_effort` (`low/high/max`) + `thinking_type` toggle; thinking on by default; tool turns must replay `reasoning_content` or the API returns 400 |
+| `@arnilo/prism-provider-xai` (formerly `@arnilo/prism-providers/xai`) | `reasoning_effort` with declared per-model ladders; `reasoning_content` replay still required |
+| `@arnilo/prism-provider-clinepass` (formerly `@arnilo/prism-providers/clinepass`) | `reasoning_effort` through per-model slot maps (`compat.thinkingLevelMap`); GLM `xhigh` passthrough, never `max` |
+| `@arnilo/prism-provider-neuralwatt` (formerly `@arnilo/prism-providers/neuralwatt`) | `reasoning_effort` (`low/medium/high/max`); budgets + preserve/clear thinking stay package-local |
+| `@arnilo/prism-provider-hyper` | `reasoning_effort` derived from live `effort_levels`; snap instead of drop; Anthropic route emits `output_config.effort` |
+| `@arnilo/prism-provider-commandcode` / `@arnilo/prism-provider-opencode-go` (formerly `@arnilo/prism-providers/opencode-go`) | Gateway level tables (`claude-*` → `output_config_effort`, `gpt-5.6*` → `openai_reasoning`, K3/DeepSeek/GLM → `reasoning_effort`, K2.x/MiniMax/Qwen → `thinking_type`) |
+| `@arnilo/prism-provider-alibaba` (formerly `@arnilo/prism-providers/alibaba`) | `thinking_type` mapped onto Qwen `enable_thinking` (toggle, no effort levels) |
+| `@arnilo/prism-provider-ollama` (formerly `@arnilo/prism-providers/ollama`) | `reasoning_effort`; `gpt-oss*` declares `low/medium/high`; native `think` field never mixed in |
+| `@arnilo/prism-provider-azure` / `.../vertex` / `.../bedrock` (compatible route) | OpenAI-compat sanitized forwarder (`reasoning_effort` / `reasoning` object), snapped to declared levels |
+| `@arnilo/prism-provider-bedrock` (native `converse` route) | Anthropic family: `additionalModelRequestFields.thinking` (`enabled`/`disabled`/`adaptive`, default budget injected); OpenAI family: `reasoning_effort` snapped to declared levels |
+| `@arnilo/prism-provider-ai-sdk` (formerly `@arnilo/prism-providers/ai-sdk`) | `noop` — host `LanguageModelV4` owns reasoning settings |
 
 ## Declared levels and snapping
 

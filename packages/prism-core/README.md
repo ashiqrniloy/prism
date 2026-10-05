@@ -29,9 +29,10 @@ bun add @nats-io/jetstream @nats-io/transport-node
 - `@arnilo/prism-core/runtime/workflows`: Multi-step DAG workflow coordinator, saga recovery, checkpoints, and loop nodes.
 
 ### Sessions
-- `@arnilo/prism-core/sessions/codecs`: Checkpoint, cursor, feedback, and search serialization codecs.
-- `@arnilo/prism-core/sessions/sqlite`: SQLite session store, leases, lifecycle, and schema migrations (`bun:sqlite`, built in).
-- `@arnilo/prism-core/sessions/postgres`: PostgreSQL session store, event source, and migrations (`pg` peer).
+- The durable session stores moved out of this package in plan 153: install `@arnilo/prism-store-sqlite`
+  (which depends on `@arnilo/prism-store-codecs`) or `@arnilo/prism-store-postgres` for the SQLite and
+  PostgreSQL stores, their leases, lifecycle, event sources, and schema migrations. This package keeps the
+  `pg` peer for `enterprise/postgres` and the prompt registry, and never names a store driver itself.
 - `@arnilo/prism-core/sessions/nats`: NATS JetStream distributed event source (`@nats-io/*` peer).
 
 ### Governance
@@ -42,7 +43,7 @@ bun add @nats-io/jetstream @nats-io/transport-node
 - `@arnilo/prism-core/governance/observability`: OpenTelemetry instrumentation and event tracing.
 
 ### Credentials & Integrations
-- `@arnilo/prism-core/credentials/node`: Keyring-backed encrypted credential store, scrypt envelope encryption, OAuth2 PKCE providers, and OIDC identity verification.
+- `@arnilo/prism-core/credentials/node`: OAuth2 PKCE providers, workload scope maps, the Microsoft 365 / Google Workspace providers, the work-token helper, and OIDC identity verification. The credential stores (OS keyring, encrypted file) now ship in `@arnilo/prism-credentials-keyring`.
 - `@arnilo/prism-core/enterprise/postgres`: Unified multi-tenant enterprise PostgreSQL state (approvals, evaluations, model-router, policy, tool effects, work idempotency).
 - `@arnilo/prism-core/validation/json-schema`: Ajv-backed JSON Schema tool argument validation.
 

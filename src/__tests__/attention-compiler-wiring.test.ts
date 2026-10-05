@@ -5,7 +5,7 @@ import { describe, it } from "bun:test";
 import { asSessionHost } from "../agent-session/session/types.js";
 import {
   type AgentConfig,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   withContextBlocks,
   estimateAssemblyTokens,
@@ -21,6 +21,7 @@ import {
   toolCallContent,
 } from "../index.js";
 import { failedRun } from "./run-result-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const model: ModelConfig = { provider: "mock", model: "demo" };
 /** 2000 window − 0 output − 1024 default reserve → input cap 976. */
@@ -35,7 +36,7 @@ const bigTool: ToolDefinition = {
 };
 
 /** First provider call asks for the tool, every later call answers in text. */
-function toolThenReply(): { provider: AIProvider; requests: ProviderRequest[] } {
+function toolThenReply(): { provider: ModelProvider; requests: ProviderRequest[] } {
   const requests: ProviderRequest[] = [];
   return {
     requests,
@@ -51,8 +52,8 @@ function toolThenReply(): { provider: AIProvider; requests: ProviderRequest[] } 
   };
 }
 
-const agentWith = async (provider: AIProvider, config: Partial<AgentConfig> = {}) =>
-  await createAgent({ model, provider, tools: { add: [bigTool] }, ...config });
+const agentWith = async (provider: ModelProvider, config: Partial<AgentConfig> = {}) =>
+  await createAgent({ model, packages: [providerPackage("test-provider", [provider])], tools: { add: [bigTool] }, ...config });
 
 function requestAt(requests: readonly ProviderRequest[], index: number): ProviderRequest {
   const request = requests[index];
@@ -199,16 +200,16 @@ describe("attentionCompiler session wiring", () => {
   it("enables compilation through an AgentDefinition and leaves scope alone", async () => {
     const definition = await resolveAgentDefinition(
       { name: "research", model: cappedModel, attentionCompiler: { maxInputTokens: 120, keepLast: 0 } },
-      { providerSource: () => undefined },
+      {},
     );
     assert.deepEqual(definition.config.attentionCompiler, { maxInputTokens: 120, keepLast: 0 });
 
-    const plain = await resolveAgentDefinition({ name: "other", model: cappedModel }, { providerSource: () => undefined });
+    const plain = await resolveAgentDefinition({ name: "other", model: cappedModel }, {});
     assert.equal(plain.config.attentionCompiler, undefined, "the field is per definition, not global");
 
     const scoped = await resolveAgentDefinition(
       { name: "research", model: cappedModel, attentionCompiler: true },
-      { providerSource: () => undefined, overrides: { ownership: { tenantId: "t1" } } },
+      { overrides: { ownership: { tenantId: "t1" } } },
     );
     assert.deepEqual(scoped.config.ownership, { tenantId: "t1" }, "copying the field leaves ownership untouched");
   });
@@ -292,7 +293,7 @@ describe("attentionCompiler session wiring", () => {
   });
 
   it("owns one lazily created frontier per session", async () => {
-    const agent = await createAgent({ model, provider: toolThenReply().provider });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [toolThenReply().provider])] });
     const host = asSessionHost(await agent.session({ id: "s", create: true }));
     const first = host.attentionStickyFor();
     assert.equal(host.attentionStickyFor(), first, "the same session reuses its frontier across turns and runs");

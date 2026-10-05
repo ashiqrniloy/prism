@@ -1,0 +1,11 @@
+DEFAULT_LAYA_BASE_URL	export declare const DEFAULT_LAYA_BASE_URL = "http://localhost:8000"
+LAYA_API_KEY_ENV	export declare const LAYA_API_KEY_ENV = "LAYA_API_KEY"
+LAYA_DEFAULT_API_KEY_REF	export declare const LAYA_DEFAULT_API_KEY_REF = "env:LAYA_API_KEY"
+createLayaProvider	export declare function createLayaProvider(options?: LayaProviderOptions): ModelProvider
+default	export default
+defineLayaModel	export declare function defineLayaModel(config: LayaModelConfig): ModelConfig
+laya	export declare function laya(options?: LayaProviderPackageOptions & LayaProviderConfig): PackageInstance
+layaBaseUrl	export declare function layaBaseUrl(options?:
+layaModels	export declare const layaModels: readonly ModelConfig[]
+type LayaModelConfig	export { DEFAULT_LAYA_BASE_URL, defineLayaModel, LAYA_API_KEY_ENV, type LayaModelConfig, layaBaseUrl, layaModels, } from "./models.js"
+type LayaProviderOptions	export { createLayaProvider, type LayaProviderOptions } from "./provider.js"

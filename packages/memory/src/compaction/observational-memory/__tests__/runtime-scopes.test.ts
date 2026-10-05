@@ -1,16 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  toolCallContent,
-  type ProviderEvent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, toolCallContent, type ProviderEvent } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
 import {
   createObservationalMemoryRuntime,
@@ -20,6 +10,7 @@ import {
   OBSERVATIONS_DROPPED,
   WORK_SCOPE_BOUND,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
@@ -27,7 +18,7 @@ const observationContent = "Long observation with many useful words";
 
 function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]) {
   let calls = 0;
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "memory",
     async *generate() {
       yield* batches[calls++] ?? [providerDone()];
@@ -38,7 +29,7 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]) {
 
 async function sessionWithMessage() {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const session = await agent.session({ id: "s1", create: true });
   await session.run("hello world");
   return { store, session, sourceId: (await session.entries())[0]!.id };

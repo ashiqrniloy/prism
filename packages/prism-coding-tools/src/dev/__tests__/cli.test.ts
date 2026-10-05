@@ -23,11 +23,12 @@ function scratchProject(): { cwd: string; entry: string } {
   const entry = join(cwd, "dist", "agent.js");
   writeFileSync(
     entry,
-    `import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+    `import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 export function createAppAgent() {
   return createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("Hi from dev"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("Hi from dev"), providerDone()]])],
   });
 }
 `,

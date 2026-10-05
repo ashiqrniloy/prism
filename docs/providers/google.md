@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/google` is the first-party Gemini `generateContent` / `streamGenerateContent` provider for Prism (`POST /v1beta/models/{model}:streamGenerateContent?alt=sse`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Uses native `fetch` + SSE — no `@google/genai` runtime dependency.
+`@arnilo/prism-provider-google` is the first-party Gemini `generateContent` / `streamGenerateContent` provider for Prism (`POST /v1beta/models/{model}:streamGenerateContent?alt=sse`). Setup is side-effect-free: no network, env scan, or keychain lookup during import/setup. Uses native `fetch` + SSE — no `@google/genai` runtime dependency.
 
 ## When to use it
 
@@ -13,28 +13,31 @@ Do **not** use for Vertex enterprise identity (deferred to 0.0.13+), as a substi
 ## Inputs / request
 
 ```ts
-import {
-  createGoogleProviderPackage,
-  createGoogleGenerateContentProvider,
-  listGoogleModels,
-  defineGoogleModel,
-} from "@arnilo/prism-providers/google";
+import google from "@arnilo/prism-provider-google";
 
-createGoogleProviderPackage(options?: GoogleProviderPackageOptions): ProviderPackage
-createGoogleGenerateContentProvider(options?): AIProvider
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+google(options?: GoogleProviderPackageOptions & GoogleProviderConfig = {}): PackageInstance
+
+// Named exports.
+createGoogleGenerateContentProvider(options?: GoogleGenerateContentProviderOptions): ModelProvider
 listGoogleModels(options?: ListGoogleModelsOptions): Promise<ModelConfig[]>
+defineGoogleModel(config: GoogleModelConfig): ModelConfig
+createGoogleModelDiscovery(options): ModelDiscovery
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Host-owned Google/Gemini API key (late-bound). |
-| `fetch` | `typeof fetch` | Optional fetch for tests/hosts. |
-| `baseUrl` | `string` | Override default Gemini REST base. |
-| `id` | `string` | Provider id (default `google`). |
-| `userAgent` | `string` | Optional User-Agent. |
-| `models` | `readonly ModelConfig[]` | Override featured offline models. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:GEMINI_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Gemini API base; defaults to `https://generativelanguage.googleapis.com/v1beta`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
 
-Featured offline aliases include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, and `gemini-3.5-flash` (see package README for the live curated list). Caller-gated discovery: `listGoogleModels()` — never during setup. Model ids may arrive prefixed with `models/`; Prism strips the prefix.
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `google`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+| `userAgent` | string | Sent as `user-agent` on every request (provider-owned). |
+
+Featured offline aliases include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, and `gemini-3.5-flash` (see the package README for the live curated list). Model ids may arrive prefixed with `models/`; Prism strips the prefix. `models()` returns the configured `models` array when set; otherwise it calls `listGoogleModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 ## Outputs / response / events
 
@@ -57,17 +60,22 @@ Featured offline aliases include `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2
 ## Implementation example
 
 ```ts
-import { createGoogleProviderPackage, listGoogleModels } from "@arnilo/prism-providers/google";
+import { createAgent } from "@arnilo/prism";
+import google from "@arnilo/prism-provider-google";
 
-api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey }));
+const agent = await createAgent({
+  model: { provider: "google", model: "gemini-2.5-pro" },
+  packages: [google({ apiKey: "env:GEMINI_API_KEY" })],
+});
 
-const models = await listGoogleModels({ apiKey: hostKey });
-api.registerProviderPackage(createGoogleProviderPackage({ apiKey: hostKey, models }));
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
 
-- Register via `defineProviderPackage` / host registries; no package auto-discovery.
+- Register by listing the package in `createAgent({ packages: [...] })`; there is no auto-discovery.
+- The package formerly exported `createGoogleProviderPackage`; that helper is retired — the package now ships the default package export plus the `google(...)` factory.
 - AI SDK remains an escape hatch, not the primary Google path.
 - Live smoke: `PRISM_LIVE_PROVIDER_TESTS=1` + `GOOGLE_API_KEY` or `GEMINI_API_KEY`.
 - Vertex / enterprise identity stays out of 0.0.11.
@@ -90,7 +98,7 @@ See [Provider request policies](../provider-request-policies.md).
 - No network during import/setup/default tests; credentials host-owned and late-bound.
 - Provider-owned auth headers cannot be overridden by caller headers.
 - Media bounds reuse shared provider media helpers; tool args arrive complete per chunk (no partial JSON reconstruction required).
-- Offline conformance: `@arnilo/prism/testing/provider-conformance`.
+- Offline conformance: `@arnilo/prism/provider-kit`.
 
 ## Thinking and reasoning
 
@@ -102,4 +110,4 @@ Google models route through the `google` family: the adapter merges `compat.thin
 - [Provider packages](../provider-packages.md): package setup + discovery contract.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable thinking helpers.
 - [Provider conformance](../provider-conformance.md): network-free assertions.
-- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)
+- Package README: [`@arnilo/prism-provider-google`](../../packages/providers/google/README.md)

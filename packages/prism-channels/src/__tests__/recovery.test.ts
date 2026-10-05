@@ -8,7 +8,7 @@ import { describe, it } from "bun:test";
 import {
   type Agent,
   type AgentIdentity,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemoryCheckpointStore,
   createMemoryLeaseStore,
@@ -31,6 +31,7 @@ import type {
   MessagingRuntime,
   MessagingRuntimeOptions,
 } from "../types.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const CONNECTION = "tg-1";
 const CHAT = "chat-1";
@@ -77,7 +78,7 @@ async function waitFor(check: () => boolean | Promise<boolean>, label: string): 
   throw new Error(`Timed out waiting for ${label}`);
 }
 
-function textProvider(calls: { count: number }, text: (turn: number) => string): AIProvider {
+function textProvider(calls: { count: number }, text: (turn: number) => string): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -89,7 +90,7 @@ function textProvider(calls: { count: number }, text: (turn: number) => string):
 }
 
 /** Provider that runs until aborted, standing in for a process that dies mid-run. */
-function hangingProvider(calls: { count: number }): AIProvider {
+function hangingProvider(calls: { count: number }): ModelProvider {
   return {
     id: "mock",
     async *generate(request) {
@@ -117,8 +118,8 @@ function trackingStore(ids: Set<string>): SessionStore {
   };
 }
 
-async function agentWith(provider: AIProvider, store: SessionStore = createMemorySessionStore()): Promise<Agent> {
-  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, provider, slots: { store } });
+async function agentWith(provider: ModelProvider, store: SessionStore = createMemorySessionStore()): Promise<Agent> {
+  return await createAgent({ id: "channel-agent", model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], slots: { store } });
 }
 
 interface Harness {
@@ -141,7 +142,7 @@ function harness(options: Partial<MessagingRuntimeOptions> & { agent: Agent; aut
 }
 
 /** One checkpoint store shared by two runtimes, the way a restart shares a database. */
-function durableWorld(provider: AIProvider, ids: Set<string>, leaseStore?: boolean) {
+function durableWorld(provider: ModelProvider, ids: Set<string>, leaseStore?: boolean) {
   const checkpoints = createMemoryCheckpointStore();
   const store = trackingStore(ids);
   const shared: Partial<MessagingRuntimeOptions> = {
@@ -430,7 +431,7 @@ describe("plan 079 channel durable recovery", () => {
     const leases = createMemoryLeaseStore();
     const store = trackingStore(ids);
     const gate = { resolve: (): void => undefined };
-    const gated: AIProvider = {
+    const gated: ModelProvider = {
       id: "mock",
       async *generate() {
         calls.count += 1;

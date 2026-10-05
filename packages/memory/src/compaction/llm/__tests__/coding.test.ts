@@ -1,21 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import {
-  type AgentEvent,
-  type ContentBlock,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  type ProviderRequest,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  type SessionEntry,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type AgentEvent, type ContentBlock, createAgent, createMemorySessionStore, createSessionEntry, type ProviderRequest, providerDone, providerError, providerTextDelta, type SessionEntry, toolCallContent } from "@arnilo/prism";
 import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
 import { createCodingCompactor } from "../index.js";
+import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "summary" };
 const timestamp = "2026-01-01T00:00:00.000Z";
@@ -119,7 +107,7 @@ test("coding_compaction_preset_redacts runtime output and appends nothing on pro
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       slots: {
         compaction: createCodingCompactor({
           provider: createMockProvider([providerTextDelta(`summary ${secret}`), providerDone()]),
@@ -154,7 +142,7 @@ test("coding_compaction_appends_nothing_when_the_summary_provider_fails", async 
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       slots: {
         store,
         compaction: createCodingCompactor({

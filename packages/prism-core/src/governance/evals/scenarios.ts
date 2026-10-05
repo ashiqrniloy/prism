@@ -1,6 +1,7 @@
 import type {
   Agent,
   AgentConfig,
+  ResolvedAgentConfig,
   RunResult,
   Session,
   AgentSessionConfig,
@@ -260,7 +261,7 @@ function failStoreRun(session: Session): Session {
  */
 export async function wrapAgentWithFailureInjection(agent: Agent, injection: FailureInjectionOptions): Promise<Agent> {
   const deny = new Set(injection.denyTools ?? []);
-  const config: AgentConfig = {
+  const config: ResolvedAgentConfig = {
     ...agent.config,
     tools: wrapTools(agent.config.tools, deny, injection.unknownEffect === true),
   };

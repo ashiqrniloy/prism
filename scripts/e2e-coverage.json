@@ -151,9 +151,11 @@
       "./testing": {
         "suites": [
           "scripts/e2e-full-surface.test.mjs",
+          "src/__tests__/conformance-helpers.test.ts",
           "src/__tests__/hook-catalog-coverage.test.ts",
           "src/__tests__/hook-invariants.test.ts",
-          "src/__tests__/package-conformance.test.ts"
+          "src/__tests__/package-conformance.test.ts",
+          "src/__tests__/session-index.test.ts"
         ],
         "mode": ""
       },
@@ -176,14 +178,6 @@
         "suites": [
           "scripts/e2e-full-surface.test.mjs",
           "src/__tests__/state-concurrency-conformance.test.ts"
-        ],
-        "mode": ""
-      },
-      "./testing/session-store-conformance": {
-        "suites": [
-          "scripts/e2e-full-surface.test.mjs",
-          "src/__tests__/conformance-helpers.test.ts",
-          "src/__tests__/session-index.test.ts"
         ],
         "mode": ""
       },
@@ -258,13 +252,6 @@
           "src/__tests__/contribution-security-boundaries.test.ts",
           "src/__tests__/settings-security.test.ts",
           "src/__tests__/system-project-prompts.test.ts"
-        ],
-        "mode": ""
-      },
-      "./node/session-store-jsonl": {
-        "suites": [
-          "scripts/e2e-full-surface.test.mjs",
-          "src/__tests__/node-session-store-jsonl.test.ts"
         ],
         "mode": ""
       },
@@ -796,33 +783,6 @@
         ],
         "mode": ""
       },
-      "./sessions/codecs": {
-        "suites": [
-          "packages/prism-core/src/sessions/codecs/__tests__/parity.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
-      "./sessions/sqlite": {
-        "suites": [
-          "packages/prism-core/src/sessions/sqlite/__tests__/lifecycle.test.ts",
-          "packages/prism-core/src/sessions/sqlite/__tests__/sqlite-persistence.test.ts",
-          "packages/prism-core/src/sessions/sqlite/__tests__/state-concurrency-conformance.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
-      "./sessions/postgres": {
-        "suites": [
-          "packages/prism-core/src/sessions/postgres/__tests__/event-source.integration.test.ts",
-          "packages/prism-core/src/sessions/postgres/__tests__/postgres-integration.test.ts",
-          "packages/prism-core/src/sessions/postgres/__tests__/postgres-persistence.test.ts",
-          "packages/prism-core/src/sessions/postgres/__tests__/root-exports.test.ts",
-          "packages/prism-core/src/sessions/postgres/__tests__/state-concurrency-conformance.integration.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
-        ],
-        "mode": ""
-      },
       "./sessions/nats": {
         "suites": [
           "packages/prism-core/src/sessions/nats/__tests__/event-source.test.ts",
@@ -1218,6 +1178,52 @@
           "examples/prism-code-headless.ts"
         ],
         "mode": ""
+      }
+    },
+    "@arnilo/prism-store-jsonl": {
+      ".": {
+        "suites": [
+          "packages/stores/jsonl/src/__tests__/jsonl-store.test.ts",
+          "packages/stores/jsonl/src/__tests__/package.test.ts",
+          "packages/stores/jsonl/src/__tests__/fixtures.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-store-codecs": {
+      ".": {
+        "suites": [
+          "packages/stores/codecs/src/__tests__/parity.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-store-sqlite": {
+      ".": {
+        "suites": [
+          "packages/stores/sqlite/src/__tests__/lifecycle.test.ts",
+          "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
+          "packages/stores/sqlite/src/__tests__/state-concurrency-conformance.test.ts",
+          "scripts/e2e-full-surface.test.mjs",
+          "examples/sqlite-resume.ts",
+          "examples/durable-approval.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-store-postgres": {
+      ".": {
+        "suites": [
+          "packages/stores/postgres/src/__tests__/event-source.integration.test.ts",
+          "packages/stores/postgres/src/__tests__/package.test.ts",
+          "packages/stores/postgres/src/__tests__/postgres-integration.test.ts",
+          "packages/stores/postgres/src/__tests__/postgres-persistence.test.ts",
+          "packages/stores/postgres/src/__tests__/root-exports.test.ts",
+          "packages/stores/postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
+          "scripts/e2e-full-surface.test.mjs"
+        ]
       }
     }
   }

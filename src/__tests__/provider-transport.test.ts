@@ -16,7 +16,7 @@ import {
   readSseData,
   readSseEvents,
   tryParseJsonObjectArguments,
-} from "../providers/transport.js";
+} from "../provider-kit/transport.js";
 
 function stream(chunks: readonly (string | Uint8Array)[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();

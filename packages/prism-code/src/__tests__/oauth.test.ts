@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { OAuthProvider } from "@arnilo/prism";
-import { createFileCredentialStore } from "@arnilo/prism-core/credentials/node";
+import { createFileCredentialStore } from "@arnilo/prism-credentials-keyring";
 import {
   createOAuthTokenSource,
   describeProviderCredentialStatus,

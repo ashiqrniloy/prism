@@ -26,7 +26,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "bun:test";
 import { createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
-import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { Pool } from "pg";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;

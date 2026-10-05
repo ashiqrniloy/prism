@@ -21,6 +21,7 @@ import {
   toolCallContent,
 } from "../../dist/index.js";
 import { createAgUiEventMapper } from "../../packages/ag-ui/dist/index.js";
+import { providerPackage } from "../../dist/provider-kit/index.js";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
@@ -80,7 +81,7 @@ async function measureDecisionApply() {
       id: "bench-decision",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: parallelProvider(PENDING),
+      packages: [providerPackage("test-provider", [parallelProvider(PENDING)])],
       tools: [
         {
           name: "write",
@@ -120,7 +121,7 @@ async function measureStickyMatch() {
       id: "bench-sticky",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -137,7 +138,7 @@ async function measureStickyMatch() {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: [
         {
           name: "write",
@@ -176,7 +177,7 @@ async function measureSnapshot() {
       id: "bench-snap",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      provider: parallelProvider(1),
+      packages: [providerPackage("test-provider", [parallelProvider(1)])],
       slots: {
         loop: {
           name: "fat",

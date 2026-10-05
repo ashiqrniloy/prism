@@ -3,15 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMockProvider,
-  providerDone,
-  providerTextDelta,
-  providerToolCallDelta,
-  type ToolDefinition,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, providerDone, providerTextDelta, providerToolCallDelta, type ToolDefinition } from "@arnilo/prism";
 import {
   type CommandHookHandler,
   type HooksJsonConfig,
@@ -20,6 +12,8 @@ import {
   hookCommandHash,
   hooksJson,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 async function until(predicate: () => boolean, what: string): Promise<void> {
   for (let attempt = 0; attempt < 80 && !predicate(); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 25));
@@ -61,7 +55,7 @@ async function toolAgent(options: {
   readonly instructionInjectors?: unknown;
   readonly stopHooks?: unknown;
 }) {
-  const provider: AIProvider = {
+  const provider: ModelProvider = {
     id: "mock",
     async *generate(request) {
       options.requests.push(request);
@@ -82,11 +76,10 @@ async function toolAgent(options: {
   };
   return await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider,
+    packages: [providerPackage("test-provider", [provider]), ...(options.hooks ? [options.hooks] : [])],
     tools: { add: [write] },
     ...(options.middleware ? { middleware: options.middleware as never } : {}),
     ...(options.guardrails ? { guardrails: options.guardrails as never } : {}),
-    ...(options.hooks ? { packages: [options.hooks] } : {}),
     ...(options.instructionInjectors ? { instructionInjectors: options.instructionInjectors as never } : {}),
     ...(options.stopHooks ? { stopHooks: options.stopHooks as never } : {}),
   });
@@ -193,15 +186,14 @@ describe("compileFixture: Stop", () => {
     let turns = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [activated.hooks, providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turns += 1;
           yield providerTextDelta(`turn ${turns}`);
           yield providerDone();
         },
-      },
-      packages: [activated.hooks],
+      }])],
     });
 
     const result = await (await agent.session({ id: "stop-cap", create: true })).run("go");
@@ -228,15 +220,14 @@ describe("compileFixture: Stop", () => {
     let turns = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [activated.hooks, providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turns += 1;
           yield providerTextDelta(`turn ${turns}`);
           yield providerDone();
         },
-      },
-      packages: [activated.hooks],
+      }])],
     });
 
     const result = await (await agent.session({ id: "stop-continue-false", create: true })).run("go");
@@ -251,8 +242,7 @@ describe("compileFixture: Stop", () => {
     const { activated } = await loadHooks(hooks);
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerDone()]),
-      packages: [activated.hooks],
+      packages: [activated.hooks, mockProvider([[providerDone()]])],
     });
 
     const result = await (await agent.session({ id: "stop-natural", create: true })).run("go");
@@ -278,15 +268,14 @@ describe("compileFixture: context injection", () => {
     const requests: { messages: readonly unknown[] }[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [activated.hooks, providerPackage("test-provider", [{
         id: "mock",
         async *generate(request) {
           requests.push(request);
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
-      packages: [activated.hooks],
+      }])],
     });
     const session = await agent.session({ id: "ctx", create: true });
 
@@ -319,14 +308,13 @@ describe("compileFixture: context injection", () => {
       const requests: unknown[] = [];
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [activated.hooks, providerPackage("test-provider", [{
           id: "mock",
           async *generate(request) {
             requests.push(request);
             yield providerDone();
           },
-        },
-        packages: [activated.hooks],
+        }])],
       });
 
       await (await agent.session({ id: "handler-limit", create: true })).run("go");
@@ -388,14 +376,13 @@ describe("compileFixture: context injection", () => {
       const requests: unknown[] = [];
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: {
+        packages: [activated.hooks, providerPackage("test-provider", [{
           id: "mock",
           async *generate(request) {
             requests.push(request);
             yield providerDone();
           },
-        },
-        packages: [activated.hooks],
+        }])],
       });
 
       await (await agent.session({ id: "spill", create: true })).run("go");
@@ -431,15 +418,14 @@ describe("compileFixture: context injection", () => {
     const requests: unknown[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [activated.hooks, providerPackage("test-provider", [{
         id: "mock",
         async *generate(request) {
           requests.push(request);
           yield providerTextDelta("ok");
           yield providerDone();
         },
-      },
-      packages: [activated.hooks],
+      }])],
     });
     const session = await agent.session({ id: "async", create: true });
 
@@ -575,8 +561,7 @@ describe("compileFixture: trust", () => {
     });
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerDone()]),
-      packages: [hooks],
+      packages: [hooks, mockProvider([[providerDone()]])],
     });
     await agent.dispose();
 

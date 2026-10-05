@@ -1,16 +1,8 @@
 import assert from "node:assert/strict";
-import {
-  type AgentIdentity,
-  createAgent,
-  createMockProvider,
-  type LoopStrategy,
-  narrowIdentity,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  type ToolDefinition,
-} from "@arnilo/prism";
+import { type AgentIdentity, createAgent, type LoopStrategy, narrowIdentity, providerDone, providerTextDelta, providerToolCall, type ToolDefinition } from "@arnilo/prism";
 import { createSpawnAgentTool, createSupervisor, createWaitAgentTool } from "@arnilo/prism-core/runtime/supervisor";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /** Demo loop with bounded tool concurrency (the kernel default loop dispatches sequentially). */
 function concurrentLoop(concurrency: number): LoopStrategy {
@@ -77,7 +69,7 @@ export async function demo(): Promise<{ readonly spawned: number; readonly refus
           assert.deepEqual([...(context.identity?.scopes ?? [])], ["read"], "the child identity is narrowed, never widened");
           return await createAgent({
             model: { provider: "mock", model: "demo" },
-            provider: createMockProvider([providerTextDelta("research complete"), providerDone()]),
+            packages: [mockProvider([[providerTextDelta("research complete"), providerDone()]])],
             tools: { add: [readOnly] },
           });
         },
@@ -106,7 +98,7 @@ export async function demo(): Promise<{ readonly spawned: number; readonly refus
   const parent = await createAgent({
     model: { provider: "mock", model: "demo" },
     slots: { loop: concurrentLoop(3) },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         if (++turns === 1) {
@@ -133,7 +125,7 @@ export async function demo(): Promise<{ readonly spawned: number; readonly refus
         yield providerTextDelta("done");
         yield providerDone();
       },
-    },
+    }])],
     tools: { add: [observedSpawn, createWaitAgentTool({ supervisor })] },
   });
   const result = await (await parent.session()).run("Research auth and billing.");

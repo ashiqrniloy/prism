@@ -1,8 +1,10 @@
 /** Contracts-core provider family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 import type { ProviderEvent, RealtimeEvent, ToolDefinition } from "../contracts-protocol.js";
+import type { HostPort } from "../host/types.js";
 import type { ContextBlock } from "./agent.js";
-import type { JsonObject, Message, ModelConfig } from "./content.js";
+import type { JsonObject, Message, ModelConfig, ModelSpec } from "./content.js";
+import type { Secret } from "./resources.js";
 
 export type CacheRetention = "none" | "short" | "long";
 export type PromptCacheKind = "implicit" | "openai_key" | "cache_control" | "provider_specific" | "none";
@@ -62,7 +64,7 @@ export interface ProviderRequestOptions {
 }
 
 export interface ProviderRequest {
-  readonly model: ModelConfig;
+  readonly model: ModelSpec;
   readonly messages: readonly Message[];
   readonly tools?: readonly ToolDefinition[];
   readonly context?: readonly ContextBlock[];
@@ -71,8 +73,24 @@ export interface ProviderRequest {
   readonly signal?: AbortSignal;
 }
 
-export interface AIProvider {
+/** What a provider's `auth` descriptors may do to the credentials slot. The kernel never runs `login`. */
+export interface AuthContext {
+  readonly host: HostPort;
+  readonly credentials: {
+    store(ref: string, secret: Secret): Promise<void>;
+    delete(ref: string): Promise<void>;
+  };
+}
+
+/** How a provider is authenticated, for a host's login UI. `ref` is a `SECRET_REF`. */
+export type AuthMethod =
+  | { readonly kind: "api-key"; readonly ref: string }
+  | { readonly kind: "oauth"; readonly id: string; login(ctx: AuthContext): Promise<void> };
+
+export interface ModelProvider {
   readonly id: string;
+  /** Declared authentication methods; a host reads them to offer login. The kernel only carries them. */
+  readonly auth?: readonly AuthMethod[];
   generate(request: ProviderRequest): AsyncIterable<ProviderEvent>;
   /**
    * Optional model discovery behind `agent.models.list()`. Each model is the existing `ModelConfig` (id =
@@ -120,10 +138,10 @@ export interface TurnBudgets {
   readonly maxTurns: number | null;
 }
 
-export type ProviderResolver = (model: ModelConfig) => AIProvider | undefined;
+export type ProviderResolver = (model: ModelConfig) => ModelProvider | undefined;
 
 /** Realtime audio/session event. Realtime is a bidirectional session, not a request/response
- *  stream, so it is a separate neutral seam from `AIProvider.generate()`. Credentials are
+ *  stream, so it is a separate neutral seam from `ModelProvider.generate()`. Credentials are
  *  bound to the session handshake only and never appear in events. */
 export interface RealtimeSession {
   readonly id: string;
@@ -140,7 +158,7 @@ export interface RealtimeSession {
   completeTool?(callId: string, output: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
 }
 
-/** Factory a provider exposes for realtime sessions; not part of `AIProvider`. */
+/** Factory a provider exposes for realtime sessions; not part of `ModelProvider`. */
 export type RealtimeSessionFactory = (options: RealtimeSessionOptions) => RealtimeSession;
 
 export interface RealtimeSessionOptions {

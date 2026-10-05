@@ -1,0 +1,62 @@
+{
+  "name": "@arnilo/prism-store-postgres",
+  "version": "0.12.1",
+  "description": "The PostgreSQL session store (leases, lifecycle, event source, and schema migrations included) as the Prism store slot, over `pg`.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "!src/**/*.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "test:postgres": "bun ../../../scripts/require-postgres-url.mjs && bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "postinstall": "rm -rf node_modules/@arnilo/prism && mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": "^0.12.1"
+  },
+  "dependencies": {
+    "@arnilo/prism-store-codecs": "^0.12.1",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism": "file:../../..",
+    "@types/bun": "1.4.2",
+    "@types/node": "^22.20.0",
+    "@types/pg": "^8.23.1",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/stores/postgres"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/stores/postgres#readme",
+  "keywords": [
+    "prism",
+    "session-store",
+    "postgres",
+    "postgresql",
+    "persistence",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

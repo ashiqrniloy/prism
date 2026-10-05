@@ -1,14 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createAgent,
-  createMockProvider,
-  registerContextSources,
-  withContextBlocks,
-  type ContextSource,
-  type Message,
-  type ProviderRequest,
-} from "../index.js";
+import { createAgent, registerContextSources, withContextBlocks, type ContextSource, type Message, type ProviderRequest } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 const MODEL = { provider: "mock", model: "demo" };
 const text = (m: Message) => m.content.find((p) => p.type === "text")?.text ?? "";
@@ -17,7 +10,7 @@ const systemTexts = (request: ProviderRequest) => request.messages.filter((m) =>
 async function capturingAgent(sources: readonly ContextSource[], captured: ProviderRequest[]) {
   return await createAgent({
     model: MODEL,
-    provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+    packages: [mockProvider([[{ type: "done" }]], { onRequest: (request) => captured.push(request) })],
     ...(sources.length > 0 ? { hooks: (hooks) => registerContextSources(hooks, sources) } : {}),
   });
 }
@@ -98,7 +91,7 @@ describe("context.build tools are restrictive-only", () => {
     const session = await (
       await createAgent({
         model: MODEL,
-        provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+        packages: [mockProvider([[{ type: "done" }]], { onRequest: (request) => captured.push(request) })],
         tools: {
           add: [
             {
@@ -133,7 +126,7 @@ describe("context.build tools are restrictive-only", () => {
     const session = await (
       await createAgent({
         model: MODEL,
-        provider: createMockProvider([{ type: "done" }], { onRequest: (request) => captured.push(request) }),
+        packages: [mockProvider([[{ type: "done" }]], { onRequest: (request) => captured.push(request) })],
         tools: {
           add: [
             {

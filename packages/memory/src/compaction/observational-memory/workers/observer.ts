@@ -1,4 +1,4 @@
-import type { AIProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
+import type { ModelProvider, ModelConfig, ProviderRequestOptions, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { createMemoryId } from "../ids.js";
 import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
 import { serializeSourceEntries } from "../serialize.js";
@@ -12,7 +12,7 @@ export const DEFAULT_OBSERVER_INSTRUCTION =
 export interface RunObserverOptions extends MemoryWorkerLimitOptions {
   readonly entries: readonly SessionEntry[];
   readonly observations?: readonly MemoryObservation[];
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
   readonly instruction?: string;

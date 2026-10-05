@@ -8,7 +8,7 @@ import {
   type VideoGenerationJob,
   type VideoGenerationProvider,
 } from "../contracts.js";
-import { runVideoGenerationConformance } from "../testing/provider-conformance.js";
+import { runVideoGenerationConformance } from "../provider-kit/conformance.js";
 
 function fakeVideo(provider = "fake"): VideoGenerationProvider {
   let polls = 0;

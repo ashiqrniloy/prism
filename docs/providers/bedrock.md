@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/bedrock` registers an Amazon Bedrock Runtime provider with two explicit routes:
+`@arnilo/prism-provider-bedrock` registers an Amazon Bedrock Runtime provider with two explicit routes:
 
 | Route | Wire API | Select with |
 | --- | --- | --- |
@@ -18,12 +18,13 @@ Use it for enterprise Bedrock access under workload identity. Do not embed long-
 ## Route selection
 
 ```ts
-import { createBedrockConverseProvider, createBedrockProviderPackage } from "@arnilo/prism-providers/bedrock";
+import bedrock from "@arnilo/prism-provider-bedrock";
+import { createBedrockConverseProvider } from "@arnilo/prism-provider-bedrock";
 
 // Package form: one provider id, selected route, optional non-streaming mode.
-createBedrockProviderPackage({
+bedrock({
   region: "eu-west-1",
-  credential: () => hostAwsCredentials(),
+  credential: () => hostAwsCredentials(), // host-resolved SSO/IRSA credentials
   api: "converse", // or "compatible" (default)
   stream: true, // native route only: ConverseStream (default) vs one Converse call
   models: [{ provider: "bedrock", model: "eu.anthropic.claude-haiku-4-5-20251001-v1:0" }],
@@ -33,7 +34,7 @@ createBedrockProviderPackage({
 const provider = createBedrockConverseProvider({ region: "us-east-1", credential });
 ```
 
-Routes are mutually exclusive per provider id, so a host that needs both registers the second provider under a different `id` and model bindings. The package records the selected route in `ProviderPackage.metadata.route` and in the registered auth method metadata.
+Routes are mutually exclusive per provider id, so a host that needs both registers a second provider under a different `id`.
 
 ## Capability matrix
 
@@ -54,22 +55,37 @@ Every feature above is tested offline against recorded frame/body fixtures; the 
 ## Inputs / request
 
 ```ts
-import { createBedrockProviderPackage } from "@arnilo/prism-providers/bedrock";
+import bedrock from "@arnilo/prism-provider-bedrock";
 
-createBedrockProviderPackage({
-  region: "eu-west-1",
-  // endpoint: "https://vpce-….bedrock-runtime.eu-west-1.vpce.amazonaws.com",
-  credential: () => hostAwsCredentials(),
-  models: [{ provider: "bedrock", model: "anthropic.claude-3-haiku-20240307-v1:0" }],
-});
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+bedrock(options: BedrockProviderPackageOptions & BedrockProviderConfig): PackageInstance
+
+// Named exports.
+createBedrockProvider(options: BedrockProviderOptions): ModelProvider
+createBedrockConverseProvider(options: BedrockConverseProviderOptions): ModelProvider
+bedrockRuntimeEndpoint(region, endpoint?): string
+signAwsRequest(input: SignAwsRequestInput): Promise<Headers>
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `region` | AWS region for signing + default endpoint |
-| `endpoint` | Optional https PrivateLink / VPC interface base URL |
-| `credential` | `{ accessKeyId, secretAccessKey, sessionToken? }` or async callback |
-| `signRequest` | Optional host SigV4 override |
+| Config field | Type | Purpose |
+| --- | --- | --- |
+| `region` | string | AWS region, e.g. `us-east-1` (checked in setup). |
+| `accessKeyId` | secret ref | SigV4 signing key id; resolved per request and redacted. |
+| `secretAccessKey` | secret ref | SigV4 signing secret; resolved per request and redacted. |
+| `sessionToken` | secret ref | Optional STS session token ref; an unresolved ref means the credential has no session token. |
+| `endpoint` | string | Optional PrivateLink / VPC endpoint base URL; must be https. |
+| `api` | `"compatible" \| "converse"` | OpenAI-compatible route (default) or native Converse. |
+| `stream` | boolean | Native Converse only: stream `ConverseStream` (default true) or one `Converse` call. |
+| `models` | `ModelConfig[]` | Static catalog; Bedrock model ids are region- and account-scoped. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `bedrock`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+| `signRequest` | `typeof signAwsRequest` | Optional host signer; defaults to the package-local SigV4. |
+| `credential` | `BedrockCredentialSource` | Host-resolved AWS credentials (SSO profile, IRSA, instance role, assumed role) — not JSON. |
+
+`models()` returns the configured `models` array when set, otherwise `[]` — Bedrock model ids are region- and account-scoped. Pass the ids you intend to use in config.
 
 Default public base: `https://bedrock-runtime.{region}.amazonaws.com` → `/openai/v1/chat/completions`.
 
@@ -90,10 +106,23 @@ X-Amz-Security-Token: …
 ## Implementation example
 
 ```ts
-const provider = createBedrockProvider({
-  region: "us-east-1",
-  credential: async () => fromNodeProviderChain()(),
+import { createAgent } from "@arnilo/prism";
+import bedrock from "@arnilo/prism-provider-bedrock";
+
+const agent = await createAgent({
+  model: { provider: "bedrock", model: "us.anthropic.claude-haiku-4-5-20251001-v1:0" },
+  packages: [
+    bedrock({
+      region: "us-east-1",
+      accessKeyId: "env:AWS_ACCESS_KEY_ID",
+      secretAccessKey: "env:AWS_SECRET_ACCESS_KEY",
+      api: "converse",
+    }),
+  ],
 });
+
+const models = await agent.models.list(); // the configured catalog, no fetch
+await agent.dispose();
 ```
 
 Native route request:
@@ -146,7 +175,7 @@ Opt-in smoke over real AWS Bedrock (package-local SigV4, static keys or session 
 
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=... AWS_REGION=us-east-1 \
-  node --test packages/prism-providers/dist/bedrock/__tests__/live.test.js
+  bun test packages/providers/bedrock/src/__tests__/live.test.ts
 ```
 
 `PRISM_LIVE_BEDROCK_MODEL` overrides the probed model (default `us.anthropic.claude-haiku-4-5-20251001-v1:0`). The same suite also probes the native route (streaming text/tools/usage and one non-streaming `Converse` call). Without credentials the suite skips.
@@ -162,4 +191,4 @@ Native route: Anthropic-family models take `additionalModelRequestFields.thinkin
 - [OpenAI-compatible provider](openai-compatible.md)
 - [Model routing](../model-routing.md)
 - [Provider packages](../provider-packages.md)
-- Package README: [`@arnilo/prism-providers` family README](../../packages/prism-providers/README.md)
+- Package README: [`@arnilo/prism-provider-bedrock`](../../packages/providers/bedrock/README.md)

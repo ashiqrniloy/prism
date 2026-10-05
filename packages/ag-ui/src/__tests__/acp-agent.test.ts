@@ -25,6 +25,7 @@ import {
 } from "@arnilo/prism";
 import packageJson from "../../package.json" with { type: "json" };
 import { createPrismAcpAgent } from "../acp/index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const authorization = { ownership: { userId: "user-1" } };
 
@@ -74,14 +75,14 @@ describe("createPrismAcpAgent", () => {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
       runState: { checkpoints, definitionRevision: "1" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           if (++turn === 1) yield { type: "tool_call" as const, call: toolCallContent("write-1", "write", { path: "/host/secret.txt" }) };
           else yield providerTextDelta("resumed");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           { name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) },
@@ -183,12 +184,16 @@ describe("createPrismAcpAgent", () => {
     const base = {
       model: { provider: "mock", model: "mock" },
       slots: { store: createMemorySessionStore() },
-      provider: {
-        id: "mock",
-        async *generate() {
-          yield providerDone();
-        },
-      },
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     };
     // Natural end.
     assert.equal(await promptStopReason(base), "end_turn");
@@ -197,13 +202,13 @@ describe("createPrismAcpAgent", () => {
       await promptStopReason({
         ...base,
         limits: { maxToolRounds: 1 },
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             yield { type: "tool_call" as const, call: toolCallContent("f4-call", "echo", {}) };
             yield providerDone();
           },
-        },
+        }])],
         tools: {
           add: [{ name: "echo", parameters: { type: "object" }, execute: () => ({ toolCallId: "f4-call", name: "echo", value: {} }) }],
         },
@@ -276,7 +281,7 @@ it("maps the four ACP outcomes onto the shared decision batch without widening s
     model: { provider: "mock", model: "mock" },
     slots: { store: createMemorySessionStore() },
     runState: { checkpoints, definitionRevision: "1" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         if (++turn === 1) {
@@ -287,7 +292,7 @@ it("maps the four ACP outcomes onto the shared decision batch without widening s
         }
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
     },

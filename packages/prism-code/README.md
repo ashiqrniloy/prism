@@ -87,4 +87,4 @@ Full reference: [`docs/prism-code.md`](../../docs/prism-code.md).
 ## Requirements
 
 - Bun `>=1.4.2` (OpenTUI native package).
-- Self-contained install: as an app, Prism Code declares `@arnilo/prism`, `@arnilo/prism-providers`, and every other runtime package as regular dependencies. The optional `@ai-sdk/provider` peer of `@arnilo/prism-providers` is only for the `/ai-sdk` adapter, which Prism Code does not load.
+- Self-contained install: as an app, Prism Code declares `@arnilo/prism`, the standalone `@arnilo/prism-provider-*` packages it ships, and every other runtime package as regular dependencies. The optional `@ai-sdk/provider` peer of `@arnilo/prism-provider-ai-sdk` is only for that adapter, which Prism Code does not load.

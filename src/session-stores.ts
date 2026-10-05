@@ -26,6 +26,7 @@ import {
   type SessionSearchQuery,
   SessionSearchUnsupportedError,
   type SessionStore,
+  type SessionStoreCapability,
   type SessionSummary,
 } from "./contracts.js";
 import { createId } from "./ids.js";
@@ -236,6 +237,17 @@ function assertLinearCap(value: number | undefined, name: string, fallback: numb
     throw new TypeError(`CreateMemorySessionStoreOptions.search.${name} must be a safe integer from 1 to ${hardMax}`);
   }
   return cap;
+}
+
+/**
+ * The optional `agent.sessions` capabilities a store implements, in contract order. The kernel derives
+ * capabilities from method presence: `inspect()` reports them, and a store that implements none leaves
+ * `agent.sessions` failing closed with `UnsupportedStoreCapabilityError`.
+ */
+export function sessionStoreCapabilities(store: SessionStore): readonly SessionStoreCapability[] {
+  return (["listSessions", "deleteSession", "searchSessions"] as const).filter(
+    (capability) => typeof store[capability] === "function",
+  );
 }
 
 export function createMemorySessionStore(

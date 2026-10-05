@@ -129,6 +129,20 @@ export interface ModelConfig {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * A model with the endpoint and credential it needs. `credential` is a `SECRET_REF` (`env:NAME` /
+ * `keyring:name`), never a value; `baseUrl` and `credential` are never listed by `agent.models.list()`.
+ */
+export interface ModelSpec extends ModelConfig {
+  /** Provider-specific request options. */
+  readonly options?: JsonObject;
+  readonly baseUrl?: string;
+  readonly credential?: string;
+}
+
+/** `"provider/model"` (split on the first `/`) or a `ModelSpec`. */
+export type ModelRef = string | ModelSpec;
+
 export interface ModelCapabilities {
   /** Known values include `text`, `image`, `audio`, `file`, and `document`. */
   readonly input?: readonly string[];

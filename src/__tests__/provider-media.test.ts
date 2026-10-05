@@ -11,7 +11,7 @@ import {
   serializeOpenAIResponsesInputAudio,
   serializeOpenAIResponsesInputFile,
   serializePdfDocumentWireBlock,
-} from "../providers/media.js";
+} from "../provider-kit/media.js";
 
 describe("provider media primitives", () => {
   it("serializes OpenAI Responses file and audio wire blocks", () => {

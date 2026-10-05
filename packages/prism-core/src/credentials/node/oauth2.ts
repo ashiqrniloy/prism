@@ -1,13 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import type {
-  OAuthCredentials,
-  OAuthLoginCallbacks,
-  OAuthProvider,
-  OAuthTokenSuccessPayload,
-  PollDeviceCodeTokenOptions,
-} from "@arnilo/prism";
-import { abortableSleep, pollDeviceCodeToken, redactOAuthError, throwIfAborted } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/providers/transport";
+import type { OAuthCredentials, OAuthLoginCallbacks, OAuthProvider } from "@arnilo/prism";
+import type { OAuthTokenSuccessPayload, PollDeviceCodeTokenOptions } from "@arnilo/prism/provider-kit";
+import { abortableSleep, pollDeviceCodeToken, readBoundedResponseJson, readBoundedResponseText, redactOAuthError, throwIfAborted } from "@arnilo/prism/provider-kit";
 
 /** RFC 7636 PKCE verifier: base64url(32 random bytes) = 43 unreserved chars. */
 export function createOAuth2PkceVerifier(bytes = 32): string {

@@ -1,5 +1,7 @@
-import { type AgentEvent, type ToolRegistry, createMockProvider, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { type AgentEvent, type ToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { codingPreset, defineAgent, mergeAgentConfig } from "@arnilo/prism-agent-sdk";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Demonstrates assembling a coding agent using `@arnilo/prism-agent-sdk`
 // with `codingPreset`, mock provider, and session execution.
@@ -18,7 +20,7 @@ export async function demo(): Promise<{
   const app = await defineAgent(
     mergeAgentConfig(codingPreset({ cwd: process.cwd() }), {
       model: { provider: "mock", model: "coding-assistant" },
-      provider,
+      packages: [providerPackage("example-provider", [provider])],
       instructions: "You are a helpful coding assistant.",
     }) as Parameters<typeof defineAgent>[0],
   );

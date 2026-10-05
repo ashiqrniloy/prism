@@ -1,4 +1,4 @@
-import type { AIProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
+import type { ModelProvider, ModelConfig, ProviderRequestOptions, ToolDefinition } from "@arnilo/prism";
 import { joinWorkerText, type MemoryWorkerLimitOptions, resolveMemoryWorkerLimits } from "../limits.js";
 import { type MemoryObservation } from "../types.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
@@ -8,7 +8,7 @@ export const DEFAULT_DROPPER_INSTRUCTION = "Drop enough observations to approach
 export interface RunDropperOptions extends MemoryWorkerLimitOptions {
   readonly observations: readonly MemoryObservation[];
   readonly targetTokens: number;
-  readonly provider: AIProvider;
+  readonly provider: ModelProvider;
   readonly model: ModelConfig;
   readonly maxTurns: number;
   readonly instruction?: string;

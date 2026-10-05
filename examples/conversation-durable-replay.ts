@@ -1,14 +1,7 @@
-import {
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  type OwnershipScope,
-  providerDone,
-  providerTextDelta,
-  providerUsage,
-} from "@arnilo/prism";
+import { createAgent, createSecretRedactor, type OwnershipScope, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createConversationService } from "@arnilo/prism-core/runtime/server";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
+import { mockProvider } from "@arnilo/prism/testing";
 
 // Durable personal/work-agent conversation: create a thread, continue it through
 // a mock agent run, then replay redacted events from a cursor. Network-free —
@@ -18,11 +11,11 @@ export async function demo(): Promise<Record<string, unknown>> {
   const persistence = createSqlitePersistence({ filename: ":memory:" });
   const agent = await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: createMockProvider([
+    packages: [mockProvider([[
       providerTextDelta("Saved to your durable thread."),
       providerUsage({ inputTokens: 5, outputTokens: 6, totalTokens: 11 }),
       providerDone(),
-    ]),
+    ]])],
     redactor: createSecretRedactor(["super-secret"]),
     slots: { store: persistence },
     runLedger: persistence,

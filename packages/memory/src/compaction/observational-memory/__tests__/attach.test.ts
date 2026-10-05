@@ -1,16 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  type ProviderEvent,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-  toolCallContent,
-} from "@arnilo/prism";
+import { type ModelProvider, createAgent, createMemorySessionStore, type ProviderEvent, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import {
   type CreateObservationalMemoryOptions,
   createObservationalMemory,
@@ -18,11 +8,13 @@ import {
   OBSERVATIONS_RECORDED,
   type ObservationalMemorySettingsInput,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const model = { provider: "mock", model: "demo" };
 const workerModel = { provider: "mock", model: "memory" };
 
-function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIProvider {
+function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): ModelProvider {
   let index = 0;
   return {
     id: "memory",
@@ -33,12 +25,12 @@ function sequenceProvider(batches: readonly (readonly ProviderEvent[])[]): AIPro
 }
 
 async function attachFixture(
-  worker: AIProvider,
+  worker: ModelProvider,
   overrides: ObservationalMemorySettingsInput = {},
   options: { readonly create?: Partial<CreateObservationalMemoryOptions>; readonly sessionModel?: typeof model } = {},
 ) {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const baseSession = await agent.session({ id: "s1", create: true });
   const om = createObservationalMemory({
     observation: { provider: worker, model: workerModel },
@@ -57,7 +49,7 @@ async function attachFixture(
 describe("observational memory attach", () => {
   it("attached_run_triggers_observation_without_manual_flush", async () => {
     let workerCalls = 0;
-    const worker: AIProvider = {
+    const worker: ModelProvider = {
       id: "memory",
       async *generate() {
         workerCalls++;
@@ -213,7 +205,7 @@ describe("observational memory attach", () => {
 
   it("unattached_extension_setup_makes_zero_provider_calls", async () => {
     let calls = 0;
-    const workerProvider: AIProvider = {
+    const workerProvider: ModelProvider = {
       id: "memory",
       async *generate() {
         calls++;
@@ -222,8 +214,7 @@ describe("observational memory attach", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "memory" },
-      provider: workerProvider,
-      packages: [observationalMemory()],
+      packages: [observationalMemory(), providerPackage("test-provider", [workerProvider])],
     });
     await agent.dispose();
     createObservationalMemory({ observation: { provider: workerProvider, model: workerModel } });
@@ -236,15 +227,15 @@ describe("observational memory attach", () => {
       release = resolve;
     });
     const store = createMemorySessionStore();
-    const agentProvider: AIProvider = {
-      id: "agent",
+    const agentProvider: ModelProvider = {
+      id: "mock",
       async *generate() {
         await gate;
         yield providerTextDelta("ok");
         yield providerDone();
       },
     };
-    const agent = await createAgent({ model, provider: agentProvider, slots: { store } });
+    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [agentProvider])], slots: { store } });
     const baseSession = await agent.session({ id: "s1", create: true });
     const om = createObservationalMemory({
       observation: { provider: sequenceProvider([[providerDone()]]), model: workerModel },

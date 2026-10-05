@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createFieldEvidenceGuardrail,
   createToolRegistry,
@@ -19,6 +19,7 @@ import {
   type GuardrailRecord,
 } from "../index.js";
 import { kernelEvents } from "./kernel-event-helpers.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const PROPOSAL = "synapta:proposal";
 const INVOICE = "tool:invoice_fetch";
@@ -183,7 +184,7 @@ describe("field evidence guardrail", () => {
       },
     };
     let turns = 0;
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate() {
         if (turns++ === 0) {
@@ -207,7 +208,7 @@ describe("field evidence guardrail", () => {
     });
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: { add: [proposal] },
       // Roadmap §2.4: a host tool guardrail is a `tool.call` hook that returns a decision.
       hooks: (hooks) =>

@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { getHeapStatistics } from "node:v8";
 import { EventSubscriber } from "../agent-session/event-subscriber.js";
-import { type AgentEvent, createAgent, createMockProvider } from "../index.js";
+import { type AgentEvent, createAgent } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 const N = 200;
 const LOW_MEM = getHeapStatistics().heap_size_limit < 512 * 1024 * 1024;
@@ -20,7 +21,7 @@ function event(n: number): AgentEvent {
 
 describe.skipIf(Boolean(LOW_MEM))("leak: sessions/subscribers/event-queue return to baseline", () => {
   it("200 subscribe/dispose cycles leave zero subscribers", async () => {
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, provider: createMockProvider() });
+    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [mockProvider()] });
     const session = await agent.session();
     for (let i = 0; i < N; i++) {
       const iterator = session.subscribe({ maxQueuedEvents: 8, overflow: "drop_oldest" })[Symbol.asyncIterator]();

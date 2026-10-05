@@ -1,15 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  CheckpointRestoreError,
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  type ExecutionAction,
-  providerDone,
-  providerTextDelta,
-  type ToolDefinition,
-} from "@arnilo/prism";
+import { CheckpointRestoreError, createAgent, createSecretRedactor, type ExecutionAction, providerDone, providerTextDelta, type ToolDefinition } from "@arnilo/prism";
 import {
   agentNode,
   cancelWorkflowRun,
@@ -34,6 +25,7 @@ import {
   WorkflowRuntimeError,
   workflowNode,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 describe("runWorkflow", () => {
   it("executes a diamond join with deterministic event order", async () => {
@@ -510,7 +502,7 @@ describe("runWorkflow", () => {
   it("runs agent nodes through Session.run", async () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([providerTextDelta("hello-agent"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello-agent"), providerDone()]])],
     });
     const research = agentNode({
       agent: "researcher",
@@ -1183,7 +1175,7 @@ describe("runWorkflow", () => {
       };
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        provider: createMockProvider([providerTextDelta("done"), providerDone()]),
+        packages: [mockProvider([[providerTextDelta("done"), providerDone()]])],
       });
       const node =
         kind === "function"

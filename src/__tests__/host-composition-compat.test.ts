@@ -3,8 +3,8 @@
  * composition.
  *
  * Two legs:
- *  - current release: packs the four family packages the composition needs
- *    (root, core, memory, providers) from the workspace, installs the tarballs
+ *  - current release: packs the family packages the composition needs
+ *    (root, core, memory, providers, and the standalone typesafe provider package) from the workspace, installs the tarballs
  *    into a fresh consumer on Bun (plan 125 Task 2 — tarballs from `npm pack`,
  *    install and execution Bun only), and runs `examples/host-composition-compat.ts`
  *    plus the Task 5 (host step-loop ledger) and Task 7 (revocation) example
@@ -34,7 +34,10 @@ const PACKAGES = [
   { dir: ".", name: "@arnilo/prism" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
   { dir: "packages/memory", name: "@arnilo/prism-memory" },
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers" },
+  // Plan 152 Task 8: the @arnilo/prism-providers workspace is deleted.
+  // Plan 152 Task 5: the `legacy-adapter-safety` check drives the standalone decision-model
+  // package, so the packed consumer installs it too.
+  { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
 ] as const;
 const CONSUMER = "examples/host-composition-compat.ts";
 const FIXTURES = ["examples/host-step-loop-timeline.ts", "examples/revocation-propagation.ts"];

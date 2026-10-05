@@ -1,5 +1,5 @@
 import { createAgent } from "@arnilo/prism";
-import { defineOpenRouterModel, openrouterPackage } from "@arnilo/prism-providers/openrouter";
+import openrouter, { defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
 
 // OpenRouter catalogs stay host-owned. The package registers the provider only.
 export async function demo() {
@@ -9,7 +9,7 @@ export async function demo() {
   });
   const agent = await createAgent({
     model: sonnet,
-    packages: [openrouterPackage({ apiKey: () => "fake-openrouter-key" })],
+    packages: [openrouter({ apiKey: "env:PRISM_TEST_OPENROUTER_KEY" })],
   });
   await agent.dispose();
   return { model: sonnet.model, routing: sonnet.compat?.openRouterRouting };

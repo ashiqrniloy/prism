@@ -1,6 +1,6 @@
-import { type AIProvider, createAgent, createMemorySessionStore, type Decision } from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, type Decision } from "@arnilo/prism";
 import {
-  createMockProvider,
+  mockProvider,
   createScriptedHostUi,
   providerDone,
   providerTextDelta,
@@ -20,12 +20,6 @@ import {
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 
-/** The mock provider replays one script per call; this plays a different one on each turn. */
-function turns(...scripts: Parameters<typeof createMockProvider>[0][]): AIProvider {
-  let turn = 0;
-  return { id: "mock", generate: (request) => createMockProvider(scripts[Math.min(turn++, scripts.length - 1)]).generate(request) };
-}
-
 function build(options: {
   readonly executed: string[];
   readonly ui?: ReturnType<typeof createScriptedHostUi>["ui"];
@@ -39,12 +33,16 @@ function build(options: {
     ...(options.ui ? { host: { ui: options.ui } } : {}),
     // The host gate: every `delete_file` call needs a person's yes.
     hooks: (hooks) => hooks.on("tool.call", (call) => (call.name === "delete_file" ? { ask: "Delete a file?" } : undefined)),
-    provider: options.finalOnly
-      ? turns([providerTextDelta("Deleted."), providerDone()])
-      : turns(
-          [providerToolCall(toolCallContent("call-1", "delete_file", { path: "tmp/scratch.txt" })), providerDone()],
-          [providerTextDelta("Deleted."), providerDone()],
-        ),
+    packages: [
+      mockProvider(
+        options.finalOnly
+          ? [[providerTextDelta("Deleted."), providerDone()]]
+          : [
+              [providerToolCall(toolCallContent("call-1", "delete_file", { path: "tmp/scratch.txt" })), providerDone()],
+              [providerTextDelta("Deleted."), providerDone()],
+            ],
+      ),
+    ],
     tools: {
       add: [
         {

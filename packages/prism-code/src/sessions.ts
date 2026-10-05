@@ -8,7 +8,7 @@ import { chmodSync, existsSync, mkdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   type Session,
-  type AIProvider,
+  type ModelProvider,
   type CompactionResult,
   createMemorySessionStore,
   type ModelConfig,
@@ -19,7 +19,7 @@ import {
   type SessionSearchHit,
   type SessionStore,
 } from "@arnilo/prism";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import type { PrismCodeConfig } from "./config.js";
 import { ensureHomeDir, resolvePrismHome } from "./home.js";
 

@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "bun:test";
-import { createAgent, createMockProvider, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createCitationIntegrityScorer } from "../citations.js";
 import { defineDataset } from "../dataset.js";
 import { runExperiment } from "../experiment.js";
 import { defineScorer } from "../scorer.js";
 import { assertEvaluationThreshold, EvalThresholdError } from "../threshold.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const body = "quoted fact";
 const hash = createHash("sha256").update(body, "utf8").digest("hex");
@@ -52,11 +53,11 @@ test("citation integrity scorer is invariant 0 on revoked ACL / forged hash even
   const report = await runExperiment({
     agent: await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([
+      packages: [mockProvider([[
         providerTextDelta("ok"),
         providerUsage({ inputTokens: 1, outputTokens: 1, totalTokens: 2 }),
         providerDone(),
-      ]),
+      ]])],
     }),
     dataset: defineDataset({ id: "cite", items: [{ id: "i1", input: "q" }] }),
     scorers: [integrity, judge],

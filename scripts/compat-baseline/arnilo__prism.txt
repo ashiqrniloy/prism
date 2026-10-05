@@ -59,6 +59,7 @@ AuditFieldRedaction	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, 
 AuditFieldRedactorLike	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 AuditFieldRedactorOptions	export type { ApplyFieldPolicyOptions, AuditFieldRedaction, AuditFieldRedactorLike, AuditFieldRedactorOptions, FieldPolicy, FieldPolicyAction, FieldPolicyDecision, FieldPolicyInput, ProtectedFieldPolicyOptions, } from "./field-policy.js"
 BATCH_TERMINAL_STATES	export declare const BATCH_TERMINAL_STATES: readonly BatchJobState[]
+BUILTIN_PROVIDER_ID	export declare const BUILTIN_PROVIDER_ID = "openai-compatible"
 BUILT_IN_GUARDRAIL_PACKS	export declare const BUILT_IN_GUARDRAIL_PACKS: ReadonlyMap<string, GuardrailPackDefinition>
 BUILT_IN_GUARDRAIL_PACK_IDS	export declare const BUILT_IN_GUARDRAIL_PACK_IDS: readonly string[]
 BUILT_IN_LOOP_REVISIONS	export declare const BUILT_IN_LOOP_REVISIONS: Readonly<Record<string, string>>
@@ -68,6 +69,7 @@ BudgetExhaustionAttribution	export type { BudgetExhaustionAttribution, RunLimitT
 CACHE_TELEMETRY_OVERFLOW_KEY	export declare const CACHE_TELEMETRY_OVERFLOW_KEY = "__overflow__"
 CAPABILITIES	export declare const CAPABILITIES: ReadonlySet<string>
 CHECKPOINT_CONFLICT_CODE	export declare const CHECKPOINT_CONFLICT_CODE = "ERR_PRISM_CHECKPOINT_CONFLICT"
+CLI_PROVIDERS	export declare const CLI_PROVIDERS: ReadonlyMap<string, CliProviderSpec>
 CONTEXT_BUDGET_ERROR_CODE	export declare const CONTEXT_BUDGET_ERROR_CODE: "context_budget_exceeded"
 CONTEXT_BUDGET_REPORT_METADATA_KEY	export declare const CONTEXT_BUDGET_REPORT_METADATA_KEY: "contextBudgetReport"
 CONVERSATION_METADATA_KEY	export declare const CONVERSATION_METADATA_KEY = "prismConversation"
@@ -126,8 +128,9 @@ ConversationThreadState	export type { ConversationBranchRef, ConversationReplayC
 CreateLoadSkillToolOptions	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 CreateMemorySessionStoreOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CreateSessionEntryOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
-CredentialRecord	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
-CredentialValueSource	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
+CredentialRecord	export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js"
+CredentialUnavailableError	export declare class CredentialUnavailableError extends Error
+CredentialValueSource	export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js"
 DEFAULT_ATTENTION_COMPACT_RATIO	export declare const DEFAULT_ATTENTION_COMPACT_RATIO = 0.9
 DEFAULT_ATTENTION_KEEP_LAST	export declare const DEFAULT_ATTENTION_KEEP_LAST = 3
 DEFAULT_ATTENTION_RESERVE_TOKENS	export declare const DEFAULT_ATTENTION_RESERVE_TOKENS = 1024
@@ -179,8 +182,10 @@ DEFAULT_MAX_SKILL_INSTRUCTION_BYTES	export declare const DEFAULT_MAX_SKILL_INSTR
 DEFAULT_MAX_STICKY_DECISIONS	export declare const DEFAULT_MAX_STICKY_DECISIONS = 64
 DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH	export declare const DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH = 128
 DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES	export declare const DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES = 65536
+DEFAULT_MAX_SYSTEMONE_STATE_BYTES	export declare const DEFAULT_MAX_SYSTEMONE_STATE_BYTES = 262144
 DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4096
 DEFAULT_MEDIA_FETCH_TIMEOUT_MS	export declare const DEFAULT_MEDIA_FETCH_TIMEOUT_MS = 30000
+DEFAULT_MODEL_DISCOVERY_TTL_MS	export declare const DEFAULT_MODEL_DISCOVERY_TTL_MS = 3600000
 DEFAULT_OPENAI_INLINE_FILE_BYTES	export declare const DEFAULT_OPENAI_INLINE_FILE_BYTES: number
 DEFAULT_PROVIDER_MEDIA_ITEM_BYTES	export declare const DEFAULT_PROVIDER_MEDIA_ITEM_BYTES = 10000000
 DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES	export declare const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32
@@ -188,6 +193,8 @@ DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Readonly<
 DEFAULT_SESSION_LIST_LIMIT	export declare const DEFAULT_SESSION_LIST_LIMIT = 20
 DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT = 20
 DEFAULT_SNAPSHOT_CACHE_TTL_MS	export declare const DEFAULT_SNAPSHOT_CACHE_TTL_MS = 1000
+DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD	export declare const DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD = 0.5
+DEFAULT_SYSTEMONE_MAX_RETRIES	export declare const DEFAULT_SYSTEMONE_MAX_RETRIES = 2
 DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
 DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
 DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
@@ -199,10 +206,9 @@ DecisionScope	export type { ApprovalOutcome, AttentionCompiler, AttentionCompile
 DefaultCompactorOptions	export type { DefaultCompactorOptions } from "./compaction.js"
 DefaultInputBuildContext	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
 DefaultInputBuilder	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
-DefaultRetryPolicyOptions	export type { DefaultRetryPolicyOptions } from "./retry.js"
+DefaultRetryPolicyOptions	export type { DefaultRetryPolicyOptions } from "./models/retry.js"
 DelegatedAgentStepError	export declare class DelegatedAgentStepError extends Error
 DelegatedAgentStepInput	export type { DelegatedAgentStepInput } from "./delegated-agent-step.js"
-DeterministicTurnError	export declare class DeterministicTurnError extends Error
 DeviceAdapter	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
 DeviceAdmitRequest	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
 DeviceChunkResult	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
@@ -388,6 +394,9 @@ MAX_PERSISTED_SKILL_BODY_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_BOD
 MAX_PERSISTED_SKILL_NAMES	export declare const MAX_PERSISTED_SKILL_NAMES = 64
 MAX_PERSISTED_SKILL_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_NAME_CHARS = 256
 MAX_STATE_VALUE_BYTES	export declare const MAX_STATE_VALUE_BYTES: number
+MAX_SYSTEMONE_CHOICE_OPTIONS	export declare const MAX_SYSTEMONE_CHOICE_OPTIONS = 255
+MAX_SYSTEMONE_QUESTIONS	export declare const MAX_SYSTEMONE_QUESTIONS = 256
+MAX_SYSTEMONE_SCORE_LEVELS	export declare const MAX_SYSTEMONE_SCORE_LEVELS = 10
 MAX_TREE_BYTES	export declare const MAX_TREE_BYTES: number
 MAX_TREE_FILES	export declare const MAX_TREE_FILES = 20000
 MODEL_FAMILY_TOKENS	export declare const MODEL_FAMILY_TOKENS: Readonly<Record<ModelFamily, ModelFamilyTokens>>
@@ -403,16 +412,16 @@ MediaMimePolicy	export type { AudioContent, DocumentContent, FileContent, MediaC
 MediaUrlRequest	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MediaUrlRequester	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
 MemoryCheckpointStoreOptions	export type { MemoryCheckpointStoreOptions } from "./checkpoints.js"
-MemoryCredentialStore	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
 MemoryRunFeedbackStoreOptions	export type { MemoryRunFeedbackStoreOptions, PrepareRunFeedbackOptions, RunFeedbackLimits, RunFeedbackRun, RunFeedbackRunResolver, } from "./feedback.js"
 MemorySessionSearchMode	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
-MockProviderOptions	export type { MockProviderOptions } from "./mock-provider.js"
 ModelClient	export type { Capability, JsonSchema, ModelClient, PackageAPI, PackageCommand, PackageCommandContext, PackageCommandInfo, PackageToolOptions, PackageDefinition, PackageDefinitionInput, PackageInput, PackageInstance, PackageSource, PackageInstanceOptions, PackageLoadErrorCode, PackageRequires, SlotRegistrar, SlotRegistrarEntry, } from "./packages/index.js"
+ModelDiscoveryError	export declare class ModelDiscoveryError extends Error
 ModelFamily	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 ModelFamilyTokens	export type { ModelFamilyTokens } from "./usage-estimation.js"
 ModelInputCapability	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
-ModelRegistry	export type { ModelRegistry, ModelRegistryOptions } from "./models.js"
-ModelRegistryOptions	export type { ModelRegistry, ModelRegistryOptions } from "./models.js"
+ModelRefError	export declare class ModelRefError extends TypeError
+ModelRegistry	export type { ModelRegistry, ModelRegistryOptions } from "./models/registry.js"
+ModelRegistryOptions	export type { ModelRegistry, ModelRegistryOptions } from "./models/registry.js"
 ModelRequestTransformResult	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 ModerationError	export declare class ModerationError extends Error
 NamedHookCatalog	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
@@ -422,6 +431,7 @@ NestedRunApproval	export type { ApprovalOutcome, AttentionCompiler, AttentionCom
 NestedRunOutcome	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 NestedRunRef	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 OBSERVE_HOOK_NAMES	export declare const OBSERVE_HOOK_NAMES: readonly ObserveHookName[]
+OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH	export declare const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH = 64
 ObserveHook	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 ObserveHookName	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 PARAMETERIZED_QUERY_GUIDANCE	export declare const PARAMETERIZED_QUERY_GUIDANCE = "Bind every user-supplied value (session ids, idempotency keys, tenant ids, timestamps, JSON payloads) as a query parameter. Quote/validate schema and table identifiers only
@@ -460,8 +470,8 @@ ProviderCapture	export type { ProviderCapture, ProviderCaptureEntry, ProviderCap
 ProviderCaptureEntry	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
 ProviderCaptureOptions	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
 ProviderCapturePolicy	export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js"
-ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
-ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./providers.js"
+ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./models/providers.js"
+ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./models/providers.js"
 ProviderRequirementError	export declare class ProviderRequirementError extends Error
 ProviderResolver	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 ProviderTransportError	export declare class ProviderTransportError extends Error
@@ -469,6 +479,7 @@ ProviderTurnFailure	export declare class ProviderTurnFailure extends Error
 PutLegalHoldInput	export type { ApplyRetentionInput, ApplyRetentionResult, ConsumeTenantQuotaInput, ExportUnderHoldInput, LegalHoldExportItem, LegalHoldQuery, LegalHoldRecord, PersistenceLifecycleStore, PersistenceResourceKind, PutLegalHoldInput, ReleaseLegalHoldInput, SetTenantQuotaInput, TenantQuota, } from "./persistence-lifecycle.js"
 REDACTED	export declare const REDACTED = "[REDACTED]"
 RESERVED_TOOL_NAMES	export declare const RESERVED_TOOL_NAMES: ReadonlySet<string>
+RETRYABLE_STATUSES	export declare const RETRYABLE_STATUSES: ReadonlySet<number>
 RUN_BUNDLE_SCHEMA_VERSION	export declare const RUN_BUNDLE_SCHEMA_VERSION = 1
 RealtimeCaps	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
 RealtimeEvent	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
@@ -488,7 +499,6 @@ ResolvedMediaContent	export type { AudioContent, DocumentContent, FileContent, M
 ResolvedToolResultFoldOptions	export type { FoldToolResultsContext, ResolvedToolResultFoldOptions, ToolResultFoldInput, ToolResultFoldOptions, } from "./tool-result-fold.js"
 ResolvedUseCaseModel	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput, UseCaseModelBinding, } from "./use-case-model.js"
 ResumeNestedRun	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
-RevocableOAuthCredentialStore	export type { CredentialRecord, CredentialValueSource, MemoryCredentialStore, RevocableOAuthCredentialStore } from "./credentials.js"
 RunBundleSnapshot	export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js"
 RunBundleSnapshotInput	export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js"
 RunCheckpointRestoreHooksOptions	export type { CheckpointRestoreAudit, CheckpointRestoreAuditEntry, CheckpointRestoreCompensation, CheckpointRestoreHandler, CheckpointRestoreHook, RunCheckpointRestoreHooksOptions, } from "./checkpoint-restore.js"
@@ -525,6 +535,7 @@ SKILL_DISCLOSURE_ERROR_CODE	export declare const SKILL_DISCLOSURE_ERROR_CODE: "s
 SKILL_LOAD_ERROR_CODE	export declare const SKILL_LOAD_ERROR_CODE: "skill_load_failed"
 SLOT_NAMES	export declare const SLOT_NAMES: readonly SlotName[]
 SLOW_DOWN_INCREMENT_MS	export declare const SLOW_DOWN_INCREMENT_MS = 5000
+STORE_CONFORMANCE_STEPS	export declare const STORE_CONFORMANCE_STEPS: readonly ["append-and-read", "branch-and-fork", "package-state", "suspended-run", "search", "title", "list-and-delete", "restart"]
 SUSPENDED_RUN_ENTRY_SCHEMA_VERSION	export declare const SUSPENDED_RUN_ENTRY_SCHEMA_VERSION: 1
 SecretRedactor	export type { SecretRedactor } from "./redaction.js"
 SecureAgentOptions	export type { ApprovalOutcome, AttentionCompiler, AttentionCompilerContext, AttentionCompilerOptions, AttentionCompilerSetting, AttentionInputCapOptions, AttentionReport, CompactionTrigger, CompactionTriggerContext, ContextMeter, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, RealtimeCaps, RealtimeEvent, RealtimeSession, RealtimeSessionFactory, RealtimeSessionOptions, ResolveShouldCompactInput, ResolveShouldC
@@ -561,6 +572,12 @@ StructuredOutputError	export declare class StructuredOutputError extends Error
 SubscriberOverflowError	export declare class SubscriberOverflowError extends Error
 SuspendedRunEntryData	export type { SuspendedRunEntryData, SuspendedRunLoopRef } from "./suspended-run.js"
 SuspendedRunLoopRef	export type { SuspendedRunEntryData, SuspendedRunLoopRef } from "./suspended-run.js"
+SystemOneAbortedError	export declare class SystemOneAbortedError extends SystemOneError
+SystemOneAuthError	export declare class SystemOneAuthError extends SystemOneError
+SystemOneError	export declare class SystemOneError extends Error
+SystemOneInvalidRequestError	export declare class SystemOneInvalidRequestError extends SystemOneError
+SystemOneRetryExhaustedError	export declare class SystemOneRetryExhaustedError extends SystemOneError
+SystemOneSchemaError	export declare class SystemOneSchemaError extends Error
 THINKING_LEVELS	export declare const THINKING_LEVELS: readonly ["none", "minimal", "low", "medium", "high", "xhigh", "max"]
 TOOL_DISCLOSURE_ERROR_CODE	export declare const TOOL_DISCLOSURE_ERROR_CODE: "tool_disclosure_exceeded"
 TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
@@ -624,7 +641,6 @@ UseCaseModelBinding	export type { ResolvedUseCaseModel, ResolveUseCaseModelInput
 VideoGenerationError	export declare class VideoGenerationError extends Error
 abortableSleep	export declare function abortableSleep(ms: number, signal?: AbortSignal): Promise<void>
 acceptDeviceChunk	export declare function acceptDeviceChunk(policy: ResolvedDevicePolicy, bytes: number): DeviceChunkResult
-activateKernel	export declare function activateKernel(kernel: ExtensionKernel): ActivatedKernelConfig
 activeTools	export declare function activeTools(agent: Agent):
 agentFingerprint	export declare function agentFingerprint(agent: Agent, revision: string): string
 agentHookIds	export declare function agentHookIds(agent: Agent): readonly string[]
@@ -632,6 +648,8 @@ agentId	export declare function agentId(agent: Agent): string
 agentRuntime	export declare function agentRuntime(agent: Agent): AgentRuntime
 agentSkillSource	export declare function agentSkillSource(agent: Agent): readonly Skill[]
 agentToolList	export declare function agentToolList(agent: Agent): readonly ToolDefinition[]
+anthropicMessagesBody	export declare function anthropicMessagesBody(request: ProviderRequest, hooks: AnthropicMessagesRouteHooks): Promise<JsonObject>
+anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
 applyCacheControl	export declare function applyCacheControl(messages: readonly Message[], breakpoints: readonly PromptCacheBreakpoint[], options?: ApplyCacheControlOptions): readonly CacheControlledMessage[]
 applyContextBudget	export declare function applyContextBudget(options:
 applyDefaultProviderRequestOptions	export declare function applyDefaultProviderRequestOptions(request: ProviderRequest, ctx?: ApplyDefaultProviderRequestOptionsContext): ProviderRequest
@@ -640,6 +658,7 @@ applyFieldPolicy	export declare function applyFieldPolicy<T>(value: T, policy: F
 applyNestedRun	export declare function applyNestedRun(session: SessionHost, input:
 applyOpenAIChatStructuredOutput	export declare function applyOpenAIChatStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
 applyOpenAIResponsesStructuredOutput	export declare function applyOpenAIResponsesStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
+applyPromptCacheBreakpoints	export declare function applyPromptCacheBreakpoints(request: ProviderRequest): readonly OpenAIBreakpointMessage[]
 applyRestoredSkillBodies	export declare function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[]
 applyThinkingLevel	export declare function applyThinkingLevel(options: ProviderRequestOptions | undefined, level: ThinkingLevel | string, family?: ThinkingCompatFamily): ProviderRequestOptions
 applyThinkingLevelForModel	export declare function applyThinkingLevelForModel(options: ProviderRequestOptions | undefined, level: ThinkingLevel | string, model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): ProviderRequestOptions
@@ -649,11 +668,13 @@ artifactCheckpointKey	export declare function artifactCheckpointKey(threadId: st
 artifactStructuredOutputRequest	export declare function artifactStructuredOutputRequest(request: ProviderRequest, schema?: StructuredOutputOptions): ProviderRequest
 asSessionHost	export declare function asSessionHost(session: unknown): SessionHost
 askEveryTool	export declare function askEveryTool(reason?: string): (hooks: HookRegistrar) => void
+askSystemOneDecisions	export declare function askSystemOneDecisions(body: SystemOneBody, options: SystemOneDecisionOptions, signal?: AbortSignal): Promise<SystemOneDecisionResult>
 assembleProviderInput	export declare function assembleProviderInput(options: AssembleProviderInputOptions): Promise<ProviderRequest>
 assertAbortIsObserved	export declare function assertAbortIsObserved(options: ProviderAbortConformanceOptions): Promise<void>
 assertAdapterSchemaMatchesModel	export declare function assertAdapterSchemaMatchesModel(adapterTables: readonly string[], adapterIndexes: readonly string[], model?: PersistenceSchemaModel): void
 assertAgentEventSourceConforms	export declare function assertAgentEventSourceConforms(factory: AgentEventSourceConformanceFactory): Promise<void>
 assertAppliedPersistenceMigrations	export declare function assertAppliedPersistenceMigrations(contract: PersistenceMigrationContract, applied: readonly AppliedPersistenceMigration[]):
+assertAuthDescriptorsWellFormed	export declare function assertAuthDescriptorsWellFormed(provider: ModelProvider): void
 assertBatchJobsSupported	export declare function assertBatchJobsSupported(model: ModelConfig): void
 assertCanRegister	export declare function assertCanRegister<K>(map: ReadonlyMap<K, unknown>, key: K, label: string, displayKey?: string, duplicate?: DuplicateRegistrationPolicy): void
 assertCanonicalToolParameters	export declare function assertCanonicalToolParameters(serialized: unknown, original: unknown): void
@@ -663,7 +684,6 @@ assertDeclaredMediaTypeMatches	export declare function assertDeclaredMediaTypeMa
 assertDeviceAdmit	export declare function assertDeviceAdmit(policy: ResolvedDevicePolicy, request: DeviceAdmitRequest): void
 assertEmbeddingsSupported	export declare function assertEmbeddingsSupported(model: ModelConfig): void
 assertExecutionAllowed	export declare function assertExecutionAllowed(policy: ExecutionPolicy | undefined, action: ExecutionAction): Promise<ExecutionAction>
-assertExtensionConforms	export declare function assertExtensionConforms(extension: Extension, options?: ExtensionConformanceOptions): Promise<ExtensionKernel>
 assertGuardrailsAllowed	export declare function assertGuardrailsAllowed(result: GuardrailRunResult): void
 assertHostCompositionReadiness	export declare function assertHostCompositionReadiness(options: HostCompositionOptions): HostCompositionReport
 assertIdentityActive	export declare function assertIdentityActive(identity: AgentIdentity, options?: AssertIdentityActiveOptions): void
@@ -676,6 +696,7 @@ assertMediaBlocksWithinBounds	export declare function assertMediaBlocksWithinBou
 assertMessagesSupportModelCapabilities	export declare function assertMessagesSupportModelCapabilities(model: ModelConfig, messages: readonly Message[]): void
 assertMigrationUpAndReopen	export declare function assertMigrationUpAndReopen(contract: PersistenceMigrationContract, appliedAfterUp: readonly AppliedPersistenceMigration[], appliedAfterReopen: readonly AppliedPersistenceMigration[]): void
 assertModelSupportsContentBlocks	export declare function assertModelSupportsContentBlocks(model: ModelConfig, blocks: readonly ContentBlock[]): void
+assertModelsListValid	export declare function assertModelsListValid(provider: ModelProvider): Promise<void>
 assertModerationSupported	export declare function assertModerationSupported(model: ModelConfig): void
 assertNoFetches	export declare function assertNoFetches(calls: readonly unknown[]): void
 assertNoForeignCacheFields	export declare function assertNoForeignCacheFields(body: unknown, allowed?: readonly string[]): void
@@ -688,13 +709,13 @@ assertPersistenceMigrationContract	export declare function assertPersistenceMigr
 assertPersistenceQueryPaginationConforms	export declare function assertPersistenceQueryPaginationConforms(fixture: PersistenceQueryConformanceFixture, sessionId?: string): Promise<void>
 assertPersistenceSchemaModel	export declare function assertPersistenceSchemaModel(model: PersistenceSchemaModel): void
 assertPersistenceSchemaShape	export declare function assertPersistenceSchemaShape(shape: PersistenceSchemaShape, dialect: PersistenceSchemaDialect, model?: PersistenceSchemaModel): void
+assertPersistenceSearchQueryParity	export declare function assertPersistenceSearchQueryParity(store: SessionStore & ProductionPersistenceStore): Promise<void>
 assertProviderMediaCapability	export declare function assertProviderMediaCapability(modality: ModelInputCapability, capabilities: ModelCapabilities, model: ModelConfig): void
 assertProviderOwnedHeadersWin	export declare function assertProviderOwnedHeadersWin(captured: Headers, options: ProviderHeaderOwnershipConformanceOptions): void
 assertProviderStreamConforms	export declare function assertProviderStreamConforms(options: ProviderStreamConformanceOptions): Promise<readonly ProviderEvent[]>
 assertRunLedgerConforms	export declare function assertRunLedgerConforms(fixture: RunLedgerConformanceFixture, options?: RunLedgerConformanceOptions): Promise<void>
 assertSerializedRequestCoversContent	export declare function assertSerializedRequestCoversContent(request: ProviderRequest, body: unknown, options?: SerializedContentCoverageOptions): void
 assertSessionMetadataKey	export declare function assertSessionMetadataKey(key: string): string
-assertSessionStoreConforms	export declare function assertSessionStoreConforms(store: SessionStore, options?: SessionStoreConformanceOptions): Promise<void>
 assertSlotOwners	export declare function assertSlotOwners(records: readonly
 assertSpeechSupported	export declare function assertSpeechSupported(model: ModelConfig): void
 assertSsrfAllowedUrl	export declare function assertSsrfAllowedUrl(url: string, policy?: SsrfPolicy): void
@@ -714,7 +735,7 @@ assertVideoGenerationSupported	export declare function assertVideoGenerationSupp
 assignSlot	export declare function assignSlot(slot: SlotName, owner: string | null, options: MaintainOptions): Promise<void>
 assignedLoop	export declare function assignedLoop(agent: Agent): LoopStrategy | undefined
 attentionTriggerState	export declare function attentionTriggerState(compiler: Pick<AttentionCompiler, "inputCap" | "runInputBudget">, turn:
-authMethodKey	export declare function authMethodKey(method: AuthMethod): string
+baseUrlProperty	export declare function baseUrlProperty(description?: string): JsonSchema
 bindChargeToolRound	export declare function bindChargeToolRound(ctx: RoundContext): (calls: readonly ToolCallContent[]) => void | Promise<void>
 bindDispatchToolCall	export declare function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent) => Promise<ToolResult>
 bindManifestInstance	export declare function bindManifestInstance(definition: PackageDefinition<any>, config: Readonly<Record<string, unknown>> | undefined, options:
@@ -744,11 +765,13 @@ classifyProviderFailure	export declare function classifyProviderFailure(error: u
 cleanupRun	export declare function cleanupRun(input:
 codingStandardPack	export declare const codingStandardPack: GuardrailPackDefinition
 collectMessageContentBlocks	export declare function collectMessageContentBlocks(messages: readonly Message[]): ContentBlock[]
-collectProviderEvents	export declare function collectProviderEvents(provider: AIProvider, request: ProviderRequest): Promise<readonly ProviderEvent[]>
+collectProviderEvents	export declare function collectProviderEvents(provider: ModelProvider, request: ProviderRequest): Promise<readonly ProviderEvent[]>
 compareVersions	export declare function compareVersions(a: SemVer, b: SemVer): number
 compileAttention	export declare function compileAttention(options: AttentionCompileOptions): Promise<AttentionCompilation>
 compileGuardrailPacks	export declare function compileGuardrailPacks(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>): CompiledGuardrailRules | undefined
 compileGuardrailPacksWithState	export declare function compileGuardrailPacksWithState(refs: readonly GuardrailPackRef[] | undefined, registry?: ReadonlyMap<string, import("./guardrail-packs/types.js").GuardrailPackDefinition>, initial?: Readonly<Record<string, unknown>>): CompiledGuardrailPacks
+compileSystemOneQuestions	export declare function compileSystemOneQuestions(schema: JsonObject): Readonly<Record<string, SystemOneQuestion>>
+compileSystemOneState	export declare function compileSystemOneState(messages: readonly Message[]): SystemOneState
 composeSystemPrompt	export declare function composeSystemPrompt(contributions?: SystemPromptConfig, options?: ComposeSystemPromptOptions): string | undefined
 configure	export declare function configure(name: string, patch: JsonObject, options: MaintainOptions): Promise<void>
 contentBlockInputModality	export declare function contentBlockInputModality(block: ContentBlock): ModelInputCapability | undefined
@@ -759,7 +782,7 @@ createActiveToolSet	export declare function createActiveToolSet(): ActiveToolSet
 createAgent	export declare function createAgent(config: AgentConfig): Promise<Agent>
 createAgentRunLifecycle	export declare function createAgentRunLifecycle(options: AgentRunLifecycleOptions): AgentRunLifecycle
 createAgentState	export declare function createAgentState<T>(key: string, initial: T): AgentState<T> &
-createAgentWith	export declare function createAgentWith(config: AgentConfig, internals: CreateAgentInternals): Promise<Agent>
+createAgentWith	export declare function createAgentWith(input: AgentConfig, internals: CreateAgentInternals): Promise<Agent>
 createAttentionCompiler	export declare function createAttentionCompiler(options?: AttentionCompilerOptions, context?: AttentionCompilerContext): AttentionCompiler
 createAttentionFoldLedger	export declare function createAttentionFoldLedger(): AttentionFoldLedger
 createAttentionStickyFrontier	export declare function createAttentionStickyFrontier(): AttentionStickyFrontier
@@ -768,48 +791,44 @@ createAuditFieldRedactor	export declare function createAuditFieldRedactor(policy
 createBackgroundTracker	export declare function createBackgroundTracker(options: BackgroundTrackerOptions): BackgroundTracker
 createBatchedRunLedger	export declare function createBatchedRunLedger(target: RunLedger, options?: BatchedRunLedgerOptions): FlushableRunLedger
 createBoundedUploadCache	export declare function createBoundedUploadCache<T>(maxEntries?: number): BoundedUploadCache<T>
+createBuiltinProvider	export declare function createBuiltinProvider(options: BuiltinProviderOptions): ModelProvider
 createCacheTelemetry	export declare function createCacheTelemetry(options?: CacheTelemetryOptions): CacheTelemetry
-createChainedCredentialResolver	export declare function createChainedCredentialResolver(resolvers: readonly CredentialResolver[]): CredentialResolver
+createCachedModelDiscovery	export declare function createCachedModelDiscovery(label: string, options: ModelDiscoveryAdapterOptions, fetchModels: (provider: string, signal: AbortSignal | undefined) => Promise<readonly ModelConfig[]>): ModelDiscovery
 createChainedSettingsProvider	export declare function createChainedSettingsProvider(providers: readonly SettingsProvider[]): SettingsProvider
 createClaimGroundingGuardrail	export declare function createClaimGroundingGuardrail(options: ClaimGroundingGuardrailOptions): (message: Message, context: HookContext) => HookRejection | undefined
-createContributionRegistries	export declare function createContributionRegistries(options?: ContributionRegistriesOptions): ContributionRegistries
-createContributionRegistry	export declare function createContributionRegistry<T>(options?: ContributionRegistryOptions): ContributionRegistry<T>
 createDefaultCompactor	export declare function createDefaultCompactor(options?: DefaultCompactorOptions): Compactor
 createDefaultInputBuilder	export declare function createDefaultInputBuilder(): DefaultInputBuilder
 createDefaultRetryPolicy	export declare function createDefaultRetryPolicy(options?: DefaultRetryPolicyOptions): RetryPolicy
 createDelegatedAgentStep	export declare function createDelegatedAgentStep(input: DelegatedAgentStepInput): Extract<AgentEvent,
-createEnvCredentialResolver	export declare function createEnvCredentialResolver(env: Readonly<Record<string, string | undefined>>, map: Readonly<Record<string, string>>): CredentialResolver
 createEnvRefCredentialResolver	export declare function createEnvRefCredentialResolver(env?: Readonly<Record<string, string | undefined>>): CredentialResolver
 createEventMultiplexer	export declare function createEventMultiplexer<T>(options?: EventMultiplexerOptions<T>): EventMultiplexer<T>
-createExplicitCredentialResolver	export declare function createExplicitCredentialResolver(sources: readonly CredentialResolverSource[]): CredentialResolver
-createExtensionEventBus	export declare function createExtensionEventBus(options?: Pick<ExtensionKernelOptions, "errorPolicy" | "secrets">): ExtensionEventBus
-createExtensionKernel	export declare function createExtensionKernel(options?: ExtensionKernelOptions): ExtensionKernel
+createFakeModelDiscovery	export declare function createFakeModelDiscovery(options?: CreateFakeModelDiscoveryOptions): ModelDiscovery
 createFieldEvidenceGuardrail	export declare function createFieldEvidenceGuardrail(options: FieldEvidenceGuardrailOptions): Guardrail<"tool_input">
 createHookBus	export declare function createHookBus(options?: HookBusOptions): HookBus
 createId	export declare function createId(prefix: string): string
-createJsonlSessionStore	export declare function createJsonlSessionStore(pathOrOptions: string | JsonlSessionStoreOptions): SessionStore
 createLoadSkillTool	export declare function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDefinition
 createLoadedSkillSet	export declare function createLoadedSkillSet(): LoadedSkillSet
 createMemoryAgentEventSource	export declare function createMemoryAgentEventSource(options?: AgentEventSourceOptions): AgentEventSource
 createMemoryCheckpointStore	export declare function createMemoryCheckpointStore(options?: MemoryCheckpointStoreOptions): CheckpointStore
-createMemoryCredentialStore	export declare function createMemoryCredentialStore(initial?: readonly CredentialRecord[], options?: MemoryCredentialStoreOptions): MemoryCredentialStore
 createMemoryLeaseStore	export declare function createMemoryLeaseStore(): LeaseStore
 createMemoryPersistenceLifecycle	export declare function createMemoryPersistenceLifecycle(): PersistenceLifecycleStore
 createMemoryRunFeedbackStore	export declare function createMemoryRunFeedbackStore(options: MemoryRunFeedbackStoreOptions): RunFeedbackStore
 createMemorySessionStore	export declare function createMemorySessionStore(initialEntries?: readonly SessionEntry[], options?: CreateMemorySessionStoreOptions): SessionStore
 createMemoryToolEffectStore	export declare function createMemoryToolEffectStore(options?:
-createMiddlewareRegistry	export declare function createMiddlewareRegistry(options?: MiddlewareRegistryOptions): MiddlewareRegistry
-createMockProvider	export declare function createMockProvider(events?: readonly ProviderEvent[], options?: MockProviderOptions): AIProvider
+createMockProvider	export declare function createMockProvider(events?: readonly ProviderEvent[], options?: MockProviderOptions): ModelProvider
 createModelIndex	export declare function createModelIndex(sources:
 createModelRegistry	export declare function createModelRegistry(models?: readonly ModelConfig[], options?: ModelRegistryOptions): ModelRegistry
-createOpenAICompatibleProvider	export declare function createOpenAICompatibleProvider(options: OpenAICompatibleProviderOptions): AIProvider
+createOpenAICompatibleProvider	export declare function createOpenAICompatibleProvider(options: OpenAICompatibleProviderOptions): ModelProvider
+createOpenAIFileUploadManager	export declare function createOpenAIFileUploadManager(options?: OpenAIFileUploadManagerOptions):
+createOpenAIResponsesProvider	export declare function createOpenAIResponsesProvider(options?: OpenAIResponsesProviderOptions): ModelProvider
+createOpenAiCompatibleModelDiscovery	export declare function createOpenAiCompatibleModelDiscovery(options: CreateOpenAiCompatibleModelDiscoveryOptions): ModelDiscovery
 createPathTrustPolicy	export declare function createPathTrustPolicy(options: PathTrustPolicyOptions): TrustPolicy
 createPersistenceMigrationContract	export declare function createPersistenceMigrationContract(): PersistenceMigrationContract
 createPersistenceSchemaModel	export declare function createPersistenceSchemaModel(): PersistenceSchemaModel
 createProtectedFieldPolicy	export declare function createProtectedFieldPolicy(options?: ProtectedFieldPolicyOptions): FieldPolicy
 createProviderCapture	export declare function createProviderCapture(options?: ProviderCaptureOptions): ProviderCapture
-createProviderRegistry	export declare function createProviderRegistry(providers?: readonly AIProvider[], options?: ProviderRegistryOptions): ProviderRegistry
-createProviderResolver	export declare function createProviderResolver(source: ProviderRegistry | readonly AIProvider[]): ProviderResolver
+createProviderRegistry	export declare function createProviderRegistry(providers?: readonly ModelProvider[], options?: ProviderRegistryOptions): ProviderRegistry
+createProviderResolver	export declare function createProviderResolver(source: ProviderRegistry | readonly ModelProvider[]): ProviderResolver
 createProviderTurnMetadata	export declare function createProviderTurnMetadata(request: ProviderRequest, providerId: string, fields?: Omit<ProviderTurnMetadata, "providerId" | "model">): ProviderTurnMetadata
 createRunController	export declare function createRunController(internals: RunControllerInternals): RunController
 createRunLimitTracker	export declare function createRunLimitTracker(limits: RunLimits | undefined, options?: RunLimitTrackerOptions): RunLimitTracker
@@ -827,6 +846,7 @@ createStaticPermissionPolicy	export declare function createStaticPermissionPolic
 createStaticSettingsProvider	export declare function createStaticSettingsProvider(settings: JsonObject): SettingsProvider
 createStaticTrustPolicy	export declare function createStaticTrustPolicy(decision: boolean | TrustDecision): TrustPolicy
 createSuspendedRunEntry	export declare function createSuspendedRunEntry(input:
+createSystemOneDecisionProvider	export declare function createSystemOneDecisionProvider(options: SystemOneDecisionProviderOptions): ModelProvider
 createToolParameterValidator	export declare function createToolParameterValidator(validator: ToolArgumentValidator, options?: ToolParameterValidatorOptions): ToolValidator
 createToolRegistry	export declare function createToolRegistry(tools?: readonly ToolDefinition[], options?: ToolRegistryOptions): ToolRegistry
 createToolSearchIndex	export declare function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex
@@ -834,6 +854,7 @@ createToolSearchState	export declare function createToolSearchState(options:
 createUsageAccumulator	export declare function createUsageAccumulator():
 decisionPrincipalRef	export declare function decisionPrincipalRef(principal: Principal | undefined): string | undefined
 decisionScopesEqual	export declare function decisionScopesEqual(a: DecisionScope, b: DecisionScope): boolean
+declaredThinkingLevelsFor	export declare function declaredThinkingLevelsFor(request: ProviderRequest, fallback?: ThinkingLevelsFallback): readonly string[] | undefined
 decodeConversationReplayCursor	export declare function decodeConversationReplayCursor(encoded: string, expectedThreadId: string, maxBytes?: number): ConversationReplayCursor
 defaultLoadDevCli	export declare const defaultLoadDevCli: PrismDevLoader
 defaultLoop	export declare const defaultLoop: LoopStrategy
@@ -842,8 +863,7 @@ defaultResolver	export declare function defaultResolver(hostname: string): Promi
 defaultUserConfigPath	export declare function defaultUserConfigPath(appName?: string): string
 deferSkillCatalog	export declare function deferSkillCatalog(request: ProviderRequest, skills: readonly Skill[], context: SkillRenderContext): void
 definePackage	export declare function definePackage<C = Readonly<Record<string, never>>>(input: PackageDefinitionInput<C>): PackageDefinition<C>
-definePrismManifest	export declare function definePrismManifest(manifest: PrismManifest): PrismManifest
-defineProviderPackage	export declare function defineProviderPackage(providerPackage: ProviderPackage): ProviderPackage
+defineProviderPackage	export declare function defineProviderPackage<Config extends object = Readonly<Record<string, never>>>(spec: ProviderPackageDefinitionSpec<Config>): PackageDefinition<Config>
 denialToErrorInfo	export declare function denialToErrorInfo(error: unknown): ErrorInfo
 deriveToolEffectKey	export declare function deriveToolEffectKey(input: Omit<ToolEffectKey, "key" | "signal">): string
 describeBudgetExhaustion	export declare function describeBudgetExhaustion(tracker: RunLimitTracker, breach: RunLimitBreach, recentToolCalls: readonly ToolCallSummary[]): BudgetExhaustionAttribution &
@@ -870,7 +890,8 @@ estimateTextBytes	export declare function estimateTextBytes(text: string): numbe
 estimateTextTokens	export declare function estimateTextTokens(text: string): number
 estimateTextTokensForFamily	export declare function estimateTextTokensForFamily(text: string, modelFamily?: string): number
 evaluateAttentionTrigger	export declare function evaluateAttentionTrigger(axes: readonly AttentionTrigger[], state: AttentionTriggerState): AttentionTriggerDecision
-executeRun	export declare function executeRun(session: SessionHost, input: AgentInput, options: RunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult>
+executeRun	export declare function executeRun(session: SessionHost, input: AgentInput, options: ResolvedRunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult>
+failDiscoveryOnStatus	export declare function failDiscoveryOnStatus(response: Response, label: string, secrets: readonly (string | undefined)[]): Promise<void>
 failedRun	export declare function failedRun(run: Promise<RunResult>, pattern?: RegExp, status?: "failed" | "aborted"): Promise<RunResult>
 filterTools	export declare function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilterInput): readonly ToolDefinition[]
 finalAssistantMessage	export declare function finalAssistantMessage(history: readonly Message[]):
@@ -879,10 +900,8 @@ foldToolResultHistory	export declare function foldToolResultHistory(history: rea
 foldToolResults	export declare function foldToolResults(results: readonly ToolResult[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly ToolResult[]>
 foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
 formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
-forwardAgentEvents	export declare function forwardAgentEvents(source: AsyncIterable<AgentEvent>, events: Pick<ExtensionEventBus, "emit">, options?: AgentEventBridgeOptions): () => void
 generateProviderTurn	export declare function generateProviderTurn(session: SessionHost, request: ProviderRequest, runId: string, signal: AbortSignal, secrets?: readonly (string | undefined)[], turn?: number, attempt?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
-generateValidateReviseLoop	export declare function generateValidateReviseLoop(opts:
-generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: RunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
+generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: ResolvedRunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
 getContextBudgetReport	export declare function getContextBudgetReport(request: ProviderRequest): ContextBudgetReport | undefined
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
 getSessionBranchEntries	export declare function getSessionBranchEntries(reader: BranchReader, query: SessionBranchRead): Promise<readonly SessionEntry[]>
@@ -900,7 +919,6 @@ inspectAgent	export declare function inspectAgent(agent: Agent, sources: Inspect
 inspectHostComposition	export declare function inspectHostComposition(options: HostCompositionOptions): HostCompositionReport
 install	export declare function install(spec: string, options: InstallOptions): Promise<ManifestEntry>
 installedPackageDir	export declare function installedPackageDir(packagesDir: string, name: string): string
-isAgentLoopOptions	export declare function isAgentLoopOptions(value: AgentLoopStrategy | AgentLoopOptions | undefined): value is AgentLoopOptions
 isAllowedByCidr	export declare function isAllowedByCidr(hostname: string, allowedCidrs: readonly string[] | undefined): boolean
 isAttentionBudgetError	export declare function isAttentionBudgetError(error: unknown): error is AttentionBudgetError
 isBatchJobTerminal	export declare function isBatchJobTerminal(job: Pick<BatchJob, "state">): boolean
@@ -919,6 +937,7 @@ isPathInside	export declare function isPathInside(root: string, target: string):
 isPathInsideReal	export declare function isPathInsideReal(root: string, target: string): Promise<boolean>
 isPdfMediaType	export declare function isPdfMediaType(mediaType: string): boolean
 isResourceHeld	export declare function isResourceHeld(holds: readonly Pick<LegalHoldRecord, "resourceKind" | "resourceId">[], resourceKind: PersistenceResourceKind, resourceId: string): boolean
+isRetryableSystemOneStatus	export declare function isRetryableSystemOneStatus(status: number): boolean
 isSessionAppendConflict	export declare function isSessionAppendConflict(error: unknown): error is SessionAppendConflictError
 isSessionEntryKind	export declare function isSessionEntryKind(value: unknown): value is SessionEntryKind
 isSessionMetadataConflict	export declare function isSessionMetadataConflict(error: unknown): error is SessionMetadataConflictError
@@ -929,6 +948,8 @@ isSkillDisclosureError	export declare function isSkillDisclosureError(error: unk
 isSkillLoadError	export declare function isSkillLoadError(error: unknown): error is SkillLoadError
 isSteerSoftInterrupt	export declare function isSteerSoftInterrupt(error: unknown): boolean
 isSupportedThinkingLevel	export declare function isSupportedThinkingLevel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">, level: unknown): boolean
+isSystemOneAnswer	export declare function isSystemOneAnswer(value: unknown): value is SystemOneAnswer
+isSystemOneResponse	export declare function isSystemOneResponse(value: unknown): value is SystemOneResponse
 isTerminalAgentEventType	export declare function isTerminalAgentEventType(type: AgentEvent["type"]): boolean
 isThinkingLevel	export declare function isThinkingLevel(value: unknown): value is ThinkingLevel
 isToolDisclosureError	export declare function isToolDisclosureError(error: unknown): error is ToolDisclosureError
@@ -945,13 +966,12 @@ loadBinaryResource	export declare function loadBinaryResource(loader: ResourceLo
 loadBoundedBinaryResource	export declare function loadBoundedBinaryResource(loader: ResourceLoader, uri: string, context: ResourceLoadContext | undefined, maxBytes: number, signal?: AbortSignal): Promise<Uint8Array>
 loadConfigFiles	export declare function loadConfigFiles(files: readonly NodeConfigFile[]): Promise<ConfigLayer[]>
 loadConfigLayers	export declare function loadConfigLayers(providers: readonly ConfigProvider[], context?: ConfigLoadContext): Promise<ConfigLayer[]>
-loadInstructionInjector	export declare function loadInstructionInjector(contribution: DiscoveredContribution, options?: LoadInstructionInjectorOptions): Promise<InstructionInjector | undefined>
-loadInstructionInjectors	export declare function loadInstructionInjectors(contributions: readonly DiscoveredContribution[], options?: LoadInstructionInjectorOptions): Promise<readonly InstructionInjector[]>
 loadInstructionSource	export declare function loadInstructionSource(contribution: DiscoveredContribution, options?: LoadInstructionSourceOptions): Promise<ContextSource | undefined>
 loadInstructionSources	export declare function loadInstructionSources(contributions: readonly DiscoveredContribution[], options?: LoadInstructionSourceOptions): Promise<readonly ContextSource[]>
 loadJsonResource	export declare function loadJsonResource(loader: ResourceLoader, uri: string, context?: ResourceLoadContext): Promise<JsonObject>
 loadManifest	export declare function loadManifest(options?: LoadManifestOptions): Promise<PackageInput[]>
 loadPackages	export declare function loadPackages(options: LoadPackagesOptions): Promise<LoadedPackages>
+loadProviderPackage	export declare function loadProviderPackage(instance: PackageInstance): Promise<void>
 loadSettingsFiles	export declare function loadSettingsFiles(files: readonly NodeSettingsFile[]): Promise<SettingsProvider>
 loadSkillDirectory	export declare function loadSkillDirectory(directory: string, options?: LoadSkillDirectoryOptions): Promise<readonly Skill[]>
 loadSuspendedRunEntry	export declare function loadSuspendedRunEntry(store: import("./contracts.js").SessionStore, sessionId: string, runId?: string): Promise<SuspendedRunEntryData | undefined>
@@ -963,6 +983,7 @@ manifestUsage	export declare const manifestUsage: string
 mapCacheRetention	export declare function mapCacheRetention(retention: CacheRetention | undefined, model: ModelConfig): "short" | "long" | undefined
 mapOpenAIChatUsage	export declare function mapOpenAIChatUsage(usage: unknown): Usage | undefined
 mapProviderStopReason	export declare function mapProviderStopReason(native: string | null | undefined): ProviderStopReason
+mapSystemOneUsage	export declare function mapSystemOneUsage(usage: SystemOneUsage | undefined): Usage | undefined
 matchNestedSticky	export declare function matchNestedSticky(session: SessionHost, decision: PendingDecision): StickyDecision | undefined
 matchStickyDecision	export declare function matchStickyDecision(session: SessionHost, call: ToolCallContent, registry: ToolRegistry): StickyDecision | undefined
 measureInputCost	export declare function measureInputCost(options: MeasureInputCostOptions):
@@ -972,10 +993,13 @@ mergeCompaction	export declare function mergeCompaction(agent: false | Compactio
 mergeConfigLayers	export declare function mergeConfigLayers(layers: readonly ConfigLayer[]): JsonObject
 mergeManifestScopes	export declare function mergeManifestScopes(sources: MergeSources): MergedManifest
 mergeManifestSlots	export declare function mergeManifestSlots(inputs: readonly PackageInput[], direct: SlotAssignments | undefined): SlotAssignments | undefined
+mergeModelCatalog	export declare function mergeModelCatalog(models: readonly ModelConfig[], catalog: readonly ModelConfig[] | undefined): readonly ModelConfig[]
 mergeProviderRequestOptions	export declare function mergeProviderRequestOptions(base: ProviderRequestOptions | undefined, patch: ProviderRequestOptions | undefined): ProviderRequestOptions | undefined
 mergeRetry	export declare function mergeRetry(agent: false | RetryOptions | undefined, run: false | RetryOptions | undefined): RetryOptions | undefined
 mergeSystemPromptConfig	export declare function mergeSystemPromptConfig(config: SystemPromptConfig | undefined, override: SystemPromptConfig | undefined): SystemPromptConfig
 messageTextBytes	export declare function messageTextBytes(message: Message): number
+mockProvider	export declare function mockProvider(script?: readonly (readonly ProviderEvent[])[], options?: MockProviderPackageOptions): PackageInstance
+modelEntrySchema	export declare const modelEntrySchema: JsonSchema
 modelSupportsBatchJobs	export declare function modelSupportsBatchJobs(capabilities?: ModelCapabilities): boolean
 modelSupportsEmbeddings	export declare function modelSupportsEmbeddings(capabilities?: ModelCapabilities): boolean
 modelSupportsImageGeneration	export declare function modelSupportsImageGeneration(capabilities?: ModelCapabilities): boolean
@@ -984,15 +1008,22 @@ modelSupportsSpeech	export declare function modelSupportsSpeech(capabilities?: M
 modelSupportsStructuredOutput	export declare function modelSupportsStructuredOutput(capabilities?: ModelCapabilities): boolean
 modelSupportsTranscription	export declare function modelSupportsTranscription(capabilities?: ModelCapabilities): boolean
 modelSupportsVideoGeneration	export declare function modelSupportsVideoGeneration(capabilities?: ModelCapabilities): boolean
+modelsProperty	export declare function modelsProperty(description?: string): JsonSchema
 name	export declare const name = "prism"
 narrowIdentity	export declare function narrowIdentity(parent: AgentIdentity, options: NarrowIdentityOptions): AgentIdentity
 nestedApprovalId	export declare function nestedApprovalId(runId: string, childApprovalId: string): string
 nestedOutcomeToolResult	export declare function nestedOutcomeToolResult(outcome: Exclude<NestedRunOutcome,
 normalizeHostname	export declare function normalizeHostname(value: string): string
 normalizePackageInput	export declare function normalizePackageInput(input: PackageInput): NormalizedPackage
+normalizeStopReason	export declare function normalizeStopReason(reason: ProviderStopReason | string | undefined): ProviderStopReason | undefined
 normalizeThinkingLevel	export declare function normalizeThinkingLevel(level: string): ThinkingLevel | string | undefined
+oauthCredentialsToSecret	export declare function oauthCredentialsToSecret(credentials: OAuthCredentials): Secret
 openAIAudioFormat	export declare function openAIAudioFormat(mediaType: string): string
 openAIChatEvents	export declare function openAIChatEvents(body: ReadableStream<Uint8Array>, options?: OpenAIChatEventsOptions): AsyncIterable<ProviderEvent>
+openAICompatThinkingExtra	export declare function openAICompatThinkingExtra(request: ProviderRequest, fallback?: ThinkingLevelsFallback): JsonObject | undefined
+openAIDefaultEffort	export declare function openAIDefaultEffort(modelId: string): string | undefined
+openAIThinkingLevels	export declare function openAIThinkingLevels(modelId: string): readonly string[] | undefined
+optionalRefSource	export declare function optionalRefSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined>
 ownershipFromIdentity	export declare function ownershipFromIdentity(identity: AgentIdentity): OwnershipScope
 packageConformance	export declare function packageConformance(input: PackageInput, options?: PackageConformanceOptions): Promise<PackageConformanceResult>
 packagesAffectTools	export declare function packagesAffectTools(agent: Agent): boolean
@@ -1000,9 +1031,10 @@ parseAgentFile	export declare function parseAgentFile(text: string, path: string
 parseAgentRunState	export declare function parseAgentRunState(value: unknown, version?: number): StoredAgentRunState
 parseAttentionStickyFrontier	export declare function parseAttentionStickyFrontier(value: unknown): PersistedAttentionStickyFrontier | undefined
 parseCliArgs	export declare function parseCliArgs(argv: readonly string[]): CliOptions
+parseErrorBody	export declare function parseErrorBody(body: unknown):
 parseJsonObjectArguments	export declare function parseJsonObjectArguments(text: string, options?: ParseJsonObjectArgumentsOptions): JsonObject
 parseManifest	export declare function parseManifest(json: unknown, options: ParseManifestOptions): PrismManifestV1
-parsePrismManifest	export declare function parsePrismManifest(value: unknown): PrismManifest
+parseModelRef	export declare function parseModelRef(ref: ModelRef): ModelSpec
 parseRange	export declare function parseRange(range: string): SemVerRange
 parseRetryAfterMs	export declare function parseRetryAfterMs(value: string | null, now?: number): number | undefined
 parseRpcRequest	export declare function parseRpcRequest(value: unknown): RpcRequest
@@ -1019,12 +1051,20 @@ persistSucceeded	export declare function persistSucceeded(ctx: RoundContext, loo
 pinnedFetch	export declare function pinnedFetch(url: URL, init: RequestInit | undefined, options?: PinnedFetchOptions): Promise<Response>
 pollBatch	export declare function pollBatch(provider: BatchJobsProvider, jobId: string, options?: PollBatchOptions): Promise<BatchJob>
 pollDeviceCodeToken	export declare function pollDeviceCodeToken(options: PollDeviceCodeTokenOptions): Promise<OAuthCredentials>
+postSystemOne	export declare function postSystemOne(body: SystemOneBody, options: SystemOneClientOptions, signal?: AbortSignal): Promise<SystemOneResponse>
 prepareRunFeedback	export declare function prepareRunFeedback(input: AppendRunFeedbackInput, options: PrepareRunFeedbackOptions): Promise<RunFeedbackRecord>
+promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined
+promptCacheOptions	export declare function promptCacheOptions(options: ProviderRequestOptions | undefined, model: ModelConfig):
+promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
+providerConformance	export declare function providerConformance(factory: () => ModelProvider, options: ProviderConformanceOptions): Promise<void>
 providerContent	export declare function providerContent(event: Extract<ProviderEvent,
 providerContentDelta	export declare function providerContentDelta(content: ContentBlock): ProviderEvent
 providerContinuationRequired	export declare function providerContinuationRequired(cursor: string, reason?: string): ProviderEvent
 providerDone	export declare function providerDone(usage?: Usage, stopReason?: ProviderStopReason): ProviderEvent
 providerError	export declare function providerError(error: unknown, secrets?: readonly (string | undefined)[]): Extract<ProviderEvent,
+providerHttpError	export declare function providerHttpError(providerName: string, decision: RetryDecisionFields, bodyText: string, secrets: readonly (string | undefined)[]): Error
+providerPackage	export declare function providerPackage(name: string, providers: readonly ModelProvider[], description?: string): PackageInstance
+providerPackageInstance	export declare function providerPackageInstance<Config extends object, Options extends object>(definition: PackageDefinition<Config>, definitionFor: (options: Options) => PackageDefinition<Config>, factoryKeys: readonly (keyof Options & string)[], options: Options & Config): PackageInstance
 providerTextDelta	export declare function providerTextDelta(text: string): ProviderEvent
 providerThinkingDelta	export declare function providerThinkingDelta(text: string, signature?: string): ProviderEvent
 providerToolCall	export declare function providerToolCall(call: ToolCallContent): ProviderEvent
@@ -1039,10 +1079,10 @@ readBoundedResponseJson	export declare function readBoundedResponseJson<T>(respo
 readBoundedResponseText	export declare function readBoundedResponseText(response: Response, options?: ReadBoundedResponseTextOptions): Promise<string>
 readCheckpointMetadata	export declare function readCheckpointMetadata(metadata: unknown): AgentRunCheckpointMetadata | undefined
 readConfigFile	export declare function readConfigFile(path: string): Promise<ConfigLayer["config"]>
-readJsonlSessionEntries	export declare function readJsonlSessionEntries(path: string): Promise<SessionEntryReadResult>
 readManifest	export declare function readManifest(dirs: ScopeDirs): Promise<PrismManifestV1 | undefined>
 readOptionalFile	export declare function readOptionalFile(path: string): Promise<string | undefined>
 readProviderHttpStatus	export declare function readProviderHttpStatus(error?: ErrorInfo): number | undefined
+readRetryAfterMs	export declare function readRetryAfterMs(headers: RetryHeaders, bodyRetryAfter?: unknown): number | undefined
 readSettingsFile	export declare function readSettingsFile(path: string): Promise<ConfigLayer["config"]>
 readSseData	export declare function readSseData(body: ReadableStream<Uint8Array>, options?: ReadSseEventsOptions): AsyncGenerator<string>
 readSseEvents	export declare function readSseEvents(body: ReadableStream<Uint8Array>, options?: ReadSseEventsOptions): AsyncGenerator<SseEvent>
@@ -1058,15 +1098,15 @@ redactProviderRequest	export declare function redactProviderRequest(request: Pro
 redactRunLedgerRecord	export declare function redactRunLedgerRecord<T extends RunLedgerRecord>(record: T, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): T
 redactSecrets	export declare function redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T
 redactSessionEntry	export declare function redactSessionEntry(entry: SessionEntry, redactor?: SecretRedactor, fieldPolicy?: FieldPolicy, destination?: string, labelFor?: (key: string, path: string) => string | undefined): SessionEntry
+refSource	export declare function refSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string>
 refreshOAuthCredential	export declare function refreshOAuthCredential(options:
 registerAgentRuntime	export declare function registerAgentRuntime(agent: Agent, runtime: AgentRuntime): void
 registerContextSources	export declare function registerContextSources(hooks: HookRegistrar, sources: readonly ContextSource[]): void
-registerDiscoveredContributions	export declare function registerDiscoveredContributions(registries: ContributionRegistries, contributions: readonly DiscoveredContribution[]): void
-registerDiscoveredInstructionInjectors	export declare function registerDiscoveredInstructionInjectors(registries: ContributionRegistries, contributions: readonly DiscoveredContribution[], options?: LoadInstructionInjectorOptions): Promise<void>
 registerSkillCatalog	export declare function registerSkillCatalog(hooks: HookRegistrar): void
 rejectProviderMediaBlock	export declare function rejectProviderMediaBlock(part: ContentBlock, capabilities: ModelCapabilities, model: ModelConfig): never
 remove	export declare function remove(name: string, options: InstallLocation): Promise<void>
 renderPromptTemplate	export declare function renderPromptTemplate(template: string, variables: JsonObject, options?: PromptTemplateOptions): string
+renderSystemOneOutput	export declare function renderSystemOneOutput(answers: Readonly<Record<string, SystemOneAnswer>>, schema: JsonObject, options?: SystemOneRenderOptions): string
 replayDurableNestedAndPending	export declare function replayDurableNestedAndPending(ctx: RoundContext): Promise<void>
 replayToolResult	export declare function replayToolResult(ctx: RoundContext, result: ToolResult): Promise<void>
 requestPinned	export declare function requestPinned(url: URL, address: MediaHostAddress, init: RequestInit | undefined, errorPrefix?: string): Promise<Response>
@@ -1083,14 +1123,14 @@ resolveCheckpointMetadata	export declare function resolveCheckpointMetadata(sour
 resolveContextBudget	export declare function resolveContextBudget(budget: ContextBudget): Required<Pick<ContextBudget, "reportOmissions">> & ContextBudget
 resolveCredentialValue	export declare function resolveCredentialValue(source: CredentialValueSource | undefined, request: CredentialRequest): Promise<string | undefined>
 resolveDevicePolicy	export declare function resolveDevicePolicy(adapter: DeviceAdapter, options?: DevicePolicyOptions): ResolvedDevicePolicy
+resolveDiscoveryBearerToken	export declare function resolveDiscoveryBearerToken(options: ModelDiscoveryAdapterOptions, label: string): Promise<string | undefined>
 resolveHostTokenEstimator	export declare function resolveHostTokenEstimator(budget: ContextBudget | undefined): TokenEstimator | undefined
 resolveIdentityLimits	export declare function resolveIdentityLimits(input?: IdentityLimits): ResolvedIdentityLimits
 resolveInputCap	export declare function resolveInputCap(options?: AttentionInputCapOptions, model?: AttentionCompilerContext["model"]): number
-resolveInstructionInjectors	export declare function resolveInstructionInjectors(options: ResolveInstructionInjectorsOptions): readonly InstructionInjector[]
-resolveLoop	export declare function resolveLoop(options:
 resolveMediaContentBlock	export declare function resolveMediaContentBlock(block: MediaContentBlock, options?: ResolveMediaContentOptions): Promise<ResolvedMediaContent>
 resolveMediaContentBlocks	export declare function resolveMediaContentBlocks(blocks: readonly MediaContentBlock[], options?: ResolveMediaContentOptions): Promise<readonly ResolvedMediaContent[]>
 resolveModelFamily	export declare function resolveModelFamily(model?: string): ModelFamily
+resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
 resolvePackageConfig	export declare function resolvePackageConfig(definition: PackageConfigDefinition, layers?: PackageConfigLayers): ResolvedPackageConfig
 resolvePinnedAddress	export declare function resolvePinnedAddress(url: URL, resolver: MediaHostnameResolver, signal: AbortSignal | null | undefined, allowLoopback: boolean, ssrf: SsrfPolicy | undefined, hostnameErrorPrefix?: string): Promise<MediaHostAddress>
 resolveProviderMediaMessages	export declare function resolveProviderMediaMessages(messages: readonly Message[], model: ModelConfig, options?: ResolveMediaContentOptions): Promise<ReadonlyMap<MediaContentBlock, ResolvedMediaContent>>
@@ -1098,12 +1138,12 @@ resolveRedactor	export declare function resolveRedactor(redactor?: SecretRedacto
 resolveRunAttentionCompiler	export declare function resolveRunAttentionCompiler(agent: AttentionCompilerSetting | undefined, run: AttentionCompilerSetting | undefined, model: AttentionCompilerContext["model"], runInputBudget?: number | null): AttentionCompiler | undefined
 resolveRunDecisions	export declare function resolveRunDecisions(input:
 resolveRunLimits	export declare function resolveRunLimits(agent?: RunLimits, run?: RunLimits): Readonly<ResolvedRunLimits>
+resolveRunOptions	export declare function resolveRunOptions<T extends RunOptions>(options: T): Omit<T, "model"> & ResolvedRunOptions
 resolveRunProviderOptions	export declare function resolveRunProviderOptions(runOptions: Pick<RunOptions, "providerOptions">, config: Pick<AgentConfig, "providerOptions">): ProviderRequestOptions | undefined
 resolveSessionSearchQuery	export declare function resolveSessionSearchQuery(query: SessionSearchQuery): ResolvedSessionSearchQuery
 resolveShouldCompact	export declare function resolveShouldCompact(options: ResolveShouldCompactOptions, input: ResolveShouldCompactInput): Promise<boolean>
 resolveSkillLoad	export declare function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill
 resolveSkillsDisclosure	export declare function resolveSkillsDisclosure(run?: SkillsDisclosure, agent?: SkillsDisclosure): SkillsDisclosure
-resolveToolConcurrency	export declare function resolveToolConcurrency(options:
 resolveToolEffectDeclaration	export declare function resolveToolEffectDeclaration(tool: ToolDefinition, args: JsonObject, context: ToolExecutionContext): ToolEffectDeclaration | undefined
 resolveToolEffects	export declare function resolveToolEffects(tool: ToolDefinition): readonly ToolCapabilityKind[]
 resolveToolResultFold	export declare function resolveToolResultFold(run?: ToolResultFoldOptions, agent?: ToolResultFoldOptions): ResolvedToolResultFoldOptions | undefined
@@ -1117,6 +1157,7 @@ restoreAttentionStickyFrontier	export declare function restoreAttentionStickyFro
 restoreRunSessionState	export declare function restoreRunSessionState(session: RunRestoreTarget, state: StoredAgentRunState, options: RunRestoreOptions): void
 resumeAgentRun	export declare function resumeAgentRun(agent: Agent, ref: AgentRunRef, resume: AgentRunResume, options: AgentRunResumeOptions): Promise<RunResult>
 resumeAgentRunStream	export declare function resumeAgentRunStream(agent: Agent, ref: AgentRunRef, resume: AgentRunResume, options: AgentRunResumeStreamOptions): AsyncGenerator<AgentEvent>
+retryLoop	export declare function retryLoop<T>(attempt: (n: number) => Promise<T>, options: RetryLoopOptions): Promise<T>
 revokeOAuthCredential	export declare function revokeOAuthCredential(options:
 runBatchJobsConformance	export declare function runBatchJobsConformance(options: BatchJobsConformanceOptions): Promise<void>
 runCheckpointRestoreHooks	export declare function runCheckpointRestoreHooks<Context>(hooks: readonly CheckpointRestoreHandler<Context>[], context: Context, options?: RunCheckpointRestoreHooksOptions): Promise<CheckpointRestoreAudit>
@@ -1127,16 +1168,15 @@ runFeedbackConformance	export declare function runFeedbackConformance(factory: R
 runFeedbackPageLimit	export declare function runFeedbackPageLimit(limit: number | undefined, maximum?: number): number
 runGuardrailList	export declare function runGuardrailList<S extends GuardrailStage>(options: RunGuardrailListOptions<S>): Promise<GuardrailRunResult>
 runImageGenerationConformance	export declare function runImageGenerationConformance(options: ImageGenerationConformanceOptions): Promise<ImageGenerationResult | undefined>
-runInstructionInjectors	export declare function runInstructionInjectors(injectors: readonly InstructionInjector[], ctx: InstructionContext):
 runLoopUntilSettled	export declare function runLoopUntilSettled(ctx: RoundContext): Promise<Usage | undefined>
 runManifestCommand	export declare function runManifestCommand(argv: readonly string[], runtime: ManifestCliRuntime): Promise<number>
+runModelDiscoveryConformance	export declare function runModelDiscoveryConformance(createDiscovery: () => ModelDiscovery): Promise<void>
 runModerationConformance	export declare function runModerationConformance(options: ModerationConformanceOptions): Promise<ModerationResult | undefined>
 runPrefixStabilityConformance	export declare function runPrefixStabilityConformance(options: PrefixStabilityConformanceOptions): Promise<PrefixStabilityConformanceResult>
 runPrismDevSubcommand	export declare function runPrismDevSubcommand(argv: readonly string[], runtime: PrismDevSubcommandRuntime): Promise<number>
 runPromptMode	export declare function runPromptMode(session: Session, options: CliOptions, stdout: Writable, mode: "print" | "json"): Promise<void>
 runRpcServer	export declare function runRpcServer(options: RpcServerOptions): Promise<void>
 runRunLedgerConformance	export declare function runRunLedgerConformance(factory: RunLedgerConformanceFactory, options?: RunLedgerConformanceOptions): Promise<void>
-runSessionStoreConformance	export declare function runSessionStoreConformance(factory: SessionStoreConformanceFactory, options?: SessionStoreConformanceOptions): Promise<void>
 runSpeechConformance	export declare function runSpeechConformance(options: SpeechConformanceOptions): Promise<SpeechResult | undefined>
 runTranscriptionConformance	export declare function runTranscriptionConformance(options: TranscriptionConformanceOptions): Promise<TranscriptionResult | undefined>
 runVideoGenerationConformance	export declare function runVideoGenerationConformance(options: VideoGenerationConformanceOptions): Promise<VideoGenerationJob | undefined>
@@ -1148,6 +1188,8 @@ scopeDirs	export declare function scopeDirs(location: ScopeLocation): ScopeDirs
 scorePrefixStability	export declare function scorePrefixStability(requests: readonly ProviderRequest[], options?: ScorePrefixStabilityOptions): PrefixStabilitySample
 scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
 searchLinearSessions	export declare function searchLinearSessions(bySession: Map<string, SessionEntry[]>, leafBySession: Map<string, string>, query: SessionSearchQuery, caps?: LinearSearchCaps): PersistencePage<SessionSearchHit>
+secretRefProperty	export declare function secretRefProperty(ref?: string, description?: string): JsonSchema
+secretToOAuthCredentials	export declare function secretToOAuthCredentials(secret: Secret): OAuthCredentials
 secretsHygienePack	export declare const secretsHygienePack: GuardrailPackDefinition
 selectDisclosedTools	export declare function selectDisclosedTools(options:
 selectRunTools	export declare function selectRunTools(listed: readonly ToolDefinition[], requested: readonly string[] | undefined, checkpoint?: readonly string[]):
@@ -1162,8 +1204,8 @@ serializeOpenAIResponsesStructuredOutput	export declare function serializeOpenAI
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
 serializePdfDocumentWireBlock	export declare function serializePdfDocumentWireBlock(options:
 serializeToolResultJson	export declare function serializeToolResultJson(message: Message): string
+sessionStoreCapabilities	export declare function sessionStoreCapabilities(store: SessionStore): readonly SessionStoreCapability[]
 setEnabled	export declare function setEnabled(name: string, enabled: boolean, options: MaintainOptions): Promise<void>
-singleShotLoop	export declare const singleShotLoop: AgentLoopStrategy
 skillCatalogDraft	export declare function skillCatalogDraft(request: ProviderRequest):
 skillHasRenderableBody	export declare function skillHasRenderableBody(skill: Skill, context?: SkillRenderContext): boolean
 skillInfos	export declare function skillInfos(agent: Agent): readonly SkillInfo[]
@@ -1175,14 +1217,14 @@ snapshotRunBundle	export declare function snapshotRunBundle(input: RunBundleSnap
 sniffMediaMimeType	export declare function sniffMediaMimeType(bytes: Uint8Array): string | undefined
 splitFrontmatter	export declare function splitFrontmatter(text: string, path: string):
 stageAskDecisions	export declare function stageAskDecisions(ctx: RoundContext, requests: readonly
+storeConformance	export declare function storeConformance(factory: StoreConformanceFactory, options?: StoreConformanceOptions): Promise<void>
 summarizeSession	export declare function summarizeSession(sessionId: string, entries: readonly SessionEntry[], leafId: string | undefined): SessionSummary
 suspendDurable	export declare function suspendDurable(session: SessionHost, input:
 suspendGatedRound	export declare function suspendGatedRound(ctx: RoundContext): Promise<void>
 suspendNested	export declare function suspendNested(ctx: RoundContext, nested:
 systemCacheControlField	export declare function systemCacheControlField(messages: readonly CacheControlledMessage[], toText: (message: Message) => string): string | readonly SystemCacheControlTextBlock[] | undefined
-systemPromptContributionKey	export declare function systemPromptContributionKey(contribution: SystemPromptContribution): string
 tenantScopedUniqueKey	export declare function tenantScopedUniqueKey(baseColumns: readonly string[], tenantColumn?: "tenant_id" | "account_id" | "user_id"): readonly string[]
-textProvider	export declare function textProvider(text?: string): AIProvider
+textProvider	export declare function textProvider(text?: string): ModelProvider
 thinkingCompatFor	export declare function thinkingCompatFor(family: ThinkingCompatFamily, level: ThinkingLevel | string): JsonObject
 thinkingFamilyForModel	export declare function thinkingFamilyForModel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): ThinkingCompatFamily
 thinkingLevelsForModel	export declare function thinkingLevelsForModel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): readonly string[] | undefined
@@ -1207,7 +1249,9 @@ type AgentRuntime	export { agentRuntime, tryAgentRuntime, type AgentRuntime } fr
 type AskRequest	export { createRunController, type AskRequest, type AskResolution, type RunControllerInternals } from "./run-controller.js"
 type AskResolution	export { createRunController, type AskRequest, type AskResolution, type RunControllerInternals } from "./run-controller.js"
 type Compactor	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
-type ConformanceCheck	export { type ConformanceCheck, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
+type ConformanceCheck	export { type ConformanceCheck, loadProviderPackage, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
+type CredentialRecord	export { resolveCredentialValue, type CredentialRecord, type CredentialValueSource } from "./legacy.js"
+type CredentialValueSource	export { resolveCredentialValue, type CredentialRecord, type CredentialValueSource } from "./legacy.js"
 type DecideCombination	export { type DecideCombination, HOOK_CATALOG, HOOK_COMBINATION, type HookCatalogEntry, OBSERVE_HOOK_NAMES, } from "./catalog.js"
 type HookCatalogEntry	export { type DecideCombination, HOOK_CATALOG, HOOK_COMBINATION, type HookCatalogEntry, OBSERVE_HOOK_NAMES, } from "./catalog.js"
 type InstallLocation	export { type InstallLocation, type InstallOptions, install, remove } from "./install.js"
@@ -1232,18 +1276,17 @@ type ManifestTrustRequest	export { type LoadManifestOptions, loadManifest, type 
 type MergeSources	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
 type MergedManifest	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
 type MockProviderOptions	export { createMockProvider, type MockProviderOptions } from "../mock-provider.js"
-type OAuthTokenSuccessPayload	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
+type MockProviderPackageOptions	export { mockProvider, type MockProviderPackageOptions } from "./mock-provider-package.js"
 type PackageConfigDefinition	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
 type PackageConfigLayers	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
 type PackageConfigSource	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
-type PackageConformanceCheckName	export { type ConformanceCheck, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
-type PackageConformanceOptions	export { type ConformanceCheck, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
-type PackageConformanceResult	export { type ConformanceCheck, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
+type PackageConformanceCheckName	export { type ConformanceCheck, loadProviderPackage, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
+type PackageConformanceOptions	export { type ConformanceCheck, loadProviderPackage, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
+type PackageConformanceResult	export { type ConformanceCheck, loadProviderPackage, type PackageConformanceCheckName, type PackageConformanceOptions, type PackageConformanceResult, packageConformance, } from "./package-conformance.js"
 type PackageLoadErrorCode	export { PackageLoadError, type PackageLoadErrorCode, type PackageLoadErrorOptions } from "./errors.js"
 type PackageLoadErrorOptions	export { PackageLoadError, type PackageLoadErrorCode, type PackageLoadErrorOptions } from "./errors.js"
 type ParseManifestOptions	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
 type PinnedFetchOptions	export { boundResponse, defaultResolver, isLoopbackAddress, isLoopbackHostname, normalizeHostname, type PinnedFetchOptions, pinnedFetch, raceAbort, requestPinned, resolvePinnedAddress, } from "./pinned-fetch.js"
-type PollDeviceCodeTokenOptions	export { abortableSleep, type OAuthTokenSuccessPayload, type PollDeviceCodeTokenOptions, pollDeviceCodeToken, redactOAuthError, throwIfAborted, } from "./oauth-device-code.js"
 type PrismManifestV1	export { isInstalledEntry, type ManifestEntry, type ManifestInstall, type ManifestOverride, type ManifestRecord, type ManifestScope, type ParseManifestOptions, type PrismManifestV1, parseManifest, } from "./format.js"
 type ResolvedManifestEntry	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
 type ResolvedPackageConfig	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
@@ -1260,13 +1303,30 @@ type SlotContracts	export { SlotConflictError, UnknownSlotError, UnknownSlotOwne
 type SlotName	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
 type SlotProvider	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
 type SlotRegistry	export { SlotConflictError, UnknownSlotError, UnknownSlotOwnerError, type Compactor, type SlotAssignments, type SlotContracts, type SlotName, type SlotProvider, type SlotRegistry, } from "./types.js"
+type StoreConformanceFactory	export { STORE_CONFORMANCE_STEPS, storeConformance, type StoreConformanceFactory, type StoreConformanceOptions, type StoreConformanceStep, } from "./store-conformance.js"
+type StoreConformanceOptions	export { STORE_CONFORMANCE_STEPS, storeConformance, type StoreConformanceFactory, type StoreConformanceOptions, type StoreConformanceStep, } from "./store-conformance.js"
+type StoreConformanceStep	export { STORE_CONFORMANCE_STEPS, storeConformance, type StoreConformanceFactory, type StoreConformanceOptions, type StoreConformanceStep, } from "./store-conformance.js"
+type SystemOneAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneBody	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneChoiceAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneChoiceQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneClientOptions	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneInstructions	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneNoulAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneNoulQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneResponse	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneSchemaErrorCode	export { compileSystemOneQuestions, compileSystemOneState, MAX_SYSTEMONE_CHOICE_OPTIONS, MAX_SYSTEMONE_QUESTIONS, MAX_SYSTEMONE_SCORE_LEVELS, SystemOneSchemaError, type SystemOneSchemaErrorCode, } from "./systemone-schema.js"
+type SystemOneScoreAnswer	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneScoreQuestion	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneState	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
+type SystemOneUsage	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
 type ToolDispatchContext	export { dispatchableToolCalls, dispatchToolCallsInOrder, throwIfAborted, type ToolDispatchContext } from "./dispatch.js"
 type VerifyIssue	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
 type VerifyOptions	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
 type VerifyResult	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
 usage	export declare const usage: string
 useCaseCredentialProviderId	export declare function useCaseCredentialProviderId(resolved: ResolvedUseCaseModel | undefined, binding?: Pick<UseCaseModelBinding, "provider">): string | undefined
-validateDeterministicTurnAnswer	export declare function validateDeterministicTurnAnswer(value: unknown): DeterministicTurnAnswer
 validateElicitationPayload	export declare function validateElicitationPayload(agent: Agent, state: StoredAgentRunState, target: PendingDecision, payload: JsonObject, signal?: AbortSignal): Promise<void>
 validateJsonSchema	export declare function validateJsonSchema(schema: JsonSchema, value: unknown): SchemaResult
 validateLoadedSkillBodies	export declare function validateLoadedSkillBodies(value: unknown): asserts value is readonly LoadedSkillBodiesEntry[]

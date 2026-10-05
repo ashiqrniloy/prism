@@ -20,6 +20,7 @@ import {
   type ToolDefinition,
   type ToolResult,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const echo = (name: string, value: string): ToolDefinition => ({
   name,
@@ -63,7 +64,7 @@ async function packHarness(packs: readonly GuardrailPackRef[] | undefined, tools
   const store = createMemorySessionStore();
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         turn += 1;
@@ -75,7 +76,7 @@ async function packHarness(packs: readonly GuardrailPackRef[] | undefined, tools
         yield providerTextDelta("stopped");
         yield providerDone();
       },
-    },
+    }])],
     tools: { add: wrapped },
     slots: { store },
   });
@@ -144,7 +145,7 @@ async function toolCallingAgent(
   let executed = 0;
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate() {
         turns += 1;
@@ -156,7 +157,7 @@ async function toolCallingAgent(
         yield providerTextDelta("stopped");
         yield providerDone();
       },
-    },
+    }])],
     tools: {
       add: tools.map((tool) => ({
         ...tool,
@@ -357,12 +358,12 @@ describe("guardrail packs", () => {
     ]);
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [echo("write", "written")] },
     });
     const bundle = snapshotRunBundle({ agent, config: { guardrailPacks: ["secrets-hygiene"] } });

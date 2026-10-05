@@ -1,4 +1,5 @@
-import { createAgent, createMockProvider, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -9,6 +10,7 @@ import {
   runWorkflow,
   type WorkflowEvent,
 } from "@arnilo/prism-core/runtime/workflows";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // True parallel research DAG: fan-out normalizes bounded topics, join exposes
 // the array, three independent research branches execute concurrently, then a
@@ -21,7 +23,7 @@ const provider = createMockProvider([
 ]);
 const summarizerAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
   instructions: "Synthesize research findings into a one-paragraph summary.",
 });
 

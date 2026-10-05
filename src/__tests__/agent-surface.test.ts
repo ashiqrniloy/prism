@@ -1,24 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentEvent,
-  type AIProvider,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  definePackage,
-  isUnsupportedStoreCapability,
-  type ModelConfig,
-  type PackageDefinitionInput,
-  providerDone,
-  providerTextDelta,
-  SessionNotFoundError,
-  type SessionStore,
-  type Skill,
-  type ToolDefinition,
-  UnsupportedStoreCapabilityError,
-} from "../index.js";
+import { type AgentEvent, type ModelProvider, createAgent, createMemorySessionStore, createSecretRedactor, definePackage, isUnsupportedStoreCapability, type ModelConfig, type PackageDefinitionInput, providerDone, providerTextDelta, SessionNotFoundError, type SessionStore, type Skill, type ToolDefinition, UnsupportedStoreCapabilityError } from "../index.js";
+import { mockProvider, createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 const SECRET = "sk-agent-surface-0123456789";
@@ -27,7 +11,7 @@ type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
   definePackage<any>({ name, version: "1.0.0", setup, ...extra });
 
-const provider = (): AIProvider => createMockProvider([providerTextDelta("ok"), providerDone()]);
+const provider = (): ModelProvider => createMockProvider([providerTextDelta("ok"), providerDone()]);
 const tool = (name: string, extra: Partial<ToolDefinition> = {}): ToolDefinition => ({
   name,
   description: `${name} tool`,
@@ -48,7 +32,7 @@ describe("agent.sessions", () => {
     const store = createMemorySessionStore();
     const agent = await createAgent({
       model: MODEL,
-      provider: createMockProvider([providerTextDelta("hello there"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("hello there"), providerDone()]])],
       slots: { store },
     });
     const a = await agent.session({ id: "a", create: true });
@@ -90,7 +74,7 @@ describe("agent.sessions", () => {
 
   it("sessions_capability_missing_fails_closed", async () => {
     const store = bareStore();
-    const agent = await createAgent({ model: MODEL, provider: provider(), slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], slots: { store } });
     const session = await agent.session({ id: "s", create: true });
     await session.run("hi");
     for (const [capability, call] of [
@@ -113,8 +97,8 @@ describe("agent.sessions", () => {
 
   it("sessions_respect_ownership_scope", async () => {
     const store = createMemorySessionStore();
-    const mine = await createAgent({ model: MODEL, provider: provider(), slots: { store }, ownership: { tenantId: "tenant-a" } });
-    const theirs = await createAgent({ model: MODEL, provider: provider(), slots: { store }, ownership: { tenantId: "tenant-b" } });
+    const mine = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], slots: { store }, ownership: { tenantId: "tenant-a" } });
+    const theirs = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], slots: { store }, ownership: { tenantId: "tenant-b" } });
     await (await mine.session({ id: "mine", create: true })).run("private to a");
     await (await theirs.session({ id: "theirs", create: true })).run("private to b");
 
@@ -148,9 +132,7 @@ describe("agent.commands", () => {
     const seen: { session?: string } = {};
     const agent = await createAgent({
       model: MODEL,
-      provider: provider(),
-      packages: [
-        pkg("@acme/cmd", ({ commands }) => {
+      packages: [pkg("@acme/cmd", ({ commands }) => {
           commands.register({
             name: "who",
             description: "reports its session",
@@ -159,8 +141,7 @@ describe("agent.commands", () => {
               return "ok";
             },
           });
-        }),
-      ],
+        }), providerPackage("test-provider", [provider()])],
     });
     assert.deepEqual(agent.commands.list(), [{ name: "who", description: "reports its session", package: "@acme/cmd" }]);
     const session = await agent.session({ id: "S", create: true });
@@ -170,7 +151,7 @@ describe("agent.commands", () => {
 });
 
 describe("agent.models", () => {
-  const discovering = (id: string, models: readonly ModelConfig[]): AIProvider => ({
+  const discovering = (id: string, models: readonly ModelConfig[]): ModelProvider => ({
     ...createMockProvider([providerDone()]),
     id,
     models: async () => models,
@@ -185,9 +166,12 @@ describe("agent.models", () => {
         parameters: { baseUrl: "https://internal.example/v1", headers: { authorization: `Bearer ${SECRET}` } },
         compat: { endpoint: SECRET },
         metadata: { token: SECRET },
-      },
+        baseUrl: "https://tenant:" + SECRET + "@internal.example/v1",
+        credential: "env:ALPHA_KEY",
+        options: { token: SECRET },
+      } as ModelConfig,
     ]);
-    const quiet: AIProvider = {
+    const quiet: ModelProvider = {
       id: "quiet",
       async *generate() {
         yield providerDone();
@@ -211,16 +195,18 @@ describe("agent.models", () => {
     assert.equal(JSON.stringify(listed).includes(SECRET), false, "no secret reaches a listing");
     assert.equal(JSON.stringify(listed).includes("internal.example"), false, "no endpoint reaches a listing");
     assert.ok(Object.isFrozen(listed));
+    for (const model of listed) {
+      for (const key of ["baseUrl", "credential", "options", "parameters", "compat", "metadata"]) assert.equal(key in model, false, key);
+    }
 
+    assert.equal(agent.models.resolve("alpha/a-1").model.model, "a-1", "a string ref resolves");
     const resolved = agent.models.resolve({ provider: "alpha", model: "a-1" });
     assert.equal(resolved.provider, alpha);
     assert.equal(resolved.model.model, "a-1");
   });
 
   it("models_resolve_unknown_provider_fails_closed", async () => {
-    // A direct `AgentConfig.provider` serves every model, so only a package-resolved agent can miss.
-    const direct = await createAgent({ model: MODEL, provider: provider() });
-    assert.equal(direct.models.resolve({ provider: "anything", model: "x" }).model.model, "x");
+    // Only a provider a package registered can serve a model, so an id nothing registered misses.
     const bare = await createAgent({ model: { provider: "ghost", model: "x" }, packages: [] });
     assert.throws(() => bare.models.resolve({ provider: "ghost", model: "x" }), /Unknown provider: ghost/);
     assert.throws(() => bare.models.resolve({ provider: 7 } as never), TypeError);
@@ -236,16 +222,13 @@ describe("agent.tools and agent.skills", () => {
   it("agent_tools_and_skills_reflect_disable", async () => {
     const agent = await createAgent({
       model: MODEL,
-      provider: provider(),
       tools: { add: [tool("host-keep", { effects: ["read"] }), tool("host-drop")] },
       skills: { add: [skill("host-skill"), skill("host-skill-drop")] },
-      packages: [
-        pkg("@acme/tools", ({ tools, skills }) => {
+      packages: [pkg("@acme/tools", ({ tools, skills }) => {
           tools.register(tool("pkg-keep", { effects: ["write", "network"] }));
           tools.register(tool("pkg-drop"));
           skills.register(skill("pkg-skill"));
-        }),
-      ],
+        }), providerPackage("test-provider", [provider()])],
       disable: { tools: ["host-drop", "pkg-drop"], skills: ["host-skill-drop"] },
     });
     assert.deepEqual(
@@ -273,7 +256,7 @@ describe("agent.tools and agent.skills", () => {
       agent.tools.map((entry) => entry.name),
     );
     // An unannotated tool can touch anything.
-    const open = await createAgent({ model: MODEL, provider: provider(), tools: { add: [tool("open")] } });
+    const open = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], tools: { add: [tool("open")] } });
     assert.deepEqual(open.tools[0]?.effects, ["read", "write", "execute", "network", "external"]);
 
     await agent.dispose();
@@ -282,10 +265,10 @@ describe("agent.tools and agent.skills", () => {
   });
 
   it("agent_id_is_configured_or_generated", async () => {
-    assert.equal((await createAgent({ model: MODEL, provider: provider(), id: "named" })).id, "named");
-    assert.equal((await createAgent({ model: MODEL, provider: provider(), name: "label" })).id, "label");
-    const a = await createAgent({ model: MODEL, provider: provider() });
-    const b = await createAgent({ model: MODEL, provider: provider() });
+    assert.equal((await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], id: "named" })).id, "named");
+    assert.equal((await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])], name: "label" })).id, "label");
+    const a = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])] });
+    const b = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])] });
     assert.ok(a.id.length > 0 && a.id !== b.id, "an unnamed agent gets its own generated id");
   });
 });
@@ -303,10 +286,8 @@ describe("agent.subscribe", () => {
   it("agent_subscribe_receives_package_status_background_and_session_events", async () => {
     const agent = await createAgent({
       model: MODEL,
-      provider: provider(),
       redactor: createSecretRedactor([SECRET]),
-      packages: [
-        pkg(
+      packages: [pkg(
           "@acme/bg",
           ({ commands, status }) => {
             status.note("info", `starting with ${SECRET}`);
@@ -320,8 +301,7 @@ describe("agent.subscribe", () => {
             });
           },
           { capabilities: ["background"] },
-        ),
-      ],
+        ), providerPackage("test-provider", [provider()])],
     });
     const subscription = agent.subscribe();
     const collected = drain(subscription, (event) => event.type === "session.closed");
@@ -339,9 +319,8 @@ describe("agent.subscribe", () => {
     let note: ((level: "info" | "warn", message: string) => void) | undefined;
     const noisy = await createAgent({
       model: MODEL,
-      provider: provider(),
       redactor: createSecretRedactor([SECRET]),
-      packages: [pkg("@acme/noisy", ({ status }) => void (note = (level, message) => status.note(level, message)))],
+      packages: [pkg("@acme/noisy", ({ status }) => void (note = (level, message) => status.note(level, message))), providerPackage("test-provider", [provider()])],
     });
     const noisyStream = drain(noisy.subscribe(), (event) => event.type === "package.status");
     note?.("warn", `late note ${SECRET}`);
@@ -357,7 +336,7 @@ describe("agent.subscribe", () => {
   it("agent_subscribe_slow_consumer_never_blocks_a_run", async () => {
     const agent = await createAgent({
       model: MODEL,
-      provider: createMockProvider([providerTextDelta("ok"), providerDone(), providerTextDelta("ok"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("ok"), providerDone(), providerTextDelta("ok"), providerDone()]])],
     });
     // Subscribed and never read, with the smallest queue: the run must still finish, and the subscriber closes by policy.
     const stalled = agent.subscribe({ maxQueuedEvents: 1, overflow: "close" })[Symbol.asyncIterator]();
@@ -378,7 +357,7 @@ describe("agent.subscribe", () => {
   });
 
   it("dispose_ends_agent_subscriptions", async () => {
-    const agent = await createAgent({ model: MODEL, provider: provider() });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider()])] });
     const iterator = agent.subscribe()[Symbol.asyncIterator]();
     const pending = iterator.next();
     await agent.dispose();

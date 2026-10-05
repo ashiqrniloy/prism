@@ -1,5 +1,6 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createHashEmbedder, createMemory } from "@arnilo/prism-memory";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const memory = createMemory({
   tenantId: "demo",
@@ -61,7 +62,7 @@ console.log("working", await memory.getWorking());
 
 const agent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([providerTextDelta("Understood."), providerDone()]),
+  packages: [mockProvider([[providerTextDelta("Understood."), providerDone()]])],
   hooks: (hooks) => memory.registerContextBuild(hooks, { includeWorking: true, includeSemantic: true }),
 });
 

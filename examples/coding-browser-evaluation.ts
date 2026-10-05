@@ -20,6 +20,7 @@ import {
   serializeEvaluationReport,
 } from "@arnilo/prism-core/governance/evals";
 import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-web-tools/browser";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const scorer = defineScorer<{ kind: string }, { pass: boolean }>({
   id: "pass-flag",
@@ -121,13 +122,13 @@ try {
   });
   const mock = await createAgent({
     model: { provider: "mock", model: "offline" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "oracle-mock",
       async *generate() {
         yield providerTextDelta("ok");
         yield providerDone();
       },
-    },
+    }])],
   });
   const toEnvironment = async (item: { expected?: { hash?: string } }) => ({
     testsPassed:

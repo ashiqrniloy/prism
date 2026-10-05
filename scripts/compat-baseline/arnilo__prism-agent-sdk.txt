@@ -1,7 +1,6 @@
-AIProvider	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
 AMBIGUOUS_PATH_PATTERN	export declare const AMBIGUOUS_PATH_PATTERN: RegExp
 Agent	export type { Agent, AgentSdkConfig, AgentSdkMcpPlane, } from "./define-agent.js"
-AgentEvent	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+AgentEvent	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
 AgentSdkConfig	export type { Agent, AgentSdkConfig, AgentSdkMcpPlane, } from "./define-agent.js"
 AgentSdkConfigError	export declare class AgentSdkConfigError extends Error
 AgentSdkJsonConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
@@ -12,7 +11,7 @@ AssembledMcpPlane	export type { AssembledMcpPlane, McpCustomTransportServerSpec,
 AssembledSkillsPlane	export type { AssembledSkillsPlane, SkillsPlaneConfig, } from "./planes/skills.js"
 CodingPresetOptions	export type { CodingPresetOptions } from "./presets.js"
 DEFAULT_MCP_CONNECT_TIMEOUT_MS	export declare const DEFAULT_MCP_CONNECT_TIMEOUT_MS = 15000
-ExecutionPolicy	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+ExecutionPolicy	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
 HooksPlaneConfig	export type { AssembledHooksPlane, HooksPlaneConfig, } from "./planes/hooks.js"
 InstructionsPlaneConfig	export type { AssembledInstructionsPlane, InstructionsPlaneConfig, } from "./planes/instructions.js"
 JsonHooksConfig	export type { AgentSdkJsonConfig, JsonHooksConfig, JsonInstructionsConfig, JsonMcpConfig, JsonPlanesConfig, JsonSkillsConfig, JsonToolsConfig, } from "./config.js"
@@ -29,14 +28,15 @@ McpPlaneConfig	export type { AssembledMcpPlane, McpCustomTransportServerSpec, Mc
 McpServerSpec	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
 McpServerStatus	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
 McpStdioServerSpec	export type { AssembledMcpPlane, McpCustomTransportServerSpec, McpHttpServerSpec, McpPlaneConfig, McpServerSpec, McpServerStatus, McpStdioServerSpec, } from "./planes/mcp.js"
-PermissionPolicy	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+ModelProvider	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+PermissionPolicy	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
 ResolveToolPlaneOptions	export type { ResolveToolPlaneOptions, ToolPlaneValue, } from "./tool-plane.js"
-RunOptions	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
-RunResult	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
-Session	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
-SessionStore	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+RunOptions	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+RunResult	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+Session	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+SessionStore	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
 SkillsPlaneConfig	export type { AssembledSkillsPlane, SkillsPlaneConfig, } from "./planes/skills.js"
-ToolDefinition	export type { AgentEvent, RunResult, Session, AIProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
+ToolDefinition	export type { AgentEvent, RunResult, Session, ModelProvider, ExecutionPolicy, PermissionPolicy, RunOptions, SessionStore, ToolDefinition, } from "@arnilo/prism"
 ToolPlaneValue	export type { ResolveToolPlaneOptions, ToolPlaneValue, } from "./tool-plane.js"
 applyMcpApprovalPolicy	export declare function applyMcpApprovalPolicy(tool: ToolDefinition, policy: ExecutionPolicy | undefined): ToolDefinition
 assembleHooksPlane	export declare function assembleHooksPlane(options?: AssembleHooksOptions): Promise<AssembledHooksPlane>
@@ -47,14 +47,14 @@ assertServerAllowed	export declare function assertServerAllowed(server: McpServe
 barePreset	export declare function barePreset(): Partial<AgentSdkConfig>
 buildConnectOptions	export declare function buildConnectOptions(server: McpServerSpec): ConnectMcpToolsOptions
 codingPreset	export declare function codingPreset(options: CodingPresetOptions): Partial<AgentSdkConfig>
-createMockProvider	export { createMockProvider, providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
+createMockProvider	export { createMockProvider } from "@arnilo/prism/testing"
 defineAgent	export declare function defineAgent(config: AgentSdkConfig): Promise<Agent>
 mergeAgentConfig	export declare function mergeAgentConfig(base: Partial<AgentSdkConfig>, override: Partial<AgentSdkConfig>): Partial<AgentSdkConfig>
 parseAgentSdkConfig	export declare function parseAgentSdkConfig(json: unknown): AgentSdkJsonConfig
 parseAllowDestination	export declare function parseAllowDestination(entry: string): ParsedAllowDestination | null
-providerDone	export { createMockProvider, providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
-providerTextDelta	export { createMockProvider, providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
-providerUsage	export { createMockProvider, providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
+providerDone	export { providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
+providerTextDelta	export { providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
+providerUsage	export { providerDone, providerTextDelta, providerUsage, } from "@arnilo/prism"
 redactMcpError	export declare function redactMcpError(server: McpServerSpec, error: unknown): string
 resolveJsonConfig	export declare function resolveJsonConfig(json: AgentSdkJsonConfig, context:
 resolveToolPlane	export declare function resolveToolPlane(options?: ResolveToolPlaneOptions): readonly ToolDefinition[]

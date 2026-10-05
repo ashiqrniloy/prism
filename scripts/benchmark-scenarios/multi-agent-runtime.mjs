@@ -22,6 +22,7 @@ import {
 import { createSupervisor, SupervisorLimitError } from "../../packages/prism-core/dist/runtime/supervisor/index.js";
 import { agentNode, defineWorkflow, fanOutNode, runWorkflow } from "../../packages/prism-core/dist/runtime/workflows/index.js";
 import { loadBudgets } from "../budget-gates.mjs";
+import { providerPackage } from "../../dist/provider-kit/index.js";
 
 /** Bounded-concurrency loop (the kernel default loop dispatches tools sequentially). */
 function concurrentLoop(concurrency) {
@@ -179,7 +180,7 @@ export async function runIndependentSessions(count, options = {}) {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore() },
-    provider: trackingProvider(tracker, delayMs),
+    packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
   });
   const sessions = await Promise.all(Array.from({ length: count }, () => agent.session({ id: nextId("s"), create: true })));
   const stops = sessions.map((session) => drain(session, events));
@@ -215,7 +216,7 @@ export async function runSupervisorFanOut(options = {}) {
           peakChildren = Math.max(peakChildren, supervisor.activeChildren);
           return await createAgent({
             model: { provider: "mock", model: "demo" },
-            provider: trackingProvider(tracker, delayMs),
+            packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
           });
         },
       },
@@ -256,7 +257,7 @@ export async function runSupervisorSaturation(options = {}) {
           peakChildren = Math.max(peakChildren, supervisor.activeChildren);
           return await createAgent({
             model: { provider: "mock", model: "demo" },
-            provider: trackingProvider(tracker, delayMs),
+            packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
           });
         },
       },
@@ -357,7 +358,7 @@ export async function runWorkflowAgentNodes(options = {}) {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: trackingProvider(tracker, delayMs),
+          packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
         })
       ).session({ id: nextId(name), create: true }),
     onEvent: (event) => collected.push(event.type),
@@ -387,7 +388,7 @@ export async function runToolConcurrency(options = {}) {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
     slots: { loop: concurrentLoop(toolConcurrency) },
-    provider: toolRoundProvider(toolCount),
+    packages: [providerPackage("test-provider", [toolRoundProvider(toolCount)])],
     tools: [
       {
         name: "work",
@@ -429,7 +430,7 @@ export async function runAbortStorm(options = {}) {
   const heapBefore = process.memoryUsage().heapUsed;
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: trackingProvider(tracker, delayMs),
+    packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
   });
   const controllers = [];
   const promises = Array.from({ length: count }, async () => {
@@ -502,7 +503,7 @@ export async function runProviderDeltas(options = {}) {
   const heapBefore = process.memoryUsage().heapUsed;
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         for (let index = 0; index < count; index += 1) {
@@ -511,7 +512,7 @@ export async function runProviderDeltas(options = {}) {
         }
         yield done;
       },
-    },
+    }])],
   });
   const start = performance.now();
   const result = await (await agent.session({ id: nextId("delta"), create: true })).run("go");

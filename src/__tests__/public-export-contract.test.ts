@@ -24,10 +24,6 @@ function readTree(dir: string, suffix: string): string {
 // and type exports against `dist/index.d.ts`, so a build that drops/renames an
 // export fails the gate. Update both arrays together when the surface changes.
 const FROZEN_VALUE_EXPORTS: readonly string[] = [
-  "abortableSleep",
-  "pollDeviceCodeToken",
-  "redactOAuthError",
-  "throwIfAborted",
   "boundResponse",
   "defaultResolver",
   "isLoopbackAddress",
@@ -262,7 +258,6 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "cacheSavings",
   "cacheUsageReport",
   "CACHE_TELEMETRY_OVERFLOW_KEY",
-  "canonicalizeJsonSchema",
   "capToolResultSummary",
   "CacheTelemetryError",
   "createCacheTelemetry",
@@ -279,13 +274,10 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "createBatchedRunLedger",
   "createRunLimitTracker",
   "createSecureAgent",
-  "createChainedCredentialResolver",
   "createChainedSettingsProvider",
   "createDefaultCompactor",
   "createDefaultInputBuilder",
   "createDefaultRetryPolicy",
-  "createEnvCredentialResolver",
-  "createExplicitCredentialResolver",
   "createEventMultiplexer",
   "EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE",
   "EventMultiplexerError",
@@ -294,12 +286,10 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "createLoadSkillTool",
   "createMemoryAgentEventSource",
   "createMemoryCheckpointStore",
-  "createMemoryCredentialStore",
   "createMemoryLeaseStore",
   "createMemoryPersistenceLifecycle",
   "createMemoryRunFeedbackStore",
   "createMemorySessionStore",
-  "createMockProvider",
   "createModelRegistry",
   "createProviderCapture",
   "createProviderRegistry",
@@ -397,6 +387,8 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "mergeProviderRequestOptions",
   "mergeSystemPromptConfig",
   "MediaContentError",
+  "CredentialUnavailableError",
+  "ModelRefError",
   "MODEL_INPUT_CAPABILITIES",
   "modelSupportsEmbeddings",
   "modelSupportsImageGeneration",
@@ -410,6 +402,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "normalizeThinkingLevel",
   "ownershipFromIdentity",
   "parseAgentFile",
+  "parseModelRef",
   "parseThinkingLevel",
   "parseSkillFile",
   "prepareRunFeedback",
@@ -425,18 +418,17 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
   "providerUsage",
   "readProviderHttpStatus",
   "rebuildSessionContext",
+  "sessionStoreCapabilities",
   "redactAgentEvent",
   "redactMessage",
   "redactProviderRequest",
   "redactRunLedgerRecord",
   "redactSecrets",
   "redactSessionEntry",
-  "refreshOAuthCredential",
   "resolveBreakpoint",
   "resolveRedactor",
   "resumeAgentRun",
   "resumeAgentRunStream",
-  "revokeOAuthCredential",
   "renderPromptTemplate",
   "requireRunFeedbackOwnership",
   "resolveActiveSkills",
@@ -510,7 +502,7 @@ const FROZEN_VALUE_EXPORTS: readonly string[] = [
 ];
 
 const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
-  "AIProvider",
+  "ModelProvider",
   "ProviderRequest",
   "ProviderEvent",
   "ProviderFailureClass",
@@ -572,11 +564,11 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
   "PersistenceLifecycleStore",
   "RetryPolicy",
   "CredentialResolver",
+  "CredentialContext",
+  "Secret",
 ];
 
 const FROZEN_TYPE_EXPORTS: readonly string[] = [
-  "OAuthTokenSuccessPayload",
-  "PollDeviceCodeTokenOptions",
   "PinnedFetchOptions",
   "AgentEventSourceErrorCode",
   "AgentInput",
@@ -691,7 +683,6 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "CreateSessionEntryOptions",
   "CredentialRecord",
   "CredentialValueSource",
-  "RevocableOAuthCredentialStore",
   "DefaultCompactorOptions",
   "DefaultInputBuildContext",
   "DefaultInputBuilder",
@@ -737,7 +728,6 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "MediaUrlRequest",
   "MediaUrlRequester",
   "MemoryCheckpointStoreOptions",
-  "MemoryCredentialStore",
   "MemoryRunFeedbackStoreOptions",
   "MemorySessionSearchMode",
   "AroundHook",
@@ -803,7 +793,6 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "ProviderCaptureEntry",
   "ProviderCaptureOptions",
   "ProviderCapturePolicy",
-  "MockProviderOptions",
   "ModelInputCapability",
   "ModelRegistry",
   "ModelRegistryOptions",
@@ -970,7 +959,6 @@ function extractIndexExports(src: string): { value: Set<string>; type: Set<strin
 // with packaging.test.ts / install-smoke.test.ts). Adding a package is one line.
 const packages = [
   { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/prism-providers", name: "@arnilo/prism-providers" },
   { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
   { dir: "packages/prism-core", name: "@arnilo/prism-core" },
 ];
@@ -1081,9 +1069,9 @@ describe("public-export contract (build-time, pre-pack)", () => {
       types: "./dist/testing/index.d.ts",
       default: "./dist/testing/index.js",
     });
-    assert.deepEqual(readPkg(".").exports?.["./testing/provider-conformance"], {
-      types: "./dist/testing/provider-conformance.d.ts",
-      default: "./dist/testing/provider-conformance.js",
+    assert.deepEqual(readPkg(".").exports?.["./provider-kit"], {
+      types: "./dist/provider-kit/index.d.ts",
+      default: "./dist/provider-kit/index.js",
     });
 
     const hooksJson = readPkg("packages/integrations/hooks-json");

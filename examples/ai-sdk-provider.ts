@@ -1,6 +1,7 @@
 import type { LanguageModelV4, LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { createAgent } from "@arnilo/prism";
-import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
+import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 function createFakeLanguageModel(parts: readonly LanguageModelV4StreamPart[]): LanguageModelV4 {
   return {
@@ -36,7 +37,7 @@ const model = createFakeLanguageModel([
 
 const provider = createAiSdkProvider({ model });
 const agent = await createAgent({
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
   model: {
     provider: provider.id,
     model: model.modelId,

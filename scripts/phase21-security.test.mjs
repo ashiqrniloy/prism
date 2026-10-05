@@ -35,16 +35,15 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { describe, it } from "bun:test";
-import { createCacheTelemetry, MediaContentError, pinnedFetch, pollDeviceCodeToken } from "@arnilo/prism";
-import { createOpenAICompatibleProvider } from "@arnilo/prism/providers/openai-compatible";
-import { ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/providers/transport";
-import { createAzureOpenAIProvider } from "@arnilo/prism-providers/azure";
-import { createBedrockProvider, signAwsRequest } from "@arnilo/prism-providers/bedrock";
-import { createNeuralWattProvider } from "@arnilo/prism-providers/neuralwatt";
-import { createOpenAIResponsesProvider, listOpenAIModels } from "@arnilo/prism-providers/openai";
-import { createOpenRouterProvider } from "@arnilo/prism-providers/openrouter";
-import { createVertexProvider } from "@arnilo/prism-providers/vertex";
-import { createZaiProvider } from "@arnilo/prism-providers/zai";
+import { createCacheTelemetry, MediaContentError, pinnedFetch } from "@arnilo/prism";
+import { createOpenAICompatibleProvider, pollDeviceCodeToken, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
+import { createAzureOpenAIProvider } from "@arnilo/prism-provider-azure";
+import { createBedrockProvider, signAwsRequest } from "@arnilo/prism-provider-bedrock";
+import { createNeuralWattProvider } from "@arnilo/prism-provider-neuralwatt";
+import { createOpenAIResponsesProvider, listOpenAIModels } from "@arnilo/prism-provider-openai";
+import { createOpenRouterProvider } from "@arnilo/prism-provider-openrouter";
+import { createVertexProvider } from "@arnilo/prism-provider-vertex";
+import { createZaiProvider } from "@arnilo/prism-provider-zai";
 
 const BLOCKER_IDS = [
   "strict-completion",

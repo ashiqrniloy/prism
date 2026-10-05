@@ -1,25 +1,13 @@
 import assert from "node:assert/strict";
 import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { afterEach, describe, it } from "bun:test";
-import {
-  askEveryTool,
-  type CommandDefinition,
-  createAgent,
-  createAgentRunLifecycle,
-  createMemoryCheckpointStore,
-  createMemoryToolEffectStore,
-  createMockProvider,
-  createSecretRedactor,
-  createStaticPermissionPolicy,
-  providerDone,
-  type ToolDefinition,
-  toolCallContent,
-} from "@arnilo/prism";
+import { askEveryTool, type CommandDefinition, createAgent, createAgentRunLifecycle, createMemoryCheckpointStore, createMemoryToolEffectStore, createSecretRedactor, createStaticPermissionPolicy, providerDone, type ToolDefinition, toolCallContent } from "@arnilo/prism";
 import { Client, InMemoryTransport, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import { createPrismMcpServer, createPrismMcpWebHandler } from "../server.js";
 import { McpBridgeError } from "../types.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 async function fixture(options: Parameters<typeof createPrismMcpServer>[0]) {
   const server = createPrismMcpServer(options);
@@ -122,7 +110,7 @@ describe("Prism MCP server", () => {
       hooks: askEveryTool(),
       id: "support",
       model: { provider: "mock", model: "offline" },
-      provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-1", "write", {}) }, providerDone()]),
+      packages: [mockProvider([[{ type: "tool_call", call: toolCallContent("call-1", "write", {}) }, providerDone()]])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: ++calls }) }] },
       runState: { checkpoints, definitionRevision: "1" },
     });

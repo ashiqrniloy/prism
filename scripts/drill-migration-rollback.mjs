@@ -4,7 +4,7 @@
 // additive column + history row) → verify the 008-shape store still works and
 // seeded data survived → re-apply → verify idempotency + data → tamper a
 // checksum row and prove the runner fails closed. SQLite: same flow
-// in-process on a temp file. Requires `bun run build:core` (dist imports).
+// in-process on a temp file. Imports the store packages by name (no build step).
 //
 // Safety: refuses any URL whose host is not localhost/127.0.0.1/::1 — CI and
 // throwaway local databases only. `--self-test` checks that refusal without
@@ -19,16 +19,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const CORE = new URL("../packages/prism-core/dist", import.meta.url);
-
 const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 // Lazy deps: assigned only when run as a CLI (repo hygiene tests import this
 // file to inspect its imports — no side effects, no database access).
 let pgMigrations, createPostgresPersistence, createSqlitePersistence, Pool, Database;
 if (invokedDirectly) {
-  pgMigrations = await import(pathToFileURL(join(CORE.pathname, "sessions/postgres/migrations.js")).href);
-  ({ createPostgresPersistence } = await import("@arnilo/prism-core/sessions/postgres"));
-  ({ createSqlitePersistence } = await import("@arnilo/prism-core/sessions/sqlite"));
+  const postgres = await import("@arnilo/prism-store-postgres");
+  pgMigrations = postgres;
+  ({ createPostgresPersistence } = postgres);
+  ({ createSqlitePersistence } = await import("@arnilo/prism-store-sqlite"));
   Pool = (await import("pg")).Pool;
   Database = (await import("bun:sqlite")).Database;
 }

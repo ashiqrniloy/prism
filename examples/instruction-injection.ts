@@ -1,17 +1,12 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContextSource, ProviderRequest } from "@arnilo/prism";
-import {
-  createAgent,
-  createMockProvider,
-  createSecretRedactor,
-  providerDone,
-  registerContextSources,
-  withContextBlocks,
-} from "@arnilo/prism";
+import { createAgent, createSecretRedactor, providerDone, registerContextSources, withContextBlocks } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
 import { loadInstructionSources } from "@arnilo/prism/node/instruction-sources";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Instruction injection, end-to-end with the mock provider.
 //
@@ -71,7 +66,7 @@ export async function demo(): Promise<{
   const session = await (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       instructions: "You are helpful.",
       // ponytail: runtime redacts ProviderRequest before the provider is called;
       // this is the backstop that strips the leaked secret from source text.

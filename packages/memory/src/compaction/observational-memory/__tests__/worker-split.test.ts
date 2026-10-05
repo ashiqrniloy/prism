@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AIProvider, ProviderEvent, SessionEntry } from "@arnilo/prism";
+import type { ModelProvider, ProviderEvent, SessionEntry } from "@arnilo/prism";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism";
 import {
   createObservationalMemory,
@@ -27,7 +27,7 @@ const existingObservation = {
   tokenCount: 50,
 } satisfies MemoryObservation;
 
-function provider(events: readonly ProviderEvent[]): AIProvider {
+function provider(events: readonly ProviderEvent[]): ModelProvider {
   return {
     id: "mock",
     async *generate() {
@@ -39,7 +39,7 @@ function provider(events: readonly ProviderEvent[]): AIProvider {
 describe("observational memory worker split", () => {
   it("observer_default_prompt_is_domain_neutral_and_appends_custom_instruction", async () => {
     const requests: string[] = [];
-    const memoryProvider: AIProvider = {
+    const memoryProvider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         const system = request.messages.find((message) => message.role === "system")?.content[0];
@@ -68,7 +68,7 @@ describe("observational memory worker split", () => {
 
   it("observer_prompt_lists_existing_active_observations", async () => {
     const prompts: string[] = [];
-    const observerProvider: AIProvider = {
+    const observerProvider: ModelProvider = {
       id: "observer",
       async *generate(request) {
         const prompt = request.messages.find((message) => message.role === "user")?.content[0];
@@ -150,14 +150,14 @@ describe("observational memory worker split", () => {
 
   it("runtime_routes_separate_observer_and_reflector_models", async () => {
     const seen: string[] = [];
-    const observerProvider: AIProvider = {
+    const observerProvider: ModelProvider = {
       id: "observer",
       async *generate(request) {
         seen.push(`observer:${request.model.model}`);
         yield providerDone();
       },
     };
-    const reflectorProvider: AIProvider = {
+    const reflectorProvider: ModelProvider = {
       id: "reflector",
       async *generate(request) {
         seen.push(`reflector:${request.model.model}`);

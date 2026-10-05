@@ -1,21 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  type AgentEvent,
-  askEveryTool,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  type Decision,
-  type JsonObject,
-  type LoopStrategy,
-  providerDone,
-  providerTextDelta,
-  type RunResult,
-  type Session,
-  toolCallContent,
-} from "../index.js";
+import { type AgentEvent, askEveryTool, createAgent, createMemorySessionStore, createSecretRedactor, type Decision, type JsonObject, type LoopStrategy, providerDone, providerTextDelta, type RunResult, type Session, toolCallContent } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 
@@ -31,7 +18,7 @@ function gatedAgent(options: { readonly store?: ReturnType<typeof createMemorySe
       slots: { store },
       ...(gate ? { hooks: askEveryTool() } : {}),
       validator: (_tool, args) => (typeof args.value === "string" ? undefined : "value must be a string"),
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -43,7 +30,7 @@ function gatedAgent(options: { readonly store?: ReturnType<typeof createMemorySe
           yield providerTextDelta("finished");
           yield providerDone();
         },
-      },
+      }])],
       tools: {
         add: [
           {
@@ -185,7 +172,7 @@ describe("session.resume", () => {
         model: MODEL,
         slots: { store, loop: make(revision) },
         hooks: askEveryTool(),
-        provider: {
+        packages: [providerPackage("test-provider", [{
           id: "mock",
           async *generate() {
             turn += 1;
@@ -197,7 +184,7 @@ describe("session.resume", () => {
             yield providerTextDelta("finished");
             yield providerDone();
           },
-        },
+        }])],
         tools: {
           add: [
             {
@@ -250,7 +237,7 @@ describe("session.resume", () => {
       slots: { store },
       hooks: askEveryTool(),
       redactor: createSecretRedactor([secret]),
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -261,7 +248,7 @@ describe("session.resume", () => {
           }
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "write", parameters: {}, execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: "done" }) }] },
     });
     const session = await agent.session({ id: "s", create: true });
@@ -280,7 +267,7 @@ describe("session.resume", () => {
 describe("RunResult", () => {
   it("run_result_status_map_covers_every_terminal_path", async () => {
     const session = async (provider: ReturnType<typeof createMockProvider>, config: Record<string, unknown> = {}) =>
-      (await createAgent({ model: MODEL, provider, ...config })).session();
+      (await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], ...config })).session();
 
     const completed = await (await session(createMockProvider([providerTextDelta("hi"), providerDone()]))).run("go");
     assert.equal(completed.status, "completed");

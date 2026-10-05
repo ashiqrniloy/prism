@@ -1,5 +1,6 @@
-createVertexProvider	export declare function createVertexProvider(options: VertexProviderOptions): AIProvider
-vertexPackage	export declare function vertexPackage(options: VertexProviderPackageOptions): PackageInstance
-type VertexProviderOptions	export { createVertexProvider, vertexPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
-type VertexProviderPackageOptions	export { createVertexProvider, vertexPackage, type VertexProviderOptions, type VertexProviderPackageOptions, vertexOpenApiBaseUrl, } from "./provider.js"
+VERTEX_DEFAULT_CREDENTIAL_REF	export declare const VERTEX_DEFAULT_CREDENTIAL_REF = "env:PRISM_VERTEX_ACCESS_TOKEN"
+createVertexProvider	export declare function createVertexProvider(options: VertexProviderOptions): ModelProvider
+default	export default
+type VertexProviderOptions	export { createVertexProvider, type VertexProviderOptions, vertexOpenApiBaseUrl, } from "./provider.js"
+vertex	export declare function vertex(options: VertexProviderPackageOptions & VertexProviderConfig): PackageInstance
 vertexOpenApiBaseUrl	export declare function vertexOpenApiBaseUrl(input:

@@ -4,15 +4,16 @@ import type {
   Agent,
   AgentDefinition,
   AgentDefinitionResolutionContext,
-  AIProvider,
+  ModelProvider,
   Skill,
   SkillRegistry,
   ToolDefinition,
   ToolRegistry,
 } from "../index.js";
 import { createAgent, createSkillRegistry, createToolRegistry, resolveAgentDefinition } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield { type: "done" };
@@ -69,13 +70,12 @@ describe("resolveAgentDefinition", () => {
     };
 
     const agent = await resolve(def, {
-      providerSource: () => provider,
+      overrides: { packages: [providerPackage("test-provider", [provider])] },
       tools: [echoTool],
       skillsRegistry: createSkillRegistry([briefSkill]),
     });
     assert.equal(agent.config.model.provider, "mock");
     assert.equal(agent.config.model.model, "demo");
-    assert.equal(agent.config.providerSource?.({ provider: "mock", model: "demo" })?.id, "mock");
     assert.equal(agent.config.instructions, "Be helpful.");
     assert.deepEqual(toolNames(agent.config.tools), ["echo"]);
 
@@ -96,37 +96,26 @@ describe("resolveAgentDefinition", () => {
       model: "mock/registered",
     };
 
-    const agent = await resolve(def, { providerSource: () => provider });
+    const agent = await resolve(def, {});
     assert.equal(agent.config.model.model, "registered");
-  });
-
-  it("uses providerSource when registries.providers is absent", async () => {
-    const def: AgentDefinition = {
-      name: "provider-source",
-      model: "mock/demo",
-    };
-
-    const agent = await resolve(def, { providerSource: () => provider });
-    assert.equal(agent.config.providerSource?.({ provider: "mock", model: "demo" })?.id, "mock");
   });
 
   it("create() escape hatch returns custom agent and applies overrides", async () => {
     const customAgent = await createAgent({
       model: { provider: "custom", model: "v1" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
     });
 
     const def: AgentDefinition = {
       name: "custom",
       model: "mock/demo",
       create(config) {
-        assert.equal(config!.model.provider, "mock");
+        assert.equal((config!.model as { provider: string }).provider, "mock");
         return customAgent;
       },
     };
 
     const agent = await resolve(def, {
-      providerSource: () => provider,
       overrides: { model: { provider: "overridden", model: "v2" } },
     });
     assert.equal(agent.config.model.provider, "overridden");
@@ -138,12 +127,11 @@ describe("resolveAgentDefinition", () => {
       name: "async-custom",
       model: "mock/demo",
       async create() {
-        return await createAgent({ model: { provider: "custom", model: "v1" }, provider });
+        return await createAgent({ model: { provider: "custom", model: "v1" }, packages: [providerPackage("test-provider", [provider])] });
       },
     };
 
     const agent = await resolve(def, {
-      providerSource: () => provider,
       overrides: { model: { provider: "overridden", model: "v2" } },
     });
     assert.equal(agent.config.model.provider, "overridden");
@@ -157,7 +145,6 @@ describe("resolveAgentDefinition", () => {
     };
 
     const agent = await resolve(def, {
-      providerSource: () => provider,
       tools: [echoTool, reverseTool],
       overrides: {
         model: { provider: "mock", model: "override" },
@@ -182,7 +169,6 @@ describe("resolveAgentDefinition", () => {
     const def: AgentDefinition = { name: "override-model", instructions: "Be brief." };
     const resolved = await resolveAgentDefinition(def, {
       overrides: { model: { provider: "mock", model: "demo" } },
-      providerSource: () => provider,
     });
     assert.equal(resolved.config.model.provider, "mock");
     assert.equal(resolved.config.model.model, "demo");
@@ -200,13 +186,13 @@ describe("resolveAgentDefinition", () => {
 
   it("unknown tool name throws", () => {
     const def: AgentDefinition = { name: "unknown-tool", model: "mock/demo", tools: ["missing"] };
-    assert.throws(() => resolveAgentDefinition(def, { providerSource: () => provider, tools: [echoTool] }), /Unknown tool: missing/);
+    assert.throws(() => resolveAgentDefinition(def, { tools: [echoTool] }), /Unknown tool: missing/);
   });
 
   it("unknown skill name throws", () => {
     const def: AgentDefinition = { name: "unknown-skill", model: "mock/demo", skills: ["missing"] };
     assert.throws(
-      () => resolveAgentDefinition(def, { providerSource: () => provider, skillsRegistry: createSkillRegistry([briefSkill]) }),
+      () => resolveAgentDefinition(def, { skillsRegistry: createSkillRegistry([briefSkill]) }),
       /Unknown skill: missing/,
     );
   });
@@ -222,7 +208,6 @@ describe("resolveAgentDefinition", () => {
     assert.throws(
       () =>
         resolveAgentDefinition(def, {
-          providerSource: () => provider,
           tools: [reverseTool],
           skillsRegistry: createSkillRegistry([schemaSkill]),
         }),
@@ -239,9 +224,9 @@ describe("resolveAgentDefinition", () => {
       tools: ["reverse"],
     };
 
-    assert.throws(() => resolveAgentDefinition(def, { providerSource: () => provider, tools: hostTools }), /Unknown tool: reverse/);
+    assert.throws(() => resolveAgentDefinition(def, { tools: hostTools }), /Unknown tool: reverse/);
 
-    const allowed = await resolve(def, { providerSource: () => provider, tools: createToolRegistry([reverseTool]) });
+    const allowed = await resolve(def, { tools: createToolRegistry([reverseTool]) });
     assert.deepEqual(toolNames(allowed.config.tools), ["reverse"]);
   });
 

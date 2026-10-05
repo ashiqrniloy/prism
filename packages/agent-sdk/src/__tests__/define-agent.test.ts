@@ -3,18 +3,8 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createMockProvider,
-  createSkillRegistry,
-  type LoopStrategy,
-  type ProviderRequest,
-  providerDone,
-  providerTextDelta,
-  type SessionStore,
-  type SkillRegistry,
-  type ToolDefinition,
-  type ToolRegistry,
-} from "@arnilo/prism";
+import { createSkillRegistry, type LoopStrategy, type ProviderRequest, providerDone, providerTextDelta, type SessionStore, type SkillRegistry, type ToolDefinition, type ToolRegistry } from "@arnilo/prism";
+import { createMockProvider , mockProvider } from "@arnilo/prism/testing";
 import type { McpToolBridge } from "@arnilo/prism-mcp";
 import { AgentSdkConfigError, defineAgent } from "../index.js";
 import {
@@ -22,7 +12,7 @@ import {
   type AgentEvent as SdkAgentEvent,
   type RunResult as SdkAgentRunResult,
   type Session as SdkAgentSession,
-  type AIProvider as SdkAIProvider,
+  type ModelProvider as SdkAIProvider,
   type ExecutionPolicy as SdkExecutionPolicy,
   type PermissionPolicy as SdkPermissionPolicy,
   type RunOptions as SdkRunOptions,
@@ -33,6 +23,7 @@ import {
   providerTextDelta as sdkProviderTextDelta,
   providerUsage as sdkProviderUsage,
 } from "../index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 function stubTool(name: string, description = `stub:${name}`): ToolDefinition {
   return {
@@ -60,7 +51,7 @@ describe("defineAgent", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
     });
 
     assert.ok(app.agent);
@@ -86,7 +77,7 @@ describe("defineAgent", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: {
         planes: { base: [toolA, toolB] },
         replace: { tool_b: replacementB },
@@ -119,7 +110,7 @@ describe("defineAgent", () => {
       const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
       const app = await defineAgent({
         model: defaultModel,
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         skills: {
           workspaceRoot: tempDir,
           exclude: ["skill-two"],
@@ -150,7 +141,7 @@ describe("defineAgent", () => {
       // Enabled case (default on when workspaceRoot is provided)
       const appEnabled = await defineAgent({
         model: defaultModel,
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         workspaceRoot: tempDir,
       });
 
@@ -165,7 +156,7 @@ describe("defineAgent", () => {
       // Disabled case (agentsMd: false)
       const appDisabled = await defineAgent({
         model: defaultModel,
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         workspaceRoot: tempDir,
         instructions: {
           agentsMd: false,
@@ -186,7 +177,7 @@ describe("defineAgent", () => {
       async () => {
         await defineAgent({
           model: defaultModel,
-          provider,
+          packages: [providerPackage("test-provider", [provider])],
           mcp: {
             servers: [
               {
@@ -218,7 +209,7 @@ describe("defineAgent", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       tools: {
         add: [stubTool("local_tool")],
       },
@@ -258,7 +249,7 @@ describe("defineAgent", () => {
 
     const app = await defineAgent({
       model: defaultModel,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       mcp: {
         servers: [
           {
@@ -298,7 +289,7 @@ describe("defineAgent", () => {
     const provider = createMockProvider([providerTextDelta("x"), providerDone()]);
     await assert.rejects(
       // @ts-expect-error identity is retired
-      defineAgent({ model: defaultModel, provider, identity: "retired-profile" }),
+      defineAgent({ model: defaultModel, packages: [providerPackage("test-provider", [provider])], identity: "retired-profile" }),
       (err: unknown) => err instanceof AgentSdkConfigError && /Unknown config field: identity/.test(err.message),
     );
   });
@@ -329,7 +320,7 @@ describe("defineAgent", () => {
 
   it("session() streams AgentEvents from the SDK root", async () => {
     const provider = createMockProvider([providerTextDelta("streamed"), providerDone()]);
-    const app = await defineAgent({ model: defaultModel, provider });
+    const app = await defineAgent({ model: defaultModel, packages: [providerPackage("test-provider", [provider])] });
 
     const events: SdkAgentEvent[] = [];
     for await (const event of (await app.session()).stream("hi")) events.push(event);
@@ -342,12 +333,11 @@ describe("defineAgent", () => {
   it("jsonl store shorthand persists entries across agent instances", async () => {
     const dir = await makeTempDir("store");
     try {
-      const path = join(dir, "sessions.jsonl");
       const provider1 = createMockProvider([providerTextDelta("one"), providerDone()]);
       const app1 = await defineAgent({
         model: defaultModel,
-        provider: provider1,
-        store: { type: "jsonl", path },
+        packages: [providerPackage("test-provider", [provider1])],
+        store: { type: "jsonl", dir },
       });
       const session1 = app1.session();
       await (await session1).run("hello");
@@ -357,8 +347,8 @@ describe("defineAgent", () => {
       const provider2 = createMockProvider([providerTextDelta("two"), providerDone()]);
       const app2 = await defineAgent({
         model: defaultModel,
-        provider: provider2,
-        store: { type: "jsonl", path },
+        packages: [providerPackage("test-provider", [provider2])],
+        store: { type: "jsonl", dir },
       });
       const store2 = app2.agent.config.slots?.store;
       assert.ok(store2 && typeof store2 !== "string");
@@ -373,7 +363,7 @@ describe("defineAgent", () => {
   it("raw SessionStore passes through by reference", async () => {
     const raw: SessionStore = { append: async () => {}, list: async () => [] };
     const provider = createMockProvider([providerTextDelta("ok"), providerDone()]);
-    const app = await defineAgent({ model: defaultModel, provider, store: raw });
+    const app = await defineAgent({ model: defaultModel, packages: [providerPackage("test-provider", [provider])], store: raw });
 
     assert.strictEqual(app.agent.config.slots?.store, raw);
     await app.dispose();
@@ -383,7 +373,7 @@ describe("defineAgent", () => {
     const provider = createMockProvider([providerTextDelta("x"), providerDone()]);
     await assert.rejects(
       // @ts-expect-error sqlite is not a Phase 1 shorthand
-      defineAgent({ model: defaultModel, provider, store: { type: "sqlite", path: "x.db" } }),
+      defineAgent({ model: defaultModel, packages: [providerPackage("test-provider", [provider])], store: { type: "sqlite", path: "x.db" } }),
       (err: unknown) => err instanceof AgentSdkConfigError && /store/.test((err as Error).message),
     );
   });
@@ -396,7 +386,7 @@ describe("defineAgent", () => {
       const provider = createMockProvider([providerTextDelta("x"), providerDone()]);
       const app = await defineAgent({
         model: defaultModel,
-        provider,
+        packages: [providerPackage("test-provider", [provider])],
         hooks: { file: hookPath },
         workspaceRoot: dir,
         registerHooks: (hooks) => hooks.on("run.end", () => undefined, { id: "config-probe" }),
@@ -407,7 +397,7 @@ describe("defineAgent", () => {
       const order: string[] = [];
       const probe = await defineAgent({
         model: defaultModel,
-        provider: createMockProvider([providerTextDelta("x"), providerDone()]),
+        packages: [mockProvider([[providerTextDelta("x"), providerDone()]])],
         hooks: { file: hookPath },
         workspaceRoot: dir,
         registerHooks: (hooks) => {

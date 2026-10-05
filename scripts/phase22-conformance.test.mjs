@@ -20,7 +20,7 @@ import { Pool } from "pg";
 import { createMemoryAgentEventSource, createMemoryCheckpointStore } from "../dist/index.js";
 import { assertStateConcurrencyConforms } from "../dist/testing/state-concurrency-conformance.js";
 import { createPostgresEnterpriseState } from "../packages/prism-core/dist/enterprise/postgres/index.js";
-import { createPostgresPersistence } from "../packages/prism-core/dist/sessions/postgres/index.js";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { blockedGate } from "./blocked-gate.mjs";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
@@ -39,8 +39,8 @@ describe("phase 22 state concurrency conformance", () => {
   it("every store leg exists on disk", () => {
     for (const file of [
       "src/__tests__/state-concurrency-conformance.test.ts",
-      "packages/prism-core/src/sessions/sqlite/__tests__/state-concurrency-conformance.test.ts",
-      "packages/prism-core/src/sessions/postgres/__tests__/state-concurrency-conformance.integration.test.ts",
+      "packages/stores/sqlite/src/__tests__/state-concurrency-conformance.test.ts",
+      "packages/stores/postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
       "packages/prism-core/src/enterprise/postgres/__tests__/state-concurrency-conformance.test.ts",
       "packages/prism-core/src/sessions/nats/__tests__/state-concurrency-conformance.test.ts",
     ]) {

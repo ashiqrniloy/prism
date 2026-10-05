@@ -12,8 +12,8 @@ import {
   toolCallContent,
   toolCallFromArgumentsText,
 } from "../index.js";
-import { reconstructToolCallDeltas } from "../provider-events.js";
-import { ProviderTransportError } from "../providers/transport.js";
+import { reconstructToolCallDeltas } from "../models/events.js";
+import { ProviderTransportError } from "../provider-kit/transport.js";
 
 describe("provider event helpers", () => {
   it("creates text thinking and image content deltas", () => {

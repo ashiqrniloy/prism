@@ -4,7 +4,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/ai-sdk` adapts a host-supplied AI SDK `LanguageModelV4` into a Prism `AIProvider`. It maps Prism messages, tools, and structured-output options into `doStream` call options, then translates stream parts into Prism provider events incrementally.
+`@arnilo/prism-provider-ai-sdk` adapts a host-supplied AI SDK `LanguageModelV4` into a Prism `ModelProvider`. It maps Prism messages, tools, and structured-output options into `doStream` call options, then translates stream parts into Prism provider events incrementally.
 
 Core `@arnilo/prism` does not depend on the AI SDK.
 
@@ -28,20 +28,27 @@ Do not use it as a credential store, model catalog, or high-level `streamText`/`
 ## Inputs / request
 
 ```ts
-import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
+import aiSdk from "@arnilo/prism-provider-ai-sdk";
 
-createAiSdkProvider(options: {
-  model: LanguageModelV4;
-  redactor?: SecretRedactor;
-  id?: string;
-}): AIProvider
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+aiSdk(options?: AiSdkProviderPackageOptions & AiSdkProviderConfig = {}): PackageInstance
+
+// Named exports.
+createAiSdkProvider(options: AiSdkProviderOptions): ModelProvider
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `model` | `LanguageModelV4` | Host-owned AI SDK language model. |
-| `redactor` | `SecretRedactor` | Optional direct-provider error redactor; agent runs use their active redactor. |
-| `id` | `string` | Prism provider id. Defaults to `ai-sdk:<model.provider>` or `ai-sdk`. |
+| `id` | string | Prism provider id; defaults to `ai-sdk:<model.provider>`. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` derives one entry from the host model. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `model` | `LanguageModelV4` | Host-owned AI SDK language model implementing the pinned v4 ABI. Factory-only: not JSON. |
+| `redactor` | `SecretRedactor` | Redacts direct provider errors; agent runs apply their own active redactor. |
+| `readVersion` | `() => string` | Test seam: how the optional `@ai-sdk/provider` peer version is read. |
+
+`models()` returns the configured array when set; otherwise one entry derived from the host model (`model.modelId`). No network call.
 
 Mapped request surfaces:
 
@@ -95,21 +102,18 @@ No AI SDK stream part is silently coerced into Prism content: the table above ma
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import { createAiSdkProvider } from "@arnilo/prism-providers/ai-sdk";
+import aiSdk from "@arnilo/prism-provider-ai-sdk";
+import { createOpenAI } from "@ai-sdk/openai";
 
-const provider = createAiSdkProvider({ model: hostCreatedLanguageModelV4 });
+const hostModel = createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat("gpt-5.1");
 
-const agent = createAgent({
-  provider,
-  model: {
-    provider: provider.id,
-    model: hostCreatedLanguageModelV4.modelId,
-    capabilities: { tools: true, streaming: true, structuredOutput: true, input: ["text"] },
-  },
+const agent = await createAgent({
+  model: { provider: "ai-sdk:openai", model: "gpt-5.1" },
+  packages: [aiSdk({ model: hostModel })],
 });
 
-const result = await agent.createSession().run("Summarize this");
-console.log(result.text);
+const models = await agent.models.list(); // the host model, derived
+await agent.dispose();
 ```
 
 ## Model catalog and discovery
@@ -149,7 +153,7 @@ Official evidence: [Custom providers / LanguageModelV4](https://ai-sdk.dev/provi
 ## Extension and configuration notes
 
 - Peer dependency: `@ai-sdk/provider@4.0.13` (matrix also lists `4.0.3`, `4.0.4`, and `4.0.10`). Upgrade policy adds a matrix row and offline conformance fixture before accepting any new version.
-- First-party HTTP providers remain independent; this adapter is available directly or through `@arnilo/prism-providers`. Installation does not select a model or invoke AI SDK.
+- First-party HTTP providers remain independent; this adapter is available directly as `@arnilo/prism-provider-ai-sdk`. Installation does not select a model or invoke AI SDK.
 - `options.compat` / `options.extra` pass through as AI SDK `providerOptions.prism`.
 - Export helpers `toAiSdkCallOptions`, `toAiSdkPrompt`, and `mapAiSdkStream` for tests and custom hosts.
 
@@ -179,7 +183,7 @@ Runs the adapter over the real `@ai-sdk/openai` provider package (dev dependency
 
 ```bash
 PRISM_LIVE_PROVIDER_TESTS=1 OPENAI_API_KEY=... \
-  node --test packages/prism-providers/dist/ai-sdk/__tests__/live.test.js
+  bun test packages/providers/ai-sdk/src/__tests__/live.test.ts
 ```
 
 `PRISM_LIVE_AISDK_MODEL` overrides the probed model (default `gpt-5.1`). Without a key the suite skips.

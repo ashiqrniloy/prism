@@ -2,11 +2,11 @@
 
 ## What it does
 
-`@arnilo/prism-providers/decisions` is the host-facing typed decision call over the shared `POST /v1/systemone` wire client used by both [TypeSafe Jev](typesafe.md) and [Laya](laya.md). One call returns the raw `answers` (noul probability, choice probabilities and confidence, score with legend and distribution), the checkpoint that actually answered, mapped usage, and wall-clock timing. Nothing is coerced: an answer is never converted to a boolean, rounded to an integer, replaced by a synthetic `0.5`, or flattened to a schema value. The subpath re-exports the question/answer types, the typed error family, the pre-fetch limits, and the schema compiler (`compileSystemOneQuestions`, `compileSystemOneState`) for hosts that build requests from JSON Schema or Prism messages.
+`@arnilo/prism/provider-kit` is the host-facing typed decision call over the shared `POST /v1/systemone` wire client used by both [TypeSafe Jev](typesafe.md) and [Laya](laya.md). One call returns the raw `answers` (noul probability, choice probabilities and confidence, score with legend and distribution), the checkpoint that actually answered, mapped usage, and wall-clock timing. Nothing is coerced: an answer is never converted to a boolean, rounded to an integer, replaced by a synthetic `0.5`, or flattened to a schema value. The kit exports the question/answer types, the typed error family, the pre-fetch limits, and the schema compiler (`compileSystemOneQuestions`, `compileSystemOneState`) for hosts that build requests from JSON Schema or Prism messages.
 
 ## When to use it
 
-Use it when a host needs calibrated decision output for confidence gating, shadow classification, calibration runs, or custom telemetry, and wants the raw probabilities plus the responding checkpoint. Use the `typesafe` or `laya` `AIProvider` adapter instead when the call is a normal structured-output request and only schema-valid JSON text is needed. The call is host-invoked; it never registers a provider, model, tool, or automatic agent hook, and a decision answer is never effect authority.
+Use it when a host needs calibrated decision output for confidence gating, shadow classification, calibration runs, or custom telemetry, and wants the raw probabilities plus the responding checkpoint. Use the `typesafe` or `laya` `ModelProvider` package instead when the call is a normal structured-output request and only schema-valid JSON text is needed. The call is host-invoked; it never registers a provider, model, tool, or automatic agent hook, and a decision answer is never effect authority.
 
 ## Inputs / request
 
@@ -89,7 +89,7 @@ The result keeps `0.91` and every probability; it does not return `true`, `"ask"
 ## Implementation example
 
 ```ts
-import { askSystemOneDecisions } from "@arnilo/prism-providers/decisions";
+import { askSystemOneDecisions } from "@arnilo/prism/provider-kit";
 
 const result = await askSystemOneDecisions(
   {
@@ -115,7 +115,7 @@ For Laya, pass `provider: "Laya"` and the `laya-serve` base URL (or omit `apiKey
 
 - Engine-specific calibration controls are not forwarded: the supported wire contract is verified for `model`, `state`, `questions`, and Bearer auth only. Temperature/floor refits belong in host configuration until the wire documents them.
 - `maxRetries`, backoff, jitter, and `random` are the shared client's knobs, not a second retry loop.
-- The wrapper is re-exported from `@arnilo/prism-providers/typesafe` and `@arnilo/prism-providers/laya` for hosts that already import the provider package.
+- The decision call ships from `@arnilo/prism/provider-kit` (plan 152 Task 5 moved it out of the retired `@arnilo/prism-providers/decisions` subpath), alongside the `typesafe` and `laya` provider packages that speak the same wire.
 - `compileSystemOneState` converts Prism messages to wire state (single user text message → string, else `[{ role, text }]` with non-text parts dropped); questions stay out of it by construction.
 
 ## Security and performance notes

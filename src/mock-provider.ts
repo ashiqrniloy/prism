@@ -1,11 +1,11 @@
-import type { AIProvider, ProviderEvent, ProviderRequest } from "./contracts.js";
+import type { ModelProvider, ProviderEvent, ProviderRequest } from "./contracts.js";
 
 export interface MockProviderOptions {
   readonly id?: string;
   readonly onRequest?: (request: ProviderRequest) => void;
 }
 
-export function createMockProvider(events: readonly ProviderEvent[] = [{ type: "done" }], options: MockProviderOptions = {}): AIProvider {
+export function createMockProvider(events: readonly ProviderEvent[] = [{ type: "done" }], options: MockProviderOptions = {}): ModelProvider {
   return {
     id: options.id ?? "mock",
     async *generate(request) {

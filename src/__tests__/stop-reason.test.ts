@@ -9,7 +9,8 @@ import {
   providerTextDelta,
   toolCallContent,
 } from "../index.js";
-import { createOpenAICompatibleProvider } from "../providers/openai-compatible.js";
+import { createOpenAICompatibleProvider } from "../provider-kit/openai-compatible.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /** Every native reason the first-party adapters can surface, mapped by the one shared table. */
 const NATIVE_CASES: readonly (readonly [string, string])[] = [
@@ -125,14 +126,14 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
       id: "stop-reason-budget",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo", limits: { contextWindow: 100_000 } },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield { type: "usage" as const, usage: { inputTokens: 500, outputTokens: 7, totalTokens: 507 } };
           yield providerTextDelta("done");
           yield providerDone(undefined, "end_turn");
         },
-      },
+      }])],
     });
     const session = await agent.session({ id: "stop-reason-session", create: true });
     const { events, error } = await collectRun(session, "hi", { maxTurns: 5, maxInputTokens: 1000 });
@@ -159,7 +160,7 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
       id: "stop-reason-tools",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           turn += 1;
@@ -171,7 +172,7 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
           yield providerTextDelta("done");
           yield providerDone();
         },
-      },
+      }])],
       tools: { add: [{ name: "digest", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "digest", value: "ok" }) }] },
     });
     const session = await agent.session({ id: "stop-reason-tools-session", create: true });
@@ -188,12 +189,12 @@ describe("provider stop-reason taxonomy (plan 087 T1)", () => {
       id: "stop-reason-error",
       slots: { store: createMemorySessionStore() },
       model: { provider: "mock", model: "demo" },
-      provider: {
+      packages: [providerPackage("test-provider", [{
         id: "mock",
         async *generate() {
           yield { type: "error" as const, error: { message: "boom" } };
         },
-      },
+      }])],
     });
     const session = await agent.session({ id: "stop-reason-error-session", create: true });
     const { events } = await collectRun(session, "hi");

@@ -15,6 +15,7 @@ import {
   type ToolResult,
   toolCallContent,
 } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // In-session handoff (swarm) pattern, end-to-end with the mock provider.
 //
@@ -190,7 +191,7 @@ export async function demo(): Promise<{
   ]);
   const triageA = await resolveAgentDefinition(definitions.triage, {
     tools: [createHandoffTool(definitions)],
-    overrides: { provider: unknownRound.aiProvider, slots: { store } },
+    overrides: { packages: [providerPackage("example-provider", [unknownRound.aiProvider])], slots: { store } },
   });
   const sessionA = await triageA.session();
   const [eventsA, _runA] = await Promise.all([trackBlocked(sessionA), sessionA.run("My last invoice was charged twice.")]);
@@ -212,7 +213,7 @@ export async function demo(): Promise<{
   ]);
   const triage = await resolveAgentDefinition(definitions.triage, {
     tools: [createHandoffTool(definitions)],
-    overrides: { provider: triageRounds.aiProvider, slots: { store } },
+    overrides: { packages: [providerPackage("example-provider", [triageRounds.aiProvider])], slots: { store } },
   });
   const triageSession = await triage.session();
   const [triageEvents, triageRun] = await Promise.all([
@@ -227,7 +228,7 @@ export async function demo(): Promise<{
   const swapStart = performance.now();
   const billing: Agent = await resolveAgentDefinition(definitions.billing, {
     tools: [refundTool],
-    overrides: { provider: billingRounds.aiProvider, slots: { store } },
+    overrides: { packages: [providerPackage("example-provider", [billingRounds.aiProvider])], slots: { store } },
   });
   const billingSession = await billing.session({ id: triageSession.id, leafId: triageRun.leafId });
   const swapMs = performance.now() - swapStart;

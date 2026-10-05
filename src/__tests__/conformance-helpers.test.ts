@@ -14,45 +14,66 @@ import {
 import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";
 import { assertCompactorConforms } from "../testing/compaction-conformance.js";
 import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
-import { assertSessionStoreConforms, runSessionStoreConformance } from "../testing/session-store-conformance.js";
+import { storeConformance } from "../testing/store-conformance.js";
 import { assertToolBlocked, assertToolDisclosureConforms, assertToolDispatchConforms } from "../testing/tool-conformance.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 
-void describe("session-store conformance helper", () => {
-  it("conforms against the core memory store", async () => {
-    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseReadBranchPath: true, exerciseSessionIndex: true });
+void describe("store conformance helper", () => {
+  it("memory_store_passes_store_conformance", async () => {
+    await storeConformance(createMemorySessionStore);
   });
 
   it("conforms against a custom store that implements readBranchPath", async () => {
-    await assertSessionStoreConforms(customStore(), { exerciseReadBranchPath: true });
+    await storeConformance(customStore);
   });
 
   it("rejects a store that silently accepts duplicate entry ids", async () => {
-    await assert.rejects(() => assertSessionStoreConforms(lenientStore()), /store must reject a duplicate entry id/);
+    await assert.rejects(() => storeConformance(lenientStore), /\[append-and-read\].*store must reject a duplicate entry id/);
   });
 
   it("rejects a store that ignores a missing expectedParentId", async () => {
     await assert.rejects(
-      () => assertSessionStoreConforms(noConflictStore()),
-      /store must throw SessionAppendConflictError when expectedParentId does not exist/,
+      () => storeConformance(noConflictStore),
+      /\[append-and-read\].*store must throw SessionAppendConflictError when expectedParentId does not exist/,
     );
   });
 
-  it("testing/session-store-conformance subpath is exported", () => {
+  it("store_conformance_fails_a_store_that_leaks_a_foreign_session", async () => {
+    await assert.rejects(() => storeConformance(leakingStore), /\[list-and-delete\].*outside the scope/);
+  });
+
+  it("store_conformance_fails_a_store_that_drops_package_state_on_reopen", async () => {
+    await assert.rejects(
+      () => storeConformance(createMemorySessionStore, { reopen: createMemorySessionStore }),
+      /\[restart\].*did not survive reopen/,
+    );
+  });
+
+  it("missing_capability_leg_expects_unsupported_error", async () => {
+    // A store without the optional methods passes: each missing-capability leg asserts the error.
+    await storeConformance(customStore);
+    // A store that implements a capability it does not claim fails the leg instead of skipping it.
+    await assert.rejects(() => storeConformance(createMemorySessionStore, { capabilities: [] }), /\[search\]/);
+  });
+
+  it("the testing root exports storeConformance and the old subpath is gone", async () => {
+    const testing = await import("../testing/index.js");
+    assert.equal(typeof testing.storeConformance, "function");
+    assert.ok(testing.STORE_CONFORMANCE_STEPS.includes("restart"));
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    assert.ok(pkg.exports["./testing/session-store-conformance"]);
+    assert.equal(pkg.exports["./testing/session-store-conformance"], undefined);
   });
 
   it("supports concurrent parent append when enabled", async () => {
-    await assertSessionStoreConforms(createMemorySessionStore(), { exerciseConcurrentParentAppend: true });
+    await storeConformance(createMemorySessionStore, { exerciseConcurrentParentAppend: true });
   });
 
-  it("runSessionStoreConformance reopens a durable shared backing store", async () => {
+  it("storeConformance reopens a durable shared backing store", async () => {
     const backing = createMemorySessionStore();
-    await runSessionStoreConformance(() => backing, {
+    await storeConformance(() => backing, {
       sessionId: "reopen-shared",
       otherSessionId: "reopen-shared-other",
-      exerciseReopen: true,
+      reopen: () => backing,
     });
   });
 });
@@ -307,6 +328,17 @@ function lenientStore(): SessionStore {
     },
     async list(sessionId) {
       return [...(bySession.get(sessionId) ?? [])];
+    },
+  };
+}
+
+// A broken store whose `listSessions` ignores the ownership scope — conformance must reject it.
+function leakingStore(): SessionStore {
+  const inner = createMemorySessionStore();
+  return {
+    ...inner,
+    async listSessions(query) {
+      return inner.listSessions!({ limit: query.limit ?? 20 });
     },
   };
 }

@@ -1,4 +1,5 @@
 import { createAgent, createMemorySessionStore, type LoopStrategy, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
  * Plan-then-act custom loop (roadmap §2.5): a host `LoopStrategy` supplied through `slots.loop` and a
@@ -35,7 +36,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "custom-loop",
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore(), loop: planThenAct },
-    provider: {
+    packages: [providerPackage("test-provider", [{
       id: "mock",
       async *generate(request) {
         turn += 1;
@@ -52,7 +53,7 @@ export async function demo(): Promise<Record<string, unknown>> {
         yield providerTextDelta(sawDenial ? "network denied; used the local file" : "no denial seen");
         yield providerDone();
       },
-    },
+    }])],
     hooks: (hooks) => {
       hooks.on("tool.call", (call) => (call.name === "fetch_url" ? { deny: "network access is disabled" } : "allow"));
     },

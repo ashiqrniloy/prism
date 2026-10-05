@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createMockProvider, createProviderRegistry, createProviderResolver, type ProviderResolver, providerDone } from "../index.js";
+import { createProviderRegistry, createProviderResolver, type ProviderResolver, providerDone } from "../index.js";
+import { createMockProvider } from "../testing/index.js";
 
 describe("createProviderResolver", () => {
   it("resolves by model.provider from a ProviderRegistry source", () => {
@@ -10,7 +11,7 @@ describe("createProviderResolver", () => {
     assert.equal(resolver({ provider: "own", model: "x" }), own);
   });
 
-  it("resolves by model.provider from an AIProvider[] source", () => {
+  it("resolves by model.provider from an ModelProvider[] source", () => {
     const a = createMockProvider([providerDone()], { id: "a" });
     const b = createMockProvider([providerDone()], { id: "b" });
     const resolver = createProviderResolver([a, b]);

@@ -37,7 +37,7 @@ import { closeSync, mkdirSync, mkdtempSync, openSync, readFileSync, statSync, wr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPostgresApprovalStore, createPostgresEnterpriseState } from "@arnilo/prism-core/enterprise/postgres";
-import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { Pool } from "pg";
 import {
   buildEnterpriseMigration001Ddl,

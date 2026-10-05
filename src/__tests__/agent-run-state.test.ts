@@ -1,26 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { agentFingerprint, parseAgentRunState, type StoredAgentRunState, saveAgentRunState } from "../agent-run-state.js";
-import {
-  AGENT_RUN_STATE_SCHEMA_VERSION,
-  AgentDecisionError,
-  AgentRunStateError,
-  askEveryTool,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  createSecretRedactor,
-  GuardrailError,
-  HARD_MAX_AGENT_RUN_STATE_BYTES,
-  loadAgentRunState,
-  providerDone,
-  providerTextDelta,
-  resumeAgentRun,
-  resumeAgentRunStream,
-  toolCallContent,
-  SubscriberOverflowError,
-} from "../index.js";
+import { AGENT_RUN_STATE_SCHEMA_VERSION, AgentDecisionError, AgentRunStateError, askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore, createSecretRedactor, GuardrailError, HARD_MAX_AGENT_RUN_STATE_BYTES, loadAgentRunState, providerDone, providerTextDelta, resumeAgentRun, resumeAgentRunStream, toolCallContent, SubscriberOverflowError } from "../index.js";
+import { mockProvider } from "../testing/index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 describe("durable agent runs", () => {
   it("suspends before a tool, recreates process objects, and executes it once on approval", async () => {
@@ -32,7 +15,7 @@ describe("durable agent runs", () => {
       id: "durable-demo",
       model: { provider: "mock", model: "demo" },
       slots: { store },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -47,7 +30,7 @@ describe("durable agent runs", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: {
         add: [
           {
@@ -103,7 +86,7 @@ describe("durable agent runs", () => {
       hooks: askEveryTool(),
       id: "ambiguous-durable-demo",
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-3", "write", {}) }, providerDone()]),
+      packages: [mockProvider([[{ type: "tool_call", call: toolCallContent("call-3", "write", {}) }, providerDone()]])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-3", name: "write" }) }] },
     });
     const suspended = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
@@ -140,7 +123,7 @@ describe("durable agent runs", () => {
       id: "stream-durable-demo",
       slots: { store },
       model: { provider: "mock", model: "demo" },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -155,7 +138,7 @@ describe("durable agent runs", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-stream", name: "write", value: ++calls }) }] },
     });
     const suspended = await (await agent.session({ id: "stream-durable-session", create: true })).run("go", {
@@ -199,7 +182,7 @@ describe("durable agent runs", () => {
       id: "sideways-demo",
       slots: { store },
       model: { provider: "mock", model: "demo" },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -214,7 +197,7 @@ describe("durable agent runs", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-sideways", name: "write", value: ++calls }) }] },
     });
     const suspended = await (await agent.session({ id: "sideways-session", create: true })).run("go", {
@@ -252,7 +235,7 @@ describe("durable agent runs", () => {
       hooks: askEveryTool(),
       id: "stream-deny-demo",
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-deny", "write", {}) }, providerDone()]),
+      packages: [mockProvider([[{ type: "tool_call", call: toolCallContent("call-deny", "write", {}) }, providerDone()]])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-deny", name: "write", value: ++calls }) }] },
     });
     const suspended = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
@@ -284,7 +267,7 @@ describe("durable agent runs", () => {
       id: "stream-bounds-demo",
       slots: { store },
       model: { provider: "mock", model: "demo" },
-      provider: (() => {
+      packages: [providerPackage("test-provider", [(() => {
         let turn = 0;
         return {
           id: "mock",
@@ -300,7 +283,7 @@ describe("durable agent runs", () => {
             yield providerDone();
           },
         };
-      })(),
+      })()])],
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-bounds", name: "write", value: ++calls }) }] },
     });
     const suspended = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
@@ -342,7 +325,7 @@ describe("durable agent runs", () => {
       hooks: askEveryTool(),
       id: "redacted-durable-demo",
       model: { provider: "mock", model: "demo" },
-      provider: createMockProvider([{ type: "tool_call", call: toolCallContent("call-2", "write", { token: "secret" }) }, providerDone()]),
+      packages: [mockProvider([[{ type: "tool_call", call: toolCallContent("call-2", "write", { token: "secret" }) }, providerDone()]])],
       tools: {
         add: [
           {

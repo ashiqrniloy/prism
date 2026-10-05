@@ -5,7 +5,7 @@ import { describe, it } from "bun:test";
 import {
   type AgentConfig,
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   type ModelConfig,
@@ -16,6 +16,7 @@ import {
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const model: ModelConfig = { provider: "mock", model: "demo" };
 const payload = `payload ${"y".repeat(4_000)}`;
@@ -65,7 +66,7 @@ const bigTool: ToolDefinition = {
   execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: payload }),
 };
 
-function toolThenReply(): { provider: AIProvider; requests: ProviderRequest[] } {
+function toolThenReply(): { provider: ModelProvider; requests: ProviderRequest[] } {
   const requests: ProviderRequest[] = [];
   return {
     requests,
@@ -81,8 +82,8 @@ function toolThenReply(): { provider: AIProvider; requests: ProviderRequest[] } 
   };
 }
 
-const agentWith = async (provider: AIProvider, config: Partial<AgentConfig> = {}) =>
-  await createAgent({ model, provider, tools: { add: [bigTool] }, ...config });
+const agentWith = async (provider: ModelProvider, config: Partial<AgentConfig> = {}) =>
+  await createAgent({ model, packages: [providerPackage("test-provider", [provider])], tools: { add: [bigTool] }, ...config });
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
@@ -158,7 +159,7 @@ describe("attention_compiled telemetry", () => {
   it("emits one event per mutated turn and reports, but does not delete", async () => {
     const store = createMemorySessionStore();
     const requests: ProviderRequest[] = [];
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "mock",
       async *generate(request) {
         requests.push(request);

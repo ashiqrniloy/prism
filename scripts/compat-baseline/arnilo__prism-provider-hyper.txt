@@ -1,0 +1,33 @@
+HYPER_DEFAULT_API_KEY_REF	export declare const HYPER_DEFAULT_API_KEY_REF = "env:HYPER_API_KEY"
+HYPER_DEFAULT_BASE_URL	export declare const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1"
+applyHyperAnthropicCacheControl	export declare function applyHyperAnthropicCacheControl(request: ProviderRequest): readonly Message[]
+classifyHyperError	export declare function classifyHyperError(input: HyperErrorInput): HyperRetryDecision
+costFromHyperPricing	export declare function costFromHyperPricing(pricing: HyperModelEntry["pricing"]): ModelCost | undefined
+createHyperProvider	export declare function createHyperProvider(options?: HyperProviderOptions): ModelProvider
+default	export default
+defineHyperModel	export declare function defineHyperModel(config: HyperModelConfig): ModelConfig
+getHyperCredits	export declare function getHyperCredits(options: GetHyperCreditsOptions): Promise<HyperCreditsBalance>
+hyper	export declare function hyper(options?: HyperProviderPackageOptions & HyperProviderConfig): PackageInstance
+hyperAnthropicCacheEnabled	export declare function hyperAnthropicCacheEnabled(request: ProviderRequest): boolean
+hyperChatBody	export declare function hyperChatBody(request: ProviderRequest): JsonObject
+hyperChatEvents	export declare function hyperChatEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
+hyperHttpError	export declare function hyperHttpError(decision: HyperRetryDecision, bodyText: string, secrets: readonly (string | undefined)[]): Error
+hyperModels	export declare const hyperModels: readonly ModelConfig[]
+hyperPreserveThinking	export declare function hyperPreserveThinking(request: ProviderRequest): boolean
+hyperReasoningEffort	export declare function hyperReasoningEffort(request: ProviderRequest): string | undefined
+hyperThinking	export declare function hyperThinking(request: ProviderRequest): JsonObject | undefined
+listHyperModels	export declare function listHyperModels(options?: ListHyperModelsOptions): Promise<ModelConfig[]>
+mapHyperModel	export declare function mapHyperModel(entry: HyperModelEntry, options?:
+parseHyperUsageCost	export declare function parseHyperUsageCost(usage: unknown): HyperUsageCost | undefined
+routeForHyperModel	export declare function routeForHyperModel(modelId: string): HyperRoute
+serializeHyperChatMessage	export declare function serializeHyperChatMessage(message: Message, preserveThinking: boolean): JsonObject
+stripHyperOwnedCompat	export declare function stripHyperOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
+type GetHyperCreditsOptions	export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js"
+type HyperCreditsBalance	export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js"
+type HyperErrorInput	export { classifyHyperError, type HyperErrorInput, type HyperRetryDecision, hyperHttpError } from "./retry.js"
+type HyperModelConfig	export { costFromHyperPricing, defineHyperModel, HYPER_DEFAULT_BASE_URL, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
+type HyperModelEntry	export { costFromHyperPricing, defineHyperModel, HYPER_DEFAULT_BASE_URL, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
+type HyperProviderOptions	export { createHyperProvider, type HyperProviderOptions } from "./provider.js"
+type HyperRetryDecision	export { classifyHyperError, type HyperErrorInput, type HyperRetryDecision, hyperHttpError } from "./retry.js"
+type HyperRoute	export { costFromHyperPricing, defineHyperModel, HYPER_DEFAULT_BASE_URL, type HyperModelConfig, type HyperModelEntry, type HyperRoute, hyperModels, listHyperModels, mapHyperModel, routeForHyperModel, } from "./models.js"
+type HyperUsageCost	export { type HyperUsageCost, parseHyperUsageCost } from "./telemetry.js"

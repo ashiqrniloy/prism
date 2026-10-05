@@ -1,4 +1,5 @@
-import { type AgentEvent, createAgent, createMockProvider, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { type AgentEvent, createAgent, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 
 // Minimal host-app embed: create an agent + session, stream events while a
 // prompt runs, and return the event-type sequence. Uses the mock provider —
@@ -11,11 +12,11 @@ import { type AgentEvent, createAgent, createMockProvider, providerDone, provide
 export async function demo(): Promise<readonly string[]> {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([
+    packages: [mockProvider([[
       providerTextDelta("Hello, host!"),
       providerUsage({ inputTokens: 4, outputTokens: 3, totalTokens: 7 }),
       providerDone(),
-    ]),
+    ]])],
   });
 
   const session = await agent.session();

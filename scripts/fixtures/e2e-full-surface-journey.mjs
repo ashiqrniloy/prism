@@ -35,7 +35,9 @@ await section("@arnilo/prism: .", async () => {
   // Plan-066: the kernel must stamp session correlation + thinking intent on
   // every generate request, even with no host policies configured.
   const seen = [];
-  const provider = prism.createMockProvider([prism.providerTextDelta("pong"), prism.providerDone()], {
+  const { createMockProvider } = await import("@arnilo/prism/testing");
+  const { canonicalizeJsonSchema, providerPackage } = await import("@arnilo/prism/provider-kit");
+  const provider = createMockProvider([prism.providerTextDelta("pong"), prism.providerDone()], {
     onRequest: (request) => seen.push(request),
   });
   const agent = await prism.createAgent({
@@ -45,7 +47,7 @@ await section("@arnilo/prism: .", async () => {
       capabilities: { thinkingLevels: ["low", "high"] },
       compat: { thinkingFamily: "reasoning_effort" },
     },
-    provider,
+    packages: [providerPackage("test-provider", [provider])],
     instructions: "reply exactly: pong",
     thinkingLevel: "low",
   });
@@ -91,7 +93,8 @@ await section("@arnilo/prism: .", async () => {
   });
   assert.match(JSON.stringify(dispatched), /"hi"/, "tool dispatch must round-trip");
   assert.equal(prism.createSecretRedactor(["s3cret"]).redact("a s3cret b"), "a [REDACTED] b");
-  assert.equal(typeof prism.canonicalizeJsonSchema({ type: "object" }).type, "string");
+  // Plan 152 Task 2: `canonicalizeJsonSchema` moved from the root barrel to `@arnilo/prism/provider-kit`.
+  assert.equal(typeof canonicalizeJsonSchema({ type: "object" }).type, "string");
   // Plan-065 thinking-effort surface: the five public helpers must resolve from the pack.
   assert.equal(prism.parseThinkingLevel("High"), "high");
   assert.deepEqual(prism.parseThinkingLevel("turbo"), { opaque: "turbo" });
@@ -122,34 +125,25 @@ await section("@arnilo/prism: .", async () => {
   );
 });
 
-for (const sub of ["providers/openai-compatible", "providers/transport", "providers/openai", "providers/schema", "providers/media"]) {
-  await section(`@arnilo/prism: ${sub}`, async () => {
-    const m = await import(`@arnilo/prism/${sub}`);
-    assert.ok(Object.keys(m).length > 0, `${sub} must export a public surface`);
-    if (sub === "providers/schema") {
-      assert.equal(m.canonicalizeJsonSchema({ type: "string" }).type, "string");
-    } else if (sub === "providers/openai") {
-      const serialized = m.serializeOpenAIChatMessage({ role: "user", content: [{ type: "text", text: "hi" }] });
-      assert.equal(serialized.role, "user");
-    } else if (sub === "providers/media") {
-      assert.equal(m.bytesToBase64(new Uint8Array([104, 105])), "aGk=");
-    } else if (sub === "providers/transport") {
-      assert.deepEqual(m.tryParseJsonObjectArguments('{"a":1}'), { ok: true, value: { a: 1 } });
-    } else if (sub === "providers/openai-compatible") {
-      const message = { role: "user", content: [{ type: "text", text: "hi" }] };
-      const body = m.buildOpenAIChatBody({ model: "m", messages: [message] });
-      assert.equal(body.messages[0].content, "hi");
-    }
-  });
-}
+await section("@arnilo/prism: provider-kit", async () => {
+  const m = await import("@arnilo/prism/provider-kit");
+  assert.equal(m.canonicalizeJsonSchema({ type: "string" }).type, "string");
+  const serialized = m.serializeOpenAIChatMessage({ role: "user", content: [{ type: "text", text: "hi" }] });
+  assert.equal(serialized.role, "user");
+  assert.equal(m.bytesToBase64(new Uint8Array([104, 105])), "aGk=");
+  assert.deepEqual(m.tryParseJsonObjectArguments('{"a":1}'), { ok: true, value: { a: 1 } });
+  const message = { role: "user", content: [{ type: "text", text: "hi" }] };
+  const body = m.buildOpenAIChatBody({ model: "m", messages: [message] });
+  assert.equal(body.messages[0].content, "hi");
+  assert.equal(typeof m.providerConformance, "function");
+  assert.equal(typeof m.providerPackage, "function");
+});
 
 await section("@arnilo/prism: testing/* conformance helpers", async () => {
   const helpers = [
     "testing",
-    "testing/provider-conformance",
     "testing/agent-event-source-conformance",
     "testing/state-concurrency-conformance",
-    "testing/session-store-conformance",
     "testing/compaction-conformance",
     "testing/tool-conformance",
     "testing/tool-effect-store-conformance",
@@ -170,7 +164,6 @@ await section("@arnilo/prism: node/* node adapters", async () => {
   const config = await import("@arnilo/prism/node/config");
   const settings = await import("@arnilo/prism/node/settings");
   const trust = await import("@arnilo/prism/node/trust");
-  const jsonl = await import("@arnilo/prism/node/session-store-jsonl");
   const contributions = await import("@arnilo/prism/node/contribution-discovery");
   const injectors = await import("@arnilo/prism/node/instruction-sources");
   const prompts = await import("@arnilo/prism/node/system-prompts");
@@ -181,8 +174,6 @@ await section("@arnilo/prism: node/* node adapters", async () => {
   assert.equal(settings.readSettingsFile.name, "readSettingsFile");
   const _policy = trust.createPathTrustPolicy({ workspaceRoot: dir });
   assert.equal(trust.isPathInside(dir, join(dir, "file.txt")), true);
-  const store = jsonl.createJsonlSessionStore(dir);
-  assert.ok(store, "jsonl session store must construct over a directory");
   assert.equal(typeof contributions.discoverContributions, "function");
   assert.equal(typeof injectors.loadInstructionSources, "function");
   assert.equal(typeof prompts.loadSystemPromptFiles, "function");
@@ -287,38 +278,56 @@ await section("@arnilo/prism-core: runtime/workflows", async () => {
   );
 });
 
-await section("@arnilo/prism-core: sessions/*", async () => {
-  const codecs = await import("@arnilo/prism-core/sessions/codecs");
+await section("@arnilo/prism-store-codecs: .", async () => {
+  const codecs = await import("@arnilo/prism-store-codecs");
   assert.ok(codecs.createSessionRowMappers, "session codecs must export row mappers");
   assert.equal(typeof codecs.clipSearchSnippet, "function");
+  assert.equal(typeof codecs.ownershipScopeMatches, "function");
+});
 
-  const { createSqlitePersistence, reopenSqlitePersistence } = await import("@arnilo/prism-core/sessions/sqlite");
+await section("@arnilo/prism-store-sqlite: .", async () => {
+  const sqlite = await import("@arnilo/prism-store-sqlite");
+  assert.ok(sqlite.default.capabilities.includes("slot:store"), "the sqlite store must claim the store slot");
   try {
-    const store = createSqlitePersistence({ filename: ":memory:" });
+    const store = sqlite.createSqlitePersistence({ filename: ":memory:" });
     await store.append({
       id: "e1",
       sessionId: "s-1",
       timestamp: new Date().toISOString(),
       kind: "message",
       message: { role: "user", content: [{ type: "text", text: "hello" }] },
+      metadata: {},
     });
     const entries = await store.list("s-1");
     assert.equal(entries[0]?.id, "e1", "sqlite persistence must round-trip a session entry");
+    const listed = await store.listSessions({ limit: 5 });
+    assert.deepEqual(listed.items.map((item) => item.sessionId), ["s-1"], "sqlite listSessions must list the session");
+    assert.equal(listed.items[0]?.messageCount, 1, "sqlite listSessions must count message entries");
+    assert.equal(await store.deleteSession("s-1"), true, "sqlite deleteSession must remove an in-scope session");
+    assert.equal((await store.list("s-1")).length, 0, "sqlite deleteSession must remove the entries");
     await store.close();
-    const reopened = reopenSqlitePersistence({ filename: ":memory:" });
+    const reopened = sqlite.reopenSqlitePersistence({ filename: ":memory:" });
     assert.ok(reopened, "sqlite persistence must reopen");
     await reopened.close();
   } catch (error) {
-    // ponytail: sqlite leg is optional off Bun — the subpath fails closed with the runtime message.
+    // ponytail: sqlite leg is optional off Bun — the package fails closed with the runtime message.
     assert.match(
       String(error?.message),
       /requires the Bun runtime \(bun:sqlite\)/,
       "sqlite absence must be the documented Bun-runtime failure",
     );
   }
+});
 
-  const postgres = await import("@arnilo/prism-core/sessions/postgres");
+await section("@arnilo/prism-store-postgres: .", async () => {
+  const postgres = await import("@arnilo/prism-store-postgres");
+  assert.equal(postgres.default.capabilities.includes("slot:store"), true);
   assert.equal(postgres.quoteIdentifier("safe"), '"safe"');
+  assert.equal(typeof postgres.createPostgresPersistence, "function");
+  assert.equal(typeof postgres.createPostgresAgentEventSource, "function");
+});
+
+await section("@arnilo/prism-core: sessions/*", async () => {
   const nats = await import("@arnilo/prism-core/sessions/nats");
   assert.equal(typeof nats.createNatsJetStream, "function");
 });
@@ -362,10 +371,11 @@ await section("@arnilo/prism-core: governance/*", async () => {
   assert.ok(telemetry, "in-memory telemetry must construct");
 });
 
-await section("@arnilo/prism-core: credentials/node + oidc", async () => {
-  const credentials = await import("@arnilo/prism-core/credentials/node");
-  const store = credentials.createEncryptedCredentialStore({ passphrase: "full-surface-test-passphrase-0123456789" });
+await section("@arnilo/prism-credentials-keyring + @arnilo/prism-core/credentials/node oidc", async () => {
+  const keyring = await import("@arnilo/prism-credentials-keyring");
+  const store = keyring.createEncryptedCredentialStore({ path: "./full-surface.vault", getPassphrase: () => "full-surface-test-passphrase-0123456789" });
   assert.ok(store, "encrypted credential store must construct with a passphrase");
+  assert.equal(typeof keyring.createKeyringCredentialResolver, "function");
   const oidc = await import("@arnilo/prism-core/credentials/node/oidc");
   assert.equal(typeof oidc.createOidcIdentityVerifier, "function");
 });
@@ -462,35 +472,35 @@ await section("@arnilo/prism-core: validation/json-schema", async () => {
 });
 
 // ---------------------------------------------------------------------------
-// @arnilo/prism-providers (22 subpaths) — pure helpers / model catalogs;
+// Standalone provider packages (plan 152) — pure helpers / model catalogs;
 // factories construct-only, never a wire call.
 // ---------------------------------------------------------------------------
-await section("@arnilo/prism-providers: adapter surfaces", async () => {
-  const anthropic = await import("@arnilo/prism-providers/anthropic");
+await section("provider packages: adapter surfaces", async () => {
+  const anthropic = await import("@arnilo/prism-provider-anthropic");
   assert.ok(anthropic.anthropicModels[0]?.id ?? anthropic.anthropicModels[0], "anthropic must export its model catalog");
-  const deepseek = await import("@arnilo/prism-providers/deepseek");
+  const deepseek = await import("@arnilo/prism-provider-deepseek");
   assert.ok(deepseek.deepseekModels.length >= 1);
-  const google = await import("@arnilo/prism-providers/google");
+  const google = await import("@arnilo/prism-provider-google");
   assert.ok(google.googleModels.length >= 1);
-  const clinepass = await import("@arnilo/prism-providers/clinepass");
+  const clinepass = await import("@arnilo/prism-provider-clinepass");
   assert.ok(clinepass.clinePassModels.length >= 1);
-  const commandcode = await import("@arnilo/prism-providers/commandcode");
+  const commandcode = await import("@arnilo/prism-provider-commandcode");
   assert.ok(commandcode.commandCodeModels.length >= 1);
-  const kimi = await import("@arnilo/prism-providers/kimi");
+  const kimi = await import("@arnilo/prism-provider-kimi");
   assert.ok(kimi.kimiCodingModels.length >= 1);
-  const openrouter = await import("@arnilo/prism-providers/openrouter");
+  const openrouter = await import("@arnilo/prism-provider-openrouter");
   assert.equal(openrouter.defineOpenRouterModel({ id: "org/model", model: "org/model", displayName: "m" }).provider, "openrouter");
-  const aiSdk = await import("@arnilo/prism-providers/ai-sdk");
+  const aiSdk = await import("@arnilo/prism-provider-ai-sdk");
   assert.ok(aiSdk.SUPPORTED_AI_SDK_SPECIFICATION, "ai-sdk adapter must pin its spec version");
-  const azure = await import("@arnilo/prism-providers/azure");
+  const azure = await import("@arnilo/prism-provider-azure");
   assert.match(azure.azureChatCompletionsUrl({ endpoint: "https://e", deployment: "d" }), /deployments/);
-  const bedrock = await import("@arnilo/prism-providers/bedrock");
+  const bedrock = await import("@arnilo/prism-provider-bedrock");
   assert.equal(typeof bedrock.bedrockRuntimeEndpoint, "function");
-  const vertex = await import("@arnilo/prism-providers/vertex");
+  const vertex = await import("@arnilo/prism-provider-vertex");
   assert.match(vertex.vertexOpenApiBaseUrl({ projectId: "p", location: "loc" }), /locations/);
-  const ollama = await import("@arnilo/prism-providers/ollama");
+  const ollama = await import("@arnilo/prism-provider-ollama");
   assert.match(ollama.ollamaBaseUrl(), /^https:\/\//, "ollama default base url must be a valid origin");
-  const opencodeGo = await import("@arnilo/prism-providers/opencode-go");
+  const opencodeGo = await import("@arnilo/prism-provider-opencode-go");
   assert.equal(typeof opencodeGo.createOpenCodeGoProvider, "function");
   // Plan-066: opencode-go fail-fast must fire from the packed install before
   // any wire call when session correlation is missing.
@@ -518,23 +528,23 @@ await section("@arnilo/prism-providers: adapter surfaces", async () => {
       error.requirement === "sessionId",
   );
   assert.equal(opencodeFetches, 0, "fail-fast must fire before any fetch");
-  const neuralwatt = await import("@arnilo/prism-providers/neuralwatt");
+  const neuralwatt = await import("@arnilo/prism-provider-neuralwatt");
   assert.equal(typeof neuralwatt.createNeuralWattProvider, "function");
-  const hyper = await import("@arnilo/prism-providers/hyper");
+  const hyper = await import("@arnilo/prism-provider-hyper");
   assert.equal(typeof hyper.createHyperProvider, "function");
-  const xai = await import("@arnilo/prism-providers/xai");
+  const xai = await import("@arnilo/prism-provider-xai");
   assert.equal(typeof xai.createXaiProvider === "function" || typeof xai.createXaiOAuthProvider === "function", true);
-  const zai = await import("@arnilo/prism-providers/zai");
+  const zai = await import("@arnilo/prism-provider-zai");
   assert.ok(zai.zaiModels.length >= 1);
-  const alibaba = await import("@arnilo/prism-providers/alibaba");
+  const alibaba = await import("@arnilo/prism-provider-alibaba");
   assert.ok(alibaba.DEFAULT_ALIBABA_BASE_URL ?? alibabapackageNameProbe(alibaba), "alibaba must export its surface");
   function alibabapackageNameProbe(ns) {
-    return ns.packageName === "@arnilo/prism-providers";
+    return ns.packageName === "@arnilo/prism-provider-alibaba";
   }
 });
 
-await section("@arnilo/prism-providers: model-discovery", async () => {
-  const discovery = await import("@arnilo/prism-providers/model-discovery");
+await section("provider-kit: model-discovery", async () => {
+  const discovery = await import("@arnilo/prism/provider-kit");
   const fake = discovery.createFakeModelDiscovery({
     models: [
       {
@@ -681,6 +691,28 @@ await section("@arnilo/prism-mcp: .", async () => {
 });
 
 // ---------------------------------------------------------------------------
+// @arnilo/prism-store-jsonl (1 subpath) — the session store package.
+// ---------------------------------------------------------------------------
+await section("@arnilo/prism-store-jsonl: .", async () => {
+  const jsonlStore = await import("@arnilo/prism-store-jsonl");
+  const dir = mkdtempSync(join(tmpdir(), "prism-full-surface-jsonl-"));
+  const store = jsonlStore.createJsonlSessionStore({ dir });
+  const entry = {
+    id: "e1",
+    sessionId: "s1",
+    timestamp: new Date().toISOString(),
+    kind: "message",
+    message: { role: "user", content: [{ type: "text", text: "packed journey" }] },
+  };
+  await store.append(entry);
+  assert.equal((await store.list("s1")).length, 1, "jsonl store must round-trip an entry");
+  assert.equal((await store.listSessions({ limit: 10 })).items[0].sessionId, "s1");
+  assert.equal(await store.deleteSession("s1"), true, "jsonl store must delete a session");
+  assert.equal(typeof jsonlStore.jsonlStore, "function", "the package must expose its instance shorthand");
+  assert.deepEqual(jsonlStore.default.capabilities, ["slot:store"], "the package claims the store slot");
+});
+
+// ---------------------------------------------------------------------------
 // @arnilo/prism-acp-agent (1 subpath) — spawnable config parsing.
 // ---------------------------------------------------------------------------
 await section("@arnilo/prism-acp-agent: .", async () => {
@@ -691,6 +723,9 @@ await section("@arnilo/prism-acp-agent: .", async () => {
   assert.equal(typeof acpAgent.createSpawnableAgent, "function");
 });
 
-assert.ok(sections.length >= 35, "every planned section must run");
+// Every `await section(...)` in this file must run: the count tracks the file, so a
+// section that silently stops running (or is deleted) fails here. Plan 152 Task 3 moved the
+// anthropic/openai sections onto the standalone provider packages without changing the count.
+assert.ok(sections.length >= 32, `every planned section must run (ran ${sections.length})`);
 console.log(`FULL SURFACE JOURNEY OK (${sections.length} sections)`);
 console.log(sections.map((s) => `  - ${s}`).join("\n"));

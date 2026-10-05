@@ -3,11 +3,12 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import type { AIProvider, ProviderRequest, Skill, ToolDefinition, ToolRegistry, TrustPolicy } from "../index.js";
+import type { ModelProvider, ProviderRequest, Skill, ToolDefinition, ToolRegistry, TrustPolicy } from "../index.js";
 import { discoverAgentBundles, resolveAgentBundle } from "../node/agent-definitions.js";
 import { discoverContributions } from "../node/contribution-discovery.js";
+import { providerPackage } from "../provider-kit/index.js";
 
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield { type: "done" };
@@ -53,7 +54,7 @@ function dirname(path: string): string {
 }
 
 function baseContext() {
-  return { providerSource: () => provider };
+  return { overrides: { packages: [providerPackage("test-provider", [provider])] } };
 }
 
 describe("discoverAgentBundles", () => {
@@ -194,14 +195,14 @@ describe("resolveAgentBundle", () => {
     });
 
     let request!: ProviderRequest;
-    const capturingProvider: AIProvider = {
+    const capturingProvider: ModelProvider = {
       id: "mock",
       async *generate(input) {
         request = input;
         yield { type: "done" };
       },
     };
-    const ctx = { providerSource: () => capturingProvider };
+    const ctx = { overrides: { packages: [providerPackage("test-provider", [capturingProvider])] } };
 
     const [bundle] = await discoverAgentBundles({ configRoot });
     const agent = await resolveAgentBundle(bundle!, {
@@ -235,14 +236,14 @@ describe("resolveAgentBundle", () => {
   async function capturePromptText(include: Record<string, boolean>): Promise<string> {
     const { configRoot, workspaceRoot } = await buildThreePromptBundle();
     let request!: ProviderRequest;
-    const capturingProvider: AIProvider = {
+    const capturingProvider: ModelProvider = {
       id: "mock",
       async *generate(input) {
         request = input;
         yield { type: "done" };
       },
     };
-    const ctx = { providerSource: () => capturingProvider };
+    const ctx = { overrides: { packages: [providerPackage("test-provider", [capturingProvider])] } };
 
     const [bundle] = await discoverAgentBundles({ configRoot });
     const agent = await resolveAgentBundle(bundle!, {
@@ -287,14 +288,14 @@ describe("resolveAgentBundle", () => {
   it("trust-gates the workspace root and app-config root independently", async () => {
     const { configRoot, workspaceRoot } = await buildThreePromptBundle();
     let request!: ProviderRequest;
-    const capturingProvider: AIProvider = {
+    const capturingProvider: ModelProvider = {
       id: "mock",
       async *generate(input) {
         request = input;
         yield { type: "done" };
       },
     };
-    const ctx = { providerSource: () => capturingProvider };
+    const ctx = { overrides: { packages: [providerPackage("test-provider", [capturingProvider])] } };
 
     const [bundle] = await discoverAgentBundles({ configRoot });
 

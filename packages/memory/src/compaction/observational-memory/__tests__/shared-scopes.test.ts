@@ -1,14 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  providerDone,
-  providerTextDelta,
-  type SessionEntry,
-} from "@arnilo/prism";
+import { createAgent, createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
 import { appendCustomEntry } from "../append-custom.js";
 import {
   buildObservationalMemoryContextBlocks,
@@ -27,6 +19,7 @@ import {
   WORK_SCOPE_GRANTED,
   WORK_SCOPE_REVOKED,
 } from "../index.js";
+import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };
 const now = "2026-09-19T00:00:00.000Z";
@@ -43,7 +36,7 @@ function entry(id: string, data: unknown): SessionEntry {
 
 async function fixture(sessionIds: readonly string[]) {
   const store = createMemorySessionStore();
-  const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+  const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
   const sessions = new Map<string, Awaited<ReturnType<typeof agent.session>>>();
   for (const id of sessionIds) {
     const session = await agent.session({ id, create: true });
@@ -263,7 +256,7 @@ describe("observational memory shared work scopes", () => {
 
   it("attached_context_without_shared_scopes_matches_the_local_projection", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model, provider: createMockProvider([providerTextDelta("ok"), providerDone()]), slots: { store } });
+    const agent = await createAgent({ model, packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])], slots: { store } });
     const session = await agent.session({ id: "s15", create: true });
     await session.run("hello s15");
     const appendEntry = (item: SessionEntry, options?: { expectedParentId?: string }) => store.append(item, options);

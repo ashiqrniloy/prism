@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { test } from "bun:test";
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import { type AIProvider, providerDone, toolCallContent } from "@arnilo/prism";
+import { type ModelProvider, providerDone, toolCallContent } from "@arnilo/prism";
 import { ConfigError } from "../config.js";
 import { createSpawnableAgent, loadConfig, parseConfig, resolveProviderAdapter, selectMcpServers, SUPPORTED_PROVIDERS } from "../index.js";
 
@@ -20,7 +20,7 @@ const baseConfig = (cwd: string) => ({
   configOptions: { options: [{ type: "boolean", id: "verbose", name: "Verbose", defaultValue: false }] },
 });
 
-function writeProvider(id = "acp-agent-write-test"): AIProvider {
+function writeProvider(id = "acp-agent-write-test"): ModelProvider {
   let turns = 0;
   return {
     id,
@@ -660,7 +660,7 @@ test("bin spawns and answers initialize over stdio", async () => {
 test("recording provider sees exact requested model", async () => {
   const requestedModel = { provider: "openai", model: "gpt-4o-mini" };
   let seenModel: unknown = null;
-  const recordingProvider: AIProvider = {
+  const recordingProvider: ModelProvider = {
     id: "openai",
     async *generate(request) {
       seenModel = request.model;
@@ -832,7 +832,7 @@ test("credential value never enters config, identity, events, or persistence", a
     assert.equal(config.credentialRef, "TEST_SECRET_REF");
     assert.equal(JSON.stringify(config).includes(canary), false);
 
-    const testProvider: AIProvider = {
+    const testProvider: ModelProvider = {
       id: "mock",
       async *generate() {
         yield providerDone();
@@ -881,7 +881,7 @@ test("two sessions with editor FS preserve the selected model and provider indep
     const writesB: Array<{ path: string; content: string }> = [];
 
     let callIndex = 0;
-    const multiSessionProvider: AIProvider = {
+    const multiSessionProvider: ModelProvider = {
       id: "openai",
       async *generate(request) {
         callIndex++;
@@ -1012,7 +1012,7 @@ test("approval/restart reconstruction restores session agents across restart wit
       agent2 as unknown as {
         lifecycle: {
           resolveAgent: (input: { agentId: string }) => Promise<{
-            agent: { config: { id: string; model: unknown; provider: { id: string } } };
+            agent: { config: { id: string; model: unknown; packages?: readonly unknown[] } };
           }>;
         };
       }
@@ -1023,7 +1023,7 @@ test("approval/restart reconstruction restores session agents across restart wit
     assert.ok(resolved.agent);
     assert.equal(resolved.agent.config.id, sessionAgentId);
     assert.deepEqual(resolved.agent.config.model, model);
-    assert.equal(resolved.agent.config.provider.id, "mock");
+    assert.equal(resolved.agent.config.packages?.length, 1, "the provider is a package, not a config field");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

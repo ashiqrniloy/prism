@@ -20,6 +20,7 @@ import { createSupervisor } from "../packages/prism-core/dist/runtime/supervisor
 import { agentNode, defineWorkflow, runWorkflow, toolNode } from "../packages/prism-core/dist/runtime/workflows/index.js";
 import { fakeObscuraCliPath } from "../packages/web-tools/dist/obscura/__tests__/fake-cli.js";
 import { createObscuraWebTools } from "../packages/web-tools/dist/obscura/index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const AUTHORIZATION = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
 const FAKE = fakeObscuraCliPath();
@@ -61,7 +62,7 @@ const fetchThen = (text) => [
 ];
 
 async function agentWith(provider, tools, id) {
-  return await (await createAgent({ model: { provider: "mock", model: "demo" }, provider, tools })).session({ id, create: true });
+  return await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools })).session({ id, create: true });
 }
 
 function jsonRequest(path, body) {
@@ -91,7 +92,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const { tools, calls } = obscuraTools();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: scriptedProvider(scrapeThen(providerTextDelta("scraped"))),
+      packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("scraped")))])],
       tools,
     });
     const session = await agent.session({ id: "core-obscura", create: true });
@@ -127,7 +128,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
       agents: {
         support: await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: scriptedProvider(scrapeThen(providerTextDelta("scraped"))),
+          packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("scraped")))])],
           tools,
         }),
       },
@@ -226,7 +227,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     });
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: scriptedProvider([[providerTextDelta("summary")], [providerTextDelta("summary")]]),
+      packages: [providerPackage("test-provider", [scriptedProvider([[providerTextDelta("summary")], [providerTextDelta("summary")]])])],
       tools,
     });
     const result = await runWorkflow(workflow, "topic", {
@@ -250,7 +251,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
           createAgent: async () =>
             await createAgent({
               model: { provider: "mock", model: "test" },
-              provider: scriptedProvider(scrapeThen(providerTextDelta("scraped"))),
+              packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("scraped")))])],
               tools,
             }),
         },
@@ -277,7 +278,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const controller = new AbortController();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider: scriptedProvider(scrapeThen(providerTextDelta("never"))),
+      packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("never")))])],
       tools,
     });
     const session = await agent.session({ id: "abort-obscura", create: true });

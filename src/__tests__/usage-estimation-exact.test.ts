@@ -22,6 +22,7 @@ import {
 } from "../index.js";
 import { createRunLimitTracker } from "../run-limits.js";
 import { estimateTextTokensForFamily } from "../usage-estimation.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL: ModelConfig = { provider: "mock", model: "claude-sonnet-4.5", limits: { contextWindow: 100_000 } };
 
@@ -67,7 +68,7 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       id: "exact-report",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: capturingProvider(seen),
+      packages: [providerPackage("test-provider", [capturingProvider(seen)])],
       tools: { add: TOOLS },
       contextBudget: { maxInputTokens: 4_096, reportOmissions: true },
     });
@@ -95,7 +96,7 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       id: "exact-report-tokenizer",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: capturingProvider(seen),
+      packages: [providerPackage("test-provider", [capturingProvider(seen)])],
       tools: { add: TOOLS },
       contextBudget: { maxInputTokens: 4_096, reportOmissions: true, tokenEstimator: (text) => Math.ceil(text.length / 3) },
     });
@@ -117,7 +118,7 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
       id: "exact-tokenizer",
       slots: { store: createMemorySessionStore() },
       model: MODEL,
-      provider: capturingProvider(seen),
+      packages: [providerPackage("test-provider", [capturingProvider(seen)])],
       tools: { add: TOOLS },
       skills: { add: SKILLS },
       contextBudget: { maxInputTokens: 4_096, tokenEstimator: stub },
@@ -201,7 +202,7 @@ describe("usage fallback exact-measurement reuse (plan 103 T6)", () => {
         id: `exact-${mode}`,
         slots: { store: createMemorySessionStore() },
         model: MODEL,
-        provider: capturingProvider([]),
+        packages: [providerPackage("test-provider", [capturingProvider([])])],
         tools: { add: TOOLS },
         // No reportOmissions: without a report the fallback seam itself projects through the
         // tokenizer, so only this mode adds estimator calls on top of the budget pass's own.

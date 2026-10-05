@@ -1,29 +1,62 @@
-OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH	export declare const OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH = 64
-applyPromptCacheBreakpoints	export declare function applyPromptCacheBreakpoints(request: ProviderRequest): readonly OpenAIBreakpointMessage[]
+DEFAULT_IMAGE_MAX_BYTES	export declare const DEFAULT_IMAGE_MAX_BYTES: number
+DEFAULT_SPEECH_MAX_AUDIO_BYTES	export declare const DEFAULT_SPEECH_MAX_AUDIO_BYTES: number
+OAuthUnavailableError	export declare class OAuthUnavailableError extends Error
+OPENAI_BATCH_COMPLETION_WINDOW	export declare const OPENAI_BATCH_COMPLETION_WINDOW = "24h"
+OPENAI_BATCH_MAX_REQUESTS	export declare const OPENAI_BATCH_MAX_REQUESTS = 50000
+OPENAI_BATCH_MAX_RESPONSE_BYTES	export declare const OPENAI_BATCH_MAX_RESPONSE_BYTES: number
+OPENAI_CODEX_DEFAULT_ACCESS_TOKEN_REF	export declare const OPENAI_CODEX_DEFAULT_ACCESS_TOKEN_REF = "keyring:openai-codex"
+OPENAI_DEFAULT_API_KEY_REF	export declare const OPENAI_DEFAULT_API_KEY_REF = "env:OPENAI_API_KEY"
+OPENAI_EMBEDDINGS_MAX_BATCH_SIZE	export declare const OPENAI_EMBEDDINGS_MAX_BATCH_SIZE = 2048
+OPENAI_IMAGE_MAX_COUNT	export declare const OPENAI_IMAGE_MAX_COUNT = 10
+OPENAI_IMAGE_PROMPT_MAX_CHARS	export declare const OPENAI_IMAGE_PROMPT_MAX_CHARS = 32000
+OPENAI_MODERATION_DEFAULT_MODEL	export declare const OPENAI_MODERATION_DEFAULT_MODEL = "omni-moderation-latest"
+OPENAI_MODERATION_INPUT_MAX_CHARS	export declare const OPENAI_MODERATION_INPUT_MAX_CHARS = 100000
+OPENAI_MODERATION_MAX_RESPONSE_BYTES	export declare const OPENAI_MODERATION_MAX_RESPONSE_BYTES: number
+OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH	export { applyPromptCacheBreakpoints, OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheOptions, promptCacheRetention, } from "@arnilo/prism/provider-kit"
+OPENAI_SPEECH_MAX_INPUT_CHARS	export declare const OPENAI_SPEECH_MAX_INPUT_CHARS = 4096
+OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES	export declare const OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES: number
+applyPromptCacheBreakpoints	export { applyPromptCacheBreakpoints, OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheOptions, promptCacheRetention, } from "@arnilo/prism/provider-kit"
+assertBatchJobsSupported	export { assertBatchJobsSupported, modelSupportsBatchJobs } from "@arnilo/prism"
 computeS256Challenge	export declare function computeS256Challenge(verifier: string): string
+createOpenAIBatchJobsProvider	export declare function createOpenAIBatchJobsProvider(options: OpenAIBatchJobsOptions): BatchJobsProvider
 createOpenAICodexOAuthProvider	export declare function createOpenAICodexOAuthProvider(options?: OpenAICodexOAuthOptions): OAuthProvider
-createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): AIProvider
-createOpenAIFileUploadManager	export declare function createOpenAIFileUploadManager(options?: OpenAIFileUploadManagerOptions):
-openaiPackage	export declare function openaiPackage(options?: OpenAIProviderPackageOptions): PackageInstance
+createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): ModelProvider
+createOpenAIEmbeddingsProvider	export declare function createOpenAIEmbeddingsProvider(options?: OpenAIEmbeddingsOptions): EmbeddingsProvider
+createOpenAIImageGenerationProvider	export declare function createOpenAIImageGenerationProvider(options?: OpenAIImageGenerationOptions): ImageGenerationProvider
+createOpenAIModerationProvider	export declare function createOpenAIModerationProvider(options: OpenAIModerationOptions): ModerationProvider
 createOpenAIRealtimeSession	export declare function createOpenAIRealtimeSession(options: OpenAIRealtimeSessionOptions): RealtimeSession
-createOpenAIResponsesProvider	export declare function createOpenAIResponsesProvider(options?: OpenAIResponsesProviderOptions): AIProvider
+createOpenAIResponsesProvider	export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "@arnilo/prism/provider-kit"
+createOpenAISpeechProvider	export declare function createOpenAISpeechProvider(options?: OpenAISpeechOptions): SpeechProvider
+createOpenAITranscriptionProvider	export declare function createOpenAITranscriptionProvider(options?: OpenAITranscriptionOptions): TranscriptionProvider
 createPkceVerifier	export declare function createPkceVerifier(bytes?: number): string
+default	export default
 defineOpenAIModel	export declare function defineOpenAIModel(config: OpenAIModelConfig): ModelConfig
 listOpenAIModels	export declare function listOpenAIModels(options?: ListOpenAIModelsOptions): Promise<ModelConfig[]>
 mapOpenAIModel	export declare function mapOpenAIModel(entry: OpenAIModelEntry, options?:
+modelSupportsBatchJobs	export { assertBatchJobsSupported, modelSupportsBatchJobs } from "@arnilo/prism"
 openAICodexModels	export declare const openAICodexModels: readonly [
 openAICodexOAuthProvider	export declare const openAICodexOAuthProvider: OAuthProvider
+openAIDefaultEffort	export { openAIDefaultEffort, openAIThinkingLevels } from "@arnilo/prism/provider-kit"
 openAIModels	export declare const openAIModels: readonly [ModelConfig]
-promptCacheKey	export declare function promptCacheKey(options: ProviderRequestOptions | undefined): string | undefined
-promptCacheOptions	export declare function promptCacheOptions(options: ProviderRequestOptions | undefined, model: ModelConfig):
-promptCacheRetention	export declare function promptCacheRetention(options: ProviderRequestOptions | undefined, model: ModelConfig): "24h" | undefined
-resolveOpenAIReasoning	export declare function resolveOpenAIReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
+openAIThinkingLevels	export { openAIDefaultEffort, openAIThinkingLevels } from "@arnilo/prism/provider-kit"
+openai	export declare function openai(options?: OpenAIProviderPackageOptions & OpenAIProviderConfig): PackageInstance
+promptCacheKey	export { applyPromptCacheBreakpoints, OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheOptions, promptCacheRetention, } from "@arnilo/prism/provider-kit"
+promptCacheOptions	export { applyPromptCacheBreakpoints, OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheOptions, promptCacheRetention, } from "@arnilo/prism/provider-kit"
+promptCacheRetention	export { applyPromptCacheBreakpoints, OPENAI_PROMPT_CACHE_KEY_MAX_LENGTH, promptCacheKey, promptCacheOptions, promptCacheRetention, } from "@arnilo/prism/provider-kit"
+resolveOpenAIReasoning	export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "@arnilo/prism/provider-kit"
 type ListOpenAIModelsOptions	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"
+type OpenAIBatchJobsOptions	export { createOpenAIBatchJobsProvider, OPENAI_BATCH_COMPLETION_WINDOW, OPENAI_BATCH_MAX_REQUESTS, type OpenAIBatchJobsOptions, } from "./batch.js"
 type OpenAICodexOAuthOptions	export { computeS256Challenge, createOpenAICodexOAuthProvider, createPkceVerifier, type OpenAICodexOAuthOptions, openAICodexOAuthProvider, } from "./oauth.js"
 type OpenAICodexProviderOptions	export { createOpenAICodexProvider, type OpenAICodexProviderOptions } from "./codex.js"
+type OpenAIEmbeddingsOptions	export { createOpenAIEmbeddingsProvider, OPENAI_EMBEDDINGS_MAX_BATCH_SIZE, type OpenAIEmbeddingsOptions, } from "./embeddings.js"
+type OpenAIImageGenerationOptions	export { createOpenAIImageGenerationProvider, DEFAULT_IMAGE_MAX_BYTES, OPENAI_IMAGE_MAX_COUNT, OPENAI_IMAGE_PROMPT_MAX_CHARS, type OpenAIImageGenerationOptions, } from "./images.js"
 type OpenAIModelConfig	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"
 type OpenAIModelEntry	export { defineOpenAIModel, type ListOpenAIModelsOptions, listOpenAIModels, mapOpenAIModel, type OpenAIModelConfig, type OpenAIModelEntry, openAICodexModels, openAIModels, } from "./models.js"
-type OpenAIRealtimeSessionOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
-type OpenAIResponsesProviderOptions	export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "./responses.js"
-type RealtimeTransport	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
-type RealtimeTransportOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type OpenAIModerationOptions	export { createOpenAIModerationProvider, OPENAI_MODERATION_DEFAULT_MODEL, OPENAI_MODERATION_INPUT_MAX_CHARS, OPENAI_MODERATION_MAX_RESPONSE_BYTES, type OpenAIModerationOptions, } from "./moderation.js"
+type OpenAIRealtimeSessionOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type OpenAIRealtimeTool	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type OpenAIResponsesProviderOptions	export { createOpenAIResponsesProvider, type OpenAIResponsesProviderOptions, resolveOpenAIReasoning } from "@arnilo/prism/provider-kit"
+type OpenAISpeechOptions	export { createOpenAISpeechProvider, DEFAULT_SPEECH_MAX_AUDIO_BYTES, OPENAI_SPEECH_MAX_INPUT_CHARS, type OpenAISpeechOptions, } from "./speech.js"
+type OpenAITranscriptionOptions	export { createOpenAITranscriptionProvider, OPENAI_TRANSCRIPTION_MAX_AUDIO_BYTES, type OpenAITranscriptionOptions, } from "./transcription.js"
+type RealtimeTransport	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"
+type RealtimeTransportOptions	export { createOpenAIRealtimeSession, type OpenAIRealtimeSessionOptions, type OpenAIRealtimeTool, type RealtimeTransport, type RealtimeTransportOptions, } from "./realtime.js"

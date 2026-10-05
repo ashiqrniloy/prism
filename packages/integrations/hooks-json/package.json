@@ -14,7 +14,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "bun test --parallel=4 --timeout=0 src",
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
     "postinstall": "mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
   },
   "peerDependencies": {

@@ -1,7 +1,9 @@
 /** create-agent (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
+import { parseModelRef } from "../models/ref.js";
 import type {
   Agent,
   AgentConfig,
+  ResolvedAgentConfig,
   AgentEvent,
   OwnershipScope,
   SessionEntry,
@@ -33,6 +35,8 @@ export interface CreateAgentInternals {
   readonly kernelVersion?: string;
   /** Reads a `skills.addDir` directory. Defaults to the Node reader, imported only when a package asks. */
   readonly readSkillDir?: (path: string) => Promise<readonly Skill[]>;
+  /** The built-in provider's `fetch`. Tests inject one; the default is the global. */
+  readonly fetch?: typeof fetch;
 }
 
 /** The fs read lives in `node/`, so the kernel root's static imports stay fs-free. */
@@ -42,7 +46,7 @@ async function readSkillDirectory(path: string): Promise<readonly Skill[]> {
 }
 
 /** Read `AgentConfig.skills.dirs` once per agent, through the same reader as `PackageAPI.skills.addDir`. */
-async function resolveHostSkillDirs(config: AgentConfig, read: (path: string) => Promise<readonly Skill[]>): Promise<AgentConfig> {
+async function resolveHostSkillDirs<T extends AgentConfig>(config: T, read: (path: string) => Promise<readonly Skill[]>): Promise<T> {
   const dirs = config.skills?.dirs;
   if (!dirs?.length) return config;
   const loaded: Skill[] = [];
@@ -58,10 +62,23 @@ export async function createAgent(config: AgentConfig): Promise<Agent> {
 }
 
 /** `createAgent` with internal seams. Not exported from the root. */
-export async function createAgentWith(config: AgentConfig, internals: CreateAgentInternals): Promise<Agent> {
-  if ("store" in (config as unknown as Record<string, unknown>) && (config as unknown as Record<string, unknown>).store !== undefined) {
+export async function createAgentWith(input: AgentConfig, internals: CreateAgentInternals): Promise<Agent> {
+  if ("store" in (input as unknown as Record<string, unknown>) && (input as unknown as Record<string, unknown>).store !== undefined) {
     throw new TypeError("AgentConfig.store was removed in Prism 1.0; assign the store slot via AgentConfig.slots.store instead");
   }
+
+  for (const field of ["provider", "providerSource"] as const) {
+    if ((input as unknown as Record<string, unknown>)[field] !== undefined) {
+      throw new TypeError(
+        `AgentConfig.${field} was removed in Prism 1.0; list a package that registers the provider via AgentConfig.packages (providers.register) instead`,
+      );
+    }
+  }
+
+  // `model` parses once here; everything below reads a `ModelSpec`. A bad reference fails creation closed.
+  // An object ref is already a `ModelSpec`, so the host's own config object stays `agent.config`.
+  const spec = parseModelRef(input.model);
+  const config = (spec === input.model ? input : { ...input, model: spec }) as ResolvedAgentConfig;
 
   let sink: ((event: AgentEvent) => void) | undefined;
   const agentSubscribers = new Set<EventSubscriber>();
@@ -99,6 +116,7 @@ export async function createAgentWith(config: AgentConfig, internals: CreateAgen
     hostConfig: effective,
     secrets,
     readSkillDir,
+    fetch: internals.fetch,
     emitAgentEvent: (event) => emitAgentEvent(event),
   });
   const agentId = effective.id ?? effective.name ?? randomId("agent");

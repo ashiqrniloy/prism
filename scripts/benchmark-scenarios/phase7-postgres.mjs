@@ -5,7 +5,7 @@ import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
 import { Pool } from "pg";
 import { createPostgresEnterpriseState } from "../../packages/prism-core/dist/enterprise/postgres/index.js";
-import { createPostgresPersistence } from "../../packages/prism-core/dist/sessions/postgres/index.js";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
 if (!url?.trim()) throw new Error("PRISM_TEST_POSTGRES_URL is required for the protected Phase 7 benchmark");

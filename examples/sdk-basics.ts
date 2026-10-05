@@ -1,11 +1,12 @@
-import { createAgent, createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism";
+import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
 
 // SDK basics: create an agent + session, subscribe to events, run a prompt.
 // Uses the mock provider — network-free, no credentials.
 export async function demo(): Promise<readonly string[]> {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    provider: createMockProvider([providerTextDelta("Hello"), providerDone()]),
+    packages: [mockProvider([[providerTextDelta("Hello"), providerDone()]])],
   });
 
   const session = await agent.session();

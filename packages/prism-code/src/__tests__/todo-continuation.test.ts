@@ -6,7 +6,7 @@ import { join } from "node:path";
 import {
   type AgentEvent,
   type Session,
-  type AIProvider,
+  type ModelProvider,
   type Message,
   type ModelConfig,
   type ProviderRequest,
@@ -39,7 +39,7 @@ function todoStep(todos: readonly TodoItem[]): ScriptStep {
 function scriptedProvider(
   steps: readonly ScriptStep[],
   options?: { readonly onMainTurn?: (index: number) => void },
-): { provider: AIProvider; requests: ProviderRequest[] } {
+): { provider: ModelProvider; requests: ProviderRequest[] } {
   const requests: ProviderRequest[] = [];
   let turn = 0;
   return {

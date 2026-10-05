@@ -37,7 +37,7 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun ci
-      - run: bun run build:core && bun run --filter @arnilo/prism-providers build
+      - run: bun run build:core
       - name: run provider live smoke
         timeout-minutes: 3
         env:
@@ -51,7 +51,7 @@ jobs:
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
           NEURALWATT_API_KEY: ${{ secrets.NEURALWATT_API_KEY }}
-        run: bun scripts/with-build-lock.mjs bun test --timeout=0 "packages/prism-providers/dist/${{ matrix.provider }}/__tests__/live.test.js"
+        run: bun scripts/with-build-lock.mjs bun test --timeout=0 "packages/providers/${{ matrix.provider }}/src/__tests__/live.test.ts"
       - name: record job summary (status only, no responses)
         if: always()
         run: |

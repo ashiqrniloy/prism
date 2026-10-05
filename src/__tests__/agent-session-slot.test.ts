@@ -3,7 +3,7 @@ import { describe, it } from "bun:test";
 import {
   type AgentConfig,
   type AgentEvent,
-  type AIProvider,
+  type ModelProvider,
   createAgent,
   createMemorySessionStore,
   definePackage,
@@ -12,9 +12,10 @@ import {
   type SessionStore,
   SessionNotFoundError,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
-const provider: AIProvider = {
+const provider: ModelProvider = {
   id: "mock",
   async *generate() {
     yield providerTextDelta("ok");
@@ -43,7 +44,7 @@ const READS = ["list", "readBranchPath", "get"];
 describe("agent.session() over the store slot (plan 149 Task 2)", () => {
   it("session_without_id_opens_new_and_reads_nothing", async () => {
     const { store, calls } = countingStore();
-    const agent = await createAgent({ model: MODEL, provider, slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store } });
     const first = await agent.session();
     const second = await agent.session();
     assert.ok(first.id && second.id && first.id !== second.id);
@@ -56,7 +57,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
   it("session_with_id_resumes_through_store_slot", async () => {
     // A direct slots.store assignment.
     const direct = createMemorySessionStore();
-    const agent = await createAgent({ model: MODEL, provider, slots: { store: direct } });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store: direct } });
     const opened = await agent.session();
     await opened.run("hello");
     const again = await agent.session({ id: opened.id });
@@ -71,7 +72,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
       capabilities: ["slot:store"],
       setup: ({ slots }: any) => slots.store.provide(provided),
     });
-    const viaPackage = await createAgent({ model: MODEL, provider, packages: [owner] });
+    const viaPackage = await createAgent({ model: MODEL, packages: [owner, providerPackage("test-provider", [provider])] });
     const s = await viaPackage.session();
     await s.run("hello");
     assert.ok((await provided.list(s.id)).length >= 2, "the session wrote through the provided store");
@@ -80,7 +81,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
   });
 
   it("unknown_session_id_fails_closed", async () => {
-    const agent = await createAgent({ model: MODEL, provider });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])] });
     await assert.rejects(agent.session({ id: "never-created" }), (error: unknown) => {
       assert.ok(error instanceof SessionNotFoundError);
       assert.equal(error.sessionId, "never-created");
@@ -90,7 +91,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
 
   it("create_true_opens_a_new_session_under_the_id_then_resumes_it", async () => {
     const store = createMemorySessionStore();
-    const agent = await createAgent({ model: MODEL, provider, slots: { store } });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store } });
     const first = await agent.session({ id: "thread-1", create: true });
     assert.equal(first.id, "thread-1");
     await first.run("hello");
@@ -100,9 +101,9 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
 
   it("create_true_still_fails_closed_across_ownership_scope", async () => {
     const store = createMemorySessionStore();
-    const mine = await createAgent({ model: MODEL, provider, slots: { store }, ownership: { tenantId: "tenant-a" } });
+    const mine = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "tenant-a" } });
     await (await mine.session({ id: "shared-id", create: true })).run("private");
-    const theirs = await createAgent({ model: MODEL, provider, slots: { store }, ownership: { tenantId: "tenant-b" } });
+    const theirs = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])], slots: { store }, ownership: { tenantId: "tenant-b" } });
     await assert.rejects(theirs.session({ id: "shared-id", create: true }), SessionNotFoundError);
   });
 
@@ -110,7 +111,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
     const store = createMemorySessionStore();
     const mine = await createAgent({
       model: MODEL,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store },
       ownership: { tenantId: "tenant-a" },
     });
@@ -118,7 +119,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
     await session.run("private");
     const theirs = await createAgent({
       model: MODEL,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       slots: { store },
       ownership: { tenantId: "tenant-b" },
     });
@@ -131,7 +132,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
     const hooked: string[] = [];
     const agent = await createAgent({
       model: MODEL,
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       hooks: (hooks) => hooks.on("session.opened", (payload) => void hooked.push(`opened:${payload.restored}`)),
     });
     const seen: AgentEvent[] = [];
@@ -156,7 +157,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
     // @ts-expect-error `store` is no longer an AgentConfig key.
     const legacy: AgentConfig = { model: MODEL, provider, store };
     await assert.rejects(createAgent(legacy), TypeError);
-    const agent = await createAgent({ model: MODEL, provider });
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])] });
     // @ts-expect-error `store` is no longer a SessionOptions key.
     await assert.rejects(agent.session({ store }), TypeError);
     assert.equal((agent as unknown as { createSession?: unknown }).createSession, undefined);

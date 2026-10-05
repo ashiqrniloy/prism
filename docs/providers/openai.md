@@ -2,13 +2,13 @@
 
 ## What it does
 
-`@arnilo/prism-providers/openai` provides explicit, side-effect-free setup for the OpenAI
+`@arnilo/prism-provider-openai` provides explicit, side-effect-free setup for the OpenAI
 Responses API (`createOpenAIResponsesProvider`) and OpenAI Codex
 subscription Responses (`createOpenAICodexProvider`), plus a Codex OAuth provider
 implementing RFC 7636 PKCE browser/device-code login.
 
 The package registers providers, model metadata, and `api_key` / `oauth` auth
-methods through `createExtensionKernel().load([...])` — no
+methods when the package is listed in `createAgent({ packages: [...] })` — no
 hidden globals, no automatic provider/model resolution.
 
 ## When to use it
@@ -18,26 +18,39 @@ Prism's `AgentSession` runtime, or needs a Codex OAuth login flow (ChatGPT
 Plus/Pro/Codex subscription).
 
 Do not use it for Chat Completions-only endpoints (use
-[`@arnilo/prism/providers/openai-compatible`](openai-compatible.md) instead), automatic
+[`@arnilo/prism/provider-kit`](openai-compatible.md) instead), automatic
 credential discovery, or real-network tests.
 
 ## Inputs / request
 
 ```ts
-import { createOpenAIProviderPackage } from "@arnilo/prism-providers/openai";
+import openai from "@arnilo/prism-provider-openai";
 
-createOpenAIProviderPackage(options: OpenAIProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+openai(options?: OpenAIProviderPackageOptions & OpenAIProviderConfig = {}): PackageInstance
+
+// Named exports.
+createOpenAIResponsesProvider(options?: OpenAIResponsesProviderOptions): ModelProvider
+createOpenAICodexProvider(options?: OpenAICodexProviderOptions): ModelProvider
+createOpenAICodexOAuthProvider(options?: OpenAICodexOAuthOptions): OAuthProvider
+listOpenAIModels(options?: ListOpenAIModelsOptions): Promise<ModelConfig[]>
+createOpenAIBatchJobsProvider / createOpenAIEmbeddingsProvider / createOpenAIImageGenerationProvider / createOpenAIModerationProvider / createOpenAIRealtimeSession / createOpenAISpeechProvider / createOpenAITranscriptionProvider
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver source for the Responses API key. |
-| `codexAccessToken` | `CredentialValueSource` | Access token for the Codex subscription backend. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides `https://api.openai.com/v1`. |
-| `codexBaseUrl` | `string` | Overrides `https://chatgpt.com/backend-api/codex`. |
-| `models` | `readonly ModelConfig[]` | Optional override for registered OpenAI Responses models (defaults to featured `openAIModels`). |
-| `codexModels` | `readonly ModelConfig[]` | Optional override for registered Codex models (defaults to featured `openAICodexModels`). |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:OPENAI_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official Responses base; defaults to `https://api.openai.com/v1`. |
+| `codexAccessToken` | secret ref | Ref holding the Codex OAuth access token; the OAuth login writes it. |
+| `models` | `ModelConfig[]` | Responses catalog override; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+| `codexBaseUrl` | string | Overrides the Codex subscription base URL (`https://chatgpt.com/backend-api/codex`). |
+| `oauth` | `OpenAICodexOAuthOptions` | Test seam for the OAuth flow (`fetch`, `now`, `sleep`, endpoint overrides). |
+
+`models()` on the Responses provider returns the configured `models` array when set, otherwise `listOpenAIModels()` — only when `agent.models.list()` runs. The Codex provider always returns the featured `openAICodexModels` catalog: `api.openai.com` does not list subscription models.
 
 `ProviderRequest.options.sessionId`, `cacheKey`, `cacheRetention`, `headers`,
 `compat`, and `extra` map to request headers/payload fields. Per-turn reasoning
@@ -81,7 +94,7 @@ Responses request body (Codex subscription shape, abbreviated):
 Realtime session (OpenAI session creation, abbreviated):
 
 ```ts
-import { createOpenAIRealtimeSession } from "@arnilo/prism-providers/openai";
+import { createOpenAIRealtimeSession } from "@arnilo/prism-provider-openai";
 
 const session = createOpenAIRealtimeSession({
   model: { provider: "openai", model: "gpt-realtime-2.1" },
@@ -102,21 +115,22 @@ https://auth.openai.com/authorize?response_type=code&client_id=...&code_challeng
 ## Implementation example
 
 ```ts
-import { createExtensionKernel, createEnvCredentialResolver } from "@arnilo/prism";
-import { createOpenAIProviderPackage, listOpenAIModels } from "@arnilo/prism-providers/openai";
+import { createAgent } from "@arnilo/prism";
+import openai from "@arnilo/prism-provider-openai";
 
-const apiKey = createEnvCredentialResolver({ OPENAI_API_KEY: "fake" }, { openai: "OPENAI_API_KEY" });
-const models = await listOpenAIModels({ apiKey }); // caller-gated; never runs during setup
-const kernel = createExtensionKernel();
-await kernel.load([
-  createOpenAIProviderPackage({ apiKey, models }),
-]);
+const agent = await createAgent({
+  model: { provider: "openai", model: "gpt-5.1" },
+  packages: [openai({ apiKey: "env:OPENAI_API_KEY" })],
+});
+
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 OAuth login (caller-supplied callbacks, mocked in tests):
 
 ```ts
-import { createOpenAICodexOAuthProvider, createPkceVerifier, computeS256Challenge } from "@arnilo/prism-providers/openai";
+import { createOpenAICodexOAuthProvider, createPkceVerifier, computeS256Challenge } from "@arnilo/prism-provider-openai";
 
 const oauth = createOpenAICodexOAuthProvider({
   redirectUri: "http://localhost:1455/auth/callback",
@@ -129,8 +143,8 @@ const challenge = computeS256Challenge(verifier);
 
 ## Extension and configuration notes
 
-- `createOpenAIProviderPackage` wires the API-key Responses backend and the Codex
-  OAuth backend separately via `baseUrl` and `codexBaseUrl`; a Codex OAuth access
+- `openai(...)` wires the API-key Responses backend and the Codex OAuth backend
+  separately via `baseUrl` and `codexBaseUrl`; a Codex OAuth access
   token never silently hits the plain `/v1` endpoint.
 - `OpenAICodexOAuthOptions.redirectUri` and `scope` are forwarded to the authorize
   URL; `scope` is also sent on the device-code POST body when supplied.
@@ -190,9 +204,9 @@ Official: [Prompt caching](https://developers.openai.com/api/docs/guides/prompt-
   [`GET /models`](https://developers.openai.com/api/reference/resources/models/methods/list)
   and maps sparse `{ id, created, owned_by }` entries to `ModelConfig` with
   `cache.kind: "openai_key"` and heuristic `longRetention` / `capabilities.reasoning`.
-- `createOpenAIProviderPackage` never calls discovery; pass results via `models:`.
+- The package never calls discovery at setup; pass a catalog via `models:` or call `agent.models.list()`.
 - Codex subscription models are **not** listed by `api.openai.com` — keep using
-  featured `openAICodexModels` or `codexModels:` override.
+  featured `openAICodexModels` catalog.
 - Static `openAIModels` / `openAICodexModels` are offline bootstrap / featured aliases only.
 
 ### Reasoning
@@ -221,7 +235,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers (`readSseData`, `readBoundedResponseText`).
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit` helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup; Prism never
   reads `process.env` on its own.
@@ -241,9 +255,9 @@ OpenAI models route through the `openai_reasoning` family: the adapter merges `c
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`, auth
+- [Provider packages](../provider-packages.md): package definition, auth
   methods, request/cache policies, model compat metadata.
 - [Credentials and redaction](../credentials-and-redaction.md):
-  `createEnvCredentialResolver`, `resolveCredentialValue`, `redactSecrets`.
+  `createEnvRefCredentialResolver`, `resolveCredentialValue`, `redactSecrets`.
 - [OpenAI-compatible provider](openai-compatible.md): Chat Completions-only adapter.
 - [Provider conformance](../provider-conformance.md): network-free adapter tests.

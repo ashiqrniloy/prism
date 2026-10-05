@@ -13,6 +13,7 @@ import {
   runCheckpointRestoreHooks,
   toolCallContent,
 } from "../index.js";
+import { providerPackage } from "../provider-kit/index.js";
 
 /** Suspends on the first tool call, then finishes on resume (same harness as agent-run-lifecycle.test.ts). */
 async function createSuspendingAgent(id: string) {
@@ -21,7 +22,7 @@ async function createSuspendingAgent(id: string) {
     id,
     slots: { store: createMemorySessionStore() },
     model: { provider: "mock", model: "demo" },
-    provider: (() => {
+    packages: [providerPackage("test-provider", [(() => {
       let turn = 0;
       return {
         id: "mock",
@@ -36,7 +37,7 @@ async function createSuspendingAgent(id: string) {
           yield providerDone();
         },
       };
-    })(),
+    })()])],
     tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-restore", name: "write", value: 1 }) }] },
   });
 }

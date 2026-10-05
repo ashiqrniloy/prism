@@ -1,5 +1,5 @@
-import { type AIProvider, createAgent } from "@arnilo/prism";
-import { createMockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
+import { createAgent } from "@arnilo/prism";
+import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 
 /**
  * Host hooks (roadmap §2.11): the host is an inline package, so `AgentConfig.hooks` registers on the same
@@ -10,12 +10,6 @@ import { createMockProvider, providerDone, providerTextDelta, providerToolCall, 
  */
 
 const allowNetwork = false;
-
-/** The mock provider replays one script per call; this plays a different one on each turn. */
-function turns(...scripts: Parameters<typeof createMockProvider>[0][]): AIProvider {
-  let turn = 0;
-  return { id: "mock", generate: (request) => createMockProvider(scripts[Math.min(turn++, scripts.length - 1)]).generate(request) };
-}
 
 export async function demo(): Promise<Record<string, unknown>> {
   const executed: string[] = [];
@@ -34,14 +28,14 @@ export async function demo(): Promise<Record<string, unknown>> {
   const agent = await createAgent({
     id: "host-hooks",
     model: { provider: "mock", model: "demo" },
-    provider: turns(
+    packages: [mockProvider([
       [
         providerToolCall(toolCallContent("net-1", "fetch_url", { url: "https://example.com" })),
         providerToolCall(toolCallContent("read-1", "read_file", { path: "README.md" })),
         providerDone(),
       ],
       [providerTextDelta("never reached"), providerDone()],
-    ),
+    ])],
     tools: { add: [tool("fetch_url", ["network"]), tool("read_file", ["read"]), tool("shell", ["execute"])] },
     // One tool switched off by id, whoever registered it.
     disable: { tools: ["shell"] },

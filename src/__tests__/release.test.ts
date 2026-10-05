@@ -50,8 +50,12 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 14 = root + 13 workspace packages, including channels, prism-hooks, agent-sdk, and prism-code.
-  assert.equal(release.packages.length, 14);
+  // 38 = root + 37 workspace packages, including channels, prism-hooks, agent-sdk, prism-code,
+  // the twenty-one standalone provider packages under packages/providers/, the keyring package
+  // under packages/credentials/ (plan 152 Tasks 3-7; the retired @arnilo/prism-providers umbrella
+  // workspace was deleted in Task 8), and the store packages under packages/stores/ (plan 153
+  // Tasks 3-4: JSONL, codecs, SQLite).
+  assert.equal(release.packages.length, 39);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -74,11 +78,11 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
   assert.ok(changelog.includes("## [0.2.0] - 2026-08-13"), "root changelog missing 0.2.0 entry");
   assert.ok(changelog.includes("## [0.1.7] - 2026-08-12"), "root changelog missing 0.1.7 entry");
-  // plan 054 Task 6: standalone provider manifests (and their changelogs) retired
-  // into the @arnilo/prism-providers family; the 0.1.2 handoff lives in the docs.
+  // Plan 152 Tasks 3-4: the flagship providers moved back out of the family into standalone
+  // `@arnilo/prism-provider-*` manifests; the 0.1.2 handoff lives in the docs.
   assert.ok(
-    existsSync(join(process.cwd(), "packages/prism-providers/src/alibaba/index.ts")),
-    "alibaba adapter must exist in the providers family",
+    existsSync(join(process.cwd(), "packages/providers/alibaba/src/index.ts")),
+    "alibaba adapter must exist as a standalone provider package",
   );
   const docs = readFileSync(join(process.cwd(), "docs/history/release-handoffs.md"), "utf8");
   assert.ok(docs.includes("### 0.1.2 publish handoff (plan 014 Task 6)"));

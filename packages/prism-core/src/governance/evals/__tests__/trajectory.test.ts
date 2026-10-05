@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import type { Agent, RunResult, AIProvider, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { Agent, RunResult, ModelProvider, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 import { createAgent, providerDone } from "@arnilo/prism";
 import type { ExecutionStep, ExecutionTimeline } from "../../observability/timeline-types.js";
 import { defineDataset } from "../dataset.js";

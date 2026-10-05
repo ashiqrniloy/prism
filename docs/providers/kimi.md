@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/kimi` provides two distinct, side-effect-free routes:
+`@arnilo/prism-provider-kimi` provides two distinct, side-effect-free routes:
 
 1. **Kimi For Coding** (default) — Anthropic-compatible `POST /messages` on
    `https://api.kimi.com/coding` with `User-Agent: KimiCLI/1.5` (unless overridden).
@@ -29,29 +29,36 @@ real-network tests (live tests stay opt-in).
 ## Inputs / request
 
 ```ts
-import {
-  createKimiProviderPackage,
-  listKimiModels,
-  defineKimiModel,
-} from "@arnilo/prism-providers/kimi";
+import kimi from "@arnilo/prism-provider-kimi";
 
-createKimiProviderPackage(options: KimiProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+kimi(options?: KimiProviderPackageOptions & KimiProviderConfig = {}): PackageInstance
+
+// Named exports.
+createKimiCodingProvider(options?: KimiCodingProviderOptions): ModelProvider
+createMoonshotProvider(options?: MoonshotProviderOptions): ModelProvider
 listKimiModels(options?: ListKimiModelsOptions): Promise<ModelConfig[]>
 defineKimiModel(config: KimiModelConfig): ModelConfig
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `kimiApiKey` | `CredentialValueSource` | Kimi For Coding API key. |
-| `moonshotApiKey` | `CredentialValueSource` | Moonshot Open Platform API key (not interchangeable with Coding keys). |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides the Coding base URL. |
-| `moonshotBaseUrl` | `string` | Overrides Moonshot base URL (default `https://api.moonshot.ai/v1`). |
-| `id` / `moonshotId` | `string` | Provider ids (defaults `kimi-coding` / `moonshot`). |
-| `userAgent` | `string` | Overrides Coding `User-Agent: KimiCLI/1.5`. |
-| `models` | `readonly ModelConfig[]` | Overrides featured Coding models. |
-| `includeMoonshotModels` | `boolean` | Registers callable Moonshot provider + models when `true`. |
-| `moonshotModels` | `readonly ModelConfig[]` | Overrides featured Moonshot models when included. |
+| `kimiApiKey` | secret ref | Resolved by the credentials slot; default `env:KIMI_API_KEY`. A literal value is rejected. |
+| `moonshotApiKey` | secret ref | Moonshot Open Platform key (not interchangeable with a Kimi For Coding key). |
+| `baseUrl` | string | Kimi For Coding base; defaults to `https://api.kimi.com/coding`. |
+| `moonshotBaseUrl` | string | Moonshot Open Platform base; defaults to `https://api.moonshot.ai/v1`. |
+| `models` | `ModelConfig[]` | Kimi For Coding catalog override; defaults to the featured catalog. |
+| `moonshotModels` | `ModelConfig[]` | Moonshot catalog override; when absent, `models()` asks the Open Platform `/models` endpoint. |
+| `includeMoonshotModels` | boolean | Register the Moonshot Open Platform provider too. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Kimi For Coding provider id; defaults to `kimi-coding`. |
+| `moonshotId` | string | Moonshot provider id; defaults to `moonshot`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+| `userAgent` | string | Sent as `user-agent` on every request (provider-owned). |
+
+`models()` on the `kimi-coding` provider returns the configured `models` array when set, otherwise the curated `kimiCodingModels` catalog — the coding endpoint publishes no `/models`. The optional `moonshot` provider (registered when `includeMoonshotModels: true`) returns configured `moonshotModels` when set, otherwise `listKimiModels()` — only when `agent.models.list()` runs.
 
 ## Outputs / response / events
 
@@ -133,35 +140,22 @@ Moonshot (Chat Completions):
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import {
-  createKimiProviderPackage,
-  listKimiModels,
-} from "@arnilo/prism-providers/kimi";
+import { createAgent } from "@arnilo/prism";
+import kimi from "@arnilo/prism-provider-kimi";
 
-const kernel = createExtensionKernel();
-await kernel.load([
-  createKimiProviderPackage({ kimiApiKey: "fake-kimi-key" }),
-]);
+const agent = await createAgent({
+  model: { provider: "kimi-coding", model: "kimi-for-coding" },
+  packages: [
+    kimi({
+      kimiApiKey: "env:KIMI_API_KEY",
+      moonshotApiKey: "env:MOONSHOT_API_KEY",
+      includeMoonshotModels: true, // registers a second `moonshot` provider
+    }),
+  ],
+});
 
-// Opt-in Moonshot Open Platform (callable provider + featured models)
-await kernel.load([
-  createKimiProviderPackage({
-    kimiApiKey: "fake-kimi-key",
-    includeMoonshotModels: true,
-    moonshotApiKey: "fake-moonshot-key",
-  }),
-]);
-
-// Caller-gated discovery — never runs during setup
-const latest = await listKimiModels({ apiKey: "fake-moonshot-key", fetch });
-await kernel.load([
-  createKimiProviderPackage({
-    includeMoonshotModels: true,
-    moonshotApiKey: "fake-moonshot-key",
-    moonshotModels: latest.filter((m) => m.model.startsWith("kimi-")),
-  }),
-]);
+const models = await agent.models.list(); // coding catalog + live Moonshot discovery
+await agent.dispose();
 ```
 
 ## Extension and configuration notes
@@ -199,7 +193,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport`
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit`
   helpers (`readSseData`, `readBoundedResponseText`).
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
@@ -217,7 +211,7 @@ Kimi models are family-stamped by id: K3 (`kimiThinkingFamily`) routes through `
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   caller-gated discovery, Anthropic/OpenAI routes.
 - [Thinking and reasoning](../thinking-and-reasoning.md): portable `ThinkingLevel`
   helpers and Kimi family mapping.

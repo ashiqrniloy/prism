@@ -1,4 +1,4 @@
-import { createAgent, createMockProvider, createToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createAgent, createToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createTimelineFolder, projectWorkflowTimeline, summarizeTimeline } from "@arnilo/prism-core/governance/observability";
 import {
   agentNode,
@@ -11,6 +11,8 @@ import {
   type WorkflowEvent,
   workflowGraphToMermaid,
 } from "@arnilo/prism-core/runtime/workflows";
+import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // ============================================================================
 // 1. Setup a 2-node workflow (extract → analyze) using mock providers
@@ -24,7 +26,7 @@ const provider = createMockProvider([
 
 const extractorAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider,
+  packages: [providerPackage("test-provider", [provider])],
   tools: { add: [] },
   instructions: "You extract technical entity names from input documents.",
 });
@@ -109,11 +111,11 @@ const graphOverlay = projectWorkflowGraphRun(graph, timeline);
 
 const liveAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([
+  packages: [mockProvider([[
     providerTextDelta("Streaming timeline fold example."),
     providerUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
     providerDone(),
-  ]),
+  ]])],
 });
 
 const session = await liveAgent.session();

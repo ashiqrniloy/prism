@@ -2,9 +2,11 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProviderRequest } from "@arnilo/prism";
-import { composeSystemPrompt, createAgent, createMockProvider, providerDone } from "@arnilo/prism";
+import { composeSystemPrompt, createAgent, providerDone } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { loadSystemPromptFiles } from "@arnilo/prism/node/system-prompts";
 import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Phase 31 system/project prompt files: AGENTS.md (workspace, source: app) and
 // SYSTEM.md (host-supplied globalRoot, source: user) auto-load as SystemPromptContribution
@@ -46,7 +48,7 @@ export async function demo(): Promise<{ composed: string; reachedProvider: boole
   const session = await (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      provider,
+      packages: [providerPackage("test-provider", [provider])],
       instructions: "You are helpful.",
       systemPrompt: layers,
     })

@@ -1,18 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import {
-  type AgentEvent,
-  createAgent,
-  createMemorySessionStore,
-  createMockProvider,
-  createSessionEntry,
-  type ProviderRequest,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  rebuildSessionContext,
-} from "@arnilo/prism";
+import { type AgentEvent, createAgent, createMemorySessionStore, createSessionEntry, type ProviderRequest, providerDone, providerError, providerTextDelta, rebuildSessionContext } from "@arnilo/prism";
 import { createLlmCompactor } from "../index.js";
+import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const model = { provider: "mock", model: "demo" };
 const summaryModel = { provider: "mock", model: "summary" };
@@ -31,7 +22,7 @@ test("session_manual_compact_with_llm_strategy_appends_compaction_entry", async 
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       slots: {
         store,
         compaction: createLlmCompactor({
@@ -65,7 +56,7 @@ test("session_auto_compact_with_llm_strategy_uses_existing_threshold_entries", a
     keepRecentTokens: 1,
   });
   const session = await (
-    await createAgent({ model, provider, compaction: { thresholdEntries: 1 }, slots: { compaction: strategy } })
+    await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 }, slots: { compaction: strategy } })
   ).session();
 
   await session.run("one");
@@ -86,7 +77,7 @@ test("llm_compaction_preserves_raw_history_and_rebuilds_summary_plus_recent_mess
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       slots: {
         store,
         compaction: createLlmCompactor({
@@ -142,7 +133,7 @@ test("llm_compaction_provider_error_appends_no_entry", async () => {
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       // Roadmap §2.5: the compactor is the `compaction` slot.
       slots: {
         compaction: createLlmCompactor({
@@ -164,7 +155,7 @@ test("llm_compaction_abort_appends_no_entry", async () => {
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       slots: {
         compaction: createLlmCompactor({ provider: createMockProvider([providerTextDelta("unused")]), model: summaryModel }),
       },
@@ -184,7 +175,7 @@ test("llm_compaction_runtime_redacts_secret_from_events_and_store", async () => 
   const session = await (
     await createAgent({
       model,
-      provider: createMockProvider([providerTextDelta("reply"), providerDone()]),
+      packages: [mockProvider([[providerTextDelta("reply"), providerDone()]])],
       slots: {
         compaction: createLlmCompactor({
           provider: createMockProvider([providerTextDelta(`summary ${secret}`), providerDone()]),

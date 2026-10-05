@@ -38,7 +38,8 @@ Every peer below is optional and fails closed at first use; the [optional peer d
 | `@arnilo/prism-core/governance/prompts` | Versioned prompt registry, promotion gating, rollback, and storage | `pg` (SQLite is `bun:sqlite`) |
 | `@arnilo/prism-core/governance/model-router` | Cost- and latency-aware model routing, token reservations, and failover | — |
 | `@arnilo/prism-core/governance/observability` | OpenTelemetry instrumentation and event tracing | `@opentelemetry/api` |
-| `@arnilo/prism-core/credentials/node` | Keyring-backed encrypted credential store, scrypt envelope encryption, OAuth2 PKCE providers, and OIDC identity verification | `@napi-rs/keyring` (bundled) |
+| `@arnilo/prism-core/credentials/node` | OAuth2 PKCE providers, workload scope maps, the M365/Google Workspace providers, the work-token helper, and OIDC identity verification | — |
+| `@arnilo/prism-credentials-keyring` | Credentials-slot package: OS keyring and scrypt-encrypted file backends, `keyring:` ref resolution, and secret/OAuth persistence | `@napi-rs/keyring` (lazy) |
 | `@arnilo/prism-core/enterprise/postgres` | Unified multi-tenant enterprise PostgreSQL state (approvals, evaluations, model-router, policy, tool effects, work idempotency) | `pg` |
 | `@arnilo/prism-core/validation/json-schema` | Ajv-backed JSON Schema tool argument validation | `ajv` (bundled) |
 

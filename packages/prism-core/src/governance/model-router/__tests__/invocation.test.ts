@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
   type AgentIdentity,
-  type AIProvider,
+  type ModelProvider,
   type ModelConfig,
   type ProviderEvent,
   type ProviderRequest,
@@ -41,7 +41,7 @@ const modelFallback: ModelConfig = {
 function createRecordingProvider(
   id: string,
   events: readonly ProviderEvent[] | ((req: ProviderRequest) => AsyncIterable<ProviderEvent>),
-): AIProvider & { readonly calls: ProviderRequest[] } {
+): ModelProvider & { readonly calls: ProviderRequest[] } {
   const calls: ProviderRequest[] = [];
   return {
     id,
@@ -62,7 +62,7 @@ function createRecordingProvider(
 describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
   it("denial before I/O: allow-list mismatch denies before calling provider", async () => {
     let providerCalled = false;
-    const mockProvider: AIProvider = {
+    const mockProvider: ModelProvider = {
       id: "openai",
       async *generate() {
         providerCalled = true;
@@ -96,7 +96,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
 
   it("denial before I/O: budget exhausted denies before calling provider", async () => {
     let providerCalled = false;
-    const mockProvider: AIProvider = {
+    const mockProvider: ModelProvider = {
       id: "openai",
       async *generate() {
         providerCalled = true;
@@ -284,7 +284,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
 
   it("abort before response: releases reservation and does not charge budget", async () => {
     const controller = new AbortController();
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "openai",
       async *generate() {
         // Abort right before generating any output
@@ -348,7 +348,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
 
   it("abort after response: commits budget reservation because output was delivered", async () => {
     const controller = new AbortController();
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "openai",
       async *generate() {
         yield providerTextDelta("first chunk");
@@ -398,7 +398,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
   });
 
   it("iterator return: breaking for-await triggers explicit settlement and releases/commits", async () => {
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "openai",
       async *generate() {
         yield providerTextDelta("chunk-1");
@@ -465,7 +465,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
   });
 
   it("duplicate settlement: settle is idempotent and runs exactly once", async () => {
-    const provider: AIProvider = {
+    const provider: ModelProvider = {
       id: "openai",
       async *generate() {
         yield providerTextDelta("ok");
@@ -503,7 +503,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
     const primaryCalls: ProviderRequest[] = [];
     const fallbackCalls: ProviderRequest[] = [];
 
-    const primaryProvider: AIProvider = {
+    const primaryProvider: ModelProvider = {
       id: "openai",
       async *generate(req) {
         primaryCalls.push(req);
@@ -512,7 +512,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
       },
     };
 
-    const fallbackProvider: AIProvider = {
+    const fallbackProvider: ModelProvider = {
       id: "anthropic",
       async *generate(req) {
         fallbackCalls.push(req);
@@ -560,7 +560,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
     const primaryCalls: ProviderRequest[] = [];
     const fallbackCalls: ProviderRequest[] = [];
 
-    const primaryProvider: AIProvider = {
+    const primaryProvider: ModelProvider = {
       id: "openai",
       async *generate(req) {
         primaryCalls.push(req);
@@ -570,7 +570,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
       },
     };
 
-    const fallbackProvider: AIProvider = {
+    const fallbackProvider: ModelProvider = {
       id: "anthropic",
       async *generate(req) {
         fallbackCalls.push(req);
@@ -614,7 +614,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
 
   it("forbidden fallback after tool call: tool call emitted NEVER falls back", async () => {
     const fallbackCalls: ProviderRequest[] = [];
-    const primaryProvider: AIProvider = {
+    const primaryProvider: ModelProvider = {
       id: "openai",
       async *generate() {
         yield providerToolCall({
@@ -627,7 +627,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
       },
     };
 
-    const fallbackProvider: AIProvider = {
+    const fallbackProvider: ModelProvider = {
       id: "anthropic",
       async *generate(req) {
         fallbackCalls.push(req);
@@ -657,7 +657,7 @@ describe("governed provider invocation lifecycle (plan 073 Task 6)", () => {
   });
 
   it("isGovernedProvider predicate and coverage exposure", () => {
-    const plainMock: AIProvider = {
+    const plainMock: ModelProvider = {
       id: "mock",
       async *generate() {},
     };

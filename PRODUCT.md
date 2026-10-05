@@ -1,6 +1,6 @@
 # Prism
 
-This page is the target design for `@arnilo/prism` 1.0. **Nothing here is shipped yet.** What ships today is `@arnilo/prism` 0.12.1, documented in [docs/index.md](docs/index.md). [roadmap.md](roadmap.md) has the full architecture and the build order.
+This page is the target design for `@arnilo/prism` 0.13.0. **Nothing here is shipped yet.** What ships today is `@arnilo/prism` 0.12.1, documented in [docs/index.md](docs/index.md). [roadmap.md](roadmap.md) has the full architecture and the build order.
 
 ## What Prism is
 
@@ -84,7 +84,7 @@ import { definePackage } from "@arnilo/prism";
 export default definePackage({
   name: "@acme/prism-audit",
   version: "1.0.0",
-  requires: { prism: "^1.0" },
+  requires: { prism: "^0.13" },
   setup(prism) {
     prism.hooks.on("tool.call", (call) => (call.name === "shell" && isDangerous(call.args) ? { deny: "blocked by audit policy" } : undefined));
     prism.hooks.on("tool.completed", (event) => audit.write(event));
@@ -104,6 +104,7 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 | Session stores | `@arnilo/prism-store-{jsonl, sqlite, postgres}` |
 | Policy | `@arnilo/prism-approval`, `@arnilo/prism-governance`, `@arnilo/prism-guardrail-packs`, `@arnilo/prism-model-router` |
 | Integrations | `@arnilo/prism-mcp`, `@arnilo/prism-hooks-json`, `@arnilo/prism-observability`, `@arnilo/prism-workflows`, `@arnilo/prism-delegate` |
+| Vendor coding agents | `@arnilo/prism-driver-{claude-code, codex, antigravity}`: run a custom agent (system prompt, tools, skills, sub-agents) on the user's installed `claude`, `codex`, or `agy` binary, under the user's own subscription where the vendor's terms allow it, with every message, thinking block, skill activation, and tool call captured as events |
 
 **Surfaces** connect an agent to the outside world, so they are host libraries rather than packages. They take an `Agent` and serve it: `@arnilo/prism-acp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-mcp-server`, `@arnilo/prism-channels`.
 

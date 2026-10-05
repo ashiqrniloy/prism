@@ -2,7 +2,7 @@
 
 ## What it does
 
-`@arnilo/prism-providers/commandcode` provides explicit, side-effect-free setup
+`@arnilo/prism-provider-commandcode` provides explicit, side-effect-free setup
 for the [Command Code Provider API](https://commandcode.ai/docs/provider) — an
 aggregator exposing every top commercial and open model through OpenAI- and
 Anthropic-compatible endpoints, billed at cost with deals auto-applied. The
@@ -37,21 +37,31 @@ or real-network tests (live probes are operator-gated, see below).
 ## Inputs / request
 
 ```ts
-import {
-  createCommandCodeProviderPackage,
-  listCommandCodeModels,
-} from "@arnilo/prism-providers/commandcode";
+import commandcode from "@arnilo/prism-provider-commandcode";
 
-createCommandCodeProviderPackage(options: CommandCodeProviderPackageOptions): ProviderPackage
+// Default export: the package definition — call it, or pass the result to `packages: [...]`.
+commandcode(options?: CommandCodeProviderPackageOptions & CommandCodeProviderConfig = {}): PackageInstance
+
+// Named exports.
+createCommandCodeProvider(options?: CommandCodeProviderOptions): ModelProvider
+listCommandCodeModels(options?: ListCommandCodeModelsOptions): Promise<ModelConfig[]>
+defineCommandCodeModel(config: CommandCodeModelConfig): ModelConfig
+routeForCommandCodeModel(model): CommandCodeRoute
 ```
 
-| Field | Type | Purpose |
+| Config field | Type | Purpose |
 | --- | --- | --- |
-| `apiKey` | `CredentialValueSource` | Direct/callback/resolver API-key source. |
-| `fetch` | `typeof fetch` | Optional fetch implementation for tests/hosts. |
-| `baseUrl` | `string` | Overrides official `https://api.commandcode.ai/provider/v1`. |
-| `models` | `readonly ModelConfig[]` | Overrides featured `commandCodeModels` defaults. |
-| `zdr` | `boolean` | Enforce zero data retention (`x-cmd-zdr: 1`). May route to costlier upstreams or fail `422 cmd_zdr_no_providers`. |
+| `apiKey` | secret ref | Resolved by the credentials slot; default `env:COMMANDCODE_API_KEY`. A literal value is rejected. |
+| `baseUrl` | string | Official base; defaults to `https://api.commandcode.ai/provider/v1`. |
+| `zdr` | boolean | Add the provider-owned `x-cmd-zdr: 1` header so requests route only through ZDR-capable upstreams. |
+| `models` | `ModelConfig[]` | Static catalog; when absent, `models()` asks the vendor's `/models` endpoint. |
+
+| Factory-only option | Type | Purpose |
+| --- | --- | --- |
+| `id` | string | Provider id; defaults to `commandcode`. |
+| `fetch` | `typeof fetch` | Test seam: the transport every request uses. |
+
+`models()` returns the configured `models` array when set; otherwise it calls `listCommandCodeModels()` (`GET {baseUrl}/models`) — only when `agent.models.list()` runs, never during setup.
 
 `ProviderRequest.options.cache.breakpoints` select messages-route
 `cache_control` markers for Claude models (max 4, no `ttl`).
@@ -101,18 +111,23 @@ Chat-route body (thinking passthrough + preserved reasoning):
 ## Implementation example
 
 ```ts
-import { createExtensionKernel } from "@arnilo/prism";
-import { createCommandCodeProviderPackage } from "@arnilo/prism-providers/commandcode";
+import { createAgent } from "@arnilo/prism";
+import commandcode from "@arnilo/prism-provider-commandcode";
 
-const kernel = createExtensionKernel();
-await kernel.load([createCommandCodeProviderPackage({ apiKey: process.env.COMMAND_CODE_API_KEY })]);
+const agent = await createAgent({
+  model: { provider: "commandcode", model: "claude-opus-5" },
+  packages: [commandcode({ apiKey: "env:COMMANDCODE_API_KEY", zdr: true })],
+});
+
+const models = await agent.models.list(); // discovery runs only here
+await agent.dispose();
 ```
 
 Caller-gated live catalog (never runs during package setup):
 
 ```ts
 const models = await listCommandCodeModels({ fetch }); // public endpoint, no auth needed
-await kernel.load([createCommandCodeProviderPackage({ apiKey: process.env.COMMAND_CODE_API_KEY, models })]);
+const packages = [commandcode({ apiKey: process.env.COMMAND_CODE_API_KEY, models })]; // pass to createAgent({ packages })
 ```
 
 ## Featured models and routes
@@ -191,7 +206,7 @@ before opaque compat spread so resolved values win.
 ### Live-verified mapping (findings ledger)
 
 The following claims are encoded as operator-gated probes in
-`packages/prism-providers/src/commandcode/__tests__/live.test.ts`. Each probe's
+`packages/providers/commandcode/src/__tests__/live.test.ts`. Each probe's
 assertion encodes the documented claim, so a probe failure **is** the finding;
 record the outcome here and adjust the mapping. Status: **pending operator
 run** (no key in CI):
@@ -201,7 +216,7 @@ run** (no key in CI):
 | 1 | Warm chat-route replay reports cached tokens (implicit caching passes through) | `live_chat_route_reports_cached_tokens_on_warm_prefix_replay` | pending |
 | 2 | `cache_control` on messages reports `cache_creation_input_tokens` on the creating call | `live_messages_route_cache_control_reports_creation_and_read_tokens` | pending |
 | 3 | Same-prefix warm replay reads the created cache entry (TTL ≥ one request) | same probe (warm leg) | pending |
-| 4 | OpenAI `prompt_cache_key` is accepted and honored for GPT-5.6 (explicit caching) — decides Task 9 | `live_gpt56_prompt_cache_key_passthrough_probe` | pending — Task 9 closed gated: **pass** → upgrade `gpt-5.6-*` to the OpenAI explicit mapping (`promptCacheKey`/`promptCacheOptions`/`applyPromptCacheBreakpoints` via `@arnilo/prism-providers/openai`, verified exported); **fail** (400/ignored/warm replay shows no cached tokens) → verified-negative, keep `implicit`, record here |
+| 4 | OpenAI `prompt_cache_key` is accepted and honored for GPT-5.6 (explicit caching) — decides Task 9 | `live_gpt56_prompt_cache_key_passthrough_probe` | pending — Task 9 closed gated: **pass** → upgrade `gpt-5.6-*` to the OpenAI explicit mapping (`promptCacheKey`/`promptCacheOptions`/`applyPromptCacheBreakpoints` via `@arnilo/prism-provider-openai`, verified exported); **fail** (400/ignored/warm replay shows no cached tokens) → verified-negative, keep `implicit`, record here |
 | 5 | OpenAI `reasoning_effort` is accepted (200) on the chat route | `live_reasoning_effort_is_accepted_on_chat_route` | pending |
 | 6 | ZDR requests route (done) or fail `422 cmd_zdr_no_providers` when no ZDR-capable upstream exists | `live_zdr_route_probe_is_opt_in_and_routable` | pending |
 
@@ -209,7 +224,7 @@ Run the gate:
 
 ```sh
 PRISM_LIVE_PROVIDER_TESTS=1 COMMAND_CODE_API_KEY=cmd_... \
-  npm run test --workspace=@arnilo/prism-providers/commandcode
+  npm run test --workspace=@arnilo/prism-provider-commandcode
 ```
 
 ## Request construction (0.5.1)
@@ -226,7 +241,7 @@ See [Provider request policies](../provider-request-policies.md).
 
 ## Security and performance notes
 
-- SSE streams and HTTP error bodies use bounded `@arnilo/prism/providers/transport` helpers.
+- SSE streams and HTTP error bodies use bounded `@arnilo/prism/provider-kit` helpers.
 - No network calls during import, setup, build, or default tests.
 - No automatic environment, file, keychain, or shell credential lookup.
 - API keys are resolved per request from caller-supplied values or resolvers
@@ -256,7 +271,7 @@ Command Code models carry provenance-commented level tables: `claude-*` → `out
 
 ## Related APIs
 
-- [Provider packages](../provider-packages.md): `defineProviderPackage`,
+- [Provider packages](../provider-packages.md): package definition,
   `ModelConfig`, discovery contract, request/cache policies.
 - [Thinking and reasoning](../thinking-and-reasoning.md): per-turn `ThinkingLevel` → compat families.
 - [Credentials and redaction](../credentials-and-redaction.md):

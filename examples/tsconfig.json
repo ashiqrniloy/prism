@@ -6,8 +6,8 @@
       "@arnilo/prism": [
         "./dist/index.d.ts"
       ],
-      "@arnilo/prism/testing/provider-conformance": [
-        "./dist/testing/provider-conformance.d.ts"
+      "@arnilo/prism/provider-kit": [
+        "./dist/provider-kit/index.d.ts"
       ],
       "@arnilo/prism/node/config": [
         "./dist/node/config.d.ts"
@@ -18,8 +18,8 @@
       "@arnilo/prism/node/trust": [
         "./dist/node/trust.d.ts"
       ],
-      "@arnilo/prism/node/session-store-jsonl": [
-        "./dist/node/session-store-jsonl.d.ts"
+      "@arnilo/prism-store-jsonl": [
+        "../packages/stores/jsonl/src/index.ts"
       ],
       "@arnilo/prism/*": [
         "./dist/*"
@@ -81,8 +81,14 @@
       "@arnilo/prism-code": [
         "./packages/prism-code/src/index.ts"
       ],
-      "@arnilo/prism-core/sessions/sqlite": [
-        "./packages/prism-core/src/sessions/sqlite/index.ts"
+      "@arnilo/prism-store-sqlite": [
+        "./packages/stores/sqlite/src/index.ts"
+      ],
+      "@arnilo/prism-store-postgres": [
+        "./packages/stores/postgres/src/index.ts"
+      ],
+      "@arnilo/prism-store-codecs": [
+        "./packages/stores/codecs/src/index.ts"
       ],
       "@arnilo/prism-supervisor": [
         "./packages/supervisor/src/index.ts"
@@ -102,34 +108,34 @@
       "@arnilo/prism-coding-tools/*": [
         "./packages/prism-coding-tools/src/*/index.ts"
       ],
-      "@arnilo/prism-providers/ai-sdk": [
+      "@arnilo/prism-provider-ai-sdk": [
         "./packages/provider-ai-sdk/src/index.ts"
       ],
-      "@arnilo/prism-providers/clinepass": [
+      "@arnilo/prism-provider-clinepass": [
         "./packages/provider-clinepass/src/index.ts"
       ],
-      "@arnilo/prism-providers/deepseek": [
+      "@arnilo/prism-provider-deepseek": [
         "./packages/provider-deepseek/src/index.ts"
       ],
-      "@arnilo/prism-providers/kimi": [
+      "@arnilo/prism-provider-kimi": [
         "./packages/provider-kimi/src/index.ts"
       ],
-      "@arnilo/prism-providers/neuralwatt": [
+      "@arnilo/prism-provider-neuralwatt": [
         "./packages/provider-neuralwatt/src/index.ts"
       ],
-      "@arnilo/prism-providers/openai": [
+      "@arnilo/prism-provider-openai": [
         "./packages/provider-openai/src/index.ts"
       ],
-      "@arnilo/prism-providers/opencode-go": [
+      "@arnilo/prism-provider-opencode-go": [
         "./packages/provider-opencode-go/src/index.ts"
       ],
-      "@arnilo/prism-providers/openrouter": [
+      "@arnilo/prism-provider-openrouter": [
         "./packages/provider-openrouter/src/index.ts"
       ],
-      "@arnilo/prism-providers/xai": [
+      "@arnilo/prism-provider-xai": [
         "./packages/provider-xai/src/index.ts"
       ],
-      "@arnilo/prism-providers/zai": [
+      "@arnilo/prism-provider-zai": [
         "./packages/provider-zai/src/index.ts"
       ],
       "@arnilo/prism-hooks-json": [

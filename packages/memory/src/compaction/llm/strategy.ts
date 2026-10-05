@@ -1,5 +1,5 @@
 import {
-  type AIProvider,
+  type ModelProvider,
   applyDefaultProviderRequestOptions,
   applyThinkingLevelForModel,
   type CompactionContext,
@@ -36,8 +36,8 @@ export type ProviderRequestTransform = (request: ProviderRequest) => ProviderReq
 
 export interface LlmCompactorOptions extends PrepareLlmCompactionOptions, SerializeCompactionConversationOptions {
   readonly name?: string;
-  readonly provider?: AIProvider;
-  readonly summaryProvider?: AIProvider | ((credential: string | undefined) => AIProvider | Promise<AIProvider>);
+  readonly provider?: ModelProvider;
+  readonly summaryProvider?: ModelProvider | ((credential: string | undefined) => ModelProvider | Promise<ModelProvider>);
   readonly model?: ModelConfig;
   /** Explicit summary model. When omitted, falls back to {@link model} (session / host fallback slot). */
   readonly summaryModel?: ModelConfig;
@@ -81,7 +81,7 @@ export function createLlmCompactor(options: LlmCompactorOptions): Compactor {
         },
       );
       const secrets = [...(context.secrets ?? []), ...(options.secrets ?? []), credential];
-      let provider: AIProvider;
+      let provider: ModelProvider;
       try {
         provider = await resolveSummaryProvider(options, credential);
       } catch (error) {
@@ -119,7 +119,7 @@ async function summarizeHistory(
   context: CompactionContext,
   prep: LlmCompactionPreparation,
   options: LlmCompactorOptions,
-  provider: AIProvider,
+  provider: ModelProvider,
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
 ): Promise<string> {
@@ -139,7 +139,7 @@ async function summarizeTurnPrefix(
   context: CompactionContext,
   prep: LlmCompactionPreparation,
   options: LlmCompactorOptions,
-  provider: AIProvider,
+  provider: ModelProvider,
   secrets: readonly (string | undefined)[],
   limits: ResolvedSummaryLimits,
 ): Promise<string> {
@@ -156,7 +156,7 @@ async function summarizeTurnPrefix(
 async function runSummaryProvider(
   context: CompactionContext,
   options: LlmCompactorOptions,
-  provider: AIProvider,
+  provider: ModelProvider,
   systemPrompt: string,
   prompt: string,
   reserveRatio: number,
@@ -268,7 +268,7 @@ function summaryModel(options: LlmCompactorOptions): ModelConfig {
   return resolved.model;
 }
 
-async function resolveSummaryProvider(options: LlmCompactorOptions, credential: string | undefined): Promise<AIProvider> {
+async function resolveSummaryProvider(options: LlmCompactorOptions, credential: string | undefined): Promise<ModelProvider> {
   const provider = options.summaryProvider ?? options.provider;
   if (!provider) throw new Error("LLM compaction requires summaryProvider or provider");
   return typeof provider === "function" ? provider(credential) : provider;

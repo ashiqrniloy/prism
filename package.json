@@ -11,25 +11,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./providers/openai-compatible": {
-      "types": "./dist/providers/openai-compatible.d.ts",
-      "default": "./dist/providers/openai-compatible.js"
-    },
-    "./providers/transport": {
-      "types": "./dist/providers/transport.d.ts",
-      "default": "./dist/providers/transport.js"
-    },
-    "./providers/openai": {
-      "types": "./dist/providers/openai-primitives.d.ts",
-      "default": "./dist/providers/openai-primitives.js"
-    },
-    "./providers/schema": {
-      "types": "./dist/providers/schema.d.ts",
-      "default": "./dist/providers/schema.js"
-    },
-    "./providers/media": {
-      "types": "./dist/providers/media.d.ts",
-      "default": "./dist/providers/media.js"
+    "./provider-kit": {
+      "types": "./dist/provider-kit/index.d.ts",
+      "default": "./dist/provider-kit/index.js"
     },
     "./manifest": {
       "types": "./dist/manifest/index.d.ts",
@@ -40,10 +24,6 @@
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
     },
-    "./testing/provider-conformance": {
-      "types": "./dist/testing/provider-conformance.d.ts",
-      "default": "./dist/testing/provider-conformance.js"
-    },
     "./testing/agent-event-source-conformance": {
       "types": "./dist/testing/agent-event-source-conformance.d.ts",
       "default": "./dist/testing/agent-event-source-conformance.js"
@@ -51,10 +31,6 @@
     "./testing/state-concurrency-conformance": {
       "types": "./dist/testing/state-concurrency-conformance.d.ts",
       "default": "./dist/testing/state-concurrency-conformance.js"
-    },
-    "./testing/session-store-conformance": {
-      "types": "./dist/testing/session-store-conformance.d.ts",
-      "default": "./dist/testing/session-store-conformance.js"
     },
     "./testing/compaction-conformance": {
       "types": "./dist/testing/compaction-conformance.d.ts",
@@ -96,10 +72,6 @@
       "types": "./dist/node/trust.d.ts",
       "default": "./dist/node/trust.js"
     },
-    "./node/session-store-jsonl": {
-      "types": "./dist/node/session-store-jsonl.d.ts",
-      "default": "./dist/node/session-store-jsonl.js"
-    },
     "./node/contribution-discovery": {
       "types": "./dist/node/contribution-discovery.d.ts",
       "default": "./dist/node/contribution-discovery.js"
@@ -122,7 +94,7 @@
   },
   "files": [
     "dist",
-    "!dist/__tests__",
+    "!dist/**/__tests__",
     "!dist/**/*.map",
     "docs",
     "!docs/next",
@@ -134,7 +106,9 @@
   ],
   "workspaces": [
     "packages/mcp",
-    "packages/prism-providers",
+    "packages/providers/*",
+    "packages/stores/*",
+    "packages/credentials/*",
     "packages/memory",
     "packages/prism-work",
     "packages/prism-core",
@@ -150,7 +124,7 @@
   "scripts": {
     "build:core": "bun scripts/with-build-lock.mjs tsc && bun scripts/emit-manifest-schema.mjs",
     "clean": "rm -rf dist packages/*/dist",
-    "build": "bun run build:core && for p in @arnilo/prism-mcp @arnilo/prism-providers @arnilo/prism-memory @arnilo/prism-work @arnilo/prism-core @arnilo/prism-channels @arnilo/prism-coding-tools @arnilo/prism-ag-ui @arnilo/prism-web-tools @arnilo/prism-acp-agent @arnilo/prism-agent-sdk @arnilo/prism-code; do bun run --filter \"$p\" build || exit 1; done",
+    "build": "bun run build:core && for p in @arnilo/prism-mcp @arnilo/prism-memory @arnilo/prism-work @arnilo/prism-core @arnilo/prism-channels @arnilo/prism-coding-tools @arnilo/prism-ag-ui @arnilo/prism-web-tools @arnilo/prism-acp-agent @arnilo/prism-agent-sdk @arnilo/prism-code; do bun run --filter \"$p\" build || exit 1; done",
     "typecheck": "bun run build && bun run --workspaces --if-present typecheck && tsc -p examples --noEmit",
     "sweep:unused": "bun scripts/sweep-unused.mjs --json",
     "test:live": "bun scripts/live-matrix.mjs",
@@ -162,7 +136,7 @@
     "format:check": "biome format .",
     "pack:dry-run": "npm pack --dry-run && bun run --filter '*' pack:dry-run",
     "test:postgres": "bun scripts/postgres-evidence.mjs",
-    "test:postgres:run": "bun scripts/require-postgres-url.mjs && bun run --filter @arnilo/prism-core test:postgres && bun run --filter @arnilo/prism-memory test:postgres && bun run --filter @arnilo/prism-channels test:postgres && bun test --timeout=0 scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
+    "test:postgres:run": "bun scripts/require-postgres-url.mjs && bun run --filter @arnilo/prism-core test:postgres && bun run --filter @arnilo/prism-store-postgres test:postgres && bun run --filter @arnilo/prism-memory test:postgres && bun run --filter @arnilo/prism-channels test:postgres && bun test --timeout=0 scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
     "test:nats": "bun scripts/require-nats-url.mjs && bun run --filter @arnilo/prism-core test:nats",
     "release:dry-run": "bun run sdk:ready",
     "post-publish:smoke": "bun scripts/post-publish-smoke.mjs",

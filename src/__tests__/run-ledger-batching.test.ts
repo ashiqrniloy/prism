@@ -1,17 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import {
-  createAgent,
-  createBatchedRunLedger,
-  createMockProvider,
-  createSecretRedactor,
-  type FlushableRunLedger,
-  providerDone,
-  providerTextDelta,
-  type RunLedger,
-  type RunRecord,
-  redactRunLedgerRecord,
-} from "../index.js";
+import { createAgent, createBatchedRunLedger, createSecretRedactor, type FlushableRunLedger, providerDone, providerTextDelta, type RunLedger, type RunRecord, redactRunLedgerRecord } from "../index.js";
+import { mockProvider } from "../testing/index.js";
 
 const run = (status: RunRecord["status"], id = "run_1"): RunRecord => ({
   id,
@@ -91,7 +81,7 @@ describe("createBatchedRunLedger", () => {
       await (
         await createAgent({
           model: { provider: "mock", model: "demo" },
-          provider: createMockProvider([providerTextDelta("ok"), providerDone()]),
+          packages: [mockProvider([[providerTextDelta("ok"), providerDone()]])],
           runLedger: ledger,
         })
       ).session()

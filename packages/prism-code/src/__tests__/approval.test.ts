@@ -4,14 +4,8 @@ import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  type AIProvider,
-  createMockProvider,
-  type ExecutionAction,
-  providerDone,
-  providerTextDelta,
-  providerToolCall,
-} from "@arnilo/prism";
+import { type ModelProvider, type ExecutionAction, providerDone, providerTextDelta, providerToolCall } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { applyMcpApprovalPolicy, buildConnectOptions } from "@arnilo/prism-agent-sdk";
 import { createTestRenderer } from "@opentui/core/testing";
 import {
@@ -45,7 +39,7 @@ async function makeTempDir(prefix: string): Promise<string> {
 }
 
 /** Replays one event list per provider request (the mock provider replays its list on every call). */
-function turnProvider(turns: readonly Parameters<typeof createMockProvider>[0][]): AIProvider {
+function turnProvider(turns: readonly Parameters<typeof createMockProvider>[0][]): ModelProvider {
   let turn = 0;
   return {
     id: "mock",

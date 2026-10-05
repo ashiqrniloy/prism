@@ -230,7 +230,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Section: Further Actions
 - Priority: P4
 - Source: plans/143-Phase-0-Reset-The-Offer.md
-- What: When the `@arnilo/prism` 1.0 kernel surface lands, replace the `offer reset: PRODUCT.md` and `offer reset: README pointer` phrase and heading-line pins with a typed or generated check.
+- What: When the `@arnilo/prism` 0.13.0 kernel surface lands, replace the `offer reset: PRODUCT.md` and `offer reset: README pointer` phrase and heading-line pins with a typed or generated check.
 - Why: The pins assert prose, so a wording-only edit that keeps the contract fails them and costs a test edit, while a semantic change that keeps the exact strings passes.
 
 ## A `tool.call` deny is scoped to a call, not a run
@@ -382,6 +382,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/146-Phase-2-Part-A-Package-Loader-And-PackageAPI.md
 - What: Run `bun run test:postgres` with a Postgres URL once and record the result in plan 148's or the next store plan's Notes.
 - Why: Task 7 covered the memory store, the kernel JSONL store, and SQLite. The Postgres leg needs a URL and was not run. No DDL changed, since `kind` is plain text.
+- Status: Delivered in plans/153-Phase-6-Session-Store-Packages.md Task 5. `@arnilo/prism-store-postgres` runs the whole `storeConformance` suite — the `package-state` leg included — against a live server: 45 pass / 0 fail with `PRISM_TEST_POSTGRES_URL`, and 37 skips without one. The measured run is in that task's Notes.
 
 ## Clear the red baseline of `bun run test`
 - Section: Further Actions
@@ -410,6 +411,7 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/149-Phase-3-Part-B-Agent-And-Session-Surface.md
 - What: Implement both in the JSONL store, `packages/prism-core` SQLite, Postgres and NATS stores, and Prism Code's session store, and run `assertSessionStoreConforms(..., { exerciseSessionIndex: true })` against each.
 - Why: `agent.sessions.list/delete` answer `UnsupportedStoreCapabilityError` on every store except the kernel memory store. Phase 6.
+- Status: Delivered for the JSONL, SQLite, and Postgres stores in plans/153-Phase-6-Session-Store-Packages.md Tasks 3-5 (each passes the `list-and-delete` leg of `storeConformance`, the renamed successor of `assertSessionStoreConforms(..., { exerciseSessionIndex: true })`), and Prism Code's session store follows because `resolveSessionStore` returns the SQLite store. Still open for the NATS store (`packages/prism-core/src/sessions/nats`), which plan 153 left in the family package.
 
 ## Close the agent's sessions on `agent.dispose()`
 - Section: Further Actions

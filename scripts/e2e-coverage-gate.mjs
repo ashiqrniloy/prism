@@ -26,6 +26,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { expandWorkspaceDirs } from "./package-truth.mjs";
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SKIP_EXPORT_KEYS = new Set(["./package.json"]); // metadata, not a functional surface
@@ -36,26 +37,15 @@ export function listPackages(root = REPO_ROOT) {
   const pkgs = [];
   const rootPkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   pkgs.push({ name: rootPkg.name, dir: root, pkg: rootPkg });
-  const workspaces = rootPkg.workspaces ?? [];
-  for (const ws of workspaces) {
-    // workspaces entries may be package dirs themselves ("packages/mcp") or
-    // bases containing packages ("packages/*")
-    const candidates = existsSync(join(root, ws, "package.json")) ? [join(root, ws)] : [];
-    if (!candidates.length) {
-      const base = join(root, ws);
-      if (existsSync(base)) {
-        for (const d of readdirSync(base, { withFileTypes: true })) {
-          if (d.isDirectory() && !d.name.startsWith(".")) candidates.push(join(base, d.name));
-        }
-      }
-    }
-    for (const dir of candidates) {
-      const path = join(dir, "package.json");
-      if (existsSync(path)) {
-        const pkg = JSON.parse(readFileSync(path, "utf8"));
-        if (pkg.exports) pkgs.push({ name: pkg.name, dir, pkg });
-      }
-    }
+  // `expandWorkspaceDirs` handles every workspace entry form: a package dir
+  // ("packages/mcp"), a one-level base ("packages/*"), or a grouped base
+  // ("packages/providers/*", plan 147/152). It fails loud on a glob that
+  // matches nothing, so a moved package can never silently leave the gate.
+  for (const dir of expandWorkspaceDirs(root, rootPkg.workspaces ?? [])) {
+    const path = join(dir, "package.json");
+    if (!existsSync(path)) continue;
+    const pkg = JSON.parse(readFileSync(path, "utf8"));
+    if (pkg.exports) pkgs.push({ name: pkg.name, dir, pkg });
   }
   return pkgs;
 }

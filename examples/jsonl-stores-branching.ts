@@ -7,7 +7,7 @@ import {
   listSessionBranches,
   rebuildSessionContext,
 } from "@arnilo/prism";
-import { createJsonlSessionStore } from "@arnilo/prism/node/session-store-jsonl";
+import { createJsonlSessionStore } from "@arnilo/prism-store-jsonl";
 
 // In-memory store + branching; JSONL persistence via the Node subpath.
 // Stores receive no provider credentials. Branching preserves old paths.
@@ -36,7 +36,8 @@ export async function demo() {
   const snapshot = rebuildSessionContext(entries);
 
   // JSONL persistence (caller-named file, host-controlled).
-  const jsonl = createJsonlSessionStore({ path: join(tmpdir(), `prism-demo-${Date.now()}.jsonl`) });
+  const dir = join(tmpdir(), `prism-demo-${Date.now()}`);
+  const jsonl = createJsonlSessionStore({ dir });
   await jsonl.append(root);
 
   return {

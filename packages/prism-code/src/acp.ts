@@ -5,7 +5,7 @@ import { ndJsonStream } from "@agentclientprotocol/sdk";
 import {
   type Agent,
   type Principal,
-  type AIProvider,
+  type ModelProvider,
   askEveryTool,
   type CheckpointStore,
   createAgent,
@@ -22,13 +22,13 @@ import {
 } from "@arnilo/prism";
 import { type AcpSessionBinding, createAcpClientFilesystem, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
 import { createAcpFilesystemOperations, registerTodoContinuation } from "@arnilo/prism-coding-tools/agent";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { createPrismCodeApprovalPolicy } from "./approval.js";
 import { resolvePrismCodeCompaction, resolvePrismCodeContextBudget, resolvePrismCodeToolResultFold } from "./compaction.js";
 import type { PrismCodeConfig, PrismCodeModeConfig } from "./config.js";
 import { PrismCodeCredentialManager } from "./credentials.js";
 import { registerCostStop, resolveContinueOnOpenTodos, resolvePrismCodeLimits, resolvePrismCodeLoop } from "./limits.js";
-import { createProviderCache, type ProviderCache } from "./providers.js";
+import { createProviderCache, providerCachePackage, type ProviderCache } from "./providers.js";
 import { prepareSessionDbPath } from "./sessions.js";
 import { loadReplacementToolModules, loadToolModules } from "./tool-modules.js";
 import { resolveCodingToolSet } from "./tools.js";
@@ -171,7 +171,7 @@ const DEFAULT_MODES: readonly PrismCodeModeConfig[] = [
 
 export interface CreatePrismCodeAcpAgentOptions {
   readonly config: PrismCodeConfig;
-  readonly provider?: AIProvider;
+  readonly provider?: ModelProvider;
   readonly credentialManager?: PrismCodeCredentialManager;
   /** Shared provider cache; ACP sessions resolve providers through it instead of a fixed instance. */
   readonly providerCache?: ProviderCache;
@@ -250,7 +250,7 @@ export async function createPrismCodeAcpAgent(options: CreatePrismCodeAcpAgentOp
   const baseAgent = await createAgent({
     id: defaultAgentId,
     model: sessionModel,
-    providerSource: (model) => cache.get(model),
+    packages: [providerCachePackage(cache)],
     slots: { store },
     tools: { add: defaultTools.list() },
     ownership,
@@ -453,7 +453,7 @@ export interface ServeAcpOptions {
   readonly config: PrismCodeConfig;
   readonly stdin?: NodeJS.ReadableStream;
   readonly stdout?: NodeJS.WritableStream;
-  readonly provider?: AIProvider;
+  readonly provider?: ModelProvider;
   readonly credentialManager?: PrismCodeCredentialManager;
   readonly providerCache?: ProviderCache;
   /** Prism home for the default session store; defaults to `PRISM_HOME`/`~/.prism`. */

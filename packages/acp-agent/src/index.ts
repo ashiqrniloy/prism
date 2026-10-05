@@ -4,30 +4,16 @@
  * Thin wiring only: config parsing (src/config.ts) plus this seam builder.
  * Every protocol detail lives in `createPrismAcpAgent` (@arnilo/prism-ag-ui);
  * this package never re-implements ACP. The default provider is the mock
- * provider so the lifecycle works out of the box; wire a real `AIProvider`
- * (e.g. @arnilo/prism-providers/openai) for actual generation.
+ * provider so the lifecycle works out of the box; wire a real `ModelProvider`
+ * (e.g. @arnilo/prism-provider-openai) for actual generation.
  */
 import { randomUUID } from "node:crypto";
 import type { AgentApp, McpServer } from "@agentclientprotocol/sdk";
-import {
-  type Agent,
-  type Principal,
-  type AIProvider,
-  askEveryTool,
-  type CheckpointStore,
-  createAgent,
-  createAgentRunLifecycle,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  createMockProvider,
-  createToolRegistry,
-  type ModelConfig,
-  type OwnershipScope,
-  type SessionStore,
-} from "@arnilo/prism";
+import { type Agent, type Principal, type ModelProvider, askEveryTool, type CheckpointStore, createAgent, createAgentRunLifecycle, createMemoryCheckpointStore, createMemorySessionStore, createToolRegistry, type ModelConfig, type OwnershipScope, type SessionStore } from "@arnilo/prism";
+import { createMockProvider } from "@arnilo/prism/testing";
 import { createAcpClientFilesystem, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
 import { createAcpFilesystemOperations, createCodingTools } from "@arnilo/prism-coding-tools/agent";
-import { createSqlitePersistence } from "@arnilo/prism-core/sessions/sqlite";
+import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import {
   AMBIGUOUS_PATH_PATTERN,
   ConfigError,
@@ -36,6 +22,7 @@ import {
   type ParsedAllowDestination,
   type PrismAcpAgentConfig,
 } from "./config.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 
 export type { PrismAcpAgentConfig } from "./config.js";
 export { ConfigError, loadConfig, parseConfig } from "./config.js";
@@ -45,7 +32,7 @@ export type CredentialResolver = (ref: string) => string | undefined;
 export interface CreateSpawnableAgentOptions {
   readonly config: PrismAcpAgentConfig;
   /** Model provider for the served Prism agent; default: lazy-loaded provider matching config.model. */
-  readonly provider?: AIProvider;
+  readonly provider?: ModelProvider;
   /** Optional model override; must match provider if supplied. */
   readonly model?: ModelConfig;
   /** Optional credential resolver for credentialRef; defaults to reading process.env[ref]. */
@@ -131,66 +118,66 @@ export function selectMcpServers(allow: readonly string[], servers: readonly Mcp
  * package suite) can verify every id in `SUPPORTED_PROVIDERS` resolves to a real adapter instead
  * of trusting the list.
  */
-export async function resolveProviderAdapter(providerId: string, apiKey: string): Promise<AIProvider> {
+export async function resolveProviderAdapter(providerId: string, apiKey: string): Promise<ModelProvider> {
   switch (providerId) {
     case "openai": {
-      const mod = await import("@arnilo/prism-providers/openai");
+      const mod = await import("@arnilo/prism-provider-openai");
       return mod.createOpenAIResponsesProvider({ apiKey });
     }
     case "anthropic": {
-      const mod = await import("@arnilo/prism-providers/anthropic");
+      const mod = await import("@arnilo/prism-provider-anthropic");
       return mod.createAnthropicMessagesProvider({ apiKey });
     }
     case "google": {
-      const mod = await import("@arnilo/prism-providers/google");
+      const mod = await import("@arnilo/prism-provider-google");
       return mod.createGoogleGenerateContentProvider({ apiKey });
     }
     case "deepseek": {
-      const mod = await import("@arnilo/prism-providers/deepseek");
+      const mod = await import("@arnilo/prism-provider-deepseek");
       return mod.createDeepSeekProvider({ apiKey });
     }
     case "openrouter": {
-      const mod = await import("@arnilo/prism-providers/openrouter");
+      const mod = await import("@arnilo/prism-provider-openrouter");
       return mod.createOpenRouterProvider({ apiKey });
     }
     case "ollama": {
-      const mod = await import("@arnilo/prism-providers/ollama");
+      const mod = await import("@arnilo/prism-provider-ollama");
       return mod.createOllamaProvider({ apiKey });
     }
     case "xai": {
-      const mod = await import("@arnilo/prism-providers/xai");
+      const mod = await import("@arnilo/prism-provider-xai");
       return mod.createXaiProvider({ apiKey });
     }
     case "zai": {
-      const mod = await import("@arnilo/prism-providers/zai");
+      const mod = await import("@arnilo/prism-provider-zai");
       return mod.createZaiProvider({ apiKey });
     }
     case "alibaba": {
-      const mod = await import("@arnilo/prism-providers/alibaba");
+      const mod = await import("@arnilo/prism-provider-alibaba");
       return mod.createAlibabaProvider({ apiKey });
     }
     case "kimi": {
-      const mod = await import("@arnilo/prism-providers/kimi");
+      const mod = await import("@arnilo/prism-provider-kimi");
       return mod.createKimiCodingProvider({ apiKey });
     }
     case "clinepass": {
-      const mod = await import("@arnilo/prism-providers/clinepass");
+      const mod = await import("@arnilo/prism-provider-clinepass");
       return mod.createClinePassProvider({ apiKey });
     }
     case "commandcode": {
-      const mod = await import("@arnilo/prism-providers/commandcode");
+      const mod = await import("@arnilo/prism-provider-commandcode");
       return mod.createCommandCodeProvider({ apiKey });
     }
     case "neuralwatt": {
-      const mod = await import("@arnilo/prism-providers/neuralwatt");
+      const mod = await import("@arnilo/prism-provider-neuralwatt");
       return mod.createNeuralWattProvider({ apiKey });
     }
     case "opencode-go": {
-      const mod = await import("@arnilo/prism-providers/opencode-go");
+      const mod = await import("@arnilo/prism-provider-opencode-go");
       return mod.createOpenCodeGoProvider({ apiKey });
     }
     case "hyper": {
-      const mod = await import("@arnilo/prism-providers/hyper");
+      const mod = await import("@arnilo/prism-provider-hyper");
       return mod.createHyperProvider({ apiKey });
     }
     default:
@@ -198,8 +185,8 @@ export async function resolveProviderAdapter(providerId: string, apiKey: string)
   }
 }
 
-function createLazyProvider(providerId: string, apiKey: string): AIProvider {
-  let resolvedProvider: AIProvider | null = null;
+function createLazyProvider(providerId: string, apiKey: string): ModelProvider {
+  let resolvedProvider: ModelProvider | null = null;
   return {
     id: providerId,
     async *generate(request) {
@@ -235,7 +222,7 @@ export async function createSpawnableAgent(options: CreateSpawnableAgentOptions)
   const { config } = options;
 
   let effectiveModel: ModelConfig;
-  let effectiveProvider: AIProvider;
+  let effectiveProvider: ModelProvider;
 
   if (options.provider) {
     if (options.model && config.model && options.model.provider !== config.model.provider) {
@@ -292,7 +279,7 @@ export async function createSpawnableAgent(options: CreateSpawnableAgentOptions)
   const prismAgent = await createAgent({
     id: defaultAgentId,
     model: effectiveModel,
-    provider: effectiveProvider,
+    packages: [providerPackage("test-provider", [effectiveProvider])],
     slots: { store },
     tools: { add: tools.list() },
     ownership,

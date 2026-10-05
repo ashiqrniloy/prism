@@ -1,5 +1,5 @@
-import { type AIProvider, createAgent } from "@arnilo/prism";
-import { createMockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
+import { createAgent } from "@arnilo/prism";
+import { mockProvider, providerDone, providerTextDelta } from "@arnilo/prism/testing";
 
 /**
  * Open a session, stream one run, and read the RunResult (roadmap Phase 3). `agent.session()` opens a new
@@ -9,21 +9,14 @@ import { createMockProvider, providerDone, providerTextDelta } from "@arnilo/pri
  * Run: npm run build:core && node examples/session.ts
  */
 
-/** The mock provider replays one script per call; this plays a different one on each turn. */
-function turns(...scripts: Parameters<typeof createMockProvider>[0][]): AIProvider {
-  let turn = 0;
-  return { id: "mock", generate: (request) => createMockProvider(scripts[Math.min(turn++, scripts.length - 1)]).generate(request) };
-}
-
 export async function demo(): Promise<Record<string, unknown>> {
   const agent = await createAgent({
     id: "session-demo",
     model: { provider: "mock", model: "demo" },
-    // `provider` stays the mock-provider input until Phase 5 replaces it with `providers.register`.
-    provider: turns(
+    packages: [mockProvider([
       [providerTextDelta("Hello"), providerTextDelta(", world."), providerDone()],
       [providerTextDelta("Second answer."), providerDone()],
-    ),
+    ])],
   });
 
   const session = await agent.session();

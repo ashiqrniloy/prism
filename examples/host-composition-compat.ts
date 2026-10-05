@@ -20,7 +20,7 @@
  *  5. `typed-decisions-injected-transport` — `askSystemOneDecisions` preserves
  *     ids/probabilities/model/usage/timing over an injected fetch and fails
  *     typed, never neutral.
- *  6. `legacy-adapter-safety` — the legacy `@arnilo/prism-providers/typesafe`
+ *  6. `legacy-adapter-safety` — the legacy `@arnilo/prism-provider-typesafe`
  *     adapter resolves one credential under the configured provider id, rejects
  *     malformed answers instead of rendering them, and keeps a `__proto__`
  *     choice label as an own wire option and rendered value.
@@ -32,7 +32,7 @@
  * Run: npm run build:core && node examples/host-composition-compat.ts
  */
 import assert from "node:assert/strict";
-import type { AIProvider, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { ModelProvider, ProviderEvent, ProviderRequest } from "@arnilo/prism";
 
 interface CompatCheck {
   readonly name: string;
@@ -56,10 +56,10 @@ async function check(name: string, run: () => Promise<unknown>): Promise<void> {
 }
 
 /** Turn-indexed provider: each generate call consumes the next scripted turn. */
-function scriptedProvider(turns: ProviderEvent[][], onRequest?: (request: ProviderRequest) => void): AIProvider {
+function scriptedProvider(turns: ProviderEvent[][], onRequest?: (request: ProviderRequest) => void): ModelProvider {
   let turn = 0;
   return {
-    id: "compat-scripted",
+    id: "mock",
     async *generate(request) {
       onRequest?.(request);
       const events = turns[turn++] ?? [{ type: "done" }];
@@ -93,7 +93,7 @@ await check("host-tools-only", async () => {
   );
   const agent = await prism.createAgent({
     model: { provider: "mock", model: "compat" },
-    provider,
+    packages: [(await import("@arnilo/prism/provider-kit")).providerPackage("test-provider", [provider])],
     tools: { add: [hostLookup] },
   });
   const result = await (await agent.session()).run("look up the record");
@@ -116,7 +116,7 @@ await check("hook-chain-snapshot", async () => {
   };
   const agent = await prism.createAgent({
     model: { provider: "mock", model: "compat" },
-    provider: prism.createMockProvider([prism.providerTextDelta("ok"), prism.providerDone()]),
+    packages: [(await import("@arnilo/prism/provider-kit")).providerPackage("test-provider", [(await import("@arnilo/prism/testing")).createMockProvider([prism.providerTextDelta("ok"), prism.providerDone()])])],
     hooks: (hooks) => {
       hooks.on("model.request", transform("first"));
       hooks.on("model.request", transform("second"));
@@ -142,7 +142,7 @@ await check("step-boundaries-and-trace-fields", async () => {
   ]);
   const agent = await prism.createAgent({
     model: { provider: "mock", model: "compat" },
-    provider,
+    packages: [(await import("@arnilo/prism/provider-kit")).providerPackage("test-provider", [provider])],
     tools: { add: [hostLookup] },
     attentionCompiler: { maxInputTokens: 4096 },
   });
@@ -223,7 +223,7 @@ await check("om-coverage-admission-retention", async () => {
 });
 
 await check("typed-decisions-injected-transport", async () => {
-  const decisions = await import("@arnilo/prism-providers/decisions");
+  const decisions = await import("@arnilo/prism/provider-kit");
   const calls: string[] = [];
   const fetchImpl = (async (input: string | URL | Request) => {
     calls.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
@@ -259,7 +259,7 @@ await check("typed-decisions-injected-transport", async () => {
 });
 
 await check("legacy-adapter-safety", async () => {
-  const { createTypeSafeProvider } = await import("@arnilo/prism-providers/typesafe");
+  const { createTypeSafeProvider } = await import("@arnilo/prism-provider-typesafe");
   const resolveRequests: { readonly provider?: string; readonly name: string }[] = [];
   const bodies: string[] = [];
   let answers: unknown = JSON.parse('{"verdict":{"type":"choice","choice":"__proto__","confidence":0.7}}');

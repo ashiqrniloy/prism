@@ -24,10 +24,10 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 | `mammoth` | `^1.8.0` | yes | `@arnilo/prism-work` | `./document-reader` | `bun add mammoth` | no |
 | `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-work` | `./document-reader` | `bun add pdf-parse` | no |
 | `e2b` | `2.49.1` | yes | `@arnilo/prism-coding-tools` | `./security` | `bun add e2b@2.49.1` | yes |
-| `pg` | `^8.23.0` | yes | `@arnilo/prism-core` | `./sessions/postgres`, `./enterprise/postgres`, `./governance/prompts` | `bun add pg` | yes |
+| `pg` | `^8.23.0` | yes | `@arnilo/prism-core` | `./enterprise/postgres`, `./governance/prompts` | `bun add pg` | yes |
 | `@nats-io/jetstream` | `^3.4.0` | yes | `@arnilo/prism-core` | `./sessions/nats` | `bun add @nats-io/jetstream @nats-io/transport-node` | yes |
 | `@nats-io/transport-node` | `^3.4.0` | yes | `@arnilo/prism-core` | `./sessions/nats` | `bun add @nats-io/transport-node` | yes |
-| `@ai-sdk/provider` | `4.0.13` | yes | `@arnilo/prism-providers` | `./ai-sdk` | `bun add @ai-sdk/provider@4.0.13` | no |
+| `@ai-sdk/provider` | `4.0.13` | yes | `@arnilo/prism-provider-ai-sdk` | `.` | `bun add @ai-sdk/provider@4.0.13` | no |
 | `playwright-core` | `1.63.0` | yes | `@arnilo/prism-web-tools` | `./browser`, `./obscura` | `bun add playwright-core@1.63.0` | yes |
 
 ## Exact pins and why
@@ -35,7 +35,7 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 Two peers are pinned to an exact version instead of a range, because the pin is a contract rather than a convenience:
 
 - **`playwright-core@1.63.0`** (`@arnilo/prism-web-tools/browser`, `/obscura`). Browser automation rides Playwright's CDP transport and accessibility snapshot shapes, which move between minors. Prism never launches, downloads, or bundles a browser: the host supplies the binary, the image, and the cache, and must match the pinned client. See [Browser automation](browser-automation.md).
-- **`@ai-sdk/provider@4.0.13`** (`@arnilo/prism-providers/ai-sdk`). The adapter consumes deterministic specification-versioned types (`LanguageModelV4`) and gates on an exact supported-version matrix at construction, so an unlisted version fails closed instead of silently mis-mapping. See [AI SDK provider](providers/ai-sdk.md).
+- **`@ai-sdk/provider@4.0.13`** (`@arnilo/prism-provider-ai-sdk`). The adapter consumes deterministic specification-versioned types (`LanguageModelV4`) and gates on an exact supported-version matrix at construction, so an unlisted version fails closed instead of silently mis-mapping. See [AI SDK provider](providers/ai-sdk.md).
 - **`e2b@2.49.1`** (`@arnilo/prism-coding-tools/security`). Pause `keepMemory`, `Sandbox.connect` auto-resume, and `ServiceBusyError` 503 semantics are version-specific. Hosts may inject `{ client }` instead of installing the peer. See [Hosted sandboxes](hosted-sandboxes.md).
 - **`@firecrawl/anydoc@0.2.4`** (`@arnilo/prism-work/document-extraction`). Error codes and the wrapper's optional third argument were checked against this release. The wrapper can upload a PDF when `ocr` is `'hosted'`; the Prism subpath never passes that argument and does not read an API key.
 
@@ -58,7 +58,10 @@ Test-only dependencies are *not* peers. `playwright-core` appears in `@arnilo/pr
 # Browser automation: pinned client, host-owned browser binary
 bun add @arnilo/prism-web-tools playwright-core@1.63.0
 
-# PostgreSQL session store: pool driver only
+# PostgreSQL store: the driver ships with the store package (nothing to add)
+bun add @arnilo/prism-store-postgres
+
+# Enterprise adapters and the prompt registry still peer on the driver in prism-core
 bun add @arnilo/prism-core pg
 
 # NATS JetStream event source: transport + jetstream together
@@ -77,6 +80,11 @@ const tools = await createBrowserTools({ browser });
 ```
 
 ## Extension and configuration notes
+
+`@arnilo/prism-store-postgres` (plan 153 Task 5) declares `pg` as a **dependency**, not a peer: the
+store cannot work without its driver, and the driver loads lazily inside that package alone, so an
+agent that lists `store-sqlite` (or no store package at all) never loads it. `@arnilo/prism-core`
+keeps the optional `pg` peer for `enterprise/postgres` and the prompt registry.
 
 - A peer is an *implementation the host owns*. When a peer's default wiring is not what you want, pass your own implementation instead of installing theirs: the document reader accepts host parsers (`createReadTool({ documentReader })`), and the browser surfaces accept a host `Browser`.
 - Subpaths that need a peer isolate that import, so importing another subpath of the same package never evaluates it. The office family is the extreme case: zero peers, because it takes structural inputs. `@arnilo/prism-channels` also has no third-party peers: Telegram uses native `fetch`, and signal-cli is a host-operated binary rather than an npm peer.
