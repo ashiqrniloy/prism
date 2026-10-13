@@ -191,7 +191,7 @@ jobs:
         run: bun test --timeout=0 scripts/phase26-coding-journey.test.mjs
       - name: retain the protected coding journey report
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: phase26-coding-journey-report-${{ github.run_id }}
           path: scripts/phase26-coding-journey-report.json

@@ -73,7 +73,7 @@ jobs:
               bun run build
               bun scripts/build-prism-code-binaries.mjs --target "$TARGET" --version "$VERSION" --out dist-bin --self-test --archive
             '
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: prism-code-${{ matrix.target }}
           path: |
@@ -148,7 +148,7 @@ jobs:
           subject-path: |
             dist-bin/prism-code-*.tar.gz
             dist-bin/SHA256SUMS
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: prism-code-binaries
           path: |
