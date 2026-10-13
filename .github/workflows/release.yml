@@ -84,7 +84,7 @@ jobs:
           grep -nE '^== sdk:ready phase|^error:|Exited with code [1-9]|✖|AssertionError|Killed|SIGKILL|ELIFECYCLE|exceeded threshold|exceeded ceiling|WebAssembly|Out of memory|ENOMEM|No space left' sdk-ready.log | tail -80 >> "$GITHUB_STEP_SUMMARY" || true
           echo "### tail of sdk-ready.log" >> "$GITHUB_STEP_SUMMARY"
           tail -200 sdk-ready.log >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: sdk-ready-log
@@ -94,7 +94,7 @@ jobs:
 
       - name: retain release evidence manifest
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-evidence
           path: scripts/release-evidence.json
@@ -103,7 +103,7 @@ jobs:
 
       - name: retain quality-gate reports
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: quality-gate-reports
           path: |
@@ -266,7 +266,7 @@ jobs:
         with:
           subject-path: release-artifacts/sbom.spdx.json
       - name: retain release artifacts
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-artifacts-${{ env.SAFE_REF }}
           path: release-artifacts
@@ -289,7 +289,7 @@ jobs:
           fi
       - name: retain publish report
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: publish-report-${{ env.SAFE_REF }}
           path: release-artifacts/publish-report.json

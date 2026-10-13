@@ -130,7 +130,7 @@ jobs:
       - name: unused-code sweep (non-blocking report, plan 015 Task 3)
         continue-on-error: true
         run: bun run sweep:unused
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: unused-sweep-report-${{ github.run_id }}
@@ -146,7 +146,7 @@ jobs:
           PRISM_ENABLE_PLAYWRIGHT_GATE: ${{ vars.PRISM_ENABLE_PLAYWRIGHT_GATE }}
           PRISM_ENABLE_OBSCURA_GATE: ${{ vars.PRISM_ENABLE_OBSCURA_GATE }}
           NATIVE_CAPABILITY: ${{ env.native_capability }}
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: sandbox-browser-status-${{ github.run_id }}
