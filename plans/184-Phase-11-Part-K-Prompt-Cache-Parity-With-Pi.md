@@ -1,0 +1,216 @@
+# Phase 11 Part K — prompt-cache parity with pi
+
+## Objectives
+
+- Prove that the providers shipped in 0.13.0 get a prompt-cache hit rate at least as high as a reference agent harness on the same model and workload. The reference is **pi** (`pi` 1.3.0, already on the dev machine with Hyper and OpenCode Go configured), run headless, for both providers (owner decision 2026-10-16, replacing the earlier Crush/OpenCode choice).
+- Catch prefix-breaking regressions offline: consecutive provider requests must keep their tools, system prompt, and earlier messages byte-identical on the wire, not only at the request level.
+- Measure all harnesses the same way: through the plan 182 wire proxy, which reads usage from the raw upstream responses. The same measurement also checks that Prism's own reported usage matches what the upstream reported.
+
+## Expected Outcome
+
+- `prefixStabilityConformance` (in `@arnilo/prism/testing`) accepts an `encode` function. It asserts that the encoded `tools`, `system`, and `messages[0..n-1]` of request *n* equal those of request *n+1*. All four shipped packages run it in their tests.
+- `bun scripts/cache-parity/run.mjs --provider hyper --model <id>` runs one scripted coding task in a fixture repository through Prism (`apps/prism-agent`), then through `pi -p` (headless) on the same model. It writes `docs/_evidence/cache-parity/<provider>-<model>-<date>.{json,md}`.
+- A `release/cache-parity` live-matrix row runs the comparison for one model per route on Hyper and OpenCode Go. `docs/_evidence/cache-parity-0.13.0.md` records Prism ≥ reference for every cell.
+
+**0.13.0 release path — plan 184 of 181–187.** Start it when plan 194 is complete (step 10; see `plans/README.md`); this plan is step 11 of 14. When it is complete, continue with plan 185. Plans 181–194 run strictly in step order, and nothing runs in parallel. Plan 194 (added 2026-10-17) changes what this plan measures:
+- the reference host now compacts on a measured trigger
+- it clears stale tool results in batches (`fold.clearAtLeastTokens`)
+- it recovers from context overflow
+
+The parity cells run with that host configuration, and a fold batch or a compaction is an expected prefix change, not a regression.
+
+This plan is a pre-publish part of roadmap **Phase 11**. It adds a test helper option and benchmark tooling, and changes no kernel contract, so it has **no phase review**. **Task 1 is a read-only check** of pi: its version, how to run it headless against the wire proxy without changing the owner's pi configuration, and where it puts cache markers. Plan 186's acceptance run includes this plan's gate. Prism's credentials come from `~/.config/prism/live.env` (`HYPER_API_KEY`, `OPENCODE_GO_API_KEY`). pi uses the provider credentials it already has configured. The runner never reads, copies, or prints pi's `~/.pi/agent/auth.json`, and the executor never asks for a key in chat. **Cost knob:** one cell is 3 runs × 2 harnesses of a bounded task (Task 3 states the ceiling). The row is opt-in and never part of `bun run test`. No version bump or publish.
+
+## Tasks
+
+- [ ] Task 1: Reference harness check: pi headless (read-only)
+  - Acceptance Criteria:
+    - Functional: The task note records, for pi (`pi --version`, 1.3.0 on 2026-10-16, dated):
+      - (a) **Routing pi through the proxy without editing `~/.pi`.** How to point pi's `hyper` and `opencode-go` providers at a custom base URL for one run: a run-scoped agent/config directory, a run-scoped models file, or an `--extension`. Verify against pi's docs (find-docs) and the installed source. The run must leave `~/.pi/agent/*` unchanged; Task 3 checks this with a checksum before and after. If pi can only take a base URL from a config that also holds credentials, record that and choose the option that passes the key through env (`--api-key` is rejected because it puts the key in process arguments).
+      - (b) **The headless command.** `pi -p --mode json --no-session --model <provider>/<id> --thinking <level> "<task>"`, run in the fixture workdir with built-in tools (`read`, `bash`, `edit`, `write`). It runs without approval prompts. For a reproducible baseline it also disables the owner's personal extras: `--no-extensions --no-mcp --no-skills --no-prompt-templates --no-context-files --no-approve`. The note records which of these change pi's request prefix, and the comparison runs with all of them.
+      - (c) **What pi sends and receives.** From the proxy log of one short run per provider and route model: the endpoint and format pi uses for each test model (Chat Completions or Anthropic Messages); where it places `cache_control` markers; whether it sends a session or affinity header (for example `x-opencode-session`) or a `prompt_cache_key`. Also whether pi's `--mode json` output reports per-request usage. If it does, Task 3 cross-checks it against the proxy as a second source.
+      - (d) **Model ids.** pi's catalog ids can differ from Prism's (pi lists `hyper/deepseek-v4-pro-0813` where Prism's catalog has `deepseek-v4-pro`). Map each test model to the same upstream id on both sides, using the upstream `model` field in the proxy log, not the display name.
+      - (e) **Differences Prism should match.** Any marker placement or affinity header pi uses that Prism does not. This becomes Task 4's first investigation list.
+    - Functional: The note fixes the test matrix (one model per provider and route, from plan 183 Task 1 (e), which pi also lists), the workload (Task 3), and the cell budget.
+    - Performance: n/a — read-only; at most one short pi run per provider.
+    - Code Quality: Every config fact cites pi's docs URL and date, or the installed source path and version.
+    - Security: No pi config file with a key is written inside the repository; `~/.pi/agent/auth.json` is never read by the runner or quoted in the note.
+  - Approach:
+    - Documentation Reviewed:
+      - `pi --help` (1.3.0: `--print`, `--mode json`, `--no-session`, `--model provider/id`, `--thinking`, the `--no-*` switches), `pi --list-models hyper|opencode-go`, pi's docs on custom providers and base URLs (find-docs), plan 182 Task 5 (`scripts/wire-proxy.mjs`), plan 183 Task 1.
+    - Options Considered:
+      - Crush for Hyper and OpenCode for OpenCode Go. Replaced by the owner on 2026-10-16: pi is installed with both providers configured, and one reference for both providers keeps the comparison simpler.
+      - Read pi's session files for usage. Rejected: `--no-session` keeps runs ephemeral, and the proxy measures both harnesses the same way.
+      - Run pi with the owner's normal extensions and MCP servers. Rejected: they add tools and prompts that differ between machines and change the prefix; the baseline is pi's own coding-agent behaviour.
+    - Chosen Approach:
+      - Check pi's headless and base-URL facts first, so the runner is built on them.
+    - API Notes and Examples:
+      ```bash
+      bun scripts/wire-proxy.mjs --upstream https://hyper.charm.land/v1 --listen 127.0.0.1:8787 --usage-log /tmp/pi-hyper.jsonl
+      # base-URL override per Task 1 (a); then, in the fixture workdir:
+      pi -p --mode json --no-session --no-extensions --no-mcp --no-skills --no-prompt-templates --no-context-files --no-approve \
+         --model hyper/<id> --thinking medium "$(cat scripts/cache-parity/task.md)"
+      ```
+    - Files to Create/Edit:
+      - this plan (task note only).
+    - References:
+      - owner decisions 2026-10-16 (cache parity; pi as the reference, run headless).
+  - Test Cases to Write:
+    - n/a — read-only.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no.
+    - Docs pages to create/edit: none.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 2: Wire-level prefix stability
+  - Acceptance Criteria:
+    - Functional: `prefixStabilityConformance` (`src/testing/prefix-stability-conformance.ts`) gains `encode?: (request: ProviderRequest) => Promise<JsonObject>`, plus `segments?: (body) => { tools?: unknown; system?: unknown; messages: unknown[] }` with defaults for the OpenAI Chat and Anthropic Messages formats. For each consecutive pair it asserts:
+      - `JSON.stringify(tools)` is equal;
+      - `JSON.stringify(system)` is equal;
+      - `messages[i]` is byte-equal for every `i` below the earlier request's last index, allowing only cache markers to move. The comparison ignores `cache_control` on the earlier request's last block, and the default breakpoint is allowed to move forward (plan 182 Task 8).
+      A failure names the segment, the index, and the first differing byte offset.
+    - Functional: Each of `hyper` and `opencode-go` runs it for each route over a ten-turn tool loop on the replay harness. The run uses the package's real encoder with thinking replay on, and a skill load mid-session, which is the existing fixture's scenario. The kernel's built-in `openai-compatible` provider runs it too.
+    - Performance: Each run is under 500 ms offline.
+    - Code Quality: The encoder comes from the package (its exported route encoder or the routed provider's `encode` seam added in plan 182 Task 7); no re-implementation in the test.
+    - Security: n/a — offline fixtures with no secrets.
+  - Approach:
+    - Documentation Reviewed:
+      - `src/testing/prefix-stability-conformance.ts:1-60` (request-level runner, `minContinuity`); plan 182 Tasks 7–8; `src/__tests__/prefix-stability-conformance.test.ts`.
+    - Options Considered:
+      - Compare the whole encoded body as a byte prefix. Rejected: JSON field order places `tools` after `messages` in the Chat body, so a growing message list always shifts later bytes. Segment equality is what the upstream cache keys on.
+    - Chosen Approach:
+      - Segment equality on the real encoder, in the existing conformance runner.
+    - API Notes and Examples:
+      ```ts
+      await prefixStabilityConformance({
+        host, skills,
+        encode: (r) => hyperRouteEncoder("anthropic")(r),
+        segments: anthropicSegments,
+      });
+      ```
+    - Files to Create/Edit:
+      - `src/testing/prefix-stability-conformance.ts`, `src/__tests__/prefix-stability-conformance.test.ts`, `src/provider-kit/routed-provider.ts` (an `encode(request)` method on the returned provider, if plan 182 did not add one), `packages/providers/{hyper,opencode-go}/src/__tests__/prefix-stability.test.ts` (new), `scripts/compat-baseline/arnilo__prism.txt` (if `/testing` or kit signatures change), `docs/testing.md`, `docs/provider-kit.md`, `CHANGELOG.md`.
+    - References:
+      - plan 182 Tasks 7–8.
+  - Test Cases to Write:
+    - `wire_prefix_detects_reordered_tools`, `wire_prefix_detects_mutated_earlier_message`, `wire_prefix_detects_system_timestamp`, `wire_prefix_allows_moved_cache_marker`: each seeds one defect and fails on it.
+    - `hyper_wire_prefix_stable_{openai,anthropic}`, `opencode_go_wire_prefix_stable_{openai,anthropic}`, `builtin_wire_prefix_stable`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: yes — new `/testing` option.
+    - Docs pages to create/edit:
+      - `docs/testing.md` (prefix stability, wire mode), `docs/provider-kit.md` ("Cache-friendly encoders").
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 3: The parity runner
+  - Acceptance Criteria:
+    - Functional: `scripts/cache-parity/` contains:
+      - `fixture/`: a small git repository template (about 15 files, one failing unit test and a short README), so a coding agent needs several reads, an edit, and a test run.
+      - `task.md`: one fixed prompt ("Make the failing test pass without changing the test; run the tests; stop when green").
+      - `run.mjs --provider <hyper|opencode-go> --model <id> [--runs 3] [--harness prism,pi]`.
+
+      For each run, the runner:
+      1. copies the fixture into a temp dir;
+      2. starts `wire-proxy.mjs` with `--usage-log`;
+      3. runs the harness with its base URL pointed at the proxy: Prism through `apps/prism-agent`'s one-shot coding worker (`hyper`/`opencode-go` package, `baseUrl` override, `toolsCoding({ root })`, approval `allow`), and pi through the Task 1 headless command, with its base URL pointed at the proxy using the run-scoped override (never by editing `~/.pi`);
+      4. stops at a turn ceiling (Prism `limits.maxTurns: 20`; for pi, a wall-clock timeout and a request ceiling enforced by the proxy (it returns 429 after the cell budget));
+      5. records whether the fixture test passes at the end.
+    - Functional: Metrics per run, from the proxy log only:
+      - `requests`;
+      - `promptTokens = Σ inputTokens`, using plan 182 Task 4's inclusive rule, applied by the proxy's own reader;
+      - `cacheRead = Σ cacheReadTokens` and `cacheWrite = Σ cacheWriteTokens`;
+      - `hitRate = cacheRead / promptTokens`;
+      - `firstTurnExcludedHitRate`, the same over requests 2..n;
+      - `taskSolved`.
+
+      Report per cell: the median and spread over runs for each harness. A run where the task was not solved is reported, but excluded from the comparison only if *both* harnesses solved the task in at least 2 of 3 runs. Otherwise the cell is marked `inconclusive`.
+    - Functional: Cross-check: for the Prism runs, the usage events Prism emitted (from the JSONL output) equal the proxy's figures per request. A mismatch fails the run with `usage_mismatch`, which is a Prism bug in the normalizer or codec.
+    - Functional: Output is `docs/_evidence/cache-parity/<provider>-<model>-<date>.{json,md}` with Prism's commit and pi's version, model, route each harness used, per-run metrics, and medians. It contains no secret: the runner scans it with `assertNoSecretLeak` against the keys.
+    - Performance: Budget per cell: at most 3 × 2 runs × 20 requests = 120 requests. The runner aborts a cell that exceeds it, reports `budget_exceeded`, and states the ceiling in `scripts/cache-parity/README.md` and the manifest row.
+    - Code Quality: Pure metric functions, unit-tested; harness launch is behind an injected `spawn`, so `run.test.mjs` runs offline with a fake upstream and scripted harnesses. No new dependency.
+    - Security:
+      - The proxy listens on loopback only.
+      - pi's run-scoped override files are written into the temp dir, never the repo. `~/.pi/agent` is checksummed before and after each run, and any change fails the run with `reference_config_mutated`.
+      - Keys reach child processes through the environment, never as arguments (no `--api-key`).
+      - Child stdout and stderr are scanned for the Prism keys before they are stored.
+  - Approach:
+    - Documentation Reviewed:
+      - Task 1 (pi headless facts); plan 182 Task 5 (proxy); `apps/prism-agent/README.md` (one-shot JSONL mode, coding worker); `apps/prism-agent/src/{cli,scenarios}/*`.
+    - Options Considered:
+      - Compare Prism to the reference on synthetic prompts without tools. Rejected: cache behaviour in agent loops (tool results, thinking replay) is the claim being tested.
+      - One run per harness. Rejected: harnesses are non-deterministic; three runs and medians are the minimum to separate noise from a real gap.
+    - Chosen Approach:
+      - A real coding task, same model, same proxy, medians over three runs.
+    - API Notes and Examples:
+      ```bash
+      export PRISM_LIVE_ENV_FILE=~/.config/prism/live.env
+      bun scripts/cache-parity/run.mjs --provider hyper --model qwen3.6-plus --runs 3
+      # → docs/_evidence/cache-parity/hyper-qwen3.6-plus-2026-10-20.md
+      #   prism      hitRate median 0.86 (0.84–0.88)  solved 3/3
+      #   pi 1.3.0   hitRate median 0.83 (0.80–0.85)  solved 3/3
+      ```
+    - Files to Create/Edit:
+      - `scripts/cache-parity/{run.mjs,metrics.mjs,harnesses.mjs,README.md,task.md}` (new; `harnesses.mjs` has two entries, `prism` and `pi`), `scripts/cache-parity/fixture/**` (new), `scripts/cache-parity/run.test.mjs` (new), `apps/prism-agent/src/cli/*` (a `--base-url` override for the provider package if the one-shot CLI lacks it; tentative until Task 1), `docs/live-testing.md` ("Cache parity"), `CHANGELOG.md`.
+    - References:
+      - plans 182, 183.
+  - Test Cases to Write:
+    - `metrics_compute_inclusive_hit_rate`, `metrics_exclude_unsolved_runs_only_when_both_solved`, `runner_marks_inconclusive_cell`, `runner_aborts_on_budget`, `runner_flags_usage_mismatch`, `runner_scans_outputs_for_keys`, `runner_writes_reference_config_outside_repo`, `runner_fails_if_pi_config_mutated`, `runner_never_passes_key_as_argument`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no — operator tooling.
+    - Docs pages to create/edit:
+      - `docs/live-testing.md`, `scripts/cache-parity/README.md` (how to run, the budget, how to read the report).
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+- [ ] Task 4: The parity gate and the first run
+  - Acceptance Criteria:
+    - Functional: `scripts/live-matrix.json` gains `release/cache-parity`: `requires: ["PRISM_LIVE_PROVIDER_TESTS", "PRISM_LIVE_CACHE_PARITY", "HYPER_API_KEY", "OPENCODE_GO_API_KEY"]` plus `pi` on `PATH` with both providers ready (`pi auth` reports them; a missing binary or provider skips the cell with a reason, and strict mode fails it). Cells: Hyper chat route, Hyper Anthropic route, OpenCode Go chat route, OpenCode Go Anthropic route, with models from Task 1. `cost` states the per-cell ceiling.
+    - Functional: The gate passes when, for every conclusive cell, Prism's median `hitRate` is at least pi's median `hitRate`, and no Prism run reports `usage_mismatch`. An `inconclusive` cell fails strict mode and is rerun once.
+    - Functional: The first run is recorded in `docs/_evidence/cache-parity-0.13.0.md`: commit, harness versions, a per-cell table, and a verdict. If Prism is behind on a cell, the executor investigates before changing code (`investigate-first` skill). The candidates, in order: the prefix segment that changed between requests (Task 2's runner on the recorded bodies), marker placement compared with pi's (Task 1 (c)), and a missing affinity header (Task 1 (d)). The fix lands in the owning plan 182 or 182 task, which is reopened with a note, and the cell is rerun. The evidence file keeps every run.
+    - Performance: Record actual requests per cell against the ceiling.
+    - Code Quality: The gate logic lives in `scripts/cache-parity/metrics.mjs`, not in the manifest runner.
+    - Security: Same as Task 3.
+  - Approach:
+    - Documentation Reviewed:
+      - `scripts/live-matrix.mjs` (row schema, strict mode); Task 3 report format; plan 186 Task 1 (triage classes).
+    - Options Considered:
+      - Allow a tolerance (Prism within 2 points of the reference). Rejected: the owner asked for "at least equal". Noise is handled by medians and one rerun of an inconclusive cell, not by a margin.
+    - Chosen Approach:
+      - A strict per-cell comparison of medians, a recorded first run, and an investigation loop for any gap.
+    - API Notes and Examples:
+      ```bash
+      PRISM_LIVE_STRICT=1 PRISM_LIVE_CACHE_PARITY=1 PRISM_LIVE_FILTER=release/cache-parity bun run test:live
+      ```
+    - Files to Create/Edit:
+      - `scripts/live-matrix.json`, `docs/live-testing.md` (generated table), `scripts/cache-parity/metrics.mjs`, `docs/_evidence/cache-parity-0.13.0.md` (new), `docs/_evidence/cache-parity/*` (reports), `CHANGELOG.md`.
+    - References:
+      - owner requirement 2026-10-16 ("cache hit rate at least equal to the native harnesses").
+  - Test Cases to Write:
+    - `parity_gate_passes_when_prism_median_at_least_pi`, `parity_gate_fails_on_lower_median`, `parity_gate_fails_on_usage_mismatch`, `parity_gate_strict_fails_inconclusive`, `parity_row_skips_without_pi`.
+  - Documentation/Wiki Assessment:
+    - Public API or behavior impacted: no.
+    - Docs pages to create/edit:
+      - `docs/live-testing.md` (generated row), evidence files.
+    - `docs/index.md` update: no
+    - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
+
+## Verification (whole plan)
+
+- `bun run build:core`
+- `bun run typecheck`
+- `bun test --timeout=0 src/__tests__/prefix-stability-conformance.test.ts`
+- `bun run --filter '@arnilo/prism-provider-*' test`
+- `bun test --timeout=0 scripts/cache-parity/run.test.mjs scripts/live-matrix.test.mjs scripts/live-doc-check.test.mjs`
+- `bun test --timeout=0 src/__tests__/docs.test.ts`
+- `bun scripts/release.mjs gate`
+- `PRISM_LIVE_STRICT=1 PRISM_LIVE_CACHE_PARITY=1 PRISM_LIVE_FILTER=release/cache-parity bun run test:live` (owner env file; `pi` installed with Hyper and OpenCode Go configured)
+- `bun run test`
+
+## Compromises Made
+
+- To be filled after tasks are completed and tests pass.
+
+## Further Actions
+
+- To be filled after task completion with improvements, rationale, and priority.
