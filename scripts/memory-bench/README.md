@@ -173,13 +173,58 @@ timeout 900 bun scripts/memory-bench/retrieval-diagnostics.mjs \
 ```
 
 The report replays the lexical fabric through the real package and records ids, ranks, counts and
-one stage per failed question: `candidate_gap` (no labelled answer-session round in the candidate
+one stage per selected question: `correct` for a correct answer, `candidate_gap` (no labelled answer-session round in the candidate
 pool), `selection_gap` (candidate exists but the passive budget/topK shows none), `fine_selection_gap`
-(the answer session is shown but its labelled message round is not) or `answer_gap` (the labelled
-round is visible and the answer is still wrong). Gold stays offline; queries and reports never carry
+(the answer session is shown but its labelled message round is not), `answer_gap` (the labelled
+round is visible and the answer is still wrong), or `gold_unknown` (no usable gold). Gold stays offline; queries and reports never carry
 source text. The generated [retrieval diagnostics](../../docs/_evidence/memory-bench/188.7/retrieval-diagnostics.json)
 show 21 `answer_gap`, 13 `fine_selection_gap` and 13 `selection_gap` of 47 failed fabric questions;
 the old 70-question arm stays diagnostic/development evidence.
+
+### Development and held-out v2 (188.8)
+
+The post-acceptance diagnosis used gold labels from all 140 `confirmatory.json` ids;
+for 188.8 these are **development** data (`--subset development`, or the frozen
+`confirmatory` name). The original ids and 188.7 results stay unchanged.
+`heldout-v2.json` freezes 100 unused LongMemEval-S ids: 20 each for knowledge-update,
+multi-session, temporal-reasoning, single-session-user and single-session-assistant.
+`drawHeldoutV2` sorts SHA-256(`prism-188.8-memory-bench-v2:` + id), excludes every
+base, confirmatory and targeted id, and refuses a short or duplicated stratum.
+The draw uses only cached pinned id/ability metadata. Preference and abstention
+have no unused ids and remain development-only non-regression checks.
+
+```sh
+timeout 1800 bun scripts/memory-bench/retrieval-diagnostics.mjs \
+  --suite longmemeval-s --subset development \
+  --failed-report docs/_evidence/memory-bench/188.7/final-accept-lme-fabric.json \
+  --output docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-before.json
+```
+
+Despite its historical name, `--failed-report` now annotates correctness for the
+**whole selected partition**, including correct answers. The offline diagnostic
+requires the pinned dataset in cache and makes no provider calls or downloads.
+It records query term counts and non-question share, every fine evidence round's
+one-based rank (`null` outside the 32 candidates), all-needed@1/3/5/10/20,
+all-needed-visible and answer-message-visible. Visibility requires the complete
+trimmed text of at least one `has_answer` message in a rendered line; comparison
+uses offsets in memory and only the Boolean is published. `allNeeded` requires
+nonempty fine evidence. Dataset `has_answer` flags are retained even on abstention;
+these are visibility diagnostics, not answer scores.
+
+The shipped-query measure uses `recallPeriod`, the frozen old harness reference
+time `2026-10-22T00:00:00.000Z`, and the 0.35 coverage floor. The budget mirror
+includes the citation preamble and the best-hit exception; a regression compares
+its selected ids with the real `createFabricContext` output. Gold never enters a
+query. Two separate date-free ranking ablations retain and remove the coverage
+floor: the investigation's original ranking table used **no floor**. Its counts
+must not be mistaken for what the shipped floor delivers. The committed
+[development baseline](../../docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-before.json)
+contains only ids, counts, ranks, Booleans and protocol/hash metadata.
+
+The diagnostic also accepts `--subset heldout-v2` for later retrieval-only checks;
+no held-out diagnostic was run to select these fixes. Paid runner/manifest support
+belongs to 188.8 Task 5. Task 3 must replace the budget mirror with the shared
+rendering decision when it changes product rendering.
 
 Token allocations use `ceil(characters/4)`; they are labeled estimates and separate from billing.
 `used`/`irrelevant` labels are judge decisions, not causal evidence. Cited-id rates require the later citation

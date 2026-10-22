@@ -2,13 +2,17 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { lexicalTerms } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
 import { createMemory, createMemoryFabric, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
+import { recallPeriod } from "../../packages/memory/fabric/src/context.ts";
 import { BENCH_SCOPE } from "./bench-scope.mjs";
 import { DATASETS, loadDataset, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import { causalSessions, extractEvidence, ingestHaystackRounds, retrievalStage, sessionRounds } from "./replay.mjs";
 
-const PROTOCOL = "retrieval-stage-v1";
+const PROTOCOL = "delivery-stage-v1";
+// Freeze the old harness wall-clock reference for reproducible pre-fix period resolution.
+const REFERENCE_TIME = "2026-10-22T00:00:00.000Z";
 const INJECT = Object.freeze({ budgetTokens: 600, topK: 3 });
 const CANDIDATE_TOP_K = 32;
 
@@ -36,7 +40,7 @@ function injectionLine(hit) {
 /** Mirrors the passive-injection loop, including its first-hit exception, without retaining text. */
 export function selectInjection(hits, budgetTokens = INJECT.budgetTokens, topK = INJECT.topK) {
   const selected = [];
-  let used = 0;
+  let used = Math.ceil("Cite the ids you use as [id].".length / 4);
   for (const hit of hits) {
     const cost = Math.ceil(injectionLine(hit).length / 4);
     if (used + cost > budgetTokens && selected.length > 0) continue;
@@ -44,7 +48,33 @@ export function selectInjection(hits, budgetTokens = INJECT.budgetTokens, topK =
     used += cost;
     if (selected.length >= topK) break;
   }
-  return { ids: selected, tokens: used };
+  return { ids: selected, tokens: selected.length ? used : 0 };
+}
+
+/** Gold is used only after recall; rendered text and message offsets never leave this grader. */
+export function deliveryMetrics({ question, query, hits, rounds, fine }) {
+  const selected = selectInjection(hits);
+  const queryTerms = lexicalTerms(query);
+  const questionTerms = lexicalTerms(question.question);
+  const nonQuestionTerms = [...queryTerms].filter((term) => !questionTerms.has(term)).length;
+  const ids = hits.map((hit) => hit.id);
+  const allIn = (visible) => fine.size > 0 && [...fine].every((id) => visible.includes(id));
+  const lines = hits.filter((hit) => selected.ids.includes(hit.id)).map(injectionLine);
+  const messages = rounds.flatMap((round) => round.messages.filter((message) => message.hasAnswer));
+  return {
+    queryTermCount: queryTerms.size,
+    nonQuestionTerms,
+    nonQuestionTermShare: queryTerms.size ? nonQuestionTerms / queryTerms.size : 0,
+    fineEvidenceRanks: [...fine].map((id) => ({ id, rank: ids.includes(id) ? ids.indexOf(id) + 1 : null })),
+    allNeededAt: Object.fromEntries([1, 3, 5, 10, 20].map((k) => [k, allIn(ids.slice(0, k))])),
+    allNeededVisible: allIn(selected.ids),
+    // A coarse round hit is insufficient: require a whole labelled message in a rendered line.
+    answerMessageVisible: messages.some((message) => {
+      const text = message.text.trim();
+      return text.length > 0 && lines.some((line) => line.indexOf(text) >= 0);
+    }),
+    answerMessages: messages.length,
+  };
 }
 
 export function stageSummary(rows) {
@@ -52,21 +82,51 @@ export function stageSummary(rows) {
   const byAbility = {};
   for (const row of rows) {
     byStage[row.stage] = (byStage[row.stage] ?? 0) + 1;
-    const ability = (byAbility[row.ability] ??= { n: 0, byStage: {} });
+    const ability = (byAbility[row.ability] ??= {
+      n: 0,
+      byStage: {},
+      allNeededVisible: 0,
+      answerMessageVisible: 0,
+      allNeededAt: {},
+      questionOnlyAllNeededAt: {},
+      questionOnlyRankAllNeededAt: {},
+      queryTerms: 0,
+      nonQuestionTerms: 0,
+      selectedRounds: 0,
+    });
     ability.n += 1;
+    ability.allNeededVisible += Number(row.allNeededVisible);
+    ability.answerMessageVisible += Number(row.answerMessageVisible);
+    ability.queryTerms += row.queryTermCount;
+    ability.nonQuestionTerms += row.nonQuestionTerms;
+    ability.selectedRounds += row.selectedRounds;
+    for (const k of [1, 3, 5, 10, 20]) {
+      ability.allNeededAt[k] = (ability.allNeededAt[k] ?? 0) + Number(row.allNeededAt[k]);
+      ability.questionOnlyAllNeededAt[k] = (ability.questionOnlyAllNeededAt[k] ?? 0) + Number(row.questionOnlyAllNeededAt[k]);
+      ability.questionOnlyRankAllNeededAt[k] = (ability.questionOnlyRankAllNeededAt[k] ?? 0) + Number(row.questionOnlyRankAllNeededAt[k]);
+    }
     ability.byStage[row.stage] = (ability.byStage[row.stage] ?? 0) + 1;
   }
   return { byStage, byAbility };
 }
 
 export async function diagnoseRetrieval(options) {
-  const failed = options.failedReport
-    ? JSON.parse(await readFile(options.failedReport, "utf8")).results.filter((row) => row.correct === false)
-    : null;
-  const failedById = new Map((failed ?? []).map((row) => [row.id, row]));
-  const questions = selectQuestions(normalizeDataset(await loadDataset(options.suite, {}), options.suite), options.suite, {
-    subset: options.subset,
-  }).filter((question) => failedById.size === 0 || failedById.has(question.id));
+  const answers = options.failedReport ? JSON.parse(await readFile(options.failedReport, "utf8")).results : null;
+  const answersById = new Map((answers ?? []).map((row) => [row.id, row]));
+  const questions = selectQuestions(
+    normalizeDataset(
+      await loadDataset(options.suite, {
+        fetch() {
+          throw new Error("Offline diagnostic requires the cached pinned dataset");
+        },
+      }),
+      options.suite,
+    ),
+    options.suite,
+    {
+      subset: options.subset,
+    },
+  );
   const rows = [];
   for (const question of questions) {
     const root = await mkdtemp(join(tmpdir(), "prism-retrieval-diagnostics-"));
@@ -78,13 +138,19 @@ export async function diagnoseRetrieval(options) {
       const config = resolveMemoryFabricConfig({ retrieval: "lexical", inject: { query: "task", kinds: ["episode", "fact", "file"] } });
       const { scopes: _scopes, tools: _tools, store: _store, ...fabricOptions } = config;
       const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
-      const query = `Question date: ${question.date}\n${question.question}`;
-      const result = await fabric.recall(query, {
+      const prompt = `Question date: ${question.date}\n${question.question}`;
+      const period = recallPeriod(prompt.slice(0, 2000), REFERENCE_TIME);
+      const query = period.text;
+      const recallOptions = {
         kinds: ["episode", "fact", "file"],
         minSimilarity: 0.35,
         topK: CANDIDATE_TOP_K,
         archiveSearch: false,
-      });
+      };
+      const result = await fabric.recall(query, { ...recallOptions, ...period.options });
+      // Isolate the investigation's date-text ablation; no wall-clock period filter here.
+      const questionOnly = await fabric.recall(question.question, recallOptions);
+      const questionOnlyRank = await fabric.recall(question.question, { ...recallOptions, minSimilarity: 0 });
       const evidence = extractEvidence(question, rounds);
       // Coarse stage: the labelled answer session. Fine message gold is reported separately so a
       // missing round inside a retrieved session is not confused with losing the whole session.
@@ -100,11 +166,18 @@ export async function diagnoseRetrieval(options) {
       const selectedFine = selected.ids.filter((id) => fine.has(id));
       const bestGoldRank = result.hits.findIndex((hit) => gold.has(hit.id));
       const bestFineRank = result.hits.findIndex((hit) => fine.has(hit.id));
-      const correct = failedById.get(question.id)?.correct;
+      const correct = answersById.get(question.id)?.correct;
+      const delivery = deliveryMetrics({ question, query, hits: result.hits, rounds, fine });
+      const clean = deliveryMetrics({ question, query: question.question, hits: questionOnly.hits, rounds, fine });
+      const rankOnly = deliveryMetrics({ question, query: question.question, hits: questionOnlyRank.hits, rounds, fine });
       rows.push({
         id: question.id,
         ability: question.ability,
         answerCorrect: correct,
+        ...delivery,
+        questionOnlyAllNeededAt: clean.allNeededAt,
+        questionOnlyRankAllNeededAt: rankOnly.allNeededAt,
+        periodFiltered: period.options.tRef !== undefined,
         goldRounds: gold.size,
         candidateRounds: candidateIds.length,
         candidateGold: candidateIds.filter((id) => gold.has(id)).length,
@@ -135,12 +208,18 @@ export async function diagnoseRetrieval(options) {
         .digest("hex")
     : null;
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     protocol: PROTOCOL,
     suite: options.suite,
     subset: options.subset,
     dataset: DATASETS[options.suite]?.sha256 ?? null,
     sourceReport,
+    partition: ["confirmatory", "development"].includes(options.subset) ? "development" : options.subset,
+    referenceTime: REFERENCE_TIME,
+    questionOnlyAblation: "question text only; no recallPeriod; minSimilarity 0.35",
+    questionOnlyRankAblation: "question text only; no recallPeriod; minSimilarity 0 (ranking without coverage floor)",
+    visibility:
+      "allNeeded requires nonempty fine message evidence; answerMessageVisible requires any complete has_answer message in a rendered line; no fine labels means allNeeded is false; dataset has_answer flags are retained even on abstention",
     query: "benchmark-prompt",
     injection: INJECT,
     candidateTopK: CANDIDATE_TOP_K,

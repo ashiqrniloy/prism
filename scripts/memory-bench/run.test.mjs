@@ -1120,3 +1120,189 @@ test("missing_gold_stays_unknown", () => {
   assert.equal(grade.answerSessionHitAtK, null);
   assert.equal(grade.evidenceRoundCoverage, null);
 });
+
+// Plan 188.8: keep these in the existing root gate's explicit test file.
+test("heldout_v2_is_disjoint_from_base_confirmatory_and_targeted", async () => {
+  const { default: heldout } = await import("./heldout-v2.json", { with: { type: "json" } });
+  const { default: confirmatory } = await import("./confirmatory.json", { with: { type: "json" } });
+  const excluded = new Set([
+    ...Object.values(subsets.longmemeval.base).flat(),
+    ...Object.values(subsets.longmemeval.targeted).flat(),
+    ...Object.values(confirmatory.abilities).flat(),
+  ]);
+  const ids = Object.values(heldout.abilities).flat();
+  assert.equal(ids.length, 100);
+  assert.ok(Object.values(heldout.abilities).every((ids) => ids.length === 20));
+  assert.equal(heldout.seed, "prism-188.8-memory-bench-v2");
+  assert.equal(new Set(ids).size, 100);
+  assert.ok(ids.every((id) => !excluded.has(id)));
+  assert.deepEqual(heldout.developmentOnly, ["single-session-preference", "abstention"]);
+  const rows = ids.map((id) => ({ id }));
+  assert.equal(selectQuestions(rows, "longmemeval-s", { subset: "heldout-v2" }).length, 100);
+  assert.throws(() => selectQuestions(rows.slice(1), "longmemeval-s", { subset: "heldout-v2" }), /Pinned subset/);
+});
+
+test("heldout_v2_draw_is_deterministic_and_fails_closed_when_a_stratum_is_short", async () => {
+  const { drawHeldoutV2 } = await import("./datasets.mjs");
+  const { createHash } = await import("node:crypto");
+  const { default: heldout } = await import("./heldout-v2.json", { with: { type: "json" } });
+  const rows = Object.keys(heldout.abilities).flatMap((ability) =>
+    Array.from({ length: 25 }, (_, i) => ({ id: `${ability}-${i}`, ability })),
+  );
+  const expected = Object.fromEntries(
+    Object.keys(heldout.abilities).map((ability) => [
+      ability,
+      rows
+        .filter((row) => row.ability === ability)
+        .sort((a, b) =>
+          createHash("sha256")
+            .update(`prism-188.8-memory-bench-v2:${a.id}`)
+            .digest("hex")
+            .localeCompare(createHash("sha256").update(`prism-188.8-memory-bench-v2:${b.id}`).digest("hex")),
+        )
+        .slice(0, 20)
+        .map((row) => row.id),
+    ]),
+  );
+  assert.deepEqual(drawHeldoutV2(rows), expected);
+  assert.deepEqual(drawHeldoutV2([...rows].reverse()), expected);
+  assert.throws(() => drawHeldoutV2(rows.slice(10)), { name: "MemoryBenchDatasetError" });
+});
+
+test("delivery_diagnostic_reports_all_needed_visible_without_text", async () => {
+  const { deliveryMetrics } = await import("./retrieval-diagnostics.mjs");
+  const hits = ["a", "b"].map((id) => ({ id, kind: "episode", ingestedAt: "2023-01-01", content: `${id} PRIVATE_FIXTURE `.repeat(150) }));
+  const rounds = hits.map((hit) => ({ id: hit.id, messages: [{ hasAnswer: true, text: hit.content }] }));
+  const metrics = deliveryMetrics({
+    question: { question: "fixture query" },
+    query: "Question date: 2023-05-30T23:40:00Z\nfixture query",
+    hits,
+    rounds,
+    fine: new Set(["a", "b"]),
+  });
+  assert.equal(metrics.allNeededVisible, false);
+  assert.equal(metrics.answerMessageVisible, true);
+  assert.equal(metrics.allNeededAt[1], false);
+  assert.equal(metrics.allNeededAt[3], true);
+  assert.deepEqual(metrics.fineEvidenceRanks, [
+    { id: "a", rank: 1 },
+    { id: "b", rank: 2 },
+  ]);
+  assert.ok(metrics.nonQuestionTermShare > 0);
+  assert.equal(JSON.stringify(metrics).includes("PRIVATE_FIXTURE"), false);
+  const hidden = deliveryMetrics({
+    question: { question: "q" },
+    query: "q",
+    hits: [{ ...hits[0], content: "different text" }],
+    rounds,
+    fine: new Set(["a"]),
+  });
+  assert.equal(hidden.answerMessageVisible, false, "round selection alone is not message visibility");
+});
+
+test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
+  const { createFabricContext } = await import("../../packages/memory/fabric/src/context.ts");
+  const { createMemory, createMemoryFabric } = await import("@arnilo/prism-memory-fabric");
+  const { selectInjection } = await import("./retrieval-diagnostics.mjs");
+  assert.deepEqual(selectInjection([]), { ids: [], tokens: 0 });
+  const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s" });
+  const fabric = createMemoryFabric({ memory, consolidate: false });
+  const hits = [];
+  for (const content of ["x".repeat(2400), "short", "tiny"]) {
+    const note = await fabric.remember({ kind: "fact", content });
+    hits.push({ ...note, score: 1 });
+  }
+  const user = {
+    id: "u",
+    kind: "message",
+    timestamp: "2026-10-22T00:00:00Z",
+    message: { role: "user", content: [{ type: "text", text: "question" }] },
+  };
+  const context = { sessionId: "s", session: { id: "s", entries: async () => [user] } };
+  for (const candidates of [hits, hits.slice(1)]) {
+    // Exact boundary: the citation preamble must consume budget too.
+    for (const budgetTokens of [1, 600, selectInjection(candidates, 10000).tokens]) {
+      const draft = await createFabricContext(memory, async () => ({ hits: candidates, explain: [] }), { budgetTokens, topK: 3 }).build(
+        { messages: [user.message] },
+        context,
+      );
+      const rendered = draft.messages[0].content.map((block) => block.text ?? "").join("\n");
+      assert.deepEqual(
+        candidates.filter((hit) => rendered.includes(`[${hit.id}]`)).map((hit) => hit.id),
+        selectInjection(candidates, budgetTokens).ids,
+      );
+    }
+  }
+});
+
+test("delivery_seams_date_prefix_order_store_timestamp_and_iso_period", async () => {
+  const { createMemorySessionStore, definePackage } = await import("@arnilo/prism");
+  const { createFabricContext, recallPeriod } = await import("../../packages/memory/fabric/src/context.ts");
+  const { createMemory } = await import("@arnilo/prism-memory-fabric");
+  const { datedMessages } = await import("./replay.mjs");
+  const sourceDate = "2023-05-30T23:40:00.000Z";
+  const store = createMemorySessionStore();
+  const append = store.append.bind(store);
+  let answerPhase = false;
+  store.append = (entry, options) => append(answerPhase ? { ...entry, timestamp: sourceDate } : entry, options);
+  let observedQuery;
+  let observedTimestamp;
+  const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s" });
+  const projection = createFabricContext(
+    memory,
+    async (query) => {
+      observedQuery = query;
+      return { hits: [], explain: [] };
+    },
+    { query: "user" },
+  );
+  const agent = await createAgent({
+    model: "mock/m",
+    slots: { store },
+    packages: [
+      providerPackage("seam-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            yield providerDone();
+          },
+        },
+      ]),
+      definePackage({
+        name: "delivery-seam-probe",
+        version: "0.13.0",
+        requires: { api: 1 },
+        capabilities: ["session-state"],
+        setup(prism) {
+          prism.hooks.on("context.build", (draft) => ({ ...draft, messages: datedMessages(draft.messages) }), { priority: -1000 });
+          prism.hooks.on(
+            "context.build",
+            async (draft, context) => {
+              observedTimestamp = (await context.session.entries()).findLast((entry) => entry.message?.role === "user").timestamp;
+              return projection.build(draft, context);
+            },
+            { priority: -1100 },
+          );
+        },
+      }),
+    ],
+  });
+  try {
+    const session = await agent.session();
+    answerPhase = true;
+    const response = await session.run({ role: "user", content: [{ type: "text", text: "what did I buy" }], metadata: { sourceDate } });
+    assert.equal(response.error, undefined);
+    assert.equal(observedQuery, `[${sourceDate}] what did I buy`);
+    assert.equal(observedTimestamp, sourceDate);
+    const prompt = `Question date: ${sourceDate}\nwhat did I buy`;
+    assert.equal(recallPeriod(prompt, sourceDate).options.tRef, undefined);
+    // Simulate the proposed regex widening: matching the datetime's date part creates a day window.
+    const widened = /\b\d{4}-\d{2}-\d{2}(?=T|\b)/.exec(prompt)[0];
+    assert.deepEqual(recallPeriod(widened, sourceDate).options.tRef, {
+      from: "2023-05-30T00:00:00.000Z",
+      to: "2023-05-31T00:00:00.000Z",
+    });
+  } finally {
+    await agent.dispose();
+  }
+});

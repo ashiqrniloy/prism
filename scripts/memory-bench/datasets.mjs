@@ -5,6 +5,7 @@ import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import confirmatory from "./confirmatory.json" with { type: "json" };
+import heldoutV2 from "./heldout-v2.json" with { type: "json" };
 import subsets from "./subsets.json" with { type: "json" };
 export class MemoryBenchDatasetError extends Error {
   name = "MemoryBenchDatasetError";
@@ -223,15 +224,36 @@ export function normalizeDataset(rows, suite) {
     }));
   });
 }
+/** Draw from id/ability metadata only; labels and history never participate. */
+export function drawHeldoutV2(questions) {
+  const excluded = new Set([
+    ...Object.values(subsets.longmemeval.base).flat(),
+    ...Object.values(subsets.longmemeval.targeted).flat(),
+    ...Object.values(confirmatory.abilities).flat(),
+  ]);
+  const abilities = {};
+  for (const ability of Object.keys(heldoutV2.abilities)) {
+    const candidates = questions.filter((row) => row.ability === ability && !excluded.has(row.id));
+    if (candidates.length < 20 || new Set(candidates.map((row) => row.id)).size !== candidates.length)
+      throw new MemoryBenchDatasetError(`Held-out v2 stratum is short or duplicated: ${ability}`);
+    const hash = (id) => createHash("sha256").update(`prism-188.8-memory-bench-v2:${id}`).digest("hex");
+    abilities[ability] = candidates
+      .sort((a, b) => hash(a.id).localeCompare(hash(b.id)))
+      .slice(0, 20)
+      .map((row) => row.id);
+  }
+  return abilities;
+}
+
 export function selectQuestions(questions, suite, { subset = "base", ability } = {}) {
   if (subset === "all") return questions;
   let ids;
   if (suite === "longmemeval-s") {
     ids =
-      subset === "confirmatory"
+      subset === "confirmatory" || subset === "development" || subset === "heldout-v2"
         ? ability
-          ? confirmatory.abilities[ability]
-          : Object.values(confirmatory.abilities).flat()
+          ? (subset === "heldout-v2" ? heldoutV2 : confirmatory).abilities[ability]
+          : Object.values((subset === "heldout-v2" ? heldoutV2 : confirmatory).abilities).flat()
         : subset === "targeted"
           ? subsets.longmemeval.targeted[ability]
           : Array.from({ length: 10 }, (_, index) => Object.values(subsets.longmemeval.base).map((ids) => ids[index])).flat();
