@@ -95,7 +95,7 @@
     }
   ],
   "preservedSurface": {
-    "src/cache-helpers.ts": "6b45fd6547b989c9fedae21811a02b035a4ec57d90d5a323c9e6d4f12dd6043c",
+    "src/provider-kit/cache-helpers.ts": "8d2be97f100790c17a938b9d2dcc611f33a4d922c73bde04139abddbb6bca23d",
     "src/provider-events.ts": "3c522f5c1ada948136e0d7c76e13b26d7baf5e3091ebe53aa9da6f8c4a3f60ce",
     "src/cli-init.ts": "107aa06b86315e280f0c6012e42dde9b614172c4c93e4bed522b42b7aac022fc",
 

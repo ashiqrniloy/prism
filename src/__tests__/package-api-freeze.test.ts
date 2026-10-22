@@ -7,15 +7,17 @@ import { CAPABILITIES, type Capability } from "../packages/capabilities.js";
 
 /**
  * Phase 3 freeze (plan 147 Task 6). The package surface Phase 3 builds on is pinned as data.
- * A rename, addition, or removal fails here. The failure names docs/next/packages.md so the
+ * A rename, addition, or removal fails here. The failure names docs/packages.md so the
  * contract and the prose move together.
  */
 
-const DOC = "docs/next/packages.md";
+const DOC = "docs/packages.md";
 
 const FROZEN_PACKAGE_API: readonly (keyof PackageAPI)[] = [
   "name",
   "config",
+  "configSources",
+  "packages",
   "hooks",
   "slots",
   "tools",
@@ -71,6 +73,10 @@ const FROZEN_LOAD_ERROR_CODES: readonly PackageLoadErrorCode[] = [
   "state_not_json",
   "state_too_large",
   "state_not_ready",
+  "unknown_package",
+  "package_disabled",
+  "self_instance",
+  "registration_closed",
 ];
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -80,10 +86,10 @@ type _capabilities = Equal<Capability, (typeof FROZEN_CAPABILITIES)[number]>;
  * Phase 4 (plan 150 Task 4): a code instance's config is the `code` layer, a `loadManifest` instance's is the
  * `manifest` layer, and `PackageInstance.source` says which. Changing either fails here on purpose.
  */
-const FROZEN_CONFIG_SOURCES = ["default", "manifest", "code", "host"] as const;
+const FROZEN_CONFIG_SOURCES = ["default", "user", "project", "code", "host"] as const;
 type _sources = Equal<PackageConfigSource, (typeof FROZEN_CONFIG_SOURCES)[number]>;
 type _instance = Equal<keyof PackageInstance, "definition" | "config" | "optional" | "source">;
-type _source = Equal<keyof PackageSource, "kind" | "scope" | "assigns">;
+type _source = Equal<keyof PackageSource, "kind" | "scope" | "assigns" | "scopes">;
 const _frozen: [_codes, _capabilities, _sources, _instance, _source] = [true, true, true, true, true];
 
 const RETIRED_ROOT_EXPORTS = [
@@ -108,6 +114,8 @@ describe("package API freeze", () => {
     const probe: Record<keyof PackageAPI, true> = {
       name: true,
       config: true,
+      configSources: true,
+      packages: true,
       hooks: true,
       slots: true,
       tools: true,

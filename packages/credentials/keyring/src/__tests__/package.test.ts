@@ -9,12 +9,11 @@ import {
   type AuthContext,
   createAgent,
   definePackage,
-  type HostUiRequest,
   type PackageInput,
   type Secret,
 } from "@arnilo/prism";
 import { packageConformance } from "@arnilo/prism/testing";
-import { openai } from "@arnilo/prism-provider-openai";
+import { hyper } from "@arnilo/prism-provider-hyper";
 import keyringDefinition, {
   createKeyringCredentialResolver,
   KEYRING_DEFAULT_SERVICE,
@@ -51,6 +50,7 @@ function credentialProbe(refs: readonly string[], out: Record<string, Secret | u
   return definePackage({
     name: "@test/credential-probe",
     version: "1.0.0",
+    requires: { api: 1 },
     capabilities: ["credentials"],
     setup: async (prism) => {
       for (const ref of refs) {
@@ -69,6 +69,7 @@ function secretAsker(ref: string, outcome: { answer?: unknown; error?: unknown }
   return definePackage({
     name: "@test/secret-asker",
     version: "1.0.0",
+    requires: { api: 1 },
     capabilities: ["host-ui"],
     setup: async (prism) => {
       try {
@@ -84,6 +85,7 @@ function secretAsker(ref: string, outcome: { answer?: unknown; error?: unknown }
 const secondClaimant = definePackage({
   name: "@test/credentials-fixture",
   version: "1.0.0",
+  requires: { api: 1 },
   capabilities: ["slot:credentials"],
   setup: (prism) => {
     prism.slots.credentials.provide({ resolve: () => ({ type: "api_key", value: "fixture" }) });
@@ -102,46 +104,12 @@ function authCredentials(resolver: ReturnType<typeof createKeyringCredentialReso
   };
 }
 
-/** A host UI that answers every request, for flows that need `open-url`. */
-function answeringUi(): AuthContext["host"] {
-  return {
-    ui: {
-      async request(request) {
-        void (request as HostUiRequest);
-        return { status: "answered", value: undefined } as never;
-      },
-    },
-  };
-}
 
-/** Routes the Codex device-code and token endpoints; any other request is a test failure. */
-function oauthFetch(): typeof fetch {
-  return (async (input: RequestInfo | URL) => {
-    const url = String(input);
-    if (url.endsWith("/device/code")) {
-      return new Response(
-        JSON.stringify({
-          device_code: "device-1",
-          user_code: "ABCD-1234",
-          verification_uri: "https://example.test/device",
-          expires_in: 900,
-          interval: 1,
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    }
-    if (url.endsWith("/oauth/token")) {
-      return new Response(JSON.stringify({ access_token: "codex-access-token", refresh_token: "codex-refresh-token", expires_in: 900 }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }
-    throw new Error(`unexpected oauth request: ${url}`);
-  }) as typeof fetch;
-}
-
-function responsesSse(): ReadableStream<Uint8Array> {
-  const events = [{ type: "response.output_text.delta", delta: "hello" }, { type: "response.completed" }];
+function hyperChatSse(): ReadableStream<Uint8Array> {
+  const events = [
+    { choices: [{ delta: { content: "hello" } }] },
+    { choices: [{ delta: {}, finish_reason: "stop" }] },
+  ];
   const text = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join("")}data: [DONE]\n\n`;
   return new ReadableStream({
     start(controller) {
@@ -214,43 +182,32 @@ describe("@arnilo/prism-credentials-keyring package", () => {
     }
   });
 
-  it("oauth_tokens_persist_through_keyring", async () => {
+  it("persisted_credentials_resolve_through_hyper_provider", async () => {
     const config = fileBackend();
-    // 1. The host runs the login outside a run and persists through the same backend the package opens.
+    // 1. The store holds a persisted credential.
     const store = await openEncryptedCredentialStore({ path: config.file.path, getPassphrase: () => "test-passphrase" });
-    const bootstrap = await createAgent({
-      model: { provider: "openai-codex", model: "gpt-5.1-codex" },
-      packages: [openai({ oauth: { fetch: oauthFetch(), now: () => 0, sleep: async () => {} } })],
-      host: answeringUi(),
-    });
-    const method = bootstrap.models.resolve("openai-codex/gpt-5.1-codex").provider.auth?.[0];
-    assert.ok(method !== undefined && method.kind === "oauth", "openai-codex carries an oauth auth descriptor");
-    await method.login({ host: answeringUi(), credentials: authCredentials(createKeyringCredentialResolver({ store })) });
-    await bootstrap.dispose();
+    await store.set({ name: "hyper", credential: { type: "api_key", value: "hyper-persisted-token" } });
 
-    const persisted = await store.get({ name: "openai-codex" });
-    assert.equal(persisted?.value, "codex-access-token", "the access token persisted through the keyring");
-    assert.equal(persisted?.metadata?.refresh, "codex-refresh-token", "the refresh token survives in metadata");
-
-    // 2. A later agent that lists the keyring package reads the persisted token through the slot.
+    // 2. An agent that lists the keyring package and hyper provider resolves the persisted token through the slot.
     let captured: Headers | undefined;
     const agent = await createAgent({
-      model: { provider: "openai-codex", model: "gpt-5.1-codex" },
+      model: { provider: "hyper", model: "hyper/hyper" },
       packages: [
         keyring(config),
-        openai({
+        hyper({
+          apiKey: "keyring:hyper",
           fetch: (async (_url: unknown, init: RequestInit) => {
             captured = new Headers(init.headers);
-            return new Response(responsesSse(), { status: 200 });
+            return new Response(hyperChatSse(), { status: 200 });
           }) as typeof fetch,
         }),
       ],
     });
     try {
-      const session = await agent.session({ id: "codex", create: true });
+      const session = await agent.session({ id: "hyper", create: true });
       const result = await session.run("hello");
       assert.equal(result.status, "completed", JSON.stringify(result));
-      assert.equal(captured?.get("authorization"), "Bearer codex-access-token", "the provider resolved the persisted token");
+      assert.equal(captured?.get("authorization"), "Bearer hyper-persisted-token", "the provider resolved the persisted token");
     } finally {
       await agent.dispose();
     }

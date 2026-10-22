@@ -1,0 +1,101 @@
+[
+  {
+    "method": "POST",
+    "path": "/zen/go/v1/chat/completions",
+    "requestBody": {
+      "model": "mimo-v2.5",
+      "messages": [
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "What is the weather in Tokyo?" }]
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a location",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "location": { "type": "string" }
+              },
+              "required": ["location"]
+            }
+          }
+        }
+      ],
+      "stream": true,
+      "stream_options": { "include_usage": true }
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"id\":\"chatcmpl-ocg-tl-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776010,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":null,\"reasoning_content\":\"The user wants weather for Tokyo. Calling get_weather.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776010,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_ocg_tool_01\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"location\\\":\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776010,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"Tokyo\\\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776010,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776010,\"model\":\"mimo-v2.5\",\"choices\":[],\"usage\":{\"prompt_tokens\":25,\"completion_tokens\":18,\"total_tokens\":43}}\n\ndata: [DONE]\n\n"
+  },
+  {
+    "method": "POST",
+    "path": "/zen/go/v1/chat/completions",
+    "requestBody": {
+      "model": "mimo-v2.5",
+      "messages": [
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "What is the weather in Tokyo?" }]
+        },
+        {
+          "role": "assistant",
+          "content": [
+            {
+              "type": "thinking",
+              "text": "The user wants weather for Tokyo. Calling get_weather.",
+              "signature": "sig_ocg_01"
+            }
+          ],
+          "tool_calls": [
+            {
+              "id": "call_ocg_tool_01",
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"location\":\"Tokyo\"}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call_ocg_tool_01",
+          "content": [
+            {
+              "type": "tool_result",
+              "toolCallId": "call_ocg_tool_01",
+              "content": "{\"temperature\":\"18C\",\"condition\":\"Cloudy\"}"
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get current weather for a location",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "location": { "type": "string" }
+              },
+              "required": ["location"]
+            }
+          }
+        }
+      ],
+      "stream": true,
+      "stream_options": { "include_usage": true }
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"id\":\"chatcmpl-ocg-tl-02\",\"object\":\"chat.completion.chunk\",\"created\":1760776012,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-02\",\"object\":\"chat.completion.chunk\",\"created\":1760776012,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"The weather in Tokyo is currently 18°C and cloudy.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-02\",\"object\":\"chat.completion.chunk\",\"created\":1760776012,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-ocg-tl-02\",\"object\":\"chat.completion.chunk\",\"created\":1760776012,\"model\":\"mimo-v2.5\",\"choices\":[],\"usage\":{\"prompt_tokens\":55,\"completion_tokens\":12,\"total_tokens\":67}}\n\ndata: [DONE]\n\n"
+  }
+]

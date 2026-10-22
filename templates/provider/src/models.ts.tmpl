@@ -1,0 +1,21 @@
+import type { ModelConfig } from "@arnilo/prism";
+
+export interface {{providerPascal}}ModelConfig extends ModelConfig {
+  readonly provider: "{{providerId}}";
+}
+
+export const {{providerId}}Models: readonly {{providerPascal}}ModelConfig[] = [
+  {
+    provider: "{{providerId}}",
+    model: "{{providerId}}-default",
+    displayName: "{{providerPascal}} Default",
+    capabilities: {
+      tools: true,
+      streaming: true,
+    },
+    limits: {
+      contextWindow: 128000,
+      maxOutputTokens: 4096,
+    },
+  },
+];

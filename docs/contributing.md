@@ -1,5 +1,13 @@
 # Contribution quality budgets
 
+## Install
+
+The kernel is the workspace root and links itself (`"@arnilo/prism": "file:."` in the root
+`devDependencies`), so every workspace resolves `@arnilo/prism` through the hoisted root
+`node_modules`. Workspaces declare no `file:` kernel dependency and no `postinstall` symlink.
+Install from the committed lock with `bun ci` (or `bun install`): `scripts/install-idempotence.test.mjs`
+runs in `release:gate` and fails if a plain install rewrites `bun.lock`.
+
 ## What it does
 
 Records the code-quality ceilings a change must not raise, and the procedure for lowering them. Three budgets exist today: the non-null assertion allowance per directory, the public export surface per package, and the benchmark/timing envelopes. All live in `scripts/budgets.json` and are enforced by in-chain gates that run as part of `npm test`.
@@ -29,9 +37,17 @@ Rules:
 
 Benchmark medians and p95 ceilings in `scripts/budgets.json` are non-flaky sanity bounds, not portable SLOs; the startup gate additionally compares a machine-relative ratio so external CPU load cannot fail the suite. `scripts/benchmark.mjs` produces the evidence-of-record numbers.
 
+## Supported provider package requirements
+
+Every provider package in `packages/providers/<vendor>` is subject to the supported-provider gate (`src/__tests__/packaging.test.ts`):
+- **Wire recordings**: a non-empty `src/__tests__/wire/` directory with recorded requests and responses for offline replay.
+- **Offline conformance**: a package test calling `providerConformance({ recordings })` or `systemOneConformance`.
+- **Live scenario suite**: `src/__tests__/live.test.ts` calling `runProviderLiveScenarios` or `runSystemOneLiveScenarios` from `@arnilo/prism/testing`.
+- **Live test matrix**: an active row in `scripts/live-matrix.json` (`providers/<vendor>`).
+
 ## Related APIs
 
 - `scripts/budget-gates.mjs`: `measureNonNullAssertions()`, `evaluateNonNullBudget()`, `measureExportCounts()`, `checkExportBudget()`, and the startup helpers.
 - `scripts/budget-gate.test.mjs`: the in-chain gate, including the negative fixtures that prove each failure mode.
 - `scripts/run-all-tests.mjs`: the stages `npm test` runs (`gate suites` includes the budget gate).
-- [Release and install](release-and-install.md): the release gates that re-assert these budgets before publication.
+- [Release and install](release.md): the release gates that re-assert these budgets before publication.

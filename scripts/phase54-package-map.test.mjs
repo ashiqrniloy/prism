@@ -1,10 +1,10 @@
 // scripts/phase54-package-map.test.mjs
 // Plan 054 Task 1: Meta-test for package freeze and 0.4 consolidation mapping.
 
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { buildPackageMap, generateMarkdown } from "./phase54-package-map.mjs";
 
@@ -15,8 +15,8 @@ test("phase54 package map: exact manifest counts and topology invariants", () =>
 
   // Total current manifests in repo after consolidation and delegated CLI adapter removal.
   assert.ok(
-    [13, 12, 14, 16, 17, 26, 30, 34, 35, 36, 38, 39, 40, 42, 50, 65].includes(map.counts.totalCurrentManifests),
-    "Total repository manifests must be 13, 12, 14, 16, 17, 26, 30, 34, 35, 36, 38, 39, 40, 42, 50 or 65",
+    [13, 12, 14, 16, 17, 26, 30, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 54, 58, 59, 60, 61, 62, 63, 65].includes(map.counts.totalCurrentManifests),
+    "Total repository manifests must be a recorded historical count (plan 174 Tasks 6-7 leave 60)",
   );
   assert.equal(map.counts.baselineManifests, 62, "Baseline 0.3.3 manifests count must be 62");
   assert.equal(map.counts.officeDraftManifests, 3, "Office drafts count must be 3");
@@ -46,7 +46,6 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
 
   const allowedManifests = new Set([
     ...baselineUnion,
-    "@arnilo/prism-core",
     "@arnilo/prism-channels",
     "@arnilo/prism-coding-tools",
     // Plan 106 R4: the hooks.json adapter package, added after the 0.4 consolidation.
@@ -55,16 +54,9 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-agent-sdk",
     // Plan 152 Task 5: adapters that never shipped as a standalone 0.3 package, so the
     // phase54 baseline union cannot name them.
-    "@arnilo/prism-provider-commandcode",
     "@arnilo/prism-provider-hyper",
     "@arnilo/prism-provider-laya",
     "@arnilo/prism-provider-typesafe",
-    // Plan 152 Task 6: cloud/adapter vendors that never shipped as a standalone 0.3 package.
-    "@arnilo/prism-provider-google",
-    "@arnilo/prism-provider-vertex",
-    "@arnilo/prism-provider-azure",
-    "@arnilo/prism-provider-bedrock",
-    "@arnilo/prism-provider-ai-sdk",
     // Plan 152 Task 7: the credentials-slot keyring package, added after the 0.4 consolidation.
     "@arnilo/prism-credentials-keyring",
     // Plan 153 Task 3: the JSONL session store package, moved out of the root `./node/` subpath.
@@ -73,7 +65,49 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-store-codecs",
     "@arnilo/prism-store-sqlite",
     "@arnilo/prism-store-postgres",
-    ...(existsSync(join(rootDir, "packages/prism-work/package.json")) ? ["@arnilo/prism-work"] : []),
+    // Plan 154 Task 3: the coding tools package, moved out of prism-coding-tools/{agent,security}.
+    "@arnilo/prism-tools-coding",
+    // Plan 155 Task 2: the web tools package, moved out of prism-web-tools/{root,brave,exa,firecrawl,obscura}.
+    "@arnilo/prism-tools-web",
+    // Plan 155 Task 3: the browser tools package, moved out of prism-web-tools/browser.
+    "@arnilo/prism-tools-browser",
+    // Plan 155 Task 4: the OpenAPI and computer-use packages, moved out of prism-coding-tools.
+    "@arnilo/prism-tools-openapi",
+    "@arnilo/prism-tools-computer-use",
+    // Plan 154 Task 6: the approval package.
+    "@arnilo/prism-approval",
+    // Plan 159 Task 5: the guardrail-packs package, moved out of the kernel's pack compile path.
+    "@arnilo/prism-guardrail-packs",
+    // Plan 159 Task 6: the governance package, moved out of prism-core's policy subpaths.
+    "@arnilo/prism-governance",
+    "@arnilo/prism-context-files",
+    // Plan 158 Task 7: the context-engineering package, moved out of the kernel's opt-in fields.
+    "@arnilo/prism-context-engineering",
+    // Plan 158 Task 2: the shared memory library, moved out of @arnilo/prism-memory's root.
+    "@arnilo/prism-memory-core",
+    // Plan 158 Task 3: the RAG package, moved out of @arnilo/prism-memory/rag.
+    "@arnilo/prism-memory-rag",
+    // Plan 158 Task 4: the fabric package, moved out of @arnilo/prism-memory/{fabric,scoped}.
+    "@arnilo/prism-memory-fabric",
+    // Plan 158 Task 5: the wiki package, moved out of @arnilo/prism-memory/wiki.
+    "@arnilo/prism-memory-wiki",
+    // Plan 157 Tasks 3-4: the compaction and observational-memory packages.
+    "@arnilo/prism-memory-compaction",
+    "@arnilo/prism-memory-observational",
+    // Plan 159 Task 3: the MCP server host library package.
+    "@arnilo/prism-mcp-server",
+    // Plan 161 Task 2: the ACP host library.
+    "@arnilo/prism-acp",
+    "@arnilo/prism-driver-process",
+    "@arnilo/prism-observability",
+    "@arnilo/prism-delegate",
+    "@arnilo/prism-evals",
+    "@arnilo/prism-devtools",
+    // Plan 174 Task 6: post-0.4 packages that never shipped as a standalone 0.3 package.
+    "@arnilo/prism-remote",
+    "@arnilo/prism-headless",
+    "@arnilo/prism-tools-research",
+    ...(existsSync(join(rootDir, "packages/tools/work/package.json")) ? ["@arnilo/prism-tools-work"] : []),
   ]);
   for (const name of manifestNames) {
     assert.ok(allowedManifests.has(name), `Manifest ${name} must be classified in package map`);
@@ -118,8 +152,7 @@ test("phase54 package map: export baselines exist and match declared surfaces", 
       // Plan 152 Task 6: the retired @arnilo/prism-providers umbrella has no public entrypoint any
       // more (every adapter is a standalone package), so its dist holds only test declarations, which
       // the surface extractor skips. An empty baseline is correct for a package with no public surface.
-      const hasPublicSurface =
-        m.pkg.types !== undefined || m.pkg.main !== undefined || Object.keys(m.pkg.exports ?? {}).length > 0;
+      const hasPublicSurface = m.pkg.types !== undefined || m.pkg.main !== undefined || Object.keys(m.pkg.exports ?? {}).length > 0;
       if (hasPublicSurface) assert.ok(content.length > 0, `Compat baseline file is empty for ${m.pkg.name}`);
     }
   }

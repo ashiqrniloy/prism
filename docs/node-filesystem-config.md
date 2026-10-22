@@ -81,6 +81,6 @@ console.log(config);
 
 ## Related APIs
 
-- [Configuration and manifests](configuration-and-manifests.md): in-memory config layers and merge behavior.
+- [Configuration and manifests](manifest.md): in-memory config layers and merge behavior.
 - [Credentials and redaction](credentials-and-redaction.md): keep credentials out of config files.
-- [Extension kernel and event bus](extensions.md): extension loading remains separate from filesystem config loading.
+- [Extension kernel and event bus](manifest.md): extension loading remains separate from filesystem config loading.

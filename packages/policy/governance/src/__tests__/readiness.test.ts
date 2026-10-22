@@ -1,0 +1,393 @@
+import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import {
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  createStaticTrustPolicy,
+  providerDone,
+  providerTextDelta,
+  type ToolValidator,
+} from "@arnilo/prism";
+import { type AgentIdentity } from "../identity/index.js";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createMockProvider, mockProvider } from "@arnilo/prism/testing";
+import { assertHostCompositionReadiness, HostCompositionError, type HostCompositionOptions, inspectHostComposition } from "../readiness.js";
+
+// Plan 159 Task 7: `AgentConfig.validator` is the kernel `ToolValidator` function form.
+const mockValidator: ToolValidator = () => undefined;
+
+async function validPersonalAgent(options: { redactorCanary?: string } = {}) {
+  const redactor = createSecretRedactor(options.redactorCanary ? [options.redactorCanary] : ["test-secret"]);
+  return await createAgent({
+    id: "personal-agent",
+    ownership: { userId: "alice" },
+    redactor,
+    trust: createStaticTrustPolicy(true),
+    validator: mockValidator,
+    limits: { maxToolRounds: 5 },
+    tools: {
+      add: [
+        {
+          name: "test_tool",
+          description: "Test tool description",
+          parameters: { type: "object", properties: { text: { type: "string" } } },
+          execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "test_tool", value: { ok: true } }),
+        },
+      ],
+    },
+    packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("ok"), providerDone()])])],
+    model: { provider: "mock", model: "test" },
+  });
+}
+
+async function validBusinessAgent(options: { tenantId?: string; redactorCanary?: string } = {}) {
+  const tenantId = options.tenantId ?? "tenant-acme";
+  const redactor = createSecretRedactor(options.redactorCanary ? [options.redactorCanary] : ["corp-secret"]);
+  const identity: AgentIdentity = {
+    tenantId,
+    userId: "worker-1",
+    principal: { kind: "user", id: "worker-1" },
+    scopes: ["worker:run"],
+    verified: true,
+    issuedAt: "2026-09-01T00:00:00.000Z",
+  };
+
+  return await createAgent({
+    id: "business-worker",
+    ownership: { tenantId, userId: "worker-1" },
+    principal: identity.principal,
+    redactor,
+    trust: createStaticTrustPolicy(true),
+    // `createSecureAgent` registered `askEveryTool`; a plain `createAgent` declares the tool gate.
+    hooks: askEveryTool(),
+    validator: mockValidator,
+    limits: { maxToolRounds: 5 },
+    tools: {
+      add: [
+        {
+          name: "biz_task",
+          description: "Executes business task",
+          parameters: { type: "object", properties: { id: { type: "string" } } },
+          execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "biz_task", value: { ok: true } }),
+        },
+      ],
+    },
+    packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("task done"), providerDone()])])],
+    model: { provider: "mock", model: "corp-model" },
+  });
+}
+
+describe("host composition inspection and readiness (plan 073 Task 5; moved in plan 159 Task 7)", () => {
+  it("inspects personal composition and reports effective tools, ownership, and non-durable memory store", async () => {
+    const agent = await validPersonalAgent();
+    const report = inspectHostComposition({
+      profile: "personal",
+      agent,
+      store: createMemorySessionStore(),
+      workspaceRoot: "/home/user/project",
+      sandboxRoots: ["/home/user/project/src", "/home/user/project/tests"],
+      credentialRefs: ["OPENAI_API_KEY", "LOCAL_KEY"],
+    });
+
+    assert.equal(report.profile, "personal");
+    assert.equal(report.ownership.userId, "alice");
+    assert.equal(report.ownership.tenantId, undefined);
+    assert.equal(report.storage.durable, false, "in-memory store must not be reported durable");
+    assert.equal(report.storage.kind, "memory");
+    assert.equal(report.sandbox.isolated, true);
+    assert.equal(report.governance.redactor, true);
+    assert.equal(report.effectiveTools.length, 1);
+    assert.equal(report.effectiveTools[0]?.name, "test_tool");
+    assert.deepEqual(report.credentialReferences, ["OPENAI_API_KEY", "LOCAL_KEY"]);
+    assert.equal(report.readiness.ok, true);
+    assert.deepEqual(report.readiness.errors, []);
+  });
+
+  it("inspects business composition and validates durable storage, tenant ownership, and verified identity", async () => {
+    const agent = await validBusinessAgent({ tenantId: "tenant-globex" });
+    const durableStore = { kind: "postgres", durable: true };
+
+    const report = inspectHostComposition({
+      profile: "business",
+      agent,
+      store: durableStore,
+      workspaceRoot: "/var/workers/tenant-globex",
+      sandboxRoots: ["/var/workers/tenant-globex/work"],
+      credentialRefs: ["BUSINESS_SERVICE_KEY"],
+    });
+
+    assert.equal(report.profile, "business");
+    assert.equal(report.ownership.tenantId, "tenant-globex");
+    assert.equal(report.storage.durable, true);
+    assert.equal(report.storage.kind, "postgres");
+    assert.equal(report.sandbox.isolated, true);
+    assert.equal(report.readiness.ok, true);
+    assert.deepEqual(report.readiness.errors, []);
+  });
+
+  it("reports connected-app identifiers without transport configuration", async () => {
+    const token = "HOST_ONLY_CONNECTED_APP_TOKEN";
+    const connectedApps = {
+      appIds: ["slack"],
+      serverIds: ["slack"],
+      // @ts-expect-error Connected-app inspection accepts identifiers, not transports.
+      transport: { env: { APP_TOKEN: token } },
+    } satisfies NonNullable<HostCompositionOptions["connectedApps"]>;
+    const report = inspectHostComposition({
+      profile: "personal",
+      agent: await validPersonalAgent(),
+      store: createMemorySessionStore(),
+      connectedApps,
+    });
+
+    assert.deepEqual(report.connectedApps, { appIds: ["slack"], serverIds: ["slack"] });
+    assert.equal(JSON.stringify(report).includes(token), false);
+  });
+
+  it("requires verified identity for business connected apps", async () => {
+    const identities: readonly (AgentIdentity | undefined)[] = [
+      undefined,
+      {
+        tenantId: "tenant-acme",
+        userId: "worker-1",
+        principal: { kind: "user", id: "worker-1" },
+        scopes: ["worker:run"],
+        verified: false,
+        issuedAt: "2026-09-01T00:00:00.000Z",
+      } as unknown as AgentIdentity,
+    ];
+
+    for (const identity of identities) {
+      const options = {
+        profile: "business" as const,
+        agent: await createAgent({
+          model: { provider: "mock", model: "m" },
+          packages: [mockProvider([[providerDone()]])],
+          redactor: createSecretRedactor([]),
+          ownership: { tenantId: "tenant-acme", userId: "worker-1" },
+          ...(identity === undefined ? {} : { identity }),
+          hooks: askEveryTool(),
+          trust: createStaticTrustPolicy(true),
+          validator: () => undefined,
+        }),
+        store: { kind: "postgres", durable: true },
+        connectedApps: { appIds: ["slack"], serverIds: ["slack"] },
+      } satisfies HostCompositionOptions;
+
+      const report = inspectHostComposition(options);
+      assert.equal(report.readiness.ok, false);
+      assert.ok(report.readiness.errors.includes("Business connected apps require a verified identity"));
+      assert.throws(
+        () => assertHostCompositionReadiness(options),
+        (error) => error instanceof HostCompositionError && error.message.includes("Business connected apps require a verified identity"),
+      );
+    }
+  });
+
+  it("rejects connected-app identifier lists above the hard cap", () => {
+    assert.throws(
+      () =>
+        inspectHostComposition({
+          connectedApps: {
+            appIds: Array.from({ length: 33 }, (_, index) => `app-${index}`),
+            serverIds: [],
+          },
+        }),
+      (error) => error instanceof HostCompositionError && error.message.includes("at most 32 identifiers"),
+    );
+  });
+
+  it("wrong owner: personal composition rejects missing userId", async () => {
+    await assert.rejects(
+      async () => {
+        assertHostCompositionReadiness({
+          profile: "personal",
+          agent: await createAgent({
+            model: { provider: "mock", model: "m" },
+            packages: [mockProvider([[providerDone()]])],
+            redactor: createSecretRedactor([]),
+            ownership: { tenantId: "some-tenant" }, // no userId
+          }),
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("Personal composition requires userId"),
+    );
+  });
+
+  it("wrong owner: business composition rejects missing tenantId", async () => {
+    await assert.rejects(
+      async () => {
+        assertHostCompositionReadiness({
+          profile: "business",
+          agent: await createAgent({
+            model: { provider: "mock", model: "m" },
+            packages: [mockProvider([[providerDone()]])],
+            redactor: createSecretRedactor([]),
+            ownership: { userId: "alice" }, // no tenantId
+          }),
+          store: { kind: "postgres", durable: true },
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("tenantId in ownership"),
+    );
+  });
+
+  it("wrong owner: business composition rejects identity mismatch with tenant ownership", async () => {
+    const redactor = createSecretRedactor([]);
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [mockProvider([[providerDone()]])],
+      redactor,
+      ownership: { tenantId: "tenant-A" },
+      hooks: askEveryTool(),
+      trust: createStaticTrustPolicy(true),
+      validator: () => undefined,
+    });
+
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "business",
+          agent,
+          identity: {
+            tenantId: "tenant-B-DIFFERENT",
+            principal: { kind: "service", id: "svc-1" },
+            scopes: ["run"],
+            verified: true,
+            issuedAt: "2026-09-01T00:00:00.000Z",
+          },
+          store: { kind: "postgres", durable: true },
+        });
+      },
+      (error) => error instanceof HostCompositionError && (error.message.includes("tenant") || error.message.includes("identity")),
+    );
+  });
+
+  it("memory-only business store: business composition rejects in-memory store", async () => {
+    const agent = await validBusinessAgent();
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "business",
+          agent,
+          store: createMemorySessionStore(), // in-memory
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("durable storage"),
+    );
+  });
+
+  it("missing redactor rejects readiness", async () => {
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [mockProvider([[providerDone()]])],
+      ownership: { userId: "alice" },
+    });
+
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "personal",
+          agent,
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("secret redactor"),
+    );
+  });
+
+  it("missing provider/model rejects readiness", () => {
+    const agent = {
+      ownership: { userId: "alice" },
+      redactor: createSecretRedactor([]),
+    };
+
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "personal",
+          agent,
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("provider or model"),
+    );
+  });
+
+  it("mixed sandbox workspace rejects readiness", async () => {
+    const agent = await validPersonalAgent();
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "personal",
+          agent,
+          workspaceRoot: "/home/user/project",
+          sandboxRoots: ["/home/user/project/src", "/etc/shadow", "/home/other"],
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("Sandbox roots must be contained"),
+    );
+  });
+
+  it("unsupported governance rejects readiness", async () => {
+    const agent = await validBusinessAgent();
+    assert.throws(
+      () => {
+        assertHostCompositionReadiness({
+          profile: "business",
+          agent,
+          store: { kind: "postgres", durable: true },
+          governance: { supported: false },
+        });
+      },
+      (error) => error instanceof HostCompositionError && error.message.includes("Unsupported governance"),
+    );
+  });
+
+  it("inspect performs zero network calls", async () => {
+    // Verify inspection runs synchronously without touching global fetch or network
+    const g = globalThis as Record<string, unknown>;
+    const originalFetch = g.fetch;
+    let fetchCalled = false;
+    g.fetch = () => {
+      fetchCalled = true;
+      throw new Error("Network call prohibited during inspection");
+    };
+
+    try {
+      const agent = await validPersonalAgent();
+      const report = inspectHostComposition({
+        profile: "personal",
+        agent,
+        store: createMemorySessionStore(),
+        connectedApps: { appIds: ["offline"], serverIds: ["offline"] },
+        liveChecks: true,
+      });
+      assert.equal(report.readiness.ok, true);
+      assert.deepEqual(report.connectedApps, { appIds: ["offline"], serverIds: ["offline"] });
+      assert.equal(fetchCalled, false, "inspect must make zero network calls");
+    } finally {
+      g.fetch = originalFetch;
+    }
+  });
+
+  it("secret canaries are absent from inspection output", async () => {
+    const canary = "SECRET_CANARY_VALUE_XYZ_98765";
+    const agent = await validPersonalAgent({ redactorCanary: canary });
+
+    const report = inspectHostComposition({
+      profile: "personal",
+      agent,
+      store: createMemorySessionStore(),
+      credentialRefs: [
+        "OPENAI_API_KEY",
+        `sk-${canary}`, // raw secret format
+        canary, // raw secret value
+      ],
+    });
+
+    const serialized = JSON.stringify(report);
+    assert.equal(serialized.includes(canary), false, "secret canary must not appear in inspection report");
+    assert.equal(serialized.includes("[REDACTED"), true, "secret values must be redacted");
+  });
+});

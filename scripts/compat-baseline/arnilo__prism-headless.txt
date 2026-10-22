@@ -1,0 +1,42 @@
+AnswerQuery	export type { AnswerQuery, RoutedAnswer } from "./answers.js"
+DEFAULT_MAX_ANSWERS	export declare const DEFAULT_MAX_ANSWERS = 1000
+HARD_MAX_ANSWERS	export declare const HARD_MAX_ANSWERS = 100000
+HOST_UI_KINDS	export declare const HOST_UI_KINDS: readonly HostUiRequestKind[]
+HeadlessError	export declare class HeadlessError extends Error
+ResumeWhenAnsweredOptions	export type { ResumeWhenAnsweredOptions, ResumeWhenAnsweredResult } from "./resume.js"
+ResumeWhenAnsweredResult	export type { ResumeWhenAnsweredOptions, ResumeWhenAnsweredResult } from "./resume.js"
+RoutedAnswer	export type { AnswerQuery, RoutedAnswer } from "./answers.js"
+ScheduleInput	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
+ScheduleState	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
+SchedulerClock	export type { SchedulerClock } from "./clock.js"
+SchedulerFiring	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
+SchedulerTarget	export type { ScheduleInput, SchedulerFiring, SchedulerTarget, ScheduleState } from "./state.js"
+answerLimit	export declare function answerLimit(value?: number): number
+createAnswerLog	export declare function createAnswerLog(maxAnswers: number, store?: CheckpointStore, ownership?: OwnershipScope):
+createResumeAuthority	export declare function createResumeAuthority(agent: Agent): ResumeAuthority
+createScheduler	export declare function createScheduler(options: SchedulerOptions): Scheduler
+holdFiringLease	export declare function holdFiringLease(store: LeaseStore, input: LeaseAcquireInput): Promise<
+isConflict	export declare const isConflict: (error: unknown) => boolean
+missedOccurrences	export declare function missedOccurrences(state: ScheduleState, now: number):
+nextCron	export declare function nextCron(expression: string, now: number, tz?: string): string
+pendingDecisionsOf	export declare function pendingDecisionsOf(branch: readonly SessionEntry[]): readonly PendingDecision[]
+policyDefault	export declare function policyDefault(answers?: PolicyAnswers): HostUiRoute
+resumeWhenAnswered	export declare function resumeWhenAnswered(authority: ResumeAuthority, supplied: Pick<Session, "id">, pending: readonly PendingDecision[] | undefined, options: ResumeWhenAnsweredOptions, offer: (request: HostUiRequest, approvalId: string, signal?: AbortSignal, accept?: (answer: HostUiResponse, route: string) => boolean) => Promise<
+routeHostUi	export declare function routeHostUi(routes: readonly HostUiRoute[], options?: RouteHostUiOptions): RoutedHostUi
+runFiring	export declare function runFiring(target: SchedulerTarget, input: string | JsonObject, parentId: string, firingId: string): Promise<SchedulerFiring>
+scheduleStore	export declare function scheduleStore(checkpoints: CheckpointStore, ownership: OwnershipScope):
+systemClock	export declare const systemClock: SchedulerClock
+type HeadlessErrorCode	export { HeadlessError, type HeadlessErrorCode } from "./errors.js"
+type HostUiRoute	export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js"
+type PolicyAnswers	export { type PolicyAnswers, policyDefault } from "./policy.js"
+type ResumeAuthority	export { createResumeAuthority, type ResumeAuthority } from "./authority.js"
+type RouteHostUiOptions	export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js"
+type RoutedHostUi	export { type HostUiRoute, type RoutedHostUi, type RouteHostUiOptions, routeHostUi } from "./route.js"
+type ScheduleInput	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+type ScheduleState	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+type Scheduler	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+type SchedulerClock	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+type SchedulerFiring	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+type SchedulerOptions	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+type SchedulerTarget	export { createScheduler, type ScheduleInput, type Scheduler, type SchedulerClock, type SchedulerFiring, type SchedulerOptions, type SchedulerTarget, type ScheduleState, } from "./scheduler/index.js"
+validInput	export declare function validInput(target: SchedulerTarget, input: unknown): asserts input is string | JsonObject

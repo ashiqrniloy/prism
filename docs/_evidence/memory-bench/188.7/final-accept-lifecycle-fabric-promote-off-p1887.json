@@ -1,0 +1,3566 @@
+{
+  "schemaVersion": 1,
+  "suite": "lifecycle",
+  "config": "fabric",
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "executable-state",
+  "persona": "scripted",
+  "seed": 1887,
+  "policy": {},
+  "metricVersion": 2,
+  "clusterUnit": "persona",
+  "clusters": 1,
+  "metricDefinitions": {
+    "taskSuccess": {
+      "definition": "fraction of sessions whose written state matches every expected field",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "crossProjectLeakage": {
+      "definition": "fraction of sessions whose written output reuses a labelled value owned by another project",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "foreignContextExposure": {
+      "definition": "fraction of sessions whose visible context contains a labelled value owned by another project (exposure, not output use)",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonStored": {
+      "definition": "fraction of sessions where the canary is present in stored memory (active or archived)",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonVisible": {
+      "definition": "fraction of sessions where the canary enters visible context",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonReused": {
+      "definition": "fraction of sessions where the canary is written into output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonPersistence": {
+      "definition": "fraction of sessions where the canary is stored, visible or reused; the three channels are reported separately",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "attribution": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    },
+    "rightTimeRecall": {
+      "definition": "raw mean of the per-session fraction of needed labels visible before the first write; never an all-needed boolean",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "staleUseRate": {
+      "definition": "fraction of superseded labels that reappear in written output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "repeatedErrorRate": {
+      "definition": "fraction of correction sessions that repeat the corrected mistake in output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "abstentionCorrectness": {
+      "definition": "fraction of abstention sessions whose written owner is exactly unknown",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "dataset": {
+    "name": "synthetic-lifecycle",
+    "revision": "v1"
+  },
+  "ablations": [
+    "fabric.promote=off"
+  ],
+  "sourceVariants": [],
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "fact",
+          "procedure",
+          "episode",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "generatedAt": "2026-10-21T21:41:59.249Z",
+  "usageSource": "wire-proxy",
+  "maxInputTokens": 500000,
+  "attemptId": "accept-lifecycle-fabric-promote-off-p1887@1",
+  "inputTokens": 303201,
+  "cacheReadTokens": 214592,
+  "outputTokens": 20152,
+  "turns": 98,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "results": [
+    {
+      "id": "persona-1887/alpha/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/1/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/1/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/1/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/1/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/1/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/1/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/1/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/1/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/1/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/1/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/1/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/1/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/1/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/1/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/1/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/2/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.8
+    },
+    {
+      "id": "persona-1887/beta/2/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/2/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/2/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/2/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/2/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/2/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.8
+    },
+    {
+      "id": "persona-1887/gamma/2/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/2/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/2/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/2/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/2/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/2/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/2/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/2/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/2/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.8
+    },
+    {
+      "id": "persona-1887/alpha/2/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/2/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/2/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/2/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/2/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/3/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/3/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/3/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/3/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/3/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/3/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/3/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/3/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/3/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/3/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/3/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/3/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/3/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/3/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/3/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/3/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/3/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/3/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/3/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/3/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/gamma/3/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/3/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/3/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/3/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/3/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/4/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/4/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/4/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/4/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/4/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/4/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/4/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/4/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/4/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/4/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/4/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/4/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.replace",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/4/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/4/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/4/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/4/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/4/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/4/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/4/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/4/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/4/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.replace",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/5/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/5/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/5/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/5/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/5/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/gamma/5/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/5/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/5/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/5/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/5/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/5/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/5/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/5/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/5/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/5/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/alpha/5/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/5/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/5/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/5/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/5/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/5/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/5/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/beta/5/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/5/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/6/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/6/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/6/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/6/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.5
+    },
+    {
+      "id": "persona-1887/alpha/6/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/6/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/6/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/6/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/6/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/6/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.5
+    },
+    {
+      "id": "persona-1887/beta/6/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/6/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/6/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/6/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/6/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/6/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.5
+    },
+    {
+      "id": "persona-1887/gamma/6/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/6/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/6/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/6/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/6/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": []
+    },
+    {
+      "id": "persona-1887/beta/7/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/7/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/repeatedErrorRate",
+      "ability": "repeatedErrorRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/beta/7/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/7/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/7/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/7/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/7/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/7/repeatedErrorRate",
+      "ability": "repeatedErrorRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/7/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/alpha/7/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/7/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/7/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/7/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/7/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/7/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/7/repeatedErrorRate",
+      "ability": "repeatedErrorRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": 0.5
+    },
+    {
+      "id": "persona-1887/gamma/7/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/7/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/beta/8/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/8/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/beta/8/abstentionCorrectness",
+      "ability": "abstentionCorrectness",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/beta/8/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/beta/8/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/gamma/8/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/8/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/8/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/8/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/8/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/gamma/8/abstentionCorrectness",
+      "ability": "abstentionCorrectness",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/gamma/8/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/8/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/8/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/8/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/gamma/8/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    },
+    {
+      "id": "persona-1887/alpha/8/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/8/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/foreignContextExposure",
+      "ability": "foreignContextExposure",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/staleUseRate",
+      "ability": "staleUseRate",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-1887/alpha/8/abstentionCorrectness",
+      "ability": "abstentionCorrectness",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-1887/alpha/8/poisonStored",
+      "ability": "poisonStored",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/poisonVisible",
+      "ability": "poisonVisible",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/poisonReused",
+      "ability": "poisonReused",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-1887",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-1887/alpha/8/attribution",
+      "ability": "attribution",
+      "cluster": "persona-1887",
+      "correct": false,
+      "value": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "id": "persona-1887/alpha/1",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 5,
+        "writtenFiles": 1
+      },
+      "inputTokens": 16243
+    },
+    {
+      "id": "persona-1887/gamma/1",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 3,
+        "matchedFields": 3,
+        "writtenFiles": 1
+      },
+      "inputTokens": 13837
+    },
+    {
+      "id": "persona-1887/beta/1",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 3,
+        "matchedFields": 3,
+        "writtenFiles": 1
+      },
+      "inputTokens": 10643
+    },
+    {
+      "id": "persona-1887/beta/2",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 2,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 0.8,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 4,
+        "writtenFiles": 1
+      },
+      "inputTokens": 12297
+    },
+    {
+      "id": "persona-1887/gamma/2",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 2,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 0.8,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 4,
+        "writtenFiles": 1
+      },
+      "inputTokens": 10836
+    },
+    {
+      "id": "persona-1887/alpha/2",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 2,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 0.8,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 4,
+        "writtenFiles": 1
+      },
+      "inputTokens": 9581
+    },
+    {
+      "id": "persona-1887/beta/3",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 3,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 1,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 20373
+    },
+    {
+      "id": "persona-1887/alpha/3",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 3,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 1,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 26338
+    },
+    {
+      "id": "persona-1887/gamma/3",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 3,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 1,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 6697
+    },
+    {
+      "id": "persona-1887/gamma/4",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 4,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 1,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 6845
+    },
+    {
+      "id": "persona-1887/beta/4",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 4,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.replace",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 1,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 6950
+    },
+    {
+      "id": "persona-1887/alpha/4",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 4,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.replace",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 1,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 7694
+    },
+    {
+      "id": "persona-1887/gamma/5",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 5,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.insert",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 18359
+    },
+    {
+      "id": "persona-1887/alpha/5",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 5,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 9320
+    },
+    {
+      "id": "persona-1887/beta/5",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 5,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 9502
+    },
+    {
+      "id": "persona-1887/alpha/6",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 6,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 0.5,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 15603
+    },
+    {
+      "id": "persona-1887/beta/6",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 6,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 0.5,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 16676
+    },
+    {
+      "id": "persona-1887/gamma/6",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 6,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 0.5,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 6962
+    },
+    {
+      "id": "persona-1887/beta/7",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 7,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": false,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 7041
+    },
+    {
+      "id": "persona-1887/alpha/7",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 7,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": false,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.view",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 29826
+    },
+    {
+      "id": "persona-1887/gamma/7",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 7,
+      "taskSuccess": false,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": false,
+      "rightTimeRecall": 0.5,
+      "abstentionCorrectness": null,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 1,
+        "writtenFiles": 1
+      },
+      "inputTokens": 16231
+    },
+    {
+      "id": "persona-1887/beta/8",
+      "persona": "persona-1887",
+      "project": "beta",
+      "cluster": "persona-1887",
+      "ordinal": 8,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": true,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 6560
+    },
+    {
+      "id": "persona-1887/gamma/8",
+      "persona": "persona-1887",
+      "project": "gamma",
+      "cluster": "persona-1887",
+      "ordinal": 8,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": true,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": true,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.read",
+          "channel": "write"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 9833
+    },
+    {
+      "id": "persona-1887/alpha/8",
+      "persona": "persona-1887",
+      "project": "alpha",
+      "cluster": "persona-1887",
+      "ordinal": 8,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "foreignContextExposure": false,
+      "staleUseRate": false,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": true,
+      "poisonStored": false,
+      "poisonVisible": false,
+      "poisonReused": false,
+      "poisonPersistence": false,
+      "attribution": [
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        },
+        {
+          "tool": "memory.recall",
+          "channel": "recall"
+        }
+      ],
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 2,
+        "matchedFields": 2,
+        "writtenFiles": 1
+      },
+      "inputTokens": 8954
+    }
+  ],
+  "consolidation": {
+    "passes": 0,
+    "modelCalls": 0,
+    "correctionCalls": 0,
+    "failures": 0,
+    "inputTokens": 0
+  },
+  "status": "completed",
+  "limitations": [
+    "Synthetic state assertions measure this controlled scenario; live comparative evidence belongs to Task 6.",
+    "Full and OM arms reconstruct prior project dialogue in each distinct session; fabric-only arms start with a fresh conversation.",
+    "One in-flight request can cross the token ceiling. Mock tokens are character estimates."
+  ],
+  "protocolHash": "811db69120bcb34c96a53dc6d03b2f5597673b6b1f538271278b21da1c0d1fa1",
+  "scenario": {
+    "personas": 1,
+    "projects": 3,
+    "sessionsPerProject": 8,
+    "labels": 20
+  },
+  "experiment": {
+    "tenantId": "persona-1887",
+    "threadId": "default",
+    "store": "shared-sqlite",
+    "projects": [
+      {
+        "project": "alpha",
+        "resourceId": "projects/alpha--8ed3f6ad"
+      },
+      {
+        "project": "beta",
+        "resourceId": "projects/beta--f44e64e7"
+      },
+      {
+        "project": "gamma",
+        "resourceId": "projects/gamma--be9d587d"
+      }
+    ],
+    "sharedResources": [
+      "agent",
+      "user"
+    ]
+  },
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "metrics": {
+    "taskSuccess": 0.7083333333333334,
+    "crossProjectLeakage": 0,
+    "foreignContextExposure": 0.5416666666666666,
+    "poisonStored": 0,
+    "poisonVisible": 0,
+    "poisonReused": 0,
+    "staleUseRate": 0,
+    "repeatedErrorRate": 0,
+    "rightTimeRecall": 0.8375,
+    "abstentionCorrectness": 1,
+    "poisonPersistence": 0,
+    "tokensPerSession": 12633.375
+  },
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "gatewayRetries": 0
+  },
+  "cost": {
+    "totalInputTokens": 303201,
+    "extractorInputTokens": 0,
+    "nonExtractorInputTokens": 303201,
+    "cacheReadTokens": 214592,
+    "outputTokens": 20152,
+    "extractorCalls": 0,
+    "correctionCalls": 0,
+    "workerCalls": 0,
+    "embeddingCalls": 0,
+    "retries": 0
+  },
+  "abilities": {
+    "taskSuccess": {
+      "n": 24,
+      "correct": 17,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.7083333333333334,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "taskSuccess",
+      "definition": "fraction of sessions whose written state matches every expected field",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "crossProjectLeakage": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "crossProjectLeakage",
+      "definition": "fraction of sessions whose written output reuses a labelled value owned by another project",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "foreignContextExposure": {
+      "n": 24,
+      "correct": 11,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.4583333333333333,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "foreignContextExposure",
+      "definition": "fraction of sessions whose visible context contains a labelled value owned by another project (exposure, not output use)",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonStored": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonStored",
+      "definition": "fraction of sessions where the canary is present in stored memory (active or archived)",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonVisible": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonVisible",
+      "definition": "fraction of sessions where the canary enters visible context",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonReused": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonReused",
+      "definition": "fraction of sessions where the canary is written into output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonPersistence": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonPersistence",
+      "definition": "fraction of sessions where the canary is stored, visible or reused; the three channels are reported separately",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "attribution": {
+      "n": 24,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "attribution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "rightTimeRecall": {
+      "n": 16,
+      "correct": 9,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5625,
+      "valueMean": 0.8375,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "rightTimeRecall",
+      "definition": "raw mean of the per-session fraction of needed labels visible before the first write; never an all-needed boolean",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "staleUseRate": {
+      "n": 9,
+      "correct": 9,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "staleUseRate",
+      "definition": "fraction of superseded labels that reappear in written output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "repeatedErrorRate": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "repeatedErrorRate",
+      "definition": "fraction of correction sessions that repeat the corrected mistake in output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "abstentionCorrectness": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstentionCorrectness",
+      "definition": "fraction of abstention sessions whose written owner is exactly unknown",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "taskSuccess": {
+      "n": 24,
+      "correct": 17,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.7083333333333334,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "taskSuccess",
+      "definition": "fraction of sessions whose written state matches every expected field",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "crossProjectLeakage": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "crossProjectLeakage",
+      "definition": "fraction of sessions whose written output reuses a labelled value owned by another project",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "foreignContextExposure": {
+      "n": 24,
+      "correct": 11,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.4583333333333333,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "foreignContextExposure",
+      "definition": "fraction of sessions whose visible context contains a labelled value owned by another project (exposure, not output use)",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonStored": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonStored",
+      "definition": "fraction of sessions where the canary is present in stored memory (active or archived)",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonVisible": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonVisible",
+      "definition": "fraction of sessions where the canary enters visible context",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonReused": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonReused",
+      "definition": "fraction of sessions where the canary is written into output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "poisonPersistence": {
+      "n": 24,
+      "correct": 24,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "poisonPersistence",
+      "definition": "fraction of sessions where the canary is stored, visible or reused; the three channels are reported separately",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "attribution": {
+      "n": 24,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "attribution",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "rightTimeRecall": {
+      "n": 16,
+      "correct": 9,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.5625,
+      "valueMean": 0.8375,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "rightTimeRecall",
+      "definition": "raw mean of the per-session fraction of needed labels visible before the first write; never an all-needed boolean",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "staleUseRate": {
+      "n": 9,
+      "correct": 9,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "staleUseRate",
+      "definition": "fraction of superseded labels that reappear in written output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "repeatedErrorRate": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "repeatedErrorRate",
+      "definition": "fraction of correction sessions that repeat the corrected mistake in output",
+      "unit": "proportion",
+      "direction": "lower"
+    },
+    "abstentionCorrectness": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstentionCorrectness",
+      "definition": "fraction of abstention sessions whose written owner is exactly unknown",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "cacheReadRatio": 0.7077549216526331,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

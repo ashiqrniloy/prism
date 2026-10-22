@@ -33,6 +33,7 @@ The scenario fails the gate on any envelope breach (`scripts/budgets.json#attent
 ## Recorded numbers
 
 ```json
+
 {
   "fixture": {
     "turns": 8,
@@ -44,17 +45,17 @@ The scenario fails the gate on any envelope breach (`scripts/budgets.json#attent
   "results": [
     {
       "name": "input_tokens_off",
-      "value": 32716,
+      "value": 32548,
       "unit": "tokens"
     },
     {
       "name": "input_tokens_on",
-      "value": 11886,
+      "value": 11718,
       "unit": "tokens"
     },
     {
       "name": "token_reduction",
-      "value": 0.6367,
+      "value": 0.64,
       "unit": "ratio"
     },
     {
@@ -79,32 +80,32 @@ The scenario fails the gate on any envelope breach (`scripts/budgets.json#attent
     },
     {
       "name": "prefix_min_hit_bytes_on",
-      "value": 192,
+      "value": 86,
       "unit": "bytes"
     },
     {
       "name": "uncached_tail_bytes_off",
-      "value": 80298,
+      "value": 79560,
       "unit": "bytes"
     },
     {
       "name": "uncached_tail_bytes_on",
-      "value": 48767,
+      "value": 48029,
       "unit": "bytes"
     },
     {
       "name": "volatile_uncached_tail_bytes",
-      "value": 37759,
+      "value": 27829,
       "unit": "bytes"
     },
     {
       "name": "pinned_uncached_tail_bytes",
-      "value": 18411,
+      "value": 9223,
       "unit": "bytes"
     },
     {
       "name": "volatile_block_resend_bytes",
-      "value": 19348,
+      "value": 18606,
       "unit": "bytes"
     },
     {

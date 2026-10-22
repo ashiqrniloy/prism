@@ -1,6 +1,6 @@
 import { createAgent, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
-import { createAgUiHandler } from "@arnilo/prism-ag-ui";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createAgUiHandler } from "@arnilo/prism-ag-ui";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
 
@@ -9,17 +9,21 @@ export async function demo() {
   let turn = 0;
   const agent = await createAgent({
     model: { provider: "mock", model: "mock" },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate() {
-        if (++turn === 1) {
-          yield { type: "tool_call" as const, call: toolCallContent("paint-1", "paint", {}) };
-        } else {
-          yield providerTextDelta("done");
-        }
-        yield providerDone();
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            if (++turn === 1) {
+              yield { type: "tool_call" as const, call: toolCallContent("paint-1", "paint", {}) };
+            } else {
+              yield providerTextDelta("done");
+            }
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     tools: {
       add: [
         {
@@ -46,15 +50,9 @@ export async function demo() {
     },
   });
 
-  const handle = createAgUiHandler({
+  const handle = createAgUiHandler(agent, {
     authorize: () => ({ ownership: { userId: "demo" } }),
-    sessionFactory: () => agent.session({ id: "ag-ui-a2ui", create: true }),
     a2ui: { catalogId, mode: "fixed-schema" },
-    input: {
-      project: ({ a2uiActions }) => ({
-        messages: a2uiActions?.[0] ? `action:${a2uiActions[0].actionName}` : "paint please",
-      }),
-    },
   });
 
   const response = await handle(

@@ -1,14 +1,15 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createMemoryCheckpointStore, createSecretRedactor, type JsonObject } from "@arnilo/prism";
+import { createSecretRedactor, type JsonObject } from "@arnilo/prism";
+import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
 import {
   CODING_GOAL_VERIFY_SUSPEND_REASON,
   type CodingCheckSummary,
   type CodingHandoffSummary,
   runCodingGoalVerify,
-} from "@arnilo/prism-coding-tools/agent";
-import { createWorkflowCheckpoints } from "@arnilo/prism-core/runtime/workflows";
+} from "@arnilo/prism-tools-coding";
+import { createWorkflowCheckpoints } from "@arnilo/prism-workflows";
 
 /**
  * Network-free goal→verify composition.
@@ -16,7 +17,17 @@ import { createWorkflowCheckpoints } from "@arnilo/prism-core/runtime/workflows"
  * Plan Markdown + named checks + workflow suspend/approve + bounded handoff.
  * No Goal table, no second agent runtime, no network.
  */
-export async function demo() {
+/** The demo result. Explicit so the inferred type stays local (TS2883 in the examples typecheck). */
+interface GoalVerifyDemoResult {
+  readonly status: string;
+  readonly suspendedAt: string | undefined;
+  readonly codingStatus: string | undefined;
+  readonly changedPathCount: number | undefined;
+  readonly noCredentialsInState: boolean;
+  readonly codingKeys: string[];
+}
+
+export async function demo(): Promise<GoalVerifyDemoResult> {
   const cwd = await mkdtemp(join(tmpdir(), "prism-coding-goal-verify-"));
   try {
     const redactor = createSecretRedactor([]);

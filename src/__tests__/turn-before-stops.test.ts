@@ -1,14 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEvent, Session, CheckpointStore, ProviderRequest, RunLedger, RunOptions, RunRecord } from "../contracts.js";
+import type { AgentEvent, Session, ProviderRequest, RunLedger, RunOptions, RunRecord } from "../contracts.js";
 import {
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
-  loadAgentRunState,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   toolCallContent,
   type HookRegistrar,
   type TurnBeforePayload,
@@ -109,7 +106,6 @@ async function turnGateAgent(options: {
 
 describe("turn.before stops", () => {
   it("turn_before_stop_replaces_turn_policy", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const requests: ProviderRequest[] = [];
     const { ledger, runs } = createMemoryLedger();
     let calls = 0;
@@ -123,10 +119,7 @@ describe("turn.before stops", () => {
     });
     const session = await agent.session({ id: "stop-session", create: true });
 
-    const stopped = await runCapturingId(session, "investigate", {
-      runLedger: ledger,
-      runState: { checkpoints, definitionRevision: "1", checkpointPolicy: "every-turn" },
-    });
+    const stopped = await runCapturingId(session, "investigate", { runLedger: ledger });
     // Two boundaries: turn 1 (continue) and turn 2 (stop) — one consult per provider turn.
     assert.equal(calls, 2, "the gate is consulted once per turn boundary");
     assert.ok(stopped.result, String(stopped.error));
@@ -142,19 +135,9 @@ describe("turn.before stops", () => {
     assert.equal(finishRecord.stopReason, "hook_stop");
     assert.equal(finishRecord.stopDetail, "l1-first-plan-paint");
 
-    const state = await loadAgentRunState(checkpoints, { runId: stopped.runId });
-    assert.equal(state.state.status, "succeeded");
-    assert.equal(state.state.stopReason, "hook_stop");
-
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: stopped.runId, sessionId: "stop-session" },
-      { decision: "continue", expectedVersion: state.record.version },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "completed");
-    assert.equal(resumed.stopReason, undefined, "the resumed leg runs without a stop");
-    assert.equal(requests.length, 2, "the resumed leg runs the next provider turn");
+    // The terminal event carries the stop; plan 168 Task 5 retired the `every-turn` checkpoint that
+    // used to make a stopped run resumable, so a fresh run reports no durable state.
+    assert.equal(stopped.result.runState, undefined);
   });
 
   it("keeps requests byte-identical between no gate and an always-continue gate", async () => {
@@ -185,17 +168,8 @@ describe("turn.before stops", () => {
     );
   });
 
-  it("fails closed with no continuable checkpoint when the handler throws", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("fails closed when the handler throws", async () => {
     const requests: ProviderRequest[] = [];
-    let writes = 0;
-    const counting: CheckpointStore = {
-      ...checkpoints,
-      async saveCheckpoint(input) {
-        writes += 1;
-        return checkpoints.saveCheckpoint(input);
-      },
-    };
     const { agent } = await turnGateAgent({
       requests,
       onTurnBefore: (hooks) =>
@@ -206,34 +180,16 @@ describe("turn.before stops", () => {
     });
     const session = await agent.session({ id: "throwing-session", create: true });
 
-    const failed = await runCapturingId(session, "go", {
-      runState: { checkpoints: counting, definitionRevision: "1", checkpointPolicy: "every-turn" },
-    });
+    const failed = await runCapturingId(session, "go", {});
     assert.ok(failed.result, "a failed run returns its result");
     assert.equal(failed.result.status, "failed");
     assert.match(failed.result.error?.message ?? "", /gate bug/);
     assert.equal(failed.result.stopReason, undefined);
+    // Fail closed: a thrown gate ends the run terminal, with no provider turn and nothing to continue.
     assert.equal(requests.length, 1, "the throwing boundary never reached the provider");
-    assert.ok(writes >= 1, "the failure still writes a terminal checkpoint");
-
-    const state = await loadAgentRunState(counting, { runId: failed.runId });
-    assert.equal(state.state.status, "failed");
-    assert.equal(state.state.stopReason, undefined, "a failed run is never marked continuable");
-    // Fail closed: a thrown gate cannot be continued, and writes no provider turn.
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          { runId: failed.runId, sessionId: "throwing-session" },
-          { decision: "continue", expectedVersion: state.record.version },
-          { checkpoints: counting, definitionRevision: "1" },
-        ),
-      /Stale or non-running/,
-    );
   });
 
-  it("carries a steer queued before the stop into the resumed turn exactly once", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("carries a steer queued before the stop into the next leg exactly once", async () => {
     const requests: ProviderRequest[] = [];
     const steer = "also check the margin metric";
     const { agent, attach } = await turnGateAgent({
@@ -243,28 +199,20 @@ describe("turn.before stops", () => {
     });
     const session = attach(await agent.session({ id: "steer-session", create: true }));
 
-    const stopped = await runCapturingId(session, "investigate", {
-      runState: { checkpoints, definitionRevision: "1", checkpointPolicy: "every-turn" },
-    });
+    const stopped = await runCapturingId(session, "investigate", {});
     assert.ok(stopped.result, String(stopped.error));
     assert.equal(stopped.result.stopReason, "hook_stop");
     assert.equal(requests.length, 1);
     assert.equal(textOccurrences(requests.at(0) as ProviderRequest, steer), 0, "the stopped leg never sends the steer");
-    const state = await loadAgentRunState(checkpoints, { runId: stopped.runId });
-    assert.equal(state.state.stopReason, "hook_stop");
 
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: stopped.runId, sessionId: "steer-session" },
-      { decision: "continue", expectedVersion: state.record.version },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "completed");
+    // The queued steer is in the session history, so the next leg on this session delivers it once.
+    const resumed = await runCapturingId(session, "continue", {});
+    assert.equal(resumed.result?.status, "completed");
     const resumedRequest = requests[1];
-    assert.ok(resumedRequest, "the resumed leg made a provider request");
+    assert.ok(resumedRequest, "the next leg made a provider request");
     assert.equal(textOccurrences(resumedRequest, steer), 1, "the steer is delivered exactly once");
     assert.equal(
-      resumed.content.filter((block) => block.type === "text").length,
+      resumed.result?.content.filter((block) => block.type === "text").length,
       1,
       "the resumed leg produced exactly one assistant message",
     );

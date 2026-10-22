@@ -13,11 +13,8 @@
  *   bun scripts/benchmark.mjs --list
  *   bun scripts/benchmark.mjs --scenario <name>            # report to stdout
  *   bun scripts/benchmark.mjs --scenario <name> --out <file>
- *   PRISM_TEST_POSTGRES_URL="postgresql://…" bun scripts/benchmark.mjs --scenario phase6-postgres
  *
- * Protected scenarios (phase6-postgres, phase7-postgres) require
- * PRISM_TEST_POSTGRES_URL and fail loud without it — blocked-gate semantics,
- * never a silent skip. Exit code 1 on scenario failure or ceiling breach.
+ * Exit code 1 on scenario failure or ceiling breach.
  */
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -27,12 +24,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 
 export const SCENARIOS = {
-  "phase6-postgres": { module: "benchmark-scenarios/phase6-postgres.mjs", phase: 6, protected: true },
-  "phase7-postgres": { module: "benchmark-scenarios/phase7-postgres.mjs", phase: 7, protected: true },
   "phase8-loops-hitl": { module: "benchmark-scenarios/phase8-loops-hitl.mjs", phase: 8, protected: false },
   "workflow-loop": { module: "benchmark-scenarios/workflow-loop.mjs", phase: 45, protected: false },
   "phase9-coding": { module: "benchmark-scenarios/phase9-coding.mjs", phase: 9, protected: false },
-  "phase10-acp": { module: "benchmark-scenarios/phase10-acp.mjs", phase: 10, protected: false },
   "phase11-auth": { module: "benchmark-scenarios/phase11-auth.mjs", phase: 11, protected: false },
   "multi-agent-runtime": { module: "benchmark-scenarios/multi-agent-runtime.mjs", phase: 35, protected: false },
   "tool-search": { module: "benchmark-scenarios/tool-search.mjs", phase: 41, protected: false },

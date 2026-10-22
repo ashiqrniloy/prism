@@ -23,19 +23,25 @@ export function dispatchableToolCalls(calls: readonly ToolCallContent[]): readon
 }
 
 /** Dispatch tool calls with bounded concurrency; append transcript rows in call order. */
-export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[], ctx: ToolDispatchContext): Promise<void> {
-  if (calls.length === 0) return;
+export async function dispatchToolCallsInOrder(
+  calls: readonly ToolCallContent[],
+  ctx: ToolDispatchContext,
+): Promise<readonly ToolResult[]> {
+  if (calls.length === 0) return [];
   await ctx.chargeToolRound?.(calls);
   const concurrency = calls.some((call) => ctx.isToolCallExclusive?.(call)) ? 1 : Math.max(1, Math.min(ctx.toolConcurrency, calls.length));
   if (concurrency === 1) {
+    const serial: ToolResult[] = [];
     for (const call of calls) {
       const result = await ctx.dispatchToolCall(call);
+      serial.push(result);
       await appendToolResultMessage(result, ctx);
     }
-    return;
+    return serial;
   }
 
   const results: (ToolResult | undefined)[] = new Array(calls.length);
+  const returned: ToolResult[] = [];
   let nextIndex = 0;
   let stopped = false;
   let firstFailure: unknown;
@@ -69,6 +75,7 @@ export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[]
   for (let index = 0; index < calls.length; index += 1) {
     const result = results[index];
     if (result) {
+      returned.push(result);
       await appendToolResultMessage(result, ctx);
       continue;
     }
@@ -77,9 +84,12 @@ export async function dispatchToolCallsInOrder(calls: readonly ToolCallContent[]
     if (index === failureIndex && isRunControlError(firstFailure)) continue;
     const call = calls[index];
     if (call === undefined) continue;
-    await appendToolResultMessage(syntheticFailureResult(call, index < claimed ? firstFailure : undefined), ctx);
+    const synthetic = syntheticFailureResult(call, index < claimed ? firstFailure : undefined);
+    returned.push(synthetic);
+    await appendToolResultMessage(synthetic, ctx);
   }
   if (stopped) throw firstFailure;
+  return returned;
 }
 
 /** Run-level control errors rethrown by `dispatchToolCall` (mirrors `src/tools.ts`). */

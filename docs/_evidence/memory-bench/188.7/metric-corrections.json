@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "provenance": "read-only recomputation of existing JSON; no paid calls",
+  "generatedAt": "2026-10-21T16:47:57.064Z",
+  "metricVersion": 2,
+  "reports": {
+    "lifecycleFull": {
+      "path": "docs/_evidence/memory-bench/task6/v2-rerun-lifecycle-full.json",
+      "sha256": "fc8aa8f2c1d9dcd47e9ac8a29aefacbe7b39d0ba43e9ba54bcebe3d3923d00e1"
+    },
+    "lifecycleFabric": {
+      "path": "docs/_evidence/memory-bench/task6/v2-rerun-lifecycle-fabric.json",
+      "sha256": "0fcd69a4617aba84d9bbbefa4ef57556bf96fbf9a13181efc6633642a17e35b3"
+    },
+    "lmeFull": {
+      "path": "docs/_evidence/memory-bench/task6/v2-rerun-longmemeval-s-full.json",
+      "sha256": "a90e73a34a3f5d1df3e25bdd01dc0963def392edba3edc1d46a7ac1181c1ba98"
+    },
+    "lmeFabric": {
+      "path": "docs/_evidence/memory-bench/task6/v2-rerun-longmemeval-s-fabric.json",
+      "sha256": "9742b7d9aa1d99aa6189a1c7042fd8aadfa4f5ea73123c357a9f7a2e5afa0ecc"
+    }
+  },
+  "correctedLifecycle": {
+    "rightTimeRecall": {
+      "ability": "rightTimeRecall",
+      "definition": {
+        "definition": "raw mean of the per-session fraction of needed labels visible before the first write; never an all-needed boolean",
+        "unit": "proportion",
+        "direction": "higher"
+      },
+      "n": 16,
+      "rawMeans": {
+        "full": 0.2625,
+        "fabric": 0.90625
+      },
+      "rawDiffFabricMinusFull": 0.64375,
+      "allNeededBooleanMeans": {
+        "full": 0.125,
+        "fabric": 0.875
+      }
+    },
+    "crossProjectLeakage": {
+      "ability": "crossProjectLeakage",
+      "definition": {
+        "definition": "fraction of sessions whose written output reuses a labelled value owned by another project",
+        "unit": "proportion",
+        "direction": "lower"
+      },
+      "n": 24,
+      "rawMeans": {
+        "full": 0,
+        "fabric": 0.9166666666666666
+      },
+      "rawDiffFabricMinusFull": 0.9166666666666666,
+      "allNeededBooleanMeans": {
+        "full": 1,
+        "fabric": 0.08333333333333333
+      }
+    },
+    "clusters": {
+      "stored": 3,
+      "unit": "persona/project",
+      "reason": "the three project stores share one persona user/agent store, so projects are not independent",
+      "correctedUnit": "persona",
+      "correctedCount": 1,
+      "confirmatory": false
+    }
+  },
+  "correctedPublic": {
+    "longmemevalS": {
+      "accuracy": {
+        "definition": {
+          "definition": "fraction of answers accepted by the configured judge (judge accuracy, not token F1)",
+          "unit": "proportion",
+          "direction": "higher"
+        },
+        "n": 70,
+        "full": 0.8285714285714286,
+        "fabric": 0.32857142857142857,
+        "diffFabricMinusFull": -0.5
+      },
+      "evidenceGranularity": {
+        "available": "answer-session rounds and message-level gold where the dataset exposes it",
+        "unavailable": "fine dia-id recall for historical reports: hit ids were not retained with gold provenance",
+        "correctedReports": "new reports write answerSessionHitAtK/evidenceRoundCoverage/evidenceAllRequired separately"
+      },
+      "clusters": {
+        "stored": "per question",
+        "correctedUnit": "shared haystack session-set hash",
+        "confirmatory": false
+      }
+    }
+  },
+  "power": {
+    "pairedDesign": "paired-cluster-signflip-simulation",
+    "effect": 0.5,
+    "clusterSize": 8,
+    "icc": 1,
+    "threeClusters": 0,
+    "twelveClusters": 1,
+    "note": "three dependent project clusters previously received an independent-arm approximation; paired simulation cannot reach alpha with three clusters"
+  },
+  "limitations": [
+    "Historical reports carry no metricVersion or protocolHash; comparisons remain descriptive and are never confirmatory.",
+    "Right-time recall is a raw per-session fraction mean; the old all-needed Boolean (+0.75) is a different estimand, not this +0.64375.",
+    "Fine evidence recall cannot be regraded for old reports because recalled hit ids were not mapped to gold provenance.",
+    "Cross-project exposure and output use are now separate metrics; stored, visible and reused poison are separate channels."
+  ]
+}

@@ -7,10 +7,10 @@ import {
   mapOpenAIChatUsage,
   serializeOpenAIChatMessage,
   serializeOpenAIChatStructuredOutput,
-  serializeOpenAIResponsesStructuredOutput,
   serializeOpenAITool,
-  serializeToolResultJson,
+  serializeToolResultText,
 } from "../provider-kit/openai-primitives.js";
+import { openAIChatBody } from "../provider-kit/codecs/openai-chat.js";
 
 describe("openai provider primitives", () => {
   it("canonicalizes shuffled tool schema keys and preserves semantic arrays", () => {
@@ -77,8 +77,8 @@ describe("openai provider primitives", () => {
         { type: "text", text: "file AGENTS.md" },
       ],
     };
-    assert.equal(serializeToolResultJson(message), JSON.stringify("file AGENTS.md"));
-    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify("file AGENTS.md"));
+    assert.equal(serializeToolResultText(message), "file AGENTS.md");
+    assert.equal(serializeOpenAIChatMessage(message).content, "file AGENTS.md");
     assert.notEqual(serializeOpenAIChatMessage(message).content, "null");
   });
 
@@ -103,9 +103,6 @@ describe("openai provider primitives", () => {
     assert.deepEqual(serializeOpenAIChatStructuredOutput(options), {
       type: "json_schema",
       json_schema: { name: "answer", schema: options.schema, strict: true },
-    });
-    assert.deepEqual(serializeOpenAIResponsesStructuredOutput(options), {
-      format: { type: "json_schema", name: "answer", schema: options.schema, strict: true },
     });
     const body: Record<string, unknown> = {};
     applyOpenAIChatStructuredOutput(body, options);
@@ -142,5 +139,183 @@ describe("openai provider primitives", () => {
       content: [{ type: "image", url: "https://example.test/x.png" }],
     };
     assert.throws(() => serializeOpenAIChatMessage(message, {}), /does not declare image input capability/);
+  });
+
+  it("chat_codec_reasoning_replay_modes", () => {
+    const message: Message = {
+      role: "assistant",
+      content: [
+        { type: "thinking", text: "step-by-step logic" },
+        { type: "text", text: "final answer" },
+      ],
+    };
+
+    // 1. "reasoning_content": preserves thinking in reasoning_content field
+    const bodyReplay = openAIChatBody(
+      {
+        model: { provider: "test", model: "m", capabilities: { reasoning: true } },
+        messages: [message],
+      },
+      { reasoningReplay: "reasoning_content", preserveThinking: () => true },
+    );
+    const msgReplay = (bodyReplay.messages as any[])[0];
+    assert.equal(msgReplay.role, "assistant");
+    assert.equal(msgReplay.content, "final answer");
+    assert.equal(msgReplay.reasoning_content, "step-by-step logic");
+
+    // 2. "fold": folds thinking into content as text
+    const bodyFold = openAIChatBody(
+      {
+        model: { provider: "test", model: "m", capabilities: { reasoning: true } },
+        messages: [message],
+      },
+      { reasoningReplay: "fold", preserveThinking: () => true },
+    );
+    const msgFold = (bodyFold.messages as any[])[0];
+    assert.equal(msgFold.role, "assistant");
+    assert.deepEqual(msgFold.content, [
+      { type: "text", text: "step-by-step logic" },
+      { type: "text", text: "final answer" },
+    ]);
+    assert.equal(msgFold.reasoning_content, undefined);
+
+    // 3. "drop": drops thinking completely
+    const bodyDrop = openAIChatBody(
+      {
+        model: { provider: "test", model: "m", capabilities: { reasoning: true } },
+        messages: [message],
+      },
+      { reasoningReplay: "drop" },
+    );
+    const msgDrop = (bodyDrop.messages as any[])[0];
+    assert.equal(msgDrop.role, "assistant");
+    assert.equal(msgDrop.content, "final answer");
+    assert.equal(msgDrop.reasoning_content, undefined);
+  });
+
+  it("chat_codec_image_gate_rejects_without_capability", () => {
+    const message: Message = {
+      role: "user",
+      content: [{ type: "image", url: "https://example.test/img.png" }],
+    };
+
+    // "capability-gated" fails without capability
+    assert.throws(
+      () =>
+        openAIChatBody(
+          {
+            model: { provider: "test", model: "m", capabilities: { input: ["text"] } },
+            messages: [message],
+          },
+          { imageInput: "capability-gated" },
+        ),
+      /does not declare image input capability/,
+    );
+
+    // "always" allows image without checking capability
+    const bodyAlways = openAIChatBody(
+      {
+        model: { provider: "test", model: "m", capabilities: { input: ["text"] } },
+        messages: [message],
+      },
+      { imageInput: "always" },
+    );
+    const msgAlways = (bodyAlways.messages as any[])[0];
+    assert.deepEqual(msgAlways.content, [
+      { type: "image_url", image_url: { url: "https://example.test/img.png" } },
+    ]);
+  });
+
+  it("chat_codec_effort_snaps_to_declared_levels", () => {
+    // Model declares ["low", "medium", "high"]
+    // "minimal" is below minimum -> snaps to "low"
+    const bodySnapped = openAIChatBody({
+      model: {
+        provider: "test",
+        model: "m",
+        capabilities: { thinkingLevels: ["low", "medium", "high"] },
+      },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "minimal" } },
+    });
+    assert.equal(bodySnapped.reasoning_effort, "low");
+
+    // Exact level stays unchanged
+    const bodyHigh = openAIChatBody({
+      model: {
+        provider: "test",
+        model: "m",
+        capabilities: { thinkingLevels: ["low", "medium", "high"] },
+      },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "high" } },
+    });
+    assert.equal(bodyHigh.reasoning_effort, "high");
+
+    // Undeclared model allows any value
+    const bodyUndeclared = openAIChatBody({
+      model: {
+        provider: "test",
+        model: "m",
+      },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      options: { compat: { reasoning_effort: "custom-effort" } },
+    });
+    assert.equal(bodyUndeclared.reasoning_effort, "custom-effort");
+  });
+
+  it("chat_codec_max_tokens_field_options", () => {
+    const bodyDefault = openAIChatBody({
+      model: {
+        provider: "test",
+        model: "m",
+        parameters: { maxTokens: 256 },
+      },
+      messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+    });
+    assert.equal(bodyDefault.max_tokens, 256);
+    assert.equal(bodyDefault.max_completion_tokens, undefined);
+
+    const bodyCompletion = openAIChatBody(
+      {
+        model: {
+          provider: "test",
+          model: "m",
+          parameters: { maxTokens: 256 },
+        },
+        messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+      },
+      { maxTokensField: "max_completion_tokens" },
+    );
+    assert.equal(bodyCompletion.max_completion_tokens, 256);
+    assert.equal(bodyCompletion.max_tokens, undefined);
+  });
+
+  it("sends tool-result text unescaped", () => {
+    const text = 'line "one"\n\tindented\npath \\ C:\\\\tmp';
+    const message: Message = { role: "tool", content: [{ type: "tool_result", toolCallId: "c1", name: "read", result: text }] };
+    assert.equal(serializeToolResultText(message), text);
+    assert.equal(serializeOpenAIChatMessage(message).content, text);
+    // The JSON step would have doubled every backslash and escaped the quote.
+    assert.notEqual(serializeOpenAIChatMessage(message).content, JSON.stringify(text));
+  });
+
+  it("keeps a structured tool value as JSON", () => {
+    const value = { files: ["a.ts", "b.ts"], count: 2 };
+    const message: Message = { role: "tool", content: [{ type: "tool_result", toolCallId: "c1", name: "glob", result: value }] };
+    assert.equal(serializeToolResultText(message), JSON.stringify(value));
+    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify(value));
+  });
+
+  it("encodes a scripted coding loop smaller than the JSON-escaped encoding", () => {
+    const page = Array.from({ length: 40 }, (_, i) => `  const value${i} = "quoted" + \`tpl\`;`).join("\n");
+    const messages: Message[] = Array.from({ length: 10 }, (_, i) => ({
+      role: "tool" as const,
+      content: [{ type: "tool_result" as const, toolCallId: `c${i}`, name: "read", result: page }],
+    }));
+    const body = openAIChatBody({ model: { provider: "mock", model: "demo" }, messages });
+    const encoded = JSON.stringify(body.messages).length;
+    const jsonEscaped = messages.reduce((total, message) => total + JSON.stringify(JSON.stringify((message.content[0] as { result: string }).result)).length, 0);
+    assert.ok(encoded < jsonEscaped, `expected ${encoded} < ${jsonEscaped}`);
   });
 });

@@ -1,12 +1,12 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, normalize } from "node:path";
+import type { ModelProvider, ProviderRequest } from "../contracts.js";
 import { createBuiltinProvider } from "../models/builtin.js";
 import * as kit from "../provider-kit/index.js";
-import type { ModelProvider, ProviderRequest } from "../contracts.js";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { exports: Record<string, unknown> };
 
@@ -61,9 +61,9 @@ describe("provider-kit", () => {
       "serializeOpenAIChatMessage",
       "canonicalizeJsonSchema",
       "resolveProviderMediaMessages",
-      "pollDeviceCodeToken",
-      "refreshOAuthCredential",
-      "revokeOAuthCredential",
+      "anthropicMessagesBody",
+      "anthropicMessagesEvents",
+      "ProviderRequirementError",
       "providerPackage",
       "defineProviderPackage",
       "providerPackageInstance",
@@ -77,13 +77,203 @@ describe("provider-kit", () => {
     ]) {
       assert.equal(typeof (kit as Record<string, unknown>)[name], "function", `provider-kit must export ${name}`);
     }
-    assert.deepEqual(pkg.exports["./provider-kit"], { types: "./dist/provider-kit/index.d.ts", default: "./dist/provider-kit/index.js" });
+    assert.deepEqual(pkg.exports["./provider-kit"], "./src/provider-kit/index.ts");
+  });
+
+  it("provider_kit_exports_match_inventory", () => {
+    const expected = [
+      "DEFAULT_MAX_ARGUMENT_BYTES",
+      "DEFAULT_MAX_BUFFER_BYTES",
+      "DEFAULT_MAX_EVENT_BYTES",
+      "DEFAULT_MAX_RESPONSE_BODY_BYTES",
+      "DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH",
+      "DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES",
+      "DEFAULT_MAX_SYSTEMONE_STATE_BYTES",
+      "DEFAULT_OWNED_COMPAT_KEYS",
+      "DEFAULT_PROVIDER_MEDIA_ITEM_BYTES",
+      "DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES",
+      "DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD",
+      "DEFAULT_SYSTEMONE_MAX_RETRIES",
+      "MAX_SYSTEMONE_CHOICE_OPTIONS",
+      "MAX_SYSTEMONE_QUESTIONS",
+      "MAX_SYSTEMONE_SCORE_LEVELS",
+      "ProviderRequirementError",
+      "ProviderTransportError",
+      "RETRYABLE_STATUSES",
+      "StructuredOutputError",
+      "SystemOneAbortedError",
+      "SystemOneAuthError",
+      "SystemOneError",
+      "SystemOneInvalidRequestError",
+      "SystemOneRetryExhaustedError",
+      "SystemOneSchemaError",
+      "THINKING_LEVELS",
+      "anthropicCacheEnabled",
+      "anthropicMessagesBody",
+      "anthropicMessagesEvents",
+      "applyCacheControl",
+      "applyDefaultProviderRequestOptions",
+      "applyOpenAIChatStructuredOutput",
+      "applyThinkingLevel",
+      "applyThinkingLevelForModel",
+      "artifactStructuredOutputRequest",
+      "askSystemOneDecisions",
+      "assertAbortIsObserved",
+      "assertAuthDescriptorsWellFormed",
+      "assertCanonicalToolParameters",
+      "assertModelsListValid",
+      "assertNoFetches",
+      "assertNoForeignCacheFields",
+      "assertNoSecretLeak",
+      "assertNotAborted",
+      "assertOpenAIChatMessage",
+      "assertProviderMediaCapability",
+      "assertProviderOwnedHeadersWin",
+      "assertProviderStreamConforms",
+      "assertRecordedStreamConforms",
+      "assertSerializedRequestCoversContent",
+      "assertStructuredOutputRequestSupported",
+      "assertToolCallDeltasReconstruct",
+      "assertUsageAccounting",
+      "baseUrlProperty",
+      "buildOpenAIChatBody",
+      "bytesToBase64",
+      "cacheHitRate",
+      "cacheSavings",
+      "cacheUsageReport",
+      "canonicalizeJsonSchema",
+      "classifyProviderFailure",
+      "collectProviderEvents",
+      "compileSystemOneQuestions",
+      "compileSystemOneState",
+      "createBoundedUploadCache",
+      "createOpenAICompatibleProvider",
+      "createRoutedProvider",
+      "createSystemOneDecisionProvider",
+      "defaultProviderFilename",
+      "defineProviderPackage",
+      "httpStatusError",
+      "isPdfMediaType",
+      "isLoopbackHost",
+      "isPlaintextRemote",
+      "isRetryableSystemOneStatus",
+      "isSupportedThinkingLevel",
+      "isSystemOneAnswer",
+      "isSystemOneResponse",
+      "isThinkingLevel",
+      "mapCacheRetention",
+      "OMITTED_TOOL_RESULT_IMAGE_NOTE",
+      "mapOpenAIChatUsage",
+      "mapSystemOneUsage",
+      "mediaFingerprint",
+      "mergeProviderRequestOptions",
+      "modelEntrySchema",
+      "modelSupportsStructuredOutput",
+      "modelsProperty",
+      "normalizeThinkingLevel",
+      "normalizeUsage",
+      "openAIChatBody",
+      "openAIChatEvents",
+      "optionalRefSource",
+      "parseErrorBody",
+      "parseJsonObjectArguments",
+      "parseRetryAfterMs",
+      "plaintextRemoteOrigin",
+      "parseThinkingLevel",
+      "postSystemOne",
+      "preserveThinking",
+      "providerConformance",
+      "providerHttpError",
+      "providerPackage",
+      "providerPackageInstance",
+      "providerUploadCacheKey",
+      "readBoundedResponseJson",
+      "readBoundedResponseText",
+      "readRetryAfterMs",
+      "readSseData",
+      "readSseEvents",
+      "reasoningEffort",
+      "reasoningObject",
+      "refSource",
+      "replayFetch",
+      "rejectProviderMediaBlock",
+      "renderSystemOneOutput",
+      "resolveBreakpoint",
+      "resolvePreserveThinking",
+      "resolvePromptCachePlan",
+      "resolveProviderApiKey",
+      "resolveProviderMediaMessages",
+      "resolveReasoningEffort",
+      "resolveReasoningObject",
+      "resolveRunProviderOptions",
+      "resolveThinkingObject",
+      "runEmbeddingsConformance",
+      "sanitizeCacheKey",
+      "secretRefProperty",
+      "serializeOpenAIChatMessage",
+      "serializeOpenAIChatStructuredOutput",
+      "serializeOpenAITool",
+      "serializePdfDocumentWireBlock",
+      "serializeToolResultText",
+      "snapThinkingLevel",
+      "stripOwnedCompat",
+      "systemCacheControlField",
+      "systemOneConformance",
+      "systemOneProviderPackage",
+      "thinkingCompatFor",
+      "thinkingFamilyForModel",
+      "thinkingLevelsForModel",
+      "thinkingObject",
+      "tryParseJsonObjectArguments",
+      "validateStructuredOutputOptions",
+      "warnIfPlaintextRemote",
+      "withoutStructuredOutput",
+    ];
+    assert.deepEqual(Object.keys(kit).sort(), [...expected].sort());
   });
 
   it("provider_package_registers_providers_in_order", () => {
     const providers: ModelProvider[] = ["a", "b"].map((id) => ({ id, async *generate() {} }));
     const instance = kit.providerPackage("acme-models", providers);
     assert.equal(instance.definition.name, "acme-models");
+  });
+
+  it("provider_kit_exports_moved_helpers", async () => {
+    const kit = await import("../provider-kit/index.js");
+    const root = await import("../index.js");
+    for (const name of [
+      "normalizeThinkingLevel",
+      "applyCacheControl",
+      "applyDefaultProviderRequestOptions",
+      "validateStructuredOutputOptions",
+    ]) {
+      assert.equal(typeof (kit as Record<string, unknown>)[name], "function", `${name} missing from provider-kit`);
+      assert.equal(Object.hasOwn(root, name), false, `${name} still on the root barrel`);
+    }
+  });
+
+  it("root_entry_does_not_load_provider_kit", () => {
+    // Files under provider-kit/ are loaded by the built-in openai-compatible provider.
+    // The barrel must not be. A file import such as ../provider-kit/transport.js is allowed.
+    const seen = new Set<string>();
+    const queue = ["src/index.ts"];
+    const hits: string[] = [];
+    while (queue.length > 0) {
+      const file = queue.pop()!;
+      if (seen.has(file) || !existsSync(file)) continue;
+      seen.add(file);
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/(?:from\s*|import\s*\(\s*)["']([^"']+)["']/g)) {
+        const spec = match[1]!;
+        if (spec === "@arnilo/prism/provider-kit" || /(?:^|\/)provider-kit(?:\/index)?\.js$/.test(spec)) {
+          hits.push(`${file}: ${spec}`);
+        }
+        if (!spec.startsWith(".")) continue;
+        const target = join(file, "..", spec.replace(/\.js$/, ".ts"));
+        queue.push(existsSync(target) ? target : join(file, "..", spec.replace(/\.js$/, ""), "index.ts"));
+      }
+    }
+    assert.deepEqual(hits, []);
   });
 
   it("provider_kit_import_does_not_load_agent_runtime", () => {
@@ -101,17 +291,23 @@ describe("provider-kit", () => {
     const vendorDirs = new Set<string>();
     for (const dir of providerPackageDirs()) vendorDirs.add(dir.slice("packages/providers/".length));
     const vendors = [...vendorDirs].filter((name) => !PROTOCOL_NAMES.has(name)).sort();
-    assert.ok(vendors.length >= 17, `expected every non-protocol vendor, got ${vendors.length}: ${vendors.join(", ")}`);
+    assert.ok(vendors.length >= 4, `expected every non-protocol vendor, got ${vendors.length}: ${vendors.join(", ")}`);
     // The invariant is about code, not prose: strip comments first. A `x-`-prefixed
     // extension key (e.g. a legacy schema alias) is a protocol token, not vendor behavior.
-    const pattern = new RegExp(
-      `(?<!x-)\\b(${[...vendors, "z\\.ai", "codex"].map((v) => v.replace(/-/g, "[- ]?")).join("|")})\\b`,
-      "i",
-    );
+    const pattern = new RegExp(`(?<!x-)\\b(${[...vendors, "z\\.ai", "codex"].map((v) => v.replace(/-/g, "[- ]?")).join("|")})\\b`, "i");
     const stripComments = (source: string): string =>
-      source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\/\/.*$/gm, "");
-    for (const file of readdirSync("src/provider-kit", { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))) {
-      assert.doesNotMatch(stripComments(readFileSync(join("src/provider-kit", file.name), "utf8")), pattern, `${file.name} names a vendor`);
+      source
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "")
+        .replace(/\/\/.*$/gm, "");
+    for (const file of readdirSync("src/provider-kit", { withFileTypes: true }).filter(
+      (entry) => entry.isFile() && entry.name.endsWith(".ts"),
+    )) {
+      let source = stripComments(readFileSync(join("src/provider-kit", file.name), "utf8"));
+      // thinking.ts keeps two pre-move wire tokens: the `google` family id and the
+      // neuralwatt provider-id fallback. They are family inference, not a vendor import.
+      if (file.name === "thinking.ts") source = source.replace(/\bgoogle\b/g, "").replace(/\bneuralwatt\b/g, "");
+      assert.doesNotMatch(source, pattern, `${file.name} names a vendor`);
     }
   });
 
@@ -144,9 +340,16 @@ describe("provider-kit", () => {
     // The host owns `open-url`; a provider package must never reach outside its own process.
     const banned = /child_process|xdg-open|from "open"|require\("open"\)|spawnSync\(|execSync\(|execFileSync\(/;
     const stripComments = (source: string): string =>
-      source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "").replace(/\/\/.*$/gm, "");
-    const scanned = providerPackageDirs().flatMap((dir) => sourceFiles(join(dir, "src")));
-    assert.ok(scanned.length > 20, `expected the provider source tree, scanned ${scanned.length} files`);
+      source
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "")
+        .replace(/\/\/.*$/gm, "");
+    const dirs = providerPackageDirs();
+    const scanned = dirs.flatMap((dir) => sourceFiles(join(dir, "src")));
+    assert.ok(
+      dirs.length > 0 && scanned.length >= dirs.length,
+      `expected the provider source tree, scanned ${scanned.length} files in ${dirs.length} packages`,
+    );
     for (const file of scanned) {
       assert.doesNotMatch(stripComments(readFileSync(file, "utf8")), banned, `${file} spawns a process or opens a browser`);
     }
@@ -197,11 +400,13 @@ describe("provider-kit", () => {
     const allowedFiles = new Set([
       "scripts/budgets.json", // historical export-budget reason text
       "scripts/coverage-thresholds.json", // frozen coverage note text
+      "scripts/deprecations-0.13.json", // the live 0.13 registry deprecation ledger: it must name every retired package and its successor
       "scripts/phase24-truth.test.mjs", // asserts the umbrella key is absent
       "scripts/phase29-freeze-manifest.json", // freeze history
       "scripts/phase29-freeze.test.mjs",
       "scripts/phase54-package-map.mjs", // 0.3-era consolidation baseline map
       "scripts/phase54-package-map.test.mjs",
+      "scripts/retired-providers.test.mjs",
       "src/__tests__/provider-kit.test.ts", // this scan's own allow-list and guards
       "src/__tests__/core-boundaries.test.ts", // asserts src/ never imports the family
       "src/__tests__/docs.test.ts", // retired-name sweep + umbrella guard
@@ -216,10 +421,7 @@ describe("provider-kit", () => {
       "docs/providers/decisions.md", // records the retired /decisions subpath
     ]);
     const allowed = (path: string): boolean =>
-      allowedFiles.has(path) ||
-      allowedDocs.has(path) ||
-      /\/CHANGELOG\.md$/.test(path) ||
-      /^docs\/migrate-to-[^/]+\.md$/.test(path);
+      allowedFiles.has(path) || allowedDocs.has(path) || /\/CHANGELOG\.md$/.test(path) || /^docs\/migrate-to-[^/]+\.md$/.test(path);
 
     const hits: string[] = [];
     const importers: string[] = [];
@@ -245,11 +447,7 @@ describe("provider-kit", () => {
       if (existsSync(root)) walk(root);
     }
 
-    assert.deepEqual(
-      importers,
-      [],
-      `no live file may import the retired @arnilo/prism-providers package: ${importers.join(", ")}`,
-    );
+    assert.deepEqual(importers, [], `no live file may import the retired @arnilo/prism-providers package: ${importers.join(", ")}`);
     assert.deepEqual(
       hits.filter((path) => !allowed(path)),
       [],

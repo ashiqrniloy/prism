@@ -8,7 +8,7 @@ import { mockProvider, createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
 /**
- * Kernel behavior that `@arnilo/prism-agent-sdk`'s `defineAgent` tests used to cover through the SDK
+ * Kernel behavior that the retired agent SDK's assembly tests used to cover through the SDK
  * (plan 149 Task 6, per plan 148 Task 1(j)). The cases keep their original names and now run against
  * `createAgent` directly: the SDK is frozen and the kernel owns these guarantees.
  */

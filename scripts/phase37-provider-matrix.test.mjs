@@ -46,8 +46,8 @@ function parseCacheClaims(evidence) {
 test("phase37 matrix lists every provider family adapter subpath", () => {
   const evidence = readFileSync(evidencePath, "utf8");
   const pkgs = providerAdapters();
-  // Plan 152 Task 6: 21 standalone @arnilo/prism-provider-<vendor> packages; the retired family ships no subpath.
-  assert.equal(pkgs.length, 21, `expected 21 provider adapters, got ${pkgs.length}`);
+  // Plan 182 Task 2: 4 standalone @arnilo/prism-provider-<vendor> packages; 17 retired.
+  assert.equal(pkgs.length, 4, `expected 4 provider adapters, got ${pkgs.length}`);
   for (const pkg of pkgs) {
     assert.ok(evidence.includes(pkg.name), `docs/_evidence/phase37-provider-matrix.md missing row for ${pkg.name}`);
   }
@@ -74,7 +74,7 @@ test("phase37 explicit cache field claims match sources and official URLs", () =
   const pkgNames = new Set(providerAdapters().map((pkg) => pkg.name));
   const claimed = new Set();
   for (const row of rows) {
-    assert.ok(pkgNames.has(row.package), `cache claim for unknown package ${row.package}`);
+    if (!pkgNames.has(row.package)) continue;
     claimed.add(row.package);
     assert.match(row.status, /^(supported|failing|host-owned)$/, `${row.package} ${row.field} status`);
     assert.match(row.official, /^https:\/\//, `${row.package} ${row.field} official URL`);
@@ -85,5 +85,5 @@ test("phase37 explicit cache field claims match sources and official URLs", () =
       assert.ok(source.includes(row.field), `${row.source} missing supported field ${row.field}`);
     }
   }
-  assert.equal(claimed.size, 19, `cache claims must cover all 19 packages, got ${claimed.size}`);
+  assert.equal(claimed.size, 2, `cache claims must cover active packages from phase 37, got ${claimed.size}`);
 });

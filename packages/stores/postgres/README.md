@@ -40,7 +40,12 @@ by the kernel's config check (`secret_literal`) before any connection.
 - Runs the numbered schema migrations on open (advisory-locked, checksum-verified, idempotent) unless
   the caller passes `skipMigrations`. The companion stores are named exports:
   `createPostgresCheckpointStore`, `createPostgresLeaseStore`, `createPostgresPersistenceLifecycle`,
-  `createPostgresAgentEventSource`, plus the DDL builders and migration appliers.
+  `createPostgresAgentEventSource`, plus the DDL builders and migration appliers. Their contracts
+  (`CheckpointStore`, `LeaseStore`) are the `checkpoints`/`leases` service contracts in
+  `@arnilo/prism-workflows`; this package depends on them with `import type` only.
+- Registers `prism.services.provide("checkpoints", …)` and `prism.services.provide("leases", …)` over the
+  same pool the store slot uses, so a listed workflows package gets durable checkpoints and leases with
+  no second connection.
 - `listSessions` pages newest-first over `prism_sessions(updated_at, id)` with a keyset cursor, and
   filters ownership from the entries' `metadata` (the kernel's `entriesInScope` rule in SQL).
   `deleteSession` removes a session's entries, branches, runs, events, tool calls, usage, search rows,
@@ -85,3 +90,5 @@ const agent = await createAgent({
 test:postgres` runs the full session-store conformance (including reopen, concurrent parent append,
 and the listing/delete/title legs), the run-ledger conformance, and the migration checks against a
 real server.
+
+- Session links (`SessionOptions.parent` / `actor`): migration `010_session_links` adds nullable, indexed `agent_id`, `workflow_run_id`, `delegation_id`, `actor_kind`, `actor_agent`, and `actor_vendor` columns to `prism_sessions` (beside `parent_session_id`). The session's first `metadata` entry stays the source of truth and `append` mirrors it into the row in the same transaction. `listSessions` and `searchSessions` filter on the columns. Existing databases migrate forward without data loss and list old sessions with absent links.

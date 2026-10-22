@@ -1,21 +1,21 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it } from "bun:test";
 import * as root from "../index.js";
 import * as testing from "../testing/index.js";
 
 /**
  * Phase 3 freeze (plan 149 Task 6, roadmap Phase 3 Done). Everything a host or a package author needs is
  * a root export of `@arnilo/prism`, and the member names of the host-facing types are pinned so Phase 4
- * builds on a surface that cannot move silently. A failure names `docs/next/agent.md` ("Frozen for Phase 4"):
+ * builds on a surface that cannot move silently. A failure names `docs/agent.md` ("Frozen surface"):
  * change that page and this list together, deliberately.
  */
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const DOC = "docs/next/agent.md (Frozen for Phase 4)";
+const DOC = "docs/agent.md (Frozen surface)";
 
 /** Type names a host or package author imports from the root (roadmap §2.3, §2.5, §2.6). */
 const ROOT_TYPES = [
@@ -34,6 +34,7 @@ const ROOT_TYPES = [
   "HostUiRequest",
   "HostUiResponse",
   "AgentEvent",
+  "EventOrigin",
   "Principal",
   "RunLimits",
   "ToolInfo",
@@ -48,7 +49,6 @@ const ROOT_TYPES = [
   "SessionContext",
   "ToolDefinition",
   "Skill",
-  "CommandDefinition",
 ] as const;
 
 const ROOT_VALUES = ["createAgent", "definePackage"] as const;
@@ -60,7 +60,6 @@ const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
   AgentInspection: ["packages", "tools", "skills", "commands", "hooks", "slots", "store", "disabled", "statusNotes"],
   Session: [
     "id",
-    "guardrailPackRefs",
     "leafId",
     "run",
     "steer",
@@ -97,13 +96,8 @@ const FROZEN_MEMBERS: Readonly<Record<string, readonly string[]>> = {
     "idempotencyKey",
     "validate",
     "tools",
-    "toolsDisclosure",
     "allowHiddenToolCalls",
-    "toolsSearch",
-    "toolResultFold",
-    "attentionCompiler",
     "inputLayout",
-    "runState",
     "promptVersion",
   ],
   RunResult: [

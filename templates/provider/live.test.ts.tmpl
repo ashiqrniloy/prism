@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import { describe, it } from "bun:test";
+import { createAgent } from "@arnilo/prism";
+import {{providerId}}Definition, { {{providerId}}, {{providerId}}Models } from "../index.js";
+
+const apiKey = process.env.{{providerUpper}}_API_KEY;
+
+describe("{{providerId}} live", () => {
+  it.skipIf(!apiKey)("runs a live turn against provider upstream", async () => {
+    const agent = await createAgent({
+      model: { provider: "{{providerId}}", model: {{providerId}}Models[0].model },
+      packages: [{{providerId}}({ apiKey: "env:{{providerUpper}}_API_KEY" })],
+    });
+    try {
+      const session = await agent.session();
+      const result = await session.run("Hello from live test");
+      assert.equal(result.status, "completed");
+    } finally {
+      await agent.dispose();
+    }
+  });
+});

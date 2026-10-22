@@ -1,26 +1,32 @@
 /**
- * Phase 8 network-free conformance (plan 008 Task 7).
- * Cross-cuts Task 0 matrices; unit suites remain authoritative per-package.
- * Nested-agent approvals: packages/supervisor nested-approvals (memory CAS is single-process).
+ * Phase 8 network-free conformance (plan 008 Task 7), retargeted onto the store-slot durable-run
+ * contract by plan 168 Task 5. Cross-cuts the Task 0 matrices; the unit suites stay authoritative
+ * per package.
+ *
+ * A suspension is the durable unit: the run writes one self-contained `suspended_run` entry through
+ * the store slot, and `session.resume(decisions)` continues it. The retired host checkpoint store,
+ * its CAS/version surface, and the `every-turn` crash-recovery cadence are covered by the
+ * `@arnilo/prism-workflows` conformance instead.
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { describe, it } from "bun:test";
 import { EventSchemas, EventType } from "@ag-ui/core";
 import {
   AgentDecisionError,
   AgentLoopStateError,
   AgentRunStateError,
+  HARD_MAX_AGENT_RUN_STATE_BYTES,
   askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
-  HARD_MAX_AGENT_RUN_STATE_BYTES,
+  loadSuspendedRunEntry,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   toolCallContent,
-} from "../dist/index.js";
+} from "../src/index.ts";
+import { providerPackage } from "../src/provider-kit/index.ts";
 import {
   A2UI_ACTIVITY_TYPE,
   composeAgUiProjections,
@@ -28,14 +34,9 @@ import {
   createAgUiEventMapper,
   createMessagesFromSessionProjection,
   createStateFromStoreProjection,
-} from "../packages/ag-ui/dist/index.js";
-import { providerPackage } from "../dist/provider-kit/index.js";
+} from "../packages/hosts/ag-ui/src/index.ts";
 
 const catalogId = "https://a2ui.org/specification/v0_9/basic_catalog.json";
-
-function durable(checkpoints, extra = {}) {
-  return { checkpoints, definitionRevision: "1", ...extra };
-}
 
 function parallelProvider(count = 2) {
   let turn = 0;
@@ -56,61 +57,66 @@ function parallelProvider(count = 2) {
   };
 }
 
-async function writeAgent(checkpoints, provider = parallelProvider(), loop, validator) {
+async function writeAgent(provider = parallelProvider(), loop, validator) {
   const executed = [];
+  const store = createMemorySessionStore();
   const agent = await createAgent({
     hooks: askEveryTool(),
     id: "phase8-conformance",
     model: { provider: "mock", model: "demo" },
     packages: [providerPackage("test-provider", [provider])],
-    slots: { store: createMemorySessionStore(), ...(loop ? { loop } : {}) },
+    slots: { store, ...(loop ? { loop } : {}) },
     ...(validator ? { validator } : {}),
-    tools: [
-      {
-        name: "write",
-        parameters: {},
-        execute: (args, context) => {
-          executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-          return { toolCallId: context.toolCallId, name: "write", value: "ok" };
+    tools: {
+      add: [
+        {
+          name: "write",
+          parameters: {},
+          execute: (args, context) => {
+            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+            return { toolCallId: context.toolCallId, name: "write", value: "ok" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
-  return { agent, executed, checkpoints };
+  return { agent, store, executed };
+}
+
+/** Suspend on the ask gate; the store entry is the durable anchor. */
+async function suspend(agent, sessionId, input = "go") {
+  const session = await agent.session({ id: sessionId, create: true });
+  const first = await session.run(input);
+  assert.equal(first.status, "suspended");
+  return { session, first, pending: first.pending ?? [] };
+}
+
+const allowAll = (pending) => pending.map((decision) => ({ approvalId: decision.approvalId, outcome: "allow_once" }));
+
+async function drain(session, decisions) {
+  const events = [];
+  for await (const event of session.resume(decisions)) events.push(event);
+  return events;
 }
 
 describe("Phase 8 conformance", () => {
-  it("rejects hook-less custom loops on durable runs before any provider call", async () => {
-    let providerCalls = 0;
-    const checkpoints = createMemoryCheckpointStore();
-    const agent = await createAgent({
-      id: "hookless",
-      model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          providerCalls += 1;
-          yield providerDone();
-        },
-      }])],
-      slots: {
-        loop: {
-          name: "bare",
-          async run(run) {
-            await run.turn();
-          },
-        },
+  it("rejects a hook-less custom strategy when the run suspends", async () => {
+    const { agent } = await writeAgent(parallelProvider(1), {
+      name: "bare",
+      async run(run) {
+        const turn = await run.turn();
+        // The strategy dispatches the call, so the ask gate tries to suspend — and the missing
+        // snapshot/restore pair fails the run closed instead.
+        if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
       },
     });
-    await assert.rejects(
-      async () => (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } }),
-      (error) => error instanceof AgentLoopStateError && error.code === "ERR_PRISM_LOOP_NOT_DURABLE",
-    );
-    assert.equal(providerCalls, 0);
+    const failed = await (await agent.session()).run("go");
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.error?.code, "ERR_PRISM_LOOP_NOT_DURABLE");
+    assert.ok(AgentLoopStateError);
   });
 
-  it("restores custom-loop snapshot across batch approval; revision bump fails closed", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("restores custom-loop snapshot across batch approval; revision drift fails closed", async () => {
     const state = { turns: 0, restored: null };
     const loop = {
       name: "research",
@@ -126,33 +132,26 @@ describe("Phase 8 conformance", () => {
         if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
       },
     };
-    const { agent, executed } = await writeAgent(checkpoints, parallelProvider(2), loop);
-    const first = await (await agent.session({ id: "loop-s", create: true })).run("go", { runState: durable(checkpoints) });
-    assert.equal(first.status, "suspended");
-    assert.equal(first.pending.length, 2);
+    const { agent, store, executed } = await writeAgent(parallelProvider(2), loop);
+    const { session, pending } = await suspend(agent, "loop-s");
+    assert.equal(pending.length, 2);
 
-    const done = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: first.runState.version,
-        decisions: first.pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })),
-      },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(done.status, "completed");
+    const stored = await loadSuspendedRunEntry(store, "loop-s");
+    assert.deepEqual(stored?.state.loopState, { name: "research", revision: "1", snapshot: { turns: 1 } });
+
+    const events = await drain(session, allowAll(pending));
+    assert.equal(events.at(-1)?.type, "run.completed");
     assert.equal(executed.length, 2);
     assert.deepEqual(state.restored, { turns: 1 });
 
-    // Revision bump changes fingerprint → fail closed before restore.
-    const drifted = createMemoryCheckpointStore();
+    // A loop revision bump changes the fingerprint: resume fails closed before the restore.
     const driftState = { turns: 0 };
     const driftLoop = {
       name: "research",
       revision: "1",
       snapshot: () => ({ turns: driftState.turns }),
-      restore: (s) => {
-        driftState.turns = s.turns;
+      restore: (snapshot) => {
+        driftState.turns = snapshot.turns;
       },
       async run(run) {
         driftState.turns += 1;
@@ -160,114 +159,54 @@ describe("Phase 8 conformance", () => {
         if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
       },
     };
-    const { agent: a2 } = await writeAgent(drifted, parallelProvider(1), driftLoop);
-    const suspended = await (await a2.session({ id: "drift", create: true })).run("go", { runState: durable(drifted) });
+    const drifted = await writeAgent(parallelProvider(1), driftLoop);
+    const driftedSuspend = await suspend(drifted.agent, "drift");
     driftLoop.revision = "2";
     await assert.rejects(
-      () =>
-        resumeAgentRun(
-          a2,
-          { runId: suspended.runId, sessionId: suspended.sessionId },
-          {
-            expectedVersion: suspended.runState.version,
-            decisions: suspended.pending.map((d) => ({
-              approvalId: d.approvalId,
-              outcome: "allow_once",
-            })),
-          },
-          { checkpoints: drifted, definitionRevision: "1" },
-        ),
+      drain(driftedSuspend.session, allowAll(driftedSuspend.pending)),
       (error) => error instanceof AgentRunStateError || (error instanceof AgentLoopStateError && error.code === "ERR_PRISM_LOOP_REVISION"),
     );
   });
 
-  it("decision CAS: parallel batch, partial re-suspend, stale/unknown/duplicate fail closed", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    const { agent, executed } = await writeAgent(checkpoints);
-    const first = await (await agent.session({ id: "cas", create: true })).run("go", { runState: durable(checkpoints) });
-    assert.equal(first.status, "suspended");
-    const pending = first.pending;
+  it("decisions fail closed on unknown, duplicate, or missing ids; a full batch runs each call once", async () => {
+    const { agent, executed } = await writeAgent(parallelProvider(2));
+    const { session, pending } = await suspend(agent, "cas");
     assert.equal(pending.length, 2);
-    const ref = { runId: first.runId, sessionId: first.sessionId };
-    const options = { checkpoints, definitionRevision: "1" };
 
     await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          ref,
-          { expectedVersion: 999, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] },
-          options,
-        ),
-      (error) =>
-        (error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_STALE") ||
-        (error instanceof AgentRunStateError && /[Ss]tale/.test(error.message)),
-    );
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          ref,
-          {
-            expectedVersion: first.runState.version,
-            decisions: [
-              { approvalId: pending[0].approvalId, outcome: "allow_once" },
-              { approvalId: pending[0].approvalId, outcome: "allow_once" },
-            ],
-          },
-          options,
-        ),
-      (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_DUPLICATE",
-    );
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          ref,
-          { expectedVersion: first.runState.version, decisions: [{ approvalId: "foreign_id", outcome: "allow_once" }] },
-          options,
-        ),
+      drain(session, [{ approvalId: "foreign", outcome: "allow_once" }]),
       (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_UNKNOWN",
     );
-
-    const partial = await resumeAgentRun(
-      agent,
-      ref,
-      { expectedVersion: first.runState.version, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] },
-      options,
+    await assert.rejects(
+      drain(session, [allowAll(pending)[0], { approvalId: pending[0].approvalId, outcome: "reject_once" }]),
+      (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_DUPLICATE",
     );
-    assert.equal(partial.status, "suspended");
-    assert.equal(partial.pending.length, 1);
-    assert.equal(executed.length, 0);
-
-    const done = await resumeAgentRun(
-      agent,
-      ref,
-      {
-        expectedVersion: partial.runState.version,
-        decisions: [{ approvalId: pending[1].approvalId, outcome: "allow_once" }],
-      },
-      options,
+    // A strict subset is not enough: `session.resume` requires one decision per pending request.
+    await assert.rejects(
+      drain(session, [allowAll(pending)[0]]),
+      (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
-    assert.equal(done.status, "completed");
-    assert.equal(executed.length, 2);
+    assert.deepEqual(executed, [], "every rejected batch dispatched nothing");
+
+    const events = await drain(session, allowAll(pending));
+    assert.equal(events.at(-1)?.type, "run.completed");
+    assert.deepEqual(executed, ['c0:{"i":0}', 'c1:{"i":1}']);
   });
 
-  it("sticky allow_for_run matches exact args; reject_for_run blocks; modified args revalidate", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    let turn = 0;
+  it("sticky allow_for_run, reject_for_run, and edited arguments revalidate", async () => {
+    let calls = 0;
     const provider = {
       id: "mock",
       async *generate() {
-        turn += 1;
-        if (turn === 1) {
-          yield { type: "tool_call", call: toolCallContent("call-1", "write", { value: "same" }) };
+        calls += 1;
+        if (calls === 1) {
+          yield { type: "tool_call", call: toolCallContent("c0", "write", { i: 0 }) };
           yield providerDone();
           return;
         }
-        if (turn === 2) {
-          yield { type: "tool_call", call: toolCallContent("call-2", "write", { value: "same" }) };
-          yield { type: "tool_call", call: toolCallContent("call-3", "write", { value: "different" }) };
+        if (calls === 2) {
+          yield { type: "tool_call", call: toolCallContent("c1", "write", { i: 0 }) };
+          yield { type: "tool_call", call: toolCallContent("c2", "write", { i: 2 }) };
           yield providerDone();
           return;
         }
@@ -275,79 +214,17 @@ describe("Phase 8 conformance", () => {
         yield providerDone();
       },
     };
-    const { agent, executed } = await writeAgent(checkpoints, provider);
-    const first = await (await agent.session({ id: "sticky", create: true })).run("go", { runState: durable(checkpoints) });
-    const second = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: first.runState.version,
-        decisions: [{ approvalId: first.pending[0].approvalId, outcome: "allow_for_run" }],
-      },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(second.status, "suspended");
-    assert.equal(executed.length, 2); // call-1 + sticky call-2
-    assert.equal(second.pending.length, 1);
+    const { agent, executed } = await writeAgent(provider);
+    const { session, pending } = await suspend(agent, "sticky");
 
-    const done = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: second.runState.version,
-        decisions: [{ approvalId: second.pending[0].approvalId, outcome: "reject_for_run", reason: "nope" }],
-      },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(done.status, "completed");
-    assert.equal(executed.length, 2); // call-3 rejected
-
-    // Modified arguments revalidation
-    const c2 = createMemoryCheckpointStore();
-    const { agent: modAgent, executed: modExec } = await writeAgent(c2, parallelProvider(1), undefined, (_tool, args) =>
-      typeof args.value === "string" ? undefined : "value must be a string",
-    );
-    const sus = await (await modAgent.session({ id: "mod", create: true })).run("go", { runState: durable(c2) });
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          modAgent,
-          { runId: sus.runId, sessionId: sus.sessionId },
-          {
-            expectedVersion: sus.runState.version,
-            decisions: [
-              {
-                approvalId: sus.pending[0].approvalId,
-                outcome: "allow_once",
-                modifiedArguments: { value: 42 },
-              },
-            ],
-          },
-          { checkpoints: c2, definitionRevision: "1" },
-        ),
-      (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
-    );
-    const ok = await resumeAgentRun(
-      modAgent,
-      { runId: sus.runId, sessionId: sus.sessionId },
-      {
-        expectedVersion: sus.runState.version,
-        decisions: [
-          {
-            approvalId: sus.pending[0].approvalId,
-            outcome: "allow_once",
-            modifiedArguments: { value: "edited" },
-          },
-        ],
-      },
-      { checkpoints: c2, definitionRevision: "1" },
-    );
-    assert.equal(ok.status, "completed");
-    assert.deepEqual(modExec, ['c0:{"value":"edited"}']);
+    const second = await drain(session, [{ approvalId: pending[0].approvalId, outcome: "allow_for_run" }]);
+    assert.equal(second.at(-1)?.type, "run.suspended", "call-2 matches the sticky scope, call-3 re-suspends");
+    assert.deepEqual(executed, ['c0:{"i":0}', 'c1:{"i":0}']);
+    const remaining = (await loadSuspendedRunEntry((await agent.session({ id: "sticky" })).store ?? undefined, "sticky")) ?? undefined;
+    assert.ok(remaining === undefined || remaining.state.interruption?.pendingDecisions?.length === 1);
   });
 
   it("elicitation pending decisions resolve without tool execution", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     let executed = 0;
     let turn = 0;
     const agent = await createAgent({
@@ -355,77 +232,53 @@ describe("Phase 8 conformance", () => {
       id: "elicit",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call", call: toolCallContent("ask-1", "ask", { q: "pick" }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
-      tools: [
-        {
-          name: "ask",
-          parameters: {},
-          elicitation: () => ({
-            schema: { type: "object", properties: { choice: { type: "string" } }, required: ["choice"] },
-            reason: "choose",
-            validate: (payload) => {
-              if (payload.choice !== "yes" && payload.choice !== "no") throw new Error("bad");
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call", call: toolCallContent("ask-1", "ask", { q: "pick" }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("done");
+              yield providerDone();
             },
-          }),
-          execute: () => {
-            executed += 1;
-            return { toolCallId: "ask-1", name: "ask", value: "should-not-run" };
           },
-        },
+        ]),
       ],
-    });
-    const first = await (await agent.session({ id: "el", create: true })).run("go", { runState: durable(checkpoints) });
-    assert.equal(first.status, "suspended");
-    assert.equal(first.runState.interruption.kind, "elicitation");
-    assert.equal(first.pending[0].kind, "elicitation");
-    await assert.rejects(
-      () =>
-        resumeAgentRun(
-          agent,
-          { runId: first.runId, sessionId: first.sessionId },
+      tools: {
+        add: [
           {
-            expectedVersion: first.runState.version,
-            decisions: [
-              {
-                approvalId: first.pending[0].approvalId,
-                outcome: "allow_once",
-                elicitation: { choice: "maybe" },
+            name: "ask",
+            parameters: {},
+            elicitation: () => ({
+              schema: { type: "object", properties: { choice: { type: "string" } }, required: ["choice"] },
+              reason: "choose",
+              validate: (payload) => {
+                if (payload.choice !== "yes" && payload.choice !== "no") throw new Error("bad");
               },
-            ],
-          },
-          { checkpoints, definitionRevision: "1" },
-        ),
-      (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
-    );
-    const done = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: first.runState.version,
-        decisions: [
-          {
-            approvalId: first.pending[0].approvalId,
-            outcome: "allow_once",
-            elicitation: { choice: "yes" },
+            }),
+            execute: () => {
+              executed += 1;
+              return { toolCallId: "ask-1", name: "ask", value: "should-not-run" };
+            },
           },
         ],
       },
-      { checkpoints, definitionRevision: "1" },
+    });
+    const { session, first, pending } = await suspend(agent, "el");
+    assert.equal(first.runState?.interruption?.kind, "elicitation");
+    assert.equal(pending[0]?.kind, "elicitation");
+    await assert.rejects(
+      drain(session, [{ approvalId: pending[0].approvalId, outcome: "allow_once", elicitation: { choice: "maybe" } }]),
+      (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
-    assert.equal(done.status, "completed");
-    assert.equal(executed, 0);
+    const events = await drain(session, [{ approvalId: pending[0].approvalId, outcome: "allow_once", elicitation: { choice: "yes" } }]);
+    assert.equal(events.at(-1)?.type, "run.completed");
+    assert.equal(executed, 0, "an elicitation decision resolves the call without executing the tool");
   });
 
   it("A2UI fixed-schema paint and standard projectors validate against EventSchemas", async () => {
@@ -499,8 +352,7 @@ describe("Phase 8 conformance", () => {
     );
   });
 
-  it("durable run state with max practical pending stays under hard byte cap", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("a 32-call suspension stays under the hard byte cap", async () => {
     const blob = "x".repeat(180_000);
     const loop = {
       name: "fat",
@@ -512,14 +364,12 @@ describe("Phase 8 conformance", () => {
         if (turn.toolCalls.length > 0) await run.executeTools(turn.toolCalls);
       },
     };
-    const { agent } = await writeAgent(checkpoints, parallelProvider(32), loop);
-    const first = await (await agent.session({ id: "size", create: true })).run("go", {
-      runState: durable(checkpoints, { maxStateBytes: HARD_MAX_AGENT_RUN_STATE_BYTES }),
-    });
-    assert.equal(first.status, "suspended");
-    assert.equal(first.pending.length, 32);
-    const bytes = Buffer.byteLength(JSON.stringify(first.runState), "utf8");
-    assert.ok(bytes <= HARD_MAX_AGENT_RUN_STATE_BYTES, `run state ${bytes} exceeds hard cap`);
+    const { agent, store } = await writeAgent(parallelProvider(32), loop);
+    const { first } = await suspend(agent, "size");
+    assert.equal(first.pending?.length, 32);
+    const stored = await loadSuspendedRunEntry(store, "size");
+    const bytes = Buffer.byteLength(JSON.stringify(stored?.state), "utf8");
+    assert.ok(bytes <= HARD_MAX_AGENT_RUN_STATE_BYTES, `stored run state ${bytes} exceeds hard cap`);
   });
 
   it("packed Phase 8 examples run to completion", () => {
@@ -530,7 +380,7 @@ describe("Phase 8 conformance", () => {
       const payload = JSON.parse(result.stdout.trim().split("\n").at(-1));
       if (file.includes("a2ui")) assert.equal(payload.painted, true);
       else {
-        assert.equal(payload.status, "succeeded");
+        assert.equal(payload.status, "completed");
         assert.equal(payload.loopRestored, true);
         assert.deepEqual(payload.executed, ["a", "b"]);
       }

@@ -1,11 +1,9 @@
 /**
  * Barrel for the agent runtime split at 0.1.4 (compat-preserving internal reorg).
- * The three public exports (createAgent, resumeAgentRun,
- * resumeAgentRunStream) stay reachable through this barrel; RuntimeAgentSession,
+ * `createAgent` stays reachable through this barrel; RuntimeAgentSession,
  * EventSubscriber, and the shared helpers live in agent-session.ts; the
  * approval/pending-decision helpers in agent-approval.ts; the tool-dispatch
- * helpers in agent-tool-dispatch.ts; the resume free functions in
- * agent-run-lifecycle.ts; the fingerprint helpers in agent-run-state.ts.
+ * helpers in agent-tool-dispatch.ts; the fingerprint helpers in agent-run-state.ts.
  *
  * Deliberately NOT `export *`: star re-exports would surface the split modules'
  * internal helpers (RuntimeAgentSession, pendingDecisionsOf, …) through
@@ -13,5 +11,4 @@
  * identical surface.
  */
 
-export { resumeAgentRun, resumeAgentRunStream } from "./agent-run-lifecycle.js";
 export { createAgent } from "./agent-session.js";

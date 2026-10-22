@@ -3,13 +3,13 @@
  *
  * The wiki helpers default `workspaceRoot`/`wikiRoot` to `process.cwd()`, so a
  * suite that passes a repo-relative scratch root writes into the repository:
- * `packages/memory/.wiki/` is tracked, and a run from the repository root used
+ * `packages/memory/wiki/.wiki/` is tracked, and a run from the repository root used
  * to scaffold an untracked `<repo>/.wiki/`. This gate runs the wiki suites from
  * both working directories a real run uses (the package, and the repo root) and
  * asserts the repository is untouched:
  *
  *   1. the three tracked fixture files are byte-identical (sha256);
- *   2. no file is added or removed inside `packages/memory/.wiki/`;
+ *   2. no file is added or removed inside `packages/memory/wiki/.wiki/`;
  *   3. no `<repo>/.wiki/` directory is scaffolded;
  *   4. no cwd-relative `dist/__tests__/scratch-*` directory appears.
  *
@@ -30,12 +30,13 @@ import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 const MEMORY = join(ROOT, "packages", "memory");
-const WIKI_SUITE_DIR = join(MEMORY, "dist", "wiki", "__tests__");
+const WIKI_PACKAGE = join(MEMORY, "wiki");
+const WIKI_SUITE_DIR = join(WIKI_PACKAGE, "src", "__tests__");
 // The suite directory is passed as a directory argument, relative to that cwd: `bun test` receives
 // explicit paths (it does not expand globs itself), and a directory keeps the set cwd-scoped.
 const suiteDir = (cwd) => relative(cwd, WIKI_SUITE_DIR).split("\\").join("/");
 const FIXTURE_NAMES = [".manifest.json", "SCHEMA.md", "log.md"];
-const FIXTURE_DIR = join("packages", "memory", ".wiki");
+const FIXTURE_DIR = join("packages", "memory", "wiki", ".wiki");
 // Pre-isolation scratch locations: `join(process.cwd(), "dist/__tests__", …)`.
 const RETIRED_SCRATCH_PREFIXES = ["scratch-", "fixture-"];
 
@@ -99,19 +100,19 @@ test("nested wiki runner is one sequential Bun process while retaining pollution
 });
 
 test("wiki suites are hermetic: tracked fixtures and the repository root stay untouched", () => {
-  assert.ok(existsSync(fixtureDir(ROOT)), "packages/memory/.wiki fixture must exist");
-  assert.ok(existsSync(WIKI_SUITE_DIR), "packages/memory must be built first (dist/wiki/__tests__ missing)");
+  assert.ok(existsSync(fixtureDir(ROOT)), "packages/memory/wiki/.wiki fixture must exist");
+  assert.ok(existsSync(WIKI_SUITE_DIR), "the wiki suite directory moved to packages/memory/wiki/src/__tests__ (plan 158 Task 5)");
   const staleRootWiki = join(ROOT, ".wiki");
   assert.ok(!existsSync(staleRootWiki), `stale ${staleRootWiki} exists before the run; remove it (rm -rf ${staleRootWiki}) and re-run`);
 
-  for (const cwd of [MEMORY, ROOT]) {
+  for (const cwd of [WIKI_PACKAGE, ROOT]) {
     const findings = detectPollution(ROOT, cwd, () => runWikiSuites(cwd));
     assert.deepEqual(findings, [], `wiki suites polluted the repository (cwd=${cwd.slice(ROOT.length + 1) || "."})`);
   }
 });
 
 test("wiki suites take every scratch root from tmpdir(), not the working directory", () => {
-  const dir = join(MEMORY, "src", "wiki", "__tests__");
+  const dir = WIKI_SUITE_DIR;
   const offenders = readdirSync(dir)
     .filter((name) => name.endsWith(".test.ts"))
     .filter((name) => readFileSync(join(dir, name), "utf8").includes("process.cwd()"));
@@ -128,7 +129,7 @@ test("pollution detector fires on every branch it is supposed to watch", () => {
   try {
     mkdirSync(fixtureDir(repo), { recursive: true });
     for (const name of FIXTURE_NAMES) writeFileSync(join(fixtureDir(repo), name), `${name}\n`);
-    const cwd = join(repo, "packages", "memory");
+    const cwd = join(repo, "packages", "memory", "wiki");
     mkdirSync(cwd, { recursive: true });
 
     // (a) fixture rewrite — the shape of the phase 070 FA 7 defect. The detector

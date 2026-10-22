@@ -46,4 +46,4 @@ Command hooks spawn an argv array. No shell. Hash pins cover the command and its
 
 ## Related
 
-Kernel hooks: `docs/next/hooks.md`. The released 0.12.1 page stays `docs/hooks.md`.
+Kernel hooks: [`docs/hooks.md`](../../../docs/hooks.md).

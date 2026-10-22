@@ -12,7 +12,15 @@ export {
   parseManifest,
 } from "./format.js";
 export { type InstallLocation, type InstallOptions, install, remove } from "./install.js";
-export { hashPackageTree, installedPackageDir, verifyInstalled } from "./integrity.js";
+export {
+  MAX_CLOSURE_PACKAGES,
+  hashPackageClosure,
+  hashPackageTree,
+  installedPackageDir,
+  verifyInstalled,
+  type HashPackageClosureOptions,
+  type HashPackageTreeContext,
+} from "./integrity.js";
 export { type LoadManifestOptions, loadManifest, type ManifestTrustRequest } from "./load.js";
 export {
   assignSlot,

@@ -23,29 +23,16 @@
  * and none was skipped, so a deleted/renamed/skipped blocker test fails the
  * suite even when the remaining tests pass.
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
-import {
-  AgentDecisionError,
-  askEveryTool,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  providerDone,
-  providerTextDelta,
-  resumeAgentRun,
-  toolCallContent,
-} from "@arnilo/prism";
-import { createCliRunner } from "@arnilo/prism-work/connectors";
-import {
-  createCodingApprovalPolicy,
-  createSandboxCodingComposition,
-  resolveSandboxCapabilities,
-} from "../packages/prism-coding-tools/dist/security/index.js";
+import { AgentDecisionError, askEveryTool, createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-tools-coding";
+import { createCliRunner } from "@arnilo/prism-tools-work/connectors";
 
 const BLOCKER_IDS = ["resume-validation", "work-tools-env", "sandbox-capabilities"];
 const blockerIds = new Set();
@@ -73,49 +60,46 @@ async function suspendedRun() {
     model: { provider: "mock", model: "demo" },
     slots: { store: createMemorySessionStore() },
     packages: [providerPackage("test-provider", [provider])],
-    tools: [
-      {
-        name: "write",
-        parameters: {},
-        execute: (args, context) => {
-          executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
-          return { toolCallId: context.toolCallId, name: "write", value: "done" };
+    tools: {
+      add: [
+        {
+          name: "write",
+          parameters: {},
+          execute: (args, context) => {
+            executed.push(`${context.toolCallId}:${JSON.stringify(args)}`);
+            return { toolCallId: context.toolCallId, name: "write", value: "done" };
+          },
         },
-      },
-    ],
+      ],
+    },
   });
-  const checkpoints = createMemoryCheckpointStore();
-  const first = await (await agent.session({ id: "phase20-run", create: true })).run("go", {
-    runState: { checkpoints, definitionRevision: "1" },
-  });
-  return { agent, checkpoints, executed, first };
+  // The suspension lives in the store slot's `suspended_run` entry (plan 168 Task 5).
+  const session = await agent.session({ id: "phase20-run", create: true });
+  const first = await session.run("go");
+  return { agent, session, executed, first };
 }
 
 describe("phase20 security conformance (plan 020 Task 5, built public entrypoints)", () => {
-  it("T1/T4 blocker: unknown durable-resume decision 'sideways' fails closed with no write and no tool call", async () => {
-    const { agent, checkpoints, executed, first } = await suspendedRun();
+  it("T1/T4 blocker: an invalid resume decision fails closed with no write and no tool call", async () => {
+    const { session, executed, first } = await suspendedRun();
     assert.equal(first.status, "suspended");
     const pending = first.pending;
     assert.equal(pending.length, 1);
-    const version = first.runState.version;
-    const ref = { runId: first.runId, sessionId: first.sessionId };
 
+    const decision = (outcome) => [{ approvalId: pending[0].approvalId, outcome }];
+    const drain = async (decisions) => {
+      for await (const _event of session.resume(decisions)) {
+        /* drain */
+      }
+    };
     await assert.rejects(
-      resumeAgentRun(agent, ref, { expectedVersion: version, decision: "sideways" }, { checkpoints, definitionRevision: "1" }),
+      drain(decision("sideways")),
       (error) => error instanceof AgentDecisionError && error.code === "ERR_PRISM_DECISION_INVALID",
     );
-    // No side effect, no version consumed, still suspended.
+    // No side effect and still suspended: the rejected attempt dispatched nothing.
     assert.deepEqual(executed, []);
-    assert.equal(first.runState.version, version);
 
-    // The original expectedVersion still resumes: the rejected attempt wrote nothing.
-    const approved = await resumeAgentRun(
-      agent,
-      ref,
-      { expectedVersion: version, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(approved.status, "completed");
+    await drain(decision("allow_once"));
     assert.deepEqual(executed, ['call-1:{"value":"a"}']);
     blockerIds.add("resume-validation");
   });
@@ -146,13 +130,10 @@ describe("phase20 security conformance (plan 020 Task 5, built public entrypoint
       execFile: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
       close: async () => {},
     };
-    const policy = createCodingApprovalPolicy({ roots: [cwd], approve: async () => true });
-
     // Un-attested Disposable-shaped adapter: workspace coherence yes, isolation no.
     const { composition } = createSandboxCodingComposition(cwd, {
       workspaceMode: "sandbox",
       sandbox: unattested,
-      executionPolicy: policy,
     });
     assert.equal(composition.capabilities.workspaceCoherent, true);
     for (const field of ["filesystemIsolated", "networkIsolated", "processIsolated", "privilegeIsolated", "egressRestricted"]) {
@@ -179,7 +160,7 @@ describe("phase20 security conformance (plan 020 Task 5, built public entrypoint
     assert.ok(Object.isFrozen(resolved), "resolved capabilities must be frozen");
 
     // Host mode reports workspace coherence but no isolation.
-    const host = createSandboxCodingComposition(cwd, { workspaceMode: "host", executionPolicy: policy });
+    const host = createSandboxCodingComposition(cwd, { workspaceMode: "host" });
     assert.equal(host.composition.capabilities.workspaceCoherent, true);
     assert.equal(host.composition.capabilities.filesystemIsolated, false);
     assert.equal(host.composition.capabilities.egressRestricted, false);

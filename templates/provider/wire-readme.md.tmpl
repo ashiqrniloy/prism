@@ -1,0 +1,10 @@
+# Wire Fixtures for {{providerId}}
+
+This folder holds recorded HTTP exchanges for replay conformance testing.
+
+To record live exchanges against the upstream provider:
+
+```bash
+bun scripts/wire-proxy.mjs --upstream https://api.{{providerId}}.example/v1 --listen 127.0.0.1:8787 \
+  --record src/__tests__/wire --secret-env {{providerUpper}}_API_KEY
+```

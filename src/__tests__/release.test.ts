@@ -1,9 +1,9 @@
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 
 import {
   assertGitState,
@@ -50,12 +50,22 @@ const missing = async () => new Response("not found", { status: 404 });
 
 test("0.3.0 release graph is independent, publishable, and documented", () => {
   const release = loadRelease(process.cwd());
-  // 38 = root + 37 workspace packages, including channels, prism-hooks, agent-sdk, prism-code,
+  // 49 = root + 48 workspace packages, including channels, prism-hooks, agent-sdk,
   // the twenty-one standalone provider packages under packages/providers/, the keyring package
   // under packages/credentials/ (plan 152 Tasks 3-7; the retired @arnilo/prism-providers umbrella
-  // workspace was deleted in Task 8), and the store packages under packages/stores/ (plan 153
-  // Tasks 3-4: JSONL, codecs, SQLite).
-  assert.equal(release.packages.length, 39);
+  // workspace was deleted in Task 8), the store packages under packages/stores/ (plan 153
+  // Tasks 3-4: JSONL, codecs, SQLite), the coding, web, browser, OpenAPI, and computer-use
+  // packages under packages/tools/ (plan 154 Task 3; plan 155 Tasks 2-4), the compaction,
+  // observational-memory, shared memory-core, RAG, fabric, and wiki packages nested under
+  // packages/memory/ (plan 157 Tasks 3-4; plan 158 Tasks 2-5), and the approval, guardrail-packs,
+  // governance, context-files, and context-engineering packages under packages/policy/ and
+  // packages/context/ (plan 154 Tasks 6-7; plan 158 Task 7; plan 159 Tasks 5-6; plan 160 Tasks 2-4),
+  // and the ACP host library (plan 161 Task 2), plus `@arnilo/prism-driver-process` (plans 166–167) and
+  // `@arnilo/prism-workflows` (plan 168 Task 2), which landed after this count was written.
+  // Plan 174 Task 6 retires the core family package, so the graph is 63 packages. Plan 174
+  // Task 7 retires the three 0.12 workspaces (coding-tools, agent-sdk, acp-agent), so 60.
+  // Plan 182 Task 2 retires the 17 provider packages, so 43.
+  assert.equal(release.packages.length, 43);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",
@@ -68,9 +78,10 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
     const changelog = readFileSync(join(process.cwd(), pkg.path, "CHANGELOG.md"), "utf8");
     if (pkg.manifest.name === "@arnilo/prism-channels") {
       assert.ok(changelog.includes("## [Unreleased] (plan 079 Task 4)"), "channels package missing extraction changelog");
-    } else if (pkg.manifest.name === "@arnilo/prism-code" || pkg.manifest.name === "@arnilo/prism-agent-sdk") {
-      // Plan 140 Task 1: own version lines, no lockstep anchor sections.
-      assert.ok(changelog.includes(`## [${pkg.manifest.version}]`), `${pkg.manifest.name} missing ${pkg.manifest.version} changelog`);
+    } else if ((changelog.match(/^## \[[^\]]+\]/m)?.[0] ?? "") === "## [Unreleased]") {
+      // Packages added after the 0.1.0 anchor (driver-process, remote, headless, research) carry an
+      // Unreleased entry until their first cut.
+      assert.ok(changelog.includes("## [Unreleased]"), `${pkg.manifest.name} missing its initial unreleased entry`);
     } else {
       assert.ok(changelog.includes("## [0.1.0] - 2026-08-09"), `${pkg.manifest.name} missing 0.1.0 changelog`);
     }
@@ -78,11 +89,10 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
   assert.ok(changelog.includes("## [0.2.0] - 2026-08-13"), "root changelog missing 0.2.0 entry");
   assert.ok(changelog.includes("## [0.1.7] - 2026-08-12"), "root changelog missing 0.1.7 entry");
-  // Plan 152 Tasks 3-4: the flagship providers moved back out of the family into standalone
-  // `@arnilo/prism-provider-*` manifests; the 0.1.2 handoff lives in the docs.
+  // Plan 182 Task 2: 17 provider packages retired; 4 supported providers remain.
   assert.ok(
-    existsSync(join(process.cwd(), "packages/providers/alibaba/src/index.ts")),
-    "alibaba adapter must exist as a standalone provider package",
+    existsSync(join(process.cwd(), "packages/providers/hyper/src/index.ts")),
+    "hyper adapter must exist as a standalone provider package",
   );
   const docs = readFileSync(join(process.cwd(), "docs/history/release-handoffs.md"), "utf8");
   assert.ok(docs.includes("### 0.1.2 publish handoff (plan 014 Task 6)"));
@@ -163,18 +173,17 @@ test("partial publish writes resumable report and publish arguments are explicit
     JSON.parse(readFileSync(reportPath, "utf8")).packages.map((entry: { status: string }) => entry.status),
     ["published", "failed"],
   );
-  assert.deepEqual(publishArgs(release.packages[0], true, true), [
+  assert.deepEqual(publishArgs(release.packages[0], VERSION, { dryRun: true }), [
     "publish",
-    ".",
+    join("release-artifacts", "arnilo-prism-0.0.13.tgz"),
     "--access",
     "public",
-    "--provenance",
     "--tag",
     "latest",
     "--dry-run",
   ]);
-  assert.ok(!publishArgs(release.packages[0], true, false).includes("--provenance"), "local publish must not request provenance");
-  assert.equal(publishArgs(release.packages[1])[1], "./packages/addon");
+  assert.ok(!publishArgs(release.packages[0], VERSION).includes("--provenance"), "npm provenance is retired");
+  assert.equal(publishArgs(release.packages[1], VERSION)[1], join("release-artifacts", "arnilo-prism-addon-0.0.13.tgz"));
 });
 
 test("release requires clean tagged git state", () => {
@@ -224,7 +233,8 @@ test("release workflow publishes the lockstep cut once and package tags independ
   assert.match(workflow, /release:publish -- --resume/);
   assert.doesNotMatch(workflow, /publish[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)/);
   const releaseCli = readFileSync(join(process.cwd(), "scripts/release.mjs"), "utf8");
-  assert.match(releaseCli, /--provenance/);
+  assert.match(releaseCli, /spawnSync\("bun", publishArgs/);
+  assert.doesNotMatch(releaseCli, /--provenance/);
   assert.match(releaseCli, /HEAD must have tag v\$\{version\}/);
 });
 

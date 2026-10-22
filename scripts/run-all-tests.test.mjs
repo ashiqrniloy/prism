@@ -4,11 +4,12 @@
 // and that the gate-file policy it encodes (protection gates in, retired phase
 // gates out) stays assertable now that the chain is data instead of a
 // `package.json` string.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join, relative } from "node:path";
-import { test } from "bun:test";
 import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 import { effectiveTestChain, GATE_FILES, runParallelLeaves, runStages, STAGES } from "./run-all-tests.mjs";
 
@@ -16,14 +17,12 @@ const ROOT = join(import.meta.dirname, "..");
 
 /** Every workspace package dir, relative to the repo root (grouped bases included). */
 function workspaceDirs() {
-  return expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces).map((dir) =>
-    relative(ROOT, dir),
-  );
+  return expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces).map((dir) => relative(ROOT, dir));
 }
 
 /**
  * Expand a package test script's file arguments the way the runner does: directory args
- * (`dist`), last-segment globs, and `--path-ignore-patterns=` filters (plan 124 Task 2).
+ * (`src`), last-segment globs, and `--path-ignore-patterns=` filters (plan 124 Task 2).
  * Used by the partition test to compare declared sets against the built tree.
  */
 function scriptFiles(script, cwd) {
@@ -42,13 +41,15 @@ function scriptFiles(script, cwd) {
       )
       .join("|")})$`,
   );
-  return tail
-    // A source package (`exports: "./src/index.ts"`, plan 147 Task 5) tests `src`; a
-    // dist package tests `dist`. Both are directories the runner passes straight through.
-    .filter((arg) => arg === "dist" || arg === "src" || arg.includes(".test.js"))
-    .flatMap((arg) => globSync(arg === "dist" ? "dist/**/*.test.js" : arg === "src" ? "src/**/*.test.ts" : arg, { cwd }))
-    .filter((file) => ignores.length === 0 || !ignorePattern.test(file))
-    .sort();
+  return (
+    tail
+      // A source package (`exports: "./src/index.ts"`, plan 147 Task 5) tests `src`, and one that
+      // lists explicit files lists `.test.ts` (plan 175 Task 8: the channels host package).
+      .filter((arg) => arg === "dist" || arg === "src" || arg.includes(".test.js") || arg.includes(".test.ts"))
+      .flatMap((arg) => globSync(arg === "dist" ? "dist/**/*.test.js" : arg === "src" ? "src/**/*.test.ts" : arg, { cwd }))
+      .filter((file) => ignores.length === 0 || !ignorePattern.test(file))
+      .sort()
+  );
 }
 
 async function fakeStages(statuses) {
@@ -145,14 +146,24 @@ test("timing-sensitive stages carry the measured --parallel=4 bound", () => {
     return args;
   };
   const rootArgs = STAGES.find((stage) => stage.name === "root suites")?.args;
-  assertBound("root suites", rootArgs, "dist/__tests__/*.test.js");
+  assertBound("root suites", rootArgs, "src");
   assert.ok(rootArgs.includes("--path-ignore-patterns=packages/**"), "the root stage must not pull the workspace twins (Task 1 §1.3)");
+  // Bun matches the positional `src` as a path substring, so the private app host
+  // (`apps/prism-agent/src/__tests__/**`) would otherwise run here and again in the workspace stage.
+  assert.ok(
+    rootArgs.includes("--path-ignore-patterns=apps/**"),
+    "the root stage must not pull the app workspace (it already runs in the workspace stage)",
+  );
+  assert.ok(
+    !rootArgs.some((arg) => arg.includes(",")),
+    "path-ignore patterns must be separate flags: Bun matches nothing for a comma-joined value",
+  );
   assert.throws(
     () =>
       assertBound(
         "root suites",
         rootArgs.filter((arg) => arg !== "--parallel=4"),
-        "dist/__tests__/*.test.js",
+        "src",
       ),
     /needs the measured worker bound/,
     "positive control: a copy without the bound must fail the assertion",
@@ -167,7 +178,6 @@ test("timing-sensitive stages carry the measured --parallel=4 bound", () => {
 });
 
 test("the workspace test scripts declare bun test file sets that resolve on disk", () => {
-  const packagesDir = join(ROOT, "packages");
   for (const dir of workspaceDirs()) {
     const script = readManifest(join(ROOT, dir, "package.json")).scripts?.test ?? "";
     assert.match(script, /bun test --parallel=4 --timeout=0 /, `${dir} must run a bounded bun test`);
@@ -175,22 +185,12 @@ test("the workspace test scripts declare bun test file sets that resolve on disk
     assert.ok(files.length > 0, `${dir}: the declared file set must be non-empty (build first)`);
     for (const file of files) assert.ok(existsSync(join(ROOT, dir, file)), `${dir}: ${file} does not exist (build first)`);
   }
-  // The two packages whose pre-flip globs needed shell quoting now pass a directory: Bun's glob
-  // engine matches only the last path segment (measured 2026-09-25), so `dist/**` matched nothing.
-  assert.match(
-    readManifest(join(ROOT, "packages/prism-coding-tools", "package.json")).scripts.test,
-    /--timeout=0 dist$/,
-    "coding-tools must pass the dist directory",
-  );
+  // Packages whose pre-flip globs needed shell quoting now pass a directory: Bun's glob engine
+  // matches only the last path segment (measured 2026-09-25), so `dist/**` matched nothing.
   assert.match(
     readManifest(join(ROOT, "packages/integrations/hooks-json", "package.json")).scripts.test,
     /--timeout=0 src$/,
     "hooks-json publishes source and tests src",
-  );
-  const coreTest = readManifest(join(packagesDir, "prism-core", "package.json")).scripts.test;
-  assert.ok(
-    !coreTest.includes("$(") && !coreTest.includes('"dist/**'),
-    "prism-core must not reintroduce a shell substitution or a mid-path ** glob",
   );
 });
 
@@ -245,7 +245,7 @@ test("the bun-blocked paths stay off the stage file sets", () => {
   for (const needle of ["--test-isolation", "--experimental-test-coverage", "--test-concurrency", "npm run"]) {
     assert.ok(!stageArgs.includes(needle), `STAGES must not carry ${needle}`);
   }
-  for (const file of ["packages/prism-channels/src/__tests__/postgres.integration.test.ts"]) {
+  for (const file of ["packages/hosts/channels/src/__tests__/postgres.integration.test.ts"]) {
     assert.ok(!stageArgs.includes(file), `${file} must stay off every stage argument`);
   }
   assert.ok(
@@ -254,24 +254,12 @@ test("the bun-blocked paths stay off the stage file sets", () => {
   );
 });
 
-test("prism-core runs every dist test file itself", () => {
-  // Plan 153 Task 4: the SQLite tests moved to @arnilo/prism-store-sqlite, so prism-core no longer
-  // needs the path-ignore split the separate SQLite stage used to balance.
-  const pkgDir = join(ROOT, "packages", "prism-core");
-  const script = readManifest(join(pkgDir, "package.json")).scripts.test;
-  assert.ok(!script.includes("--path-ignore-patterns"), "the default side must run every built test file");
-  const all = globSync("dist/**/*.test.js", { cwd: pkgDir }).sort();
-  assert.ok(all.length > 0, "build first: prism-core dist tests must exist");
-});
-
 test("ownership, checkpoint, snapshot, and timestamp regressions stay in mandatory offline stages", () => {
   const regressions = [
-    ["dist/__tests__/session-stores.test.js", "memory session store snapshots initial and appended entries before indexing"],
-    ["packages/prism-core/dist/runtime/workflows/__tests__/run.test.js", "never retries effects after a post-execution checkpoint failure"],
-    [
-      "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
-      "scopes ordinary and leaf entry queries to the owning session",
-    ],
+    ["src/__tests__/session-stores.test.ts", "memory session store snapshots initial and appended entries before indexing"],
+    // Plan 168 Task 7 deleted the 0.12 engine: the regression lives in the ported package's own suite.
+    ["packages/integrations/workflows/src/__tests__/run.test.ts", "never retries effects after a post-execution checkpoint failure"],
+    ["packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts", "scopes ordinary and leaf entry queries to the owning session"],
     ["packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts", "filters and keyset-paginates branch entry queries"],
     [
       "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
@@ -295,12 +283,11 @@ test("every workspace test file runs exactly once: default suite or an opt-in le
     assert.ok(!claimed.has(file), `${file} runs in two stages: ${claimed.get(file)} and ${owner}`);
     claimed.set(file, owner);
   };
-  for (const file of globSync("dist/__tests__/*.test.js", { cwd: ROOT })) claim(file, "root suites");
-  assert.equal(
-    globSync("dist/__tests__/*.test.js", { cwd: ROOT }).length,
-    globSync("dist/**/*.test.js", { cwd: ROOT }).length,
-    "the root stage glob must cover every root dist test file",
-  );
+  for (const file of globSync("src/**/*.test.ts", { cwd: ROOT })) {
+    // The workspace stage owns the package twins; the root stage owns everything under src/.
+    if (file.includes("/node_modules/")) continue;
+    claim(file, "root suites");
+  }
   for (const file of GATE_FILES) claim(file, "gate suites");
   for (const file of ["scripts/phase23-build-race.test.mjs", "scripts/budget-gate.test.mjs", "scripts/examples-execution.test.mjs"]) {
     claim(file, "stage");

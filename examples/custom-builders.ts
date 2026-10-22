@@ -29,8 +29,7 @@ export async function demo(): Promise<readonly string[]> {
             {
               type: "text",
               text: messages
-                .map((m) => m.content)
-                .flat()
+                .flatMap((m) => m.content)
                 .map((b) => (b.type === "text" ? b.text : ""))
                 .join(" "),
             },

@@ -9,9 +9,9 @@ import {
   createMoveTool,
   createReadPathSet,
   createReadTool,
-  createRepoSearchTool,
+  createGrepTool,
   createWriteTool,
-} from "@arnilo/prism-coding-tools/agent";
+} from "@arnilo/prism-tools-coding";
 
 function textOf(result: { content?: ReadonlyArray<{ type: string; text?: string }> }): string {
   const block = result.content?.[0];
@@ -20,10 +20,10 @@ function textOf(result: { content?: ReadonlyArray<{ type: string; text?: string 
 
 /**
  * Network-free smoke of Phase 4 coding-tool capabilities:
- * repo_search outputMode, glob, read-before-write, delete, move.
+ * grep outputMode, glob, read-before-write, delete, move.
  */
 export async function demo() {
-  const cwd = await mkdtemp(join(tmpdir(), "prism-coding-tools-gaps-"));
+  const cwd = await mkdtemp(join(tmpdir(), "prism-tools-coding-gaps-"));
   try {
     await mkdir(join(cwd, "src"), { recursive: true });
     await writeFile(join(cwd, "src", "a.ts"), "export const alpha = 1;\n", "utf8");
@@ -36,9 +36,9 @@ export async function demo() {
       signal: AbortSignal.timeout(15_000),
     };
 
-    const search = createRepoSearchTool(cwd);
-    const count = await search.execute({ query: "alpha", outputMode: "count" }, ctx);
-    const files = await search.execute({ query: "alpha", outputMode: "files_with_matches" }, ctx);
+    const search = createGrepTool(cwd);
+    const count = await search.execute({ pattern: "alpha", outputMode: "count" }, ctx);
+    const files = await search.execute({ pattern: "alpha", outputMode: "files_with_matches" }, ctx);
 
     const glob = createGlobTool(cwd);
     const matched = await glob.execute({ pattern: "src/**/*.ts" }, ctx);

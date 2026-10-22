@@ -5,6 +5,7 @@ export default {
   name: "@acme/hello",
   version: "1.0.0",
   description: "Greets by name. Declares one tool and one secret ref.",
+  requires: { api: 1 },
   capabilities: ["host-ui"],
   config: {
     type: "object",

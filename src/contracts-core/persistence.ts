@@ -42,91 +42,6 @@ export interface PersistenceQuery {
   readonly order?: "asc" | "desc";
 }
 
-/** Generic versioned checkpoint key. Namespaces prevent consumer collisions. */
-export interface CheckpointKey extends OwnershipScope {
-  readonly namespace: string;
-  readonly key: string;
-  readonly signal?: AbortSignal;
-}
-
-/** Input for an optimistic checkpoint write. Versions must strictly increase. */
-export interface CheckpointSaveInput extends CheckpointKey {
-  readonly version: number;
-  /** Exact current version required before update; use 0 for create-only. */
-  readonly expectedVersion?: number;
-  /** Monotonic lease fence. Lower or absent worker fences cannot replace a fenced record. */
-  readonly fencingToken?: number;
-  readonly value: unknown;
-  readonly category?: string;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-/** Durable generic checkpoint record. */
-export interface CheckpointRecord extends OwnershipScope {
-  readonly namespace: string;
-  readonly key: string;
-  readonly version: number;
-  readonly fencingToken?: number;
-  readonly value: unknown;
-  readonly category?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-/** Bounded checkpoint query. */
-export interface CheckpointQuery extends PersistenceQuery, OwnershipScope {
-  readonly namespace?: string;
-  readonly keyPrefix?: string;
-  readonly category?: string | readonly string[];
-  readonly signal?: AbortSignal;
-}
-
-/** Generic versioned checkpoint capability for persistence adapters. */
-export interface CheckpointStore {
-  saveCheckpoint(input: CheckpointSaveInput): Promise<CheckpointRecord>;
-  loadCheckpoint(input: CheckpointKey): Promise<CheckpointRecord | null>;
-  listCheckpoints(query?: CheckpointQuery): Promise<PersistencePage<CheckpointRecord>>;
-  deleteCheckpoint(input: CheckpointKey): Promise<boolean>;
-}
-
-/** Generic lease key. Ownership fields are part of the trust boundary. */
-export interface LeaseKey extends OwnershipScope {
-  readonly namespace: string;
-  readonly key: string;
-  readonly signal?: AbortSignal;
-}
-
-export interface LeaseAcquireInput extends LeaseKey {
-  readonly ownerId: string;
-  readonly ttlMs: number;
-}
-
-export interface LeaseClaimInput extends LeaseKey {
-  readonly ownerId: string;
-  readonly token: string;
-  readonly ttlMs?: number;
-}
-
-export interface LeaseRecord extends OwnershipScope {
-  readonly namespace: string;
-  readonly key: string;
-  readonly ownerId: string;
-  readonly token: string;
-  readonly fencingToken: number;
-  readonly acquiredAt: string;
-  readonly expiresAt: string;
-  readonly updatedAt: string;
-}
-
-/** Atomic distributed lease capability. Expired rows retain fencing counters. */
-export interface LeaseStore {
-  tryAcquireLease(input: LeaseAcquireInput): Promise<LeaseRecord | null>;
-  renewLease(input: LeaseClaimInput & { readonly ttlMs: number }): Promise<LeaseRecord | null>;
-  releaseLease(input: LeaseClaimInput): Promise<boolean>;
-  getLease(input: LeaseKey): Promise<LeaseRecord | null>;
-}
-
 /** Stored session record. Does not include provider objects or credentials. */
 export interface SessionRecord extends OwnershipScope {
   readonly id: string;
@@ -372,15 +287,13 @@ export interface MigrationQuery extends PersistenceQuery {
  * Production database-neutral persistence store contract.
  * Hosts implement this interface to provide durable, paginated storage
  * for sessions, entries, runs, events, tool calls, usage, agent definitions,
- * and migrations, with optional generic checkpoint and atomic lease capabilities. No SQL client, ORM, host file storage, or network dependency is
- * required by the contract.
+ * and migrations. No SQL client, ORM, host file storage, or network dependency is
+ * required by the contract. Resumable consumers (workflows, channels) reach the
+ * checkpoints and leases capabilities through the service contracts their own
+ * packages publish (plan 168 Task 4-5).
  */
 export interface ProductionPersistenceStore {
   readonly name?: string;
-  /** Optional generic write capability for resumable consumers such as workflows. */
-  readonly checkpoints?: CheckpointStore;
-  /** Optional atomic distributed lease capability for coordinators and workers. */
-  readonly leases?: LeaseStore;
   /** Optional immutable run/trace feedback storage capability. */
   readonly feedback?: RunFeedbackStore;
   /** Optional durable, cross-replica-capable event source. */
@@ -404,10 +317,5 @@ export interface ProductionPersistenceStore {
   /** DB-friendly branch read (mirrors `SessionStore.readBranchPath`): one ancestor-chain
    *  query instead of `queryEntries({ sessionId })` + in-memory walk. Optional. */
   readBranchPath?(query: SessionBranchRead): Promise<PersistencePage<SessionEntry>>;
-  /**
-   * Optional Phase 8 retention / legal-hold / export / tenant-quota lifecycle.
-   * Prefer attaching `createMemoryPersistenceLifecycle()` or adapter-native methods.
-   */
-  readonly lifecycle?: import("../persistence-lifecycle.js").PersistenceLifecycleStore;
   readonly metadata?: Readonly<Record<string, unknown>>;
 }

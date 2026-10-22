@@ -21,10 +21,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import { describe, it } from "bun:test";
-import { sanitizeCacheKey, trimTrailingSlashes } from "@arnilo/prism";
-import { htmlParser, pdfParser } from "@arnilo/prism-memory/rag";
-import { parseMarkdownHeading, parseSkillMarkdown } from "@arnilo/prism-memory/wiki";
-import { parseCodingPlanTodos } from "../packages/prism-coding-tools/dist/agent/index.js";
+import { trimTrailingSlashes } from "@arnilo/prism";
+import { sanitizeCacheKey } from "@arnilo/prism/provider-kit";
+import { htmlParser, pdfParser } from "@arnilo/prism-memory-rag";
+import { parseMarkdownHeading, parseSkillMarkdown } from "@arnilo/prism-memory-wiki";
+import { parseCodingPlanTodos } from "@arnilo/prism-tools-coding";
 
 describe("phase38 codeql regressions", () => {
   it("trimTrailingSlashes matches replace semantics and is linear on hostile input", () => {
@@ -117,12 +118,6 @@ describe("phase38 codeql regressions", () => {
     const fixture = readFileSync("scripts/fixtures/phase26-coding-journey.mjs", "utf8");
     assert.ok(!fixture.includes("Math.random"), "fixture must not use Math.random identifiers");
     assert.ok(fixture.includes("randomBytes"), "fixture suffix must come from node:crypto");
-  });
-
-  it("phase27 DR drill never prints raw error text (alert 56)", () => {
-    const drill = readFileSync("scripts/phase27-dr.test.mjs", "utf8");
-    assert.ok(!/\$\{error\.message\}/.test(drill), "error.message must not be interpolated into console output");
-    assert.ok(!/console\.error\(`[^`]*\$\{error\.(message|stack)/.test(drill));
   });
 
   it("CodeQL config enables security-extended with no first-party exclusions", () => {

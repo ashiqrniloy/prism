@@ -23,7 +23,7 @@ function publicModel(model: ModelSpec, providerId: string): ModelConfig {
 }
 
 export function createModelIndex(sources: {
-  readonly configured: ModelSpec;
+  readonly configured: ModelSpec | undefined;
   readonly packages: () => LoadedPackages;
   readonly redactor: () => SecretRedactor | undefined;
 }): ModelIndex {
@@ -42,7 +42,7 @@ export function createModelIndex(sources: {
         for (const model of await provider.models()) add(model, provider.id);
       }
       // A provider without discovery still serves the configured model, so the list is never silently empty.
-      add(sources.configured, sources.configured.provider);
+      if (sources.configured) add(sources.configured, sources.configured.provider);
       const redactor = sources.redactor();
       const plain = JSON.parse(JSON.stringify(models)) as ModelConfig[];
       const safe = redactor ? redactor.redact(plain) : plain;

@@ -1,4 +1,4 @@
-import type { ModelProvider, ProviderEvent, ProviderRequest } from "../contracts.js";
+import type { EmbeddingsProvider, ModelProvider, ProviderEvent, ProviderRequest } from "../contracts.js";
 import { createMockProvider } from "../mock-provider.js";
 import { providerPackage } from "../provider-kit/package.js";
 import type { PackageInstance } from "../packages/index.js";
@@ -7,6 +7,8 @@ export interface MockProviderPackageOptions {
   /** The provider id a `ModelRef` selects. Default `mock`. */
   readonly id?: string;
   readonly onRequest?: (request: ProviderRequest) => void;
+  /** An embeddings adapter behind `prism.models.embeddings(ref)`, for RAG and memory tests. */
+  readonly embeddings?: EmbeddingsProvider;
 }
 
 /**
@@ -21,6 +23,7 @@ export function mockProvider(
   let turn = 0;
   const provider: ModelProvider = {
     id: options.id ?? "mock",
+    ...(options.embeddings === undefined ? {} : { embeddings: () => options.embeddings! }),
     generate(request) {
       const step = steps[Math.min(turn++, steps.length - 1)] ?? [];
       return createMockProvider(step, { id: provider.id, onRequest: options.onRequest }).generate(request);

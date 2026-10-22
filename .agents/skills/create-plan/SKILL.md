@@ -97,7 +97,7 @@ A plan turns one roadmap phase, or one self-contained change, into checkable tas
 - Write test cases before implementation. Derive them from the criteria, name each test, and say which break makes it fail.
 - **Every task leaves `bun run typecheck` and the task's suites green.** A rename updates all of its callers in the same task. Never write "red until Task N": plan 142 left the root typecheck red across four tasks because callers were deferred.
 - **A task that moves, renames, or removes a public export must plan the baseline regeneration in that same task:**
-  - Name `node scripts/release.mjs gate --update-baseline` and the `scripts/compat-baseline/` files it rewrites.
+  - Name `bun scripts/release.mjs gate --update-baseline` and the `scripts/compat-baseline/` files it rewrites.
   - Require the post-regeneration diff in the task note, with removals attributed to this plan or inherited.
   - This rule exists because plan 083 skipped the regeneration, leaving `release:gate` red for every later plan, and plan 142 missed `assembleAppAgent`'s return type in the prism-code baseline.
 - **A task that changes an error contract (code, class, or refusal shape) or retires a name must require a repo-wide grep** over `src/ packages/ apps/ scripts/ examples/ docs/`, excluding `dist/`, `plans/`, `docs/history/`, and `docs/_evidence/`. Plan 080 left retired errors asserted in a Postgres test and a script fixture.
@@ -109,7 +109,7 @@ A plan turns one roadmap phase, or one self-contained change, into checkable tas
 ## Self-check before presenting
 
 - [ ] The review task is present, or the header says why the plan changes no contract.
-- [ ] Every task answers the `references/prism.md` §3 probes: placement, mechanism, fail-closed, secrets, load cost, retirement, public surface, callers, proof, docs, enforcement rows, lab impact, cost knobs.
+- [ ] Every task answers the `references/prism.md` §3 probes: placement, mechanism, fail-closed, secrets, load cost, retirement, public surface, callers, proof, docs, enforcement rows, reference host impact, cost knobs.
 - [ ] No task leaves the tree red; every rename updates its callers in the same task.
 - [ ] Every export move plans a baseline regeneration; every retired name or error plans a sweep.
 - [ ] Every new package, example, or docs page plans its enforcement-row updates (`references/prism.md` §3 probe 11).

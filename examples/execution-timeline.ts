@@ -1,5 +1,6 @@
-import { createAgent, createToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
-import { createTimelineFolder, projectWorkflowTimeline, summarizeTimeline } from "@arnilo/prism-core/governance/observability";
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
+import { createAgent, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
+import { createTimelineFolder, projectWorkflowTimeline, summarizeTimeline } from "@arnilo/prism-observability";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
@@ -8,9 +9,8 @@ import {
   projectWorkflowGraphRun,
   runWorkflow,
   serializeWorkflowGraph,
-  type WorkflowEvent,
   workflowGraphToMermaid,
-} from "@arnilo/prism-core/runtime/workflows";
+} from "@arnilo/prism-workflows";
 import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
@@ -33,7 +33,7 @@ const extractorAgent = await createAgent({
 
 // Node 1: Agent node that extracts entities from raw input
 const extractNode = agentNode({
-  agent: "extractor",
+  agent: extractorAgent,
   input: (ctx) => ({ text: ctx.workflowInput }),
 });
 
@@ -67,12 +67,11 @@ const checkpoints = createMemoryWorkflowCheckpoints();
 const ownership = { tenantId: "tenant-demo" };
 
 const runResult = await runWorkflow(workflow, "Prism execution timeline provides host cockpit waterfalls and trajectory evals.", {
-  agentFactory: (_name) => extractorAgent.session(),
   checkpoints,
   ownership,
-  onEvent: (event) => {
+  transitions: workflowEvents((event) => {
     events.push(event);
-  },
+  }),
 });
 
 // ============================================================================
@@ -111,11 +110,15 @@ const graphOverlay = projectWorkflowGraphRun(graph, timeline);
 
 const liveAgent = await createAgent({
   model: { provider: "mock", model: "demo" },
-  packages: [mockProvider([[
-    providerTextDelta("Streaming timeline fold example."),
-    providerUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
-    providerDone(),
-  ]])],
+  packages: [
+    mockProvider([
+      [
+        providerTextDelta("Streaming timeline fold example."),
+        providerUsage({ inputTokens: 10, outputTokens: 5, totalTokens: 15 }),
+        providerDone(),
+      ],
+    ]),
+  ],
 });
 
 const session = await liveAgent.session();
@@ -160,3 +163,11 @@ console.log(
 
 console.log("\n--- Workflow Mermaid Diagram ---");
 console.log(mermaid);
+
+function workflowEvents(consume: (event: WorkflowEvent) => void) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
+}

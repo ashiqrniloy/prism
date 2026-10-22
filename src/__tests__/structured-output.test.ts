@@ -8,7 +8,7 @@ import {
   StructuredOutputError,
   validateStructuredOutputOptions,
   withoutStructuredOutput,
-} from "../structured-output.js";
+} from "../provider-kit/structured-output.js";
 
 const schema = { type: "object", properties: { title: { type: "string" } }, required: ["title"] };
 

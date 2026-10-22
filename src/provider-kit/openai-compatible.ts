@@ -1,26 +1,22 @@
-import type { ModelProvider, JsonObject, Message, ProviderEvent, ProviderRequest, Usage } from "../contracts.js";
-import { type CredentialValueSource, resolveCredentialValue } from "../credentials/index.js";
+import type {
+  JsonObject,
+  Message,
+  ModelProvider,
+  ProviderEvent,
+  ProviderRequest,
+  Usage,
+} from "../contracts.js";
+import type { CredentialValueSource } from "../credentials/index.js";
+import { createRoutedProvider } from "./routed-provider.js";
 import {
-  mapProviderStopReason,
-  providerDone,
-  providerError,
-  providerTextDelta,
-  providerThinkingDelta,
-  providerToolCall,
-  providerToolCallDelta,
-  providerUsage,
-  toolCallFromArgumentsText,
-} from "../models/events.js";
-import { assertStructuredOutputRequestSupported } from "../structured-output.js";
-import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
-import {
-  applyOpenAIChatStructuredOutput,
-  assertOpenAIChatMessage,
-  mapOpenAIChatUsage,
-  serializeOpenAIChatMessage,
-  serializeOpenAITool,
-} from "./openai-primitives.js";
-import { httpStatusError, ProviderTransportError, readBoundedResponseText, readSseEvents } from "./transport.js";
+  type OpenAIChatCodecOptions,
+  type OpenAIChatEventsOptions,
+  buildOpenAIChatBody,
+  openAIChatBody,
+  openAIChatEvents,
+} from "./codecs/openai-chat.js";
+
+export { openAIChatEvents, openAIChatBody, buildOpenAIChatBody, type OpenAIChatEventsOptions };
 
 export interface OpenAICompatibleProviderOptions {
   readonly id?: string;
@@ -57,223 +53,47 @@ export interface OpenAICompatibleProviderOptions {
   readonly onComment?: (text: string) => ProviderEvent | undefined;
 }
 
-export interface OpenAIChatEventsOptions {
-  readonly signal?: AbortSignal;
-  /** Require `[DONE]` and a `finish_reason`; `done` then carries the final usage. Default `true` (fail-closed); set `false` explicitly to accept streams that end without completion evidence. */
-  readonly strictCompletion?: boolean;
-  /** Emit the final stream usage on the `done` event. */
-  readonly doneUsage?: boolean;
-  readonly mapUsage?: (usage: unknown) => Usage | undefined;
-  /** Handle an SSE comment line (text after `:`), e.g. `: energy` / `: cost` telemetry. Returned events are yielded in stream order before the data of the same SSE event. */
-  readonly onComment?: (text: string) => ProviderEvent | undefined;
-}
+/** Subset of factory options that shape the request body. */
+export type OpenAIChatBodyOptions = OpenAIChatCodecOptions;
 
 /**
- * Shared OpenAI Chat Completions SSE stream loop: maps `data:` frames to Prism
- * `ProviderEvent` values (text/thinking deltas, tool-call fragments, usage, done/error).
+ * Creates an OpenAI-compatible provider as a single-route instance of `createRoutedProvider`.
  */
-export async function* openAIChatEvents(
-  body: ReadableStream<Uint8Array>,
-  options: OpenAIChatEventsOptions = {},
-): AsyncIterable<ProviderEvent> {
-  const tools = new Map<number, ToolAccumulator>();
-  let usage: Usage | undefined;
-  let sawDoneMarker = false;
-  let sawFinishReason = false;
-  let finishReason: string | undefined;
-  for await (const sseEvent of readSseEvents(body, { signal: options.signal })) {
-    if (options.onComment && sseEvent.comments?.length) {
-      for (const text of sseEvent.comments) {
-        const commentEvent = options.onComment(text);
-        if (commentEvent) yield commentEvent;
-      }
-    }
-    const data = sseEvent.data.trim();
-    if (!data) continue;
-    if (data === "[DONE]") {
-      sawDoneMarker = true;
-      break;
-    }
-    let parsed: OpenAIStreamChunk;
-    try {
-      parsed = JSON.parse(data) as OpenAIStreamChunk;
-    } catch (error) {
-      // Malformed chunks are terminal: yield the error instead of crashing the generator.
-      yield providerError(error, []);
-      return;
-    }
-    const mapped = (options.mapUsage ?? mapOpenAIChatUsage)(parsed.usage);
-    if (mapped) {
-      usage = mapped;
-      yield providerUsage(mapped);
-    }
-
-    for (const choice of parsed.choices ?? []) {
-      if (choice.finish_reason) {
-        sawFinishReason = true;
-        finishReason = choice.finish_reason;
-      }
-      const delta = choice.delta ?? {};
-      if (typeof delta.content === "string" && delta.content) yield providerTextDelta(delta.content);
-      const thinking = delta.reasoning ?? delta.reasoning_content;
-      if (typeof thinking === "string" && thinking) {
-        yield providerThinkingDelta(thinking);
-      }
-      for (const tool of delta.tool_calls ?? []) {
-        const index = tool.index ?? 0;
-        const current = tools.get(index) ?? { argumentsText: "" };
-        current.id = tool.id ?? current.id;
-        current.name = tool.function?.name ?? current.name;
-        current.argumentsText += tool.function?.arguments ?? "";
-        tools.set(index, current);
-        yield providerToolCallDelta({
-          index,
-          id: tool.id,
-          name: tool.function?.name,
-          argumentsText: tool.function?.arguments,
-        });
-      }
-    }
-  }
-
-  const incomplete = [...tools.entries()].find(([, call]) => !call.id || !call.name);
-  if (incomplete) {
-    yield providerError(new ProviderTransportError("incomplete_delta", `Incomplete tool call delta at index ${incomplete[0]}`));
-    return;
-  }
-  if ((options.strictCompletion ?? true) && (!sawDoneMarker || !sawFinishReason)) {
-    // Truncated streams must fail loudly — emitting done would mark partial output as succeeded.
-    yield providerError(
-      new Error(
-        `Chat stream ended without completion evidence ` +
-          `([DONE]: ${sawDoneMarker ? "received" : "missing"}, ` +
-          `finish_reason: ${sawFinishReason ? "received" : "missing"})`,
-      ),
-    );
-    return;
-  }
-  for (const call of tools.values()) {
-    yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
-  }
-  yield providerDone(
-    (options.strictCompletion ?? true) || options.doneUsage ? usage : undefined,
-    finishReason === undefined ? undefined : mapProviderStopReason(finishReason),
-  );
-}
-
-interface ToolAccumulator {
-  id?: string;
-  name?: string;
-  argumentsText: string;
-}
-
 export function createOpenAICompatibleProvider(options: OpenAICompatibleProviderOptions): ModelProvider {
   const providerId = options.id ?? "openai-compatible";
+  const auth = options.authStyle ?? "bearer";
 
-  return {
+  return createRoutedProvider({
     id: providerId,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      const apiKey = options.resolveApiKey
-        ? await options.resolveApiKey(request)
-        : await resolveCredentialValue(options.apiKey, { name: "apiKey", provider: providerId });
-      const fetchImpl = options.fetch ?? fetch;
-      const secrets = [apiKey];
-
-      try {
-        const url =
-          typeof options.chatCompletionsUrl === "function"
-            ? options.chatCompletionsUrl(request)
-            : (options.chatCompletionsUrl ?? `${trimTrailingSlashes(options.baseUrl)}/chat/completions`);
-        const authStyle = options.authStyle ?? "bearer";
-        const headers: Record<string, string> = {
-          ...Object.fromEntries(
-            Object.entries(request.options?.headers ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-          ),
-          ...options.extraHeaders?.(request),
-          "content-type": "application/json",
-        };
-        if (apiKey && authStyle === "api-key") headers["api-key"] = apiKey;
-        if (apiKey && authStyle === "bearer") headers.authorization = `Bearer ${apiKey}`;
-        const response = await fetchImpl(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(toOpenAIRequest(request, options)),
-          signal: request.signal,
-        });
-
-        if (!response.ok) {
-          const bodyText = await readBoundedResponseText(response, { secrets });
-          const error = options.mapHttpError
-            ? options.mapHttpError(response, bodyText, secrets)
-            : httpStatusError(options.requestFailedPrefix ?? "OpenAI-compatible request failed", response, bodyText);
-          yield providerError(error, secrets);
-          return;
-        }
-
-        if (!response.body) {
-          yield providerError(new Error("OpenAI-compatible response had no body"), secrets);
-          return;
-        }
-
-        yield* openAIChatEvents(response.body, {
-          signal: request.signal,
+    baseUrl: options.baseUrl,
+    apiKey: options.apiKey,
+    resolveApiKey: options.resolveApiKey,
+    fetch: options.fetch,
+    extraHeaders: options.extraHeaders,
+    requestFailedPrefix: options.requestFailedPrefix,
+    mapHttpError: options.mapHttpError,
+    mapUsage: options.mapUsage,
+    routes: {
+      openai: {
+        format: "openai-chat",
+        path: "/chat/completions",
+        auth,
+        url: options.chatCompletionsUrl
+          ? (req, baseUrl) =>
+              typeof options.chatCompletionsUrl === "function"
+                ? options.chatCompletionsUrl(req)
+                : options.chatCompletionsUrl!
+          : undefined,
+        codec: {
+          mapMessages: options.mapMessages,
+          serializeMessage: options.serializeMessage,
+          buildBodyExtra: options.buildBodyExtra,
+          transformBody: options.transformBody,
           strictCompletion: options.strictCompletion,
           doneUsage: options.doneUsage,
-          mapUsage: options.mapUsage,
           onComment: options.onComment,
-        });
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
+        },
+      },
     },
-  };
-}
-
-/** Subset of factory options that shape the request body. */
-export type OpenAIChatBodyOptions = Pick<
-  OpenAICompatibleProviderOptions,
-  "mapMessages" | "serializeMessage" | "buildBodyExtra" | "transformBody"
->;
-
-function toOpenAIRequest(request: ProviderRequest, options: OpenAIChatBodyOptions): JsonObject {
-  assertStructuredOutputRequestSupported(request.model, request.options);
-  const body: JsonObject = {
-    model: request.model.model,
-    messages: (options.mapMessages?.(request) ?? request.messages).map((message, index) => {
-      if (options.serializeMessage) return options.serializeMessage(message, request);
-      assertOpenAIChatMessage(message, `messages[${index}]`);
-      return serializeOpenAIChatMessage(message, request.model.capabilities ?? {});
-    }),
-    tools: request.tools?.map(serializeOpenAITool),
-    stream: true,
-    stream_options: { include_usage: true },
-    ...request.model.parameters,
-  } as JsonObject;
-  applyOpenAIChatStructuredOutput(body, request.options?.structuredOutput);
-  const merged = { ...body, ...options.buildBodyExtra?.(request) };
-  return options.transformBody ? options.transformBody(merged, request) : merged;
-}
-
-/** Base Chat Completions request body builder, exported for provider packages keeping public body helpers. */
-export function buildOpenAIChatBody(request: ProviderRequest, options: OpenAIChatBodyOptions = {}): JsonObject {
-  return toOpenAIRequest(request, options);
-}
-
-interface OpenAIStreamChunk {
-  readonly choices?: readonly {
-    readonly finish_reason?: string | null;
-    readonly delta?: {
-      readonly content?: string;
-      readonly reasoning_content?: string;
-      /** Newer alias of `reasoning_content` used by some gateways. */
-      readonly reasoning?: string;
-      readonly tool_calls?: readonly {
-        readonly index?: number;
-        readonly id?: string;
-        readonly function?: { readonly name?: string; readonly arguments?: string };
-      }[];
-    };
-  }[];
-  readonly usage?: unknown;
+  });
 }

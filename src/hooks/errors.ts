@@ -40,3 +40,6 @@ export class UnknownHookError extends Error {
     this.hook = hook;
   }
 }
+
+/** `tool.execute` is wrap-only: a handler that replaces the call's name or arguments is refused (plan 177 Task 2). */
+export const HOOK_EXECUTE_REWRITE = "ERR_PRISM_HOOK_EXECUTE_REWRITE";

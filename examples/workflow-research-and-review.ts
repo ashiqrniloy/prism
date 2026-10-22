@@ -1,12 +1,7 @@
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
 import { createAgent, createSecretRedactor, createToolRegistry, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
-import {
-  agentNode,
-  createMemoryWorkflowCheckpoints,
-  defineWorkflow,
-  runWorkflow,
-  type WorkflowEvent,
-} from "@arnilo/prism-core/runtime/workflows";
+import { agentNode, createMemoryWorkflowCheckpoints, defineWorkflow, runWorkflow } from "@arnilo/prism-workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Sequential research → draft → review pipeline with in-memory checkpoints.
@@ -34,17 +29,17 @@ const writerAgent = await makeAgent("writer", "You write a draft based on provid
 const reviewerAgent = await makeAgent("reviewer", "You review a draft for quality. Return approved/fix-needed.");
 
 const researchNode = agentNode({
-  agent: "researcher",
+  agent: researchAgent,
   input: (ctx) => ({ topic: ctx.workflowInput }),
 });
 
 const draftNode = agentNode({
-  agent: "writer",
+  agent: writerAgent,
   input: (ctx) => ({ facts: ctx.upstream.research }),
 });
 
 const reviewNode = agentNode({
-  agent: "reviewer",
+  agent: reviewerAgent,
   input: (ctx) => ({ draft: ctx.upstream.draft }),
 });
 
@@ -68,12 +63,11 @@ export async function demo() {
     workflow,
     { topic: "React hooks" },
     {
-      agentFactory: (name) => (name === "researcher" ? researchAgent : name === "writer" ? writerAgent : reviewerAgent).session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },
       signal: AbortSignal.timeout(30_000),
-      onEvent: (e) => events.push(e),
+      transitions: workflowEvents((e) => events.push(e)),
     },
   );
 
@@ -93,4 +87,12 @@ export async function main() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   await main();
+}
+
+function workflowEvents(consume: (event: WorkflowEvent) => void) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
 }

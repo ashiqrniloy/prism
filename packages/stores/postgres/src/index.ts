@@ -15,8 +15,10 @@
  * });
  * ```
  */
+
 import { type AgentEventSourceOptions, definePackage, type JsonSchema, type PackageInstance, type SecretRedactor } from "@arnilo/prism";
 import type { Pool, PoolConfig } from "pg";
+import manifest from "../package.json" with { type: "json" };
 
 import { createPostgresPersistence } from "./persistence.js";
 
@@ -33,6 +35,7 @@ export {
   buildMigration007Ddl,
   buildMigration008Ddl,
   buildMigration009Ddl,
+  buildMigration010Ddl,
 } from "./ddl.js";
 export {
   type ClosablePostgresAgentEventSource,
@@ -95,9 +98,9 @@ const configSchema: JsonSchema = {
 function definitionFor(options: PostgresStoreOptions) {
   return definePackage<PostgresStoreConfig>({
     name: "@arnilo/prism-store-postgres",
-    version: "0.12.1",
+    version: manifest.version,
     description: "PostgreSQL session store with leases, lifecycle, event source, and schema migrations.",
-    requires: { prism: "^0.12.1 || ^0.13.0-0" },
+    requires: { api: 1 },
     capabilities: ["slot:store", "credentials"],
     config: configSchema,
     setup: async (prism) => {
@@ -114,19 +117,22 @@ function definitionFor(options: PostgresStoreOptions) {
         }
         connectionString = secret.value;
       }
-      prism.slots.store.provide(
-        await createPostgresPersistence({
-          ...options,
-          ...(connectionString === undefined ? {} : { connectionString }),
-          schema: config.schema,
-          poolMax: config.pool?.max,
-          poolConfig: {
-            ...options.poolConfig,
-            ...(config.pool?.connectionTimeoutMillis === undefined ? {} : { connectionTimeoutMillis: config.pool.connectionTimeoutMillis }),
-            ...(config.pool?.idleTimeoutMillis === undefined ? {} : { idleTimeoutMillis: config.pool.idleTimeoutMillis }),
-          },
-        }),
-      );
+      const persistence = await createPostgresPersistence({
+        ...options,
+        ...(connectionString === undefined ? {} : { connectionString }),
+        schema: config.schema,
+        poolMax: config.pool?.max,
+        poolConfig: {
+          ...options.poolConfig,
+          ...(config.pool?.connectionTimeoutMillis === undefined ? {} : { connectionTimeoutMillis: config.pool.connectionTimeoutMillis }),
+          ...(config.pool?.idleTimeoutMillis === undefined ? {} : { idleTimeoutMillis: config.pool.idleTimeoutMillis }),
+        },
+      });
+      prism.slots.store.provide(persistence);
+      // The workflows service names are the cross-package contract (plan 168 Task 4); both stores share
+      // the one pool above, so providing them opens no second connection.
+      prism.services.provide("checkpoints", persistence.checkpoints);
+      prism.services.provide("leases", persistence.leases);
     },
   });
 }

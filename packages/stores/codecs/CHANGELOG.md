@@ -12,6 +12,13 @@
   `@arnilo/prism-core` depends on this package while its Postgres tree is still in the family package
   (it moves to `@arnilo/prism-store-postgres` in plan 153 Task 5).
 
+### Changed
+
+- The checkpoint and lease conflict errors are defined here instead of imported from `@arnilo/prism`
+  (plan 168 Task 4): `CheckpointConflictError`/`CHECKPOINT_CONFLICT_CODE` and
+  `LeaseConflictError`/`LEASE_CONFLICT_CODE`. The **code** is the cross-package contract, so consumers
+  match `error.code` and a store package never loads the workflows engine.
+
 ## [0.1.0] - 2026-08-09
 
 Initial published surface for the lockstep line. See the root `CHANGELOG.md`.

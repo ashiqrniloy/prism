@@ -22,27 +22,25 @@ This reference covers two groups:
   - each maps `HostUi` onto its protocol (ACP maps `confirm` to a permission request) and uses only the public API
   - `packages/acp-agent` becomes a thin binary over `serveAcp` plus a manifest
 
-## Today (0.12 code being replaced)
+## Today
 
-- `packages/mcp/src/`: the client (`bridge.ts`, `auth.ts`, `transport.ts`) → `mcp`; the server (`server.ts`) → `mcp-server`.
-- `packages/agent-sdk/src/planes/mcp.ts` and the lab's `packages/prism-code/src/mcp.ts` (the trust file) → `mcp` via `host.ui`.
-- `packages/hooks/src/` → `hooks-json`.
-- `packages/ag-ui/src/` (AG-UI mapper, `acp/`, `renderer/`), `packages/acp-agent/src/`, `packages/prism-code/src/acp.ts` → host libraries.
-- `packages/prism-channels/src/` → `channels`.
-- `packages/prism-core/src/runtime/{workflows,server,supervisor,realtime.ts}`, `src/delegated-agent-step.ts`, `packages/prism-core/src/governance/{observability,evals}`, and `packages/prism-coding-tools/src/dev` → `workflows`, host libraries, `delegate`, `observability`, `evals`, and `devtools`.
-- Current docs (released contract): [mcp-tools.md](../../../../docs/mcp-tools.md), [hooks.md](../../../../docs/hooks.md), [acp.md](../../../../docs/acp.md), [ag-ui.md](../../../../docs/ag-ui.md), [a2a.md](../../../../docs/a2a.md), [messaging-channels.md](../../../../docs/messaging-channels.md), [workflows.md](../../../../docs/workflows.md), [multi-agent-patterns.md](../../../../docs/multi-agent-patterns.md), [supervisors.md](../../../../docs/supervisors.md), [server.md](../../../../docs/server.md), [observability.md](../../../../docs/observability.md), [evaluations.md](../../../../docs/evaluations.md), [dev-inspector.md](../../../../docs/dev-inspector.md).
+- Integration packages (`packages/integrations/*`): `mcp` (client: `bridge.ts`, `auth.ts`, transports, elicitation, connected apps; project servers trust-gated through `host.ui`), `hooks-json` (`.agents/hooks.json` compiled onto the hook bus: `compile.ts`, `handlers/`, `matchers.ts`), `workflows` (graph engine, `agentNode`/`functionNode`/gates/fan-out, checkpoints and leases), `delegate` (sub-agents as a tool), `observability` (OpenTelemetry instrumentation and the timeline).
+- Host libraries (`packages/hosts/*`): `acp` (`serveAcp`), `ag-ui`, `mcp-server` (`serve`, `serveTools`), `channels` (messaging channels and pairing), `evals`, `devtools` (local inspector), `remote` (`serveAgent`/`connectAgent`), `headless` (pending answers, resume, scheduler).
+- Driver: `packages/drivers/process` (`prism-driver-process`, the generic external-agent driver) over the kernel driver kit (`src/driver-kit/`).
+- In flight: plan 191 (release path step 7) changes the `delegate` config and result contract.
+- Current docs: [hooks.md](../../../../docs/hooks.md), [drivers.md](../../../../docs/drivers.md); integration packages [`mcp`](../../../../packages/integrations/mcp/README.md), [`hooks-json`](../../../../packages/integrations/hooks-json/README.md), [`workflows`](../../../../packages/integrations/workflows/README.md), [`delegate`](../../../../packages/integrations/delegate/README.md), [`observability`](../../../../packages/integrations/observability/README.md); host libraries [`acp`](../../../../packages/hosts/acp/README.md), [`ag-ui`](../../../../packages/hosts/ag-ui/README.md), [`mcp-server`](../../../../packages/hosts/mcp-server/README.md), [`channels`](../../../../packages/hosts/channels/README.md), [`evals`](../../../../packages/hosts/evals/README.md), [`devtools`](../../../../packages/hosts/devtools/README.md), [`remote`](../../../../packages/hosts/remote/README.md), [`headless`](../../../../packages/hosts/headless/README.md).
 
 ## Graft queries
 
 - `graft ask "acp capability advertisement permission request" --source`
-- `graft ask "mcp plane connect timeout allow reconnect status" --source`
-- `graft ask "hooks json compile guardrail stop hook instruction" --source`
-- `graft callers createPrismAcpAgent --depth all`
+- `graft ask "mcp client connect trust reconnect status" --source --in packages/integrations/mcp/`
+- `graft ask "hooks json compile command handler decision" --source`
+- `graft callers serveAcp --depth all`
 
 ## Tests
 
-- `packages/mcp`, `packages/hooks`, `packages/ag-ui`, `packages/acp-agent`, `packages/prism-channels` suites (run from each workspace directory)
-- `src/__tests__/rpc.test.ts`, `cli*.test.ts`, `delegated-agent-step.test.ts`
+- `packages/integrations/<name>/src/__tests__/`, `packages/hosts/<name>/src/__tests__/`, `packages/drivers/process/src/__tests__/` (run from each package directory)
+- Driver conformance: `@arnilo/prism/testing` `driverConformance`; the three reference adapters run in `release:gate` through `examples/adapters/conformance.ts`
 
 ## Rules
 

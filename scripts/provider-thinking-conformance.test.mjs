@@ -10,58 +10,19 @@
 // Task 8, so it moved here.
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { applyThinkingLevelForModel, THINKING_LEVELS } from "@arnilo/prism";
-import { anthropicMessagesBody, anthropicModels } from "@arnilo/prism-provider-anthropic";
-import { clinePassBody, clinePassModels } from "@arnilo/prism-provider-clinepass";
-import { COMMAND_CODE_ANTHROPIC_HOOKS, commandCodeChatBody, commandCodeModels, routeForCommandCodeModel } from "@arnilo/prism-provider-commandcode";
-import { deepseekBody, deepseekModels } from "@arnilo/prism-provider-deepseek";
-import { googleGenerateContentBody, googleModels } from "@arnilo/prism-provider-google";
-import { hyperChatBody, hyperModels } from "@arnilo/prism-provider-hyper";
-import { kimiAnthropicBody, kimiCodingModels, moonshotBody, moonshotKimiModels } from "@arnilo/prism-provider-kimi";
-import { neuralWattBody, neuralWattModels } from "@arnilo/prism-provider-neuralwatt";
-import { openAICodexModels, openAIModels, resolveOpenAIReasoning } from "@arnilo/prism-provider-openai";
-import { openAIChatBody, openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
-import { anthropicMessagesBody as sharedAnthropicMessagesBody } from "@arnilo/prism/provider-kit";
-import { xaiBody, xaiModels } from "@arnilo/prism-provider-xai";
-import { zaiBody, zaiModels } from "@arnilo/prism-provider-zai";
+import { applyThinkingLevelForModel, openAIChatBody, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
+import { HYPER_CHAT_ROUTE, hyperModels } from "@arnilo/prism-provider-hyper";
+import { OPENCODE_GO_CHAT_ROUTE, openCodeGoModels } from "@arnilo/prism-provider-opencode-go";
 
 /** Reasoning-capable models that must receive NO compat at all despite the core heuristic. */
 const PASSTHROUGH = new Set();
 
 /** Catalogs whose body builders emit a provider-specific effort vocabulary (slot maps). */
-const PROVIDER_VOCABULARY = new Set(["clinepass"]);
-
-const wireAnthropic = async (request) => anthropicMessagesBody(request);
-const wireGoogle = async (request) => googleGenerateContentBody(request);
-const wireKimiAnthropic = async (request) => kimiAnthropicBody(request);
-// OpenAI has no standalone body builder; the reasoning resolution is the body
-// fragment the conformance walk needs (full-body transport covered by openai.test.ts).
-const wireOpenAI = (request) => {
-  const reasoning = resolveOpenAIReasoning(request.model, request.options);
-  return { reasoning };
-};
-
-// CommandCode is dual-route: claude-* ids only exist on the anthropic /messages route.
-const wireCommandCode = async (request) =>
-  routeForCommandCodeModel(request.model.model) === "anthropic"
-    ? sharedAnthropicMessagesBody(request, COMMAND_CODE_ANTHROPIC_HOOKS)
-    : commandCodeChatBody(request);
+const PROVIDER_VOCABULARY = new Set();
 
 const CATALOGS = [
-  { id: "anthropic", models: anthropicModels, wire: wireAnthropic },
-  { id: "openai", models: openAIModels, wire: wireOpenAI },
-  { id: "openai-codex", models: openAICodexModels, wire: wireOpenAI },
-  { id: "google", models: googleModels, wire: wireGoogle },
-  { id: "kimi-coding", models: kimiCodingModels, wire: wireKimiAnthropic },
-  { id: "kimi-moonshot", models: moonshotKimiModels, wire: moonshotBody },
-  { id: "zai", models: zaiModels, wire: zaiBody },
-  { id: "xai", models: xaiModels, wire: xaiBody },
-  { id: "deepseek", models: deepseekModels, wire: deepseekBody },
-  { id: "hyper", models: hyperModels, wire: hyperChatBody },
-  { id: "clinepass", models: clinePassModels, wire: clinePassBody },
-  { id: "neuralwatt", models: neuralWattModels, wire: neuralWattBody },
-  { id: "opencode-go", models: openCodeGoModels, wire: openAIChatBody },
-  { id: "commandcode", models: commandCodeModels, wire: wireCommandCode },
+  { id: "hyper", models: hyperModels, wire: (req) => openAIChatBody(req, HYPER_CHAT_ROUTE.codec) },
+  { id: "opencode-go", models: openCodeGoModels, wire: (req) => openAIChatBody(req, OPENCODE_GO_CHAT_ROUTE.codec) },
 ];
 
 const everyModel = () => CATALOGS.flatMap((catalog) => catalog.models.map((model) => ({ catalog: catalog.id, model })));

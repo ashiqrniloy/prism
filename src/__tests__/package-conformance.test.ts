@@ -15,7 +15,7 @@ describe("packageConformance", () => {
       definePackage<{ apiKey: string; level: "info" | "warn" }>({
         name: "@acme/well-behaved",
         version: "1.0.0",
-        requires: { prism: "^0.12.1 || ^0.13.0-0" },
+        requires: { api: 1 },
         capabilities: ["credentials", "session-state"],
         config: {
           type: "object",
@@ -51,6 +51,7 @@ describe("packageConformance", () => {
       definePackage({
         name: "@acme/leaky",
         version: "1.0.0",
+        requires: { api: 1 },
         setup(prism) {
           const hooks = prism.hooks;
           // Keeps the registrar and registers a hook after teardown has run.
@@ -70,6 +71,7 @@ describe("packageConformance", () => {
       definePackage({
         name: "@acme/undeclared-slot",
         version: "1.0.0",
+        requires: { api: 1 },
         setup(prism) {
           prism.slots.loop.provide(prism.slots.loop.default);
         },
@@ -85,6 +87,7 @@ describe("packageConformance", () => {
       definePackage<{ apiKey: string }>({
         name: "@acme/secret-leaker",
         version: "1.0.0",
+        requires: { api: 1 },
         capabilities: ["credentials"],
         config: {
           type: "object",

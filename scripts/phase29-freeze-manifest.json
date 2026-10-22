@@ -93,7 +93,7 @@
       },
       {
         "name": "@arnilo/prism-memory",
-        "live": "@arnilo/prism-memory"
+        "live": "@arnilo/prism-memory-core"
       },
       {
         "name": "@arnilo/prism-mcp",
@@ -139,12 +139,12 @@
       },
       {
         "name": "@arnilo/prism-wiki",
-        "foldedInto": "@arnilo/prism-memory",
+        "foldedInto": "@arnilo/prism-memory-wiki",
         "by": "plan 054"
       },
       {
         "name": "@arnilo/prism-graft",
-        "foldedInto": "@arnilo/prism-memory",
+        "foldedInto": "@arnilo/prism-memory-core",
         "by": "plan 054"
       },
       {
@@ -154,7 +154,7 @@
       },
       {
         "name": "@arnilo/prism-prompts",
-        "foldedInto": "@arnilo/prism-core",
+        "foldedInto": "retired-family",
         "by": "plan 054"
       },
       {

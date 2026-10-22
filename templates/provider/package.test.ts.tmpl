@@ -1,0 +1,46 @@
+import assert from "node:assert/strict";
+import { describe, it } from "bun:test";
+import { createAgent } from "@arnilo/prism";
+import { packageConformance } from "@arnilo/prism/testing";
+import { providerConformance } from "@arnilo/prism/provider-kit";
+import {{providerId}}Definition, {
+  {{providerId}},
+  create{{providerPascal}}Provider,
+  {{providerId}}Models,
+  {{providerUpper}}_DEFAULT_API_KEY_REF,
+} from "../index.js";
+
+describe("{{name}} package", () => {
+  it("passes_package_conformance", async () => {
+    const result = await packageConformance({{providerId}}Definition, {
+      config: { apiKey: "env:PRISM_TEST_{{providerUpper}}_CONFORMANCE" },
+    });
+    assert.deepEqual(
+      result.checks.filter((check) => !check.ok),
+      [],
+      JSON.stringify(result.checks),
+    );
+    assert.equal(result.ok, true);
+  });
+
+  it("literal_api_key_fails_config_validation", async () => {
+    await assert.rejects(
+      () =>
+        createAgent({
+          model: { provider: "{{providerId}}", model: {{providerId}}Models[0].model },
+          packages: [{{providerId}}({ apiKey: "sk-literal-secret-not-ref" })],
+        }),
+      (error: { code?: string }) => error.code === "secret_literal",
+    );
+  });
+
+  it("passes_provider_conformance_against_recordings", async () => {
+    await providerConformance(
+      () => create{{providerPascal}}Provider({ apiKey: async () => "fake-key" }),
+      {
+        recordings: new URL("./wire/", import.meta.url),
+        models: {{providerId}}Models,
+      },
+    );
+  });
+});

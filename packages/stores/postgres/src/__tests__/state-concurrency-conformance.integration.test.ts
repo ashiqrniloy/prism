@@ -1,5 +1,6 @@
 // plan 022 Task 4: durable (PostgreSQL) leg of the state-concurrency harness —
-// conversation metadata CAS, checkpoint CAS/approval, and replay-cursor resume
+// conversation metadata CAS and replay-cursor resume (checkpoint/lease probes live in
+// @arnilo/prism-workflows/testing since plan 168 Tasks 3-5)
 // across a real re-open. Gated by test:postgres (skips without
 // PRISM_TEST_POSTGRES_URL).
 
@@ -38,20 +39,19 @@ describeProtected("state concurrency conformance (postgres)", () => {
     return store;
   }
 
-  it("passes the conversation CAS, checkpoint CAS, and cursor-resume probes against durable stores", async () => {
+  it("passes the conversation CAS and cursor-resume probes against durable stores", async () => {
     // The cursor-resume probe re-opens the store mid-probe (restart), so its
     // factory must recreate against the same schema — unlike the other
     // factories, whose probes are single-instance and self-contained.
     const eventsSchema = schema();
     const probes = await assertStateConcurrencyConforms({
       sessions: () => makeStore(),
-      checkpoints: async () => (await makeStore()).checkpoints,
       events: {
         reopenable: true,
         create: async () => (await makeStore(eventsSchema)).events,
       },
     });
-    for (const probe of ["conversation-metadata-cas", "approval-determinism", "checkpoint-cas", "cursor-resume"]) {
+    for (const probe of ["conversation-metadata-cas", "cursor-resume"]) {
       if (!probes.includes(probe)) throw new Error(`postgres run did not execute probe ${probe}`);
     }
   });

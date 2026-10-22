@@ -25,6 +25,8 @@ function makeInternals(overrides: Partial<RunControllerInternals> = {}) {
     hooks,
     sessionId: "s",
     runId: "r",
+    loopOwner: "kernel",
+    model: { provider: "mock", model: "demo" },
     metadata: {},
     history,
     inputMessages: [],
@@ -49,6 +51,7 @@ function makeInternals(overrides: Partial<RunControllerInternals> = {}) {
     isToolCallExclusive: () => false,
     effectsFor: () => ["read"],
     appendMessage: async () => {},
+    externalState: () => ({ append: async () => {}, load: async () => [] }),
     applyPendingSteers: async () => false,
     queueContinuation: (decision) => continuations.push(decision.reason),
     setFinishReason: (reason) => {
@@ -77,13 +80,18 @@ describe("RunController", () => {
     const controller = createRunController(internals);
     assert.deepEqual(Object.keys(controller).sort(), [
       "append",
+      "ask",
       "emit",
       "end",
       "executeTools",
       "input",
       "limits",
+      "model",
+      "observe",
       "session",
       "signal",
+      "state",
+      "steers",
       "turn",
     ]);
   });
@@ -163,10 +171,126 @@ describe("RunController", () => {
     const { internals, hooks, continuations } = makeInternals({ maxContinuations: 1 });
     hooks.on("run.end", () => ({ continue: { reason: "more" } }));
     const controller = createRunController(internals);
-    assert.deepEqual(await controller.end(), { continue: true });
+    assert.deepEqual(await controller.end(), { continue: true, reason: "more" });
     assert.deepEqual(continuations, ["more"]);
     assert.deepEqual(await controller.end(), { continue: false });
     assert.equal(internals.finishReason(), "hook_limit");
+  });
+});
+
+describe("RunController driver surface (K2 first half)", () => {
+  const call = (id: string): ToolCallContent => ({ type: "tool_call", id, name: "read", arguments: {} });
+
+  it("loop_cannot_emit_catalog_event", () => {
+    const { internals, events } = makeInternals();
+    const controller = createRunController(internals);
+    assert.throws(() => controller.emit("tool.completed", {}), { code: "emit_reserved_name" });
+    assert.throws(() => controller.emit("package.event", {}), { code: "emit_reserved_name" });
+    assert.equal(events.length, 0);
+    controller.emit("x.y", { n: 1 });
+    assert.deepEqual(events, [{ type: "package.event", sessionId: "s", runId: "r", package: "kernel", name: "x.y", data: { n: 1 } }]);
+  });
+
+  it("emit_is_owned_by_the_loop_slot_owner", () => {
+    const { internals, events } = makeInternals({ loopOwner: "@scope/ext-loop" });
+    createRunController(internals).emit("a.b", null);
+    assert.equal((events[0] as { package: string }).package, "@scope/ext-loop");
+  });
+
+  it("hook_context_cannot_emit_catalog_event", () => {
+    const events: AgentEvent[] = [];
+    const bus = createHookBus({ onEvent: (event) => events.push(event) });
+    let failure: unknown;
+    bus.registrar("pkg-a").on("run.started", (_payload, ctx) => {
+      ctx.emit("my.event", { ok: true });
+      try {
+        ctx.emit("tool.completed", {});
+      } catch (error) {
+        failure = error;
+      }
+    });
+    bus.observe("run.started", { type: "run.started", sessionId: "s", runId: "r" } as never);
+    assert.equal((failure as { code?: string }).code, "emit_reserved_name");
+    assert.deepEqual(events, [{ type: "package.event", sessionId: "s", runId: "r", package: "pkg-a", name: "my.event", data: { ok: true } }]);
+  });
+
+  it("execute_tools_returns_results_in_order", async () => {
+    const { internals, hooks } = makeInternals();
+    hooks.on("tool.call", (payload) => (payload.callId === "c2" ? { deny: "no" } : undefined));
+    const controller = createRunController(internals);
+    const results = await controller.executeTools([call("c1"), call("c2"), call("c3")]);
+    assert.deepEqual(
+      results.map((result) => [result.toolCallId, result.error?.code ?? result.value]),
+      [
+        ["c1", "ok"],
+        ["c2", "hook_denied"],
+        ["c3", "ok"],
+      ],
+    );
+  });
+
+  it("execute_tools_returns_approval_pending_marker_in_place", async () => {
+    const { internals, hooks } = makeInternals({
+      ask: async (requests) => new Map(requests.map((request) => [request.call.id, { kind: "suspend" as const }])),
+    });
+    hooks.on("tool.call", (payload) => (payload.callId === "c1" ? { ask: "confirm" } : undefined));
+    const results = await createRunController(internals).executeTools([call("c1"), call("c2")]);
+    assert.equal((results[0]!.metadata as { approvalPending?: boolean }).approvalPending, true);
+    assert.equal(results[1]!.value, "ok");
+  });
+
+  it("concurrent_execute_tools_fires_tool_call", async () => {
+    const { internals, hooks, dispatched, history } = makeInternals({
+      appendMessage: async () => {},
+    });
+    const seen: string[] = [];
+    hooks.on("tool.call", (payload) => {
+      seen.push(payload.callId);
+      return undefined;
+    });
+    const controller = createRunController(internals);
+    const [a, b] = await Promise.all([
+      controller.executeTools([call("a1"), call("a2")]),
+      controller.executeTools([call("b1")], { concurrency: 2 }),
+    ]);
+    assert.deepEqual([...seen].sort(), ["a1", "a2", "b1"]);
+    assert.equal(a.length, 2);
+    assert.equal(b.length, 1);
+    assert.equal(dispatched.length, 3);
+    assert.equal(history.length, 3);
+  });
+
+  it("execute_tools_origin_reaches_payload_and_dispatch", async () => {
+    const origins: unknown[] = [];
+    const { internals, hooks } = makeInternals({
+      dispatchToolCall: async (c, origin) => {
+        origins.push(origin);
+        return { toolCallId: c.id, name: c.name, value: "ok" };
+      },
+    });
+    const payloadOrigins: unknown[] = [];
+    hooks.on("tool.call", (payload) => {
+      payloadOrigins.push(payload.origin);
+      return undefined;
+    });
+    const origin = { kind: "external" as const, agent: "ext", agentId: "a1", depth: 0 };
+    const controller = createRunController(internals);
+    await controller.executeTools([call("c1")], { origin });
+    await controller.executeTools([call("c2")]);
+    assert.deepEqual(payloadOrigins, [origin, undefined]);
+    assert.deepEqual(origins, [origin, undefined]);
+  });
+
+  it("a_throwing_tool_call_hook_denies_only_that_call_in_a_concurrent_round", async () => {
+    const { internals, hooks } = makeInternals();
+    hooks.on("tool.call", (payload) => {
+      if (payload.callId === "bad") throw new Error("boom");
+      return undefined;
+    });
+    const controller = createRunController(internals);
+    const [bad, good] = await Promise.all([controller.executeTools([call("bad")]), controller.executeTools([call("good")])]);
+    assert.equal(bad[0]!.error?.code, "hook_denied");
+    assert.equal(good[0]!.value, "ok");
   });
 });
 

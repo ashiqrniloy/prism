@@ -1,18 +1,41 @@
-import type { ModelProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
-import { ProviderRequirementError, providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
-import { httpStatusError, readBoundedResponseText } from "@arnilo/prism/provider-kit";
-import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "@arnilo/prism/provider-kit";
-import { applyOpencodeAnthropicCacheControl, opencodeOwnedHeaders, opencodeSessionId } from "./cache.js";
-import { OPENCODE_GO_DEFAULT_BASE_URL } from "./models.js";
-import { openAIChatBody, openAIChatEvents } from "./openai-chat.js";
-import { openCodeGoPreserveThinking, openCodeGoReasoningEffort, openCodeGoThinking, stripOpenCodeGoOwnedCompat } from "./thinking.js";
+import type { CredentialValueSource, ModelProvider, ProviderRequest } from "@arnilo/prism";
+import {
+  createRoutedProvider,
+  sanitizeCacheKey,
+  type RoutedProviderRoute,
+} from "@arnilo/prism/provider-kit";
+import { OPENCODE_GO_DEFAULT_BASE_URL, type OpenCodeGoRoute, routeForOpenCodeGoModel } from "./models.js";
 
-const OPENCODE_GO_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks = {
-  applyCacheControl: applyOpencodeAnthropicCacheControl,
-  preserveThinking: openCodeGoPreserveThinking,
-  stripOwnedCompat: stripOpenCodeGoOwnedCompat,
-  thinking: openCodeGoThinking,
-  effort: openCodeGoReasoningEffort,
+/** `x-opencode-session` accepted length cap (OpenCode server session id). */
+export const OPENCODE_SESSION_ID_MAX_LENGTH = 128;
+
+/**
+ * Derives the `x-opencode-session` affinity header from the request's sanitized cacheKey or sessionId.
+ */
+export function opencodeSession(request: ProviderRequest): Record<string, string> {
+  const session = sanitizeCacheKey(
+    request.options?.cacheKey ?? request.options?.sessionId,
+    OPENCODE_SESSION_ID_MAX_LENGTH,
+  );
+  return session ? { "x-opencode-session": session } : {};
+}
+
+export const OPENCODE_GO_CHAT_ROUTE: RoutedProviderRoute<"openai-chat"> = {
+  format: "openai-chat",
+  path: "/chat/completions",
+  auth: "bearer",
+  affinity: opencodeSession,
+  codec: {
+    reasoningReplay: "reasoning_content",
+    imageInput: "capability-gated",
+  },
+};
+
+export const OPENCODE_GO_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages"> = {
+  format: "anthropic-messages",
+  path: "/messages",
+  auth: "x-api-key+bearer",
+  affinity: opencodeSession,
 };
 
 export interface OpenCodeGoProviderOptions {
@@ -24,55 +47,16 @@ export interface OpenCodeGoProviderOptions {
 }
 
 export function createOpenCodeGoProvider(options: OpenCodeGoProviderOptions = {}): ModelProvider {
-  const id = options.id ?? "opencode-go";
-  const baseUrl = trimTrailingSlashes(options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL);
-  return {
-    id,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      if (!opencodeSessionId(request.options)) {
-        throw new ProviderRequirementError("opencode-go requires session correlation (options.sessionId → x-opencode-session)", {
-          providerId: id,
-          requirement: "sessionId",
-        });
-      }
-      let token: string | undefined;
-      const secrets: (string | undefined)[] = [];
-      try {
-        const route = routeFor(request);
-        const body = route === "anthropic" ? await anthropicMessagesBody(request, OPENCODE_GO_ANTHROPIC_HOOKS) : openAIChatBody(request);
-        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-        secrets.push(token);
-        const response = await (options.fetch ?? fetch)(`${baseUrl}${route === "anthropic" ? "/messages" : "/chat/completions"}`, {
-          method: "POST",
-          headers: {
-            ...request.options?.headers,
-            ...opencodeOwnedHeaders(request.options),
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-            // Provider-owned Anthropic-route auth: Bearer-only returns HTTP 401 upstream.
-            // Applied last so callers cannot replace credential-bearing headers.
-            ...(route === "anthropic" && token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {}),
-          },
-          body: JSON.stringify(body),
-          signal: request.signal,
-        });
-        if (!response.ok) {
-          return yield providerError(
-            httpStatusError("OpenCode Go request failed", response, await readBoundedResponseText(response, { secrets })),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("OpenCode Go response had no body"), secrets);
-        yield* route === "anthropic"
-          ? anthropicMessagesEvents(response.body, request.signal)
-          : openAIChatEvents(response.body, request.signal);
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
+  return createRoutedProvider({
+    id: options.id ?? "opencode-go",
+    baseUrl: options.baseUrl ?? OPENCODE_GO_DEFAULT_BASE_URL,
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    require: { sessionId: true },
+    routeFor: (r) => (r.model.compat?.route as OpenCodeGoRoute | undefined) ?? routeForOpenCodeGoModel(r.model.model),
+    routes: {
+      openai: OPENCODE_GO_CHAT_ROUTE,
+      anthropic: OPENCODE_GO_MESSAGES_ROUTE,
     },
-  };
-}
-
-function routeFor(request: ProviderRequest): "openai" | "anthropic" {
-  return request.model.compat?.route === "anthropic" ? "anthropic" : "openai";
+  });
 }

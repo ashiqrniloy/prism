@@ -51,7 +51,7 @@
   - access-based recency, touched only by an explicit recall or a citation, never by passive injection
   - shared `fuseRankings` (RRF) and `withTailContext` helpers; the tail message carries block metadata so plan 194's context accounting can measure it
 
-**0.13.0 release path — plan 188, step 4 of 14.** Owner decision 2026-10-17: these memory fixes ship in 0.13.0. Start this plan when plan 183 is complete; when it is complete, continue with plan 189 (step 5; plans 189–191 were added on 2026-10-17 and run before plan 184). Plan 188 runs **before** plan 184 on purpose:
+**0.13.0 release path — plan 188, step 4 of 21.** Owner decision 2026-10-17: these memory fixes ship in 0.13.0. Start this plan when plan 183 is complete; when it is complete, continue with plan 189 (step 5; plans 189–191 were added on 2026-10-17 and run before plan 184). Plan 188 runs **before** plan 184 on purpose:
 
 - The reference host (`apps/prism-agent/src/host/coding.ts:31`, `research.ts:25`) installs OM, so OM's prompt placement is part of what plan 184 measures.
 - Plan 185 freezes the public surface, and this plan changes memory-package exports.
@@ -88,7 +88,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
 
 ## Tasks
 
-- [ ] Task 1: Assumption check (read-only)
+- [x] Task 1: Assumption check (read-only)
   - Acceptance Criteria:
     - Functional: The task note records a verdict on each assumption below, citing `file:line`. Any "no" stops the plan for re-cutting.
       - (a) **`context.build` draft messages.** A `context.build` handler can return `{ ...draft, messages }` with one extra message inserted before the final user input, and `applyDraft` sends it as is (`src/loop/run-controller.ts:133`). The draft is per-request and never persisted (the hook invariant: `context.build` never mutates the store). Also record:
@@ -146,7 +146,53 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 2: Memory benchmark harness and baseline
+  - Notes (executed 2026-10-18):
+    - **Verdict: proceed with the package-level corrections below; no kernel addition is needed.** The fallback cases explicitly allowed in (b) and (i) apply. No implementation, export, baseline, or product-doc change was made. The review covers roadmap Phase 8 (`roadmap.md:1853`) and Phase 11 (`roadmap.md:2352`), `docs/hooks.md:68`, `docs/slots.md`, and the memory package READMEs. Task 1 is complete; Tasks 2–14 remain unchecked.
+    - **(a) Yes, with composition and lifetime limits.** `draftFromRequest` builds a fresh request draft (`src/loop/run-controller.ts:115`); `applyDraft` preserves the message order supplied by a handler, while materializing `systemPrompt` and additional context blocks (`:133-159`). Only input, assistant output, and tool results enter history; the transformed draft does not (`:203-230`). `context.build` runs once per `RunController.turn`/provider attempt, including later tool rounds (`:180-205`), so an inserted message must be reinserted on each call. Engineering folds tool-result content, narrows tools, then applies attention or budget (`packages/context/engineering/src/handler.ts:56-125`). Attention retains ordinary text messages; a budget can drop a non-leading inserted system message as history (`budget.ts:135-176,185-225`). Run tail insertion after engineering using existing hook priority/order, and test the combined handlers. Anchor it before the latest real user message, even when assistant/tool messages follow; when there is no user message, append at the tail. Keep its bytes and anchor stable across tool rounds. `src/input.ts:114-135` defines the two assembly layouts, and `:361-365` renders block metadata into messages. Task 9 now states these limits explicitly.
+    - **(b) Supported fallback required; payload assumption is false.** `compaction.completed` is observable with the package-bound session (`src/hooks/catalog.ts:25`, `src/hooks/bus.ts:210-222`, `src/agent-session/session.ts:880-889`). Its payload contains summary/count or error, **no entry/id/strategy** (`src/contracts-protocol.ts:345-353`). The entry has already been appended when success is emitted (`src/agent-session/session.ts:1100-1113`); read it through `session.entries()` and deduplicate by entry id. OM's entry data includes its strategy (`packages/memory/observational/src/strategy.ts:90-100`). Observe callbacks are fire-and-forget (`src/hooks/bus.ts:224-240`): an async log append alone does not guarantee pinning before the next request. Task 5 must capture a bounded ledger snapshot synchronously on success, keep the scan/pin promise in package memory, and await it in `context.build` before rendering. Failed compactions do not pin. On reopen, reconcile once from the last compaction entry. The originally suggested `turn.completed` scan is a recovery fallback only: it is too late for the first request immediately following run-start or mid-run compaction. No steady-state branch read is required.
+    - **(c) Yes.** Run-start compaction happens after the new input entries are appended (`src/agent-session/session/assemble.ts:351-358`); subsequent provider turns check before assembly (`:414-419`). `resolveAutoCompact` dispatches the hook at both points (`src/agent-session/session.ts:989-1036`). Multiple handlers combine by the first `{ compact: true }`; abstentions and `{ compact: false }` do not veto another handler (`src/hooks/bus.ts:53-66`, catalog `:61`). While any handler exists, all-abstain returns no compaction and bypasses `thresholdEntries` (`session.ts:1025-1036`). OM registers even while disabled and abstains (`packages/memory/observational/src/index.ts:117-120`): the known suppression remains for plan 194 Task 2. The historical 8-turn reproduction was not rerun here. Task 5 tests must enable OM and assert its own decisions.
+    - **(d) Yes.** `createSessionEntry` preserves a supplied timestamp (`src/session-stores.ts:61-68`); the in-memory store appends and clones entries without replacing it (`:271-279`). `SessionContext.entries` delegates to the full branch (`src/agent-session/session.ts:278-282,747-751`), not the compacted provider view. OM coverage is entry-id based and slices the original entries (`packages/memory/observational/src/coverage-helpers.ts:13-19`). A synthetic dated append/read/cursor check passed. Seed linked `parentId` entries, preserve original roles, and use `haystack_dates` for LongMemEval; message bodies have no timestamp field.
+    - **(e) Yes on the installed minimum runtime.** `bun --version` returned **1.4.2**; the in-memory `CREATE VIRTUAL TABLE t USING fts5(x)` probe passed. `packages/stores/sqlite/src/bun-runtime.ts:1-18` uses a type-only import and guarded `createRequire` call; loading the runtime module initializes its constructor. Task 6 should isolate that module behind `./sqlite`, not import it from core's root. This proves the installed minimum, not every future Bun build.
+    - **(f) Yes, with dataset protocol corrections.** Sources checked/downloaded **2026-10-18**, pinned to immutable revisions below. Sizes and SHA-256 were computed from the full response bytes in memory; no dataset text was printed or vendored.
+
+      | Dataset / license | Pinned download | Bytes | SHA-256 |
+      | --- | --- | ---: | --- |
+      | LongMemEval-S cleaned / MIT ([dataset card](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md)) | https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json | 277383467 | `d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442` |
+      | LoCoMo / CC BY-NC 4.0 ([license](https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/LICENSE.txt)) | https://raw.githubusercontent.com/snap-research/locomo/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/data/locomo10.json | 2805274 | `79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4` |
+      | MemoryAgentBench Conflict_Resolution / MIT ([dataset card](https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/blob/7ea066982b140a19337e17e60d45d4076e042faf/README.md)) | https://huggingface.co/datasets/ai-hyz/MemoryAgentBench/resolve/7ea066982b140a19337e17e60d45d4076e042faf/data/Conflict_Resolution-00000-of-00001.parquet | 1491588 | `24d5c3f09ce0ce15625cb9f8a98f44f0d864ca6c94d7b4ad04eb697ca3a5ff45` |
+
+      - LongMemEval has **500** questions. Fields: `question_id`, `question_type`, `question`, `question_date`, `answer`, `answer_session_ids`, `haystack_dates`, `haystack_session_ids`, `haystack_sessions`; session messages have `role`, `content`. Six type counts are `single-session-user: 70`, `single-session-assistant: 56`, `single-session-preference: 30`, `multi-session: 133`, `temporal-reasoning: 133`, `knowledge-update: 78`. **30 abstentions** are indicated by `question_id` ending `_abs`, not by a question-type suffix ([upstream protocol](https://github.com/xiaowu0162/LongMemEval/blob/main/README.md)). Task 2's six ordinary strata must exclude abstentions; the 30-question preference ablation includes all available preference questions.
+      - LoCoMo has **10** conversations. Root fields: `qa`, `conversation`, `event_summary`, `observation`, `session_summary`, `sample_id`. QA fields: `question`, `answer` (optional for adversarial), `evidence`, `category`; adversarial QA uses `adversarial_answer`. Categories: **1 multi-hop (282), 2 temporal (321), 3 open-domain (96), 4 single-hop (841), 5 adversarial (446)**, **1986** QA total ([upstream scoring](https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/task_eval/evaluation.py)). Preserve conversation session dates and dialogue ids; do not assume every QA has the same answer fields. The license is noncommercial; it must stay attached to the downloaded cache and benchmark documentation.
+      - MemoryAgentBench's split is **`Conflict_Resolution`**, **8 context rows**, not 40 independent rows. Official card schema: `context: string`, `questions: string[]`, `answers: string[][]`, `metadata` with `demo`, `haystack_sessions`, `keypoints`, `previous_events`, `qa_pair_ids`, `question_dates`, `question_ids`, `question_types`, `source` (nullable per source). The card describes `fact_sh` and `fact_mh`; **Task 2 decode correction (2026-10-18):** the pinned Parquet actually stores `factconsolidation_sh_{6k,32k,64k,262k}` and `factconsolidation_mh_{6k,32k,64k,262k}`, 100 questions per row; upstream reports `substring_exact_match` accuracy ([runner protocol](https://github.com/HUST-AI-HYZ/MemoryAgentBench#evaluation)). Task 2 must draw 40 **(context-row, question-index)** pairs stratified by source, preserve ordered incremental context chunks, and accept alternative gold answers. These are fact streams, not dated conversation sessions; use deterministic synthetic ingestion times and label them synthetic. The pinned artifact is Parquet: Task 2 must explicitly select a benchmark-only decoder and document any development dependency; no memory package runtime dependency. The HF row-preview endpoint timed out; schema/row count came from the pinned dataset card/API rather than a decoded local Parquet scan.
+    - **(g) Yes; no reference edit.** `docs/hooks.md` and `docs/slots.md` exist; `docs/next/` does not. `.agents/skills/create-plan/references/prism-wiki.md:7-15` already states the promoted layout. Use package READMEs. `docs/packages.md:117,180-188` describes generic package state and uses memory as an example; it is not a memory-behavior catalog and needs no edit for this plan.
+    - **(h) Caller closures recorded below.** All 14 requested `graft callers <symbol> --depth all` queries ran. `NEUTRAL_IMPORTANCE` is a module-level constant the graph does not resolve as a symbol; exhaustive `graft grep NEUTRAL_IMPORTANCE` found only its declaration and `clampImportance` use (`packages/memory/core/src/scoring.ts:10,22`). The latter's closure is listed below. This is a graph snapshot; executors must refresh it when changing the symbols.
+    - **(i) Fallback field required.** Plain `MemoryNote` and `MemoryNoteMetadata` do not expose lifecycle status (`packages/memory/fabric/src/types.ts:49-78,300-353`); scoped status/uses live in a separate file ledger (`scoped/ledger.ts:5-23`). Add validated **top-level vector `metadata.status`** (`candidate | verified | archived`) in Task 13, expose it on plain note/hit results, preserve it through rewrites/corrections, and treat absent status on existing plain notes as verified. Scoped missing status must keep meaning candidate. `statusOf` is currently duplicated, not shared (`scoped/lifecycle.ts:16-18`, `scoped/mirror.ts:14-16`); move normalization and the candidate age predicate into a small `fabric/src/lifecycle.ts` helper with explicit fallback. `runScopedGcPass` only proposes archive and returns `archived: 0` (`scoped/lifecycle.ts:93-129`); it cannot be called directly for plain notes. Reuse the age predicate while plain promotion applies `validTo` and `unused-candidate`. No kernel change is needed.
+    - **(j) Yes, with provider-view availability limits.** The coding compactor wraps `keepLatestPlanTurn` (`packages/memory/compaction/src/index.ts:53`); the latest tool result with `metadata.todos` and its matching assistant call are pinned via `keepEntryIds` (`coding.ts:35-93`). Find the last tool message with array `metadata.todos` in `draft.messages`; the actual writer returns that metadata (`packages/tools/coding/src/agent/todo.ts:216`). Engineering may fold/drop that result, so query extraction must happen before that stage or fall back to stored entries. Fabric already reads the public OM fold from `session.entries()` (`fabric/src/create.ts:137-142,174-178`); Task 4 must extend OM's fold/export with the replaced task state (`observational/src/ledger.ts:16-35`) for Task 11 to use.
+    - **(k) Yes via persisted user identity; not via draft hook ids.** `HookContext` has no turn counter (`src/hooks/types.ts:27-37`). More subtly, `draftFromRequest` has neither session nor run ids (`src/loop/run-controller.ts:115-123`), and the bus derives both from payload fields, so **`context.runId` and `context.sessionId` are empty for `context.build`** (`src/hooks/bus.ts:126-135,243-251`); `context.session.id` is available. The latest user message is not necessarily the last message after tools. Cache by `(context.session.id, latest persisted user-entry id)` found through `session.entries()` (which retains compacted history). Reuse a cached empty result too; invalidate on a new user entry/steer, never on assistant/tool rounds. Obtain this identity during the same branch read used for Task 11's OM task-state query. A `turn.before` handler can also capture the valid run id/counter if needed; assistant-count inference (`engineering/src/handler.ts:257-261`) is provider-round identity, not user-turn identity.
+    - **Verification:** `timeout 30s bun -e '<FTS5 probe from the task>'` passed on Bun 1.4.2. An inline assert-based synthetic probe passed for arbitrary timestamp append/read, OM cursor slicing, draft immutability, and empty draft hook run id. `timeout 180s bun test src/__tests__/session-stores.test.ts src/__tests__/compaction-trigger.test.ts src/__tests__/mid-run-compaction.test.ts packages/memory/observational/src/__tests__/coverage.test.ts packages/memory/compaction/src/__tests__/coding.test.ts`: **60 passed, 0 failed**. `timeout 1200s bun run typecheck`: **passed** (kernel, workspaces, examples). `timeout 600s bun test --timeout=0 src/__tests__/docs.test.ts`: passed. No live model benchmark or whole-plan release gate was run for this read-only task.
+
+    **Caller closures (2026-10-18).** Paths below are under `packages/memory/` unless an absolute repo-relative path is shown. Each list includes transitive graph consumers, not only direct calls.
+
+    | Symbol / definition | Complete graph consumer list |
+    | --- | --- |
+    | `renderObservationalMemory` — `observational/src/render.ts:23` | `observational/src/__tests__/ledger.test.ts:17`; `commands.ts:156` (`viewCommand`) → `commands.ts:64` (`createObservationalMemoryCommands`); `context.ts:33` (`memoryBlocksFrom`) → `context.ts:21` (`observationalMemoryBlock`); `recent-messages.ts:55` (`buildObservationalMemoryContextBlocks`); `strategy.ts:44` (`compact`); `observational/src/index.ts:68` (`setup`); `observational/src/__tests__/recent-messages.test.ts:1`; `examples/revocation-propagation.ts:1`. |
+    | `observationalMemoryBlock` — `observational/src/context.ts:21` | `observational/src/index.ts:68` (`setup`, call at `:102`). |
+    | `createObservationalMemoryCompactor` — `observational/src/strategy.ts:40` | `observational/src/__tests__/strategy.test.ts:6`; `compactor.ts:21` (`createObservationalCompactor`) → `observational/src/index.ts:68` (`setup`). |
+    | `runReflector` — `observational/src/workers/reflector.ts:23` | `observational/src/__tests__/workers.test.ts:6`; `flush.ts:90` (`pass`, call at `:134`) → `flush.ts:68` (`flush`). |
+    | `runDropper` — `observational/src/workers/dropper.ts:44` | `observational/src/__tests__/workers.test.ts:6`; `flush.ts:90` (`pass`, call at `:158`) → `flush.ts:68` (`flush`). |
+    | `runObserver` — `observational/src/workers/observer.ts:25` | `observational/src/__tests__/worker-split.test.ts:5`, `workers.test.ts:6`; `flush.ts:90` (`pass`, call at `:113`) → `flush.ts:68` (`flush`). |
+    | `planMemoryConsolidation` — `fabric/src/consolidate.ts:42` | `fabric/src/create.ts:233` (`rememberIndexed`, call at `:257`) → `create.ts:360` (`remember`) and `create.ts:164` (`rememberReflection`). |
+    | `createMemory` — `fabric/src/memory.ts:68` | See the expanded list immediately below. |
+    | `contextBlocks` — `fabric/src/memory.ts:539` | `fabric/src/memory.ts:589` (`registerContextBuild`, call at `:590`). |
+    | `NEUTRAL_IMPORTANCE` — `core/src/scoring.ts:10` | Graph symbol unsupported; exhaustive text sweep: `core/src/scoring.ts:22` (`clampImportance`), then that symbol's closure below. |
+    | `clampImportance` — `core/src/scoring.ts:21` | `core/src/scoring.ts:27` (`normalizeImportance`), `:99` (`rerankRecallHits`), `:47` (`deriveEntryImportance`); `core/src/postgres/index.ts:452` (`upsert`); `core/src/vector-memory.ts:187` (`upsert`); `fabric/src/__tests__/public-surface.test.ts:15`; `fabric/src/memory.ts:208` (`recall`), `:150` (`indexEntries`), `:539` (`contextBlocks`), `:196` (`remember`), `:589` (`registerContextBuild`). |
+    | `recencyOf` — `core/src/scoring.ts:88` | `core/src/scoring.ts:99` (`rerankRecallHits`); `fabric/src/__tests__/public-surface.test.ts:1`; `fabric/src/memory.ts:208` (`recall`) → `:539` (`contextBlocks`) → `:589` (`registerContextBuild`). |
+    | `rerankRecallHits` — `core/src/scoring.ts:99` | `fabric/src/__tests__/public-surface.test.ts:20`; `fabric/src/memory.ts:208` (`recall`, call at `:261`) → `:539` (`contextBlocks`) → `:589` (`registerContextBuild`). |
+    | `probeLocomoRecall` — `fabric/src/scoped/eval/recall-probe.ts:5` | `fabric/src/scoped/eval/runner.ts:61` (`runScopedMemoryEval`, call at `:121`) → `fabric/src/scoped/__tests__/eval.test.ts:1`. |
+
+    - Expanded `createMemory` closure: `examples/scoped-memory.ts:5`, `examples/working-semantic-memory.ts:3`, `scripts/fixtures/e2e-070-host-completeness-journey.mjs:38`; `fabric/src/index.ts:45`; `fabric/src/conformance.ts:15`; `fabric/src/scoped/eval/runner.ts:28` (`bind`), `:51` (`runTask`), `:61` (`runScopedMemoryEval`); `fabric/src/__tests__/consolidate.test.ts:9` (`makeMemory`, plus module `:1`), `deletion-propagation.test.ts:23`, `eval-procedure.test.ts:4`, `eval-revocation.test.ts:4`, `host-wiring.test.ts:14`, `lineage.test.ts:15`, `memory.test.ts:15`, `notes.test.ts:17` (`makeMemory`, plus module `:1`), `observational-source.test.ts:23`, `postgres-memory.integration.test.ts:7`, `postgres-vector.integration.test.ts:14`, `public-surface.test.ts:23`, `recall.test.ts:10` (`makeMemory`, plus module `:1`), `repoint.test.ts:25,34` (`makeHarness`), `tools.test.ts:19` (`makeMemory`, plus module `:1`), `package.test.ts:1`; `fabric/src/scoped/__tests__/eval.test.ts:8`, `lifecycle.test.ts:12` (`bound`, plus module `:1`), `mirror.test.ts:14` (`bound`, plus module `:1`), `policy.test.ts:10,14` (`makeBound`), `read-policy.test.ts:37` (`boundPolicy`, plus module `:1`), `reviewer.test.ts:13` (`bound`, plus module `:1`), `trust.test.ts:14` (`bound`, plus module `:1`).
+
+- [x] Task 2: Memory benchmark harness and baseline
   - Acceptance Criteria:
     - Functional:
       - `bun scripts/memory-bench/run.mjs --suite longmemeval-s|locomo|memoryagentbench-cr --config full|om|fabric|om+fabric --provider <id> --model <id> --judge <provider/model>`:
@@ -157,7 +203,9 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
           - MemoryAgentBench conflict resolution: 40 questions (the knowledge-update and supersession signal for Tasks 4, 10, and 11)
           - `--subset targeted --ability <name>`: 30 questions of one LongMemEval type, a superset of the 10 above. Task 14 ablations use it for the ability a change targets: at 10 questions an ability's standard error is about ±15 pp, too wide to see a regression.
           - ids are fixed by a seeded draw recorded in the file
-        - replays each haystack as dated session entries (Task 1 (d))
+        - replays conversation haystacks as dated session entries (Task 1 (d)); MemoryAgentBench fact streams retain incremental source order with explicitly synthetic ingestion times
+        - uses Task 1 (f)'s immutable URLs, byte sizes, hashes, and license notices; decodes the pinned MemoryAgentBench Parquet with an explicitly documented benchmark-only decoder/development dependency
+        - samples LongMemEval abstentions by `question_id` suffix `_abs`, excluding them from the six ordinary strata; selects MemoryAgentBench questions by `(context-row, question-index)` stratified over the decoded single-/multi-hop sources (`factconsolidation_sh_*` / `factconsolidation_mh_*`) and scores alternative answers with upstream `substring_exact_match`
         - asks the question in a final run
         - scores the answer with the judge model using LongMemEval's published judge prompts (and LoCoMo's F1 plus the same judge)
         - writes `docs/_evidence/memory-bench/<suite>-<config>-<provider>-<model>-<date>.{json,md}`
@@ -219,10 +267,14 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - Files to Create/Edit:
       - `scripts/memory-bench/{run.mjs,datasets.mjs,replay.mjs,judge.mjs,report.mjs,injection-log.mjs,stats.mjs,subsets.json,README.md}`: new
       - `scripts/memory-bench/fixtures/synthetic.json`: new
+      - `scripts/memory-bench/{live.mjs,judge-prompts.json,judge-LICENSE.txt,locomo-f1.py,requirements.txt}`: benchmark-only entry point, pinned judge templates/license, upstream-compatible scoring, and isolated Python tooling
       - `scripts/memory-bench/run.test.mjs`: new (offline smoke and checksum refusal)
+      - `scripts/run-all-tests.mjs`: include the offline harness tests in the existing gate stage
       - `packages/memory/fabric/src/scoped/eval/{recall-probe.ts,runner.ts}`, `fixtures/locomo.json` → `fixtures/recall-smoke.json`, `scoped/__tests__/eval.test.ts`: rename
       - `scripts/compat-baseline/arnilo__prism-memory-fabric.txt`: regenerated
-      - `.github/workflows/live-matrix.yml`: `release/memory-bench` row, manual only
+      - `scripts/budgets.json`: attributed shipped-doc byte growth and probe-name rationale
+      - `packages/memory/fabric/src/__tests__/package.test.ts`: recognize the retained historical export-budget record
+      - `.github/workflows/live-matrix.yml`, `scripts/live-matrix.json`: `release/memory-bench` row, manual only
       - `docs/live-testing.md`: the row and its cost
       - `docs/_evidence/memory-bench-0.13.0.md`: baseline section
       - `CHANGELOG.md`: `[Unreleased]` entry
@@ -246,7 +298,16 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: OM ledger correctness — reflections replace their evidence
+  - Notes (executed 2026-10-19):
+    - Added the opt-in, scripts-only harness for all three pinned suites and four configurations, verified runtime downloads, seeded base/targeted subsets, dated native-session replay, upstream judge templates and scoring, wire usage, worker counts, block/item injection logging, atomic checkpoints, and exact paired McNemar comparisons. Dataset/answer/memory text is excluded from evidence.
+    - Decoded the actual pinned draws: LongMemEval 70, LoCoMo 386 QA across two conversations, MemoryAgentBench 40 stratified row/question pairs. Corrected Task 1's assumed source labels to the decoded `factconsolidation_sh_*` / `factconsolidation_mh_*`. Parquet uses isolated benchmark-only `pyarrow==23.0.1`; stemmed F1 uses pinned `nltk==3.9.2`. No package runtime dependency was added.
+    - Recorded every suite/configuration outcome in `docs/_evidence/memory-bench-0.13.0.md` and linked JSON/Markdown artifacts. On OpenCode Go MiMo v2.5, full context completed LongMemEval 56/70 (80%) and conflict resolution 17/40 (42.5%; ten truncated questions). Fabric-only is unavailable until Task 13. OM and combined attempts ended with worker errors and retain their partial scores/usage; LoCoMo full context stopped on an invalid judge response in its retry. These are failed measurements, not successful full quality baselines. No live paired comparison is claimed for mismatched scored sets. Task 14 retains final measurement and ablations after the fixes.
+    - Continued the full live execution at the user's explicit direction. Each attempt retained the 15M input-token ceiling. Increased harness worker waits, then individual-call/run deadlines, to ten minutes after observed timeouts; retained failed timeout attempts as diagnostics. Full-context retries were bounded and separately recorded; attempts were not merged. No memory defaults were tuned.
+    - Renamed the synthetic scoped probe/fixture/result field to recall smoke, updating all callers without an alias. Regenerated the fabric compatibility baseline with `bun scripts/release.mjs gate --update-baseline`: `probeLocomoRecall` becomes `probeRecallSmoke`, attributed to this task. The frozen `arnilo__prism-memory.txt` 0.12-family baseline remains historical. The live-tree retirement sweep excludes the benchmark and frozen historical records and returns no remaining old probe names.
+    - Added the manual-only `release/memory-bench` workflow row and the offline regression file to the existing default gate-test stage. Updated the benchmark/package READMEs, live-testing documentation and changelog. Kernel packed/unpacked byte ceilings were attributed to shipped documentation growth (1,070,298 / 3,501,307 bytes); no kernel runtime code/dependency growth.
+    - Verification: 19 harness regressions plus 17 test-runner checks passed; fabric 153 passed / 19 external Postgres skips; OM 64 passed; live matrix/docs/workflow 28 passed. Full workspace typecheck and release gate passed. Verified pinned draws, decoder and upstream-compatible F1 self-checks. All four offline statuses and paired mock comparison were checked. Item precision/citation rates remain limited by metadata scheduled in Tasks 4, 9, 11 and 12.
+
+- [x] Task 3: OM ledger correctness — reflections replace their evidence
   - Acceptance Criteria:
     - Functional:
       - **Tool schemas.** `record_reflection` and `drop_observations` declare full argument schemas: `content` and `supportingObservationIds` required; `observationIds` required. Today both are `{ type: "object" }` (`observational/src/workers/reflector.ts:29`, `workers/dropper.ts:53`), the defect `observer.ts` already documents for weaker models.
@@ -284,9 +345,9 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       }
       ```
     - Files to Create/Edit:
-      - `packages/memory/observational/src/{types.ts,ledger.ts,flush.ts,context.ts,render.ts,strategy.ts,projection.ts,recall.ts,config.ts}`
+      - `packages/memory/observational/src/{types.ts,ledger.ts,flush.ts,context.ts,render.ts,strategy.ts,projection.ts,recall.ts,config.ts,settings.ts,coverage-helpers.ts,commands.ts,exports.ts}`
       - `packages/memory/observational/src/workers/{reflector.ts,dropper.ts}`
-      - tests under `src/__tests__/` (ledger, workers, strategy, observational)
+      - tests under `src/__tests__/` (`reflection-replacement.test.ts` regressions and the empty-pass coverage expectation in `coverage.test.ts`)
       - `scripts/compat-baseline/arnilo__prism-memory-observational.txt`: regenerated if exported types change; the diff goes in the note
       - `packages/memory/observational/README.md`, `CHANGELOG.md`
     - References:
@@ -307,7 +368,25 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: OM temporal grounding, supersession, and task state
+  - Notes (executed 2026-10-19):
+    - Reflection passes now read active reflections plus unreflected observations and append replacement metadata only when they record valid reflections. Folding and merging preserve evidence history while active views exclude consumed observations and superseded reflections. Re-recording an identical reflection keeps it active.
+    - Updated context, commands, compaction, projection, and recall together. Budget drops no longer suppress reflections; invalidation resolves source ids against the full evidence ledger, including consumed observations. Recall labels consumed evidence `(reflected)` and dropped evidence `(dropped)`.
+    - Added full reflector/dropper argument schemas, independent post-reflection dropping, cross-key config validation, the 20,000-token dropper default, and oldest-first observation removal under the rendering byte cap. The library settings default also becomes 20,000; its explicit pool-target override remains supported.
+    - Updated the OM README and root changelog. No dependencies or kernel source changes.
+    - Checks passed: OM suite (73 tests), fabric suite (153 passed, 19 existing PostgreSQL skips), workspace `bun run typecheck`, offline `examples/observational-memory.ts`, docs suite, and `bun scripts/release.mjs gate --package @arnilo/prism-memory-observational --skip-tarball` after baseline regeneration.
+    - Full `bun scripts/release.mjs gate --update-baseline` regenerated declarations but fails the existing kernel tarball budget: packed 1,070,403 > 1,070,298 bytes (+105), unpacked 3,501,628 > 3,501,307 (+321). Left those unrelated budgets unchanged. The full release gate still needs this resolved before release; task-local implementation and compatibility checks pass.
+    - Semantic compatibility-baseline diff (also regenerated the formatted re-export declarations; no exports removed):
+      ```diff
+      -DEFAULT_DROPPER_TARGET_TOKENS = 10000
+      +DEFAULT_DROPPER_TARGET_TOKENS = 20000
+      +activeReflections(ledger: ObservationalMemoryLedger): readonly MemoryReflection[]
+      -reflectionBlockedByInvalidation(..., droppedOrInvalidated: ReadonlySet<string>): boolean
+      +reflectionBlockedByInvalidation(..., invalidated: ReadonlySet<string>): boolean
+      ```
+      The optional record/ledger metadata and reflector input are additive type fields; the baseline extractor records interface export declarations rather than their member bodies.
+    - Later-task finding: Task 14 must measure replacement behavior and the new dropper default; this task supplies functional proof only. Whole-plan benchmarks and verification remain with their scheduled tasks.
+
+- [x] Task 4: OM temporal grounding, supersession, and task state
   - Acceptance Criteria:
     - Functional:
       - **Event time.** `MemoryObservation` gains `observedAt` (ISO; the latest `timestamp` of its `sourceEntryIds`, from `SessionEntry.timestamp`, `src/contracts-core/session.ts:46`) and optional `referencedAt` (ISO date the content refers to, from the observer). `timestamp` keeps meaning "recorded at".
@@ -351,7 +430,8 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - [a1b2c3d4e5f6] 09:12 (high) User moved the deploy to Friday (refers to 2026-10-17)
       ```
     - Files to Create/Edit:
-      - `packages/memory/observational/src/{types.ts,serialize.ts,render.ts,ledger.ts,context.ts,limits.ts,workers/observer.ts,workers/reflector.ts}`
+      - `packages/memory/observational/src/{types.ts,serialize.ts,render.ts,ledger.ts,context.ts,limits.ts,config.ts,flush.ts,projection.ts,recent-messages.ts,recall.ts,commands.ts,index.ts,exports.ts,workers/observer.ts,workers/reflector.ts}`
+      - `examples/observational-memory.ts` (scripted provider reads the entry id after the new timestamp prefix)
       - tests
       - baseline `scripts/compat-baseline/arnilo__prism-memory-observational.txt`
       - README
@@ -377,13 +457,23 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 5: OM context that keeps the prompt cache
+  - Notes (executed 2026-10-19):
+    - Implemented source-derived `observedAt`, validated `referencedAt`, dated observer input and ≥10-minute gap markers, dated observation groups, and evidence-derived reflection ranges (including ranges inherited from prior reflections). Optional temporal fields preserve legacy ledgers.
+    - Added explicit supersession drop records and an unknown-id warning without rejecting the new fact. `runObserver` keeps its observation-array return shape and exposes additional ledger records through `onRecord`; the flush persists them after the observation batch.
+    - Added schema-declared `record_task_state`, shared UTF-8 text bounds (`worker.maxTaskStateBytes`, default 2,048; hard ceiling 65,536), latest-only folding, current-task prompt context, citation guidance, and rendered-item metadata in display order. Current task renders last and survives oversized reflection prefixes. `om:view`, branch context blocks, and source-backed task-id recall use the same state; revoked sources withhold task recall.
+    - Updated the README, changelog, prior prompt/schema assertions, and scripted provider fixtures. No dependency, kernel code, or extra model call was added.
+    - Checks passed: `bun run typecheck`; OM suite (84 pass); fabric suite (153 pass, 19 environment-gated skips); memory benchmark offline unit suite (19 pass); compatibility-baseline currentness check (1 pass); `bun examples/observational-memory.ts` (SQLite restart, recall, compaction, secret redaction, slot ownership); scoped `git diff --check`.
+    - Release gate limitation: both `bun scripts/release.mjs gate --update-baseline` and the OM package-filtered gate regenerated the baseline but failed the kernel package-size budgets. The first run measured packed/unpacked overages of 105/321 bytes; after the example fixture adjustment the package-filtered run measured 193/548 bytes over. No budget was raised. This remains a release-wide verification blocker, rather than unfinished Task 4 behavior.
+    - Baseline delta (`scripts/compat-baseline/arnilo__prism-memory-observational.txt`): additions `DEFAULT_MAX_TASK_STATE_BYTES`, `HARD_MAX_TASK_STATE_BYTES`, `MemoryTaskState`, `TaskStateRecordedData`, `TASK_STATE_RECORDED`, `isTaskStateRecordedData`, and the declaration scanner's `isIsoDate` entry; updated the observer instruction and grouped type re-export rows to include the new types. No exports removed. Existing signatures remain; new fields/options are optional except the resolved worker limit.
+    - Later-task handoff: Task 5 still owns carrying task state into the compaction summary/folded snapshot and changing injection timing. The existing package log retains task-state records; this task does not claim compaction-summary support. Live provider/benchmark ablations remain Task 14. No retired API/config names required a retirement sweep.
+
+- [x] Task 5: OM context that keeps the prompt cache
   - Acceptance Criteria:
     - Functional:
       - **No per-pass prefix churn.** OM's `context.build` (`observational/src/index.ts:99`) renders:
         - nothing before the session's first compaction (the history is verbatim)
         - nothing after a compaction made by OM's own compactor (its summary already is the ledger; this removes the duplicate injection via `src/session-stores.ts:177`)
-        - after a compaction by another slot owner, the ledger **pinned** at that compaction: OM observes `compaction.completed` (Task 1 (b)) and appends `om.context.pinned { coversUpToId }` to its log. The block renders the ledger folded up to that record.
+        - after a compaction by another slot owner, the ledger **pinned** at that compaction: on a successful `compaction.completed`, capture the bounded ledger snapshot synchronously, then resolve the already-appended compaction entry/id/strategy through `session.entries()` (the event carries none). Serialize the `om.context.pinned { coversUpToId, compactionEntryId }` write and await its pending promise in `context.build` before rendering; observe hooks themselves are not awaited. Ignore failed/duplicate events and reconcile once on reopen. `turn.completed` is recovery only, not the first-request synchronization point. The block renders the captured ledger snapshot for that record.
         - The block therefore changes only when a compaction has already rewritten the prefix.
       - **Observation-driven compaction when OM owns the slot.** OM's compactor appends `om.compacted { coversUpToId }` when it runs.
         - Once a session has an `om.compacted` record, OM's `compaction.when` requests compaction whenever the observation coverage cursor is ahead of the last `om.compacted` cursor. Observed messages then leave the context in the same step that changes the prefix (Mastra: "observed messages are removed from the context window").
@@ -396,7 +486,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - Observer input is O(new messages + bounded pool).
       - The README cost table states: one compaction per observation pass when OM owns the slot (no model call; the summary is the ledger).
     - Code Quality:
-      - No kernel change and no branch read in `context.build` (the log is in memory).
+      - No kernel change and no steady-state branch read in `context.build` (the log is in memory); await a pending compaction pin or one-time reopen reconciliation before rendering.
       - `compactAfterTokens` keeps its meaning as the gate before the first own compaction and for foreign owners.
     - Security: The pinned and compaction renders keep redaction (`redactSecrets`) and invalidation filtering.
   - Approach:
@@ -416,21 +506,25 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - API Notes and Examples:
       ```ts
       prism.hooks.on("compaction.completed", (event, context) => {
-        /* append om.context.pinned or om.compacted to the OM log */
+        if (event.error || !context.session) return;
+        /* Capture the ledger now; retain the entry-scan/pin promise for context.build to await. */
       });
       ```
     - Files to Create/Edit:
-      - `packages/memory/observational/src/{index.ts,context.ts,compactor.ts,strategy.ts,flush.ts,commands.ts,types.ts,ledger.ts,workers/observer.ts}`
+      - `packages/memory/observational/src/{index.ts,context-cache.ts,compactor.ts,strategy.ts,flush.ts,commands.ts}` (pin coordination is internal; observer input is bounded at the flush call site)
       - tests (observational, strategy)
       - `examples/observational-memory.ts`: shows the own-compaction mode; keep its assertions green
       - `apps/prism-agent` tests if they assert the OM block
       - README, `CHANGELOG.md`
-      - baseline regeneration if exports change
+      - `scripts/budgets.json`: measured root pack ceilings for the shipped CHANGELOG entries; no export moves or baseline regeneration
     - References:
       - review findings OM-3, OM-7, OM-9
       - plan 184
   - Test Cases to Write:
     - `om_context_block_empty_before_first_compaction`.
+    - `foreign_compaction_pin_ready_before_next_model_request`: delayed entry scan/log append is awaited by context build, including run-start compaction.
+    - `failed_compaction_does_not_pin_and_duplicate_event_does_not_repin`.
+    - `reopened_session_reconciles_latest_compaction_once`.
     - `om_context_block_empty_after_own_compaction` (the duplicate-injection bug).
     - `om_context_block_pinned_after_foreign_compaction`: with `slots: { compaction: memory-compaction }`, the block equals the ledger at the pin and does not change after a later observation pass.
     - `om_requests_compaction_when_coverage_advances_after_own_compaction`.
@@ -444,7 +538,15 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 6: memory-core — SQLite vector and working store
+  - Notes (executed 2026-10-19):
+    - Implemented the three context modes in an internal `context-cache.ts`: no injection before compaction or after OM compaction; bounded captured ledger pins after foreign compaction. Entry scans and pin writes are serialized and awaited before context assembly. Failed events are ignored, duplicate events do not repin, and reopen reconciles the latest compaction once from its saved pin or preceding ledger records. Compaction while disabled clears the cached mode for subsequent reconciliation.
+    - OM compaction records `om.compacted` with the coverage used by its summary; subsequent coverage advancement requests compaction only in own-compaction mode. The initial token/trigger gate and foreign-owner gate remain intact. Summaries render current task state last with existing redaction, and the observer receives only the newest active pool within `dropper.targetTokens / 4` at the flush boundary.
+    - Added `contextMode` to status commands/events, documented context/cache behavior and costs, and asserted none/own-compaction modes in the durable SQLite restart example. No kernel change, dependency, moved/removed public export, or retired name; compatibility baselines are unchanged.
+    - Proof: observational suite **96 passed**, including delayed entry scans/log writes, duplicate/failed events, reopen recovery, own/foreign gates, bounded observer input, task-state summary/redaction, request-prefix equality, and `runPrefixStabilityConformance` with cacheable continuity **1**. A final focused observational integration run passed **19 tests**. Fabric suite **153 passed / 19 skipped** (existing optional cases), reference-host suite **38 passed**, docs suite **64 passed**, root `bun run typecheck`, and `bun examples/observational-memory.ts` passed. `bun scripts/release.mjs gate` passed for **43 packages** with no compatibility baseline changes.
+    - Release gate initially caught root pack growth from shipped CHANGELOG text. Re-measured `kernel.packedBytes` **1070298 → 1070590** (+292), `kernel.unpackedBytes` **3501307 → 3502167** (+860): **312 bytes** from this task's entry plus **548 inherited bytes** from Tasks 3–4 (227 temporal/task-state + 321 reflection replacement). Updated only these ceilings and their attribution comments; source/export/file-count budgets did not change.
+    - Live-provider cache ratios and benchmark ablations remain Task 14; this task proves deterministic request-prefix behavior offline. Whole-plan verification/backlog handoff remains for completion of the remaining tasks.
+
+- [x] Task 6: memory-core — SQLite vector and working store
   - Acceptance Criteria:
     - Functional:
       - `@arnilo/prism-memory-core/sqlite` exports `createSqliteMemoryStores({ path, dimensions? })` returning `{ vectorStore, workingStore, close() }`:
@@ -456,7 +558,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - A path outside the host-provided root is the caller's concern (the fabric resolves it in Task 7).
     - Performance:
       - `bun:sqlite` is loaded lazily only under `./sqlite`, so the root entry never imports it (a "not loaded unless used" test, like `./postgres`).
-      - Exact search is O(rows in scope). The README states the trade-off (fine to about 50k notes per scope; Postgres+pgvector beyond).
+      - Exact cosine scoring is O(rows in scope × dimensions), followed by deterministic sorting. The README states the trade-off (fine to about 50k notes per scope; Postgres+pgvector beyond).
     - Code Quality: Mirrors the `./postgres` layout and DDL builder style; no new runtime dependency.
     - Security:
       - Identifiers are validated with `validateIdentifier`.
@@ -482,6 +584,8 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - Files to Create/Edit:
       - `packages/memory/core/src/sqlite/{index.ts,ddl.ts}`: new
       - `packages/memory/core/package.json`: `exports["./sqlite"]`
+      - `packages/memory/core/tsconfig.json`: include the installed Bun SQLite type declarations
+      - `scripts/budgets.json`: measured root pack ceilings for the required CHANGELOG entry
       - `packages/memory/core/src/__tests__/sqlite.test.ts`: new
       - `scripts/compat-baseline/arnilo__prism-memory-core.txt`: regenerated; the diff goes in the note
       - `packages/memory/core/README.md`, `CHANGELOG.md`
@@ -495,13 +599,30 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `memory_core_root_does_not_load_bun_sqlite`.
     - `sqlite_store_rejects_corrupt_file`.
     - `sqlite_file_mode_is_0600`.
+    - `sqlite_isolates_scope_and_filters_before_ranking`: ACLs, invalidation, lineage, and allow-lists filter both retrieval legs before topK.
+    - `sqlite_batches_rollback_and_working_cas_is_atomic`: failed vector batches leave no rows; two connections cannot both claim version zero.
+    - `sqlite_pagination_generations_holds_and_aborts`: stable cursors, generation rollback in both query legs, sticky legal holds, scoped share grants, and cancelled writes.
+    - `sqlite_dimensions_and_identifiers_fail_closed`: unsafe SQL identifiers and incompatible dimensions are rejected.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes. A new subpath.
     - Docs pages to create/edit: `packages/memory/core/README.md`: export table row and the scale trade-off.
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 7: Fabric durability
+  - Notes (executed 2026-10-19):
+    - Added the `@arnilo/prism-memory-core/sqlite` subpath with `createSqliteMemoryStores({ path, dimensions? })`, its store/options types, and a validated DDL builder. Bun SQLite loads dynamically only inside the factory; the root stays driver-free. No runtime dependency or kernel source change.
+    - Vector records, consent metadata, scope generations (including bigint), ACL replace-sets, sticky invalidations/legal holds, and resource-isolated share grants persist in SQLite. Exact cosine and FTS5 BM25 both apply scope, generation, lineage, ACL, and id filters before topK. FTS triggers keep updates/deletes indexed; delete counts use `RETURNING` because SQLite's change count includes trigger writes. Vector batches and working-memory merge/replace/version checks use immediate synchronous transactions, including across two connections.
+    - Unknown/corrupt/incompatible files fail with `MemoryValidationError`; new files use 0600. Persisted dimensions are checked on reopen. The README documents exact-scan sizing (about 50k notes per scope), sorting cost, literal-token FTS queries, existing-file permission preservation, and caller-owned path containment. Task 7 can consume this factory directly; it still owns root resolution, default selection, and lifecycle wiring.
+    - Proof: memory-core **18 passed** (including **11 SQLite tests** and shared `runMemoryConformance`), fabric **153 passed / 19 skipped**, RAG **99 passed / 4 skipped**, docs **64 passed**, root `bun run typecheck`, final memory-core typecheck, and focused Biome checks passed. Skips are existing optional integration cases. `bun scripts/release.mjs gate --update-baseline --package @arnilo/prism-memory-core` and the subsequent full `bun scripts/release.mjs gate` passed for **43 packages**. Registered the new suite and subpath in the coverage ledger.
+    - Compatibility baseline diff in `scripts/compat-baseline/arnilo__prism-memory-core.txt`: two additive declaration signatures; no changed or removed signatures, and no retirement sweep needed:
+      ```diff
+      +buildSqliteMemoryDdl export declare function buildSqliteMemoryDdl(tableInput?: string): string
+      +createSqliteMemoryStores export declare function createSqliteMemoryStores(options: SqliteMemoryStoresOptions): Promise<SqliteMemoryStores>
+      ```
+    - The restricted package type configuration now includes the already-installed `bun-types/sqlite.d.ts`. Release packing initially exceeded the exact kernel byte ceilings solely because the required root CHANGELOG entry adds **232 unpacked bytes / 125 packed bytes**. Updated and attributed only those ceilings: **1070590 → 1070715** packed, **3502167 → 3502399** unpacked; kernel source, export, file-count, and dependency budgets are unchanged.
+    - Documentation verified against Bun **1.4.2** SQLite transactions/prepared statements (`https://github.com/oven-sh/bun/blob/bun-v1.4.2/docs/runtime/sqlite.mdx`) and SQLite FTS5 (`https://www.sqlite.org/fts5.html`). No live provider calls or large-scale benchmark were needed. Whole-plan verification and backlog handoff remain for completion of the remaining tasks.
+
+- [x] Task 7: Fabric durability
   - Acceptance Criteria:
     - Functional:
       - Config `store` accepts `"memory"`, `{ sqlite: { path } }`, or `{ postgres: {...} }`.
@@ -540,6 +661,9 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - `examples/working-semantic-memory.ts`: restart demo or unchanged; the note says which
       - README, `CHANGELOG.md`
       - baseline regeneration for config types
+      - `fabric/src/{create.ts,types.ts,tools.ts}`: file content hashes, `fabric/tsconfig.json`: SQLite types
+      - `packages/stores/sqlite/src/bun-sqlite.d.ts`: shared ambient declaration needed by examples importing both SQLite packages
+      - `scripts/budgets.json`: root CHANGELOG-only tarball growth
     - References:
       - review finding FAB-1
   - Test Cases to Write:
@@ -556,7 +680,15 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 8: Fabric write surface — typed notes and in-place edit
+  - Notes (executed 2026-10-19):
+    - Stores now resolve as a vector/working pair. `tools.root` defaults to SQLite at `.prism-memory.sqlite`; explicit in-process stores warn about loss on exit. SQLite paths are checked lexically and through the existing real-path jail before opening. Postgres uses `createPostgresMemoryStores`; custom vector tables still share its durable working store and pool. Disposal drains reconciliation before closing stores.
+    - Startup defers one bounded pass until package services are available. File notes carry SHA-256 `contentHash`; file inserts stamp it too. Reconcile embeds changed/new files once, keeps unchanged files free of embedding calls, and forgets missing files. Database files/sidecars and symlinks are excluded; invalidated/held rows are not revived. The first context build waits for the pass, preventing startup races with tools.
+    - Bounds: one index page and at most `limits.rebuildBatchSize` visited entries, with `limits.rebuildMs` cancellation; directory views stop at their existing 200-entry cap. Truncated listings never imply deletion. Empty/oversized files are skipped. Large directories/indexes need explicit rebuilding; this bounded startup pass is not a full filesystem watcher. Missing embeddings skip reconciliation. README records these limits and per-file cost.
+    - Small prerequisite: examples import both SQLite packages, exposing the session store's older ambient `bun:sqlite` declaration. Added the `strict`, typed `query`, and transaction `immediate` members needed by memory-core. The SQLite store suite passes (43 tests).
+    - Verification: fabric suite 158 passed, 20 Postgres-gated skips; core suite 18 passed; repository `bun run typecheck` passed; docs suite 64 passed (including executable examples); `examples/working-semantic-memory.ts` passed unchanged. Restart coverage lives in the package tests, so the existing example remains unchanged. Live Postgres execution was skipped without `PRISM_TEST_POSTGRES_URL`; the new package restart integration test is explicitly gated.
+    - `bun scripts/release.mjs gate --update-baseline` and the subsequent ordinary `gate` passed (43 packages). Baseline regeneration has no exported-name additions/removals: the config union, rebuild limits, and hash fields extend existing exported types. Kernel tarball ceilings were remeasured at 1,070,793 packed / 3,502,593 unpacked bytes (+78/+194), solely the root CHANGELOG entry; no kernel source/export/dependency growth.
+
+- [x] Task 8: Fabric write surface — typed notes and in-place edit
   - Acceptance Criteria:
     - Functional:
       - `memory.insert` accepts a third exclusive target, `kind: "fact" | "procedure"`, with optional `supersedes`, `tRef`, `validFrom`, `validTo`, `tags`, and `keywords`. It writes through `fabric.remember`, so the typed note kinds become reachable from tools. Today only working blocks and files are (`fabric/src/tools.ts:137-185`).
@@ -592,8 +724,8 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       {"tool":"memory.replace","args":{"block":"profile","old":"Prefers Python","new":"Prefers TypeScript"}}
       ```
     - Files to Create/Edit:
-      - `packages/memory/fabric/src/{tools.ts,blocks.ts,files.ts,create.ts}`
-      - `src/__tests__/tools.test.ts`
+      - `packages/memory/fabric/src/{tools.ts,files.ts,memory.ts}` and `packages/memory/core/src/types.ts` (scoped exact-id read for correction)
+      - `packages/memory/fabric/src/__tests__/{tools,package}.test.ts`
       - README (Tools table)
       - `CHANGELOG.md`
       - baseline regeneration
@@ -615,7 +747,15 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 9: memory-core — scoring fixes and shared helpers
+  - Notes (executed 2026-10-19):
+    - The requested title is Task 8 here; plan 158 Task 8 is already complete and concerns kernel context-engineering retirement. This task extends `memory.insert` with exclusive fact/procedure targets and all seven optional note fields, validated by `fabric.remember`. Durable typed inserts and id replacements scan the complete resulting content and return `refused: <class>` without writing.
+    - Added `memory.replace` (`edit`) for exactly one block/path/id. Missing or duplicate matches fail visibly (overlapping matches count); empty replacements delete text. Block writes use the existing working-store version check and character cap. Files use the existing jail, refuse truncated reads, enforce the byte cap, and refresh their hash/index; empty files retain a path-only note. Every tool uses the existing session gate.
+    - Small prerequisite: `Memory.getEntry` reads a redacted exact-id row in the current thread and excludes blocked/revoked rows, avoiding similarity search for edits. `correct()` now accepts an empty string for full-text deletion while preserving its caps, re-embedding, and correction invalidation lineage. No new exported names: baseline regeneration changes no memory-package name lists; the API additions extend existing interfaces.
+    - Verification: core + fabric suites **181 pass / 20 Postgres-gated skips / 0 fail** (`--timeout 20000`; the initial five-second retired-family sweep timed out). Tests cover typed fact/procedure writes, exclusive targets, exact/ambiguous/missing replacement, full deletion, jailed file refresh, correction lineage, held-note exclusion, refusal, session visibility, and one embedding per typed write/id edit versus zero for block edits. Repository `bun run typecheck`, subsequent fabric typecheck, and kernel tools/docs suites (**100 pass**) passed.
+    - README Tools/trust/cost details and root CHANGELOG updated. Regenerated release baseline and ordinary release gate both passed (`updated: true`, then `updated: false`), 43 packages; no exported-name additions/removals. The root CHANGELOG adds 67 packed / 175 unpacked bytes, so kernel tarball ceilings are remeasured at 1,070,860 / 3,502,768 with attribution in `scripts/budgets.json`; kernel source/exports/dependencies are unchanged.
+    - Scope limits: no file rename or watcher added. Live Postgres checks remain gated without `PRISM_TEST_POSTGRES_URL`. File write and index refresh remain sequential operations, as with insert; a failed embedding can leave the file ahead of its index until reconciliation.
+
+- [x] Task 9: memory-core — scoring fixes and shared helpers
   - Acceptance Criteria:
     - Functional:
       - `NEUTRAL_IMPORTANCE` becomes `0.5` (`core/src/scoring.ts:10`), so an unrated record no longer outranks every rated one.
@@ -627,7 +767,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
           
           Passive injection never touches, so an irrelevant hit that keeps being injected does not keep refreshing its own recency (rich-get-richer). Generative Agents counts retrieval as access; this plan counts use. The README says why.
       - New `fuseRankings(lists, { k = 60 })` (reciprocal rank fusion) is moved from `packages/memory/rag/src/fusion.ts`; rag imports it from core (no copy kept).
-      - New `withTailContext(draft, blocks)` inserts one message holding the rendered blocks immediately before the draft's final user message (Task 1 (a)). The cached prefix is untouched.
+      - New `withTailContext(draft, blocks)` inserts one message holding the rendered blocks immediately before the draft's latest real user message, preserving that anchor when later assistant/tool messages follow; append when no user message exists (Task 1 (a)). Reinsert on every model call, after engineering's fold/budget handler through existing hook priority/order. The cached prefix is untouched.
         - The message carries `metadata.contextBlocks: [{ title, source, itemIds, tokens }]`, so a consumer that measures context (Task 2's injection log, plan 194's accounting) sees tail blocks exactly like `draft.context` blocks.
       - All existing scoring callers are updated (Task 1 (h)).
     - Performance:
@@ -659,8 +799,8 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - `packages/memory/core/src/{scoring.ts,types.ts,vector-memory.ts,postgres/index.ts,sqlite/index.ts,index.ts}`
       - a new `packages/memory/core/src/{fusion.ts,tail-context.ts}`
       - `packages/memory/rag/src/{fusion.ts,retrieve.ts}` (import from core)
-      - tests in core and rag
-      - baselines (core, rag)
+      - tests in core, fabric, rag, and context engineering (tail placement after budget)
+      - baselines (core, rag); `scripts/budgets.json` for root CHANGELOG-only pack growth
       - READMEs (core Scoring, fabric "Recall scoring" section, which today documents neutral `1`)
       - `CHANGELOG.md`
     - References:
@@ -676,13 +816,36 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `with_tail_context_inserts_before_final_user_message`.
     - `with_tail_context_leaves_prefix_identical`.
     - `with_tail_context_message_carries_block_metadata`.
+    - `with_tail_context_preserves_anchor_across_tool_rounds_and_appends_without_user`.
+    - `with_tail_context_composes_after_engineering_budget`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes. Scoring default, new exports, rag internal move.
     - Docs pages to create/edit: `packages/memory/core/README.md`, `packages/memory/fabric/README.md` (Recall scoring), `packages/memory/rag/README.md` (if it names fusion).
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 10: Fabric consolidation — no silent supersession
+  - Notes (executed 2026-10-19):
+    - Implemented neutral importance `0.5`, validated `recencyBasis` (`accessed` by default, `created` opt-in), and decay from `lastAccessedAt` with creation fallback. Updated existing scoring assertions and documented the defaults.
+    - Added `Memory.touch(ids)` in fabric, which owns the `Memory` implementation: exact-thread lookup, deduplicated ids, one batched upsert, and no changes beyond `lastAccessedAt`. Missing, revoked, and invalidated entries are skipped; empty calls do not write. Recall remains read-only. Task 11 owns the explicit tool/citation wiring and must call touch only for access-based recency, never for passive injection.
+    - Added optional `MemoryVectorRecord.lastAccessedAt`. In-memory and SQLite stores already spread/serialize the complete record, so neither needed implementation changes. PostgreSQL now reads/writes nullable `last_accessed_at`; idempotent DDL adds it to existing tables. Added gated PostgreSQL round-trip coverage and an offline DDL assertion.
+    - Moved N-list RRF into core as `fuseRankings(lists, { k = 60 })`, preserving scope identity, deduplication, deterministic ties, and first-leg display scores. RAG calls core directly; deleted rag's fusion module and its old exports, with no alias. Core exports the fusion types. Added default-k, scope-isolation, and invalid-k coverage alongside the migrated reference tests.
+    - Added `withTailContext`: one system message immediately before the latest user message, or appended with no user; existing prefix/message objects remain intact. Metadata carries each block's title/source/itemIds/tokens, with estimated tokens when absent. A real hook-bus composition test registers tail insertion before the budget handler but gives it priority below engineering's `-1000`, proving it runs after budgeting. Task 11 must reapply it to each fresh draft at that priority on every model call.
+    - Validation: `bun test --timeout=0 packages/memory/core/src packages/memory/fabric/src packages/memory/rag/src packages/context/engineering/src/__tests__/tail-context.test.ts` passed **286**, skipped **24**, failed **0**. Skips are credential/endpoint-gated PostgreSQL, Drive, and live reranker cases; no live database/service claim is made. The first broad run caught old neutral/resolver expectations, which were updated; a later run under Bun's default 5-second timeout hit an existing hosted-reranker timeout test, and the prescribed timeout-free suite passed. `bun run typecheck` and `bun scripts/release.mjs gate` passed. Changed TypeScript files were formatted.
+    - Regenerated core/rag compatibility baselines using `bun scripts/release.mjs gate --update-baseline`. Baseline delta (removals intentional, owned by the fusion move):
+      ```diff
+      core:
+      - NEUTRAL_IMPORTANCE = 1
+      + NEUTRAL_IMPORTANCE = 0.5
+      + fuseRankings(lists, { k }?): readonly FusedCandidate[]
+      + withTailContext(draft, blocks): ContextDraft
+      rag:
+      - fuseReciprocalRank(vectorHits, lexicalHits, rrfK)
+      - FusedCandidate / RetrievalLeg re-exports from ./fusion.js
+      ```
+      The record/scoring/Memory interfaces also gain `lastAccessedAt`, `recencyBasis`, and `touch`; the baseline format does not expand interface fields. Root pack ceilings increased only for the required CHANGELOG entry (**+111 packed / +262 unpacked bytes**); the reason is recorded in `scripts/budgets.json`. No kernel source, export, file, or dependency growth.
+    - Retirement sweep over `src/ packages/ apps/ scripts/ examples/ docs/`, excluding dist/history/evidence and archived compatibility snapshots: no executable use of `fuseReciprocalRank` or `fuseReciprocalRankLists` remains. The core README intentionally names the removed export to explain its replacement. No new dependency, version bump, or publish.
+
+- [x] Task 10: Fabric consolidation — no silent supersession
   - Acceptance Criteria:
     - Functional:
       - `planMemoryConsolidation` (`fabric/src/consolidate.ts:44-58`) never returns `supersede` from similarity alone. The plan becomes:
@@ -696,7 +859,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - **Opt-in model decider:** `consolidate: { decider: "model", model?: "<provider/model>" }`.
         - For each write with candidates ≥ threshold, one model call with the new note and the top 5 candidates returns `ADD | UPDATE <id> | SUPERSEDE <id> | NOOP` through a schema-declared tool (Mem0's operation set).
         - A malformed or failed decision falls back to `insert` with a `similar` link, and records `status.note` once per session.
-        - The fabric declares the `models` capability only for this path; it is resolved lazily so a host that never enables it pays nothing.
+        - The fabric statically declares the `models` capability for this optional path (package capabilities are definition-level); the client is resolved lazily only for eligible writes, so a host that never enables it pays nothing.
       - `recall` explain rows expose `similar` links so the agent can see near-duplicates.
     - Performance:
       - Default: no model call (as today).
@@ -704,7 +867,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - Code Quality:
       - The threshold stays configurable.
       - The `ponytail` note at `consolidate.ts:7` is replaced by the decided behavior.
-      - No alias for the removed `supersede` action from similarity.
+      - No alias for the removed `supersede` action from similarity. Same-path file refresh remains an update, preserving Task 8’s file identity behavior.
     - Security:
       - Decider input is redacted (`redactJson`) and bounded by worker limits.
       - The decider's output can only reference candidate ids it was shown (others are ignored).
@@ -726,8 +889,9 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - Files to Create/Edit:
       - `packages/memory/fabric/src/{consolidate.ts,create.ts,config.ts,index.ts,links.ts,types.ts}`
       - a new `packages/memory/fabric/src/decider.ts`
-      - `package.json` capabilities if declared there
-      - tests (consolidate, notes)
+      - `fabric/src/{workers.ts,recall.ts,tools.ts}` (validation, explain links, session identity)
+      - tests (consolidate and package integration)
+      - `scripts/budgets.json` for root CHANGELOG-only tarball growth
       - README
       - `CHANGELOG.md`
       - baseline regeneration
@@ -747,7 +911,19 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 11: Fabric recall — one path, selective injection, hybrid ranking, a floor, and tail placement
+  - Notes (executed 2026-10-19):
+    - Default consolidation updates normalized-identical same-kind notes; different text inserts with a `similar` link and never retires the candidate. Same-path file refresh remains unchanged. Recall explain rows now expose stored links. Explicit `supersedes` resolves an accessible, distinct fabric row through `Memory.getEntry`, preserves host metadata, and sets `validTo`; explicit correction remains through `correct()`.
+    - Added the opt-in model decider: one bounded worker turn, one schema-declared `decide_memory` call, at most five same-kind threshold candidates, and candidate-id validation before any mutation. ADD preserves both notes, UPDATE rewrites the selected candidate, SUPERSEDE retires it, and NOOP returns the nearest existing note without writing. Malformed/missing/multiple/oversized/failed decisions insert with a similar link; aborted writes still abort. Input uses `redactJson` with the direct fabric's supplied redactor/secrets. Direct callers supply `resolveModelClient`; package writes resolve `prism.models.client` lazily and pass tool session identity for once-per-session fallback warnings.
+    - Implementation finding: `PackageDefinition.capabilities` is static (`src/packages/define.ts:123`), and `PackageAPI.models.client` requires `models` (`src/packages/api.ts:118`). Declared it solely to authorize the optional decider; no client/provider work occurs with the default. Acceptance wording above now records this existing boundary rather than implying per-config capability declarations. README documents the cost, fallback, direct-call redaction setup, and static declaration. No kernel change or dependency addition.
+    - Verification passed: fabric suite **178 pass / 20 skip / 0 fail** (28 files); all workspace `bun run typecheck` checks; release gate baseline regeneration (`updated: true`) and ordinary release gate (`updated: false`), **43 packages**. Skips are the existing Postgres integration cases without a configured database. Regression coverage includes Alice/Bob flights, explicit retirement/host metadata preservation, all four model actions, invalid ids, failed/missing/multiple/oversized responses, input limits/redaction, a nonfirst candidate among the top five, default zero model calls, warning deduplication, and the real package/tool/model integration.
+    - Fabric compatibility-baseline delta (no removals):
+      ```diff
+      +decideConsolidation  export declare function decideConsolidation(input:
+      ```
+      Existing exported option/explain types also gain the decider settings, lazy client/failure hooks, redactor/secrets, write session id, and explain links; the baseline format does not expand interface fields. The old similarity-driven `supersede` member is removed from `MemoryConsolidationPlan`; explicit/model retirement stays internal to the write path. Targeted graft sweep found no stale similarity-retirement or threshold-shortcut wording (only the valid linker exclusion comment).
+    - Root tarball ceilings grew only for the required CHANGELOG entry: **+114 packed / +259 unpacked bytes**, now **1,071,085 / 3,503,289**, attributed in `scripts/budgets.json`. Kernel source, exports, dependencies, and file count are unchanged. Live decider accuracy/cost ablations remain Task 14; no paid model or benchmark run was needed for Task 10.
+
+- [x] Task 11: Fabric recall — one path, selective injection, hybrid ranking, a floor, and tail placement
   - Acceptance Criteria:
     - Functional:
       - **One recall path.** The `context.build` block (`fabric/src/memory.ts:539`, wired at `index.ts:157`) recalls through the fabric recall (or the scoped policy when configured), not the core `memory.recall`. Passive injection therefore applies:
@@ -766,7 +942,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
         - the latest `todo_write` plan text in `draft.messages` (Task 1 (j))
         
         Time-aware expansion (LongMemEval): when the user message names a date or a relative period ("last week", "in March"), the period is resolved against the message time and passed to recall as an `asOf`/`tRef` window filter, not as query text.
-      - **Once per user turn.** The semantic block is computed on the first model call of a user turn and reused byte-identical on that turn's later tool rounds (Task 1 (k)). Within a turn the tail does not change, and there is one recall per user turn, not one per model call.
+      - **Once per user turn.** The semantic block is computed on the first model call of a user turn and reused byte-identical on that turn's later tool rounds (Task 1 (k)). Within a turn the tail does not change, and there is one recall per user turn, not one per model call. Cache even empty results by `context.session.id` plus the latest persisted user-entry id from `session.entries()`; `context.runId` is empty on current draft dispatch. A new user entry/steer changes the key. Extract `metadata.todos` before engineering can fold/drop the result, or use the persisted plan as fallback.
       - **No duplicates across sources.** Before rendering, drop a hit when:
         - its id is in the OM block's `itemIds`, or its `sourceEntryIds` are all still present verbatim in `draft.messages`
         - it is a `file` note whose path appears in a `read` tool result still visible in `draft.messages`
@@ -818,12 +994,14 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       memoryFabric({ tools: { root: "./memory" }, inject: { minSimilarity: 0.35, topK: 3 } });  // opt-in passive recall
       ```
     - Files to Create/Edit:
-      - `packages/memory/fabric/src/{memory.ts,recall.ts,search.ts,create.ts,index.ts,config.ts,types.ts}`
+      - `packages/memory/fabric/src/{memory.ts,recall.ts,context.ts,provider.ts,create.ts,index.ts,config.ts,types.ts,tools.ts,conformance.ts,scoped/read-policy.ts}`
       - `packages/memory/core/src/{types.ts,vector-memory.ts,postgres/index.ts,sqlite/index.ts}`
       - tests (recall, memory, postgres-vector integration, sqlite)
       - READMEs (fabric, core)
       - `CHANGELOG.md`
       - baselines (core, fabric)
+      - `scripts/memory-bench/{injection-log.mjs,run.test.mjs}` (tail metadata accounting and offline OM fixture alignment)
+      - `scripts/budgets.json` (required root CHANGELOG-only tarball growth)
     - References:
       - review findings FAB-5, FAB-6, FAB-9; context-rot review 2026-10-17 (default off, pre-fusion floor, task query, once per turn, dedup, citation)
   - Test Cases to Write:
@@ -834,7 +1012,9 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `lexical_only_hit_needs_non_stopword_match`.
     - `task_query_includes_om_task_state_and_plan`.
     - `relative_date_becomes_validity_window`: "what did we decide last week" on 2026-10-17 filters 2026-10-05..2026-10-11.
-    - `semantic_block_computed_once_per_user_turn`: two tool rounds, one recall, identical tail bytes.
+    - `semantic_block_computed_once_per_user_turn`: two tool rounds, one recall, identical tail bytes; empty hits are cached too.
+    - `recall_cache_changes_on_new_user_entry_with_empty_context_run_id`: includes a steer and a compacted user entry.
+    - `task_query_survives_engineering_fold_of_plan_result`.
     - `hit_already_in_om_block_is_dropped`, `hit_with_visible_source_entries_is_dropped`, `file_note_for_visible_read_is_dropped`.
     - `cited_injected_ids_are_touched_uncited_are_not`.
     - `recall_tool_says_no_confident_match_below_floor`.
@@ -850,7 +1030,25 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 12: Fabric memory directory — progressive disclosure for long-term memory
+  - Notes (executed 2026-10-19):
+    - **One recall path, default off.** Package injection, direct fabric registration, and the legacy `Memory.contextBlocks`/registration seam now use the fabric recall projection (or configured scoped policy). The old core-recall injection body and `formatRecall` are deleted. `inject` defaults to false; opting in defaults to a provisional 0.35 cosine floor, three hits, 600 rendered tokens, and a task query. `inject.kinds` permits explicit procedure inclusion. Working memory stays in a `fabric-working` prefix block; semantic memory uses `withTailContext` and `fabric-semantic` accounting metadata. The package warns once with the uncalibrated embedder id and selected floor.
+    - **Retrieval and lookup.** Core recall's opt-in hybrid leg uses the existing in-memory lexical query, SQLite FTS5/BM25, and Postgres full-text. `fuseRankings` now exposes its RRF score separately from the original hit, and optional recency/importance re-ranking follows fusion. The cosine floor runs before fusion; lexical-only hits need a non-stopword token and never report an RRF score as cosine, including with composite scoring. Fabric recall defaults to this path and the provisional floor; consolidation retains its vector-only candidate path. Augmented keys include content/keywords/tags/context on writes, corrections, and rebuilds without changing stored content. `Memory.get` batches exact-scope ids through all three stores, bounds/deduplicates inputs, redacts, and checks invalidation/hold/consent. One-hop link expansion uses at most one lookup, reaches outside the candidate batch, and rechecks kinds, validity, and reference-time bounds; it never widens a parent share grant or reads another thread.
+    - **Task state and prompt lifetime.** A single branch read supplies the persisted user-entry id, OM task state, and persisted todo fallback. Each query source is bounded to 2,000 characters. ISO dates, last week (UTC Monday–Sunday), and named months resolve from the user-entry timestamp into `asOf` and a half-open `tRef` interval; notes without `tRef` use ingestion time. Cache identity uses session id plus persisted user-entry id, including empty results, so empty hook run ids, tool rounds, steers, and compacted provider history behave correctly. No persisted user identity means no passive injection. Render-time dedup uses OM item ids, verbatim source contents, and visible read results/calls, then refills the requested slots within the bounded candidate window.
+    - **Hook-order findings.** Fabric runs at priority **-1100**, after OM and engineering (-1000); todo extraction falls back to persisted metadata if engineering folded the plan. Integration coverage runs real fold/budget stages and checks identical tail bytes across rounds. `turn.completed` precedes persistence of the assistant output, so citation ids are accumulated from streamed text (including split citations) and touched through tracked background work at completion. Declared the existing `background` capability for this operation; default-off injection schedules none of this work. Recall-tool hits are touched when returned and empty results say `no confident match`. Passive scoped recall passes `recordUse: false`, so viewing an injected hit does not increase the scoped promotion ledger's reuse count.
+    - **Benchmark follow-through.** The injection logger now reads `metadata.contextBlocks`, preserving tail placement, item ids, and token totals. Added a tail-accounting fixture. The earlier offline OM smoke assertion expected always-on injection, which Task 5 retired: its small un-compacted history correctly yields no duplicate injection. Updated that assertion rather than reintroducing redundant context. No live dataset or paid model evaluation was run; per-embedder calibration and default decisions remain Task 14.
+    - **Verification passed:** `bun run typecheck` (kernel, workspaces, examples), followed by final fabric typechecks after the focused ranking/policy corrections; core **20 pass / 0 fail**, fabric **192 pass / 20 skip / 0 fail**, OM **96 pass / 0 fail**, RAG **100 pass / 4 skip / 0 fail**, benchmark tests **20 pass / 0 fail**, docs **64 pass / 0 fail**. Offline benchmark completed all **14** synthetic questions. The observational-memory and working-semantic-memory examples passed. The whole-plan verification named the removed `examples/long-term-memory.ts`; corrected it to the existing `examples/working-semantic-memory.ts`. Postgres integration and live-source skips remain environment-gated; the shared lookup conformance is wired into in-memory, SQLite, and Postgres suites, with the first two exercised locally. Release baseline regeneration (`updated: true`) and ordinary gate (`updated: false`) both passed for **43 packages**.
+    - **Compatibility baselines regenerated (no symbol removals).** The declaration graph records:
+      ```diff
+      +createFabricContext  export declare function createFabricContext(memory: Memory, recall: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, semanticAvailable?: () => boolean, options?: MemoryContextProviderOptions)
+      +recallPeriod         export declare function recallPeriod(text: string, timestamp: string)
+      +type MemoryFabricInjectConfig
+      -registerMemoryFabricContext(hooks: HookRegistrar, memory: Memory, options?: MemoryContextProviderOptions)
+      +registerMemoryFabricContext(hooks: HookRegistrar, memory: Memory, options?: MemoryContextProviderOptions, recall?: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig)
+      ```
+      The two helpers are module exports in the reachable declaration graph, not new root-barrel functions. Existing interfaces gain `Memory.get`, store `getByIds`, hybrid/floor/retrieval components, reference-time/use-recording options, and injection configuration. The baseline format does not expand interface fields, so memory-core's serialized surface remains unchanged despite regeneration. Repo-wide retirement sweep across `src/ packages/ apps/ scripts/ examples/ docs/` found no `formatRecall`, batch-only expansion, or obsolete id/get-shortcut references outside excluded history/evidence/baselines.
+    - **Root tarball budget:** the required CHANGELOG entry adds **158 packed / 354 unpacked bytes**, attributed in `scripts/budgets.json`; ceilings are now **1,071,243 / 3,503,643**. No kernel source, export, dependency, or file-count growth. Task 12's directory and Task 13's candidate lifecycle remain unimplemented as planned; Task 14 still owns calibration. No new dependency, version bump, publish, or paid benchmark.
+
+- [x] Task 12: Fabric memory directory — progressive disclosure for long-term memory
   - Acceptance Criteria:
     - Functional:
       - With passive injection off by default (Task 11), the agent needs to know what long-term memory holds before it can decide to recall. The fabric renders one `memory-directory` context block. It sits in the prefix next to the working-memory block, with `metadata: { source: "fabric-directory" }`:
@@ -928,7 +1126,20 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 13: OM → fabric background promotion
+  - Notes (executed 2026-10-19):
+    - **Store contract.** `VectorStore` gains optional `countByKind(scope, { asOf?, signal? })` and `topTags(scope, { asOf?, limit?, signal? })`; `Memory` gains the matching methods (a store without them makes the `Memory` method throw `MemoryScopeError`, and the directory then omits counts). One predicate defines "active": a `metadata.fabric.kind`, inside `validFrom`/`validTo` at `asOf`, `consent.visible !== false`, not invalidated (same lineage rule as `recordBlocked`), not `metadata.status: "candidate"`. The in-memory store scans through `core/src/directory.ts`; SQLite uses `json_extract`/`json_each` with `julianday()` (NULL for a malformed timestamp, so the row is excluded); Postgres uses `jsonb` plus the existing `invalidationPredicate`. `topTags` unions `tags` and `keywords`, counts once per note, orders count desc then tag ascending, limit default 20, hard cap 500. The shared memory conformance suite asserts the same fixture on every store (superseded/expired, future, candidate, revoked, forgotten, plain, other-thread rows, a past `asOf`, invalid `asOf`/`limit`).
+    - **Directory.** `fabric/src/directory.ts` holds the snapshot, cache, renderer, and pager. A snapshot is `{ counts, topics (≤200), files, filesTruncated, blocks }`, cached per memory instance under a write counter that `fabric/src/memory.ts` bumps after every content write (`remember`/indexing, `updateWorking`, `deleteWorking`, `setConsent`, `correct`, `forget`, a retention sweep that deleted rows). The startup reconcile writes through the store directly, so the package calls `directory.invalidate()` when it finishes. Files come from a bounded walk of `tools.root` (1,000 files, six levels, hidden files and the SQLite store skipped, most recently modified first, relative paths). The block is `Long-term memory` with `metadata.source: "fabric-directory"` and `tokens`, in the prefix after the working block in one `withContextBlocks` call. It shrinks files then topics to fit `maxTokens` (default 200, hard cap 500; topics ≤50, files ≤100), and is dropped when empty or when the aggregate query fails (an abort still propagates). Config `directory: true | false | { maxTopics, maxFiles, maxTokens }` defaults on when `semantic` or `tools.root` is set; the schema and the resolver both enforce the caps. `memory.view` with no `path` returns the summary plus the full topic and file lists, 50 per page by `offset`; with `directory` off (or no directory wired) it keeps listing the root.
+    - **Findings.**
+      - The index is per own scope: a share grant widens recall, not the index (asserted).
+      - Cache by version means a `validTo` that passes between writes stays counted until the next write, and writes from another process show after a restart. A host-supplied `Memory` not built by `createMemory` must call `directory.invalidate()` itself. All three limits are in the fabric README.
+      - Task 13 only has to set `metadata.status: "candidate"` and call the same write path; the candidate exclusion is already in all three stores, so its directory assertion needs a fixture, not new code.
+      - `createMemoryFabric` (library use) does not build a directory; only the package wires it, so `fabric.tools()` keeps the old path-less `memory.view` there.
+    - **Verification passed:** `bun run typecheck` (kernel, workspaces, examples); core **20 pass / 0 fail** (SQLite runs the shared conformance including the new aggregates); fabric **201 pass / 20 skip / 0 fail** (new `directory.test.ts` has eight tests: seven of the listed ones plus a files/redaction/paging test, and the listed `store_conformance_count_by_kind_and_top_tags` lives in the shared conformance suite; one package test checks the block enters the prefix after a write and that the next two turns are byte-identical without listing the store file); OM **96**, RAG **100 pass / 4 skip**, engineering **78**, docs **64**, all 0 fail. `examples/working-semantic-memory.ts` runs. Baseline regeneration (`updated: true`) and ordinary gate (`updated: false`) both pass for **43 packages**.
+    - **Not verified locally:** the Postgres aggregates. The conformance is wired into the Postgres integration suite, but pgvector is unavailable here (the local Postgres has no `vector` extension and Docker could not fork a new container: "Resource temporarily unavailable"), so those tests skipped. I reviewed the SQL by hand; run `integration-postgres` before the release cut.
+    - **Compatibility baselines regenerated (no symbol removals).** Additions only: memory-core gains `HARD_DIRECTORY_TAGS`, `activeDirectoryNote`, `rankDirectoryTags`, `resolveDirectoryAsOf`, `resolveDirectoryLimit`, `scanDirectory` (and the `MemoryDirectoryQuery`, `MemoryTopTagsQuery`, `MemoryTagCount` types, from the `export *` barrel); memory-fabric gains `createFabricDirectory`, `renderFabricDirectory`, `DEFAULT_DIRECTORY_OPTIONS`, `HARD_DIRECTORY_FILES/TOKENS/TOPICS`, the directory types, and the reachable-graph helpers `noteMemoryWrite`, `pageFabricDirectory`, `isFabricDirectoryEmpty`, `resolveFabricDirectoryOptions`; `createFabricContext` takes a trailing optional `directory` handle. The baseline format does not expand interface members, so `Memory.countByKind`/`topTags` and the `VectorStore` members do not show.
+    - **Root tarball budget:** the CHANGELOG entry adds **202 packed / 508 unpacked bytes**, attributed in `scripts/budgets.json`; ceilings are now **1,071,445 / 3,504,151**. No kernel source, export, dependency, or file-count growth. No new dependency, version bump, publish, or paid benchmark.
+
+- [x] Task 13: OM → fabric background promotion
   - Acceptance Criteria:
     - Functional:
       - Fabric config `promote: { observational: true, verifyAfterUses?: 2, archiveAfterDays?: 30 }` (`observational` defaults to `false`).
@@ -936,7 +1147,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       - Each new reflection:
         - passes the trust scan, or is skipped and counted
         - is written as a `fact` note with `promotedFrom: { reflectionId }` and `sourceEntryIds` from its evidence, through the Task 10 consolidation path
-        - is written with `status: "candidate"`, the scoped policy's lifecycle (`fabric/src/scoped/lifecycle.ts:16`; the field per Task 1 (i))
+        - is written with top-level vector `metadata.status: "candidate"`, validated and exposed on note/hit results; rewrites and corrections preserve status. Existing plain notes without status remain verified; scoped missing status remains candidate (Task 1 (i)). Share status normalization with an explicit fallback and the candidate age predicate via `fabric/src/lifecycle.ts`.
       - The cursor advances only after a successful write.
       - **Candidates are never injected passively.** Task 11's passive path and the Task 12 directory counts exclude `status: "candidate"`. `memory.recall` returns candidates marked `(candidate)` after verified hits of equal score.
       - **A candidate becomes `verified` when:**
@@ -945,7 +1156,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
         - a host calls `fabric.verify(id)`
       - **Retirement.**
         - A candidate superseded by a later explicit `supersedes`, a `correct()`, or the decider is retired like any note.
-        - A candidate unused for `promote.archiveAfterDays` (default 30) is archived (`validTo` set, reason `unused-candidate`) by the next promotion pass, reusing `runScopedGcPass`'s rule (`lifecycle.ts:112`) rather than a second implementation.
+        - A candidate unused for `promote.archiveAfterDays` (default 30) is archived (`validTo` set, reason `unused-candidate`) by the next promotion pass, reusing the candidate age predicate extracted from `runScopedGcPass` (`scoped/lifecycle.ts:112`), not calling that file-ledger proposal pass directly (it returns `archived: 0`).
         - Archived candidates are not recalled. `memory:status` counts candidates, verified, archived, and refused.
       - The stale `om.scope.bound` requirement in the docs (`fabric/src/types.ts:91`; code at `create.ts:166-178` does not enforce it) is corrected to what the code does.
       - New example `examples/long-term-memory.ts` (mock provider, temp dir):
@@ -982,7 +1193,7 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
       ```
     - Files to Create/Edit:
       - `packages/memory/fabric/src/{index.ts,config.ts,types.ts}`
-      - a new `packages/memory/fabric/src/promote.ts`
+      - new `packages/memory/fabric/src/{promote.ts,lifecycle.ts}`; `src/scoped/{lifecycle.ts,mirror.ts}` consume the shared normalization/age rule
       - tests (a new promote test, observational-source)
       - `examples/long-term-memory.ts`: new
       - `examples/README.md` line and `scripts/e2e-coverage.json` entry (probe 11)
@@ -1002,6 +1213,9 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `candidate_verified_by_agent_insert_or_replace`.
     - `unused_candidate_archived_after_days`.
     - `archived_candidate_not_recalled`.
+    - `plain_legacy_note_is_verified_scoped_missing_status_is_candidate`.
+    - `candidate_status_survives_rewrite_and_correction`.
+    - `plain_and_scoped_gc_share_candidate_age_rule`.
     - Example gate: `examples_demos_run_to_completion_and_emit_no_secret` covers `long-term-memory.ts`.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes. New config, a background task, a new example.
@@ -1009,7 +1223,26 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
+  - Notes (executed 2026-10-19):
+    - **Lifecycle.** `fabric/src/lifecycle.ts` holds `normalizeNoteStatus(status, fallback)` and `isStaleCandidate(lastActivity, now, days)`. `scoped/{lifecycle,mirror}.ts` now call them (scoped fallback `candidate`; plain fallback `verified`), so the two GC paths share the age rule; `runScopedGcPass` still only proposes. `metadata.status` is a validated top-level vector field (a malformed value makes `parseMemoryNoteMetadata` return `undefined`, so the row is never injected), is exposed as `status` on note/hit results, and is preserved by rewrites, supersession, evolution patches, and `correct()` because every writer already spreads the host metadata. `encodeMemoryNoteMetadata` keeps it out of the `fabric` key.
+    - **Write path.** `MemoryFabricWriteOptions.status: "candidate"` is the only way to write a candidate (the agent tools cannot). On a consolidation update, a verified note stays verified (a promotion never demotes), a candidate stays a candidate for a promotion write, and any non-promotion write (agent `memory.insert` with `kind`) makes it `verified`. `rememberReflection` now also carries the reflection's evidence (`sourceEntryIds` from its supporting observations that still resolve).
+    - **Metadata-only updates.** Added `Memory.patchMetadata(id, mutate, { signal })` (core interface; implemented in `fabric/src/memory.ts`, bumps the directory write counter). Use counting, verification, and archiving go through it, so none of them re-embeds. Note the `Memory` interface gained a required member; no other implementer exists in the tree (typecheck clean).
+    - **Promotion.** `fabric/src/promote.ts`: `runFabricPromotion` (new reflections → trust scan → `fabric.remember({ kind: "fact", reflectionId }, { status: "candidate" })` → cursor save per reflection → `archiveStale`), `createFabricLifecycle` (`verify`, `recordUse`, `archiveStale`, `census`), config resolution (`promote.{observational,verifyAfterUses,archiveAfterDays}`, caps 100 / 3,650). The package keeps a per-session `fabric.promote` state `{ done[≤1000 ids], refused }` as the cursor; reflections carry no timestamp, so "newer than the cursor" is "id not in `done`". `index.ts` registers `turn.completed` to precheck the ledger and only then calls `session.background("fabric.promote", …)` with a fabric bound to that session (`observational: { session }`); a failed write rejects only that background task. `memory:status` command reports candidate / verified / archived and the session's refused count.
+    - **Candidate behavior.** Passive injection skips `status: "candidate"` hits (`context.ts`); the directory and stores already excluded them (Task 12). `memory.recall` labels them `(candidate)`, and `createFabricRecall` puts verified before candidate only inside runs of exactly equal score (hybrid RRF scores rarely tie, so ranking is otherwise unchanged). `memory.recall` counts a use per candidate hit per `runId` (a "turn" is a run; `lastUseKey` stops one run counting twice), `memory.replace` on a note id verifies it, `fabric.verify(id)` is the host path. An archived candidate has `validTo` set and `status: "archived"`.
+    - **Findings that affect later tasks.**
+      - A reflection lands in the background after a turn, so the promoting `turn.completed` is the one after it appears (documented; the example and package test run two turns).
+      - There is no separate "reason" field for archival: the reason `unused-candidate` is implied by `status: "archived"` plus `validTo`; no extra column was added.
+      - "Cited" candidates: the passive path never injects candidates, so citation never fires for them; only tool recall and explicit confirmation verify. Task 14's `fabric` bench config can now run (`promote.observational: true`); promotion needs two turns per reflection, which the replay harness should allow for.
+      - The scoped layer is unchanged apart from the shared helpers; it still keeps its own file ledger.
+      - Stale doc fixed: `reflectionId` no longer claims `om.scope.bound` (`types.ts`).
+    - **Tests (`fabric/src/__tests__/promote.test.ts`, 15):** the listed names that map one to one are `promoted_fact_is_candidate_and_not_passively_injected`, `candidate_verified_after_uses_in_distinct_turns`, `candidate_status_survives_rewrite_and_correction`, `plain_legacy_note_is_verified_scoped_missing_status_is_candidate`, `plain_and_scoped_gc_share_candidate_age_rule`, `promote_cursor_advances_only_on_success`, `promote_skips_injection_flagged_reflection`, `promote_writes_new_reflections_as_facts`, `promote_off_does_nothing`; combined: `candidate_verified_by_agent_insert_or_replace_or_host` (insert and host paths; the replace tool hook is not exercised by a tool-level test), `unused_candidate_archived_after_days_and_not_recalled`. `promote_failure_is_background_failed_only` is covered at the function level (the pass rejects without advancing the cursor); no test observes the `background.failed` event itself. Extras: equal-score ordering, never-demote, malformed status fails closed, the package hook promotes in the background. `examples/long-term-memory.ts` runs (session one promotes 1 candidate; a second agent recalls it from SQLite); it is listed in `scripts/e2e-coverage.json` and `examples/README.md`.
+    - **Verification passed:** `bun run typecheck` (kernel, workspaces, examples); fabric **216 pass / 20 skip / 0 fail**; core **20 pass**; OM **96**; RAG **100 pass / 4 skip**; engineering **78**; `bun scripts/release.mjs gate --update-baseline` (`updated: true`) then ordinary gate (`updated: false`), **43 packages**.
+    - **Compatibility baselines regenerated (no symbol removals attributable to this task).** Additions only: memory-fabric gains `createFabricLifecycle`, `runFabricPromotion`, `readPromoteState`, `resolvePromoteConfig`, `memoryFabricPromoteSchema`, `INITIAL_PROMOTE_STATE`, `DEFAULT/HARD_PROMOTE_*`, `isMemoryNoteStatus`, `normalizeNoteStatus`, `isStaleCandidate`, and the `MemoryNoteStatus`, `MemoryFabricPromoteConfig`, `FabricPromotion*`, `FabricNoteCensus` types; `MemoryFabric` gains `verify`/`recordUse`, `MemoryNote` gains `status`/`uses`, `Memory` gains `patchMetadata` (interface members do not show in the baseline format).
+    - **Root tarball budget:** the CHANGELOG entry adds **216 packed / 563 unpacked bytes**, attributed in `scripts/budgets.json`; ceilings are now **1,071,661 / 3,504,714**. No kernel source, export, dependency, or file-count growth.
+    - **Not done / not verified:** Postgres `patchMetadata` path is the generic `upsert` and was not run against a live pgvector (unavailable locally, as in Task 12). `scripts/e2e-coverage-gate.mjs` fails on a missing `src/__tests__/oauth-device-code.test.ts` in the kernel entry, which this task does not touch (I did not confirm it failed before my change). Biome reports import-order errors across untouched files; none were fixed here. No new dependency, version bump, publish, or paid benchmark.
+
 - [ ] Task 14: Benchmark rerun, ablations, calibration, defaults, and documentation truth
+  - Dropped by plan 188.1 (2026-10-19): moved to plan 188.1 Task 10 (retrieval ablation re-cut for markdown + lexical). Re-homed the same day by the 188.1 amendment to plan 188.6 Task 6, which runs it after the memory lifecycle (plans 188.2–188.5) lands. Owner decision 2026-10-19: the fabric moves to OKF markdown files and lexical retrieval before this benchmark runs, so the vector-floor calibration and hybrid-vs-vector ablation below no longer describe the shipped design.
   - Acceptance Criteria:
     - Functional:
       - Task 2's harness is rerun on Hyper and OpenCode Go (one model each, the plan 183 matrix), all four configs. Ablations on LongMemEval-S:
@@ -1100,14 +1333,14 @@ So the plan has no formal phase review. **Task 1 is a read-only check** of the a
 - `timeout 900 bun run --filter @arnilo/prism-agent test`
 - `timeout 120 bun scripts/memory-bench/run.mjs --offline`
 - `timeout 300 bun test --timeout=0 scripts/memory-bench/run.test.mjs`
-- `timeout 900 bun examples/observational-memory.ts && timeout 900 bun examples/long-term-memory.ts`
+- `timeout 900 bun examples/observational-memory.ts && timeout 900 bun examples/working-semantic-memory.ts`
 - `timeout 600 bun test --timeout=0 src/__tests__/docs.test.ts`
 - `timeout 1800 bun scripts/release.mjs gate`
 
 ## Compromises Made
 
-- To be filled after tasks are completed and tests pass.
+- Plan closed at Task 13 (2026-10-19). Task 14's measurement moved to plan 188.1 Task 10, and then to plan 188.6 Task 6; the fabric's store and retrieval defaults are re-cut there (OKF markdown source of truth, lexical retrieval first).
 
 ## Further Actions
 
-- To be filled after task completion with improvements, rationale, and priority.
+- Open work continues through the 188.x sub-plans. [188.7 — Memory evaluation remediation and paid acceptance](188.7-Phase-11-Part-O7-Memory-Evaluation-Remediation-And-Paid-Acceptance.md) addresses findings from 188.6's partial campaign and a second review, then requires paid OpenCode Go before/after evaluations at the end of the memory sequence. This parent stays closed at Task 13; incomplete 188.6 criteria stay open.

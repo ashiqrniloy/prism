@@ -6,7 +6,7 @@ import {
   defineWorkflow,
   functionNode,
   runWorkflow,
-} from "@arnilo/prism-core/runtime/workflows";
+} from "@arnilo/prism-workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Offline multimodal document workflow. Host constructs a bounded inline PDF
@@ -50,7 +50,7 @@ const prepare = functionNode({
 });
 
 const summarize = agentNode({
-  agent: "document-summarizer",
+  agent,
   input: (ctx) => ctx.upstream.prepare,
 });
 
@@ -71,7 +71,6 @@ export async function demo() {
   const credential = await credentials.resolve("env:DEMO_API_KEY", {});
   const redactor = createSecretRedactor([credential?.value]);
   const result = await runWorkflow(workflow, null, {
-    agentFactory: () => agent.session(),
     checkpoints: createMemoryWorkflowCheckpoints({ redactor }),
     redactor,
     ownership: { tenantId: "demo" },

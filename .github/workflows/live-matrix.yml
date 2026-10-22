@@ -10,6 +10,11 @@ on:
         description: "PRISM_LIVE_FILTER substring (suite id); empty runs every credentialed suite"
         required: false
         default: "providers/opencode-go"
+      memory_suite:
+        description: "Dataset for the manual release/memory-bench row"
+        type: choice
+        options: [longmemeval-s, locomo, memoryagentbench-cr]
+        default: longmemeval-s
       strict:
         description: "Fail the run on any skipped suite (PRISM_LIVE_STRICT=1)"
         type: boolean
@@ -25,6 +30,7 @@ concurrency:
 
 jobs:
   matrix:
+    if: ${{ inputs.filter != 'release/memory-bench' }}
     environment: live-canaries
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -48,16 +54,8 @@ jobs:
           # Add a secret here AND wire it below when credentialing more suites.
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           PRISM_LIVE_OPENCODE_MODEL: ${{ vars.PRISM_LIVE_OPENCODE_MODEL }}
-          # Prism Code live smoke (code/live-smoke): one API key for the stored-key leg, or a
-          # Codex refresh token for the OAuth-refresh leg (legs skip independently).
-          # PRISM_LIVE_PRISM_CODE_TASK opts into the create-file/write-test/green-check task leg.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          PRISM_LIVE_CODEX_REFRESH_TOKEN: ${{ secrets.PRISM_LIVE_CODEX_REFRESH_TOKEN }}
-          PRISM_LIVE_PRISM_CODE_TASK: "1"
-          # Plan 140 Task 6 release-acceptance journey (bun + linux-x64 channels) plus its report.
-          PRISM_LIVE_PRISM_CODE_JOURNEY: "1"
-          PRISM_LIVE_JOURNEY_REPORT: docs/_evidence/prism-code-journey-report.json
         run: bun run test:live
       - name: e2e surface coverage gate (100% functional-surface)
         run: bun scripts/e2e-coverage-gate.mjs --baseline --json > e2e-coverage-report.json
@@ -67,7 +65,39 @@ jobs:
           name: live-matrix-report-${{ github.run_id }}
           path: |
             docs/_evidence/live-matrix-report.json
-            docs/_evidence/prism-code-journey-report.json
             e2e-coverage-report.json
           if-no-files-found: warn
           retention-days: 7
+
+  memory-bench:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.filter == 'release/memory-bench' }}
+    environment: live-canaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - name: install benchmark dependencies
+        run: |
+          bun ci
+          python3 -m venv /tmp/memory-bench-python
+          /tmp/memory-bench-python/bin/pip install -r scripts/memory-bench/requirements.txt
+      - name: release/memory-bench (manual only)
+        env:
+          PRISM_LIVE_MEMORY_BENCH_MANUAL: "1"
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          PRISM_LIVE_MEMORY_BENCH_MODEL: ${{ vars.PRISM_LIVE_MEMORY_BENCH_MODEL || 'mimo-v2.5' }}
+          PRISM_MEMORY_BENCH_SUITE: ${{ inputs.memory_suite }}
+          PRISM_MEMORY_BENCH_PYTHON: /tmp/memory-bench-python/bin/python
+        run: timeout 21000 bun scripts/memory-bench/live.mjs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: memory-bench-${{ github.run_id }}
+          path: docs/_evidence/memory-bench/
+          if-no-files-found: warn
+          retention-days: 30

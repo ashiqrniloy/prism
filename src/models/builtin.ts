@@ -1,6 +1,6 @@
 import type { ModelProvider, ModelSpec, Secret } from "../contracts.js";
 import { CredentialUnavailableError } from "../credentials/errors.js";
-import { createOpenAICompatibleProvider } from "../provider-kit/openai-compatible.js";
+import { createRoutedProvider } from "../provider-kit/routed-provider.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import { ModelRefError } from "./ref.js";
 
@@ -23,17 +23,24 @@ export interface BuiltinProviderOptions {
  * it at another endpoint without a second instance.
  */
 export function createBuiltinProvider(options: BuiltinProviderOptions): ModelProvider {
-  const inner = createOpenAICompatibleProvider({
+  const inner = createRoutedProvider({
     id: BUILTIN_PROVIDER_ID,
     baseUrl: "",
     fetch: options.fetch,
-    chatCompletionsUrl: (request) => `${trimTrailingSlashes((request.model as ModelSpec).baseUrl as string)}/chat/completions`,
     async resolveApiKey(request) {
       const ref = (request.model as ModelSpec).credential;
       if (ref === undefined) return undefined;
       const credential = await options.resolveCredential(ref);
       if (!credential?.value) throw new CredentialUnavailableError(ref);
       return credential.value;
+    },
+    routes: {
+      openai: {
+        format: "openai-chat",
+        path: "/chat/completions",
+        auth: "bearer",
+        url: (request) => `${trimTrailingSlashes((request.model as ModelSpec).baseUrl as string)}/chat/completions`,
+      },
     },
   });
   return {

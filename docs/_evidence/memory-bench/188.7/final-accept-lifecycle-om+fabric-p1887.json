@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "suite": "lifecycle",
+  "config": "om+fabric",
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "executable-state",
+  "persona": "scripted",
+  "seed": 1887,
+  "policy": {},
+  "metricVersion": 2,
+  "clusterUnit": "persona",
+  "clusters": 1,
+  "metricDefinitions": {},
+  "dataset": {
+    "name": "synthetic-lifecycle",
+    "revision": "v1"
+  },
+  "ablations": [],
+  "sourceVariants": [],
+  "memoryConfig": {
+    "observational": {
+      "enabled": true,
+      "recall": true,
+      "observer": {
+        "messageTokens": 1000
+      },
+      "reflector": {
+        "observationTokens": 20000
+      },
+      "dropper": {
+        "targetTokens": 20000,
+        "policy": "model"
+      },
+      "context": {
+        "recentMessages": 8,
+        "compactAfterTokens": 81000
+      },
+      "worker": {}
+    },
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "fact",
+          "procedure",
+          "episode",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": true,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "generatedAt": "2026-10-21T21:59:45.656Z",
+  "usageSource": "wire-proxy",
+  "maxInputTokens": 500000,
+  "attemptId": "accept-lifecycle-om+fabric-p1887@1",
+  "inputTokens": 12272,
+  "cacheReadTokens": 5312,
+  "outputTokens": 2405,
+  "turns": 4,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "results": [],
+  "sessions": [],
+  "consolidation": {
+    "passes": 0,
+    "modelCalls": 0,
+    "correctionCalls": 0,
+    "failures": 0,
+    "inputTokens": 0
+  },
+  "status": "failed",
+  "limitations": [
+    "Synthetic state assertions measure this controlled scenario; live comparative evidence belongs to Task 6.",
+    "Full and OM arms reconstruct prior project dialogue in each distinct session; fabric-only arms start with a fresh conversation.",
+    "One in-flight request can cross the token ceiling. Mock tokens are character estimates."
+  ],
+  "protocolHash": "6bc175769a144dd5930f7fe90b7ef1d97beb015b1e2f109e1aa1fbfb66aea39c",
+  "scenario": {
+    "personas": 1,
+    "projects": 3,
+    "sessionsPerProject": 8,
+    "labels": 20
+  },
+  "experiment": {
+    "tenantId": "persona-1887",
+    "threadId": "default",
+    "store": "shared-sqlite",
+    "projects": [
+      {
+        "project": "alpha",
+        "resourceId": "projects/alpha--8ed3f6ad"
+      },
+      {
+        "project": "beta",
+        "resourceId": "projects/beta--f44e64e7"
+      },
+      {
+        "project": "gamma",
+        "resourceId": "projects/gamma--be9d587d"
+      }
+    ],
+    "sharedResources": [
+      "agent",
+      "user"
+    ]
+  },
+  "usageComplete": false,
+  "usageMissingExchanges": 1,
+  "failure": {
+    "code": "LifecycleObserverError",
+    "errorName": "Error"
+  },
+  "failedSession": {
+    "id": "persona-1887/alpha/1",
+    "diagnostics": {
+      "outputWritten": true,
+      "validJSON": true,
+      "expectedFields": 5,
+      "matchedFields": 5,
+      "writtenFiles": 1
+    }
+  },
+  "usageError": "MemoryBenchUsageMissing",
+  "calls": {
+    "observer": 1,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "gatewayRetries": 0
+  },
+  "metrics": {
+    "taskSuccess": null,
+    "crossProjectLeakage": null,
+    "foreignContextExposure": null,
+    "poisonStored": null,
+    "poisonVisible": null,
+    "poisonReused": null,
+    "staleUseRate": null,
+    "repeatedErrorRate": null,
+    "rightTimeRecall": null,
+    "abstentionCorrectness": null,
+    "poisonPersistence": null,
+    "tokensPerSession": null
+  },
+  "cost": {
+    "totalInputTokens": 12272,
+    "extractorInputTokens": 0,
+    "nonExtractorInputTokens": 12272,
+    "cacheReadTokens": 5312,
+    "outputTokens": 2405,
+    "extractorCalls": 0,
+    "correctionCalls": 0,
+    "workerCalls": 1,
+    "embeddingCalls": 0,
+    "retries": 0
+  },
+  "abilities": {},
+  "abilityGroups": {},
+  "cacheReadRatio": 0.43285528031290743,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

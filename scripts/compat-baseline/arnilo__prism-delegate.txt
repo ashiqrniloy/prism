@@ -1,0 +1,24 @@
+DEFAULT_CHILD_LIMITS	export declare const DEFAULT_CHILD_LIMITS:
+DEFAULT_MAX_CONCURRENT	export declare const DEFAULT_MAX_CONCURRENT = 4
+DELEGATE_PACKAGE	export declare const DELEGATE_PACKAGE = "@arnilo/prism-delegate"
+DelegateError	export declare class DelegateError extends Error
+DelegateStepError	export declare class DelegateStepError extends Error
+HARD_CHILD_LIMITS	export declare const HARD_CHILD_LIMITS:
+HARD_MAX_CONCURRENT	export declare const HARD_MAX_CONCURRENT = 32
+MAX_DELEGATE_ID_BYTES	export declare const MAX_DELEGATE_ID_BYTES = 256
+MAX_DELEGATE_STEP_BYTES	export declare const MAX_DELEGATE_STEP_BYTES: number
+createDelegateRuntime	export declare function createDelegateRuntime(prism: PackageAPI<DelegateConfig>):
+createDelegateTools	export declare function createDelegateTools(runtime: DelegateRuntime): readonly ToolDefinition[]
+default	export default
+delegateConfigSchema	export declare const delegateConfigSchema:
+delegateStepData	export declare function delegateStepData(input: DelegateStepInput): JsonValue
+resolveChildLimits	export declare function resolveChildLimits(requested?: DelegateChildLimits, budgetShare?: number): RunLimits
+type DelegateChildConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateChildLimits	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateLifetime	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateReport	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateStepInput	export { type DelegateStepInput, DelegateStepError, type DelegateStepPhase, delegateStepData } from "./step.js"
+type DelegateStepPhase	export { type DelegateStepInput, DelegateStepError, type DelegateStepPhase, delegateStepData } from "./step.js"
+type DelegationOutcome	export { DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
+type DelegationStatus	export { DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"

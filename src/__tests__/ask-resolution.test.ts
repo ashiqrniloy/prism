@@ -1,10 +1,26 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore, createSecretRedactor, providerDone, providerTextDelta, toolCallContent, type AgentConfig, type AgentEvent, type Session, type HostUi, type HostUiRequest, type HostUiResponse, type JsonObject, loadSuspendedRunEntry, resumeAgentRun, type Decision } from "../index.js";
-import { agentHookIds } from "../agent-session/runtime-registry.js";
+import assert from "node:assert/strict";
 import { agentRuntime } from "../agent-session/create-agent.js";
-import { mockProvider } from "../testing/index.js";
+import { agentHookIds } from "../agent-session/runtime-registry.js";
+import {
+  type AgentConfig,
+  type AgentEvent,
+  askEveryTool,
+  createAgent,
+  definePackage,
+  createMemorySessionStore,
+  createSecretRedactor,
+  type HostUi,
+  type HostUiRequest,
+  type HostUiResponse,
+  type JsonObject,
+  loadSuspendedRunEntry,
+  providerDone,
+  providerTextDelta,
+  toolCallContent,
+} from "../index.js";
 import { providerPackage } from "../provider-kit/index.js";
+import { mockProvider } from "../testing/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 
@@ -28,22 +44,26 @@ async function agentFor(
     model: MODEL,
     ...rest,
     ...(ask ? { hooks: (hooks: Parameters<NonNullable<AgentConfig["hooks"]>>[0]) => hooks.on("tool.call", () => ({ ask })) } : {}),
-    packages: [providerPackage("test-provider", [(() => {
-      let turn = 0;
-      return {
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", args ?? { value: "ok" }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("finished");
-          yield providerDone();
-        },
-      };
-    })()])],
+    packages: [
+      providerPackage("test-provider", [
+        (() => {
+          let turn = 0;
+          return {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", args ?? { value: "ok" }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("finished");
+              yield providerDone();
+            },
+          };
+        })(),
+      ]),
+    ],
     tools: {
       add: [
         {
@@ -99,10 +119,9 @@ describe("ask resolution", () => {
   });
 
   it("ask_without_ui_suspends", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const { agent, calls } = await agentFor({ ask: "Approve?" });
     const session = await agent.session();
-    const result = await session.run("go", { runState: { checkpoints, definitionRevision: "1" } });
+    const result = await session.run("go");
     assert.equal(result.status, "suspended");
     assert.equal(calls(), 0);
     assert.equal(result.runState?.interruption?.toolCallId, "call-1");
@@ -111,9 +130,8 @@ describe("ask resolution", () => {
   });
 
   it("ask_ui_unavailable_suspends", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const { agent, calls } = await agentFor({ ask: "Approve?", host: { ui: ui({ status: "unavailable" }) } });
-    const result = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
+    const result = await (await agent.session()).run("go");
     assert.equal(result.status, "suspended");
     assert.equal(calls(), 0);
   });
@@ -216,12 +234,13 @@ describe("ask resolution", () => {
     const store = createMemorySessionStore();
     const { agent } = await agentFor({ ask: "Approve?", slots: { store } });
     assert.deepEqual(agentHookIds(agent), ["host:tool.call", "kernel:context.build"]);
-    // A session registers `kernel:*#session-<n>` pack hooks; the fingerprint ids ignore them.
+    // Plan 159 Task 5 retired the pack hooks: a session registers no kernel `#session-` hooks.
     const session = await agent.session({ id: "s", create: true });
-    assert.ok(
+    assert.equal(
       agentRuntime(agent)
         .hooks.registrations()
         .some((registration) => registration.owner === "kernel" && registration.id.includes("#session-")),
+      false,
     );
     assert.deepEqual(agentHookIds(agent), ["host:tool.call", "kernel:context.build"]);
     const first = await session.run("go");
@@ -242,19 +261,51 @@ describe("ask resolution", () => {
     );
   });
 
-  it("suspended ask resumes and executes once", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    const store = createMemorySessionStore();
-    const { agent, calls } = await agentFor({ ask: "Approve?", slots: { store } });
-    const first = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
-    assert.equal(first.status, "suspended");
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      { decision: "approve", expectedVersion: first.runState!.version! },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "completed");
-    assert.equal(calls(), 1);
+  it("kernel ask confirm has no package and carries sessionId", async () => {
+    const seen: HostUiRequest[] = [];
+    const { agent } = await agentFor({ ask: "Approve?", host: { ui: ui({ status: "answered", value: true }, seen) } });
+    const session = await agent.session();
+    await session.run("go");
+    const request = seen[0];
+    assert.equal(request?.kind, "confirm");
+    assert.equal(request?.package, undefined);
+    assert.equal(request?.sessionId, session.id);
+  });
+
+  it("package confirm still reaches the host when interactive is false", async () => {
+    const seen: HostUiRequest[] = [];
+    const agent = await createAgent({
+      id: "pkg-ui",
+      model: MODEL,
+      host: { ui: ui({ status: "answered", value: true }, seen) },
+      packages: [
+        mockProvider([[{ type: "tool_call", call: toolCallContent("call-1", "write", { value: "ok" }) }, providerDone()], [providerTextDelta("finished"), providerDone()]]),
+        definePackage({
+          name: "ui-pkg",
+          version: "0.1.0",
+          requires: { api: 1 },
+          capabilities: ["host-ui"],
+          setup(api) {
+            api.hooks.on("tool.call", async () => {
+              await api.host.ui?.request({ kind: "confirm", title: "Package confirm" });
+              return "allow" as const;
+            });
+          },
+        }),
+      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: () => ({ toolCallId: "call-1", name: "write", value: "done" }),
+          },
+        ],
+      },
+    });
+    const result = await (await agent.session()).run("go", { interactive: false });
+    assert.equal(result.status, "completed");
+    assert.equal(seen[0]?.kind, "confirm");
+    assert.equal(seen[0]?.package, "ui-pkg");
   });
 });

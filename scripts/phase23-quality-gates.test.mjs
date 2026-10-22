@@ -3,7 +3,7 @@
 // reports). Runs in the bun run test gate segment after sweep-unused.test.mjs.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "bun:test";
 
@@ -33,22 +33,12 @@ test("config migrated: biome.json uses preset, not the deprecated recommended ke
 });
 
 test("timing quarantine: the racy elapsed assert is gone; kept guards carry named ceilings", () => {
-  const bridge = readFileSync(join(ROOT, "packages", "mcp", "src", "__tests__", "bridge.test.ts"), "utf8");
+  const bridge = readFileSync(join(ROOT, "packages", "integrations", "mcp", "src", "__tests__", "bridge.test.ts"), "utf8");
   assert.ok(!bridge.includes("Date.now() - started"), "the bridge timeout test must not measure wall-clock deltas");
   assert.ok(!bridge.includes("hung MCP call exceeded timeout bound"), "the old 150ms elapsed bound is replaced by a test-level timeout");
   for (const [file, needle] of [
-    [
-      existsSync(join(ROOT, "packages/coding-agent/src/__tests__/repository.test.ts"))
-        ? "packages/coding-agent/src/__tests__/repository.test.ts"
-        : "packages/prism-coding-tools/src/agent/__tests__/repository.test.ts",
-      "ponytail: wall-clock anti-block guard",
-    ],
-    [
-      existsSync(join(ROOT, "packages/coding-security/src/__tests__/native-sandbox.test.ts"))
-        ? "packages/coding-security/src/__tests__/native-sandbox.test.ts"
-        : "packages/prism-coding-tools/src/security/__tests__/native-sandbox.test.ts",
-      "ponytail: wall-clock promptness guard",
-    ],
+    ["packages/tools/coding/src/agent/__tests__/repository.test.ts", "ponytail: wall-clock anti-block guard"],
+    ["packages/tools/coding/src/security/__tests__/native-sandbox.test.ts", "ponytail: wall-clock promptness guard"],
     ["packages/credentials/keyring/src/__tests__/credentials-node.test.ts", "ponytail: anti-hang guard"],
   ]) {
     const src = readFileSync(join(ROOT, file), "utf8");

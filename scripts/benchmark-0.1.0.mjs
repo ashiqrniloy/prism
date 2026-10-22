@@ -12,10 +12,7 @@
  * nothing is measured twice.
  *
  * Scenarios phase8-loops-hitl/phase9-coding/phase10-acp/phase11-auth are
- * network-free and always run. Scenarios phase6-postgres/phase7-postgres need
- * live PostgreSQL and run only when PRISM_TEST_POSTGRES_URL is set; without it
- * those rows are recorded as skipped (protected) and the network-free contract
- * still gates.
+ * network-free and always run.
  *
  * Usage:
  *   bun scripts/benchmark-0.1.0.mjs                       # report to stdout
@@ -60,18 +57,6 @@ const LEGS = [
     phase: 11,
     protected: false,
     fixtures: budgets.phase11,
-  },
-  {
-    scenario: "phase6-postgres",
-    phase: 6,
-    protected: true,
-    fixtures: budgets.enterprisePostgres,
-  },
-  {
-    scenario: "phase7-postgres",
-    phase: 7,
-    protected: true,
-    fixtures: budgets.phase7Postgres,
   },
 ];
 

@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
-import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
-import { assertLeaseInput, assertOwnershipScope } from "@arnilo/prism-store-codecs";
+import { assertLeaseInput, assertOwnershipScope, LeaseConflictError } from "@arnilo/prism-store-codecs";
+import type { LeaseRecord, LeaseStore } from "@arnilo/prism-workflows";
 
 interface Row {
   namespace: string;

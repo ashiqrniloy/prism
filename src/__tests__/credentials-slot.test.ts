@@ -14,13 +14,12 @@ import {
   type Secret,
 } from "../index.js";
 import { loadPackages } from "../packages/loader.js";
-import { refreshOAuthCredential } from "../provider-kit/index.js";
 import { createScriptedHostUi } from "../testing/host-ui.js";
 
 const CANARY = "sk-live-canary-credentials-slot";
 
 const pkg = (name: string, setup: (api: any) => void, extra: Record<string, unknown> = {}): PackageInput =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra }) as PackageInput;
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra }) as PackageInput;
 
 describe("credentials slot", () => {
   it("env_default_resolves_env_refs_only", async () => {
@@ -68,23 +67,17 @@ describe("credentials slot", () => {
     assert.deepEqual(answer, { status: "unavailable" });
   });
 
-  it("oauth_refresh_persists_through_slot_store", async () => {
+  it("slot_store_persists_secret", async () => {
     const stored: Array<[string, Secret]> = [];
     const sink: CredentialResolver = {
       resolve: () => undefined,
       store: (ref, secret) => void stored.push([ref, secret]),
     };
-    const refreshed = await refreshOAuthCredential({
-      provider: {
-        id: "mock-oauth",
-        login: () => ({ access: "unused" }),
-        refresh: (credentials) => ({ ...credentials, access: "new-access" }),
-      },
-      credentials: { access: "old-access", refresh: "refresh-token" },
-      ref: "keyring:mock-oauth",
-      sink,
-    });
-    assert.equal(refreshed.access, "new-access");
+    await sink.store?.("keyring:mock-oauth", {
+      type: "bearer",
+      value: "new-access",
+      metadata: { refresh: "refresh-token" },
+    }, {});
     assert.equal(stored.length, 1);
     assert.equal(stored[0][0], "keyring:mock-oauth");
     assert.equal(stored[0][1].value, "new-access");

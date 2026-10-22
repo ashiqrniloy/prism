@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.packages.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@arnilo/prism": ["../../src/index.ts"],
+      "@arnilo/prism/*": ["../../src/*"],
+      "bun": ["./src/bun-module.d.ts"]
+    }
+  },
+  "include": ["src/**/*", "bin/**/*"]
+}

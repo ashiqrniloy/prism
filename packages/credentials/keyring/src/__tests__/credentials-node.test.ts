@@ -3,7 +3,6 @@ import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, tr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "bun:test";
-import { refreshOAuthCredential } from "@arnilo/prism/provider-kit";
 import { assertRestrictiveFileMode } from "../file-io.js";
 import {
   CredentialDecryptError,
@@ -166,22 +165,17 @@ describe("createEncryptedCredentialStore", () => {
     assert.equal(credential?.value, "resolved");
   });
 
-  it("integrates with refreshOAuthCredential via OAuth adapter", async () => {
+  it("integrates with OAuth credential sink via OAuth adapter", async () => {
     const path = tempCredentialPath("oauth");
     const store = await openEncryptedCredentialStore({ path, getPassphrase: () => "pass" });
     const oauthStore = createOAuthCredentialStoreAdapter(store);
     await oauthStore.set("demo", { access: "old", refresh: "refresh" });
-    const refreshed = await refreshOAuthCredential({
-      provider: {
-        id: "demo",
-        login: async () => ({ access: "unused" }),
-        refresh: async () => ({ access: "new", refresh: "refresh" }),
-      },
-      credentials: { access: "old", refresh: "refresh" },
-      ref: "keyring:demo",
-      sink: createOAuthCredentialSink(oauthStore, "demo"),
-    });
-    assert.equal(refreshed.access, "new");
+    const sink = createOAuthCredentialSink(oauthStore, "demo");
+    await sink.store?.("keyring:demo", {
+      type: "bearer",
+      value: "new",
+      metadata: { refresh: "refresh" },
+    }, {});
     assert.equal((await oauthStore.get("demo"))?.access, "new");
   });
 

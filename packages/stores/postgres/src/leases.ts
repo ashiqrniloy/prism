@@ -1,5 +1,5 @@
-import { LeaseConflictError, type LeaseRecord, type LeaseStore } from "@arnilo/prism";
-import { assertLeaseInput, assertOwnershipScope } from "@arnilo/prism-store-codecs";
+import { assertLeaseInput, assertOwnershipScope, LeaseConflictError } from "@arnilo/prism-store-codecs";
+import type { LeaseRecord, LeaseStore } from "@arnilo/prism-workflows";
 import type { Pool } from "pg";
 import { qualifyTable } from "./identifiers.js";
 

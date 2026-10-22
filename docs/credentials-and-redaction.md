@@ -7,8 +7,6 @@ Prism provides small helpers for host-owned credentials and known-secret redacti
 - `resolveCredentialValue()`: resolves a credential from a direct string, callback, or `CredentialResolver`.
 - `createExplicitCredentialResolver()`: tries named resolver sources in caller-provided order, such as runtime override → stored → env object → fallback.
 - `createEnvCredentialResolver()`: reads only a caller-supplied env-like object and map.
-- `refreshOAuthCredential()`: calls a provider OAuth refresh function and writes the result to a caller-owned store when supplied.
-- `revokeOAuthCredential()`: best-effort upstream revocation (`OAuthProvider.revoke?`) followed by a mandatory caller-owned store delete, so a revoked token fails closed locally even if the provider has no revocation endpoint.
 - `CredentialValueSource`: the accepted source type for `resolveCredentialValue()`.
 - `redactSecrets()`: replaces known secret string values inside strings, arrays, and plain objects.
 - `errorToErrorInfo()`: converts unknown errors into `ErrorInfo` and redacts known secret values from error text.
@@ -41,8 +39,6 @@ resolveCredentialValue(
 ```ts
 createExplicitCredentialResolver(sources: readonly CredentialResolverSource[]): CredentialResolver
 createEnvCredentialResolver(env: Readonly<Record<string, string | undefined>>, map: Readonly<Record<string, string>>): CredentialResolver
-refreshOAuthCredential(options: { provider: OAuthProvider; credentials: OAuthCredentials; store?: OAuthCredentialStore }): Promise<OAuthCredentials>
-revokeOAuthCredential(options: { provider: OAuthProvider; credentials: OAuthCredentials; store?: RevocableOAuthCredentialStore }): Promise<void>
 redactSecrets<T>(value: T, secrets: readonly (string | undefined)[]): T
 errorToErrorInfo(error: unknown, secrets?: readonly (string | undefined)[]): ErrorInfo
 ```
@@ -122,15 +118,13 @@ A future provider-local OAuth adapter needs published permission for third-party
 - Live provider/worker tests are gated behind explicit environment variables and skipped by default: `PRISM_LIVE_PROVIDER_TESTS`, `PRISM_LIVE_COMPACTION_TESTS`, `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS`. Default `npm test` is network-free; do not add ungated network calls to default tests.
 - Credentials are not eagerly resolved by the core runtime, serialized into provider requests/events/stores, or passed to loops/compaction.
 - `resolveCredentialValue()` and `createExplicitCredentialResolver()` do not cache values. Add host-side caching only if a real credential source needs it.
-- `refreshOAuthCredential()` only calls the supplied OAuth provider and optional store; it has no built-in persistence or retry loop.
-- OpenAI Codex device-code OAuth polls inside `createOpenAICodexOAuthProvider().login()` with bounded delays and abort support via `OAuthLoginCallbacks.signal`. Token-endpoint failures redact authorization codes, PKCE verifiers, device/user codes, and access/refresh tokens when those values are known.
-- The shared bounded device/token flow lives in core `pollDeviceCodeToken` (0.2.1) and is used by the OpenAI Codex provider and the credentials-node OAuth 2.0 provider (Microsoft 365 / Google Workspace). It owns the RFC 8628 device-code request and poll loop (`authorization_pending` continue, `slow_down` +5s backoff, expiry deadline, abort), reads every response body under the shared byte ceiling, parses success bodies with a fail-closed shape gate (an `access_token` string is required), and redacts device/user codes, authorization codes, PKCE verifiers, and tokens from every thrown error. Adapter-specific fields (message prefix, extra token params, account binding) are plain options, never subclasses. Optional `bodyEncoding: "form"` POSTs `application/x-www-form-urlencoded` for both the device-code request and every token poll (default remains `json` so existing callers stay byte-compatible). `extraDeviceParams` merge into the device-code body only. `verification_uri` and optional `verification_uri_complete` must be `https:`; the complete URI is what `onDeviceCode` receives when present.
+
 
 ## Related APIs
 
-- [Public contracts](public-contracts.md): `CredentialRequest`, `Credential`, `CredentialResolver`, `CredentialResolverSource`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, and `ErrorInfo`.
-- [Provider layer](provider-layer.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
-- [LLM compaction package](compaction-llm.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
-- [OpenAI-compatible provider](providers/openai-compatible.md): resolves API keys per request and redacts known values from adapter errors.
+- [Public contracts](packages.md): `CredentialRequest`, `Credential`, `CredentialResolver`, `CredentialResolverSource`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, and `ErrorInfo`.
+- [Provider layer](provider-kit.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
+- [LLM compaction package](../packages/memory/compaction/README.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
+- OpenAI-compatible provider: resolves API keys per request and redacts known values from adapter errors.
 
-Phase 10 added `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. By default the memory store serves a providerless record for a provider-scoped request of the same name — that record is then shared across every provider; pass `{ allowProviderFallback: false }` for exact-match-only resolution (strict provider scoping). Phase 11 adds OAuth/API-key contracts plus explicit resolver order helpers. Core still has no persistent secret store and does not read environment variables or files for credentials. For durable storage, use the [`@arnilo/prism-credentials-keyring`](credential-storage.md) encrypted-file or keychain backends (it claims the `credentials` slot, so `keyring:` refs resolve and `secret` answers persist). See [Security/auth/trust](settings-auth-trust-security.md).
+Phase 10 added `createMemoryCredentialStore()`, `createChainedCredentialResolver()`, and `createSecretRedactor()` for opt-in in-memory auth and runtime redaction. By default the memory store serves a providerless record for a provider-scoped request of the same name — that record is then shared across every provider; pass `{ allowProviderFallback: false }` for exact-match-only resolution (strict provider scoping). Phase 11 adds OAuth/API-key contracts plus explicit resolver order helpers. Core still has no persistent secret store and does not read environment variables or files for credentials. For durable storage, use [`@arnilo/prism-credentials-keyring`](../packages/credentials/keyring/README.md) encrypted-file or keychain backends. See [Security/auth/trust](settings-auth-trust-security.md).

@@ -1,0 +1,163 @@
+{
+  "sessions": [
+    {
+      "date": "2025-01-01T09:00:00.000Z",
+      "messages": [
+        {
+          "id": "s0-u",
+          "role": "user",
+          "text": "My project color is amber."
+        },
+        {
+          "id": "s0-a",
+          "role": "assistant",
+          "text": "Recorded."
+        }
+      ]
+    },
+    {
+      "date": "2025-01-02T09:00:00.000Z",
+      "messages": [
+        {
+          "id": "s1-u",
+          "role": "user",
+          "text": "My project color changed to cobalt."
+        },
+        {
+          "id": "s1-a",
+          "role": "assistant",
+          "text": "Recorded."
+        }
+      ]
+    },
+    {
+      "date": "2025-01-03T09:00:00.000Z",
+      "messages": [
+        {
+          "id": "s2-u",
+          "role": "user",
+          "text": "The current project color remains cobalt."
+        },
+        {
+          "id": "s2-a",
+          "role": "assistant",
+          "text": "Recorded."
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "synthetic:knowledge-update",
+      "ability": "knowledge-update",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:multi-session",
+      "ability": "multi-session",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:single-session-assistant",
+      "ability": "single-session-assistant",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:single-session-preference",
+      "ability": "single-session-preference",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:single-session-user",
+      "ability": "single-session-user",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:temporal-reasoning",
+      "ability": "temporal-reasoning",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:abstention",
+      "ability": "abstention",
+      "question": "Which unknown planet is the project on? (unanswerable)",
+      "answers": [
+        "unknown"
+      ]
+    },
+    {
+      "id": "synthetic:single-hop",
+      "ability": "single-hop",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:multi-hop",
+      "ability": "multi-hop",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:temporal",
+      "ability": "temporal",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:open-domain",
+      "ability": "open-domain",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:adversarial",
+      "ability": "adversarial",
+      "question": "Which unknown planet is the project on? (unanswerable)",
+      "answers": [
+        "unknown"
+      ]
+    },
+    {
+      "id": "synthetic:conflict-resolution-single-hop",
+      "ability": "conflict-resolution-single-hop",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    },
+    {
+      "id": "synthetic:conflict-resolution-multi-hop",
+      "ability": "conflict-resolution-multi-hop",
+      "question": "What color is the project currently?",
+      "answers": [
+        "cobalt"
+      ]
+    }
+  ]
+}

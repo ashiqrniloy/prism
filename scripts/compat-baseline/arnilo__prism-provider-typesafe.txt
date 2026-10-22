@@ -4,7 +4,7 @@ TYPESAFE_DEFAULT_BASE_URL	export declare const TYPESAFE_DEFAULT_BASE_URL = "http
 createTypeSafeProvider	export declare function createTypeSafeProvider(options?: TypeSafeProviderOptions): ModelProvider
 default	export default
 defineTypeSafeModel	export declare function defineTypeSafeModel(config: TypeSafeModelConfig): ModelConfig
-type TypeSafeModelConfig	export { defineTypeSafeModel, TYPESAFE_API_KEY_ENV, TYPESAFE_DEFAULT_BASE_URL, type TypeSafeModelConfig, typeSafeModels, } from "./models.js"
+type TypeSafeModelConfig	export { defineTypeSafeModel, type TypeSafeModelConfig, typeSafeModels, TYPESAFE_API_KEY_ENV, TYPESAFE_DEFAULT_API_KEY_REF, TYPESAFE_DEFAULT_BASE_URL, } from "./models.js"
 type TypeSafeProviderOptions	export { createTypeSafeProvider, type TypeSafeProviderOptions } from "./provider.js"
 typeSafeModels	export declare const typeSafeModels: readonly ModelConfig[]
 typesafe	export declare function typesafe(options?: TypeSafeProviderPackageOptions & TypeSafeProviderConfig): PackageInstance

@@ -256,7 +256,43 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: yes — the Providers list shrinks to four entries.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 3: Remove vendor-specific modules and OpenAI Responses from the kit
+- [x] Task 3: Remove vendor-specific modules and OpenAI Responses from the kit
+  - Execution Notes:
+    - **Modules and Tests Deleted:**
+      - Deleted 9 vendor-specific / non-generic modules from `src/provider-kit/`:
+        `openai-responses.ts`, `openai-uploads.ts`, `openai-cache.ts`, `openai-thinking.ts`, `openai-compat.ts`, `oauth.ts`, `oauth-device-code.ts`, `image-generation.ts`, `model-discovery.ts`.
+      - Deleted 3 dedicated test files: `src/__tests__/openai-responses.test.ts`, `src/__tests__/oauth-device-code.test.ts`, `src/__tests__/model-discovery.test.ts`.
+      - Cleaned up deleted features: removed Responses cases from `src/__tests__/provider-media.test.ts`; removed `runImageGenerationConformance`, `ImageGenerationFixture`, and image generation assertions from `src/provider-kit/conformance.ts`.
+      - Inlined internal helper: Replaced deleted public `openAIAudioFormat` with internal `audioFormatExtension(mediaType)` in `src/provider-kit/media.ts` to preserve default audio filename generation without vendor names.
+    - **Hyper Provider Responses Route Removal:**
+      - Removed `"responses"` from `HyperRoute` union in `packages/providers/hyper/src/provider.ts` and `packages/providers/hyper/src/models.ts`.
+      - Removed Responses route handling from `generate()`; requests with `compat.route: "responses"` fail-closed with `ProviderRequirementError { requirement: "route" }`.
+      - Removed `live_responses_route_*` probe from `packages/providers/hyper/src/__tests__/live.test.ts` and deleted the `hyper responses route` test suite.
+      - Added unit test `hyper_rejects_responses_route` in `packages/providers/hyper/src/__tests__/hyper.test.ts` (suite passes 21/21).
+    - **Keyring & Credentials Migration:**
+      - Defined `OAuthCredentialSink` and `secretToOAuthCredentials` locally in `packages/credentials/keyring/src/resolver.ts` to avoid depending on provider-kit for credentials persistence.
+      - Removed deleted `refreshOAuthCredential` and `pollDeviceCodeToken` references from `packages/credentials/keyring/src/__tests__/package.test.ts`, `src/__tests__/credentials-redaction.test.ts`, `src/__tests__/credentials-slot.test.ts`, `src/__tests__/install-smoke.test.ts`, and `scripts/phase21-security.test.mjs`.
+    - **Documentation Sweep:**
+      - Updated `docs/credentials-and-redaction.md` and `docs/settings-auth-trust-security.md` to remove deleted OAuth and device code signatures.
+      - Updated `src/__tests__/docs.test.ts` expectations (suite passes 64/64).
+      - Updated `docs/provider-kit.md` with a "Removed Modules and Exports" section documenting the retired APIs.
+    - **Public Export Contract & Compat Baselines:**
+      - Frozen `src/__tests__/public-export-contract.test.ts` provider-kit surface updated to exactly 98 runtime exports (only the 18 KEEP modules from Task 1 (b)).
+      - Regenerated baseline via `bun scripts/release.mjs gate --update-baseline`: updated `scripts/compat-baseline/arnilo__prism.txt` and package baselines.
+    - **Performance, Size Ceilings & Budgets (`scripts/budgets.json`):**
+      - Provider kit lines: 4,984 lines across 28 files -> 3,470 lines across 19 files (-1,514 lines).
+      - `src/provider-kit/index.ts`: 27 lines (983 bytes) -> 18 lines (653 bytes).
+      - Kernel source lines: 35,452 -> 33,938 (-1,514 lines). Lowered ceiling in `budgets.json` to 33,938.
+      - Root exports: 1,438 -> 1,376 (-62 exports). Lowered ceiling in `budgets.json` to 1,376.
+      - Root tarball packed bytes: 1,052,649 -> 1,033,196 (-19,453 bytes). Lowered ceiling in `budgets.json` to 1,033,196.
+      - Root tarball unpacked bytes: 3,425,133 -> 3,343,276 (-81,857 bytes). Lowered ceiling in `budgets.json` to 3,343,276.
+      - Root tarball file count: 356 -> 347 (-9 files). Lowered ceiling in `budgets.json` to 347.
+    - **Changelog & Deprecations:**
+      - Updated `CHANGELOG.md` under `## [Unreleased] -> ### Removed` documenting all 9 removed modules and their exported symbols.
+    - **Verification Results:**
+      - `bun run typecheck`: clean exit 0 across all 42 workspaces, root, and app host.
+      - `bun test src/__tests__/public-export-contract.test.ts src/__tests__/provider-kit.test.ts src/__tests__/credentials-redaction.test.ts src/__tests__/credentials-slot.test.ts packages/providers/hyper/src/__tests__/hyper.test.ts scripts/phase21-security.test.mjs scripts/budget-gate.test.mjs`: 123/123 pass.
+      - `bun scripts/release.mjs gate`: clean exit 0.
   - Acceptance Criteria:
     - Functional: The Task 1 (b) *delete* modules and their tests (`src/__tests__/{openai-responses,oauth-device-code,model-discovery}.test.ts`, the Responses cases in `provider-media.test.ts`, `runImageGenerationConformance` and its tests) are removed. Hyper's `responses` route is removed (`packages/providers/hyper/src/provider.ts:27-36`, `HyperRoute` loses `"responses"`, the live probe `live_responses_route_*` and the unit `hyper responses route` suite are deleted). A model with `compat.route: "responses"` is rejected by Hyper at `generate()` with `ProviderRequirementError { requirement: "route" }`, not silently sent to chat.
     - Functional: `src/provider-kit/index.ts` exports only *keep* symbols; the root-export freeze (`src/__tests__/public-export-contract.test.ts`) and the `provider-kit` subpath baseline are regenerated (`bun scripts/release.mjs gate --update-baseline`, rewriting `scripts/compat-baseline/arnilo__prism.txt` and `arnilo__prism-provider-hyper.txt`); the note lists every removal attributed to this plan.
@@ -291,7 +327,48 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 4: One usage contract across codecs
+- [x] Task 4: One usage contract across codecs
+  - Execution Notes:
+    - **Unified Usage Contract (`src/contracts-core/content.ts:211`):**
+      - Documented inclusive accounting rule: `inputTokens` represents every prompt token processed by the model; `cacheReadTokens` and `cacheWriteTokens` are non-negative subsets of `inputTokens`; `totalTokens = inputTokens + outputTokens` when vendor omits it.
+    - **Shared Normalizer (`src/provider-kit/usage.ts`):**
+      - Created `normalizeUsage(raw: RawUsageInput): Usage | undefined` as the single canonical builder across all codecs.
+      - Handles vendor differences: `inputTokensInclusive: false` (Anthropic Messages wire format) automatically sums cache read and write tokens into `inputTokens`; derives `totalTokens` when omitted; drops empty or non-finite values.
+      - Exported from `src/provider-kit/index.ts` and `src/provider-kit/usage.ts`.
+    - **Codecs Updated:**
+      - `src/provider-kit/anthropic-messages.ts`: `toUsage` delegates to `normalizeUsage` with `inputTokensInclusive: false`.
+      - `src/provider-kit/openai-primitives.ts`: `mapOpenAIChatUsage` delegates to `normalizeUsage` with `prompt_tokens` (inclusive) and `prompt_tokens_details`.
+      - `src/provider-kit/systemone.ts`: `mapSystemOneUsage` delegates to `normalizeUsage` and derives `totalTokens` when omitted.
+    - **Downstream Consumers Updated:**
+      - `src/agent-session/session/provider-round.ts`: `withCatalogCost` updated so uncached input tokens are `Math.max(0, inputTokens - cacheReadTokens - cacheWriteTokens)` and cost formula calculates `(uncachedInput * quote.input + cacheReadTokens * quote.cacheRead + cacheWriteTokens * quote.cacheWrite + outputTokens * quote.output) / 1_000_000`, eliminating double-charging of cached tokens.
+      - `src/provider-kit/conformance.ts`: `assertUsageAccounting` updated to enforce `(actual.cacheReadTokens ?? 0) + (actual.cacheWriteTokens ?? 0) <= (actual.inputTokens ?? 0)`, failing providers that report invalid cache accounting.
+    - **Tests Added & Updated:**
+      - Created `src/__tests__/provider-usage.test.ts` (5 tests):
+        - `anthropic_usage_is_inclusive_of_cache`
+        - `chat_usage_is_inclusive_of_cache`
+        - `chat_usage_derives_total_tokens_when_vendor_omits_it`
+        - `cache_hit_rate_is_at_most_one`
+        - `system_one_usage_derives_total_tokens_and_is_inclusive`
+      - Created `src/__tests__/provider-round-cost.test.ts` (1 test):
+        - `catalog_cost_does_not_double_charge_cached_tokens`
+      - Updated `src/__tests__/provider-conformance.test.ts`:
+        - Added `usage_accounting_rejects_cache_above_input` conformance self-test.
+      - Updated existing tests expecting inclusive tokens:
+        - `src/__tests__/anthropic-messages.test.ts`: updated expected `inputTokens` from 10 to 16, asserted `totalTokens: 21`.
+        - `packages/providers/hyper/src/__tests__/hyper.test.ts`: updated expected `inputTokens` from 4 to 7.
+        - `packages/providers/opencode-go/src/__tests__/opencode-go.test.ts`: updated expected `inputTokens` from 4 to 7.
+      - Frozen export tests: Updated `src/__tests__/public-export-contract.test.ts` and `src/__tests__/provider-kit.test.ts` to include `"normalizeUsage"`.
+    - **Documentation & Budgets:**
+      - `docs/models.md`: Added "## Usage and token accounting" documenting inclusive semantics, cache hit rate (`cacheReadTokens / inputTokens`), and catalog cost calculation.
+      - `docs/provider-kit.md`: Documented `normalizeUsage` signature and mapping options.
+      - `CHANGELOG.md`: Added entry under `## [Unreleased] -> ### Changed`.
+      - `scripts/budgets.json`: Rebaselined package limits with exact rationale (+1 file, +2 root exports, +97 source lines, +2276 packed bytes, +7133 unpacked bytes).
+      - `bun scripts/release.mjs gate --update-baseline`: Updated compat baselines (43 packages).
+    - **Verification Results:**
+      - `bun run typecheck`: clean exit 0 across all 42 workspaces, root, and app host.
+      - `bun test`: all 159 targeted tests passed across 12 files.
+      - `bun test scripts/budget-gate.test.mjs`: 20/20 pass.
+      - `bun scripts/release.mjs gate`: clean exit 0 (`{ "updated": false, "packages": 43 }`).
   - Acceptance Criteria:
     - Functional: `Usage` (`src/contracts-core/content.ts:211`) documents the rule chosen in Task 1 (c): `inputTokens` is every prompt token; `cacheReadTokens` and `cacheWriteTokens` are subsets of it; `totalTokens = inputTokens + outputTokens` when the vendor omits it.
     - Functional: The Anthropic mapper reports `inputTokens = input_tokens + cache_read_input_tokens + cache_creation_input_tokens`. The Chat mapper keeps `prompt_tokens`. The System One mapper (`systemone.ts` `mapSystemOneUsage`) is checked against the rule. A shared `normalizeUsage` in `src/provider-kit/usage.ts` is the only place a codec builds `Usage`.
@@ -329,7 +406,48 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 5: Wire recorder and replay harness
+- [x] Task 5: Wire recorder and replay harness
+  - Execution Notes:
+    - **Loopback Proxy (`scripts/wire-proxy.mjs`):**
+      - Implemented Bun HTTP proxy with loopback binding validation (`127.0.0.1`, `localhost`, `::1`) that refuses non-loopback addresses (exit code 1).
+      - CLI argument parsing: `--upstream <url>`, `--listen <host:port>`, `--record <dir>`, `--secret-env <names>`, `--usage-log <file>`.
+      - Zero-buffering response piping via `stream.tee()` for concurrent streaming back to the client while optionally capturing recorded exchanges.
+      - Recorded exchanges format: `<n>.json` containing `method`, `path`, `requestBody`, `status`, `contentType`, and `responseBody`. Never records request/response authentication, authorization, or arbitrary server headers.
+      - Secret scanning: Mandatory `--secret-env` when `--record` is specified (exits 2 if missing); scans method, path, request body, and response body against specified environment variable values; aborts disk write and terminates with exit code 3 if secret hit detected.
+      - Usage logging: `--usage-log <file>` extracts usage information across Anthropic Messages and OpenAI chat/responses formats, outputting normalized JSONL lines with raw usage and normalized token counts (`inputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`, `totalTokens`).
+    - **Wire Replay & Stream Conformance (`src/provider-kit/wire-replay.ts`):**
+      - Exported `replayFetch(exchanges: RecordedExchange | readonly RecordedExchange[])`: Serves recorded HTTP exchanges sequentially, verifying HTTP method and pathname match for each exchange, returning synthetic Response with recorded status, headers, and body. Throws on unexpected path or method.
+      - Exported `assertRecordedStreamConforms(options: RecordedStreamConformanceOptions)`: Wraps `replayFetch` with `assertProviderStreamConforms` to validate that streaming provider responses against recorded wire exchanges produce expected normalized `ProviderEvent` streams.
+      - Re-exported both helpers from `src/provider-kit/index.ts`.
+    - **Tests Added & Updated:**
+      - `scripts/wire-proxy.test.mjs` (5 tests):
+        - `proxy_refuses_non_loopback_listen`: Validates exit 1 when listening on `0.0.0.0`.
+        - `proxy_requires_secret_env_when_recording`: Validates exit 2 when `--record` set without `--secret-env`.
+        - `proxy_records_body_and_content_type_only`: Verifies only method, path, body, status, content-type written.
+        - `proxy_aborts_write_on_secret_hit`: Verifies exit 3 and aborted file creation when secret detected.
+        - `proxy_usage_log_reads_both_formats`: Confirms extraction from both Anthropic and OpenAI usage payloads.
+      - `src/__tests__/wire-replay.test.ts` (5 tests):
+        - `replay_fetch_fails_on_unexpected_path`
+        - `replay_fetch_serves_recorded_exchanges_in_order`
+        - `replay_fetch_fails_on_unexpected_method`
+        - `recorded_stream_conforms_helper_reports_mismatch`
+        - `recorded_stream_conforms_succeeds_when_expectations_match`
+      - Export freeze contracts:
+        - `src/__tests__/public-export-contract.test.ts`: Added `assertRecordedStreamConforms` and `replayFetch` to `FROZEN_PROVIDER_KIT_EXPORTS`.
+        - `src/__tests__/provider-kit.test.ts`: Updated `FROZEN_PROVIDER_KIT_EXPORTS`.
+    - **Documentation & Budgets:**
+      - `docs/provider-kit.md`: Added "Wire replay and stream conformance" section documenting `replayFetch` and `assertRecordedStreamConforms`.
+      - `docs/live-testing.md`: Added "Recording wire fixtures" section with CLI proxy options, security guarantees, and usage examples.
+      - `CHANGELOG.md`: Added entry for wire recorder proxy and replay harness under `### Added`.
+      - `scripts/compat-baseline/arnilo__prism.txt`: Updated compat baseline with `assertRecordedStreamConforms` and `replayFetch`.
+      - `scripts/budgets.json`: Added `kernel` budget entry (packedBytes 1038143, unpackedBytes 3358533, fileCount 349, rootExports 1382, sourceLines 34151) and updated `@arnilo/prism` export baseline to 1382.
+    - **Verification Results:**
+      - `bun test scripts/wire-proxy.test.mjs`: 5/5 pass.
+      - `bun test src/__tests__/wire-replay.test.ts`: 5/5 pass.
+      - `bun test src/__tests__/public-export-contract.test.ts`: 33/33 pass.
+      - `bun test src/__tests__/provider-kit.test.ts`: 17/17 pass.
+      - `bun scripts/release.mjs gate`: clean exit 0 (`{ "updated": false, "packages": 43 }`).
+      - `bun run typecheck`: clean exit 0 across all 42 workspaces, root, and app host.
   - Acceptance Criteria:
     - Functional: `scripts/wire-proxy.mjs` is a Bun HTTP proxy: `--upstream <url> --listen 127.0.0.1:<port>`. It forwards requests unchanged, including auth headers, and streams responses back unchanged. With `--record <dir>` it writes one `<n>.json` per exchange: method, path, request body, status, the `content-type` header, and the raw response body. No other request or response header is ever written. With `--usage-log <file>` it appends one JSONL line per exchange with the raw upstream usage object, parsed by a small format-aware reader that is independent of the kit codecs (so it can check them). Plan 183 relies on this.
     - Functional: Before writing, a recorded exchange is scanned for the values of every variable named by `--secret-env` (for example `HYPER_API_KEY`). A hit aborts the write and exits 3. Response ids and request ids are kept: they are not secrets.
@@ -368,7 +486,42 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 6: Anthropic Messages codec, correct against real streams
+- [x] Task 6: Anthropic Messages codec, correct against real streams
+  - Execution Notes:
+    - **Contract & Session Updates:**
+      - Added `redacted?: boolean` and `data?: string` properties to `ThinkingContent` in `src/contracts-core/content.ts`.
+      - Updated `pushCoalescedContent` in `src/agent-session/session/provider-round.ts` to prevent coalescing adjacent thinking blocks when either block has `redacted: true`.
+    - **Codec Relocation & Wire Stream Corrections:**
+      - Relocated codec from `src/provider-kit/anthropic-messages.ts` to `src/provider-kit/codecs/anthropic-messages.ts` and re-exported from `src/provider-kit/index.ts`.
+      - Added `AnthropicMessagesEventsOptions` interface supporting `signal` and `secrets` redaction.
+      - Supported `event: ping` keep-alive frames (silently ignored).
+      - Implemented field-by-field merge of `message_start.message.usage` and `message_delta.usage`, preserving earlier values when delta omits fields, normalized to inclusive `Usage` via `normalizeUsage`.
+      - Handled `message_delta` (and `message.delta` compat) capturing `stop_reason` and yielding `providerUsage`.
+      - Accumulated `signature_delta` into the thinking block's `signature`.
+      - Handled `redacted_thinking` content blocks, emitting as thinking block with `redacted: true` and `data`.
+      - Replayed thinking only with valid `signature`. Unsigned thinking replays as text when `preserveThinking: true`. Redacted thinking replays verbatim as `type: "redacted_thinking"`.
+      - Mapped stream `error` events to `providerError` with vendor `error.type` as `code` (`overloaded_error` and `api_error` marked transient, others permanent), with secret redaction via `secrets`.
+      - Guarded JSON parsing so malformed frames or JSON parse errors yield terminal `providerError` instead of throwing unhandled exceptions.
+    - **Wire Fixtures & Conformance Suites:**
+      - Recorded wire suites created under `packages/providers/hyper/src/__tests__/wire/anthropic/` (`text.json`, `tool-loop.json`, `thinking.json`, `cache.json`, `error.json`, `README.md`) using Hyper Anthropic route.
+      - Recorded wire suites created under `packages/providers/opencode-go/src/__tests__/wire/anthropic/` (`text.json`, `tool-loop.json`, `thinking.json`, `cache.json`, `error.json`, `README.md`) using OpenCode Go Anthropic route (`/zen/go/v1/messages`).
+      - Verified wire fixtures with `assertNoSecretLeak`.
+    - **Tests Added & Updated:**
+      - `src/__tests__/anthropic-messages.test.ts` (13/13 passing): verified delta usage merge, signature delta accumulation, unsigned thinking replay as text, redacted thinking round-tripping, error event transient mapping, malformed frame terminal error, ping event ignoring.
+      - `packages/providers/hyper/src/__tests__/hyper.test.ts` (25/25 passing): replaced hand-written fixture with 5 recorded wire tests (`recorded_hyper_anthropic_text`, `recorded_hyper_anthropic_tool_loop`, `recorded_hyper_anthropic_thinking`, `recorded_hyper_anthropic_cache`, `recorded_hyper_anthropic_error`).
+      - `packages/providers/opencode-go/src/__tests__/opencode-go.test.ts` (46/46 passing): added 5 recorded wire tests (`recorded_opencode_go_anthropic_text`, `recorded_opencode_go_anthropic_tool_loop`, `recorded_opencode_go_anthropic_thinking`, `recorded_opencode_go_anthropic_cache`, `recorded_opencode_go_anthropic_error`).
+    - **Budgets & Documentation:**
+      - Updated `scripts/budgets.json` kernel ceilings (packedBytes 1039713, unpackedBytes 3365024, rootExports 1383, sourceLines 34284) and `@arnilo/prism` export baseline to 1383 (+1 `AnthropicMessagesEventsOptions`).
+      - Updated `docs/provider-kit.md` documenting Anthropic Messages codec wire behavior, signature accumulation, redacted thinking, and error mapping.
+      - Updated `CHANGELOG.md` with entry under `### Fixed`.
+    - **Verification Results:**
+      - `bun run typecheck`: clean exit 0 across all 42 workspaces, root, and app host.
+      - `bun test src/__tests__/anthropic-messages.test.ts`: 13/13 pass.
+      - `bun test packages/providers/hyper/src/__tests__/hyper.test.ts`: 25/25 pass.
+      - `bun test packages/providers/opencode-go/src/__tests__/opencode-go.test.ts`: 46/46 pass.
+      - `bun test scripts/wire-proxy.test.mjs`: 5/5 pass.
+      - `bun test src/__tests__/wire-replay.test.ts`: 5/5 pass.
+      - `bun scripts/release.mjs gate`: clean exit 0 (`{ "updated": false, "packages": 43 }`).
   - Acceptance Criteria:
     - Functional: `anthropicMessagesEvents` (moved to `src/provider-kit/codecs/anthropic-messages.ts`):
       - reads `message_start.message.usage` and merges each later `message_delta.usage` field by field (a field the delta omits keeps its earlier value);
@@ -410,7 +563,42 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 7: OpenAI Chat codec options and the routed-provider builder
+- [x] Task 7: OpenAI Chat codec options and the routed-provider builder
+  - Execution Notes:
+    - **OpenAI Chat Codec Options & Primitives:**
+      - Created `src/provider-kit/codecs/openai-chat.ts` absorbing serializer options: `reasoningReplay: "reasoning_content" | "fold" | "drop"`, `imageInput: "capability-gated" | "always"`, and `maxTokensField: "max_tokens" | "max_completion_tokens"`.
+      - Exported `openAIChatBody`, `buildOpenAIChatBody`, and `openAIChatEvents` from `src/provider-kit/codecs/openai-chat.ts` and re-exported via `src/provider-kit/index.ts`.
+      - Preserved compatibility with downstream transforms (`maxTokens` preserved on body for `transformBody` and stripped on output).
+    - **Shared Thinking & Compat Resolvers:**
+      - Added in `src/provider-kit/thinking.ts`: `resolvePreserveThinking`, `preserveThinking`, `resolveReasoningEffort`, `reasoningEffort` (snapping effort to declared model levels), `resolveThinkingObject`, `thinkingObject`, `resolveReasoningObject`, `reasoningObject`, and `stripOwnedCompat(compat, extraKeys)` / `stripOwnedCompat(keys)(compat)` with `DEFAULT_OWNED_COMPAT_KEYS`.
+      - Updated `AnthropicMessagesRouteHooks` in `src/provider-kit/codecs/anthropic-messages.ts` to make hooks optional and default to the shared resolvers.
+    - **Routed Provider Builder:**
+      - Created `createRoutedProvider` in `src/provider-kit/routed-provider.ts` supporting routes table (`routes: Record<string, RoutedProviderRoute>`), `routeFor` dispatching by `model.compat?.route` (failing closed with `ProviderRequirementError { requirement: "route" }` on unknown route), pre-fetch `require.sessionId` assertion, single-pass credential resolution via `resolveProviderApiKey`, provider-owned header precedence over caller headers, bounded error body extraction with secret redaction via `assertNoSecretLeak`, and streaming codec dispatch.
+      - Refactored `createOpenAICompatibleProvider` in `src/provider-kit/openai-compatible.ts` as a thin single-route wrapper on `createRoutedProvider`.
+      - Updated `createBuiltinProvider` in `src/models/builtin.ts` to build on `createRoutedProvider` directly.
+      - Updated `src/provider-kit/systemone-provider.ts` to share `assertNotAborted` and `resolveProviderApiKey` from `routed-provider.js`.
+      - Updated imports in `packages/providers/hyper` and `packages/providers/opencode-go` to target `src/provider-kit/codecs/openai-chat.js` and `thinking.js` with no aliases left at old paths.
+    - **Offline Example & Coverage:**
+      - Created runnable offline example `examples/custom-provider.ts` demonstrating a multi-route Acme provider using `createRoutedProvider` and `replayFetch`.
+      - Registered `examples/custom-provider.ts` in `examples/README.md`, `scripts/e2e-coverage.json`, and `src/__tests__/docs.test.ts`.
+    - **Tests Added & Updated:**
+      - `src/__tests__/routed-provider.test.ts` (6/6 pass): verified unknown route fails closed, `require.sessionId` checked before fetch, provider-owned headers win, API key resolved once per request, error body redacted, and built-in provider behavior unchanged.
+      - `src/__tests__/openai-primitives.test.ts` (13/13 pass): verified reasoning replay modes (`reasoning_content`, `fold`, `drop`), image capability gate rejection, reasoning effort snapping to declared levels, and `maxTokensField` mapping.
+      - `src/__tests__/provider-kit.test.ts` & `src/__tests__/public-export-contract.test.ts`: updated frozen export inventories with the 14 new provider-kit exports.
+    - **Documentation & Budgets:**
+      - Rewrote `docs/provider-kit.md` around "write a provider package": package shell -> routes -> codec options -> catalog -> conformance and recorded fixtures, citing `createRoutedProvider` and the Acme example.
+      - Updated `CHANGELOG.md` under `### Added` with entry for OpenAI Chat codec options and routed-provider builder.
+      - Updated `scripts/budgets.json` kernel ceilings (packedBytes: 1044961, unpackedBytes: 3393049, fileCount: 351, rootExports: 1401, sourceLines: 34922) and `@arnilo/prism` export baseline (1401).
+      - Updated compat baseline `scripts/compat-baseline/arnilo__prism.txt`.
+    - **Verification Results:**
+      - `bun run typecheck`: clean exit 0 across all 42 workspaces, root, and app host.
+      - `bun test src/__tests__/routed-provider.test.ts`: 6/6 pass.
+      - `bun test src/__tests__/openai-primitives.test.ts`: 13/13 pass.
+      - `bun test src/__tests__/openai-compatible.test.ts`: 21/21 pass.
+      - `bun test src/__tests__/openai-compatible-builtin.test.ts`: 4/4 pass.
+      - `bun test packages/providers/hyper/src/__tests__/hyper.test.ts`: 25/25 pass.
+      - `bun test packages/providers/opencode-go/src/__tests__/opencode-go.test.ts`: 46/46 pass.
+      - `bun scripts/release.mjs gate`: clean exit 0 (`{ "updated": false, "packages": 43 }`).
   - Acceptance Criteria:
     - Functional: `src/provider-kit/codecs/openai-chat.ts` absorbs the duplicated serializer from Task 1 (f) as codec options: `reasoningReplay: "reasoning_content" | "fold" | "drop"`, `imageInput: "capability-gated" | "always"`, `maxTokensField: "max_tokens" | "max_completion_tokens"`, plus the shared `preserveThinking`, `reasoningEffort` (snapped to declared levels), `thinkingObject`, `reasoningObject`, and `stripOwnedCompat(keys)` resolvers. The Anthropic codec takes the same resolvers through its hooks (`AnthropicMessagesRouteHooks` gets defaults, so a package passes only what differs).
     - Functional: `createRoutedProvider(options)` in `src/provider-kit/routed-provider.ts`:
@@ -464,7 +652,40 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: no — the page is indexed; its one-line entry is updated if its scope sentence changes.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 8: Cache planner defaults
+- [x] Task 8: Cache planner defaults
+  - Execution Notes:
+    - **Prompt Cache Breakpoints & Defaults:**
+      - Added `"last_message"` to `PromptCacheBreakpointLocation` in `src/contracts-core/provider.ts`.
+      - Updated `DEFAULT_CACHE_BREAKPOINTS` in `src/provider-kit/provider-request-policy.ts` from `system_prompt` + `last_stable_message` to `[{ location: "system_prompt" }, { location: "last_message" }]`.
+      - Preserved `"last_stable_message"` in `src/provider-kit/cache-helpers.ts` (`messages.length - 2` or `messages.length - 1`) for hosts and workloads requiring stable turn boundaries.
+      - Updated `resolveBreakpoint` to return `messages.length - 1` for `"last_message"` and `-1` for `"tools"`, bypassing message indexing for tool definition caching.
+    - **Cache Planner & De-duplication:**
+      - Added `resolvePromptCachePlan(messages, breakpoints, options)` in `src/provider-kit/cache-helpers.ts`: resolves requested breakpoints, sets `markTools: true` when `"tools"` is specified, de-duplicates target message indices before enforcing `maxBreakpoints` (allocating 1 breakpoint slot to tool definitions when `markTools: true`), and produces sorted, deduplicated `targetIndices`.
+      - Added `anthropicCacheEnabled(request)` in `src/provider-kit/cache-helpers.ts` checking `request.options?.promptCache?.enabled !== false` and Anthropic cache control support.
+    - **Empty Block Safety & Tool Definition Caching:**
+      - Enhanced `applyCacheControl` and `systemCacheControlField` in `src/provider-kit/cache-helpers.ts` with 20-block reverse lookback to ensure cache control markers never land on empty text, whitespace-only content, or empty tool result blocks.
+      - Integrated `resolvePromptCachePlan` into `anthropicMessagesBody` (`src/provider-kit/codecs/anthropic-messages.ts`): stamps `cache_control: { type: "ephemeral" }` on the last tool definition in `request.tools` when `plan.markTools` is true, clamps message breakpoint limit to 3, and safely maps messages with non-empty block detection.
+    - **Route Affinity:**
+      - Added `affinity?: (request: ProviderRequest) => Record<string, string>` to `RoutedProviderRoute` (`src/provider-kit/routed-provider.ts`), `AnthropicMessagesRouteHooks` (`src/provider-kit/codecs/anthropic-messages.ts`), and `OpenAIChatCodecOptions` (`src/provider-kit/codecs/openai-chat.ts`).
+      - In `createRoutedProvider`, route affinity headers (such as `sanitizeCacheKey(request.options?.promptCache?.key)`) are merged after caller headers and before provider-owned auth/content-type headers with case-insensitive collision resolution.
+    - **Tests Added & Updated:**
+      - `src/__tests__/provider-request-policy.test.ts`: added `default_breakpoints_mark_newest_message` and verified updated defaults.
+      - `src/__tests__/cache-helpers.test.ts`: added tests for `resolveBreakpoint` (`last_message`, `last_stable_message`, `tools`), `resolvePromptCachePlan` target de-duplication before `maxBreakpoints`, empty block lookback protection, `tools_breakpoint_marks_last_tool_definition`, and `uncached_tail_is_one_turn_in_ten_turn_loop`.
+      - `src/__tests__/routed-provider.test.ts`: added `affinity_header_is_sanitized_cache_key`.
+      - `src/__tests__/agents.test.ts`: updated expected default breakpoint from `last_stable_message` to `last_message`.
+      - `packages/providers/hyper/src/__tests__/hyper.test.ts` & `packages/providers/opencode-go/src/__tests__/opencode-go.test.ts`: updated kernel default tests to expect `last_message` breakpoint.
+      - `src/__tests__/public-export-contract.test.ts` & `src/__tests__/provider-kit.test.ts`: updated frozen inventories with `anthropicCacheEnabled` and `resolvePromptCachePlan`.
+    - **Documentation & Budgets:**
+      - Documented prompt caching defaults, breakpoint locations, empty block protection, and route affinity in `docs/models.md` and `docs/provider-kit.md`. Added required API page headings to `docs/provider-kit.md`.
+      - Updated `CHANGELOG.md` under `### Added` and `### Changed`.
+      - Rebaselined `scripts/budgets.json` kernel ceilings: `packedBytes: 1048811`, `unpackedBytes: 3406509`, `fileCount: 351`, `rootExports: 1404`, `sourceLines: 35107`, and `@arnilo/prism` export baseline to 1404.
+      - Updated compat baseline in `scripts/compat-baseline/arnilo__prism.txt`.
+    - **Verification Results:**
+      - `bun run typecheck`: clean exit 0 across all 42 workspaces, root, and app host.
+      - `bun test src/__tests__/docs.test.ts`: 64/64 pass.
+      - `bun test src/__tests__/{cache-helpers,provider-request-policy,routed-provider,agents,anthropic-messages,public-export-contract,provider-kit}.test.ts`: all pass.
+      - `bun test packages/providers/{hyper,opencode-go}/src/__tests__/*.test.ts`: all pass.
+      - `bun scripts/release.mjs gate`: clean exit 0 (`{ "updated": false, "packages": 43 }`).
   - Acceptance Criteria:
     - Functional: Using the Task 1 (e) decision, `DEFAULT_CACHE_BREAKPOINTS` (`provider-request-policy.ts:26-29`) becomes `system_prompt` plus `last_message`, where the new `last_message` location marks the newest message. `last_stable_message` keeps its meaning for hosts that ask for it. `tools` marks the last tool *definition* on codecs that support it (Anthropic: `cache_control` on the last tool), not a tool message. `maxBreakpoints` is applied after de-duplication.
     - Functional: The Anthropic encoder places tool markers on `tools[]`. The system marker is unchanged. Markers never land on an empty block.
@@ -500,7 +721,48 @@ This plan is a pre-publish part of roadmap **Phase 11**, made necessary by the o
     - `docs/index.md` update: no
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
-- [ ] Task 9: Provider conformance a host can run
+- [x] Task 9: Provider conformance a host can run
+  - Execution Notes:
+    - **Provider Conformance Wire Recordings Replay (`src/provider-kit/conformance.ts`):**
+      - Added `ProviderConformanceScenarioResult` and `ProviderConformanceResult` return types to `src/provider-kit/conformance.ts` and exported from `src/provider-kit/index.ts`.
+      - Added `recordings` (directory path, file path, or URL) and `models` options to `ProviderConformanceOptions`.
+      - Implemented automatic multi-scenario wire recordings discovery and parsing (`findJsonFiles`), supporting single exchange files and multiple exchange arrays.
+      - Replays each scenario through `replayFetch` with signature-tracking fetch wrapper (`trackingFetch`):
+        - Enforces event order and terminal `done` or `error` events.
+        - Enforces streaming tool-call reconstruction and parameter parsing.
+        - Enforces usage token accounting invariants (`cacheReadTokens + cacheWriteTokens <= inputTokens`).
+        - Verifies thinking signature round-trip, throwing if thinking content is replayed onto the wire without a signature (`conformance_fails_on_unsigned_thinking_replay`).
+        - Verifies abort pre-check (`assertAbortIsObserved`), provider-owned header priority (`assertProviderOwnedHeadersWin`), and secret leak scanning (`assertNoSecretLeak`).
+        - Reports structured result with `{ ok: boolean, scenarios: ProviderConformanceScenarioResult[] }`.
+    - **Provider Package Scaffolder (`prism new package --provider <name>`):**
+      - Added `--provider` flag support to `prism new package` in `src/cli-manifest.ts`.
+      - Added modern 0.13.0 provider package template files in `templates/provider/`:
+        - `package.json.tmpl`: 0.13.0 peer dependency and manifest dependencies (`@arnilo/prism`, `bun-types`).
+        - `src/index.ts.tmpl`: modern package shell with `secretRefProperty`, `baseUrlProperty`, `modelsProperty`, and `providerPackageInstance`.
+        - `src/provider.ts.tmpl`: routed provider builder using `createRoutedProvider`.
+        - `src/models.ts.tmpl`: static catalog and `list<Provider>Models` discovery.
+        - `package.test.ts.tmpl`: offline package test asserting config literal secret rejection and running `providerConformance({ recordings })`.
+        - `live.test.ts.tmpl`: credentials-gated live test skeleton skipping when environment variable is unset.
+        - `wire-readme.md.tmpl`: documentation on recording wire exchanges using loopback proxy `scripts/wire-proxy.mjs`.
+        - `README.md.tmpl` & `CHANGELOG.md.tmpl`: standard package documentation.
+    - **Tests Added & Updated:**
+      - `src/__tests__/provider-conformance.test.ts`:
+        - `conformance_replays_recordings_and_reports_scenario`: asserts replay of hyper wire fixtures reports >= 5 scenarios (`text`, `tool-loop`, `thinking`, `cache`, `error`) and passes conformance.
+        - `conformance_fails_on_usage_rule_break`: asserts violation of `cacheReadTokens + cacheWriteTokens <= inputTokens` rejects with descriptive invariant violation error.
+        - `conformance_fails_on_unsigned_thinking_replay`: asserts that replaying thinking blocks without signature on wire throws `conformance_fails_on_unsigned_thinking_replay`.
+        - `scaffolded_provider_package_passes_its_own_tests`: scaffolds a provider package with `prism new package --provider demo`, writes a mock recording fixture into its `wire/` directory, and executes `bun test` inside the scaffolded package, verifying clean pass.
+      - `src/__tests__/cli-manifest.test.ts`:
+        - `new_provider_package_scaffolds_provider_skeleton`: validates generated file structure and contents (`createRoutedProvider`, `secretRefProperty`, `providerConformance`).
+    - **Documentation & Budgets:**
+      - Documented `providerConformance` recordings replay and `prism new package --provider` in `docs/provider-kit.md`.
+      - Linked `providerConformance` from `docs/testing.md`.
+      - Added release notes to `CHANGELOG.md` under `### Added`.
+      - Updated compat baseline `scripts/compat-baseline/arnilo__prism.txt` and kernel ceilings in `scripts/budgets.json`.
+    - **Verification Results:**
+      - `bun run typecheck`: clean exit 0 across all 43 workspaces, root, and app host.
+      - `bun test src/__tests__/provider-conformance.test.ts src/__tests__/cli-manifest.test.ts`: 28/28 pass.
+      - `bun test src/__tests__/docs.test.ts`: 64/64 pass.
+      - `bun scripts/release.mjs gate`: clean exit 0 (`{ "updated": false, "packages": 43 }`).
   - Acceptance Criteria:
     - Functional: `providerConformance` (`conformance.ts:242`) gains a `recordings` option. With it, the suite replays every recorded scenario through the package's provider and checks: event order, the usage rule (Task 4), tool-call reconstruction, `done` stop reason, that thinking replay round-trips with its signature (Anthropic route), the abort pre-check, header ownership, and no secret leak. A package passes by pointing it at its `wire/` directory.
     - Functional: `prism new package --provider <name>` (the existing scaffolder, roadmap Phase 4) generates a provider skeleton: `createRoutedProvider`, a one-model catalog, a `package.test.ts` calling `providerConformance({ recordings })`, an empty `wire/` folder with a README that gives the recording command, and a `live.test.ts` skeleton that skips without credentials. If the scaffolder has no provider template today, this task adds one.

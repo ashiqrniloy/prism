@@ -30,7 +30,6 @@ export async function demo() {
     input: "Pick a skill",
     skills,
     skillsDisclosure: "progressive",
-    contextBudget: { maxInputTokens: 900, reportOmissions: true },
   });
   const catalogText = catalogRequest.messages
     .flatMap((message) => message.content)

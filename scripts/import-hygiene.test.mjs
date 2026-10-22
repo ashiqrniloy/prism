@@ -128,7 +128,7 @@ test("src/ has no ESM cycle between content.ts and pinned-fetch.ts", () => {
     `detector found no create-agent/session cycle (found: ${names.join("; ") || "none"})`,
   );
   assert.ok(
-    names.some((cycle) => cycle.includes("src/provider-request-policy.ts") && cycle.includes("src/thinking.ts")),
+    names.some((cycle) => cycle.includes("src/provider-kit/provider-request-policy.ts") && cycle.includes("src/provider-kit/thinking.ts")),
     `detector found no provider-request-policy/thinking cycle (found: ${names.join("; ") || "none"})`,
   );
   // Plan 070 Task 10 moved the SSRF gate, `MediaContentError`, and the host/address

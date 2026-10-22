@@ -1,0 +1,6 @@
+# Bun reads coveragePathIgnorePatterns only from $cwd/bunfig.toml. Only sibling
+# packages and the repo root (`../`) are excluded; this package's own sources
+# stay measured. Enforcement is the parsed `All files` row in
+# scripts/coverage-summary.mjs.
+[test]
+coveragePathIgnorePatterns = ["../**"]

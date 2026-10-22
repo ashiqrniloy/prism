@@ -3,7 +3,7 @@ import { createServer, type RequestListener, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { describe, it } from "bun:test";
 import { MediaContentError } from "../content.js";
-import { boundResponse, pinnedFetch, resolvePinnedAddress } from "../pinned-fetch.js";
+import { boundResponse, pinnedFetch, requestPinned, resolvePinnedAddress } from "../pinned-fetch.js";
 
 function listen(handler: RequestListener): Promise<{ origin: string; server: Server }> {
   return new Promise((resolve) => {
@@ -236,6 +236,19 @@ describe("pinned fetch (DNS pinning)", () => {
       await assert.rejects(response.text(), /exceeds 10 bytes/);
       assert.throws(() => boundResponse(new Response("x".repeat(64), { headers: { "content-length": "64" } }), 16), /exceeds 16 bytes/);
       await assert.rejects(boundResponse(new Response("x".repeat(64)), 16).text(), /exceeds 16 bytes/);
+    } finally {
+      server.close();
+    }
+  });
+
+  it("pinned_lookup_is_honored_for_unresolvable_host", async () => {
+    const { origin, server } = await listen((_request, response) => response.end("lookup-proof-body"));
+    try {
+      const port = Number(new URL(origin).port);
+      const url = new URL(`http://unresolvable-test-hostname.invalid:${port}/proof`);
+      const response = await requestPinned(url, { address: "127.0.0.1", family: 4 }, undefined);
+      assert.equal(response.status, 200);
+      assert.equal(await response.text(), "lookup-proof-body");
     } finally {
       server.close();
     }

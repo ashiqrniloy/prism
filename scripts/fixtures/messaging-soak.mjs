@@ -17,10 +17,10 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAgent, providerDone, providerTextDelta } from "../../dist/index.js";
-import { createMessagingRuntime } from "../../packages/prism-channels/dist/index.js";
+import { createAgent, providerDone, providerTextDelta } from "../../src/index.ts";
+import { createChannelRuntime } from "@arnilo/prism-channels";
 import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import { providerPackage } from "../../dist/provider-kit/index.js";
+import { providerPackage } from "../../src/provider-kit/index.ts";
 
 const DEFAULT_DURATION_MS = 30_000;
 const MAX_DURATION_MS = 7 * 24 * 60 * 60_000;
@@ -119,9 +119,8 @@ try {
     slots: { store: persistence },
     runLedger: persistence,
   });
-  const runtime = createMessagingRuntime({
-    authorize: () => ({ identity, agentAliases: ["primary"], grantRevision: "rev-1" }),
-    resolveAgent: () => agent,
+  const runtime = createChannelRuntime(agent, {
+    authorize: () => ({ identity, grantRevision: "rev-1" }),
     deliver: (reply) => {
       deliveredCount += 1;
       deliveredTexts.add(reply.text);

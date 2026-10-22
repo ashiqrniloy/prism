@@ -4,6 +4,7 @@ import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, symlink, writeFile } f
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+  hashPackageClosure,
   hashPackageTree,
   install,
   installedPackageDir,
@@ -50,7 +51,8 @@ describe("manifest install", () => {
     const onDisk = parseManifest(await readJson(dirs.manifestPath), { scope: "project", path: dirs.manifestPath });
     assert.deepEqual(onDisk.packages, [entry]);
     await verifyInstalled(entry, dirs.packagesDir, "project");
-    assert.equal(
+    assert.equal(await hashPackageClosure(dirs.packagesDir, entry.name, "project"), entry.integrity);
+    assert.notEqual(
       await hashPackageTree(installedPackageDir(dirs.packagesDir, entry.name), { scope: "project", name: entry.name }),
       entry.integrity,
     );

@@ -6,7 +6,7 @@
 // in @arnilo/prism pins that side); these assertions pin that no body builder turns
 // the payload back into an empty or absent field.
 //
-// Shared seam: `serializeToolResultJson` feeds the chat bodies of openai, alibaba,
+// Shared seam: `serializeToolResultText` feeds the chat bodies of openai, alibaba,
 // deepseek, kimi moonshot, neuralwatt, opencode-go, the Anthropic body, and the
 // Responses API; `googleGenerateContentBody` and `toAiSdkPrompt` read the block
 // directly. It used to live in the retired provider-family workspace, deleted in
@@ -14,10 +14,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { EMPTY_TOOL_RESULT_TEXT } from "@arnilo/prism";
-import { serializeOpenAIChatMessage, serializeToolResultJson } from "@arnilo/prism/provider-kit";
-import { toAiSdkPrompt } from "@arnilo/prism-provider-ai-sdk";
-import { anthropicMessagesBody } from "@arnilo/prism-provider-anthropic";
-import { googleGenerateContentBody } from "@arnilo/prism-provider-google";
+import { anthropicMessagesBody, openAIChatBody, serializeOpenAIChatMessage, serializeToolResultText } from "@arnilo/prism/provider-kit";
+import { HYPER_CHAT_ROUTE } from "@arnilo/prism-provider-hyper";
+import { OPENCODE_GO_CHAT_ROUTE } from "@arnilo/prism-provider-opencode-go";
 
 const model = { provider: "mock", model: "demo" };
 const toolMessage = {
@@ -27,28 +26,31 @@ const toolMessage = {
 const request = { model, messages: [toolMessage] };
 
 describe("empty tool result on provider wires", () => {
-  it("serialize_tool_result_json_emits_the_sentinel_not_null", () => {
-    assert.equal(serializeToolResultJson(toolMessage), JSON.stringify(EMPTY_TOOL_RESULT_TEXT));
-    assert.equal(serializeOpenAIChatMessage(toolMessage).content, JSON.stringify(EMPTY_TOOL_RESULT_TEXT));
+  it("serialize_tool_result_text_emits_the_sentinel_not_null", () => {
+    assert.equal(serializeToolResultText(toolMessage), EMPTY_TOOL_RESULT_TEXT);
+    assert.equal(serializeOpenAIChatMessage(toolMessage).content, EMPTY_TOOL_RESULT_TEXT);
   });
 
   it("anthropic_messages_body_carries_the_sentinel", async () => {
-    const body = await anthropicMessagesBody(request);
+    const hooks = {
+      applyCacheControl: (req) => req.messages,
+      preserveThinking: () => false,
+      stripOwnedCompat: () => ({}),
+      thinking: () => undefined,
+      effort: () => undefined,
+    };
+    const body = await anthropicMessagesBody(request, hooks);
     const content = body.messages[0]?.content;
-    assert.equal(content?.[0]?.content, JSON.stringify(EMPTY_TOOL_RESULT_TEXT));
+    assert.equal(content?.[0]?.content, EMPTY_TOOL_RESULT_TEXT);
   });
 
-  it("google_function_response_carries_the_sentinel", async () => {
-    const body = await googleGenerateContentBody(request);
-    const parts = body.contents[0]?.parts;
-    const functionResponse = parts?.[0]?.functionResponse;
-    assert.deepEqual(functionResponse?.response, { result: EMPTY_TOOL_RESULT_TEXT });
+  it("hyper_chat_body_carries_the_sentinel", async () => {
+    const body = openAIChatBody(request, HYPER_CHAT_ROUTE.codec);
+    assert.equal(body.messages[0]?.content, EMPTY_TOOL_RESULT_TEXT);
   });
 
-  it("ai_sdk_tool_result_output_is_not_empty", () => {
-    const prompt = toAiSdkPrompt([toolMessage], model);
-    const output = prompt[0]?.content[0]?.output;
-    assert.equal(output?.value, EMPTY_TOOL_RESULT_TEXT);
-    assert.notEqual(output?.value, "");
+  it("opencode_go_chat_body_carries_the_sentinel", () => {
+    const body = openAIChatBody(request, OPENCODE_GO_CHAT_ROUTE.codec);
+    assert.equal(body.messages[0]?.content, EMPTY_TOOL_RESULT_TEXT);
   });
 });

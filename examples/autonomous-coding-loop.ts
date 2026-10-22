@@ -1,19 +1,20 @@
 import { type Agent, type RunResult, type ModelProvider, createAgent, createMemorySessionStore, providerDone, providerTextDelta, providerToolCall, type SessionStore, toolCallContent } from "@arnilo/prism";
-import { createAskUserDecisionResumeValidator, suspendAskUserDecision } from "@arnilo/prism-coding-tools/agent";
-import { createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
+import {
+  ASK_USER_DECISION_SUSPEND_REASON,
+  askUserDecisionResumeSchema,
+  resolveAskUserDecisionAnswer,
+  toAskUserDecisionSuspendData,
+} from "@arnilo/prism-tools-coding";
 import {
   createMemoryWorkflowCheckpoints,
   defineWorkflow,
   functionNode,
   resumeWorkflow,
   runWorkflow,
-} from "@arnilo/prism-core/runtime/workflows";
-import {
-  buildObservationalMemoryProjection,
-  createObservationalMemory,
-  createObservationalMemoryCompactor,
-  recallObservationalMemory,
-} from "@arnilo/prism-memory/compaction/observational-memory";
+  suspend,
+} from "@arnilo/prism-workflows";
+import memoryObservational from "@arnilo/prism-memory-observational";
+import { providerPackage } from "@arnilo/prism/provider-kit";
 import { mockProvider } from "@arnilo/prism/testing";
 
 /**
@@ -22,7 +23,7 @@ import { mockProvider } from "@arnilo/prism/testing";
  * bounded iterate-until-done loop. Mock providers only — no network, no creds.
  *
  * Docs mapped in comments: workflows.md (Bounded iterate-until-done host-loop
- * pattern), supervisors.md, coding-agent-tools.md,
+ * pattern), coding-agent-tools.md,
  * compaction-observational-memory.md, compaction-and-retry.md.
  */
 
@@ -32,6 +33,27 @@ const MAX_TOKENS = 8_000;
 const MAX_TOOL_CALLS = 8;
 const WORKSPACE_SESSION_ID = "workspace";
 const OWNERSHIP = { tenantId: "demo", userId: "coder" } as const;
+
+/** The durable human gate (plan 154 Task 5): a workflow `suspend` carrying the answer schema. */
+const GATE_DATA = toAskUserDecisionSuspendData({
+  question: "Continue the coding loop?",
+  selectionMode: "single",
+  allowCustom: false,
+  options: [
+    {
+      id: "continue",
+      label: "Continue",
+      pros: ["Keeps momentum", "Uses remaining budget", "Human still in the loop"],
+      cons: ["More tool calls", "More tokens", "Another compaction"],
+    },
+    {
+      id: "stop",
+      label: "Stop",
+      pros: ["Saves budget", "Stops now", "No extra child runs"],
+      cons: ["Goal unfinished", "Drops context", "Needs a later restart"],
+    },
+  ],
+});
 
 export class BudgetExhaustedError extends Error {
   readonly code = "budget_exhausted";
@@ -49,25 +71,33 @@ interface LoopInput {
   readonly neverPass?: boolean;
 }
 
-function memoryWorkerProvider(store: SessionStore, sessionId: string): ModelProvider {
+/**
+ * The observer worker. The package's prompt lists the eligible entries it was shown as `[id]`, so the
+ * mock records one observation per entry it can see, exactly like a real worker would.
+ */
+function memoryWorkerProvider(): ModelProvider {
   return {
     id: "memory",
-    async *generate() {
-      const entries = (await store.list(sessionId)).filter((entry) => entry.kind === "message" && entry.message?.role === "user");
-      yield providerToolCall(
-        toolCallContent("c1", "record_observation", {
-          content: "Coding loop recorded a child or parent turn.",
-          relevance: "high",
-          sourceEntryIds: entries.map((entry) => entry.id),
-        }),
-      );
+    async *generate(request) {
+      const alreadyCalled = request.messages.some((message) => message.role === "tool");
+      const prompt = request.messages.find((message) => message.role === "user")?.content[0];
+      const text = prompt?.type === "text" ? prompt.text : "";
+      const sourceEntryIds = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1] as string);
+      if (!alreadyCalled && sourceEntryIds.length > 0) {
+        yield providerToolCall(
+          toolCallContent("c1", "record_observation", {
+            content: "Coding loop recorded a child or parent turn.",
+            relevance: "high",
+            sourceEntryIds,
+          }),
+        );
+      }
       yield providerDone();
     },
   };
 }
 
 async function childAgent(model: string, text: string, store: SessionStore): Promise<Agent> {
-  // docs/supervisors.md — factory must return Agent, not a session (BUG-2)
   return await createAgent({
     model: { provider: "mock", model },
     packages: [mockProvider([[providerTextDelta(text), providerDone()]])],
@@ -81,32 +111,48 @@ function requireSucceeded(result: RunResult, childId: string): string {
 }
 
 async function buildRuntime(store: SessionStore) {
-  const supervisor = createSupervisor({
-    ownership: OWNERSHIP,
-    limits: { maxTokens: MAX_TOKENS, maxToolCalls: MAX_TOOL_CALLS, timeoutMs: 15_000 },
-    children: {
-      implementer: { createAgent: async () => await childAgent("implementer", "patched parser.ts", store) },
-      validator: { createAgent: async () => await childAgent("validator", "named checks ran", store) },
+  // Each child is a bounded one-shot agent (limits only narrow); `@arnilo/prism-delegate` is the model-facing form.
+  const children: Record<string, () => Promise<Agent>> = {
+    implementer: async () => await childAgent("implementer", "patched parser.ts", store),
+    validator: async () => await childAgent("validator", "named checks ran", store),
+  };
+  const supervisor = {
+    async delegate(request: { childId: string; input: string }): Promise<RunResult> {
+      const agent = await children[request.childId]!();
+      const childSession = await agent.session();
+      try {
+        return await childSession.run(request.input, { limits: { maxTotalTokens: MAX_TOKENS, maxToolCalls: MAX_TOOL_CALLS, maxWallTimeMs: 15_000 } });
+      } finally {
+        await childSession.close();
+        await agent.dispose();
+      }
     },
-  });
+  };
   const parent = await createAgent({
     model: { provider: "mock", model: "parent" },
-    packages: [mockProvider([[providerTextDelta("ack"), providerDone()]])],
-    // Roadmap §2.5: the compactor is the `compaction` slot, not a per-call `compact({ strategy })`.
-    slots: { store, compaction: createObservationalMemoryCompactor({ keepRecentEntries: 4 }) },
+    packages: [
+      mockProvider([[providerTextDelta("ack"), providerDone()]]),
+      // The observer's model resolves through the agent's own providers, like any other model call.
+      providerPackage("memory", [memoryWorkerProvider()]),
+      // Roadmap §2.11: the package owns the toggle, the ledger, the context block, the recall tool,
+      // the om* commands, and the `compaction` slot. It is off until `om` turns it on for a session.
+      memoryObservational({
+        observer: { model: { provider: "memory", model: "worker" }, messageTokens: 1 },
+        // One observation pass per message, then a high reflector gate so reflection and dropping stay
+        // out of the demo; the dropper's budget must be at least the reflector's gate.
+        reflector: { model: { provider: "memory", model: "worker" }, observationTokens: 999_999 },
+        dropper: { targetTokens: 999_999 },
+        context: { recentMessages: 4, compactAfterTokens: 999_999 },
+        worker: { maxTurns: 1 },
+      }),
+    ],
+    slots: { store },
   });
   const leafId = (await store.list(WORKSPACE_SESSION_ID)).at(-1)?.id;
-  // Recreate from the store leaf so OM entries survive the simulated restart.
+  // Recreate from the store leaf so the ledger survives the simulated restart.
   const session = await parent.session({ id: WORKSPACE_SESSION_ID, ...(leafId ? { leafId } : {}), create: true });
-  const om = createObservationalMemory({
-    observation: { provider: memoryWorkerProvider(store, WORKSPACE_SESSION_ID), model: { provider: "mock", model: "memory" } },
-    context: { recentMessages: 4, compactAfterTokens: 999_999 },
-    overrides: { observation: { messageTokens: 1 }, reflection: { observationTokens: 999_999 }, agentMaxTurns: 1 },
-  });
-  const attached = om.attach(session, {
-    appendEntry: (entry, options) => store.append(entry, options),
-    sessionModel: { provider: "mock", model: "parent" },
-  });
+  // The 0.12 `om.attach()` call is now the package's per-session toggle.
+  await parent.commands.run("om", {}, { session });
 
   const workflow = defineWorkflow({
     id: "autonomous-coding-loop",
@@ -126,10 +172,9 @@ async function buildRuntime(store: SessionStore) {
           const result = await supervisor.delegate({
             childId: "implementer",
             input: `${input.goal} task ${input.iteration}`,
-            limits: { maxTokens: 4_000, maxToolCalls: 4 },
           });
           // untrusted child text: record only, never eval
-          await attached.session.run(`implementer: ${requireSucceeded(result, "implementer")}`);
+          await session.run(`implementer: ${requireSucceeded(result, "implementer")}`);
           return { patch: result.text };
         },
       }),
@@ -140,10 +185,9 @@ async function buildRuntime(store: SessionStore) {
           const result = await supervisor.delegate({
             childId: "validator",
             input: String((ctx.upstream.execute as { patch?: string } | undefined)?.patch ?? ""),
-            limits: { maxTokens: 4_000, maxToolCalls: 4 },
           });
           const summary = requireSucceeded(result, "validator");
-          await attached.session.run(`validator: ${summary}`);
+          await session.run(`validator: ${summary}`);
           const passed = input.neverPass !== true && input.iteration >= 1;
           return { summary, passed };
         },
@@ -158,23 +202,10 @@ async function buildRuntime(store: SessionStore) {
             if (selectedId !== "continue") throw new Error(`gate rejected ${selectedId}`);
             return { continued: true, selectedId };
           }
-          return suspendAskUserDecision({
-            question: "Continue the coding loop?",
-            selectionMode: "single",
-            options: [
-              {
-                id: "continue",
-                label: "Continue",
-                pros: ["Keeps momentum", "Uses remaining budget", "Human still in the loop"],
-                cons: ["More tool calls", "More tokens", "Another compaction"],
-              },
-              {
-                id: "stop",
-                label: "Stop",
-                pros: ["Saves budget", "Stops now", "No extra child runs"],
-                cons: ["Goal unfinished", "Drops context", "Needs a later restart"],
-              },
-            ],
+          return suspend({
+            reason: ASK_USER_DECISION_SUSPEND_REASON,
+            data: GATE_DATA,
+            resumeSchema: askUserDecisionResumeSchema(GATE_DATA),
           });
         },
       }),
@@ -182,7 +213,7 @@ async function buildRuntime(store: SessionStore) {
         execute: async () => {
           // docs/compaction-and-retry.md — compact at task boundary, never during a run.
           // Roadmap §2.5: the implementation is the agent's `compaction` slot, so this only sizes it.
-          await attached.session.compact();
+          await session.compact();
           return { compacted: true };
         },
       }),
@@ -195,7 +226,7 @@ async function buildRuntime(store: SessionStore) {
     ],
   });
 
-  return { workflow, attached, supervisor };
+  return { workflow, session, parent, supervisor };
 }
 
 function validationPassed(outputs: Readonly<Record<string, unknown>>): boolean {
@@ -208,7 +239,7 @@ export async function demo() {
   const store = createMemorySessionStore();
 
   let runtime = await buildRuntime(store);
-  await runtime.attached.session.run(`goal: ${GOAL}`);
+  await runtime.session.run(`goal: ${GOAL}`);
 
   const suspended = await runWorkflow(runtime.workflow, { goal: GOAL, iteration: 0 } satisfies LoopInput, {
     checkpoints,
@@ -224,7 +255,13 @@ export async function demo() {
     {
       checkpoints,
       ownership: OWNERSHIP,
-      validateResume: createAskUserDecisionResumeValidator(),
+      validateResume: (input) => {
+        if (input.value === undefined || input.value === null) return;
+        resolveAskUserDecisionAnswer(input.value as never, GATE_DATA.selectionMode, GATE_DATA.options, {
+          allowCustom: GATE_DATA.allowCustom,
+          maxCustomTextBytes: 2_048,
+        });
+      },
       resume: {
         decision: "approve",
         expectedVersion: suspended.version,
@@ -247,10 +284,11 @@ export async function demo() {
   }
   if (!validationPassed(last.outputs)) throw new Error("happy path should pass before budget");
 
-  const entries = await runtime.attached.session.entries();
-  const projection = buildObservationalMemoryProjection(entries);
-  const observationId = projection.observations[0]?.id ?? projection.full.observations[0]?.id;
-  const recall = observationId ? recallObservationalMemory(entries, observationId) : { found: false as const };
+  // The ledger lives in package state, so the host reads it through the package's own commands.
+  const status = (await runtime.parent.commands.run("om:status", {}, { session: runtime.session })) as {
+    observations?: { recorded?: number; active?: number };
+  };
+  const view = (await runtime.parent.commands.run("om:view", {}, { session: runtime.session })) as { text?: string };
 
   let budgetExhaustedIterations = 0;
   try {
@@ -275,8 +313,9 @@ export async function demo() {
     suspendedRestart: true,
     budgetExhaustedIterations,
     budgetExhausted: budgetExhaustedIterations === MAX_ITERATIONS,
-    recallFound: recall.found,
-    observationCount: projection.full.observations.length,
+    omViewRendered: (view.text ?? "").length > 0,
+    observationCount: status.observations?.recorded ?? 0,
+    activeObservations: status.observations?.active ?? 0,
     childModels: ["implementer", "validator"],
     validatorSummary: (last.outputs.validate as { summary?: string } | undefined)?.summary,
   };

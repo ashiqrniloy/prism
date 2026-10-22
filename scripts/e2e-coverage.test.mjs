@@ -3,11 +3,12 @@
  * package trees in tmp dirs + one real-repo baseline leg. Registered in the
  * root `bun run test` chain.
  */
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { computeCoverage, discoverSurfaces, REPO_ROOT } from "./e2e-coverage-gate.mjs";
 
 /** Fixture repo: root pkg with one file surface, workspace pkg with one dir
@@ -139,8 +140,17 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   // minus the six remaining family subpaths plan 152 Task 6 retired, plus the five cloud/adapter packages;
   // plus the plan 152 Task 7 credentials-keyring package; minus the retired `./testing/session-store-conformance`
   // subpath (plan 153 Task 2, folded into `./testing`).
-  assert.equal(summary.total, 108);
-  assert.equal(summary.pending, 0, "Tasks 4-9 will re-introduce pending entries as planned suites register");
+  // plan 174 Task 2: minus agent-event-source-conformance, node/config, node/settings, node/agent-definitions.
+  // plan 174 Task 4: minus testing/persistence-schema and testing/feedback (moved to store-codecs).
+  // plan 174 Task 7: minus the three retired 0.12 workspaces (coding-tools, agent-sdk, acp-agent).
+  // plan 176 Task 3: regenerated for the 0.13 grouped workspace set (retired family keys dropped, 64
+  // dangling suite paths pruned). Four surfaces have no covering suite yet and stay pending in baseline mode.
+  // plan 182 Task 2: minus the 17 retired provider packages (91 -> 74).
+  // plan 188.1 Task 4: plus `@arnilo/prism-memory-core/fabric` (74 -> 75); the WIP 0.13 package
+  // restructuring had already added one more surface without updating this count, so the live
+  // total is 76.
+  assert.equal(summary.total, 76);
+  assert.equal(summary.pending, 4, "four surfaces are unannotated after the 0.13 regeneration");
 });
 
 test("real repo: every annotated suite file exists on disk", () => {

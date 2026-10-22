@@ -13,7 +13,7 @@ prism add @arnilo/prism-store-jsonl
 // manifest entry, with every config field that has no default
 {
   "name": "@arnilo/prism-store-jsonl",
-  "version": "^0.12.1",
+  "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": { "dir": ".prism/sessions" }
 }
@@ -94,3 +94,5 @@ await session.close();
 const summary = await createJsonlSessionStore({ dir: ".prism/sessions" }).listSessions({ limit: 10 });
 console.log(summary.items[0]?.sessionId, summary.items[0]?.leafId);
 ```
+
+- Session links (`SessionOptions.parent` / `actor`) are the first line of a session's file, so `listSessions` finds them in its two-line sample and filters on `agentId`, `parentSessionId`, `workflowRunId`, `delegationId`, `actorKind`, and `actorAgent` without a full read; `searchSessions` applies the same filters through the kernel's linear matcher. Files written before links existed list with absent links.

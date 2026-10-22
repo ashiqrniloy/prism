@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore, HookError, loadSuspendedRunEntry, providerDone, providerTextDelta, resumeAgentRun, type Decision, type RunController, type SessionEntry, toolCallContent } from "../index.js";
+import { askEveryTool, createAgent,  createMemorySessionStore, loadSuspendedRunEntry, providerDone, providerTextDelta,  type Decision, type RunController, type SessionEntry, toolCallContent } from "../index.js";
 import { echoTool, loopConformance, textProvider , mockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -66,7 +66,7 @@ describe("hook invariants", () => {
     assert.ok(fired.has("tool.call"), "tool.call did not fire");
     assert.deepEqual(order, ["tool.call", "tool.execute"]);
     // The loop can reach a tool only through `executeTools`, and a model only through `turn`.
-    assert.deepEqual(controllerKeys, ["append", "emit", "end", "executeTools", "input", "limits", "session", "signal", "turn"]);
+    assert.deepEqual(controllerKeys, ["append", "ask", "emit", "end", "executeTools", "input", "limits", "model", "observe", "session", "signal", "state", "steers", "turn"]);
   });
 
   it("deny_wins_over_allow_and_ask", async () => {
@@ -171,7 +171,6 @@ describe("hook invariants", () => {
   });
 
   it("a_suspended_run_survives_a_process_restart_through_the_store_slot", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const store = createMemorySessionStore();
     const model = { provider: "mock", model: "demo" } as const;
     const tools = [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write", value: "done" }) }];
@@ -198,9 +197,7 @@ describe("hook invariants", () => {
       tools: { add: tools },
       hooks: askEveryTool(),
     });
-    const suspended = await (await first.session({ id: "invariant-restart", create: true })).run("go", {
-      runState: { checkpoints, definitionRevision: "1" },
-    });
+    const suspended = await (await first.session({ id: "invariant-restart", create: true })).run("go");
     assert.equal(suspended.status, "suspended");
 
     // A new process reads the suspended_run entry from the store alone.
@@ -219,13 +216,10 @@ describe("hook invariants", () => {
       approvalId: pending.approvalId,
       outcome: "allow_once",
     }));
-    const resumed = await resumeAgentRun(
-      fresh,
-      { runId: entry.runId, sessionId: "invariant-restart" },
-      { expectedVersion: entry.state.version ?? 1, decisions },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "completed");
+    const resumed = await fresh.session({ id: "invariant-restart" });
+    for await (const _event of resumed.resume(decisions)) {
+      // drain: the last event settles the run
+    }
   });
 
   it("context_build_mutations_never_reach_the_store", async () => {
@@ -250,5 +244,41 @@ describe("hook invariants", () => {
       false,
       "a context.build mutation reached the store",
     );
+  });
+
+  it("execute_tools_origin_stamps_tool_events_from_a_custom_loop", async () => {
+    const origin = { kind: "external" as const, agent: "ext", agentId: "a1", depth: 0 };
+    let results: readonly { toolCallId: string }[] = [];
+    const payloadOrigins: unknown[] = [];
+    const { events } = await loopConformance({
+      loop: {
+        name: "origin-loop",
+        revision: "1",
+        async run(run: RunController) {
+          const turn = await run.turn();
+          results = await run.executeTools(turn.toolCalls, { origin });
+          await run.turn();
+        },
+      },
+      hooks: (hooks) => {
+        hooks.on("tool.call", (payload) => {
+          payloadOrigins.push(payload.origin);
+          return undefined;
+        });
+      },
+    });
+    assert.deepEqual(payloadOrigins, [origin]);
+    assert.equal(results.length, 1);
+    for (const type of ["tool.started", "tool.completed"]) {
+      const event = events.find((candidate) => candidate.type === type);
+      assert.deepEqual(event?.origin, origin, type);
+    }
+  });
+
+  it("default_loop_tool_events_carry_no_origin", async () => {
+    const { events } = await loopConformance();
+    const started = events.find((event) => event.type === "tool.started");
+    assert.ok(started);
+    assert.equal("origin" in started, false);
   });
 });

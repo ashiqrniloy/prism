@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createAgent, definePackage, type ModelProvider, PackageLoadError, providerDone, providerError, providerTextDelta } from "../index.js";
+import {
+  createAgent,
+  definePackage,
+  type ModelProvider,
+  PackageLoadError,
+  providerDone,
+  providerError,
+  providerTextDelta,
+} from "../index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
 function named(id: string, seen: string[]): ModelProvider {
@@ -15,14 +23,27 @@ function named(id: string, seen: string[]): ModelProvider {
 }
 
 const provide = (name: string, ...providers: ModelProvider[]) =>
-  definePackage<any>({ name, version: "1.0.0", setup: ({ providers: api }: any) => providers.forEach((p) => api.register(p)) });
+  definePackage<any>({
+    name,
+    version: "1.0.0",
+    requires: { api: 1 },
+    setup: ({ providers: api }: any) => {
+      providers.forEach((p) => {
+        api.register(p);
+      });
+    },
+  });
 
 describe("per-agent provider cache", () => {
   it("run_model_switch_uses_the_runs_provider_not_a_fixed_one", async () => {
     const seen: string[] = [];
     const agent = await createAgent({
       model: "alpha/one",
-      packages: [provide("@acme/beta", named("beta", seen)), provide("@acme/gamma", named("gamma", seen)), providerPackage("test-provider", [named("alpha", seen)])],
+      packages: [
+        provide("@acme/beta", named("beta", seen)),
+        provide("@acme/gamma", named("gamma", seen)),
+        providerPackage("test-provider", [named("alpha", seen)]),
+      ],
     });
     const session = await agent.session();
     await session.run("a");
@@ -33,7 +54,12 @@ describe("per-agent provider cache", () => {
   });
 
   it("package_registering_openai_compatible_fails_closed", async () => {
-    const taken = provide("@acme/squatter", { id: "openai-compatible", async *generate() { yield providerDone(); } });
+    const taken = provide("@acme/squatter", {
+      id: "openai-compatible",
+      async *generate() {
+        yield providerDone();
+      },
+    });
     await assert.rejects(createAgent({ model: "x/y", packages: [taken, providerPackage("test-provider", [named("x", [])])] }), (error) => {
       assert.ok(error instanceof PackageLoadError);
       assert.equal(error.code, "provider_conflict");
@@ -55,12 +81,13 @@ describe("per-agent provider cache", () => {
         yield { type: "done", stopReason: "stop" as never };
       },
     };
-    let types: string[] = [];
+    const types: string[] = [];
     let stop: unknown;
     let finished: Promise<void> = Promise.resolve();
     const user = definePackage<any>({
       name: "@acme/client",
       version: "1.0.0",
+      requires: { api: 1 },
       capabilities: ["models"],
       setup: ({ models, hooks }: any) => {
         const client = models.client();

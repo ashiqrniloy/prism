@@ -1,0 +1,21 @@
+DEFAULT_MAX_REPAIRS	export declare const DEFAULT_MAX_REPAIRS = 1
+DEFAULT_MAX_SOURCES	export declare const DEFAULT_MAX_SOURCES = 500
+DEFAULT_REDACT_QUERY	export declare const DEFAULT_REDACT_QUERY: readonly ["key", "token", "api_key", "access_token", "sig", "signature"]
+DEFAULT_SOURCE_TOOLS	export declare const DEFAULT_SOURCE_TOOLS: readonly ["web_fetch", "web_search", "web_extract", "browser_observe", "rag_search"]
+EMPTY_STATE	export declare const EMPTY_STATE: ResearchState
+HARD_MAX_REPAIRS	export declare const HARD_MAX_REPAIRS = 3
+HARD_MAX_SOURCES	export declare const HARD_MAX_SOURCES = 5000
+NO_CITATIONS	export declare const NO_CITATIONS = "<no-citations>"
+citationDecision	export declare function citationDecision(state: ResearchState, unresolved: readonly string[], maxRepairs: number):
+citationIds	export declare function citationIds(text: string): readonly string[]
+citeMarker	export declare function citeMarker(id: string): string
+default	export default
+lastAssistantText	export declare function lastAssistantText(history: readonly Message[]): string
+ledgerLine	export declare function ledgerLine(added: readonly LedgerEntry[]): string
+recordSources	export declare function recordSources(state: ResearchState, hits: readonly SourceHit[], meta:
+redactUrl	export declare function redactUrl(raw: string, redactQuery: readonly string[]): string | undefined
+sourcesIn	export declare function sourcesIn(tool: string, value: unknown, redactQuery: readonly string[]): readonly SourceHit[]
+toolsResearch	export declare function toolsResearch(config?: ToolsResearchConfig): PackageInstance
+toolsResearchConfigSchema	export declare const toolsResearchConfigSchema: JsonSchema
+unresolvedIds	export declare function unresolvedIds(ids: readonly string[], entries: readonly LedgerEntry[], requireCitations: boolean): readonly string[]
+withLedgerLine	export declare function withLedgerLine(result: ToolResult, line: string): ToolResult

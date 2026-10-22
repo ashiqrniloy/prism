@@ -75,7 +75,7 @@ function resolveFile(file) {
     "packages/document-reader/": "packages/prism-work/src/document-reader/",
     "packages/prism-openapi-tools/": "packages/prism-coding-tools/src/openapi/",
     "packages/computer-use-linux/": "packages/prism-coding-tools/src/computer-use-linux/",
-    "packages/prism-dev/": "packages/prism-coding-tools/src/dev/",
+    "packages/prism-dev/": "packages/hosts/devtools/src/",
     "packages/prism-caveman/": "packages/prism-coding-tools/src/caveman/",
     "packages/prism-ponytail/": "packages/prism-coding-tools/src/ponytail/",
     "packages/prism-impeccable/": "packages/prism-coding-tools/src/impeccable/",

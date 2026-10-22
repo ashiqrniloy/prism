@@ -1,0 +1,962 @@
+{
+  "ceiling": 90000000,
+  "priorReservation": 10358372,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "results": [],
+  "jobs": [
+    {
+      "id": "rerun-longmemeval-s-full",
+      "family": "rerun",
+      "suite": "longmemeval-s",
+      "config": "full",
+      "ablate": []
+    },
+    {
+      "id": "rerun-locomo-full",
+      "family": "rerun",
+      "suite": "locomo",
+      "config": "full",
+      "ablate": []
+    },
+    {
+      "id": "rerun-memoryagentbench-cr-full",
+      "family": "rerun",
+      "suite": "memoryagentbench-cr",
+      "config": "full",
+      "ablate": []
+    },
+    {
+      "id": "rerun-lifecycle-full",
+      "family": "rerun",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": []
+    },
+    {
+      "id": "rerun-longmemeval-s-fabric",
+      "family": "rerun",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": []
+    },
+    {
+      "id": "rerun-memoryagentbench-cr-fabric",
+      "family": "rerun",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": []
+    },
+    {
+      "id": "rerun-lifecycle-fabric",
+      "family": "rerun",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": []
+    },
+    {
+      "id": "rerun-longmemeval-s-fabric-agentic",
+      "family": "rerun",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": []
+    },
+    {
+      "id": "rerun-memoryagentbench-cr-fabric-agentic",
+      "family": "rerun",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric-agentic",
+      "ablate": []
+    },
+    {
+      "id": "rerun-lifecycle-fabric-agentic",
+      "family": "rerun",
+      "suite": "lifecycle",
+      "config": "fabric-agentic",
+      "ablate": []
+    },
+    {
+      "id": "rerun-longmemeval-s-om",
+      "family": "rerun",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": []
+    },
+    {
+      "id": "rerun-memoryagentbench-cr-om",
+      "family": "rerun",
+      "suite": "memoryagentbench-cr",
+      "config": "om",
+      "ablate": []
+    },
+    {
+      "id": "rerun-lifecycle-om",
+      "family": "rerun",
+      "suite": "lifecycle",
+      "config": "om",
+      "ablate": []
+    },
+    {
+      "id": "rerun-longmemeval-s-om_fabric",
+      "family": "rerun",
+      "suite": "longmemeval-s",
+      "config": "om+fabric",
+      "ablate": []
+    },
+    {
+      "id": "rerun-memoryagentbench-cr-om_fabric",
+      "family": "rerun",
+      "suite": "memoryagentbench-cr",
+      "config": "om+fabric",
+      "ablate": []
+    },
+    {
+      "id": "rerun-lifecycle-om_fabric",
+      "family": "rerun",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": []
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-knowledge-update",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": [],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update-fabric.stem=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.stem=off"
+      ],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update-fabric.keyWeight=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.keyWeight=off"
+      ],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update-fabric.multiQuery=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.multiQuery=off"
+      ],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update-fabric.snippetBudget=600",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=600"
+      ],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update-fabric.snippetBudget=1200",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=1200"
+      ],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-knowledge-update-fabric.snippetBudget=2400",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=2400"
+      ],
+      "ability": "knowledge-update",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-multi-session",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": [],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session-fabric.stem=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.stem=off"
+      ],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session-fabric.keyWeight=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.keyWeight=off"
+      ],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session-fabric.multiQuery=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.multiQuery=off"
+      ],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session-fabric.snippetBudget=600",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=600"
+      ],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session-fabric.snippetBudget=1200",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=1200"
+      ],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-multi-session-fabric.snippetBudget=2400",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=2400"
+      ],
+      "ability": "multi-session",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-single-session-assistant",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": [],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant-fabric.stem=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.stem=off"
+      ],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant-fabric.keyWeight=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.keyWeight=off"
+      ],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant-fabric.multiQuery=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.multiQuery=off"
+      ],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant-fabric.snippetBudget=600",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=600"
+      ],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant-fabric.snippetBudget=1200",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=1200"
+      ],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-assistant-fabric.snippetBudget=2400",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=2400"
+      ],
+      "ability": "single-session-assistant",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-single-session-preference",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": [],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference-fabric.stem=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.stem=off"
+      ],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference-fabric.keyWeight=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.keyWeight=off"
+      ],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference-fabric.multiQuery=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.multiQuery=off"
+      ],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference-fabric.snippetBudget=600",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=600"
+      ],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference-fabric.snippetBudget=1200",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=1200"
+      ],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-preference-fabric.snippetBudget=2400",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=2400"
+      ],
+      "ability": "single-session-preference",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-single-session-user",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": [],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user-fabric.stem=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.stem=off"
+      ],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user-fabric.keyWeight=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.keyWeight=off"
+      ],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user-fabric.multiQuery=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.multiQuery=off"
+      ],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user-fabric.snippetBudget=600",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=600"
+      ],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user-fabric.snippetBudget=1200",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=1200"
+      ],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-single-session-user-fabric.snippetBudget=2400",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=2400"
+      ],
+      "ability": "single-session-user",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-temporal-reasoning",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "ablate": [],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning-fabric.stem=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.stem=off"
+      ],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning-fabric.keyWeight=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.keyWeight=off"
+      ],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning-fabric.multiQuery=off",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.multiQuery=off"
+      ],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning-fabric.snippetBudget=600",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=600"
+      ],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning-fabric.snippetBudget=1200",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=1200"
+      ],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "retrieval-longmemeval-s-fabric-agentic-temporal-reasoning-fabric.snippetBudget=2400",
+      "family": "retrieval",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "ablate": [
+        "fabric.snippetBudget=2400"
+      ],
+      "ability": "temporal-reasoning",
+      "subset": "targeted"
+    },
+    {
+      "id": "om-longmemeval-s-om-om.dates=off",
+      "family": "om",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": [
+        "om.dates=off"
+      ]
+    },
+    {
+      "id": "om-longmemeval-s-om-om.replaceOnReflect=off",
+      "family": "om",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": [
+        "om.replaceOnReflect=off"
+      ]
+    },
+    {
+      "id": "om-longmemeval-s-om-om.taskState=off",
+      "family": "om",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": [
+        "om.taskState=off"
+      ]
+    },
+    {
+      "id": "om-longmemeval-s-om-om.reflector.observationTokens=5000-om.dropper.targetTokens=5000",
+      "family": "om",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": [
+        "om.reflector.observationTokens=5000",
+        "om.dropper.targetTokens=5000"
+      ]
+    },
+    {
+      "id": "om-longmemeval-s-om-om.reflector.observationTokens=10000-om.dropper.targetTokens=10000",
+      "family": "om",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": [
+        "om.reflector.observationTokens=10000",
+        "om.dropper.targetTokens=10000"
+      ]
+    },
+    {
+      "id": "om-longmemeval-s-om-om.reflector.observationTokens=20000-om.dropper.targetTokens=20000",
+      "family": "om",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "ablate": [
+        "om.reflector.observationTokens=20000",
+        "om.dropper.targetTokens=20000"
+      ]
+    },
+    {
+      "id": "fabric-memoryagentbench-cr-fabric-fabric.inject=off",
+      "family": "fabric",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": [
+        "fabric.inject=off"
+      ]
+    },
+    {
+      "id": "fabric-memoryagentbench-cr-fabric-fabric.inject.query=user",
+      "family": "fabric",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": [
+        "fabric.inject.query=user"
+      ]
+    },
+    {
+      "id": "fabric-memoryagentbench-cr-fabric-fabric.inject=off-fabric.directory=off",
+      "family": "fabric",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": [
+        "fabric.inject=off",
+        "fabric.directory=off"
+      ]
+    },
+    {
+      "id": "fabric-memoryagentbench-cr-fabric-fabric.inject=off-fabric.directory=__",
+      "family": "fabric",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": [
+        "fabric.inject=off",
+        "fabric.directory={}"
+      ]
+    },
+    {
+      "id": "fabric-memoryagentbench-cr-fabric-fabric.crossSourceDedup=off",
+      "family": "fabric",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": [
+        "fabric.crossSourceDedup=off"
+      ]
+    },
+    {
+      "id": "fabric-memoryagentbench-cr-fabric-fabric.consolidate.decider=model",
+      "family": "fabric",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "ablate": [
+        "fabric.consolidate.decider=model"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-fabric.promote=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-lifecycle.clock=calendar",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "lifecycle.clock=calendar"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-lifecycle.decayMode=exponential",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "lifecycle.decayMode=exponential"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-lifecycle.capacity=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "lifecycle.capacity=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-lifecycle.merge=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "lifecycle.merge=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-fabric.cues=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.cues=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-fabric.core=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.core=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.explicit=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.explicit=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.correction=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.correction=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.outcome=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.outcome=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.recurrence=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.recurrence=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.generality=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.generality=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.ephemerality=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.ephemerality=off"
+      ]
+    },
+    {
+      "id": "lifecycle-lifecycle-om_fabric-promote.signal.derivability=off",
+      "family": "lifecycle",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "promote.signal.derivability=off"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=2-fabric.lifecycle.capacity.agent.notes=2-fabric.lifecycle.capacity.project.notes=2",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=2",
+        "fabric.lifecycle.capacity.agent.notes=2",
+        "fabric.lifecycle.capacity.project.notes=2"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=5-fabric.lifecycle.capacity.agent.notes=5-fabric.lifecycle.capacity.project.notes=5",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=5",
+        "fabric.lifecycle.capacity.agent.notes=5",
+        "fabric.lifecycle.capacity.project.notes=5"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=10-fabric.lifecycle.capacity.agent.notes=10-fabric.lifecycle.capacity.project.notes=10",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=10",
+        "fabric.lifecycle.capacity.agent.notes=10",
+        "fabric.lifecycle.capacity.project.notes=10"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=20-fabric.lifecycle.capacity.agent.notes=20-fabric.lifecycle.capacity.project.notes=20",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=20",
+        "fabric.lifecycle.capacity.agent.notes=20",
+        "fabric.lifecycle.capacity.project.notes=20"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=50-fabric.lifecycle.capacity.agent.notes=50-fabric.lifecycle.capacity.project.notes=50",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=50",
+        "fabric.lifecycle.capacity.agent.notes=50",
+        "fabric.lifecycle.capacity.project.notes=50"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=100-fabric.lifecycle.capacity.agent.notes=100-fabric.lifecycle.capacity.project.notes=100",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=100",
+        "fabric.lifecycle.capacity.agent.notes=100",
+        "fabric.lifecycle.capacity.project.notes=100"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=200-fabric.lifecycle.capacity.agent.notes=200-fabric.lifecycle.capacity.project.notes=200",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=200",
+        "fabric.lifecycle.capacity.agent.notes=200",
+        "fabric.lifecycle.capacity.project.notes=200"
+      ]
+    },
+    {
+      "id": "capacity-lifecycle-om_fabric-fabric.lifecycle.capacity.user.notes=500-fabric.lifecycle.capacity.agent.notes=500-fabric.lifecycle.capacity.project.notes=500",
+      "family": "capacity",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [
+        "fabric.lifecycle.capacity.user.notes=500",
+        "fabric.lifecycle.capacity.agent.notes=500",
+        "fabric.lifecycle.capacity.project.notes=500"
+      ]
+    }
+  ],
+  "unavailable": [
+    {
+      "arm": "fabric-hybrid",
+      "reason": "No live embeddings model configured; hash embeddings are not a substitute."
+    }
+  ],
+  "limitations": [
+    "OM 5k/10k dropper arms jointly lower the reflector to satisfy the shipped invariant; these are coupled arms.",
+    "LoCoMo is comparison-only; only the full-context arm is measured."
+  ]
+}

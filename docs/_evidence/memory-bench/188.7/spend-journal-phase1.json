@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-56eda6e25bd2",
+  "manifestHash": "56eda6e25bd21155caf9b6f6b3d7d2bb8dd26d14788377f6c40787acfbad0527",
+  "ceiling": 106000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-21T18:47:53.916Z",
+  "updatedAt": "2026-10-21T19:05:12.032Z",
+  "status": "active",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept-lme-full@1",
+      "jobId": "accept-lme-full",
+      "manifestHash": "56eda6e25bd21155caf9b6f6b3d7d2bb8dd26d14788377f6c40787acfbad0527",
+      "status": "failed",
+      "output": "docs/_evidence/memory-bench/188.7/final-accept-lme-full.json",
+      "maxInputTokens": 19000000,
+      "reservedInputTokens": 19500000,
+      "startedAt": "2026-10-21T18:47:53.918Z",
+      "confirmedInputTokens": 358267,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-21T18:52:43.630Z"
+    },
+    {
+      "attemptId": "accept-lme-full@2",
+      "jobId": "accept-lme-full",
+      "manifestHash": "56eda6e25bd21155caf9b6f6b3d7d2bb8dd26d14788377f6c40787acfbad0527",
+      "status": "failed",
+      "output": "docs/_evidence/memory-bench/188.7/final-accept-lme-full.json",
+      "maxInputTokens": 19000000,
+      "reservedInputTokens": 19500000,
+      "startedAt": "2026-10-21T18:52:54.605Z",
+      "confirmedInputTokens": 718058,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 1497,
+      "endedAt": "2026-10-21T18:58:26.068Z"
+    },
+    {
+      "attemptId": "accept-lme-om@1",
+      "jobId": "accept-lme-om",
+      "manifestHash": "56eda6e25bd21155caf9b6f6b3d7d2bb8dd26d14788377f6c40787acfbad0527",
+      "status": "abandoned",
+      "output": "docs/_evidence/memory-bench/188.7/final-accept-lme-om.json",
+      "maxInputTokens": 12000000,
+      "reservedInputTokens": 12500000,
+      "startedAt": "2026-10-21T18:58:26.103Z",
+      "confirmedInputTokens": 12500000,
+      "usageComplete": false,
+      "endedAt": "2026-10-21T19:01:37.290Z"
+    },
+    {
+      "attemptId": "accept-lme-full@3",
+      "jobId": "accept-lme-full",
+      "manifestHash": "56eda6e25bd21155caf9b6f6b3d7d2bb8dd26d14788377f6c40787acfbad0527",
+      "status": "abandoned",
+      "output": "docs/_evidence/memory-bench/188.7/final-accept-lme-full-2.json",
+      "maxInputTokens": 19000000,
+      "reservedInputTokens": 19500000,
+      "startedAt": "2026-10-21T19:01:40.844Z",
+      "confirmedInputTokens": 1157285,
+      "usageComplete": true,
+      "endedAt": "2026-10-21T19:05:12.032Z"
+    }
+  ]
+}

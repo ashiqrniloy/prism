@@ -1,0 +1,64 @@
+{
+  "name": "@arnilo/prism-ag-ui",
+  "version": "0.13.0",
+  "description": "Host library serving a Prism Agent over AG-UI SSE, with protocol adapters and a reference renderer.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./renderer": "./src/renderer/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ag-ui/core": "0.0.59"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism-mcp": "^0.13.0"
+  },
+  "devDependencies": {
+    "@ag-ui/client": "0.0.59",
+    "@arnilo/prism-acp": "file:../acp",
+    "@arnilo/prism-mcp": "file:../../integrations/mcp",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/hosts/ag-ui"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/hosts/ag-ui#readme",
+  "keywords": [
+    "prism",
+    "ag-ui",
+    "agent",
+    "interoperability",
+    "host"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependenciesMeta": {
+    "@arnilo/prism-mcp": {
+      "optional": true
+    }
+  }
+}

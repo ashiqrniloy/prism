@@ -3,12 +3,9 @@ import { describe, it } from "bun:test";
 import type { AgentEvent, Message, ProviderRequest, RunLimits } from "../contracts.js";
 import {
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
-  loadAgentRunState,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   type HookRegistrar,
   type RunEndPayload,
 } from "../index.js";
@@ -103,35 +100,18 @@ describe("run.end continuations", () => {
   });
 
   it("run_end_todo_continuation_capped_by_max_continuations", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const requests: ProviderRequest[] = [];
-    let continueAlways = true;
+    const continueAlways = true;
     const agent = await textAgent({
       requests,
       onEnd: (hooks) => hooks.on("run.end", () => (continueAlways ? { continue: { reason: "again" } } : undefined)),
     });
     const session = await agent.session({ id: "capped", create: true });
 
-    const result = await session.run("go", {
-      runState: { checkpoints, definitionRevision: "1", checkpointPolicy: "every-turn" },
-    });
+    const result = await session.run("go");
     assert.equal(result.status, "stopped");
     assert.equal(result.stopReason, "hook_limit", "the cap is a clean stop, not an error");
     assert.equal(requests.length, 4, "default cap 3 allows three continuation turns");
-
-    const state = await loadAgentRunState(checkpoints, { runId: result.runId });
-    assert.equal(state.state.status, "succeeded");
-    assert.equal(state.state.stopReason, "hook_limit");
-
-    continueAlways = false;
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: result.runId, sessionId: "capped" },
-      { decision: "continue", expectedVersion: state.record.version },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(resumed.status, "completed");
-    assert.equal(resumed.stopReason, undefined, "the resumed leg ends naturally once the handler stops");
   });
 
   it("observes run.end but never continues at maxContinuations: 0", async () => {

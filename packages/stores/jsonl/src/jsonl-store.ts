@@ -1,6 +1,7 @@
 import { appendFile, mkdir, open, readdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  assertSessionLinkFilter,
   createMemorySessionStore,
   DEFAULT_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_LIST_LIMIT,
@@ -15,9 +16,11 @@ import {
   SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
   type SessionEntry,
-  type SessionListQuery,
   type SessionStore,
   type SessionSummary,
+  sessionLinksMatch,
+  sessionLinksOf,
+  summaryLinkFields,
 } from "@arnilo/prism";
 
 const IDEMPOTENCY_SEEN_MAX = 4_096;
@@ -213,6 +216,7 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
       messageCount,
       ...(title !== undefined ? { title } : {}),
       ...(workspaceRoot !== undefined ? { metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } } : {}),
+      ...summaryLinkFields(sessionLinksOf(edges.entries)),
     };
   }
 
@@ -320,10 +324,13 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
       }
       const order = query.order ?? "desc";
       if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
+      assertSessionLinkFilter(query);
       const summaries: SessionSummary[] = [];
       for (const sessionId of await sessionIds()) {
         const edges = await readEdges(sessionId);
         if (!edges || !edgesInScope(edges.entries, query)) continue;
+        // The links entry is a session's first line, so the sampled edges carry it without a full read.
+        if (!sessionLinksMatch(sessionLinksOf(edges.entries), query)) continue;
         summaries.push(summarizeEdges(sessionId, edges));
       }
       const key = (summary: SessionSummary) => `${summary.updatedAt ?? ""}\t${summary.sessionId}`;
@@ -365,9 +372,7 @@ export function createJsonlSessionStore(options: JsonlSessionStoreOptions): Sess
  */
 function edgesInScope(entries: readonly SessionEntry[], scope: OwnershipScope | undefined): boolean {
   if (!scope) return true;
-  return entries.every((entry) =>
-    OWNERSHIP_KEYS.every((key) => scope[key] === undefined || entry.metadata?.[key] === scope[key]),
-  );
+  return entries.every((entry) => OWNERSHIP_KEYS.every((key) => scope[key] === undefined || entry.metadata?.[key] === scope[key]));
 }
 
 function parseEdge(text: string): SessionEntry | undefined {
@@ -376,12 +381,7 @@ function parseEdge(text: string): SessionEntry | undefined {
 }
 
 /** Read one end of a file: the first line or the last line, in chunks, counting the bytes read. */
-async function readEdge(
-  path: string,
-  size: number,
-  end: "first" | "last",
-  countBytes: (bytes: number) => void,
-): Promise<string> {
+async function readEdge(path: string, size: number, end: "first" | "last", countBytes: (bytes: number) => void): Promise<string> {
   const handle = await open(path, "r");
   let total = 0;
   try {
@@ -433,10 +433,7 @@ function lastLineStart(buffer: Buffer): number | undefined {
 }
 
 /** Read a JSONL session file and return both valid entries and per-line parse errors. */
-export async function readJsonlSessionEntries(
-  path: string,
-  onBytesRead?: (bytes: number) => void,
-): Promise<SessionEntryReadResult> {
+export async function readJsonlSessionEntries(path: string, onBytesRead?: (bytes: number) => void): Promise<SessionEntryReadResult> {
   let text: string;
   try {
     text = await readFile(path, "utf8");
@@ -539,6 +536,11 @@ function validateSessionEntry(
     case "package_state":
       if (!isPlainObject(entry.data)) {
         return { ok: false, error: { line: lineNumber, message: "Invalid package_state entry: expected object data", raw } };
+      }
+      break;
+    case "external_state":
+      if (!isPlainObject(entry.data)) {
+        return { ok: false, error: { line: lineNumber, message: "Invalid external_state entry: expected object data", raw } };
       }
       break;
     case "suspended_run":

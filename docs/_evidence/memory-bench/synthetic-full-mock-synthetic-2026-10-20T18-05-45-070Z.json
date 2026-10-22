@@ -1,0 +1,421 @@
+{
+  "schemaVersion": 1,
+  "usageSource": "mock",
+  "concurrency": 1,
+  "generation": null,
+  "generatedAt": "2026-10-20T18:05:45.070Z",
+  "suite": "synthetic",
+  "subset": "base",
+  "ability": null,
+  "config": "full",
+  "embeddings": null,
+  "provider": "mock",
+  "model": "synthetic",
+  "judge": "mock/synthetic-judge",
+  "dataset": {
+    "license": "original synthetic fixture"
+  },
+  "maxInputTokens": 15000000,
+  "memoryConfig": {
+    "observational": null,
+    "fabric": null
+  },
+  "inputTokens": 6694,
+  "cacheReadTokens": 0,
+  "outputTokens": 0,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "judge": 12,
+    "gatewayRetries": 0
+  },
+  "turns": 14,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "results": [
+    {
+      "id": "synthetic:knowledge-update",
+      "ability": "knowledge-update",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:multi-session",
+      "ability": "multi-session",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:single-session-assistant",
+      "ability": "single-session-assistant",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:single-session-preference",
+      "ability": "single-session-preference",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:single-session-user",
+      "ability": "single-session-user",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:temporal-reasoning",
+      "ability": "temporal-reasoning",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:abstention",
+      "ability": "abstention",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:single-hop",
+      "ability": "single-hop",
+      "correct": true,
+      "f1": 1,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:multi-hop",
+      "ability": "multi-hop",
+      "correct": true,
+      "f1": 1,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:temporal",
+      "ability": "temporal",
+      "correct": true,
+      "f1": 1,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:open-domain",
+      "ability": "open-domain",
+      "correct": true,
+      "f1": 1,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:adversarial",
+      "ability": "adversarial",
+      "correct": true,
+      "f1": 1,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:conflict-resolution-single-hop",
+      "ability": "conflict-resolution-single-hop",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    },
+    {
+      "id": "synthetic:conflict-resolution-multi-hop",
+      "ability": "conflict-resolution-multi-hop",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 0,
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "inputCap": 125952,
+  "selectedQuestionIds": [
+    "synthetic:knowledge-update",
+    "synthetic:multi-session",
+    "synthetic:single-session-assistant",
+    "synthetic:single-session-preference",
+    "synthetic:single-session-user",
+    "synthetic:temporal-reasoning",
+    "synthetic:abstention",
+    "synthetic:single-hop",
+    "synthetic:multi-hop",
+    "synthetic:temporal",
+    "synthetic:open-domain",
+    "synthetic:adversarial",
+    "synthetic:conflict-resolution-single-hop",
+    "synthetic:conflict-resolution-multi-hop"
+  ],
+  "abilities": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "multi-session": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "single-session-assistant": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "single-session-preference": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "single-session-user": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "temporal-reasoning": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "abstention": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "single-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "temporal": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "open-domain": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "adversarial": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "conflict-resolution-single-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    }
+  },
+  "abilityGroups": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "multi-session": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "information-extraction": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "temporal-reasoning": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "abstention": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "single-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "temporal": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "open-domain": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "adversarial": {
+      "n": 1,
+      "correct": 1,
+      "f1": 1,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "conflict-resolution-single-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "conflict-resolution-multi-hop": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    }
+  },
+  "cacheReadRatio": 0,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "retrievalRecallAtK": null
+}

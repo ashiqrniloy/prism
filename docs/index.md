@@ -1,267 +1,132 @@
 # Prism Docs
 
-Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, tools, credentials, storage, and behavior; Prism supplies contracts, registries, events, and replaceable runtime primitives.
+Prism is a TypeScript agent SDK for the Bun runtime. `@arnilo/prism` is a small kernel (agent, session, loop, hooks, slots, and packages); every capability is a native package a host lists in `createAgent({ packages })`. Start with the [README](../README.md).
 
-## Current line (0.12.1)
+## Current line (0.13.0)
 
-- **Prism Code release support**: `capToolResultSummary` (the tool-result fold) is exported from `@arnilo/prism` and consumed by the published `@arnilo/prism-code@0.4.0` app, so 0.12.1 is the floor for that install. The other 0.12.1 changes are additive exports only.
-- **Resilient MCP plane**: `assembleMcpPlane` connects every allowed server in parallel with a per-server `connectTimeoutMs` (default 15 s), returns per-server `connected`/`failed`/`disabled` status instead of aborting startup on the first failure, enforces the host `mcp.allow` list, redacts header values from status errors, and exposes `reconnect(serverId)` plus `close()` while keeping the agent's tool registry in sync. HTTP specs accept `headers` and OAuth `auth`.
-- **Memory-store branch reads**: the built-in memory session store implements `readBranchPath`. A snapshot walks the branch once and clones each kept entry once.
-- **JSONL parse cache**: a read after an in-process append reuses the parsed file when size and mtime match. A same-size write inside one filesystem timestamp tick can still look unchanged.
-- **Idempotency window**: memory and JSONL stores remember the latest 4,096 dedup keys. Replaying an older key appends a new entry instead of rejecting the write.
-- **In-memory lease sweep**: expired lease rows are deleted once the map reaches 1,024. A swept key starts its next fence at 1. A released key still in the map keeps `fencingToken + 1`. SQLite and Postgres adapters still keep the counter on the row.
-- **Shared text token estimate**: plain-text estimates use one `ceil(length/4)` helper. Message and entry estimates are unchanged.
-- **System One decision models**: `@arnilo/prism-provider-typesafe` (hosted Jev) and `@arnilo/prism-provider-laya` (self-hosted `laya-serve`) answer only `options.structuredOutput` requests, one `POST /v1/systemone` round trip, no tools or streaming; `@arnilo/prism/provider-kit` adds a typed host call that preserves raw probabilities, confidence, the responding checkpoint, usage, and timing.
-- **14 publishable packages** at current **0.12.1** lockstep, with the migration guide reachable from the release section below — inventory below.
+The kernel pages and package READMEs below describe the 0.13.0 contract. The current **0.13.0** line is the root `@arnilo/prism` kernel and every native package.
 
-### Carried from the 0.10.0 line
+## Kernel
 
-- **Attention budget axes**: `attentionCompiler.trigger` accepts one axis, a predicate, or an any-of array (`input_ratio`, `run_input_ratio`, `token_floor`), and `durable: true` keeps the fold ledger and sticky frontier in the checkpoint across a resume.
-- **Turn traces and exhaustion attribution**: `provider_turn_finished` carries a closed `stopReason`, a `budgets` snapshot, the effective tool menu (`count` / `idsHash`), and provider cache counts; `agent_finished` carries the run outcome, and the execution timeline adds per-turn stop reasons plus `exhaustion`.
-- **Cache-stable disclosure**: late-expanding context (skill bodies, deferred schemas, loaded references) lands at the request tail instead of rewriting the prefix, cache read/write telemetry rides usage records, and `runPrefixStabilityConformance` asserts a shared-prefix floor against a host's own assembly.
-- **Per-turn tool narrowing**: a host callback receives the turn and the run grant and returns the effective subset; out-of-grant names are dropped and reported as `tool_narrowing_clamped`.
-- **Usage estimation and the context meter**: labeled token estimates for providers that report no usage (reported usage always wins, and `usageEstimation: "off"` restores zero-for-no-usage), plus `session.contextMeter()` for cap and spend ratios.
-- **Guardrail packs**: four built-in restrictive packs (`coding-standard`, `destructive-commands`, `validation-respect`, `secrets-hygiene`) compiled onto existing tool stages, each with a trajectory scorer.
-- **Background child agents**: session-lifetime children with milestone or streamed reports, narrowed budget shares, and rate-coalesced child events.
-- **Checkpoint sidecar metadata**: a redacted ≤4 KiB map attached to every checkpoint record without charging `maxStateBytes`, plus restore hooks that revert external layers before a resume claims the run.
-- **Bounded session search**: `store.searchSessions(query)` over workspace/time/provider/label/kind/ownership filters, indexed at append time (SQLite FTS5, Postgres `tsvector`) with a bounded linear matcher for JSONL and memory stores.
-- **Deterministic turns**: the `beforeProviderTurn` middleware hook answers a turn from host data with no provider request, recorded as `deterministic` on the timeline and in usage.
-- **Shared work scopes**: explicitly granted observational-memory scopes shared across sessions, deny-by-default, audited, and revocable at the next read; session-private scopes stay the default.
-- **Retrieval revocation and local reranking**: deletion and revocation propagate through derived vector/wiki artifacts under bounded walks, and an in-process cross-encoder reranker ships with no declared inference dependency.
-- **Live-stream terminal semantics**: one `isTerminalAgentEventType` predicate (`agent_finished` / `agent_denied` / `error`) shared by every source, so a limit death delivers `run_limit_exceeded` → `budget_exhausted` → `error` before a stream or replay ends.
-### Carried from the 0.8.0 line
+- [Agent](agent.md): `createAgent`, sessions, runs, `RunResult`, the principal contract, and the frozen agent surface.
+- [Agent adapters](agent-adapters.md): Mapping a vendor coding agent onto the driver contract, with worked adapters and the terms-of-use caveats.
+- [Driver kit](drivers.md): The driver kit: how an external-agent package fills the loop slot, gates vendor calls through `run.ask`, and bridges tools.
+- [Events](events.md): The dotted `AgentEvent` catalog: every event name, its payload, and when it fires.
+- [Hooks](hooks.md): The hook model: observe, transform, decide, and around hooks, the full catalog, ordering, and error policy.
+- [Host port](host.md): `HostPort` and `HostUi`: how a host answers asks, secrets, and logs, and how a run suspends without one.
+- [Loop](loop.md): The loop slot, `RunController` primitives, `defaultLoop`, suspend and resume, and writing a custom loop.
+- [Manifest](manifest.md): `@arnilo/prism/manifest`: the package manifest format, scopes, merge, install, remove, integrity, and project trust.
+- [Models](models.md): `ModelRef`, the provider registry, the built-in provider, model resolution, and credentials refs.
+- [Packages](packages.md): `definePackage` and `PackageAPI`: loading, `requires`, config, contributions, state, services, and `disable`.
+- [Provider kit](provider-kit.md): `@arnilo/prism/provider-kit`: building a provider, request policies, structured output, thinking, and conformance.
+- [Release and provenance](release.md): The Bun-only release pipeline, gates, attestation, and how a consumer verifies a published package.
+- [Slots](slots.md): The four slots (loop, compaction, store, credentials), their contracts, and the kernel defaults.
+- [Testing](testing.md): `@arnilo/prism/testing`: the mock provider, scripted host, and package and loop conformance helpers.
+- [Tools](tools.md): Tool registration, effects annotations, allow/deny filtering, per-run narrowing, and bounded results.
 
-- **Messaging channels**: `@arnilo/prism-channels` transport-neutral runtime with deny-by-default authorization, owned bindings, one-use durable approvals, official Telegram (private DMs, opt-in granted groups/topics, drafts, bounded media/voice, opt-in notices) and experimental pinned signal-cli Signal.
-- **Connected apps**: identity-bound MCP server sessions admit host-selected transports and register prefixed tools; Google Workspace and Microsoft 365 HTTP adapters live under `@arnilo/prism-work/connectors`.
-- **Work family**: `@arnilo/prism-work` replaces `@arnilo/prism-office` — connectors, documents, sheets, diagrams, document-reader, sandbox, and vendored office skills. No pre-1.0 shim.
-- **Durable long runs**: turn-boundary checkpoints with host-only `decision: "continue"`, turn-stop policy, frozen run-bundle snapshots, claim-grounding guardrail, and typed provider failure classes.
-- **Honesty surfaces**: Postgres release evidence is this-commit, channel lease release stays held until the store acknowledges, and observational-memory workers ignore non-tool events on purpose.
+## Packages
 
-### Carried from the 0.7.0 line
+Each native package documents itself in its README; the kernel pages above cover the contracts they build on.
 
-- **Traps closed**: ACP MCP destination matching uses WHATWG origin plus path-segment subtree rules, the ACP launcher requires a real provider (mock mode is explicit), and the model-router facade refuses governance it cannot enforce (`ERR_PRISM_MODEL_ROUTER_ASYNC_REQUIRED` / `_ASYNC_STATE`).
-- **Governed host surfaces**: validated personal/business compositions, governed provider invocation with aggregate task/tenant accounting, durable business-action drafts with editable approvals, Docker process sessions and coherent workspace recovery, Drive knowledge synchronization, snapshot/reconnect with one hosted sandbox, fair worker admission, cross-layer memory lineage with correction/revocation, evidence-backed citations with import-fidelity/OCR reports, and monotonic per-run tool narrowing.
-- **Evidence cockpit**: execution timeline, workflow graph, trajectory/outcome evals (scenarios, trials, manifests), cockpit aggregations, and workflow OpenTelemetry spans — with the cross-package journey matrix behind them.
-- **Attention Compiler**: opt-in per-turn gate that mutates the transcript only after a ratio of the model input cap, with sticky thinking/tool stubs and a host-programmable compaction trigger.
-- **Memory Fabric**: opt-in typed notes (fact/procedure/file/working/episode) with links, validity windows, and time/tool recall over the working, semantic, and observational-memory engines.
-- **Work-scope memory index**: host-named work scopes (`open`/`bind`/`project`/`enter`) project the observational outline; unscoped attach keeps the 0.6.0 dropper.
-- **Host-owned subagent spawn**: `spawn_agent` over the host supervisor (allow-listed children, narrowed identity, redacted results), bounded async spawn with `wait_agent`/`cancel_agent`, opt-in per-child worktree isolation, and redacted `subagent_started`/`subagent_stopped` lifecycle events.
-- **Native Bedrock Converse and governed realtime voice**: `createBedrockConverseProvider` adds a native `Converse`/`ConverseStream` route next to the OpenAI-compatible one, with no AWS SDK dependency; realtime voice sessions stay host-governed.
+### Providers
 
-### Carried from the 0.6.0 line
+- [`@arnilo/prism-provider-hyper`](../packages/providers/hyper/README.md): Charm Hyper provider package for Prism.
+- [`@arnilo/prism-provider-laya`](../packages/providers/laya/README.md): Laya provider package for Prism.
+- [`@arnilo/prism-provider-opencode-go`](../packages/providers/opencode-go/README.md): OpenCode Go provider package for Prism.
+- [`@arnilo/prism-provider-typesafe`](../packages/providers/typesafe/README.md): TypeSafe Jev provider package for Prism.
 
-- **Node 22 floor (retired in 0.12.0)**: the 0.6.0 line set `engines.node` to `>=22` in all eleven then-publishable packages, turned the `node20-compat` CI leg into `node22-compat`, and moved `@types/node` to `^22.20.0` (plan 071; Node 20 is upstream EOL since 2026-04-30). The 0.12.0 line declares `engines.bun >=1.4.2` instead — see the [Node retirement record](history/retire-node-runtime.md).
-- **Folded 0.5.7 content**: the 0.5.7 cut was never published — its durable-tool-round and strict-tool-result fixes, host knobs, peer/options truth, and dependency floors ship in 0.6.0 (migration guide below).
-- **Release-truth gates**: one forward-claim version-literal gate (manifests, internal ranges, lockfile, version constant, index banner, workflow tags), a workflow-liveness gate (every script target and action reference resolves, actions SHA-pinned), and a load-tolerant startup budget ratio (plan 071).
-- **Self-describing coverage failures**: a failing coverage child prints its redacted output tail and records `status`/`exitCode`/`tail` on its artifact row (plan 071).
-- **Durable tool rounds**: concurrent tool dispatch persists successful sibling results — plus synthetic errors for failed and never-dispatched calls — before a round fails or aborts, so no `tool_use` is left unanswered (plan 070).
-- **Strict-provider tool results**: a content-less `ToolResult` folds to the non-empty `(tool completed with no output)` payload instead of an empty one (plan 070).
-- **Host-tunable knobs**: context-budget `tokenEstimator`, `snapshotCacheTtlMs`, memory-session search caps, `SsrfPolicy.allowedCidrs`, and browser `idleRunTtlMs` (plan 070).
-- **Peer and options truth**: the optional peer-dependency matrix and the configuration options index (both linked below) cover every third-party peer and public option surface (plan 070).
-- **Trusted extension activation**: `activateKernel(kernel)` returns ready-to-spread `AgentConfig` contributions; CLI loads allow-listed `--extension` packages (plan 069).
-- **Wiki ingest**: `/wiki-ingest` + `ingestWikiSource` stage text/file/image/PDF (and URLs via a host `fetchUrl` hook) into `raw/ingest/` with an OKF filing brief (plan 069).
-- **Run limits**: HARD caps are request/response bytes only; policy axes accept `null` (plan 067).
-- **Tool-result fold**: content-only `ToolResult`s fold into `tool_result.result` (0.5.3).
-- **Stream token coalesce**: adjacent text/thinking deltas merge on persist (0.5.2).
-- **Provider request construction**: kernel session/cache/thinking defaults; hosts overlay (0.5.1).
+### Tools
 
-## Public contracts
+- [`@arnilo/prism-tools-browser`](../packages/tools/browser/README.md): First-party browser automation tools for Prism.
+- [`@arnilo/prism-tools-coding`](../packages/tools/coding/README.md): First-party coding tools for Prism.
+- [`@arnilo/prism-tools-computer-use`](../packages/tools/computer-use/README.md): First-party Linux desktop tools for Prism.
+- [`@arnilo/prism-tools-openapi`](../packages/tools/openapi/README.md): First-party OpenAPI tools for Prism.
+- [`@arnilo/prism-tools-research`](../packages/tools/research/README.md): Research skills, a per-session source ledger, a read-only cite tool, and a bounded run.end citation check.
+- [`@arnilo/prism-tools-web`](../packages/tools/web/README.md): First-party web search and fetch tools for Prism.
+- [`@arnilo/prism-tools-work`](../packages/tools/work/README.md): First-party work tools for Prism.
 
-- [Public contracts](public-contracts.md): canonical message, agent, tool, store, resource, credential, and event shapes.
-- [Coding tools, sandboxing, and personas](coding-tools.md): `@arnilo/prism-coding-tools` family subpaths — agent, security, openapi, computer-use-linux, dev, personas.
-- [Core runtime, sessions, and governance](core.md): `@arnilo/prism-core` family subpaths — runtime, sessions, governance, credentials, enterprise, validation.
-- [Configuration options index](options-index.md): every public `*Options`/`*Limits`/`*Config` surface mapped to the doc page that owns its fields.
+### Memory and context
 
-## Identity and governance
+- [`@arnilo/prism-memory-compaction`](../packages/memory/compaction/README.md): LLM summarization compaction for Prism.
+- [`@arnilo/prism-memory-core`](../packages/memory/core/README.md): Shared memory contracts, stores, lineage, propagation, and scoring used by the Prism memory packages.
+- [`@arnilo/prism-memory-fabric`](../packages/memory/fabric/README.md): Working, semantic, and scoped memory for Prism agents.
+- [`@arnilo/prism-memory-observational`](../packages/memory/observational/README.md): Observational memory for Prism.
+- [`@arnilo/prism-memory-rag`](../packages/memory/rag/README.md): Retrieval-augmented generation for Prism agents.
+- [`@arnilo/prism-memory-wiki`](../packages/memory/wiki/README.md): The LLM Wiki knowledge compiler for Prism agents.
+- [`@arnilo/prism-context-engineering`](../packages/context/engineering/README.md): Context engineering for Prism agents.
+- [`@arnilo/prism-context-files`](../packages/context/files/README.md): AGENTS.md and SYSTEM.md context layers for Prism agents, trust-gated and cached per session.
 
-- [Agent identity](agent-identity.md): host-verified `Principal`/`AgentIdentity`, delegation narrowing, redacted telemetry refs, optional OIDC verifier.
-- [Policy and audit](policy-and-audit.md): allow/deny/modify/approval decision ledger, multi-party approvals, OPA evaluator — evidence refs only.
-- [Signed, hash-chained audit export](audit-export.md): tenant-scoped signed, hash-chained audit batches with independent verification; no key storage.
-- [Model routing](model-routing.md): allow-list/residency/budget/rate/circuit/fallback governance with atomic budget reservation, aggregate task/tenant accounting across all paid work, and fail-closed synchronous invocation boundaries.
+### Stores
 
-## Agent/session runtime
+- [`@arnilo/prism-store-codecs`](../packages/stores/codecs/README.md): Row codecs, cursors, ownership-scope helpers, and SQL query semantics shared by the Prism SQL session-store adapters.
+- [`@arnilo/prism-store-jsonl`](../packages/stores/jsonl/README.md): One JSONL file per session under a directory, as a durable single-process session store for Prism agents.
+- [`@arnilo/prism-store-postgres`](../packages/stores/postgres/README.md): The PostgreSQL session store (leases, lifecycle, event source, and schema migrations included) as the Prism store slot, over `pg`.
+- [`@arnilo/prism-store-sqlite`](../packages/stores/sqlite/README.md): The SQLite session store (leases, lifecycle, and schema migrations included) as the Prism store slot, over bun:sqlite.
 
-- [Agent SDK](agent-sdk.md): assembles a configurable agentic runtime (tool planes, skills, instructions, a resilient MCP plane with per-server status/reconnect, hooks) over the harness with every plane optional or replaceable.
-- [Agent/session runtime](agent-session-runtime.md): create agents/sessions, `run`/`prompt`/`steer`/`stream`, durable resume, batch approvals, per-run `toolNames` narrowing.
-- [Durable runs](durable-runs.md): turn-boundary `checkpointPolicy: "every-turn"` checkpoints and `decision: "continue"` crash recovery for long runs.
-- [Agent definitions](agent-definitions.md): declarative `AgentDefinition` resolution and `AGENT.md` bundle discovery, fail-closed activation.
-- [Agent loops](agent-loops.md): replaceable loops with `limits.maxToolRounds` budgets and durable revision/restore hooks.
-- [Hooks](hooks.md): the hook model — stop hooks with bounded continuation, session/compaction boundary seams, and the Claude Code / Codex event map plus the `hooks.json` adapter.
-- [Guardrails](guardrails.md): typed fail-closed input/output/tool checks with redacted decision records, plus an opt-in tool-input field-evidence verifier for proposal-shaped calls.
-- [Agent events](agent-events.md): `turn_started`/`tool_call_delta` stream plus durable page/resume sources for reconnect.
-- [Observability](observability.md): OTel GenAI span hierarchy, workflow spans, cockpit aggregations, RAG span tree, bounded trace linkage, exporter isolation.
-- [Execution timeline](execution-timeline.md): execution timeline projection and cockpit summaries for host dashboards and trajectory evals.
-- [Operations runbook](operations.md): high-availability fencing, fair worker admission, operator queue/cancel/reconcile; never unlock leases manually.
-- [Disaster recovery and backup operations](disaster-recovery.md): backup/restore/PITR/DR-drill runbook with guarded commands and RPO/RTO.
-- [Data classification and field-level redaction](data-classification.md): `applyFieldPolicy` allow/redact/tokenize/deny walks with fail-closed protected default.
-- [Evaluations](evaluations.md): trajectory/outcome scorers over execution timelines, citation-integrity invariant, workflow experiments, scenarios, repeated trials that re-run items with sample standard error, failure injection, two-field and release manifests, deterministic bounded trace/model-judge scoring.
-- [Runs and usage ledger](runs-and-usage.md): durable run/event/usage persistence, aggregate task accounting across paid work, host-raisable `RunLimits`, `CostCatalog` pricing.
-- [Performance limits](performance.md): frozen 0.1.0 capacity envelopes and network-free benchmark evidence — the performance contract.
-- [Structured output](structured-output.md): `Artifact*` seam plus provider-native `StructuredOutputOptions` for capable models.
+### Policy and credentials
 
-## Compaction/session memory
+- [`@arnilo/prism-approval`](../packages/policy/approval/README.md): Approval modes over tool effects and roots, as one tool.call gate.
+- [`@arnilo/prism-governance`](../packages/policy/governance/README.md): Policy engine, OPA adapter, approvals, and audit ledger as one tool.call/run.input/model.request gate.
+- [`@arnilo/prism-guardrail-packs`](../packages/policy/guardrail-packs/README.md): Built-in guardrail packs.
+- [`@arnilo/prism-model-router`](../packages/policy/model-router/README.md): Native model router package.
+- [`@arnilo/prism-credentials-keyring`](../packages/credentials/keyring/README.md): Credentials slot package for Prism.
 
-- [Compaction and retry policies](compaction-and-retry.md): host-replaceable summarize/retry policies with deprecated-option removals fail closed.
-- [LLM compaction subpath](compaction-llm.md): provider-backed summarization with finite `model.parameters.maxTokens` and coding handoff strategy.
-- [Observational memory compaction subpath](compaction-observational-memory.md): source-backed observations/reflections, coverage-safe admission that retains or defers on unobserved prefixes, an optional work-scope index for the current working set, and exact-id recall; `invalidatedIds` withhold derived injection.
-- [Working and semantic memory](working-and-semantic-memory.md): working-memory store, semantic recall, pgvector path, consent lifecycle, lineage invalidation, parent-child share grants.
-- [Memory fabric](memory-fabric.md): opt-in typed notes (fact/procedure/file/working/episode) with validity windows over the existing vector and working stores.
-- [Scoped memory](scoped-memory.md): workspace-scope guard, gated writes, promotion ladder, decay reads, audit mirror (`@arnilo/prism-memory/scoped`).
-- [Scoped agent memory design concept](scoped-agent-memory.md): workspace-scoped persistent memory — gated writes, promotion ladder, decay-based reads; case study and research basis.
-- [Session stores](session-stores.md): `SessionStore` contract, memory snapshots, bounded SQL branch-path pages, and session search — start here for persistence.
-- [Conversations](conversations.md): durable user-scoped threads with versioned metadata and legal-hold-aware deletion.
-- [Work artifacts and review](work-artifacts-and-review.md): artifact attach, revision compare, evidence-bound citations, approve/reject, expiring delivery links.
-- [Session stores and branching](session-stores-and-branching.md): branch-semantics helper reference (compatibility stub for session-stores.md).
-- [Database persistence](database-persistence.md): production persistence contracts, ownership-scoped entry reads/branch cursors, monotonic session activity, migrations, retention, and conformance harnesses.
-- [SQLite persistence](sqlite-persistence.md): built-in `bun:sqlite` adapter with filtered/paginated entry queries, bounded branch-path pages, monotonic session activity, FTS search, and verified migrations.
-- [PostgreSQL persistence](postgres-persistence.md): optional pooled `pg` adapter with filtered/paginated entry queries, bounded branch-path pages, monotonic session activity, advisory-locked migrations, and live conformance.
-- [Enterprise PostgreSQL state](enterprise-postgres-state.md): durable governance/router/ERP state, outbox/inbox messaging, approval records.
-- [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
-- [Node JSONL session store](node-jsonl-session-store.md): development-only JSONL adapter, single-process, no cross-process safety.
+### Integrations
 
-## Provider and model connection
+- [`@arnilo/prism-delegate`](../packages/integrations/delegate/README.md): Sub-agents as a tool.
+- [`@arnilo/prism-hooks-json`](../packages/integrations/hooks-json/README.md): Claude/Codex hooks.json compiled onto Prism hooks.
+- [`@arnilo/prism-mcp`](../packages/integrations/mcp/README.md): Bounded MCP tools, resources, prompts, client callbacks, and authorized Streamable HTTP sessions.
+- [`@arnilo/prism-observability`](../packages/integrations/observability/README.md): OpenTelemetry spans and metrics over the Prism agent event catalog.
+- [`@arnilo/prism-workflows`](../packages/integrations/workflows/README.md): Typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions.
 
-- [Embeddings](embeddings.md): provider-neutral batch `embedMany` contract with OpenAI-compatible and DashScope adapters.
-- [Speech and transcription](speech.md): provider-neutral synthesis and transcription contracts with streaming variants.
-- [Realtime voice](realtime-voice.md): governed OpenAI Realtime bridge into host tool dispatch, barge-in, reconnect, and transcript privacy.
-- [Image generation and editing](image-generation.md): provider-neutral generate/edit contract with OpenAI and DashScope adapters.
-- [Moderation](moderation.md): provider-neutral classification under a neutral vocabulary; scores are provider output.
-- [Batch jobs](batch-jobs.md): provider-neutral submit/status/cancel/results contract with OpenAI Files-API adapter.
-- [Provider primitives](provider-primitives.md): shared bounded transport and OpenAI serialization helpers across providers.
-- [Provider layer](provider-layer.md): register host-owned providers/models, duplicate policy, streaming, mock provider.
-- [Model registry](model-registry.md): register `ModelConfig` records with capabilities, limits, cost, cache metadata.
-- [Provider caching](provider-caching.md): `PromptCacheHints`, stable-prefix guidance, per-provider cache matrix, cache telemetry.
-- [Thinking and reasoning](thinking-and-reasoning.md): `thinkingLevel` snapping to per-model capability families with legality evidence.
-- [Use-case model selection](use-case-model-selection.md): bind models for compaction, memory, and other non-session LLM jobs.
-- [Provider request policies](provider-request-policies.md): kernel request-option defaults with host `ProviderRequestPolicy` overlays.
-- [Provider packages](provider-packages.md): all adapters as standalone `@arnilo/prism-provider-<vendor>` packages; tool_result and event wire shapes stay provider-neutral.
-  - First-party adapters: [`openai`](providers/openai.md), [`anthropic`](providers/anthropic.md), [`google`](providers/google.md), [`opencode-go`](providers/opencode-go.md), [`openrouter`](providers/openrouter.md), [`zai`](providers/zai.md), [`deepseek`](providers/deepseek.md), [`xai`](providers/xai.md), [`clinepass`](providers/clinepass.md), [`hyper`](providers/hyper.md), [`commandcode`](providers/commandcode.md), [`kimi`](providers/kimi.md), [`alibaba`](providers/alibaba.md), [`ollama`](providers/ollama.md), [`neuralwatt`](providers/neuralwatt.md), [`typesafe`](providers/typesafe.md), [`laya`](providers/laya.md), plus the cross-vendor `model-discovery` listing adapters on the same page.
-  - [System One decisions](providers/decisions.md): typed host decision call over the shared `POST /v1/systemone` client, preserving raw probabilities/confidence/legend, the responding checkpoint, usage, and timing with pre-fetch bounds and deadline/abort composition.
-  - Enterprise cloud (workload identity): [`azure`](providers/azure.md) (Entra/Foundry), [`bedrock`](providers/bedrock.md) (IAM/SigV4; OpenAI-compatible or native Converse route), [`vertex`](providers/vertex.md) (ADC/Vertex).
-  - Optional AI SDK adapter: [`ai-sdk`](providers/ai-sdk.md) maps host-owned pinned `LanguageModelV4` models onto Prism streams.
-- [OpenAI-compatible provider](providers/openai-compatible.md): base Chat Completions subpath with strict-completion default and vendor hooks.
+### Drivers
 
-## Input, prompt, and context assembly
+- [`@arnilo/prism-driver-process`](../packages/drivers/process/README.md): Generic process driver and adapter contract for external agents.
 
-- [SDK customization guide](customization.md): map every replaceable seam — providers, middleware, loops, stores — to explicit host wiring.
-- [Input and prompt assembly](input-and-prompt-assembly.md): input-to-message builders, cache-aware ordering, optional context-budget eviction.
-- [Attention compiler](attention-compiler.md): opt-in per-turn gate that mutates only after a ratio of the model input cap.
-- [Multimodal content](multimodal-content.md): media resolution, SSRF/MIME policy, capability tags, video generation contract.
-- [System prompts](system-prompts.md): layered system prompts plus trust-gated `AGENTS.md`/`SYSTEM.md` file auto-load.
-- [Versioned prompt registry](prompt-registry.md): immutable content-hashed prompt assets with durable stores and bounded diff.
-- [Instruction injection](instruction-injection.md): package injectors layer redacted instructions without granting capabilities.
-- [Context and skills](context-and-skills.md): ordered context providers, multi-root discovery, progressive skill disclosure, fail-closed activation. `@arnilo/prism-work` ships `docx`, `xlsx`, `powerpoint`, `pdf`.
-- [LLM Wiki](wiki.md): optional knowledge compiler emitting OKF bundles, with `/wiki-ingest` raw staging (text, file, image, or URL via a host `fetchUrl` hook). A set `extractDocument` hook owns PDF and CSV; image OCR is opt-in.
-- [Retrieval-augmented generation](rag.md): bounded source lifecycle, concurrent exact-scope hybrid retrieval with permission rechecks, reranking, evidence-backed citations, and inert injection; host parsers may convert documents without indexing failed OCR.
-- [Knowledge synchronization](knowledge-sync.md): paged enterprise-source import with a Drive connector, checkpointed change cursors, and host-owned ACL mapping.
+## Host libraries
 
-## Tools
+Host libraries serve or drive an agent from outside; they are not loaded as packages.
 
-- [Recoverable tool effects](tool-effects.md): effect declarations, claim/CAS store, unknown reconciliation classifications.
-- [Tools](tools.md): host-owned tool registration, allow/deny filtering, per-run `toolNames` narrowing, bounded artifact-loop dispatch, progressive loading.
-- [OpenAPI tools adapter](openapi-tools.md): compile allow-listed OpenAPI 3.1 operations into bounded, approval-gated tools.
-- [Tool execution primitives](tool-execution-primitives.md): bounded JSON Schema validation, parallel dispatch, MCP bridge mapping.
-- [Tool validator JSON Schema package](../packages/prism-core/README.md): optional `@arnilo/prism-core/validation/json-schema` adapter.
-- [MCP client bridge and server exposure](mcp-tools.md): SDK v2 bridge and serving with OAuth transports and DNS-pinned transport.
-- [Connected apps](connected-apps.md): identity-bound MCP server sessions that admit host-selected transports and register prefixed tools.
-- [Web search, fetch, and extraction](web-tools.md): Brave/Exa/Firecrawl tools with finite limits, hashed web evidence snapshots, and untrusted-content boundaries.
-- [Work tools](work-tools.md): identity-scoped M365/GWS connectors — scanned file get, hash-bound uploads/copies, fixed Docs/Sheets/Slides updates, approvals, isolated subprocess environments.
-- [Work connectors](work-connectors.md): connector principles, capability gates, scoped OAuth establishment, out-of-scope boundaries.
-- [Work sandbox](work-sandbox.md): host-pinned document image and `createWorkComposition` — office/exec in an injected Docker sandbox, connectors stay on the host.
-- [Browser automation](browser-automation.md): Playwright-backed browser tools with egress policy, caps, and verified checkpoints.
-- [Device adapters](device-adapters.md): deny-by-default realtime voice/desktop-control contract with consent and sandbox gating.
-- [Linux desktop control](computer-use-linux.md): optional `computer-use-linux` MCP wrapper — doctor-first, approval-gated mutators.
-- [Obscura browser engine](obscura.md): optional host-binary browser engine adapter with fail-closed lifecycle and CDP composition.
-- [Coding agent tools](coding-agent-tools.md): shell/read/write/edit/search toolset with caps, document reader, `todo_write` task tracking with a completion stop hook, and optional Git awareness.
-- [Document reader](document-reader.md): bounded PDF/DOCX/XLSX/PPTX text extraction behind `createReadTool({ documentReader })`; optional host-selected Mistral OCR parser (not default).
-- [Indexed code search](indexed-code-search.md): host-owned incremental index seam; results labeled `untrusted_index`.
-- [Coding workspaces](coding-workspaces.md): worktree lifecycle with CheckpointStore CAS records, LeaseStore fencing, and opt-in per-child spawn isolation.
-- [Coding review and diagnostics](coding-review-and-diagnostics.md): bounded patch-review manifests and normalized LSP diagnostics.
-- [Language intelligence](language-intelligence.md): bounded LSP client with lazy spawn, URI confinement, policy-gated rename.
-- [Process sessions](process-sessions.md): long-running process registry with durable recovery, Docker/E2B container sessions, and fail-closed ownership.
-- [Forge integration](forge-integration.md): reference GitHub adapter — every mutation policy-gated and effect-recorded.
-- [Coding execution approval and sandboxing](coding-security.md): path/command approval, workspace modes, Docker/native/E2B sandboxes with long-running process handles, egress allow-listing.
-- [Hosted sandboxes](hosted-sandboxes.md): E2B `DisposableSandbox` adapter with pause/resume, filesystem-only snapshots, and reconnect by non-secret sandbox id.
+- [`@arnilo/prism-acp`](../packages/hosts/acp/README.md): Host library serving one Prism agent over the Agent Client Protocol.
+- [`@arnilo/prism-ag-ui`](../packages/hosts/ag-ui/README.md): Host library serving a Prism Agent over AG-UI SSE, with protocol adapters and a reference renderer.
+- [`@arnilo/prism-channels`](../packages/hosts/channels/README.md): Host library serving one Prism agent over Telegram and Signal messaging channels.
+- [`@arnilo/prism-devtools`](../packages/hosts/devtools/README.md): Host library serving a loopback developer inspector over a Prism agent.
+- [`@arnilo/prism-evals`](../packages/hosts/evals/README.md): Host library providing evaluations, datasets, scorers, judges, and multi-turn scenarios for Prism agents.
+- [`@arnilo/prism-headless`](../packages/hosts/headless/README.md): Host library for routed Prism HostUi requests and durable agent/workflow scheduling.
+- [`@arnilo/prism-mcp-server`](../packages/hosts/mcp-server/README.md): Host library serving a Prism agent over MCP stdio and Streamable HTTP transports.
+- [`@arnilo/prism-remote`](../packages/hosts/remote/README.md): Host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1.
 
-## Documents, sheets, and diagrams
+## Guides
 
-- [Documents, spreadsheets, and presentations](documents.md): OOXML generation, parsing, import fidelity reports, patching, structural diffs, and bounded preview for Office formats.
-- [Document extraction](document-extraction.md): optional local Markdown conversion for Office, OpenDocument, CSV, and text PDFs. Scanned PDFs fail closed unless the host runs the packaged Docling worker; never hosted OCR.
-- [Spreadsheets and CSV data](sheets.md): fail-closed XLSX/CSV ingestion with decimal-safety guarantees.
-- [Diagrams and mxGraph embed](diagrams.md): origin-enforced draw.io embed client with XXE-safe XML validation.
+- [Prism Agent walkthrough](../apps/prism-agent/README.md): the reference host, built only on `@arnilo/prism` and the manifest.
+- [Examples gallery](../examples/README.md): runnable examples of hosts, packages, and workflows.
+- [Migrations](migration.md): the era index of migration notes with replacement tables and rollback notes.
+- [Migrate 0.12 → 0.13](migrate-to-0.13.md): what moved where in the 0.13 kernel and packages — the `createAgent` and `defineAgent` maps, the family-package map, the removed root exports, and the upgrade steps.
 
-## Extensions/plugins
+## Reference
 
-- [Contribution discovery (workspace)](contribution-discovery.md): realpath-contained `SKILL.md`/manifest scanner producing inert envelopes.
-- [Contribution registries](contribution-registries.md): explicit host-owned registries with strict duplicate shadowing prevention.
-- [Extension kernel and event bus](extensions.md): ordered extension loading, registration, lifecycle events, error isolation.
-- [Extension authoring guide](extension-authoring.md): publish third-party extensions with host-owned activation and trust boundaries.
-- [Middleware hooks](middleware-hooks.md): ordered hooks for provider, input, tool, retry, compaction, and session boundaries.
-
-## Configuration/manifests
-
-- [Configuration and manifests](configuration-and-manifests.md): layered JSON config merge with data-only manifest validation.
-- [Effective run bundle snapshots](run-bundle.md): frozen JSON projection of the effective run bundle — prompt/skill/tool/guardrail digests, resolved limits, storage kinds, one pinning digest, zero network or store reads.
-- [Host compositions](host-compositions.md): personal and business worker host compositions, inspection reports, storage durability truth, sandbox isolation, and fail-closed readiness enforcement.
-- [Node filesystem config loader](node-filesystem-config.md): explicitly read caller-named JSON config files in Node.
-- [Resource loading](resource-loading.md): decode text/JSON/binary through caller-provided loaders; RAG bridge.
 - [Optional peer dependencies](peer-dependencies.md): every third-party peer a package declares, the subpath it unlocks, its install line, pin rationale, and which peers touch the network.
-
-## Server/API
-
-- [Web-standard server handler](server.md): framework-free authorized agent/SSE handler with durable reconnect, editable approvals, and webhook seams.
-
-## Multi-agent and interoperability
-
-- [Multi-agent patterns (handoff/crew/supervisor/spawn/A2A)](multi-agent-patterns.md): decision table for handoff, crew, supervisor, in-process spawn, and A2A.
-- [Supervisor delegation](supervisors.md): child allow-lists, model-facing sync/async spawn, wait/cancel, narrowed permissions, finite budgets, nested delegation.
-- [A2A interoperability](a2a.md): A2A 1.0 cards, durable task seams, verified client, AG-UI fronting.
-- [Frontend interoperability (AG-UI and ACP)](ag-ui.md): AG-UI event mapping with editable durable approvals, A2UI middleware, hardened MCP/A2A adapters, ACP sibling.
-- [ACP coding-host interop](acp.md): stable ACP v1 agent with capability advertisement, approvals, durability, and projections.
-- [Spawnable ACP agent](acp-agent.md): stdio bin serving `createPrismAcpAgent` with lazy real providers, credential references, explicit offline mock mode, durable SQLite recovery, and origin- and path-safe MCP allow-listing.
-- [AG-UI adoption evaluation](ag-ui-adoption.md): official AG-UI matrix and shipped handshake boundaries.
-
-## CLI/RPC
-
-- [Prism Code](prism-code.md): terminal coding agent app — TUI, headless print/json, and ACP surfaces over the Agent SDK with a layered `~/.prism` user home (global config, remembered selection), layered skills with progressive disclosure, an explicit durable credential store (keychain / owner-only file / encrypted file / session-only), provider/model setup, repo sessions, observational memory, and optional web/wiki planes; install with `bun add -g` or the native curl installer.
-- [Dev inspector](dev-inspector.md): loopback-only local playground over a configured agent; composition inspection via `GET /inspect`; quality/cost/latency compare from timeline summaries; `prism dev` composition.
-- [CLI/RPC](cli-rpc.md): print/json modes, LF-delimited RPC, `prism init` scaffold (`personal-assistant`, `business-worker`, `deep-research` templates), provider scaffolding, allow-listed `--extension` activation.
-- [Workflows](workflows.md): typed DAG orchestration with execution-only retries, fail-closed checkpoint recovery, and serializable graph/Mermaid overlay for host UIs.
+- [Performance limits](performance.md): measured limits, hard caps, and sizing guidance.
+- [Operations runbook](operations.md): high availability, failover, and fencing for durable state.
+- [Disaster recovery](disaster-recovery.md): backup and restore operations.
+- [Resource loading](resource-loading.md): trust-gated loading of skills, prompts, and other file resources.
+- [Node filesystem config](node-filesystem-config.md): the Node filesystem config loader.
+- [Run bundle](run-bundle.md): effective run bundle snapshots.
 
 ## Security and credentials
 
 - [Host security guide](host-security.md): fail-closed checklist across supply chain, boundaries, redaction, trust, persistence.
 - [Security/auth/trust](settings-auth-trust-security.md): settings providers, trust/permission policies, host-owned wiring.
 - [Credentials and redaction](credentials-and-redaction.md): resolver order, env/OAuth helpers, provider-edge resolution, secret redaction.
-- [Credential storage](credential-storage.md): bounded AES-GCM adapter, owner-only plaintext file (`auth.json`), system keychain with a read-only availability probe, host-KMS wrap, work/OIDC subpaths.
+- [Coding security](coding-security.md): coding-tool security model and the package that owns it.
 
-## Testing and examples
+## Testing and contributing
 
-- [Test layout and isolation](testing.md): the `npm test` stage table (build, performance budget, root, SQLite, gate, build-race, workspace, examples, and branch-coverage stages), scratch-root rule, and the tracked-fixture isolation gate.
 - [Contribution quality budgets](contributing.md): the non-null assertion allowance, export-surface ceilings, and the rule that keeps them shrinking.
 - [Live and end-to-end testing](live-testing.md): opt-in live matrix with skip-not-fail contract and credential scoping table.
-- Provider test doubles: `createMockProvider()` and provider event helpers are documented on the canonical Provider layer page above.
-- [Provider conformance](provider-conformance.md): network-free adapter assertions from `@arnilo/prism/provider-kit`.
-- [Session store conformance](session-store-conformance.md): assert append/idempotency/conflict/branch invariants for any store.
-- [Run ledger conformance](run-ledger-conformance.md): assert durable run/usage writes and reopen survival.
-- [Compaction conformance](compaction-conformance.md): assert redacted non-empty summaries and abort observation.
-- [Prefix stability conformance](prefix-stability-conformance.md): assert progressive disclosure keeps the provider cache prefix stable.
-- [Tool conformance](tool-conformance.md): assert blocked-reason matrix and success-path dispatch behavior.
-- [Extension conformance](extension-conformance.md): assert inert contributions and redacted setup errors.
-- `examples/`: compile-checked typed examples ([`conversation-durable-replay.ts`](../examples/conversation-durable-replay.ts), [`artifact-review-delivery.ts`](../examples/artifact-review-delivery.ts), [`enterprise-identity.ts`](../examples/enterprise-identity.ts), [`enterprise-policy-audit.ts`](../examples/enterprise-policy-audit.ts), [`enterprise-work-connectors.ts`](../examples/enterprise-work-connectors.ts), [`connected-slack-mcp.ts`](../examples/connected-slack-mcp.ts), [`server-deployment-seams.ts`](../examples/server-deployment-seams.ts), [`neuralwatt-agent-run.ts`](../examples/neuralwatt-agent-run.ts), [`cache-aware-prompt-assembly.ts`](../examples/cache-aware-prompt-assembly.ts), [`guardrail-packs.ts`](../examples/guardrail-packs.ts), [`ag-ui-server.ts`](../examples/ag-ui-server.ts), [`acp-coding-host.ts`](../examples/acp-coding-host.ts), [`telegram-agent.ts`](../examples/telegram-agent.ts), [`signal-agent.ts`](../examples/signal-agent.ts), [`messaging-agent.ts`](../examples/messaging-agent.ts), and more), plus runnable mock demos.
 
-## Third-party integrations
+## History
 
-- [Impeccable behavior integration](impeccable.md): upstream Impeccable skill behind `load_skill`; host supplies the compiled `SKILL.md`.
-- [Messaging channels](messaging-channels.md): `@arnilo/prism-channels` transport-neutral runtime — deny-by-default sender authorization, owned session binding, serialized turns, current-run replies, one-use durable approvals, bounded attachment refs (images reach the model only when it declares image input), and opt-in host notices to one already-bound pair.
-- [Telegram channel](telegram-channel.md): official `@arnilo/prism-channels/telegram` long polling and mountable webhook ingress with durable offset/lease handling, approval callbacks, opt-in granted group/topic text, bounded media with optional voice transcription/synthesis, and opt-in streaming drafts.
-- [Signal channel (experimental)](signal-channel.md): `@arnilo/prism-channels/signal` pinned signal-cli v0.14.8 private-socket manual receive, explicit policy gate, UUID DM filtering and bounded ambiguous delivery.
-- [Messaging channel operations](messaging-channel-operations.md): durable journal, restart and reconciliation contract, lease fencing, retention and the operator runbook.
-- [Synapta → Prism integration review](synapta-integration-review.md): host-integration findings, the F1–F4 fixes, the remediation tasks that shipped them, and the authorities that stay with the host.
-
-## Release and install
-
-- [Release and install](release-and-install.md): Bun install rules and the runtime matrix, the package graph, deterministic resumable publication, and the Prism Code standalone binary channel (six `bun build --compile` targets, `SHA256SUMS`, provenance).
 - [Migrate 0.11 → 0.12](history/migrate-to-0.12.0.md): Bun `>=1.4.2`, `bun:sqlite`, and optional local document extraction.
 - [Migrate 0.10 → 0.11](migrate-to-0.11.md): idempotency window, in-memory lease fence reset, and the persona/graft subpath removals.
 - [Migrate 0.8 → 0.9](migrate-to-0.9.md): the four behavior deltas inside existing surfaces (limit-death stream order, turn-trace metadata, cache-stable disclosure, labeled usage estimates), every new option with its sizing line, and 0.9.0 host migration steps.
@@ -277,26 +142,47 @@ Prism is a TypeScript agent harness for the Bun runtime. Hosts own providers, to
 The generated inventory below derives from [`scripts/package-truth.json`](../scripts/package-truth.json) — regenerate with `bun scripts/package-truth.mjs --emit-docs`, never hand-edit.
 
 <!-- generated:package-truth:inventory begin -->
-**39 publishable manifests** — root `@arnilo/prism` plus 38 workspace packages (3 `prism-*` family packages, 14 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**43 publishable manifests** — root `@arnilo/prism` plus 42 workspace packages (1 `prism-*` family packages, 37 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.12.1 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-channels` | 0.12.1 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.12.1 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.12.1 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
-| `@arnilo/prism-acp-agent` | 0.12.1 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.12.1 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
-| `@arnilo/prism-code` | 0.4.1 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
-| `@arnilo/prism-credentials-keyring` | 0.12.1 | capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence |
-| `@arnilo/prism-hooks-json` | 0.12.1 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
-| `@arnilo/prism-mcp` | 0.12.1 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.12.1 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
-| `@arnilo/prism-store-codecs` | 0.12.1 | capability |
-| `@arnilo/prism-store-jsonl` | 0.12.1 | capability |
-| `@arnilo/prism-store-postgres` | 0.12.1 | capability |
-| `@arnilo/prism-store-sqlite` | 0.12.1 | capability |
-| `@arnilo/prism-web-tools` | 0.12.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
-| `@arnilo/prism-work` | 0.12.1 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism` | 0.13.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-channels` | 0.13.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
+| `@arnilo/prism-acp` | 0.13.0 | capability |
+| `@arnilo/prism-ag-ui` | 0.13.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-approval` | 0.13.0 | capability — approval modes deny/ask/edits/auto over tool effects and roots, as one tool.call gate |
+| `@arnilo/prism-context-engineering` | 0.13.0 | capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler |
+| `@arnilo/prism-context-files` | 0.13.0 | capability — AGENTS.md / SYSTEM.md layers as one context.build handler, trust-gated and cached per session |
+| `@arnilo/prism-credentials-keyring` | 0.13.0 | capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence |
+| `@arnilo/prism-delegate` | 0.13.0 | capability — a delegate tool whose child agent inherits a chosen subset of the parent packages, reporting delegate.step package events |
+| `@arnilo/prism-devtools` | 0.13.0 | capability |
+| `@arnilo/prism-driver-process` | 0.13.0 | capability — generic external-agent process driver with a host-written adapter |
+| `@arnilo/prism-evals` | 0.13.0 | capability |
+| `@arnilo/prism-governance` | 0.13.0 | capability — deny-by-default policy engine (inline rules or OPA) plus approvals and an audit ledger, as one tool.call/run.input/model.request gate with a governance.policy/governance.audit service |
+| `@arnilo/prism-guardrail-packs` | 0.13.0 | capability — built-in guardrail packs (coding-standard, destructive-commands, validation-respect, secrets-hygiene) as restrictive-only tool.call/tool.result rules with package session state |
+| `@arnilo/prism-headless` | 0.13.0 | library — host library routing HostUi requests through ordered routes with a value-free answer log |
+| `@arnilo/prism-hooks-json` | 0.13.0 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
+| `@arnilo/prism-mcp` | 0.13.0 | capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close |
+| `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
+| `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
+| `@arnilo/prism-memory-core` | 0.13.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
+| `@arnilo/prism-memory-fabric` | 0.13.0 | capability — working, semantic, and scoped memory with the memory.* tools, a context block, and per-session state |
+| `@arnilo/prism-memory-observational` | 0.13.0 | capability |
+| `@arnilo/prism-memory-rag` | 0.13.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
+| `@arnilo/prism-memory-wiki` | 0.13.0 | capability — the LLM Wiki knowledge compiler: four wiki tools, four commands, bundled skills, and the prism-wiki CLI |
+| `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
+| `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
+| `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
+| `@arnilo/prism-store-codecs` | 0.13.0 | capability |
+| `@arnilo/prism-store-jsonl` | 0.13.0 | capability |
+| `@arnilo/prism-store-postgres` | 0.13.0 | capability |
+| `@arnilo/prism-store-sqlite` | 0.13.0 | capability |
+| `@arnilo/prism-tools-browser` | 0.13.0 | capability — six exclusive Playwright browser tools with declared effects, fail-closed egress policy, and artifact quarantine |
+| `@arnilo/prism-tools-coding` | 0.13.0 | capability — coding file/search/shell tools as a package: a small tool set with declared effects, in-tool path containment, and an optional shell |
+| `@arnilo/prism-tools-computer-use` | 0.13.0 | capability — the host-owned computer-use-linux MCP binary as tools with declared external effects, in-tool device admission, and a bundled skill |
+| `@arnilo/prism-tools-openapi` | 0.13.0 | capability — compile allow-listed OpenAPI 3.1 operations into bounded tools with pinned origins, per-method effects, and ref-only header credentials |
+| `@arnilo/prism-tools-research` | 0.13.0 | capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check |
+| `@arnilo/prism-tools-web` | 0.13.0 | capability — Brave/Exa search, Firecrawl fetch/extract, and host-installed Obscura with declared network effects and a web.fetch service |
+| `@arnilo/prism-tools-work` | 0.13.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism-workflows` | 0.13.0 | library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts |
 <!-- generated:package-truth:inventory end -->

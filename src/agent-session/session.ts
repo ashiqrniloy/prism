@@ -1,54 +1,39 @@
 /** session (0.2.5 plan 025 Task 1 split). Moved verbatim from agent-session.ts; public surface unchanged behind the barrel. */
 
-import { resolveRunOptions } from "../models/ref.js";
-import { ActiveDurableRun, ActiveDurableRunExtras, pendingDecisionsOf, resolveRunDecisions } from "../agent-approval.js";
+import { ActiveDurableRun, pendingDecisionsOf, resolveRunDecisions } from "../agent-approval.js";
 import { restoreRunSessionState } from "../agent-run-restore.js";
-import { createMemoryCheckpointStore } from "../checkpoints.js";
-import type { PendingToolCall, PersistedGuardrailPacks, StoredAgentRunState } from "../agent-run-state.js";
+import type { PendingToolCall, StoredAgentRunState } from "../agent-run-state.js";
 import { agentFingerprint, saveAgentRunState } from "../agent-run-state.js";
-import {
-  type AttentionFoldLedger,
-  type AttentionStickyFrontier,
-  createAttentionFoldLedger,
-  createAttentionStickyFrontier,
-  type PersistedAttentionFoldLedger,
-  type PersistedAttentionStickyFrontier,
-  resolveInputCap,
-  restoreAttentionStickyFrontier,
-  serializeAttentionFoldLedger,
-  serializeAttentionStickyFrontier,
-} from "../attention-compiler.js";
+import { createMemoryRunStateCell, type DurableRunStateOptions } from "../run-state-cell.js";
 import { isCompactionEntryData } from "../compaction.js";
-import { estimateAssemblyTokens, estimateMessageTokens, estimateTextTokens } from "../context-budget.js";
 import type {
   Agent,
   AgentEvent,
   AgentEventRecord,
-  RunResult,
   AgentRunState,
-  AgentRunStateOptions,
   AgentRunStatus,
-  Decision,
-  Session,
-  AgentSessionConfig,
-  SessionOptions,
-  ModelProvider,
   CompactionOptions,
   CompactionResult,
   ContextMeter,
+  Decision,
   ErrorInfo,
-  GuardrailPackRef,
+  JsonValue,
   Message,
+  ModelProvider,
   OwnershipScope,
   PendingDecision,
   PromptVersionRef,
   ProviderRequest,
+  ResolvedRunOptions,
   RunLedger,
   RunOptions,
-  ResolvedRunOptions,
+  RunResult,
+  Session,
   SessionBranchRead,
   SessionEntry,
+  SessionLinks,
   SessionForkOptions,
+  SessionOptions,
   SessionStore,
   Skill,
   SteerOptions,
@@ -57,29 +42,27 @@ import type {
   ToolDefinition,
   ToolEffectStore,
   Usage,
-  JsonValue,
 } from "../contracts.js";
 import {
   AgentDecisionError,
   AgentRunStateError,
+  assertSessionLinks,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
   DEFAULT_SNAPSHOT_CACHE_TTL_MS,
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
   resolveShouldCompact,
+  SESSION_LINKS_DATA_KEY,
+  SessionNotFoundError,
   toRunResultStatus,
 } from "../contracts.js";
-import {
-  compileGuardrailPacksWithState,
-  type CompiledGuardrailPacks,
-  type CompiledGuardrailRules,
-  GuardrailPackError,
-  guardrailRefusalText,
-  runGuardrailList,
-} from "../guardrails.js";
-import type { Principal } from "../identity.js";
+import { createHookBus, type HookBus, } from "../hooks/index.js";
+import type { Principal } from "../contracts-core/principal.js";
 import type { AgentInput } from "../input.js";
-import { applyDefaultProviderRequestOptions } from "../provider-request-policy.js";
+import type { LoopStrategy } from "../loop/index.js";
+import { estimateAssemblyTokens, estimateMessageTokens, estimateTextTokens, resolveInputCap } from "../models/estimate.js";
+import { resolveRunOptions } from "../models/ref.js";
+import { type Capability, requireCapability } from "../packages/capabilities.js";
 import {
   errorToErrorInfo,
   redactAgentEvent,
@@ -89,27 +72,21 @@ import {
   redactSessionEntry,
   type SecretRedactor,
 } from "../redaction.js";
-import {
-  createHookBus,
-  type HookBus,
-  type HookContext,
-  type ToolCallDecision,
-  type ToolCallHookPayload,
-  type ToolResultHookPayload,
-} from "../hooks/index.js";
-import type { LoopStrategy } from "../loop/index.js";
-import { createSlotDefaults, createSlotRegistry, type SlotRegistry } from "../slots/index.js";
-import { resolveBackgroundSettleMs, type RunLimitTracker } from "../run-limits.js";
+import { type RunLimitTracker, resolveBackgroundSettleMs } from "../run-limits.js";
+import { type BackgroundTracker, createBackgroundTracker } from "../session/background.js";
+import { createExternalState, type ExternalStateHandle } from "../session/external-state.js";
+import { bindSessionState, type PackageStateData, SessionStateStore } from "../session/state.js";
+import type { SessionContext } from "../session-context.js";
 import type { SessionContextSnapshot } from "../session-stores.js";
-import { createMemorySessionStore, createSessionEntry, getSessionBranchEntries, rebuildSessionContext } from "../session-stores.js";
+import { narrowScope } from "../agent/sessions.js";
+import { createSessionEntry, entriesInScope, getSessionBranchEntries, rebuildSessionContext } from "../session-stores.js";
 import { createLoadedSkillSet } from "../skill-disclosure.js";
 import type { LoadedSkillBodiesEntry } from "../skill-load.js";
 import { validateLoadedSkillBodies } from "../skill-load.js";
 import { resolveAllActiveSkills } from "../skills.js";
-import { createActiveToolSet } from "../tool-search.js";
+import { createSlotDefaults, createSlotRegistry, type SlotRegistry } from "../slots/index.js";
 import { pendingSuspensionOf, type SuspendedRunEntryData } from "../suspended-run.js";
 import { tryAgentRuntime } from "./create-agent.js";
-import { agentSkillSource } from "./runtime-registry.js";
 import { EventSubscriber } from "./event-subscriber.js";
 import {
   finalAssistantMessage,
@@ -122,27 +99,15 @@ import {
   throwIfAbortedSignal,
   withoutTrailingInput,
 } from "./helpers.js";
-import { type Capability, requireCapability } from "../packages/capabilities.js";
-import type { SessionContext } from "../session-context.js";
-import { type BackgroundTracker, createBackgroundTracker } from "../session/background.js";
-import { bindSessionState, type PackageStateData, SessionStateStore } from "../session/state.js";
+import { agentSkillSource } from "./runtime-registry.js";
 import { executeRun } from "./session/assemble.js";
 import { asSessionHost } from "./session/types.js";
-
-/**
- * Session-scoped hook id suffix. The suffix is excluded from the durable agent fingerprint
- * (`agentHookIds`), because session packs are run state, not agent definition.
- */
-const SESSION_HOOK_ID_PREFIX = "session-";
-let sessionHookSeq = 0;
-function sessionHookId(): string {
-  sessionHookSeq += 1;
-  return `${SESSION_HOOK_ID_PREFIX}${sessionHookSeq}`;
-}
 
 export class RuntimeAgentSession implements Session {
   readonly id: string;
   private readonly agent: Agent;
+  /** Plan 177 Task 4: the agent's scope narrowed by `SessionOptions.ownership`; every run narrows it further. */
+  readonly scope: OwnershipScope | undefined;
   private readonly metadata?: Readonly<Record<string, unknown>>;
   private readonly store: SessionStore;
   private readonly subscribers = new Set<EventSubscriber>();
@@ -154,6 +119,7 @@ export class RuntimeAgentSession implements Session {
   private activeProviderTurnAbort?: AbortController;
   pendingSoftInterrupt = false;
   private pendingSteers: Message[] = [];
+  private readonly steerListeners = new Set<() => void>();
   private pendingSteerBytes = 0;
   private activeRedactor?: SecretRedactor;
   activeProvider?: ModelProvider;
@@ -164,18 +130,6 @@ export class RuntimeAgentSession implements Session {
   private activeIdempotencyKey?: string;
   /** Messages the active run appended to the branch (as stored, after redaction); reset at each run start. */
   activeRunMessages: Message[] = [];
-  /** Plan 092 Task 2: guardrail packs compiled once in the constructor; their tool seams are hooks. */
-  packGuardrails?: CompiledGuardrailRules;
-  /** Plan 104 Task 3: `ask` rules as the durable gate — a match returns `{ ask }` from `tool.call`. */
-  packAskGate?: readonly import("../contracts.js").Guardrail<"tool_input">[];
-  /** Plan 104 Task 3: the same `ask` rules as plain blocks for a run that cannot suspend. */
-  packAskBlocks?: readonly import("../contracts.js").Guardrail<"tool_input">[];
-  /** Plan 104 T3: the pack `ask` record for a staged suspension, keyed by tool-call id. */
-  packAskRecords?: Map<string, import("../contracts.js").GuardrailRecord>;
-  /** Original pack refs, carried into `fork()`/`clone()` so a branch cannot silently lose its policy. */
-  private packRefs?: readonly GuardrailPackRef[];
-  /** Plan 104 Task 2: compiled refs + live pack state, replaced by `restoreGuardrailPacks` on resume. */
-  private compiledGuardrailPacks?: CompiledGuardrailPacks;
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
@@ -194,60 +148,12 @@ export class RuntimeAgentSession implements Session {
   private readonly loadedSkills = createLoadedSkillSet();
   /** Run-owned only: loaded bodies and URI resources retain first insertion order within one provider loop. */
   readonly tailSegments = new Map<string, Message>();
-  /** Tools activated via `search_tools` this session (plan 041); names-only in persistence. */
-  readonly activatedTools = createActiveToolSet();
   /** Plan 018 Task 6 (closeout `checkpoint-bodies`): persisted exact instructions, registry-independent. */
   restoredSkillBodies: readonly LoadedSkillBodiesEntry[] = [];
   /** Skills of the current run (for the bodies snapshot); replaced at each run start. */
   activeRunSkills: readonly import("../contracts.js").Skill[] = [];
   /** Per-run tool allow-list (Task 21); undefined means the full registered set. */
   activeToolNames?: readonly string[];
-  /** Sticky frontier for this session (plan 074 C10); created on first use, so a session whose
-   *  agents never enable the compiler allocates nothing. Mutations stay applied once made, so a
-   *  later under-ratio turn re-applies them instead of rewriting the prompt-cache prefix. */
-  private attentionSticky?: AttentionStickyFrontier;
-
-  attentionStickyFor(): AttentionStickyFrontier {
-    this.attentionSticky ??= createAttentionStickyFrontier();
-    return this.attentionSticky;
-  }
-
-  /** Plan 074 P3: bounded snapshot for a durable checkpoint; `undefined` when the session never
-   *  mutated anything, so a compiler-off (or never-over-ratio) session persists nothing extra. */
-  serializedAttentionSticky(): PersistedAttentionStickyFrontier | undefined {
-    return this.attentionSticky && this.attentionSticky.thinking.size + this.attentionSticky.toolCallIds.size > 0
-      ? serializeAttentionStickyFrontier(this.attentionSticky)
-      : undefined;
-  }
-
-  /** Plan 074 P3: restore a frontier validated at checkpoint load, so a resumed run keeps its
-   *  stubs instead of re-deciding its first turn from the ratio. */
-  restoreAttentionSticky(persisted: PersistedAttentionStickyFrontier): void {
-    this.attentionSticky = restoreAttentionStickyFrontier(persisted);
-  }
-
-  /** Session-owned folded bodies (plan 086 T3); created on first use like the frontier, so a
-   *  compiler-off session allocates nothing. */
-  private attentionFold?: AttentionFoldLedger;
-  /** Set per run from the resolved compiler: `durable: true` opts the fold ledger and its
-   *  frontier into checkpoints even when `persistSessionState` is off. */
-  attentionDurable = false;
-
-  attentionFoldFor(): AttentionFoldLedger {
-    this.attentionFold ??= createAttentionFoldLedger();
-    return this.attentionFold;
-  }
-
-  /** Plan 086 T3: bounded ledger snapshot for a durable checkpoint; `undefined` before any fold. */
-  serializedAttentionFold(): PersistedAttentionFoldLedger | undefined {
-    return this.attentionFold && this.attentionFold.bodies.size > 0 ? serializeAttentionFoldLedger(this.attentionFold) : undefined;
-  }
-
-  /** Plan 086 T3: adopt a ledger validated at checkpoint load, so a resumed fold is byte-identical. */
-  restoreAttentionFold(ledger: AttentionFoldLedger): void {
-    this.attentionFold = ledger;
-  }
-
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
   restoreLoadedSkills(names: readonly string[]): void {
     for (const name of names) this.loadedSkills.add(name);
@@ -258,16 +164,6 @@ export class RuntimeAgentSession implements Session {
     return this.loadedSkills.list();
   }
 
-  /** Plan 041: re-add persisted activated-tool names (names only; inert for absent tools). */
-  restoreActivatedTools(names: readonly string[]): void {
-    for (const name of names) this.activatedTools.add(name);
-  }
-
-  /** Plan 041: host reset of search-activated tools. */
-  clearActivatedTools(): void {
-    this.activatedTools.clear();
-  }
-
   /** Plan 018 Task 6: restore persisted loaded-skill bodies (already validated fail-closed at load). */
   restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[]): void {
     validateLoadedSkillBodies(bodies);
@@ -275,126 +171,6 @@ export class RuntimeAgentSession implements Session {
     for (const entry of bodies) this.loadedSkills.add(entry.name);
   }
 
-  /** Plan 104 T2: the refs this session actually enforces (restored ones after a resume). */
-  get guardrailPackRefs(): readonly GuardrailPackRef[] | undefined {
-    return this.packRefs;
-  }
-
-  /** Plan 104 T2: pack refs + live pack-owned state for a durable checkpoint (opt-in with `persistSessionState`). */
-  serializedGuardrailPackState(): PersistedGuardrailPacks | undefined {
-    const compiled = this.compiledGuardrailPacks;
-    if (!compiled || compiled.packs.length === 0) return undefined;
-    const state = compiled.snapshotState();
-    return { packs: compiled.packs, ...(state ? { state } : {}) };
-  }
-
-  /**
-   * Plan 104 T2: recompile checkpoint packs before the resumed run's first turn. `state` present
-   * (even empty) marks a restore, so unknown ids, version mismatches, and codec-less state fail
-   * closed as `AgentRunStateError` — never a session that silently enforces less than it did.
-   */
-  restoreGuardrailPacks(refs: readonly GuardrailPackRef[], state?: Readonly<Record<string, unknown>>): void {
-    let compiled: CompiledGuardrailPacks;
-    try {
-      compiled = compileGuardrailPacksWithState(refs, undefined, state ?? {});
-    } catch (error) {
-      if (error instanceof GuardrailPackError) throw new AgentRunStateError(`Cannot restore guardrail packs: ${error.message}`);
-      throw error;
-    }
-    this.setCompiledGuardrailPacks(compiled, refs);
-  }
-
-  private setCompiledGuardrailPacks(compiled: CompiledGuardrailPacks, refs: readonly GuardrailPackRef[] | undefined): void {
-    this.compiledGuardrailPacks = compiled;
-    this.packGuardrails = { toolInput: compiled.toolInput, toolOutput: compiled.toolOutput };
-    this.packAskGate = compiled.askGate;
-    this.packAskBlocks = compiled.askBlocks;
-    this.packRefs = refs;
-  }
-
-  /**
-   * Registers this session's pack seams as hooks. The bus is per-agent, so every handler is guarded
-   * by `sessionId`; a session's packs never enforce against a sibling session's calls.
-   * Registered under the `kernel` owner with a `#session-<n>` id marker, which the durable fingerprint
-   * skips. `close()` removes the pair, so a long-lived agent does not accumulate one per session.
-   */
-  private registerGuardrailPackHooks(): void {
-    const kernel = this.hookBusInstance.registrar("kernel");
-    const toolCallId = sessionHookId();
-    const toolResultId = sessionHookId();
-    this.packHookIds.push(`kernel:tool.call#${toolCallId}`, `kernel:tool.result#${toolResultId}`);
-    kernel.on(
-      "tool.call",
-      (payload: ToolCallHookPayload, context: HookContext): Promise<ToolCallDecision | undefined> | ToolCallDecision | undefined => {
-        if (payload.sessionId !== this.id) return undefined;
-        return this.evaluatePackToolCall(payload, context);
-      },
-      { id: toolCallId },
-    );
-    kernel.on(
-      "tool.result",
-      async (result: ToolResultHookPayload, context: HookContext) => {
-        if (context.sessionId !== this.id) return undefined;
-        return this.evaluatePackToolResult(result, context);
-      },
-      { id: toolResultId },
-    );
-  }
-
-  /** Map a terminal pack tool-input record to a `tool.call` decision (deny wins; ask when durable). */
-  private async evaluatePackToolCall(payload: ToolCallHookPayload, context: HookContext): Promise<ToolCallDecision | undefined> {
-    const compiled = this.compiledGuardrailPacks;
-    if (!compiled || compiled.toolInput.length + compiled.askBlocks.length + compiled.askGate.length === 0) return undefined;
-    const rules = this.activeDurable ? [...compiled.toolInput, ...compiled.askGate] : [...compiled.toolInput, ...compiled.askBlocks];
-    if (rules.length === 0) return undefined;
-    const result = await runGuardrailList({
-      stage: "tool_input",
-      guards: rules,
-      value: { type: "tool_call", id: payload.callId, name: payload.name, arguments: payload.args },
-      context: {
-        sessionId: this.id,
-        runId: payload.runId,
-        toolCallId: payload.callId,
-        toolName: payload.name,
-        metadata: {},
-        signal: context.signal,
-      },
-      redactor: this.activeRedactor,
-      emit: (event) => this.emit(event),
-    });
-    const terminal = result.terminal;
-    if (!terminal) return undefined;
-    const text = guardrailRefusalText(terminal) ?? "Tool call blocked by guardrail";
-    if (terminal.action === "interrupt") {
-      // The `{ ask }` reason is a string only; carry the pack/rule identity for the pending decision.
-      this.packAskRecords ??= new Map();
-      this.packAskRecords.set(payload.callId, terminal);
-      return { ask: guardrailRefusalText(terminal, "Approval required") ?? text };
-    }
-    return { deny: text };
-  }
-
-  /** Run pack result observers; they never deny, so the result passes through unchanged. */
-  private async evaluatePackToolResult(result: ToolResultHookPayload, context: HookContext): Promise<undefined> {
-    const compiled = this.compiledGuardrailPacks;
-    if (!compiled || compiled.toolOutput.length === 0) return undefined;
-    await runGuardrailList({
-      stage: "tool_output",
-      guards: compiled.toolOutput,
-      value: result,
-      context: {
-        sessionId: this.id,
-        runId: context.runId,
-        toolCallId: result.toolCallId,
-        toolName: result.name,
-        metadata: {},
-        signal: context.signal,
-      },
-      redactor: this.activeRedactor,
-      emit: (event) => this.emit(event),
-    });
-    return undefined;
-  }
   private ledgerChain: Promise<void> = Promise.resolve();
   private ledgerFailure: unknown;
   private snapshotGeneration = 0;
@@ -437,8 +213,6 @@ export class RuntimeAgentSession implements Session {
     ready: () => this.ready(),
     redact: (value) => this.redactBetweenRuns(value),
   });
-  /** Full ids of the session-pack hooks on the shared bus, removed by `close()`. */
-  private readonly packHookIds: string[] = [];
   private readyPromise?: Promise<void>;
   private closing?: Promise<void>;
   /** Serializes appends, so a state `set` racing a run's own append cannot orphan either entry. */
@@ -449,6 +223,9 @@ export class RuntimeAgentSession implements Session {
   private observingHookError = false;
   /** Pending suspended run entry found on session resume (plan 149 Task 2 / Task 4). */
   pendingSuspendedRun?: SuspendedRunEntryData;
+
+  /** `SessionOptions.parent` and `actor`, written once when a new session opens. */
+  private readonly links: SessionLinks | undefined;
 
   constructor(config: SessionOptions & { readonly agent: Agent; readonly store: SessionStore }) {
     this.id = config.id ?? randomId("session");
@@ -466,15 +243,11 @@ export class RuntimeAgentSession implements Session {
     // `hook.error`/`emit` events raised by a hook route back to this session.
     runtime?.setEventSink((event) => this.emit(event));
     this.metadata = config.metadata;
+    this.scope = config.ownership;
+    this.links = sessionLinksOption(config);
     this.store = config.store;
     this.currentLeafId = config.leafId;
     this.snapshotCacheTtlMs = resolveSnapshotCacheTtlMs(config.snapshotCacheTtlMs);
-    this.compiledGuardrailPacks = compileGuardrailPacksWithState(config.guardrailPacks);
-    this.packGuardrails = { toolInput: this.compiledGuardrailPacks.toolInput, toolOutput: this.compiledGuardrailPacks.toolOutput };
-    this.packAskGate = this.compiledGuardrailPacks.askGate;
-    this.packAskBlocks = this.compiledGuardrailPacks.askBlocks;
-    this.packRefs = config.guardrailPacks;
-    this.registerGuardrailPackHooks();
     const usageEstimation = config.agent.config.usageEstimation;
     if (usageEstimation !== undefined && usageEstimation !== "fallback" && usageEstimation !== "off" && usageEstimation !== "strict") {
       throw new TypeError('usageEstimation must be "fallback", "off", or "strict"');
@@ -502,6 +275,11 @@ export class RuntimeAgentSession implements Session {
         },
         metadata: this.metadata,
         model: this.agent.config.model,
+        entries() {
+          const declared = session.packageCapabilities.get(owner);
+          if (declared) requireCapability(owner, declared, "session-state", "SessionContext.entries");
+          return session.entries();
+        },
         background(name, task) {
           const declared = session.packageCapabilities.get(owner);
           if (declared) requireCapability(owner, declared, "background", "SessionContext.background");
@@ -534,6 +312,16 @@ export class RuntimeAgentSession implements Session {
   async openNewSession(): Promise<void> {
     this.readyPromise = Promise.resolve();
     this.stateStore.hydrate([]);
+    // The one metadata write: links are the session's first entry, so `fork` copies them and stores can index them.
+    if (this.links) {
+      await this.appendEntry({
+        id: randomId("entry"),
+        sessionId: this.id,
+        timestamp: new Date().toISOString(),
+        kind: "metadata",
+        data: { [SESSION_LINKS_DATA_KEY]: this.links },
+      });
+    }
     this.observeOnly({ type: "session.opened", sessionId: this.id, runId: "", restored: false });
   }
 
@@ -580,6 +368,33 @@ export class RuntimeAgentSession implements Session {
           data,
         }),
       ),
+    );
+  }
+
+  /** `run.state(key)` for the loop `vendor` (roadmap §2.12.9 K5): an `external_state` log on this branch. */
+  externalState(vendor: string, key: string): ExternalStateHandle {
+    return createExternalState(
+      {
+        branch: () => this.entries(),
+        write: async (build) => {
+          await this.ready();
+          await this.serialAppend(async () => {
+            const data = build(await this.entries());
+            await this.appendNow(
+              createSessionEntry({
+                sessionId: this.id,
+                parentId: this.currentLeafId,
+                ...(this.activeRunId ? { runId: this.activeRunId } : {}),
+                kind: "external_state",
+                data,
+              }),
+            );
+          });
+        },
+        redact: (value) => this.redactBetweenRuns(value),
+      },
+      vendor,
+      key,
     );
   }
 
@@ -630,13 +445,11 @@ export class RuntimeAgentSession implements Session {
   /** Cold path of `contextMeter()`: one estimate over stored history plus cap/budget resolution. */
   private measureContextMeter(): ContextMeter {
     const model = this.agent.config.model;
-    const inputTokens = this.activeInputMeter?.tokens ?? estimateMessageTokens(this.history, model.model).tokens;
+    const inputTokens = this.activeInputMeter?.tokens ?? estimateMessageTokens(this.history, model?.model).tokens;
     const source = this.activeInputMeter?.source ?? "estimated";
     let inputCap: number | undefined;
     try {
-      const setting = this.agent.config.attentionCompiler;
-      const options = typeof setting === "object" && setting !== null ? setting : undefined;
-      inputCap = resolveInputCap(options ? { maxInputTokens: options.maxInputTokens, reserveTokens: options.reserveTokens } : {}, model);
+      inputCap = model ? resolveInputCap({}, model) : undefined;
     } catch {
       inputCap = undefined; // undialed model: omit instead of throwing a state read
     }
@@ -685,6 +498,7 @@ export class RuntimeAgentSession implements Session {
     }
     this.pendingSteers.push(...messages);
     this.pendingSteerBytes += addBytes;
+    for (const listener of [...this.steerListeners]) listener();
     if (options.softInterrupt) {
       if (this.activeProviderTurnAbort) this.activeProviderTurnAbort.abort(new SteerSoftInterrupt());
       else this.pendingSoftInterrupt = true;
@@ -692,18 +506,17 @@ export class RuntimeAgentSession implements Session {
   }
 
   /**
-   * Kernel-internal resume core, shared by `session.resume` and the checkpoint lifecycle
-   * (`resumeAgentRun`): re-enters the run loop for a suspended run's stored state. Announces the
+   * Kernel-internal resume core, shared by `session.resume` (the store-slot `suspended_run` entry is
+   * the only durable anchor): re-enters the run loop for a suspended run's stored state. Announces the
    * settled batch with `decision.resolved` first, keyed by the tool call id the pending decision
    * named (never the arguments, which a decision may have modified).
    */
   async continueSuspendedRun(
     state: StoredAgentRunState,
-    runState: AgentRunStateOptions,
+    runState: DurableRunStateOptions,
     ownership?: OwnershipScope,
     signal?: AbortSignal,
     decisions?: ReadonlyMap<string, Decision>,
-    extras?: ActiveDurableRunExtras,
     runOptions: ResolvedRunOptions = {},
     /** The suspension's pending decisions: the claimed state no longer carries them. */
     pending?: readonly PendingDecision[],
@@ -722,66 +535,17 @@ export class RuntimeAgentSession implements Session {
         via: "resume",
       });
     }
-    return this.runInternal(state.input ?? [], { ...runOptions, runState, ownership, signal }, state.runId, {
+    return this.runInternal(state.input ?? [], { ...runOptions, ownership, signal }, state.runId, {
       options: runState,
       state,
-      version: state.version!,
       decisions,
-      ...extras,
     });
-  }
-
-  async announceResuspended(
-    runId: string,
-    interruption: import("../contracts.js").AgentRunInterruption,
-    version: number,
-    ownership?: OwnershipScope,
-  ): Promise<void> {
-    this.activeLedger = this.agent.config.runLedger;
-    this.activeOwnership = ownership ?? this.agent.config.ownership;
-    this.activeRedactor = this.runRedactor();
-    try {
-      this.emit({ type: "run.suspended", sessionId: this.id, runId, interruption, version });
-      await this.drainLedger();
-    } finally {
-      this.activeLedger = undefined;
-      this.activeOwnership = undefined;
-      this.activeRedactor = undefined;
-      this.closeRunSubscribers();
-    }
-  }
-
-  async announceDenied(
-    runId: string,
-    interruption: import("../contracts.js").AgentRunInterruption,
-    version: number,
-    ownership?: OwnershipScope,
-  ): Promise<void> {
-    this.activeLedger = this.agent.config.runLedger;
-    this.activeOwnership = ownership ?? this.agent.config.ownership;
-    this.activeRedactor = this.runRedactor();
-    try {
-      this.emit({
-        type: "decision.resolved",
-        sessionId: this.id,
-        runId,
-        decisions: (interruption.pendingDecisions ?? []).map((pending) => ({
-          toolCallId: pending.toolCallId ?? pending.approvalId,
-          outcome: "deny" as const,
-        })),
-        via: "resume",
-      });
-      await this.drainLedger();
-    } finally {
-      this.activeLedger = undefined;
-      this.activeOwnership = undefined;
-      this.activeRedactor = undefined;
-      this.closeRunSubscribers();
-    }
   }
 
   async *resume(decisions: readonly Decision[], options: RunOptions & SubscribeOptions = {}): AsyncGenerator<AgentEvent> {
     const { maxQueuedEvents, overflow, ...rawRunOptions } = options;
+    // An already-aborted caller never claims: fail closed before the first read or write.
+    throwIfAbortedSignal(rawRunOptions.signal);
     const runOptions = resolveRunOptions(rawRunOptions);
     // Everything that can reject (no suspension, bad or incomplete decisions, drift, a stale claim)
     // happens here, before a subscriber exists or a single event is emitted.
@@ -791,10 +555,9 @@ export class RuntimeAgentSession implements Session {
     const runPromise = this.continueSuspendedRun(
       prepared.state,
       prepared.runState,
-      undefined,
+      runOptions.ownership,
       runOptions.signal,
       prepared.decisions,
-      undefined,
       runOptions,
       prepared.pending,
     ).finally(() => {
@@ -818,32 +581,33 @@ export class RuntimeAgentSession implements Session {
 
   /**
    * Read this session's pending suspension from its branch and turn the host's decisions into a claimed,
-   * resumable run. The checkpoint that backs the claim is the host's (`RunOptions.runState` or
-   * `AgentConfig.runState`) when one is configured; otherwise a private in-memory one seeded from the
-   * stored state, because the `suspended_run` entry is the durable anchor.
+   * resumable run. The claim lives in a private in-memory cell seeded from the stored state, because
+   * the store slot's `suspended_run` entry is the durable anchor (plan 168 Task 5).
    */
   private async prepareResume(
     decisions: readonly Decision[],
     runOptions: ResolvedRunOptions,
   ): Promise<{
     readonly state: StoredAgentRunState;
-    readonly runState: AgentRunStateOptions;
+    readonly runState: DurableRunStateOptions;
     readonly decisions: ReadonlyMap<string, Decision>;
     readonly pending: readonly PendingDecision[];
   }> {
     await this.ready();
-    const suspension = pendingSuspensionOf(await this.entries());
+    const branch = await this.entries();
+    // Plan 177 Task 4: fail closed before `decision.resolved` when the branch is outside the run's scope.
+    const scope = narrowScope(this.scope, runOptions.ownership, "Run");
+    if (scope && !entriesInScope(branch, scope)) throw new SessionNotFoundError(this.id);
+    const suspension = pendingSuspensionOf(branch);
     if (!suspension) throw new AgentDecisionError("ERR_PRISM_DECISION_STALE", "Session has no suspended run to resume");
     if (this.activeRun) throw new Error("Agent session already has an active run");
     const stored = suspension.state;
     restoreRunSessionState(this, stored, { persistSessionState: true, includeSkillBodies: true });
-    const toolInputGuardrails = [...(this.packGuardrails?.toolInput ?? []), ...(this.packAskBlocks ?? [])];
     const resolved = await resolveRunDecisions({
       agent: this.agent,
       state: stored,
       decisions,
       signal: runOptions.signal,
-      toolInputGuardrails: toolInputGuardrails.length > 0 ? toolInputGuardrails : undefined,
     });
     if (resolved.remaining.length > 0) {
       throw new AgentDecisionError(
@@ -855,28 +619,15 @@ export class RuntimeAgentSession implements Session {
     if (stored.fingerprint !== agentFingerprint(this.agent, stored.definitionRevision)) {
       throw new AgentRunStateError("Agent definition revision or fingerprint mismatch on resume");
     }
-    const ownership = this.agent.config.ownership;
-    const configured = runOptions.runState ?? this.agent.config.runState;
-    let runState: AgentRunStateOptions;
-    let expectedVersion: number;
-    let base: StoredAgentRunState = stored;
-    if (configured) {
-      runState = configured;
-      expectedVersion = stored.version!;
-    } else {
-      const checkpoints = createMemoryCheckpointStore();
-      runState = { checkpoints, definitionRevision: stored.definitionRevision, persistSessionState: true };
-      const { version: _version, ...unversioned } = stored;
-      const seeded = await saveAgentRunState({ checkpoints, state: unversioned, expectedVersion: 0, ownership });
-      base = seeded.state;
-      expectedVersion = seeded.record.version;
-    }
+    const runState: DurableRunStateOptions = {
+      cell: createMemoryRunStateCell(),
+      definitionRevision: stored.definitionRevision,
+      persistSessionState: true,
+    };
+    const { version: _version, ...unversioned } = stored;
     const claimed = await saveAgentRunState({
-      checkpoints: runState.checkpoints,
-      state: { ...base, status: "running", interruption: undefined, stickyDecisions: resolved.stickyDecisions },
-      expectedVersion,
-      ownership,
-      fencingToken: runState.fencingToken,
+      cell: runState.cell,
+      state: { ...unversioned, status: "running", interruption: undefined, stickyDecisions: resolved.stickyDecisions },
     });
     return { state: claimed.state, runState, decisions: resolved.decisionsById, pending: pendingDecisionsOf(stored) ?? [] };
   }
@@ -884,7 +635,10 @@ export class RuntimeAgentSession implements Session {
   private async runInternal(input: AgentInput, options: ResolvedRunOptions, runId: string, resumed?: ActiveDurableRun): Promise<RunResult> {
     // Only a session that needs its branch read waits: the rest start the run in the same tick, as before.
     if (this.needsOpening()) await this.ready();
-    return executeRun(asSessionHost(this), input, options, runId, resumed);
+    // Plan 177 Task 4: narrow before any event, then fail closed when the branch is outside the scope.
+    const scope = narrowScope(this.scope, options.ownership, "Run");
+    if (scope && !entriesInScope((await this.snapshot()).entries, scope)) throw new SessionNotFoundError(this.id);
+    return executeRun(asSessionHost(this), input, { ...options, ownership: scope }, runId, resumed);
   }
 
   /** Session teardown: closes every subscriber, run-scoped and `acrossRuns` alike (idempotent). */
@@ -903,9 +657,10 @@ export class RuntimeAgentSession implements Session {
       await this.ready().catch(() => undefined);
       await this.background.settle(resolveBackgroundSettleMs(this.agent.config.limits));
     } finally {
-      for (const id of this.packHookIds) this.hookBusInstance.remove(id);
       this.observeOnly({ type: "session.closed", sessionId: this.id, runId: "" });
       this.closeSubscribers();
+      // Plan 177 Task 5: the agent's open-session registry drops this session as soon as it closes.
+      tryAgentRuntime(this.agent)?.openSessions.delete(this);
     }
   }
 
@@ -1037,11 +792,18 @@ export class RuntimeAgentSession implements Session {
       store: this.store,
       leafId: copied.at(-1)?.id,
       metadata: this.metadata,
+      ownership: this.scope,
       snapshotCacheTtlMs: this.snapshotCacheTtlMs,
-      ...(this.packRefs ? { guardrailPacks: this.packRefs } : {}),
     });
     // Resolved opened: package state is hydrated from the copied entries and `session.opened` has fired.
-    await forked.openResumedSession(copied);
+    const registry = tryAgentRuntime(this.agent)?.openSessions;
+    registry?.add(forked);
+    try {
+      await forked.openResumedSession(copied);
+    } catch (error) {
+      registry?.delete(forked);
+      throw error;
+    }
     return forked;
   }
 
@@ -1057,8 +819,10 @@ export class RuntimeAgentSession implements Session {
     return tryAgentRuntime(this.agent)?.packages.redactor(base) ?? base;
   }
 
-  resolveRunProvider(options: ResolvedRunOptions): void {
+  resolveRunProvider(options: ResolvedRunOptions, skip = false): void {
     const model = options.model ?? this.agent.config.model;
+    // A model-less agent has no provider to resolve; `turn()` fails `no_model` if a loop asks for one.
+    if (!model || skip) return;
     // One resolution shared with `models.client` and `agent.models`: the run's model picks its provider, so a
     // fixed `AgentConfig.provider` never shadows a `RunOptions.model` on another id. A miss on every source
     // fails closed with `Unknown provider: ${model.provider}` before any provider turn.
@@ -1170,10 +934,25 @@ export class RuntimeAgentSession implements Session {
     if (failure) throw failure;
   }
 
-  async applyPendingSteers(runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean> {
+  /** Register a `steer()` listener (the `RunController.steers()` wake-up); returns its unsubscribe. */
+  onSteer(listener: () => void): () => void {
+    this.steerListeners.add(listener);
+    return () => {
+      this.steerListeners.delete(listener);
+    };
+  }
+
+  async applyPendingSteers(runId: string, _metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean> {
     if (this.pendingSteers.length === 0) return false;
+    await this.drainSteers(runId, signal);
+    return true;
+  }
+
+  /** Drain the steer queue through the `run.input` gate; returns the messages that survived it. */
+  async drainSteers(runId: string, signal: AbortSignal): Promise<readonly Message[]> {
     const drained = this.pendingSteers.splice(0);
     this.pendingSteerBytes = 0;
+    const kept: Message[] = [];
     for (const message of drained) {
       throwIfAborted(signal);
       // Mid-run steer passes the same `run.input` gate as run-start input: a handler that drops the
@@ -1196,10 +975,11 @@ export class RuntimeAgentSession implements Session {
         });
         continue;
       }
-      for (const kept of steered) this.history.push(kept);
-      for (const kept of steered) await this.appendMessage(kept, runId);
+      for (const survivor of steered) this.history.push(survivor);
+      for (const survivor of steered) await this.appendMessage(survivor, runId);
+      kept.push(...steered);
     }
-    return true;
+    return kept;
   }
 
   async appendMessage(message: Message, runId: string): Promise<void> {
@@ -1262,8 +1042,8 @@ export class RuntimeAgentSession implements Session {
         ...(turn === undefined ? {} : { turn }),
         // Estimates of the branch the run is about to send: messages plus carried summaries.
         estimateInputTokens,
-        // Same cap helper the attention compiler resolves its `inputCap` with.
-        resolveInputCapTokens: () => resolveInputCap(undefined, options.model ?? this.agent.config.model),
+        // The model-derived per-request cap (`contextWindow - maxOutputTokens - reserve`).
+        resolveInputCapTokens: () => resolveInputCap({}, options.model ?? this.agent.config.model),
         metadata: compaction.metadata,
         signal,
       },
@@ -1300,6 +1080,7 @@ export class RuntimeAgentSession implements Session {
     const secrets = options.secrets ?? [];
     // The `compaction` slot owns the implementation (roadmap §2.5); `CompactionOptions` only sizes it.
     const compactor = this.slotRegistry.resolve("compaction", this.agent.config.slots?.compaction);
+    const owner = this.slotRegistry.ownerOf("compaction", this.agent.config.slots?.compaction);
     const context = {
       sessionId: this.id,
       entries,
@@ -1308,6 +1089,8 @@ export class RuntimeAgentSession implements Session {
       secrets,
       metadata: options.metadata,
       signal,
+      // A package owner can read its own session (ledger, per-session knobs); a host or kernel compactor gets none.
+      ...(owner === "host" || owner === "kernel" ? {} : { session: this.sessionContextFor(owner) }),
     };
     this.emit({ type: "compaction.started", sessionId: this.id, runId });
     let result = await compactor.compact(context);
@@ -1351,7 +1134,7 @@ export class RuntimeAgentSession implements Session {
 
   private async appendNow(entry: SessionEntry): Promise<void> {
     // Entries carry the owning scope so a resume by id can fail closed across scopes.
-    const scope = this.activeOwnership ?? this.agent.config.ownership;
+    const scope = this.activeOwnership ?? this.scope;
     const stamp: Record<string, unknown> = {};
     for (const key of ["tenantId", "accountId", "userId"] as const) {
       if (scope?.[key] !== undefined && entry.metadata?.[key] === undefined) stamp[key] = scope[key];
@@ -1428,4 +1211,11 @@ function resolveSnapshotCacheTtlMs(value: number | undefined): number {
     throw new TypeError(`AgentSessionConfig.snapshotCacheTtlMs must be a safe integer from 0 to ${HARD_MAX_SNAPSHOT_CACHE_TTL_MS}`);
   }
   return ttl;
+}
+
+function sessionLinksOption(config: SessionOptions): SessionLinks | undefined {
+  if (config.parent === undefined && config.actor === undefined) return undefined;
+  const links: SessionLinks = { ...config.parent, ...(config.actor !== undefined ? { actor: config.actor } : {}) };
+  assertSessionLinks(links);
+  return links;
 }

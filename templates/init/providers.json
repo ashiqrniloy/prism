@@ -1,0 +1,36 @@
+{
+  "mock": {
+    "id": "mock",
+    "modelProvider": "mock",
+    "modelName": "demo",
+    "imports": "import {\n  createAgent,\n  createMockProvider,\n  providerDone,\n  providerTextDelta,\n} from \"@arnilo/prism\";",
+    "providerExpression": "createMockProvider([\n    providerTextDelta(\"Hello from Prism\"),\n    providerDone(),\n  ])",
+    "modelExpression": "{ provider: \"mock\", model: \"demo\" }"
+  },
+  "hyper": {
+    "id": "hyper",
+    "packageName": "@arnilo/prism-provider-hyper",
+    "envKey": "HYPER_API_KEY",
+    "envPlaceholder": "your-hyper-api-key",
+    "modelProvider": "hyper",
+    "modelName": "hyper/hyper",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { hyper } from \"@arnilo/prism-provider-hyper\";",
+    "providerExpression": "hyper({\n    apiKey: \"env:HYPER_API_KEY\",\n  })",
+    "modelExpression": "{ provider: \"hyper\", model: \"hyper/hyper\" }",
+    "factoryModule": "@arnilo/prism-provider-hyper",
+    "factoryExport": "hyper"
+  },
+  "opencode-go": {
+    "id": "opencode-go",
+    "packageName": "@arnilo/prism-provider-opencode-go",
+    "envKey": "OPENCODE_GO_API_KEY",
+    "envPlaceholder": "your-opencode-go-api-key",
+    "modelProvider": "opencode-go",
+    "modelName": "gpt-5.1-go",
+    "imports": "import { createAgent } from \"@arnilo/prism\";\nimport { opencodeGo } from \"@arnilo/prism-provider-opencode-go\";",
+    "providerExpression": "opencodeGo({\n    apiKey: \"env:OPENCODE_GO_API_KEY\",\n  })",
+    "modelExpression": "{ provider: \"opencode-go\", model: \"gpt-5.1-go\", compat: { route: \"openai\" } }",
+    "factoryModule": "@arnilo/prism-provider-opencode-go",
+    "factoryExport": "opencodeGo"
+  }
+}

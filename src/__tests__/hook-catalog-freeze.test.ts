@@ -70,7 +70,7 @@ const FROZEN_PHASE_1_COMBINATION: Readonly<Record<string, DecideCombination>> = 
   "compaction.when": "any-compact",
 };
 
-const DOCS = "docs/next/events.md (event catalog), docs/next/hooks.md (hook catalog), and docs/next/slots.md (slot contracts)";
+const DOCS = "docs/events.md (event catalog), docs/hooks.md (hook catalog), and docs/slots.md (slot contracts)";
 
 describe("hook catalog is frozen for phase 2", () => {
   it("hook_catalog_is_frozen_for_phase_2", () => {

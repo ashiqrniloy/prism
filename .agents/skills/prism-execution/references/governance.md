@@ -13,26 +13,23 @@ The governance package (policy engine, OPA, identity verification and principal 
 - **Secrets:** config and manifest values are refs (`env:NAME`, `keyring:name`). A literal secret in config fails validation, and secrets never reach events, `inspect()`, errors, or stores.
 - **Project scope:** project manifests and project MCP servers need the host's trust callback, or they stay unloaded.
 
-## Today (0.12 code being replaced)
+## Today
 
-- Kernel parts:
-  - `src/identity.ts` (`AgentIdentity`, `assertIdentityActive`), `src/secure-agent.ts`, `src/host-composition.ts`
-  - `src/field-policy.ts`, `src/field-evidence.ts`, `src/evidence-grounding.ts`, `src/guardrail-packs/`
-  - `src/redaction.ts`, `src/security.ts`, `src/pinned-fetch.ts` (moves with web tools)
-- Packages: `packages/prism-core/src/governance/{policy,model-router,observability,evals,prompts}` (OPA in `policy/opa.ts`), `packages/prism-core/src/enterprise/`.
-- In-flight: plan 142 made SDK `identity` required with a `"local-operator"` profile. The roadmap replaces that with the opaque `principal`.
-- Current docs (released contract): [agent-identity.md](../../../../docs/agent-identity.md), [policy-and-audit.md](../../../../docs/policy-and-audit.md), [audit-export.md](../../../../docs/audit-export.md), [model-routing.md](../../../../docs/model-routing.md), [data-classification.md](../../../../docs/data-classification.md), [settings-auth-trust-security.md](../../../../docs/settings-auth-trust-security.md), [credentials-and-redaction.md](../../../../docs/credentials-and-redaction.md), [host-security.md](../../../../docs/host-security.md).
+- Kernel floor: `src/redaction.ts` (`redactSecrets`), `src/security.ts`, `src/pinned-fetch.ts`, `src/guardrails.ts` (the generic guardrail stage runner packages call), `src/credentials/` (the `env:` resolver), `src/node/trust.ts` (project trust). `principal` is opaque in `src/contracts-core/principal.ts`; ownership scopes are narrow-only (`SessionOptions.ownership`, `OwnershipScopeError`).
+- `@arnilo/prism-governance` (`packages/policy/governance/src/`): `policy/` (engines, OPA), `identity/` and `identity-hooks.ts` (verified identity and principal enforcement), `field-policy.ts`, `field-evidence.ts`, `claim-grounding.ts`, `audit.ts`, `readiness.ts`.
+- `@arnilo/prism-guardrail-packs` (`compile.ts`, `packs/`), `@arnilo/prism-model-router` (`router/`, `around.ts` on `model.call`), `@arnilo/prism-approval` (`decide.ts` over `tool.call` effects and `coding.targets` roots).
+- Current docs: [`governance`](../../../../packages/policy/governance/README.md), [`guardrail-packs`](../../../../packages/policy/guardrail-packs/README.md), [`model-router`](../../../../packages/policy/model-router/README.md), [`approval`](../../../../packages/policy/approval/README.md), [credentials-and-redaction.md](../../../../docs/credentials-and-redaction.md), [settings-auth-trust-security.md](../../../../docs/settings-auth-trust-security.md), [host-security.md](../../../../docs/host-security.md).
 
 ## Graft queries
 
 - `graft ask "approval grant consumption quorum" --source`
-- `graft ask "identity verified principal ownership resolveRunIdentity" --source`
+- `graft ask "verified identity principal enforcement ownership scope" --source`
 - `graft callers redactSecrets`
 
 ## Tests
 
-- `src/__tests__/identity.test.ts`, `guardrails.test.ts`, `credentials-redaction.test.ts`, `field-policy.test.ts`, `settings-security.test.ts`, `runtime-redaction.test.ts`, `supply-chain-security.test.ts`, `pinned-fetch.test.ts`
-- `packages/prism-core` governance suites (run from the workspace directory)
+- Kernel: `src/__tests__/credentials-redaction.test.ts`, `runtime-redaction.test.ts`, `settings-security.test.ts`, `supply-chain-security.test.ts`, `pinned-fetch.test.ts`, `principal.test.ts`, `ownership-scope.test.ts`
+- Packages: `packages/policy/{governance,guardrail-packs,model-router,approval}/src/__tests__/` (run from each package directory)
 
 ## Rules
 

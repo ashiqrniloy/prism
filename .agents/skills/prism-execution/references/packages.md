@@ -33,32 +33,29 @@ packages/<group>/<name>/
 - **Background work:** use `session.background(name, task)`. Never leave a promise untracked.
 - **Commands and tools:** a name collision fails closed. Use `tools.register(tool, { when })` for per-session visibility.
 
-## Today (0.12 code being replaced)
+## Today
 
-- `src/extensions.ts` (`createExtensionKernel`, `activateKernel`, `forwardAgentEvents`), `src/contributions.ts`, `src/manifests.ts` (`PrismManifest`), `src/provider-packages.ts`, `src/node/contribution-discovery.ts`. All of these are removed once `definePackage` lands.
-- `packages/agent-sdk/src/` (`defineAgent`, planes, presets): replaced by the kernel `createAgent`.
-- `packages/hooks`: the first package to port; it becomes `packages/integrations/hooks-json`.
-- CLI: `src/cli.ts`, `src/cli-init.ts`, `src/cli-provider-add.ts`. These are replaced by the manifest CLI; scaffolding survives as `prism new package`.
-- Current docs (released contract): [extensions.md](../../../../docs/extensions.md), [extension-authoring.md](../../../../docs/extension-authoring.md), [contribution-registries.md](../../../../docs/contribution-registries.md), [configuration-and-manifests.md](../../../../docs/configuration-and-manifests.md), [agent-sdk.md](../../../../docs/agent-sdk.md), [hooks.md](../../../../docs/hooks.md), [cli-rpc.md](../../../../docs/cli-rpc.md).
+- Package system: `src/packages/{define,loader,api,config,capabilities,schema,semver,errors}.ts` (`definePackage`, the loader, `PackageAPI`, `requires: { api }` checked against `KERNEL_API_LEVEL`).
+- Manifest: `src/manifest/{load,install,integrity,merge,maintain,store,format,schema}.ts` (`@arnilo/prism/manifest`; `.prism/packages.json` project and user scopes, dependency-closure integrity, project trust).
+- CLI: `src/cli.ts`, `src/cli-manifest.ts` (`prism add`, `remove`, and the manifest commands).
+- File contributions: `src/node/contribution-discovery.ts` and `src/contribution-parsing.ts` (`SKILL.md` and agent files; inert data, never code).
+- Current docs: [packages.md](../../../../docs/packages.md), [manifest.md](../../../../docs/manifest.md) (manifest and the `prism` CLI), [agent.md](../../../../docs/agent.md), [hooks.md](../../../../docs/hooks.md), [testing.md](../../../../docs/testing.md) (package conformance).
 
 ## Graft queries
 
-- `graft ask "extension kernel load setup unwind dispose" --source`
-- `graft ask "defineAgent planes assemble tool registry" --source`
-- `graft callers activateKernel --depth all` (every consumer to migrate)
+- `graft ask "package loader setup unwind dispose capabilities" --source`
+- `graft ask "manifest install integrity dependency closure" --source`
+- `graft callers definePackage --depth 2`
 
 ## Tests
 
-- `src/__tests__/extensions.test.ts`, `contributions*.test.ts`, `middleware.test.ts`; `packages/agent-sdk/src/__tests__/`; `packages/hooks/src/__tests__/`
-- Target suite: the package conformance suite in `@arnilo/prism/testing`. It checks that setup and dispose are idempotent, nothing leaks after dispose, the config schema is valid, declared capabilities cover the APIs used, and no secret appears in `inspect()`.
+- `src/__tests__/package-loader.test.ts`, `package-config.test.ts`, `package-contributions.test.ts`, `package-api-reads.test.ts`, `package-api-freeze.test.ts`, `package-setup-boundaries.test.ts`, `package-conformance.test.ts`
+- Manifest and CLI: `manifest-load.test.ts`, `manifest-install.test.ts`, `manifest-integrity.test.ts`, `manifest-maintain.test.ts`, `manifest-format.test.ts`, `cli-manifest.test.ts`, `cli-bin.test.ts`
+- Published conformance: `packageConformance` in `@arnilo/prism/testing` (idempotent setup and dispose, no leak after dispose, a valid config schema, capabilities covering the APIs used, no secret in `inspect()`)
 
 ## Rules
 
 - Never reintroduce host-activated contributions. A package that has loaded is active.
-- **Tooling owned by the first plan that creates `packages/<group>/<name>`:**
-  - add the nested layout to the root `workspaces`
-  - update `scripts/package-truth.mjs` `workspacePackageCounts()`, `packaging.test.ts`, and `public-export-contract.test.ts` for TypeScript-source exports
-  - regenerate the compat baseline
-- Each new publishable package also needs a decision in `scripts/independent-packages.json` and a compat baseline file.
+- **A new package** needs: an entry in the root `workspaces`, the `scripts/package-truth.mjs` counts, the `packaging.test.ts` package list, a compat baseline file, a decision in `scripts/independent-packages.json` (empty until the 0.13.0 publish: everything ships lockstep), `requires: { api: 1 }`, and a `docs/index.md` link to its README.
 - A package must not import another package's internals. It depends only through `requires.packages` plus `services`.
 - A manifest config value that looks like a literal secret is rejected; do not relax that check.

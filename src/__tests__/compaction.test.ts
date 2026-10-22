@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type Agent, type AgentConfig, type CompactionOptions, type CompactionEntryData, createAgent, createDefaultCompactor, createSessionEntry, providerDone, rebuildSessionContext } from "../index.js";
+import {
+  type Agent,
+  type AgentConfig,
+  type CompactionContext,
+  type CompactionOptions,
+  type CompactionEntryData,
+  createAgent,
+  createDefaultCompactor,
+  createSessionEntry,
+  definePackage,
+  type JsonValue,
+  providerDone,
+  rebuildSessionContext,
+} from "../index.js";
 import { mockProvider } from "../testing/index.js";
 
 const now = () => new Date("2026-01-01T00:00:00.000Z");
@@ -123,6 +136,58 @@ describe("compaction", () => {
 
     assert.equal(result.summary, "from the slot", "session.compact() routes through the compaction slot");
     assert.equal((await session.entries()).at(-1)?.summary, "from the slot");
+  });
+
+  it("compaction_context_carries_owner_session", async () => {
+    let seen: CompactionContext | undefined;
+    const owner = definePackage({
+      name: "@acme/compactor",
+      version: "1.0.0",
+      requires: { api: 1 },
+      capabilities: ["slot:compaction", "session-state"],
+      setup: ({ slots, state }) => {
+        const mark = state.session<JsonValue>("mark", { n: 5 });
+        slots.compaction.provide({
+          compact: (context) => {
+            seen = context;
+            return { summary: `session ${context.session?.id} state ${JSON.stringify(mark.get(context.session!))}` };
+          },
+        });
+      },
+    });
+    const agent: Agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [owner, mockProvider([[providerDone()]])],
+    });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("old");
+
+    const result = await session.compact();
+
+    assert.equal(seen?.session?.id, "s1", "a package compactor reads its own session");
+    assert.equal(result.summary, 'session s1 state {"n":5}', "session state is hydrated when the compactor runs");
+  });
+
+  it("compaction_context_omits_session_for_a_host_compactor", async () => {
+    let seen: CompactionContext | undefined;
+    const agent: Agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [mockProvider([[providerDone()]])],
+      slots: {
+        compaction: {
+          compact: (context) => {
+            seen = context;
+            return { summary: "host" };
+          },
+        },
+      },
+    });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("old");
+    await session.compact();
+
+    assert.equal(seen?.sessionId, "s1");
+    assert.equal(seen?.session, undefined, "a host or kernel compactor gets no session view");
   });
 });
 

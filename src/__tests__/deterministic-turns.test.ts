@@ -14,7 +14,7 @@ const DESK_ANSWERS = new Map([["what is the desk?", "The desk answers from local
 /** A `model.call` around handler that skips `next`: no provider request, no usage. */
 function deskModelCall() {
   return (hooks: import("../index.js").HookRegistrar) => {
-    hooks.on("model.call", async (request, next, context) => {
+    hooks.on("model.call", async (request, next, _context) => {
       const userText = request.messages
         .filter((message) => message.role === "user")
         .flatMap((message) => message.content)

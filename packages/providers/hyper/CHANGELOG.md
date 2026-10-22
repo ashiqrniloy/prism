@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Rebuilt `createHyperProvider` on the shared routed builder (`createRoutedProvider`) with dual routes: `openai` (`/chat/completions`) and `anthropic` (`/messages`) (plan 183 Task 2).
+- Surfaced Hyper usage monetization fields (`cost.usd`, `cost.hypercredits`, `remaining.hypercredits`) into `Usage.cost`, `Usage.currency`, and `Usage.metadata.hyper`.
+- Added wire test recordings in `src/__tests__/wire/` (`openai` and `anthropic`) with full `providerConformance({ recordings })` coverage.
+- Exported route definitions `HYPER_CHAT_ROUTE`, `HYPER_MESSAGES_ROUTE`, and usage mapper `withHyperCost`.
+
+### Removed
+
+- Removed obsolete wire and retry helper exports: `hyperChatBody`, `hyperChatEvents`, `serializeHyperChatMessage`, `classifyHyperError`, `hyperHttpError`, `applyHyperAnthropicCacheControl`, `hyperAnthropicCacheEnabled`, `hyperPreserveThinking`, `hyperReasoningEffort`, `hyperThinking`, `stripHyperOwnedCompat`.
+
 ### Added
 
 - New provider package (plan 152 Task 5): `@arnilo/prism-provider-hyper` replaces the

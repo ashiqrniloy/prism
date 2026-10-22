@@ -4,7 +4,6 @@ import { randomUUID } from "node:crypto";
 import { afterAll as after, describe, it } from "bun:test";
 import { promisify } from "node:util";
 import { Pool } from "pg";
-import { createPostgresEnterpriseState } from "../packages/prism-core/dist/enterprise/postgres/index.js";
 import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 
 const exec = promisify(execFile);
@@ -13,13 +12,6 @@ const describeProtected = url ? describe : describe.skip;
 const worker = new URL("./fixtures/phase7-worker.mjs", import.meta.url);
 const cursorSecret = "phase7-process-worker-secret";
 const ownership = { tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
-const identity = {
-  ...ownership,
-  principal: { kind: "agent", id: "agent-a" },
-  scopes: ["tools:execute"],
-  issuedAt: "2026-08-04T00:00:00.000Z",
-  verified: true,
-};
 const schemas = new Set();
 const pools = [];
 
@@ -45,19 +37,6 @@ function event(id, sessionId, runId) {
     timestamp: "2026-08-04T00:00:00.000Z",
     event: { type: "turn.started", sessionId, runId, turn: 1 },
     redacted: true,
-  };
-}
-
-function effect(key) {
-  return {
-    identity,
-    ownership,
-    key,
-    sessionId: "effect-session",
-    runId: "effect-run",
-    toolCallId: "effect-call",
-    toolName: "mail.send",
-    argumentsHash: "a".repeat(64),
   };
 }
 
@@ -168,48 +147,4 @@ describeProtected("Phase 7 protected process conformance", () => {
     await subscriber.close();
   });
 
-  it("never reruns pending or dispatched effects after worker death", async () => {
-    const valueSchema = schema();
-    const database = pool(8);
-    const state = await createPostgresEnterpriseState({ pool: database, schema: valueSchema });
-    await database.query(`CREATE TABLE "${valueSchema}"."phase7_effect_counter" (id TEXT PRIMARY KEY, executions INTEGER NOT NULL)`);
-
-    const pending = effect("pending-worker-death");
-    await runWorker("effect-pending", { schema: valueSchema, effect: pending });
-    assert.equal((await state.toolEffects.begin(pending)).outcome, "existing");
-    await database.query(
-      `UPDATE "${valueSchema}"."prism_tool_effects" SET expires_at = clock_timestamp() - INTERVAL '1 millisecond' WHERE effect_key = $1`,
-      [pending.key],
-    );
-    assert.equal((await state.toolEffects.get(pending)).status, "failed_retryable");
-    assert.equal((await state.toolEffects.begin(pending)).outcome, "acquired");
-
-    const dispatched = effect("dispatched-worker-death");
-    await runWorker("effect-dispatched", { schema: valueSchema, effect: dispatched });
-    assert.equal((await state.toolEffects.begin(dispatched)).record.status, "dispatched");
-    assert.equal(
-      (await database.query(`SELECT executions FROM "${valueSchema}"."phase7_effect_counter" WHERE id = $1`, [dispatched.key])).rows[0]
-        ?.executions,
-      1,
-    );
-    await database.query(
-      `UPDATE "${valueSchema}"."prism_tool_effects" SET expires_at = clock_timestamp() - INTERVAL '1 millisecond' WHERE effect_key = $1`,
-      [dispatched.key],
-    );
-    assert.equal((await state.toolEffects.get(dispatched)).status, "unknown");
-    assert.equal((await state.toolEffects.begin(dispatched)).outcome, "existing");
-    assert.equal(
-      (await database.query(`SELECT executions FROM "${valueSchema}"."phase7_effect_counter" WHERE id = $1`, [dispatched.key])).rows[0]
-        ?.executions,
-      1,
-    );
-    assert.equal(
-      await state.toolEffects.get({
-        ...dispatched,
-        identity: { ...identity, tenantId: "tenant-b" },
-        ownership: { ...ownership, tenantId: "tenant-b" },
-      }),
-      undefined,
-    );
-  });
 });

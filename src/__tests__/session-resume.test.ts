@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AgentEvent, askEveryTool, createAgent, createMemorySessionStore, createSecretRedactor, type Decision, type JsonObject, type LoopStrategy, providerDone, providerTextDelta, type RunResult, type Session, toolCallContent } from "../index.js";
+import {
+  type AgentEvent,
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  type Decision,
+  type JsonObject,
+  type LoopStrategy,
+  providerDone,
+  providerTextDelta,
+  type RunResult,
+  type Session,
+  toolCallContent,
+} from "../index.js";
 import { createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -18,19 +32,23 @@ function gatedAgent(options: { readonly store?: ReturnType<typeof createMemorySe
       slots: { store },
       ...(gate ? { hooks: askEveryTool() } : {}),
       validator: (_tool, args) => (typeof args.value === "string" ? undefined : "value must be a string"),
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "ok" }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("finished");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "ok" }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("finished");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: {
         add: [
           {
@@ -172,25 +190,32 @@ describe("session.resume", () => {
         model: MODEL,
         slots: { store, loop: make(revision) },
         hooks: askEveryTool(),
-        packages: [providerPackage("test-provider", [{
-          id: "mock",
-          async *generate() {
-            turn += 1;
-            if (turn === 1) {
-              yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "ok" }) };
-              yield providerDone();
-              return;
-            }
-            yield providerTextDelta("finished");
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate() {
+                turn += 1;
+                if (turn === 1) {
+                  yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: "ok" }) };
+                  yield providerDone();
+                  return;
+                }
+                yield providerTextDelta("finished");
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
         tools: {
           add: [
             {
               name: "write",
               parameters: {},
-              execute: (_a, c) => (executed.push("write"), { toolCallId: c.toolCallId, name: "write", value: "done" }),
+              execute: (_a, c) => {
+                executed.push("write");
+                return { toolCallId: c.toolCallId, name: "write", value: "done" };
+              },
             },
           ],
         },
@@ -237,18 +262,22 @@ describe("session.resume", () => {
       slots: { store },
       hooks: askEveryTool(),
       redactor: createSecretRedactor([secret]),
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: secret }) };
-            yield providerDone();
-            return;
-          }
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("call-1", "write", { value: secret }) };
+                yield providerDone();
+                return;
+              }
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: { add: [{ name: "write", parameters: {}, execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: "done" }) }] },
     });
     const session = await agent.session({ id: "s", create: true });

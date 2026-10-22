@@ -3,9 +3,9 @@
  * Attention-compiler scenario (plan 074, Further Actions P1): *measure before extending*.
  *
  * Builds a synthetic but realistic multi-turn session (assistant turns with tool calls, 8 KB
- * tool results, an optional volatile context provider) and assembles every turn through
- * `assembleProviderInput` in two modes:
- *   - compiler off: today's requests, append-only prefix
+ * tool results, an optional volatile context block) and compiles every turn through the
+ * `@arnilo/prism-context-engineering` attention pass in two modes:
+ *   - compiler off: the same messages, append-only prefix
  *   - compiler on: the ratio gate, sticky thinking strip, deterministic tool stubs
  *
  * Reports the four numbers the plan asks for:
@@ -17,14 +17,15 @@
  * Network-free and credential-free by construction; exits 1 on envelope breach.
  */
 import { cpus, totalmem } from "node:os";
+import { estimateAssemblyTokens, estimateTextTokens } from "../../src/index.ts";
+// Plan 158 Task 8: the compiler and its truncation policy are package-owned now, so the scenario
+// measures the same pass a session runs through the package's `context.build` handler.
 import {
-  assembleProviderInput,
+  compileAttention,
+  createAttentionCompiler,
+  createAttentionStickyFrontier,
   createAttentionTruncationTrigger,
-  estimateAssemblyTokens,
-  estimateTextTokens,
-  resolveInputCap,
-  resolveShouldCompact,
-} from "../../dist/index.js";
+} from "../../packages/context/engineering/src/exports.js";
 
 const TURNS = 8;
 const PAYLOAD_BYTES = 8_192;
@@ -81,53 +82,63 @@ function requestTokens(request) {
   return estimateAssemblyTokens(request.messages) + estimateTextTokens(JSON.stringify(request.tools ?? []));
 }
 
-/** One fixture run: assemble every turn in one mode and collect its per-turn numbers. */
+/**
+ * The volatile block as the assembler renders it: a leading system message, so a change to it
+ * invalidates every byte behind it — the shape the volatile/pinned comparison measures.
+ */
+function withVolatileBlock(messages, block) {
+  return block === undefined ? messages : [{ role: "system", content: [{ type: "text", text: block }] }, ...messages];
+}
+
+/** One fixture run: compile every turn in one mode and collect its per-turn numbers. */
 async function runMode({ mode, volatileProvider, pinnedProvider, frontier, triggerRatio = TRIGGER_RATIO, inputCap = INPUT_CAP, bytesFor }) {
   const rows = [];
+  const compiler = createAttentionCompiler(
+    { maxInputTokens: inputCap, triggerRatio, compactRatio: Math.min(0.995, triggerRatio + 0.005), keepLast: 0 },
+    { model: { limits: { contextWindow: inputCap } } },
+  );
   let previous;
   let busts = 0;
   let previousHit = 0;
   let uncachedTail = 0;
   for (let turn = 1; turn <= TURNS; turn += 1) {
     const { history, toolResults } = fixtureFor(turn, bytesFor);
-    const reports = [];
-    const request = await assembleProviderInput({
-      model: { provider: "mock", model: "demo" },
-      input: "keep going",
-      history,
-      toolResults,
-      tools: [echoTool],
-      ...(volatileProvider ? { contextProviders: [pinnedProvider ? pinnedProvider(turn, volatileProvider) : volatileProvider(turn)] } : {}),
-      ...(mode === "on"
-        ? {
-            attentionCompiler: {
-              maxInputTokens: inputCap,
-              triggerRatio,
-              compactRatio: Math.min(0.995, triggerRatio + 0.005),
-              keepLast: 0,
-            },
-          }
-        : {}),
-      ...(mode === "on" && frontier ? { attentionSticky: frontier } : {}),
-      onAttentionReport: (report) => reports.push(report),
-    });
-    const serialized = JSON.stringify({ messages: request.messages, tools: request.tools ?? [], context: request.context ?? [] });
+    const blocks = volatileProvider ? (pinnedProvider ? pinnedProvider(turn, volatileProvider) : volatileProvider(turn)).resolve() : undefined;
+    const messages = withVolatileBlock(
+      [...history, ...toolResults, { role: "user", content: [{ type: "text", text: "keep going" }] }],
+      blocks?.[0]?.content,
+    );
+    const compiled =
+      mode === "on"
+        ? await compileAttention({
+            compiler,
+            messages,
+            tools: [echoTool],
+            ...(frontier ? { frontier } : {}),
+            turn,
+            sessionId: "benchmark",
+            runId: "benchmark",
+          })
+        : { messages, mutated: false, report: undefined };
+    const request = { messages: compiled.messages, tools: [echoTool] };
+    const serialized = JSON.stringify(request);
     const serializeBytes = Buffer.byteLength(serialized, "utf8");
     const hit = previous === undefined ? 0 : commonPrefix(previous, serialized);
     if (previous !== undefined && previousHit > 0 && hit < previousHit) busts += 1;
     previous = serialized;
     previousHit = hit;
     uncachedTail += serializeBytes - hit;
+    const report = compiled.report;
     rows.push({
       turn,
       tokens: requestTokens(request),
       bytes: serializeBytes,
       prefixHitBytes: hit,
-      mutated: reports.length > 0,
-      stubbed: reports.reduce((sum, report) => sum + report.stubbedToolResults, 0),
-      stubbedBytes: reports.reduce((sum, report) => sum + report.stubbedBytes, 0),
-      usedAfter: reports.at(-1)?.usedAfter,
-      truncated: reports.some((report) => report.truncated),
+      mutated: compiled.mutated,
+      stubbed: report?.stubbedToolResults ?? 0,
+      stubbedBytes: report?.stubbedBytes ?? 0,
+      usedAfter: report?.usedAfter,
+      truncated: report?.truncated === true,
     });
   }
   return { rows, busts, uncachedTail };
@@ -135,7 +146,7 @@ async function runMode({ mode, volatileProvider, pinnedProvider, frontier, trigg
 
 async function runScenario() {
   const off = await runMode({ mode: "off" });
-  const on = await runMode({ mode: "on", frontier: { thinking: new Set(), toolCallIds: new Set() } });
+  const on = await runMode({ mode: "on", frontier: createAttentionStickyFrontier() });
   // Volatility is measured on small append-only turns, so the uncached tail is the block plus
   // everything behind it, not the new turn's own payload.
   const smallTurns = () => WARM_PAYLOAD_BYTES;
@@ -168,28 +179,21 @@ async function runScenario() {
 
   // Restart churn: with the gate relaxed, only a restored frontier keeps the stub — measure the
   // payload bytes a resume would otherwise re-send (plan 074 P3).
-  const resumeFrontier = { thinking: new Set(), toolCallIds: new Set() };
+  const resumeFrontier = createAttentionStickyFrontier();
   await runMode({ mode: "on", frontier: resumeFrontier });
   const relaxed = { mode: "on", triggerRatio: 0.99, inputCap: 64_000 };
   const restored = (await runMode({ ...relaxed, frontier: resumeFrontier })).rows.at(-1);
-  const cleared = (await runMode({ ...relaxed, frontier: { thinking: new Set(), toolCallIds: new Set() } })).rows.at(-1);
+  const cleared = (await runMode({ ...relaxed, frontier: createAttentionStickyFrontier() })).rows.at(-1);
 
-  // Truncated-turn follow-up (plan 074 P4): a fixture that cannot get back under the ratio
-  // because every eligible row is excluded must drive the host's compact-once policy.
+  // Truncated-turn follow-up (plan 074 P4): a fixture whose stubs cannot hold the request under
+  // the ratio must drive the host's compact-once policy. The package owns the policy now: feed it
+  // the compiled reports and ask it at the next task boundary (`shouldCompact`).
   const policy = createAttentionTruncationTrigger({ threshold: 1 });
-  const excludedRun = await runMode({ mode: "on", frontier: { thinking: new Set(), toolCallIds: new Set() } });
+  const excludedRun = await runMode({ mode: "on", frontier: createAttentionStickyFrontier() });
   for (const row of excludedRun.rows) {
     if (row.mutated) policy.observe({ truncated: row.truncated });
   }
-  const compactDecision = await resolveShouldCompact(
-    { trigger: policy.trigger },
-    {
-      sessionId: "benchmark",
-      entryCount: excludedRun.rows.length,
-      estimateInputTokens: () => on.rows.at(-1)?.tokens ?? 0,
-      resolveInputCapTokens: () => resolveInputCap(undefined, { limits: { contextWindow: INPUT_CAP } }),
-    },
-  );
+  const compactDecision = policy.shouldCompact();
 
   const tokensOff = off.rows.reduce((sum, row) => sum + row.tokens, 0);
   const tokensOn = on.rows.reduce((sum, row) => sum + row.tokens, 0);

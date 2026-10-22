@@ -12,7 +12,9 @@
  * });
  * ```
  */
+
 import { definePackage, type JsonSchema, type PackageInstance } from "@arnilo/prism";
+import manifest from "../package.json" with { type: "json" };
 
 import { compileHooks, type HooksJsonConfig, type HooksJsonOptions } from "./compile.js";
 
@@ -132,9 +134,9 @@ const hooksConfigSchema: JsonSchema = {
 function definitionFor(options: HooksJsonOptions) {
   return definePackage<HooksJsonConfig>({
     name: "@arnilo/prism-hooks-json",
-    version: "0.12.1",
+    version: manifest.version,
     description: "Claude/Codex hooks.json compiled onto Prism hooks.",
-    requires: { prism: "^0.12.1 || ^0.13.0-0" },
+    requires: { api: 1 },
     capabilities: ["credentials"],
     config: hooksConfigSchema,
     setup: (prism) => compileHooks(prism, options),

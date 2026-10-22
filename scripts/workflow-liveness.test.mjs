@@ -48,9 +48,6 @@ const WORKSPACE = /(?:^|\s)(?:-w|--workspace|-F|--filter)[=\s]+("[^"]+"|'[^']+'|
 const SCRIPT_RUN = /\b(?:npm|bun)\s+run\s+([\w:.-]+)/;
 /** `bun run --filter <pkg> <script>`: the selector consumes the token `SCRIPT_RUN` would need. */
 const FILTER_RUN = /\b(?:npm|bun)\s+run\s+(?:-F|--filter)[=\s]+\S+\s+([\w:.-]+)/;
-/** Registry toolchain commands allowed to keep npm (plan 125 Task 5's exception list). */
-// deprecate is the same class as publish: a registry mutation that needs the publish auth.
-const NPM_REGISTRY_OPS = new Set(["pack", "publish", "sbom", "view", "deprecate"]);
 /** The one Bun setup action, pinned to a full commit SHA (plan 124 Task 5). */
 const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6";
 
@@ -84,9 +81,9 @@ export function workflowReferenceProblems(text, inventory) {
 }
 
 /**
- * npm/npx uses that are not the registry-toolchain exception, as `line N: …` strings.
- * Bun is the only runner in these workflows (plan 124 Task 5): every step is `bun`/`bun run`/
- * `bunx`, and the only npm left is the release-host registry ops (plan 125 Task 5).
+ * npm/npx uses in a workflow, as `line N: …` strings. Bun is the only runner (plan 124 Task 5):
+ * every step is `bun`/`bun run`/`bunx`. Plan 175 Task 8 took the last npm call site (the deprecation
+ * job) to the registry HTTP API, so no workflow may run npm at all.
  */
 export function nonBunCommandProblems(text) {
   const problems = [];
@@ -95,7 +92,8 @@ export function nonBunCommandProblems(text) {
     if (/\bnpx\b/.test(code)) problems.push(`line ${index + 1}: npx is not bunx`);
     if (/\bnpm\s+run\b/.test(code)) problems.push(`line ${index + 1}: npm run is not bun run`);
     for (const match of code.matchAll(/\bnpm\s+([\w-]+)/g)) {
-      if (!NPM_REGISTRY_OPS.has(match[1])) problems.push(`line ${index + 1}: npm ${match[1]} is not a registry op`);
+      if (match[1] === "run") continue;
+      problems.push(`line ${index + 1}: npm ${match[1]} is not a Bun command`);
     }
   });
   return problems;
@@ -193,7 +191,7 @@ test("a retired package or unknown subpath in a script fails (positive control)"
   // Planted specifiers are assembled at runtime so this gate's own source stays clean
   // under its own scan (a literal specifier in an import clause would be reported).
   const retired = "@arnilo/prism-coding-agent";
-  const unknownSubpath = "@arnilo/prism-core/runtime/nope";
+  const unknownSubpath = "@arnilo/prism-workflows/nope";
   assert.match(
     unresolvedScriptImports(`import { createProcessSessions } from "${retired}";`, inventory).join("\n"),
     /@arnilo\/prism-coding-agent names a package that is not a live workspace/,
@@ -201,7 +199,7 @@ test("a retired package or unknown subpath in a script fails (positive control)"
   );
   assert.match(
     unresolvedScriptImports(`await import("${unknownSubpath}");`, inventory).join("\n"),
-    /@arnilo\/prism-core declares no "\.\/runtime\/nope" export/,
+    /@arnilo\/prism-workflows declares no "\.\/nope" export/,
     "an unknown subpath must be reported",
   );
   assert.deepEqual(unresolvedScriptImports('import { createAgent } from "@arnilo/prism";', inventory), []);
@@ -215,16 +213,16 @@ test("a retired package or missing script in a live workflow fails (positive con
   const file = join(WORKFLOWS, "sandbox-browser.yml");
   const text = readFileSync(file, "utf8");
   assert.deepEqual(workflowReferenceProblems(text, inventory), [], "sandbox-browser.yml must be live");
-  const retired = text.replace("@arnilo/prism-work", "@arnilo/prism-diagrams");
+  const retired = text.replace("@arnilo/prism-tools-coding", "@arnilo/prism-diagrams");
   assert.match(
     workflowReferenceProblems(retired, inventory).join("\n"),
     /unknown workspace "@arnilo\/prism-diagrams"/,
     "a retired package name must be reported",
   );
-  const missingScript = `${text}\n          npm run test:drawio -w @arnilo/prism-work\n`;
+  const missingScript = `${text}\n          npm run test:drawio -w @arnilo/prism-tools-work\n`;
   assert.match(
     workflowReferenceProblems(missingScript, inventory).join("\n"),
-    /@arnilo\/prism-work has no "test:drawio" script/,
+    /@arnilo\/prism-tools-work has no "test:drawio" script/,
     "a script no package declares must be reported",
   );
 });
@@ -258,19 +256,16 @@ test("workflows install Bun and declare no Node leg", () => {
     [],
     "no workflow may declare a Node leg after the engines flip (plan 125 Task 1)",
   );
-  // Registry-only workflows run no repo code (npm deprecate touches the registry and nothing else),
-  // so they carry the Bun setup for the runner contract but skip the dependency install.
-  const registryOnly = new Set(["npm-deprecate.yml"]);
   for (const { file, text } of workflows) {
     assert.ok(text.includes(SETUP_BUN), `${file} must set up Bun from the pinned action SHA`);
     assert.ok(text.includes('bun-version: "1.4.2"'), `${file} must pin bun-version 1.4.2`);
-    if (!registryOnly.has(file)) assert.ok(text.includes("bun ci"), `${file} must install with bun ci`);
+    assert.ok(text.includes("bun ci"), `${file} must install with bun ci`);
   }
 });
 
-test("no workflow step calls npm run or npx, and npm keeps only the registry ops", () => {
+test("no workflow step calls npm", () => {
   const problems = readWorkflows().flatMap(({ file, text }) => nonBunCommandProblems(text).map((p) => `${file} ${p}`));
-  assert.deepEqual(problems, [], "workflows must run bun/bun run/bunx; npm is the registry toolchain only");
+  assert.deepEqual(problems, [], "workflows must run bun/bun run/bunx; no workflow may run npm (plan 175 Task 8)");
   // Non-vacuity: the scan sees the sanctioned Bun forms it is guarding.
   const bunCommands = readWorkflows().flatMap(({ text }) => text.match(/\bbun (?:ci|run|test|x) /g) ?? []);
   assert.ok(bunCommands.length >= 20, `expected bun commands to scan, found ${bunCommands.length}`);
@@ -289,9 +284,13 @@ test("no workflow step calls npm run or npx, and npm keeps only the registry ops
     /npm run is not bun run[\s\S]*npx is not bunx/,
     "positive control: npm run and npx must be reported",
   );
-  // Registry ops stay, in every workflow that needs them.
-  assert.deepEqual(nonBunCommandProblems("          npm pack --json\n          npm sbom --sbom-format spdx\n          npm publish"), []);
-  assert.deepEqual(nonBunCommandProblems("          npm ci"), ["line 1: npm ci is not a registry op"]);
+  // npm is retired from workflows: every npm form is reported, the registry ops included.
+  assert.deepEqual(nonBunCommandProblems("          npm pack --json\n          npm sbom --sbom-format spdx\n          npm publish"), [
+    "line 1: npm pack is not a Bun command",
+    "line 2: npm sbom is not a Bun command",
+    "line 3: npm publish is not a Bun command",
+  ]);
+  assert.deepEqual(nonBunCommandProblems("          npm ci"), ["line 1: npm ci is not a Bun command"]);
 });
 
 test("every scripts/*.mjs a workflow names exists", () => {
@@ -312,7 +311,12 @@ test("non-script npm commands and root scripts are handled without false positiv
   ].join("\n");
   assert.deepEqual(workflowReferenceProblems(installers, inventory), []);
   // Root scripts resolve against the root manifest, and a bogus one is reported.
-  assert.deepEqual(workflowReferenceProblems("      - run: npm run build:core && npm run build -w @arnilo/prism-core", inventory), []);
+  // Plan 175 Task 8: no package carries a `build` script any more (the migration publishes TS
+  // source), so the fixture uses a live one.
+  assert.deepEqual(
+    workflowReferenceProblems("      - run: npm run build:core && npm run typecheck -w @arnilo/prism-workflows", inventory),
+    [],
+  );
   assert.match(
     workflowReferenceProblems("      - run: npm run build:core:typo", inventory).join("\n"),
     /the root package has no "build:core:typo" script/,

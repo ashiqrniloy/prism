@@ -108,7 +108,7 @@ describe("skill load", () => {
   it("agent session load_skill includes instructions on subsequent provider turn", async () => {
     const requests: ProviderRequest[] = [];
     const registry = createSkillRegistry([{ name: "brief", description: "Answer briefly.", instructions: "Be very brief." }]);
-    const loadSkill = createLoadSkillTool({ registry });
+    const _loadSkill = createLoadSkillTool({ registry });
     const provider = {
       id: "mock",
       async *generate(request: ProviderRequest) {

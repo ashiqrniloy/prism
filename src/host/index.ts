@@ -13,4 +13,5 @@ export type {
   HostUiSecretRequest,
   HostUiSelectOption,
   HostUiSelectRequest,
+  HostUiTerminalRequest,
 } from "./types.js";

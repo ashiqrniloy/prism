@@ -314,27 +314,34 @@ function run(node: Node, input: JsonValue, path: string, errors: SchemaError[]):
     const itemNode = node.items;
     if (itemNode) value = value.map((entry, index) => run(itemNode, entry, pointer(path, index), errors).value);
   } else if (isRecord(value)) {
-    const source = value as Record<string, JsonValue>;
-    const out: Record<string, JsonValue> = {};
-    for (const key of Object.keys(source)) {
-      const entry = source[key] as JsonValue;
-      const declared = node.properties.get(key);
-      if (declared) out[key] = run(declared, entry, pointer(path, key), errors).value;
-      else if (node.additional === true) out[key] = entry;
-      else if (node.additional === false) fail("unknown_key", `unknown key "${key}"`);
-      else out[key] = run(node.additional, entry, pointer(path, key), errors).value;
-    }
-    for (const [key, declared] of node.properties) {
-      if (Object.hasOwn(source, key)) continue;
-      if ("default" in declared.schema) out[key] = cloneJson(declared.schema.default as JsonValue);
-      else if (declared.properties.size > 0) {
-        // A nested object materialises only when a default exists below it.
-        const nested = schemaDefaults(declared.schema);
-        if (Object.keys(nested).length > 0) out[key] = nested;
+    // A node that only composes branches (`oneOf`/`anyOf`) declares no object shape of its own. Its
+    // empty property map must not reject every key as unknown before the branches run, so the shape
+    // keywords apply only when the node actually constrains an object.
+    const constrainsObject =
+      s.type === "object" || s.properties !== undefined || s.additionalProperties !== undefined || s.required !== undefined;
+    if (constrainsObject) {
+      const source = value as Record<string, JsonValue>;
+      const out: Record<string, JsonValue> = {};
+      for (const key of Object.keys(source)) {
+        const entry = source[key] as JsonValue;
+        const declared = node.properties.get(key);
+        if (declared) out[key] = run(declared, entry, pointer(path, key), errors).value;
+        else if (node.additional === true) out[key] = entry;
+        else if (node.additional === false) fail("unknown_key", `unknown key "${key}"`);
+        else out[key] = run(node.additional, entry, pointer(path, key), errors).value;
       }
+      for (const [key, declared] of node.properties) {
+        if (Object.hasOwn(source, key)) continue;
+        if ("default" in declared.schema) out[key] = cloneJson(declared.schema.default as JsonValue);
+        else if (declared.properties.size > 0) {
+          // A nested object materialises only when a default exists below it.
+          const nested = schemaDefaults(declared.schema);
+          if (Object.keys(nested).length > 0) out[key] = nested;
+        }
+      }
+      for (const key of s.required ?? []) if (!Object.hasOwn(out, key)) failAt("required", pointer(path, key), "is required");
+      value = out;
     }
-    for (const key of s.required ?? []) if (!Object.hasOwn(out, key)) failAt("required", pointer(path, key), "is required");
-    value = out;
   }
 
   if (node.oneOf) {

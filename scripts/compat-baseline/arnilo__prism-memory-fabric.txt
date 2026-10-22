@@ -1,0 +1,377 @@
+ARCHIVE_SEARCH_COVERAGE	export declare const ARCHIVE_SEARCH_COVERAGE = 0.34
+ActiveNoteOptions	export type { ActiveNoteOptions, MemoryNoteStatus } from "./status.js"
+ArchiveConfig	export type { ArchiveConfig, ArchiveDecisionOptions } from "./archive.js"
+ArchiveDecisionOptions	export type { ArchiveConfig, ArchiveDecisionOptions } from "./archive.js"
+CONSOLIDATION_EXTRACT_SYSTEM	export declare const CONSOLIDATION_EXTRACT_SYSTEM = "You consolidate a coding agent's session into durable memory notes.\n\nYou are given candidates the session already flagged: explicit user statements, user corrections, task-state decisions, high-relevance observations, and reflections. You also see up to 12 existing notes per scope, and the task segments of this session.\n\nRules:\n- Call record_notes exactly once. Write nothing when the session taught nothing durable: fewer, better notes.\n-
+CONSOLIDATION_PATTERNS	export declare const CONSOLIDATION_PATTERNS: ConsolidationPatterns
+CUE_ANY_BUCKET	export declare const CUE_ANY_BUCKET = "*"
+CapacityLimits	export type { CapacityLimits, CapacityNote, CapacityUsage } from "./capacity.js"
+CapacityNote	export type { CapacityLimits, CapacityNote, CapacityUsage } from "./capacity.js"
+CapacityUsage	export type { CapacityLimits, CapacityNote, CapacityUsage } from "./capacity.js"
+ConsolidationExtractionError	export declare class ConsolidationExtractionError extends Error
+DEFAULT_ARCHIVE_CONFIG	export declare const DEFAULT_ARCHIVE_CONFIG: ArchiveConfig
+DEFAULT_CAPACITY	export declare const DEFAULT_CAPACITY: Readonly<Record<"user" | "agent" | "project", CapacityLimits>>
+DEFAULT_CONSOLIDATION_THRESHOLD	export declare const DEFAULT_CONSOLIDATION_THRESHOLD = 0.85
+DEFAULT_CONVERSATION_SEARCH_TOP_K	export declare const DEFAULT_CONVERSATION_SEARCH_TOP_K = 5
+DEFAULT_CORE_OPTIONS	export declare const DEFAULT_CORE_OPTIONS: ResolvedFabricCoreOptions
+DEFAULT_CUES_OPTIONS	export declare const DEFAULT_CUES_OPTIONS: ResolvedFabricCuesOptions
+DEFAULT_DECAY	export declare const DEFAULT_DECAY: MemoryNoteDecay
+DEFAULT_DERIVABLE_FROM	export declare const DEFAULT_DERIVABLE_FROM: readonly string[]
+DEFAULT_DIRECTORY_OPTIONS	export declare const DEFAULT_DIRECTORY_OPTIONS: ResolvedFabricDirectoryOptions
+DEFAULT_DUPLICATE_DICE	export declare const DEFAULT_DUPLICATE_DICE = 0.8
+DEFAULT_EPISODE_MIN_CLUSTER	export declare const DEFAULT_EPISODE_MIN_CLUSTER = 5
+DEFAULT_FABRIC_MAX_FILE_BYTES	export declare const DEFAULT_FABRIC_MAX_FILE_BYTES: number
+DEFAULT_LINKER_TOP_K	export declare const DEFAULT_LINKER_TOP_K = 3
+DEFAULT_MAX_CONSOLIDATION_CANDIDATES	export declare const DEFAULT_MAX_CONSOLIDATION_CANDIDATES = 48
+DEFAULT_MEMORY_FABRIC_PROVIDER_NAME	export declare const DEFAULT_MEMORY_FABRIC_PROVIDER_NAME = "memory-fabric"
+DEFAULT_PROMOTE_MIN_TURNS_BETWEEN	export declare const DEFAULT_PROMOTE_MIN_TURNS_BETWEEN = 8
+DEFAULT_PROMOTION_MIN_SCORE	export declare const DEFAULT_PROMOTION_MIN_SCORE = 0.5
+DEFAULT_PROMOTION_WEIGHTS	export declare const DEFAULT_PROMOTION_WEIGHTS: PromotionWeights
+DEFAULT_RECALL_KINDS	export declare const DEFAULT_RECALL_KINDS: readonly MemoryNoteKind[]
+DEFAULT_RECURRENCE_SATURATION	export declare const DEFAULT_RECURRENCE_SATURATION = 4
+DEFAULT_SCOPE_PRIORS	export declare const DEFAULT_SCOPE_PRIORS: ScopePriors
+DEFAULT_STORAGE_WEIGHTS	export declare const DEFAULT_STORAGE_WEIGHTS: StorageWeights
+DEFAULT_STRENGTH_WEIGHTS	export declare const DEFAULT_STRENGTH_WEIGHTS: StrengthWeights
+DEFAULT_VERIFY_AFTER_SESSIONS	export declare const DEFAULT_VERIFY_AFTER_SESSIONS = 2
+DEFAULT_WIDEN_CONFIG	export declare const DEFAULT_WIDEN_CONFIG: WidenConfig
+DERIVABLE_COVERAGE	export declare const DERIVABLE_COVERAGE = 0.9
+DIRECTORY_VIEW_PAGE	export declare const DIRECTORY_VIEW_PAGE = 50
+DuplicateGroup	export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js"
+EPISODE_MERGE_SYSTEM	export declare const EPISODE_MERGE_SYSTEM = "You compress a run of episodes into one durable note.\n\nYou are given episodes of one subject in one project, oldest first. Write what they add up to: the recurring goal, how it was solved, what kept going wrong. A reader who never saw the episodes must be able to act on the note.\n\nRules:\n- Call record_episode_history exactly once.\n- text is one self-contained statement of at most 1000 characters. No code blocks, no quotes, no ids.\n- kind is \"p
+EPISODE_MERGE_TOOL	export declare const EPISODE_MERGE_TOOL = "record_episode_history"
+EXTRACTED_NOTE_KEYS	export declare const EXTRACTED_NOTE_KEYS: readonly string[]
+EXTRACT_KEY_PATTERN	export declare const EXTRACT_KEY_PATTERN = "^[a-z0-9.-]
+EXTRACT_NOTE_KINDS	export declare const EXTRACT_NOTE_KINDS: readonly ["fact", "procedure", "preference", "episode"]
+EXTRACT_NOTE_SCOPES	export declare const EXTRACT_NOTE_SCOPES: readonly ["user", "project", "path"]
+EXTRACT_TOOL_NAME	export declare const EXTRACT_TOOL_NAME = "record_notes"
+EpisodeCluster	export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js"
+EpisodeSummary	export type { DuplicateGroup, EpisodeCluster, EpisodeSummary } from "./merge.js"
+FABRIC_BLOCK_LABEL	export declare const FABRIC_BLOCK_LABEL: RegExp
+HARD_CORE_TOKENS	export declare const HARD_CORE_TOKENS = 1000
+HARD_CUES_PER_TURN	export declare const HARD_CUES_PER_TURN = 5
+HARD_CUE_TOKENS	export declare const HARD_CUE_TOKENS = 1000
+HARD_DIRECTORY_FILES	export declare const HARD_DIRECTORY_FILES = 100
+HARD_DIRECTORY_TOKENS	export declare const HARD_DIRECTORY_TOKENS = 500
+HARD_DIRECTORY_TOPICS	export declare const HARD_DIRECTORY_TOPICS = 50
+HARD_FABRIC_MAX_FILE_BYTES	export declare const HARD_FABRIC_MAX_FILE_BYTES: number
+HARD_FABRIC_VIEW_ENTRIES	export declare const HARD_FABRIC_VIEW_ENTRIES = 200
+HARD_MAX_FABRIC_LINK_TOP_K	export declare const HARD_MAX_FABRIC_LINK_TOP_K = 32
+HARD_PROMOTE_MIN_TURNS_BETWEEN	export declare const HARD_PROMOTE_MIN_TURNS_BETWEEN = 1000
+HARD_VERIFY_AFTER_SESSIONS	export declare const HARD_VERIFY_AFTER_SESSIONS = 100
+INITIAL_PROMOTE_STATE	export declare const INITIAL_PROMOTE_STATE: FabricPromoteState
+InspectNoteInput	export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js"
+LifecycleDecisionView	export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js"
+LifecycleNoteView	export type { InspectNoteInput, LifecycleDecisionView, LifecycleNoteView } from "./inspect.js"
+MAX_ARCHIVED_HITS	export declare const MAX_ARCHIVED_HITS = 3
+MAX_ARCHIVE_BELOW	export declare const MAX_ARCHIVE_BELOW = 1000
+MAX_DERIVABLE_FILES	export declare const MAX_DERIVABLE_FILES = 16
+MAX_DERIVABLE_FILE_BYTES	export declare const MAX_DERIVABLE_FILE_BYTES: number
+MAX_DUPLICATE_DICE	export declare const MAX_DUPLICATE_DICE = 1
+MAX_EPISODE_CHARS	export declare const MAX_EPISODE_CHARS = 280
+MAX_EPISODE_CLUSTER	export declare const MAX_EPISODE_CLUSTER = 50
+MAX_EPISODE_SUMMARY_CHARS	export declare const MAX_EPISODE_SUMMARY_CHARS = 1000
+MAX_EXISTING_NOTES_PER_SCOPE	export declare const MAX_EXISTING_NOTES_PER_SCOPE = 12
+MAX_EXTRACTED_ALIASES	export declare const MAX_EXTRACTED_ALIASES = 8
+MAX_EXTRACTED_EVIDENCE	export declare const MAX_EXTRACTED_EVIDENCE = 16
+MAX_EXTRACTED_KEYWORDS	export declare const MAX_EXTRACTED_KEYWORDS = 8
+MAX_EXTRACTED_NOTES	export declare const MAX_EXTRACTED_NOTES = 48
+MAX_EXTRACTED_TEXT_CHARS	export declare const MAX_EXTRACTED_TEXT_CHARS = 1000
+MAX_FABRIC_CAPACITY_NOTES	export declare const MAX_FABRIC_CAPACITY_NOTES = 10000
+MAX_FABRIC_CAPACITY_TOKENS	export declare const MAX_FABRIC_CAPACITY_TOKENS = 1000000
+MAX_GRACE_SESSIONS	export declare const MAX_GRACE_SESSIONS = 10000
+MAX_SCOPE_PRIOR	export declare const MAX_SCOPE_PRIOR = 0.5
+MAX_STORAGE_WEIGHT	export declare const MAX_STORAGE_WEIGHT = 10
+MAX_STRENGTH_WEIGHT	export declare const MAX_STRENGTH_WEIGHT = 0.5
+MAX_TOUCHED_PATHS	export declare const MAX_TOUCHED_PATHS = 256
+MAX_USE_EVENTS	export declare const MAX_USE_EVENTS = 32
+MAX_WIDEN_CONTRADICTIONS	export declare const MAX_WIDEN_CONTRADICTIONS = 20
+MAX_WIDEN_PROJECTS	export declare const MAX_WIDEN_PROJECTS = 10
+MAX_WIDEN_SIBLINGS	export declare const MAX_WIDEN_SIBLINGS = 20
+MEMORY_FABRIC_WORKING_KEY	export declare const MEMORY_FABRIC_WORKING_KEY = "_fabric"
+MEMORY_NOTE_KINDS	export declare const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[]
+MEMORY_NOTE_METADATA_KEY	export declare const MEMORY_NOTE_METADATA_KEY = "fabric"
+MEMORY_NOTE_SCOPES	export declare const MEMORY_NOTE_SCOPES: readonly MemoryNoteScope[]
+MIN_DUPLICATE_DICE	export declare const MIN_DUPLICATE_DICE = 0.5
+MIN_WIDEN_CONTRADICTIONS	export declare const MIN_WIDEN_CONTRADICTIONS = 2
+MIN_WIDEN_PROJECTS	export declare const MIN_WIDEN_PROJECTS = 2
+MIN_WIDEN_SIBLINGS	export declare const MIN_WIDEN_SIBLINGS = 2
+MemoryNoteStatus	export type { ActiveNoteOptions, MemoryNoteStatus } from "./status.js"
+MemoryNoteUseEvent	export type { MemoryNoteUseEvent } from "./lifecycle/events.js"
+PROJECT_ID_PATTERN	export declare const PROJECT_ID_PATTERN: RegExp
+SCOPE_CLOCK_COUNTER	export declare const SCOPE_CLOCK_COUNTER = "sessions"
+SCOPE_DEPTH	export declare const SCOPE_DEPTH: readonly MemoryNoteScope[]
+ScopedMemoryRecallResult	export type { ScopedMemoryRecallResult } from "./read-policy.js"
+ScopedMemoryReviewResult	export type { ScopedMemoryReviewResult, ScopedMemoryReviewer } from "./reviewer.js"
+ScopedMemoryReviewer	export type { ScopedMemoryReviewResult, ScopedMemoryReviewer } from "./reviewer.js"
+SiblingGroup	export type { SiblingGroup, WidenConfig, WidenGroup, WidenNote } from "./widen.js"
+TEAM_RESOURCE	export declare const TEAM_RESOURCE = "project"
+TEAM_TENANT	export declare const TEAM_TENANT = "team"
+WidenConfig	export type { SiblingGroup, WidenConfig, WidenGroup, WidenNote } from "./widen.js"
+WidenGroup	export type { SiblingGroup, WidenConfig, WidenGroup, WidenNote } from "./widen.js"
+WidenNote	export type { SiblingGroup, WidenConfig, WidenGroup, WidenNote } from "./widen.js"
+appendFabricBlock	export declare function appendFabricBlock(memory: Memory, block: string, text: string, options?:
+appendUseEvent	export declare function appendUseEvent(uses: readonly MemoryNoteUseEvent[], event: MemoryNoteUseEvent): readonly MemoryNoteUseEvent[]
+approveScopedPending	export declare function approveScopedPending(input:
+assertFabricBlockLabel	export declare function assertFabricBlockLabel(block: unknown): asserts block is string
+baseScore	export declare function baseScore(hit: MemoryVectorHit): number
+buildConsolidationExtractPrompt	export declare function buildConsolidationExtractPrompt(input: ConsolidationPromptInput): JsonObject
+candidateIds	export declare function candidateIds(candidates: readonly ConsolidationCandidate[]): readonly string[]
+capacityForLevel	export declare function capacityForLevel(level: MemoryNoteScope, capacity?: Readonly<Record<string, CapacityLimits>>): CapacityLimits
+capacityUsage	export declare function capacityUsage(notes: readonly CapacityNote[]): CapacityUsage
+caseConclusionsNotProcedures	export declare function caseConclusionsNotProcedures(environment:
+citationEvidence	export declare function citationEvidence(input: CitationEvidenceInput): CitationEvidence
+compareNotes	export declare function compareNotes(left: CapacityNote, right: CapacityNote): number
+consolidationExtractSchema	export declare function consolidationExtractSchema(input:
+coreCandidateRows	export declare function coreCandidateRows(rows: readonly MemoryVectorMetadataRow[], weights?: StorageWeights): readonly
+coreHeading	export declare function coreHeading(label: string): string
+createConsolidationLease	export declare function createConsolidationLease():
+createFabricCitationTracker	export declare function createFabricCitationTracker(): FabricCitationTracker
+createFabricContext	export declare function createFabricContext(memory: Memory, recall: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, options?: MemoryContextProviderOptions, directory?: FabricDirectoryHandle, tracker?: FabricCitationTracker, touchedPaths?: (sessionId: string) => readonly string[], core?: FabricCore, cues?: FabricCues):
+createFabricConversationSearch	export declare function createFabricConversationSearch(deps:
+createFabricCore	export declare function createFabricCore(input: CreateFabricCoreOptions): FabricCore
+createFabricCues	export declare function createFabricCues(input: CreateFabricCuesOptions): FabricCues
+createFabricDirectory	export declare function createFabricDirectory(options: CreateFabricDirectoryOptions): FabricDirectory
+createFabricFileJail	export declare function createFabricFileJail(root: string, options?: CreateFabricFileJailOptions): FabricFileJail
+createFabricLifecycle	export declare function createFabricLifecycle(memory: Memory): FabricLifecycle
+createFabricRecall	export declare function createFabricRecall(deps:
+createFabricRepointHandler	export declare function createFabricRepointHandler(options:
+createFabricTeam	export declare function createFabricTeam(input:
+createMemory	export declare function createMemory(options: CreateMemoryOptions): Memory
+createMemoryFabric	export declare function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFabric
+createMemoryFabricTools	export declare function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: MemoryFabricToolsOptions) => readonly ToolDefinition[]
+createMemoryWorkingStore	export declare function createMemoryWorkingStore(options?: MemoryWorkingStoreOptions): WorkingMemoryStore
+createScopeClock	export declare function createScopeClock(counter: ScopeCounterStore, tenantId: string): ScopeClock
+createScopeRecall	export declare function createScopeRecall(deps:
+createScopedMemoryHealthCommand	export declare function createScopedMemoryHealthCommand(options:
+createScopedMemoryPolicy	export declare function createScopedMemoryPolicy(options: CreateScopedMemoryPolicyOptions): ScopedMemoryPolicy
+createTouchedPathTracker	export declare function createTouchedPathTracker(options:
+crossProjectGroups	export declare function crossProjectGroups(notes: readonly WidenNote[], options?:
+cueBucket	export declare function cueBucket(glob: string): string
+decideConsolidation	export declare function decideConsolidation(input:
+default	export default
+defaultScopeFor	export declare function defaultScopeFor(kind: MemoryNoteKind): MemoryNoteScope
+describeNote	export declare function describeNote(view: LifecycleNoteView): string
+duplicateGroups	export declare function duplicateGroups(notes: readonly CapacityNote[], options?:
+encodeMemoryNoteMetadata	export declare function encodeMemoryNoteMetadata(fields: Omit<MemoryNoteMetadata, "v">): JsonObject
+entriesAfter	export declare function entriesAfter(entries: readonly SessionEntry[], cursor: string | undefined): readonly SessionEntry[]
+ephemeralReason	export declare function ephemeralReason(text: string, scratchDir?: string): string | undefined
+episodeClusters	export declare function episodeClusters(notes: readonly CapacityNote[], minCluster: number): readonly EpisodeCluster[]
+estimateNoteTokens	export declare function estimateNoteTokens(text: string): number
+evictionOrder	export declare function evictionOrder(notes: readonly CapacityNote[], clock: number, options?: ArchiveDecisionOptions): readonly CapacityNote[]
+exportMemoryOkf	export declare function exportMemoryOkf(memory: Memory, options: ExportMemoryOkfOptions): Promise<ExportMemoryOkfResult>
+extractConsolidationNotes	export declare function extractConsolidationNotes(input: ExtractConsolidationNotesInput): Promise<ConsolidationExtraction>
+fabricBlockId	export declare function fabricBlockId(block: string): string
+gateScopedMemoryContent	export declare function gateScopedMemoryContent(text: string): void
+gatherConsolidationCandidates	export declare function gatherConsolidationCandidates(entries: readonly SessionEntry[], options?: GatherConsolidationOptions): readonly ConsolidationCandidate[]
+globMatches	export declare function globMatches(pattern: string, path: string): boolean
+hasNewObservationalMaterial	export declare function hasNewObservationalMaterial(entries: readonly SessionEntry[], cursor: string | undefined): boolean
+importMemoryOkf	export declare function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOptions): Promise<ImportMemoryOkfResult>
+inspectNote	export declare function inspectNote(input: InspectNoteInput): LifecycleNoteView
+isActiveNote	export declare function isActiveNote(noteOrStatus:
+isExtractedNoteKind	export declare function isExtractedNoteKind(value: unknown): value is ExtractedNoteKind
+isFabricDirectoryEmpty	export declare function isFabricDirectoryEmpty(snapshot: FabricDirectorySnapshot): boolean
+isMemoryNoteKind	export declare function isMemoryNoteKind(value: unknown): value is MemoryNoteKind
+isMemoryNoteScope	export declare function isMemoryNoteScope(value: unknown): value is MemoryNoteScope
+isMemoryNoteStatus	export declare function isMemoryNoteStatus(value: unknown): value is MemoryNoteStatus
+isMemoryNoteValidAt	export declare function isMemoryNoteValidAt(metadata: Pick<MemoryNoteMetadata, "validFrom" | "validTo">, asOfMs: number): boolean
+isStorableExtractedKind	export declare function isStorableExtractedKind(kind: ExtractedNoteKind): kind is Extract<MemoryNoteKind, "fact" | "procedure" | "preference">
+listScopedPending	export declare function listScopedPending(ledgerFile: string): Promise<readonly
+loadDerivableSources	export declare function loadDerivableSources(root: string, files?: readonly string[]): Promise<DerivableSources>
+loadScopedLedger	export declare function loadScopedLedger(path: string, options?:
+logistic	export declare function logistic(value: number): number
+memoryFabric	export declare function memoryFabric(config: MemoryFabricConfig): PackageInstance
+memoryFabricConfigSchema	export declare const memoryFabricConfigSchema: JsonSchema
+memoryFabricLifecycleSchema	export declare const memoryFabricLifecycleSchema: JsonSchema
+memoryFabricPromoteSchema	export declare const memoryFabricPromoteSchema:
+memoryWriteVersion	export declare function memoryWriteVersion(memory: object): number
+mergeNoteLinks	export declare function mergeNoteLinks(...groups: (readonly MemoryNoteLink[] | undefined)[]): readonly MemoryNoteLink[] | undefined
+mergeNoteMetadata	export declare function mergeNoteMetadata(existing: MemoryNoteMetadata, incoming: MemoryNoteMetadata): MemoryNoteMetadata
+mergedKeywords	export declare function mergedKeywords(notes: readonly CapacityNote[], key?: string): readonly string[]
+mergedMetadata	export declare function mergedMetadata(survivor: MemoryNoteMetadata, others: readonly MemoryNoteMetadata[]): MemoryNoteMetadata
+narrowingCandidates	export declare function narrowingCandidates(notes: readonly CapacityNote[], threshold?: number): readonly string[]
+normalizeNoteStatus	export declare function normalizeNoteStatus(status: string | undefined, fallback: MemoryNoteStatus): MemoryNoteStatus
+normalizeNoteText	export declare function normalizeNoteText(text: string): string
+normalizeRemote	export declare function normalizeRemote(raw: string): string
+normalizeWidenText	export declare function normalizeWidenText(text: string): string
+noteFields	export declare function noteFields(metadata: MemoryNoteMetadata): MemoryNoteFields
+noteImportance	export declare function noteImportance(strength: number): number
+noteMemoryWrite	export declare function noteMemoryWrite(memory: object): void
+onLegacyScopedLedger	export declare function onLegacyScopedLedger(sink: ((ignored: number) => void) | undefined): void
+overCapacity	export declare function overCapacity(usage: CapacityUsage, limits: CapacityLimits): boolean
+packageName	export declare const packageName = "@arnilo/prism-memory-fabric"
+pageFabricDirectory	export declare function pageFabricDirectory(snapshot: FabricDirectorySnapshot, offset: number, size?: number):
+parseMemoryNoteMetadata	export declare function parseMemoryNoteMetadata(metadata: JsonObject | undefined): MemoryNoteMetadata | undefined
+parseMemoryNoteProvenance	export declare function parseMemoryNoteProvenance(value: unknown): MemoryNoteProvenance | undefined
+parseProjectFile	export declare function parseProjectFile(content: string): ProjectFileSections | undefined
+parsePromotionStamp	export declare function parsePromotionStamp(value: unknown): MemoryNotePromotionStamp | undefined
+parseRecallKinds	export declare function parseRecallKinds(value: unknown): readonly MemoryNoteKind[] | undefined
+planMemoryConsolidation	export declare function planMemoryConsolidation(input:
+priorFor	export declare function priorFor(metadata: MemoryNoteMetadata, priors: ScopePriors, touchedPaths: readonly string[]): number
+probePrecisionAt3	export declare function probePrecisionAt3(policy: Recall, queries: readonly
+probeRecallSmoke	export declare function probeRecallSmoke(policy: Recall, seededIds: ReadonlySet<string>, questions: readonly
+projectResourceId	export declare function projectResourceId(identity: Pick<ProjectIdentity, "slug" | "id8">): string
+projectSlug	export declare function projectSlug(name: string): string
+readFabricBlock	export declare function readFabricBlock(record: WorkingMemoryRecord | undefined, block: string): FabricWorkingBlock | undefined
+readPromoteState	export declare function readPromoteState(value: unknown): FabricPromoteState
+readScopeClockState	export declare function readScopeClockState(value: unknown): ScopeClockSessionState
+readUseEvents	export declare function readUseEvents(value: unknown): readonly MemoryNoteUseEvent[] | undefined
+recallPeriod	export declare function recallPeriod(text: string, timestamp: string):
+recallScopedMemory	export declare function recallScopedMemory(input:
+reconcileFabricFiles	export declare function reconcileFabricFiles(options:
+recurrenceSignal	export declare function recurrenceSignal(sessions: number, saturation?: number): number
+registerMemoryFabricContext	export declare function registerMemoryFabricContext(hooks: HookRegistrar, memory: Memory, options?: MemoryContextProviderOptions, recall?: MemoryFabric["recall"], inject?: false | MemoryFabricInjectConfig, tracker?: FabricCitationTracker, lifecycle?:
+rejectScopedPending	export declare function rejectScopedPending(input:
+rememberScopedFact	export declare function rememberScopedFact(input:
+remoteUrlFromConfig	export declare function remoteUrlFromConfig(config: string): string | undefined
+renderCore	export declare function renderCore(label: string, lines: readonly CoreLine[]):
+renderFabricDirectory	export declare function renderFabricDirectory(snapshot: FabricDirectorySnapshot, options: ResolvedFabricDirectoryOptions):
+renderProjectFile	export declare function renderProjectFile(identity:
+renderScopedMirror	export declare function renderScopedMirror(input:
+resolveCandidateLimit	export declare function resolveCandidateLimit(topK: number): number
+resolveConsolidationThreshold	export declare function resolveConsolidationThreshold(value: unknown): number
+resolveFabricCoreOptions	export declare function resolveFabricCoreOptions(input: boolean | MemoryFabricCoreConfig | undefined, defaultOn: boolean): false | ResolvedFabricCoreOptions
+resolveFabricCuesOptions	export declare function resolveFabricCuesOptions(input: boolean | MemoryFabricCuesConfig | undefined, defaultOn: boolean): false | ResolvedFabricCuesOptions
+resolveFabricDirectoryOptions	export declare function resolveFabricDirectoryOptions(input: boolean | MemoryFabricDirectoryConfig | undefined, defaultOn: boolean): false | ResolvedFabricDirectoryOptions
+resolveFabricTeamOptions	export declare function resolveFabricTeamOptions(value: boolean | MemoryFabricTeamConfig | undefined, projectRoot: string | undefined): false | ResolvedFabricTeamOptions
+resolveLifecycleConfig	export declare function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | undefined): ResolvedLifecycleConfig
+resolveMemoryFabricConfig	export declare function resolveMemoryFabricConfig(config?: MemoryFabricConfig): ResolvedMemoryFabricConfig
+resolveMemoryFabricSettings	export declare function resolveMemoryFabricSettings(options: CreateMemoryFabricOptions): MemoryFabricSettings
+resolveNoteLinks	export declare function resolveNoteLinks(candidates: readonly MemoryLinkCandidate[], options:
+resolveProjectIdentity	export declare function resolveProjectIdentity(root: string): ProjectIdentity
+resolvePromoteConfig	export declare function resolvePromoteConfig(value: false | MemoryFabricPromoteConfig | undefined): ResolvedPromoteConfig
+resolveScopePriors	export declare function resolveScopePriors(input: Partial<Record<MemoryNoteScope, number>> | undefined): ScopePriors
+retrievalStrength	export declare function retrievalStrength(metadata: Pick<MemoryNoteMetadata, "uses" | "useSessions" | "created">, clock: number, d: number): number
+reviewScopedSession	export declare function reviewScopedSession(input:
+runConsolidationPass	export declare function runConsolidationPass(input: ConsolidationPassInput): Promise<ConsolidationPassResult>
+runFabricEvolutionWorker	export declare function runFabricEvolutionWorker(input:
+runMaintenance	export declare function runMaintenance(deps: MaintenanceDeps, options?: MemoryFabricMaintainOptions): Promise<MemoryFabricMaintenanceReport>
+runMemoryConformance	export declare function runMemoryConformance(createStores: () => Promise<MemoryConformanceStores> | MemoryConformanceStores): Promise<void>
+runScopedGcPass	export declare function runScopedGcPass(input:
+runScopedMemoryEval	export declare function runScopedMemoryEval(input:
+saveScopedLedger	export declare function saveScopedLedger(path: string, ledger: ScopedMemoryLedger): Promise<void>
+scanScopedMemoryContent	export declare function scanScopedMemoryContent(text: string):
+scopeOf	export declare function scopeOf(candidate: FabricCandidate): MemoryNoteScope
+scopedLedgerPath	export declare function scopedLedgerPath(scopeRoot: string): string
+scopedMemoryHealth	export declare function scopedMemoryHealth(memory: Memory, ledgerFile: string): Promise<
+scorePromotion	export declare function scorePromotion(note: ExtractedNote, context: PromotionScoreContext): PromotionScore
+selectWithScopeReserve	export declare function selectWithScopeReserve<T>(ranked: readonly T[], options:
+setFabricBlock	export declare function setFabricBlock(memory: Memory, block: string, content: string, options?:
+shadowedExplain	export declare function shadowedExplain(shadowed: readonly ShadowedCandidate[], priors: ScopePriors, touchedPaths: readonly string[]): MemoryFabricExplainEntry[]
+shouldArchive	export declare function shouldArchive(metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion" | "pinned" | "created">, clock: number, options?: ArchiveDecisionOptions): boolean
+siblingGroups	export declare function siblingGroups(pathNotes: readonly CapacityNote[], minSiblings?: number): readonly SiblingGroup[]
+stampProvenance	export declare function stampProvenance(by: MemoryNoteActor, at: string, extra?:
+storageStrength	export declare function storageStrength(metadata: Pick<MemoryNoteMetadata, "useSessions" | "helpful" | "harmful" | "promotion">, weights?: StorageWeights): number
+strengthPrior	export declare function strengthPrior(metadata: Pick<MemoryNoteMetadata, "kind" | "uses" | "useSessions" | "helpful" | "harmful" | "promotion">, clock: number, options?: StrengthPriorOptions): number
+summarizeEpisodeCluster	export declare function summarizeEpisodeCluster(input: SummarizeEpisodeClusterInput): Promise<EpisodeSummary | undefined>
+tombstoneFabricBlock	export declare function tombstoneFabricBlock(memory: Memory, block: string, options?:
+type ActiveNoteOptions	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ArchiveConfig	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ArchiveDecisionOptions	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type CapacityLimits	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type CapacityNote	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type CapacityUsage	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type CreateFabricCoreOptions	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type CreateFabricDirectoryOptions	export { type CreateFabricDirectoryOptions, createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, type FabricDirectory, type FabricDirectoryHandle, type FabricDirectorySnapshot, HARD_DIRECTORY_FILES, HARD_DIRECTORY_TOKENS, HARD_DIRECTORY_TOPICS, type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, renderFabricDirectory, } from "./directory.js"
+type CreateMemoryFabricOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type CreateScopedMemoryPolicyOptions	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type DuplicateGroup	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type EpisodeCluster	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ExportMemoryOkfOptions	export { type ExportMemoryOkfOptions, type ExportMemoryOkfResult, exportMemoryOkf, type ImportMemoryOkfOptions, type ImportMemoryOkfResult, importMemoryOkf, type MemoryOkfStores, } from "./okf-bundle.js"
+type ExportMemoryOkfResult	export { type ExportMemoryOkfOptions, type ExportMemoryOkfResult, exportMemoryOkf, type ImportMemoryOkfOptions, type ImportMemoryOkfResult, importMemoryOkf, type MemoryOkfStores, } from "./okf-bundle.js"
+type FabricCitationTracker	export { createFabricCitationTracker, type FabricCitationTracker } from "./context.js"
+type FabricConsolidationReport	export { DEFAULT_PROMOTE_MIN_TURNS_BETWEEN, type FabricConsolidationReport, type FabricNoteCensus, type FabricPromoteState, HARD_PROMOTE_MIN_TURNS_BETWEEN, type MemoryFabricPromoteConfig, resolvePromoteConfig, } from "./promote.js"
+type FabricCore	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type FabricCoreBlock	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type FabricCoreScope	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type FabricCoreScopeBinding	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type FabricDirectory	export { type CreateFabricDirectoryOptions, createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, type FabricDirectory, type FabricDirectoryHandle, type FabricDirectorySnapshot, HARD_DIRECTORY_FILES, HARD_DIRECTORY_TOKENS, HARD_DIRECTORY_TOPICS, type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, renderFabricDirectory, } from "./directory.js"
+type FabricDirectoryHandle	export { type CreateFabricDirectoryOptions, createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, type FabricDirectory, type FabricDirectoryHandle, type FabricDirectorySnapshot, HARD_DIRECTORY_FILES, HARD_DIRECTORY_TOKENS, HARD_DIRECTORY_TOPICS, type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, renderFabricDirectory, } from "./directory.js"
+type FabricDirectorySnapshot	export { type CreateFabricDirectoryOptions, createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, type FabricDirectory, type FabricDirectoryHandle, type FabricDirectorySnapshot, HARD_DIRECTORY_FILES, HARD_DIRECTORY_TOKENS, HARD_DIRECTORY_TOPICS, type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, renderFabricDirectory, } from "./directory.js"
+type FabricLifecycle	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type FabricNoteCensus	export { DEFAULT_PROMOTE_MIN_TURNS_BETWEEN, type FabricConsolidationReport, type FabricNoteCensus, type FabricPromoteState, HARD_PROMOTE_MIN_TURNS_BETWEEN, type MemoryFabricPromoteConfig, resolvePromoteConfig, } from "./promote.js"
+type FabricPromoteState	export { DEFAULT_PROMOTE_MIN_TURNS_BETWEEN, type FabricConsolidationReport, type FabricNoteCensus, type FabricPromoteState, HARD_PROMOTE_MIN_TURNS_BETWEEN, type MemoryFabricPromoteConfig, resolvePromoteConfig, } from "./promote.js"
+type FabricScopeLevel	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type ImportMemoryOkfOptions	export { type ExportMemoryOkfOptions, type ExportMemoryOkfResult, exportMemoryOkf, type ImportMemoryOkfOptions, type ImportMemoryOkfResult, importMemoryOkf, type MemoryOkfStores, } from "./okf-bundle.js"
+type ImportMemoryOkfResult	export { type ExportMemoryOkfOptions, type ExportMemoryOkfResult, exportMemoryOkf, type ImportMemoryOkfOptions, type ImportMemoryOkfResult, importMemoryOkf, type MemoryOkfStores, } from "./okf-bundle.js"
+type InspectNoteInput	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type LifecycleDecisionView	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type LifecycleEvidence	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type LifecycleNoteView	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type MemoryConformanceStores	export { type MemoryConformanceStores, runMemoryConformance } from "./conformance.js"
+type MemoryFabric	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricConsolidateOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConsolidateResult	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConsolidateSource	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConsolidationOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConversationHit	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConversationSearchOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricConversationSearchResult	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricCoreConfig	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type MemoryFabricCuesConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricDirectoryConfig	export { type CreateFabricDirectoryOptions, createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, type FabricDirectory, type FabricDirectoryHandle, type FabricDirectorySnapshot, HARD_DIRECTORY_FILES, HARD_DIRECTORY_TOKENS, HARD_DIRECTORY_TOPICS, type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, renderFabricDirectory, } from "./directory.js"
+type MemoryFabricEvolutionOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricExplainEntry	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricForgetInput	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricForgetResult	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricInjectConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricLifecycleConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricLinkerOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricMaintainOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricMaintenanceReport	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricMarkdownStoreConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricObservationSource	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricPostgresStoreConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricProjectScopeConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricPromoteConfig	export { DEFAULT_PROMOTE_MIN_TURNS_BETWEEN, type FabricConsolidationReport, type FabricNoteCensus, type FabricPromoteState, HARD_PROMOTE_MIN_TURNS_BETWEEN, type MemoryFabricPromoteConfig, resolvePromoteConfig, } from "./promote.js"
+type MemoryFabricRecallOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricRecallResult	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricRememberInput	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricScopeBinding	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricScopeBudget	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricScopeOpenInput	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricScopedConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricScopesConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricSettings	export { type MemoryFabricSettings, resolveMemoryFabricSettings } from "./workers.js"
+type MemoryFabricTeamConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricToolsConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type MemoryFabricToolsOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryFabricWriteOptions	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNote	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteDecay	export { DEFAULT_DECAY, DEFAULT_STORAGE_WEIGHTS, DEFAULT_STRENGTH_WEIGHTS, logistic, MAX_STORAGE_WEIGHT, MAX_STRENGTH_WEIGHT, noteImportance, retrievalStrength, type StrengthPriorOptions, type StrengthWeights, storageStrength, type StorageWeights, strengthPrior, type MemoryNoteDecay, } from "./strength.js"
+type MemoryNoteFields	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteHit	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteKind	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteLink	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteMetadata	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNotePromotion	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteScope	export { type CreateMemoryFabricOptions, DEFAULT_RECALL_KINDS, encodeMemoryNoteMetadata, type FabricScopeLevel, isMemoryNoteKind, isMemoryNoteValidAt, MEMORY_FABRIC_WORKING_KEY, MEMORY_NOTE_KINDS, MEMORY_NOTE_METADATA_KEY, MEMORY_NOTE_SCOPES, type MemoryFabric, type MemoryFabricConsolidateOptions, type MemoryFabricConsolidateResult, type MemoryFabricConsolidateSource, type MemoryFabricMaintainOptions, type MemoryFabricMaintenanceReport, type MemoryFabricScopeBudget, type MemoryFabricScopeOpenInp
+type MemoryNoteStatus	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type MemoryNoteUseEvent	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type MemoryOkfStores	export { type ExportMemoryOkfOptions, type ExportMemoryOkfResult, exportMemoryOkf, type ImportMemoryOkfOptions, type ImportMemoryOkfResult, importMemoryOkf, type MemoryOkfStores, } from "./okf-bundle.js"
+type MemoryWorkingStoreOptions	export { createMemoryWorkingStore, type MemoryWorkingStoreOptions, validateWorkingValue } from "./working-memory.js"
+type ProjectIdentity	export { type ProjectIdentity, projectResourceId, resolveProjectIdentity } from "./scope/identity.js"
+type RecordUsesOptions	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ResolvedFabricCoreOptions	export { type CreateFabricCoreOptions, createFabricCore, DEFAULT_CORE_OPTIONS, type FabricCore, type FabricCoreBlock, type FabricCoreScope, type FabricCoreScopeBinding, HARD_CORE_TOKENS, type MemoryFabricCoreConfig, type ResolvedFabricCoreOptions, resolveFabricCoreOptions, } from "./delivery/core.js"
+type ResolvedFabricDirectoryOptions	export { type CreateFabricDirectoryOptions, createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, type FabricDirectory, type FabricDirectoryHandle, type FabricDirectorySnapshot, HARD_DIRECTORY_FILES, HARD_DIRECTORY_TOKENS, HARD_DIRECTORY_TOPICS, type MemoryFabricDirectoryConfig, type ResolvedFabricDirectoryOptions, renderFabricDirectory, } from "./directory.js"
+type ResolvedFabricScope	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type ResolvedFabricTeamOptions	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type ResolvedLifecycleConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type ResolvedMemoryFabricConfig	export { type MemoryFabricConfig, type MemoryFabricCoreConfig, type MemoryFabricCuesConfig, type MemoryFabricInjectConfig, type MemoryFabricLifecycleConfig, type MemoryFabricMarkdownStoreConfig, type MemoryFabricPostgresStoreConfig, type MemoryFabricProjectScopeConfig, type MemoryFabricScopedConfig, type MemoryFabricScopesConfig, type MemoryFabricTeamConfig, type MemoryFabricToolsConfig, memoryFabricConfigSchema, memoryFabricLifecycleSchema, type ResolvedFabricCoreOptions, type ResolvedFabricSco
+type ScopeClock	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ScopeClockSessionState	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ScopeClockTick	export { type ActiveNoteOptions, appendUseEvent, createFabricLifecycle, DEFAULT_VERIFY_AFTER_SESSIONS, type FabricLifecycle, HARD_VERIFY_AFTER_SESSIONS, isActiveNote, isMemoryNoteStatus, type LifecycleEvidence, MAX_USE_EVENTS, type ScopeClock, type ScopeClockSessionState, type ScopeClockTick, SCOPE_CLOCK_COUNTER, createScopeClock, readScopeClockState, type MemoryNoteStatus, type MemoryNoteUseEvent, normalizeNoteStatus, readUseEvents, type RecordUsesOptions, type ArchiveConfig, type CapacityLimit
+type ScopedMemoryApprovalMode	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryPolicy	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryPolicyKnobs	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryPolicySettings	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryReviewResult	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type ScopedMemoryReviewer	export { type CreateScopedMemoryPolicyOptions, createScopedMemoryPolicy, type ScopedMemoryApprovalMode, type ScopedMemoryPolicy, type ScopedMemoryPolicyKnobs, type ScopedMemoryPolicySettings, type ScopedMemoryReviewResult, type ScopedMemoryReviewer, } from "./policy.js"
+type StorageWeights	export { DEFAULT_DECAY, DEFAULT_STORAGE_WEIGHTS, DEFAULT_STRENGTH_WEIGHTS, logistic, MAX_STORAGE_WEIGHT, MAX_STRENGTH_WEIGHT, noteImportance, retrievalStrength, type StrengthPriorOptions, type StrengthWeights, storageStrength, type StorageWeights, strengthPrior, type MemoryNoteDecay, } from "./strength.js"
+type StrengthPriorOptions	export { DEFAULT_DECAY, DEFAULT_STORAGE_WEIGHTS, DEFAULT_STRENGTH_WEIGHTS, logistic, MAX_STORAGE_WEIGHT, MAX_STRENGTH_WEIGHT, noteImportance, retrievalStrength, type StrengthPriorOptions, type StrengthWeights, storageStrength, type StorageWeights, strengthPrior, type MemoryNoteDecay, } from "./strength.js"
+type StrengthWeights	export { DEFAULT_DECAY, DEFAULT_STORAGE_WEIGHTS, DEFAULT_STRENGTH_WEIGHTS, logistic, MAX_STORAGE_WEIGHT, MAX_STRENGTH_WEIGHT, noteImportance, retrievalStrength, type StrengthPriorOptions, type StrengthWeights, storageStrength, type StorageWeights, strengthPrior, type MemoryNoteDecay, } from "./strength.js"
+unionStrings	export declare function unionStrings(left: readonly string[] | undefined, right: readonly string[] | undefined): readonly string[] | undefined
+validateAppliesTo	export declare function validateAppliesTo(value: unknown): readonly string[]
+validateNoteKey	export declare function validateNoteKey(value: unknown): string
+validateWorkingValue	export declare function validateWorkingValue(value: JsonObject, options:
+writeConsolidationNotes	export declare function writeConsolidationNotes(input: WriteConsolidationNotesInput): Promise<WriteConsolidationNotesResult>

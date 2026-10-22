@@ -1,5 +1,8 @@
 dist/
 
+# kernel manifest schema — emitted by `bun run build:core` (scripts/emit-manifest-schema.mjs)
+manifest/schema.json
+
 # compiled example demos (emitted by docs.test tsc step; never commit)
 examples/*.js
 node_modules/
@@ -36,3 +39,7 @@ dist-bin/
 /laya-amd-setup.md
 /163-prism-feature-request.md
 .types/
+.gate-fixture-*/
+
+# Consented memory-bench recordings and extractor cache (never commit).
+/.cache/

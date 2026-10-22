@@ -15,11 +15,11 @@ import { toolOwner } from "../runtime-registry.js";
 import type {
   AgentRunInterruption,
   AgentRunRef,
-  GuardrailRecord,
   NestedRunRef,
   PendingDecision,
   ResumeNestedRun,
   Decision,
+  EventOrigin,
   StickyDecision,
   ToolCallContent,
   ToolRegistry,
@@ -29,7 +29,6 @@ import type {
 import {
   AgentDecisionError,
   AgentDelegationSuspendedError,
-  AgentRunStateError,
   HARD_MAX_PENDING_DECISIONS,
   MAX_ATTRIBUTION_DEPTH,
 } from "../../contracts.js";
@@ -94,7 +93,6 @@ export function buildPendingDecision(
   runId: string,
   metadata: Readonly<Record<string, unknown>>,
   signal: AbortSignal,
-  ask?: GuardrailRecord,
 ): PendingDecision {
   const tool = registry.get(call.name);
   const declaration = tool?.effect
@@ -114,12 +112,8 @@ export function buildPendingDecision(
     signal,
     metadata,
   });
-  // Plan 104 T3: the pack `ask` rule that gated this call is named in the bounded reason and carried
-  // machine-readably, so a host never parses the name to know which rule raised the approval.
-  const pack = ask?.metadata?.pack;
-  const rule = ask?.metadata?.rule;
-  const guardrailRule: { pack: string; rule: string } | undefined =
-    typeof pack === "string" && typeof rule === "string" ? { pack, rule } : undefined;
+  // Plan 104 T3: the pack `ask` rule that gated this call is named in the bounded reason, so a host
+  // never parses the name to know which rule raised the approval.
   return {
     approvalId,
     kind: elicitation ? "elicitation" : "tool_approval",
@@ -130,25 +124,15 @@ export function buildPendingDecision(
       ...(declaration && declaration.kind !== "none" ? { effectKind: declaration.kind } : {}),
       ...(identityRef ? { identity: identityRef } : {}),
     },
-    reason: elicitation?.reason ?? (ask ? askDecisionReason(ask) : "Tool side effect requires approval"),
+    reason: elicitation?.reason ?? "Tool side effect requires approval",
     ...(elicitation ? { elicitationSchema: elicitation.schema } : {}),
-    ...(ask && guardrailRule ? { guardrail: ask.guardrail, guardrailRule } : {}),
   };
 }
 
-const MAX_ASK_DECISION_REASON_BYTES = 200;
-
-/** `pack:<pack>/<rule>` plus the pack's own reason, bounded like every other decision field. */
-function askDecisionReason(ask: GuardrailRecord): string {
-  const pack = ask.metadata?.pack;
-  const rule = ask.metadata?.rule;
-  const defaultReason = typeof pack === "string" && typeof rule === "string" ? `guardrail pack rule ${pack}/${rule}` : undefined;
-  const line = `Approval required by guardrail rule ${ask.guardrail}`;
-  const text = ask.reason && ask.reason !== defaultReason ? `${line}: ${ask.reason}` : line;
-  const bytes = new TextEncoder().encode(text);
-  return bytes.length <= MAX_ASK_DECISION_REASON_BYTES ? text : new TextDecoder().decode(bytes.subarray(0, MAX_ASK_DECISION_REASON_BYTES));
-}
-
+/**
+ * @deprecated No replacement: nothing reads it since the 0.13 split. Kept for the deprecation
+ * wave and removed at the next breaking cut (docs/_evidence/dead-export-verification-2026-09-03.md).
+ */
 export async function applyNestedRun(
   session: SessionHost,
   input: {
@@ -233,11 +217,7 @@ export function stageAskDecisions(
 ): void {
   for (const { call, reason } of requests) {
     const approvalId = randomId("approval");
-    // Plan 104 T3: the pack `ask` record rides alongside the `{ ask }` reason, so the pending
-    // decision keeps its machine-readable guardrail identity. Cleared once staged.
-    const ask = ctx.session.packAskRecords?.get(call.id);
-    ctx.session.packAskRecords?.delete(call.id);
-    const base = buildPendingDecision(ctx.session, call, approvalId, ctx.registry, ctx.runId, ctx.metadata, ctx.controller.signal, ask);
+    const base = buildPendingDecision(ctx.session, call, approvalId, ctx.registry, ctx.runId, ctx.metadata, ctx.controller.signal);
     ctx.session.activeGatedRound ??= new Map();
     ctx.session.activeGatedRound.set(call.id, {
       entry: { call, status: "ready", approvalId },
@@ -280,6 +260,10 @@ export async function suspendGatedRound(ctx: RoundContext): Promise<void> {
   );
 }
 
+/**
+ * @deprecated No replacement: nothing reads it since the 0.13 split. Kept for the deprecation
+ * wave and removed at the next breaking cut (docs/_evidence/dead-export-verification-2026-09-03.md).
+ */
 export async function suspendNested(
   ctx: RoundContext,
   nested: { entry: NestedRunRef; toolCall: ToolCallContent; pending: PendingDecision[] },
@@ -328,29 +312,53 @@ export async function suspendNested(
 }
 
 export async function replayToolResult(ctx: RoundContext, result: ToolResult): Promise<void> {
-  await ctx.session.appendMessage(toToolResultMessage(result), ctx.runId);
+  const message = toToolResultMessage(result);
+  // Keep the loop's history in step with the store: a replayed row must reach the next provider turn.
+  ctx.session.history.push(message);
+  await ctx.session.appendMessage(message, ctx.runId);
 }
 
-export async function handleNestedSignal(ctx: RoundContext, error: AgentDelegationSuspendedError): Promise<void> {
-  const durableOptions = ctx.session.activeDurable?.options;
-  if (!durableOptions || !error.toolCall) {
-    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Nested-run suspension requires durable run state and a hosting tool call");
-  }
-  if (error.pendingDecisions.length === 0) {
-    throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Nested-run suspension carried no pending decisions");
-  }
-  const applied = await applyNestedRun(ctx.session, {
-    ref: error.ref,
-    toolCall: error.toolCall,
-    path: error.path ?? [],
-    pending: error.pendingDecisions,
-    hook: durableOptions.resumeNestedRun,
+/**
+ * Plan 177 Task 3: replay a resumed run's approved calls through the full tool pipeline. They go to
+ * `RunController.executeTools`, so `tool.call` (two rounds), `tool.execute`, `tool.result`, and the
+ * transcript append run exactly as for a fresh turn. `resolveAskDecisions` satisfies the `ask` with
+ * the resumed decision, so an approved call is not re-prompted; a call a rewrite moved off the
+ * approved arguments is staged again by the gate (`suspendGatedRound` after the batch).
+ */
+async function executeApproved(ctx: RoundContext, calls: readonly ToolCallContent[]): Promise<void> {
+  if (calls.length === 0) return;
+  await ctx.runController.executeTools(calls);
+}
+
+/** Replay a `reject_*` decision: the call never runs, but it still settles as a blocked `tool.completed`. */
+async function replayRejected(ctx: RoundContext, result: ToolResult): Promise<void> {
+  await replayToolResult(ctx, result);
+  ctx.session.emit({
+    type: "tool.completed",
+    sessionId: ctx.session.id,
+    runId: ctx.runId,
+    toolCallId: result.toolCallId,
+    name: result.name,
+    result,
+    metadata: { durationMs: 0, status: "blocked" },
+    status: "blocked",
+    reason: typeof result.error?.code === "string" ? result.error.code : "approval_rejected",
+    ...(result.error ? { error: result.error } : {}),
   });
-  if ("toolResult" in applied) {
-    await replayToolResult(ctx, applied.toolResult);
-    return;
-  }
-  await suspendNested(ctx, { entry: applied.entry, toolCall: error.toolCall, pending: applied.pending });
+}
+
+/**
+ * A nested (delegated) child suspended on its own approval inside a root tool call. Routing the host's
+ * decision back into the child needs the nested-resume hook that the retired run-state surface carried
+ * (plan 168 Task 5), and a nested suspension whose decisions no host can route is a dead end — so this
+ * fails closed at the boundary. In-process delegation surfaces a suspended child through its own package
+ * (`delegate_wait` returns the pending decisions) instead of through the root run.
+ */
+export function handleNestedSignal(_ctx: RoundContext, _error: AgentDelegationSuspendedError): never {
+  throw new AgentDecisionError(
+    "ERR_PRISM_DECISION_INVALID",
+    "Nested-run suspension cannot be routed to the host: this kernel has no nested-run resume hook",
+  );
 }
 
 export function bindChargeToolRound(ctx: RoundContext): (calls: readonly ToolCallContent[]) => void | Promise<void> {
@@ -383,8 +391,8 @@ function dispatchFilter(ctx: RoundContext): { filter: { allow: readonly string[]
   return ctx.tools.length > 0 ? { filter: { deny: ctx.tools.map((tool) => tool.name) } } : {};
 }
 
-export function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent) => Promise<ToolResult> {
-  return async (call) => {
+export function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent, origin?: EventOrigin) => Promise<ToolResult> {
+  return async (call, origin) => {
     const sticky = matchStickyDecision(ctx.session, call, ctx.registry);
     if (sticky?.outcome === "reject_for_run") {
       return {
@@ -417,7 +425,7 @@ export function bindDispatchToolCall(ctx: RoundContext): (call: ToolCallContent)
           },
           principal: ctx.session.activePrincipal,
         },
-        emit: (event) => ctx.session.emit(event),
+        emit: (event) => ctx.session.emit(origin ? { ...event, origin } : event),
         trust: ctx.session.agent.config.trust,
         redactor: ctx.session.activeRedactor,
         ledger: ctx.session.activeLedger,
@@ -467,7 +475,6 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
   let resumePendingCalls = resumed?.state?.pendingCalls;
   if (resumed?.state?.nestedRuns?.length) {
     const nestedRuns = resumed.state.nestedRuns;
-    const hook = session.activeDurable?.options.resumeNestedRun;
     const oldPending = resumed.state.interruption?.pendingDecisions ?? [];
     const nestedApprovalIds = new Set(nestedRuns.flatMap((entry) => entry.approvals.map((approval) => approval.id)));
     const remainingNested: NestedRunRef[] = [];
@@ -484,26 +491,13 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
         surfacedPending.push(...oldPending.filter((pending) => entry.approvals.some((approval) => approval.id === pending.approvalId)));
         continue;
       }
-      if (!hook) {
-        throw new AgentDecisionError("ERR_PRISM_DECISION_INVALID", "Nested-run decisions require a resumeNestedRun hook");
-      }
-      const toolCall = resumePendingCalls?.find((pending) => pending.call.id === entry.toolCallId)?.call;
-      if (!toolCall) throw new AgentRunStateError("Nested run link is missing its tool call");
-      const ref: AgentRunRef = { runId: entry.runId, ...(entry.sessionId ? { sessionId: entry.sessionId } : {}) };
-      const outcome = await hook({ ref, toolCallId: entry.toolCallId, path: entry.path }, grouped);
-      if (outcome.status !== "suspended") {
-        await replayToolResult(ctx, nestedOutcomeToolResult(outcome, entry.toolCallId, toolCall.name));
-        resolvedToolCallIds.add(entry.toolCallId);
-        continue;
-      }
-      const applied = await applyNestedRun(session, { ref, toolCall, path: entry.path, pending: outcome.pendingDecisions, hook });
-      if ("toolResult" in applied) {
-        await replayToolResult(ctx, applied.toolResult);
-        resolvedToolCallIds.add(entry.toolCallId);
-      } else {
-        remainingNested.push(applied.entry);
-        surfacedPending.push(...applied.pending);
-      }
+      // Routing a host decision back into a nested child needs the nested-resume hook, which had no
+      // 0.13 carrier once the run-state surface was retired (plan 168 Task 5). Fail closed instead of
+      // dropping the decision; the child's own package resumes it (delegate surfaces them as a tool result).
+      throw new AgentDecisionError(
+        "ERR_PRISM_DECISION_INVALID",
+        "Nested-run decisions cannot be routed: this kernel has no nested-run resume hook",
+      );
     }
     resumePendingCalls = resumePendingCalls
       ?.filter((entry) => !resolvedToolCallIds.has(entry.call.id))
@@ -547,12 +541,13 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
       );
     }
   }
+  const approved: ToolCallContent[] = [];
   if (resumePendingCalls?.length) {
     for (const entry of resumePendingCalls) {
       if (entry.status !== "ready") continue;
       const decision = entry.decision ?? resumed?.decisions?.get(entry.approvalId);
       if (decision && (decision.outcome === "reject_once" || decision.outcome === "reject_for_run")) {
-        await replayToolResult(ctx, {
+        await replayRejected(ctx, {
           toolCallId: entry.call.id,
           name: entry.call.name,
           error: { code: "approval_rejected", message: decision.reason ?? "Approval rejected" },
@@ -563,17 +558,24 @@ export async function replayDurableNestedAndPending(ctx: RoundContext): Promise<
         await replayToolResult(ctx, { toolCallId: entry.call.id, name: entry.call.name, value: decision.elicitation });
         continue;
       }
-      const call = decision?.modifiedArguments ? { ...entry.call, arguments: decision.modifiedArguments } : entry.call;
-      try {
-        await replayToolResult(ctx, await ctx.dispatchToolCall(call));
-      } catch (error) {
-        if (!(error instanceof AgentDelegationSuspendedError)) throw error;
-        await handleNestedSignal(ctx, error);
-      }
+      // `modifiedArguments` was schema/guardrail-validated at decision time; the full `tool.call`
+      // gate still runs on it in `executeApproved`, exactly like a rewrite.
+      approved.push(decision?.modifiedArguments ? { ...entry.call, arguments: decision.modifiedArguments } : entry.call);
     }
   } else if (resumed?.state?.pending?.status === "ready") {
-    await replayToolResult(ctx, await ctx.dispatchToolCall(resumed.state.pending.call));
+    approved.push(resumed.state.pending.call);
   }
+  if (approved.length > 0) {
+    try {
+      await executeApproved(ctx, approved);
+    } catch (error) {
+      if (!(error instanceof AgentDelegationSuspendedError)) throw error;
+      await handleNestedSignal(ctx, error);
+    }
+  }
+  // A call the resumed decision no longer covers (a rewrite moved it) was staged by the gate:
+  // suspend before the loop takes a provider turn.
+  await suspendGatedRound(ctx);
 }
 
 export async function runLoopUntilSettled(ctx: RoundContext): Promise<Usage | undefined> {

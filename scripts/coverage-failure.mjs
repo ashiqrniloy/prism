@@ -3,7 +3,7 @@
  *
  * A failing coverage child used to surface as a bare `no coverage data (suite
  * failed)` row: the child's output was captured and dropped, so the reason was
- * unrecoverable (observed once on @arnilo/prism-memory during plan 071 Task 9,
+ * unrecoverable (observed once on the memory family during plan 071 Task 9,
  * green again on the next run). These helpers keep a bounded tail of that output
  * and the row shape that records it, and they are deliberately side-effect free
  * so the formatter and the shape can be unit-tested without running the eleven

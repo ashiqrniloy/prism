@@ -1,0 +1,59 @@
+import { type JsonSchema, type ModelConfig, type PackageInstance } from "@arnilo/prism";
+import {
+  baseUrlProperty,
+  defineProviderPackage,
+  modelsProperty,
+  providerPackageInstance,
+  refSource,
+  secretRefProperty,
+} from "@arnilo/prism/provider-kit";
+import { {{providerPascal}}ModelConfig, {{providerId}}Models } from "./models.js";
+import { create{{providerPascal}}Provider, {{providerPascal}}ProviderOptions } from "./provider.js";
+
+export * from "./models.js";
+export * from "./provider.js";
+
+export const {{providerUpper}}_DEFAULT_API_KEY_REF = "env:{{providerUpper}}_API_KEY";
+
+export interface {{providerPascal}}ProviderConfig {
+  readonly apiKey?: string;
+  readonly baseUrl?: string;
+  readonly models?: readonly ModelConfig[];
+}
+
+const configSchema: JsonSchema = {
+  type: "object",
+  properties: {
+    apiKey: secretRefProperty({{providerUpper}}_DEFAULT_API_KEY_REF),
+    baseUrl: baseUrlProperty("Official API base URL; defaults to provider default."),
+    models: modelsProperty("Optional static catalog override."),
+  },
+  additionalProperties: false,
+};
+
+function definitionFor(options: {{providerPascal}}ProviderOptions = {}) {
+  return defineProviderPackage<{{providerPascal}}ProviderConfig>({
+    name: "{{name}}",
+    description: "{{providerPascal}} model provider package for Prism.",
+    config: configSchema,
+    setup: async (prism) => {
+      const ref = prism.config.apiKey ?? {{providerUpper}}_DEFAULT_API_KEY_REF;
+      const resolve = (target: string) => prism.credentials.resolve(target);
+      const apiKey = refSource(resolve, ref);
+      const provider = create{{providerPascal}}Provider({
+        ...options,
+        apiKey,
+        baseUrl: prism.config.baseUrl ?? options.baseUrl,
+      });
+      prism.providers.register(provider);
+    },
+  });
+}
+
+const definition = definitionFor({});
+export const {{providerId}}Definition = definition;
+export default definition;
+
+export function {{providerId}}(options: {{providerPascal}}ProviderOptions & {{providerPascal}}ProviderConfig = {}): PackageInstance {
+  return providerPackageInstance(definition, definitionFor, ["id", "fetch"], options);
+}

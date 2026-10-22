@@ -37,17 +37,6 @@ export const BLOCKED_RECORD_TEMPLATE = "BLOCKED GATE <id> requires=<names> evide
  */
 export const PROTECTED_GATES = [
   {
-    id: "phase12-restart-recovery",
-    script: "scripts/phase12-restart-recovery.test.mjs",
-    style: "test",
-    requires: ["PRISM_TEST_POSTGRES_URL"],
-    evidence: "scripts/phase12-restart-recovery.json",
-    hint: "PRISM_TEST_POSTGRES_URL=<url> bun run test:postgres against a disposable pgvector/pgvector:pg16",
-    runner: "bun run test:postgres",
-    manifestClass: "required",
-    surface: "test:postgres durable conformance",
-  },
-  {
     id: "phase22-conformance",
     script: "scripts/phase22-conformance.test.mjs",
     style: "test",
@@ -76,16 +65,6 @@ export const PROTECTED_GATES = [
     evidence: "scripts/phase26-baseline.json",
     hint: "PRISM_TEST_PTY_BACKEND=<module exporting createPtyBackend()> bun test --timeout=0 scripts/phase26-pty-protected.test.mjs",
     runner: "manual protected leg (4/4 recorded in scripts/phase26-baseline.json; needs a host PTY engine)",
-    manifestClass: "protected",
-  },
-  {
-    id: "phase27-dr",
-    script: "scripts/phase27-dr.test.mjs",
-    style: "script",
-    requires: ["PRISM_TEST_POSTGRES_URL", "PRISM_DR_TARGET_URL", "PRISM_PITR_URL"],
-    evidence: "docs/_evidence/phase27-dr-evidence.json",
-    hint: "bun scripts/phase27-dr.test.mjs --target <loopback-url> --confirm-target prism_dr_restore with the source and PITR containers up; evidence freshness is asserted in-chain by scripts/phase27-erp-journey.test.mjs",
-    runner: "manual disaster-recovery drill (needs a PITR target; never part of the default suite)",
     manifestClass: "protected",
   },
   {

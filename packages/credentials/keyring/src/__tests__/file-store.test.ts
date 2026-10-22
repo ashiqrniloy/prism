@@ -26,17 +26,17 @@ describe("file credential store", () => {
     const store = createFileCredentialStore({ path });
     assert.deepEqual(store.list(), []);
 
-    store.set({ name: "apiKey", provider: "anthropic", credential: { type: "api_key", value: "sk-ant-test" } });
+    store.set({ name: "apiKey", provider: "hyper", credential: { type: "api_key", value: "hyper-test-key" } });
     store.setOAuth("openai-codex", { access: "access-token", refresh: "refresh-token" }, "acct_1");
 
-    assert.equal(store.get({ name: "apiKey", provider: "anthropic" })?.value, "sk-ant-test");
+    assert.equal(store.get({ name: "apiKey", provider: "hyper" })?.value, "hyper-test-key");
     assert.equal(store.getOAuth("openai-codex", "acct_1")?.access, "access-token");
     assert.equal(store.list().length, 1);
     assert.equal(store.listOAuth().length, 1);
 
     // A second store instance reads the persisted file.
     const reopened = createFileCredentialStore({ path });
-    assert.equal(reopened.get({ name: "apiKey", provider: "anthropic" })?.value, "sk-ant-test");
+    assert.equal(reopened.get({ name: "apiKey", provider: "hyper" })?.value, "hyper-test-key");
     assert.equal(reopened.getOAuth("openai-codex", "acct_1")?.refresh, "refresh-token");
 
     if (process.platform !== "win32") {
@@ -44,8 +44,8 @@ describe("file credential store", () => {
       assert.equal(statSync(join(path, "..")).mode & 0o777, 0o700);
     }
 
-    assert.equal(store.delete({ name: "apiKey", provider: "anthropic" }), true);
-    assert.equal(store.delete({ name: "apiKey", provider: "anthropic" }), false);
+    assert.equal(store.delete({ name: "apiKey", provider: "hyper" }), true);
+    assert.equal(store.delete({ name: "apiKey", provider: "hyper" }), false);
     assert.equal(store.deleteOAuth("openai-codex", "acct_1"), true);
     assert.equal(store.list().length, 0);
     assert.equal(store.listOAuth().length, 0);
@@ -89,7 +89,7 @@ describe("file credential store", () => {
       },
     }));
     const { probeKeychainAvailability } = await import("../keychain-store.js");
-    const result = await probeKeychainAvailability({ service: "prism-code" });
+    const result = await probeKeychainAvailability({ service: "prism-test" });
     assert.equal(result.status, "unavailable");
     assert.equal(result.status === "unavailable" && result.message.includes("secret-value"), false);
     assert.equal(writes, 0);

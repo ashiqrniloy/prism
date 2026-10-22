@@ -46,11 +46,14 @@ function validate(input: PackageDefinitionInput<any>): void {
   const requires = input.requires;
   if (requires !== undefined) {
     if (typeof requires !== "object" || requires === null) invalid(name, "requires must be an object");
-    if (typeof requires.prism !== "string") invalid(name, "requires.prism is required and must be a semver range");
-    try {
-      parseRange(requires.prism);
-    } catch (error) {
-      invalid(name, `requires.prism: ${error instanceof Error ? error.message : "invalid range"}`);
+    if (!Number.isInteger(requires.api)) invalid(name, "requires.api is required and must be an integer");
+    if (requires.prism !== undefined) {
+      if (typeof requires.prism !== "string") invalid(name, "requires.prism must be a semver range");
+      try {
+        parseRange(requires.prism);
+      } catch (error) {
+        invalid(name, `requires.prism: ${error instanceof Error ? error.message : "invalid range"}`);
+      }
     }
     if (requires.packages !== undefined) {
       if (typeof requires.packages !== "object" || requires.packages === null) invalid(name, "requires.packages must be an object");

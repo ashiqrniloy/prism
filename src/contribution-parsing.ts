@@ -118,14 +118,14 @@ export interface AgentFileDeclaration {
 }
 
 /** Parse a per-agent `AGENT.md` bundle frontmatter file. Only `name`/`metadata`
- *  surface here; full resolution is `resolveAgentDefinition`. */
+ *  surface here. The resolver left with the agent-definition module. */
 export function parseAgentFile(text: string, path: string): AgentFileDeclaration {
   const { front } = splitFrontmatter(text, path);
   const name = String(front.get("name") ?? "").trim() || parentDirName(path);
   if (!NAME_RE.test(name)) {
     throw new Error(`Invalid agent name in ${path}: ${JSON.stringify(name)}`);
   }
-  // ponytail: full resolution is Phase 33's resolveAgentDefinition. Only name/metadata surface here.
+  // ponytail: only the name/metadata surface stays. The resolver was deleted in plan 174 Task 2.
   const metadata: Record<string, JsonValue> = {};
   for (const [key, value] of front) {
     if (key !== "name") metadata[key] = value as JsonValue;

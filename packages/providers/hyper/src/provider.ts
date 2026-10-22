@@ -1,13 +1,16 @@
-import type { ModelProvider, CredentialValueSource, ProviderRequest } from "@arnilo/prism";
-import { providerError, resolveCredentialValue, trimTrailingSlashes } from "@arnilo/prism";
-import { readBoundedResponseText } from "@arnilo/prism/provider-kit";
-import { createOpenAIResponsesProvider } from "@arnilo/prism/provider-kit";
-import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "@arnilo/prism/provider-kit";
-import { applyHyperAnthropicCacheControl } from "./cache.js";
-import { HYPER_DEFAULT_BASE_URL, type HyperRoute } from "./models.js";
-import { hyperChatBody, hyperChatEvents } from "./openai-chat.js";
-import { classifyHyperError, hyperHttpError } from "./retry.js";
-import { hyperPreserveThinking, hyperReasoningEffort, hyperThinking, stripHyperOwnedCompat } from "./thinking.js";
+import type { CredentialValueSource, JsonObject, ModelProvider, Usage } from "@arnilo/prism";
+import {
+  createRoutedProvider,
+  mapOpenAIChatUsage,
+  normalizeUsage,
+  parseErrorBody,
+  providerHttpError,
+  readRetryAfterMs,
+  RETRYABLE_STATUSES,
+  type RoutedProviderRoute,
+} from "@arnilo/prism/provider-kit";
+import { HYPER_DEFAULT_BASE_URL, type HyperRoute, routeForHyperModel } from "./models.js";
+import { parseHyperUsageCost } from "./telemetry.js";
 
 export interface HyperProviderOptions {
   readonly id?: string;
@@ -17,75 +20,101 @@ export interface HyperProviderOptions {
   readonly fetch?: typeof fetch;
 }
 
-const HYPER_ANTHROPIC_HOOKS: AnthropicMessagesRouteHooks = {
-  applyCacheControl: applyHyperAnthropicCacheControl,
-  preserveThinking: hyperPreserveThinking,
-  stripOwnedCompat: stripHyperOwnedCompat,
-  thinking: hyperThinking,
-  effort: hyperReasoningEffort,
+export const HYPER_CHAT_ROUTE: RoutedProviderRoute<"openai-chat"> = {
+  format: "openai-chat",
+  path: "/chat/completions",
+  auth: "bearer",
+  codec: {
+    reasoningReplay: "reasoning_content",
+    maxTokensField: "max_tokens",
+  },
 };
 
-export function createHyperProvider(options: HyperProviderOptions = {}): ModelProvider {
-  const id = options.id ?? "hyper";
-  const baseUrl = trimTrailingSlashes(options.baseUrl ?? HYPER_DEFAULT_BASE_URL);
-  // Third route: Codex-style `/v1/responses` OpenAI-standard pass-through,
-  // reusing the OpenAI package's Responses machinery wholesale (body, stream,
-  // usage, continuation, media) with Hyper's base URL and auth header.
-  const responsesProvider = createOpenAIResponsesProvider({
-    id,
-    baseUrl,
-    apiKey: options.apiKey,
-    fetch: options.fetch,
-    label: "Hyper",
-  });
+export const HYPER_MESSAGES_ROUTE: RoutedProviderRoute<"anthropic-messages"> = {
+  format: "anthropic-messages",
+  path: "/messages",
+  auth: "x-api-key+bearer",
+};
+
+/**
+ * Augments usage reporting with Hyper's monetization metadata and currency fields.
+ */
+export function withHyperCost(raw: unknown): Usage | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const isAnthropic = "input_tokens" in raw && !("prompt_tokens" in raw);
+  const baseUsage = isAnthropic
+    ? normalizeUsage({
+        inputTokens: (raw as { input_tokens?: number }).input_tokens,
+        inputTokensInclusive: false,
+        outputTokens: (raw as { output_tokens?: number }).output_tokens,
+        cacheReadTokens: (raw as { cache_read_input_tokens?: number }).cache_read_input_tokens,
+        cacheWriteTokens: (raw as { cache_creation_input_tokens?: number }).cache_creation_input_tokens,
+      })
+    : mapOpenAIChatUsage(raw);
+
+  const hyper = parseHyperUsageCost(raw);
+  if (!hyper) return baseUsage;
+
+  const hyperMetadata: JsonObject = {
+    ...(hyper.usd !== undefined ? { usd: hyper.usd } : {}),
+    ...(hyper.hypercredits !== undefined ? { hypercredits: hyper.hypercredits } : {}),
+    ...(hyper.remainingHypercredits !== undefined ? { remainingHypercredits: hyper.remainingHypercredits } : {}),
+  };
+
+  const metadata: JsonObject = {
+    ...(baseUsage?.metadata ?? {}),
+    hyper: hyperMetadata,
+  };
+
   return {
-    id,
-    async *generate(request) {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-      if (routeFor(request) === "responses") {
-        yield* responsesProvider.generate(request);
-        return;
-      }
-      let token: string | undefined;
-      const secrets: (string | undefined)[] = [];
-      try {
-        const route = routeFor(request);
-        const body = route === "anthropic" ? await anthropicMessagesBody(request, HYPER_ANTHROPIC_HOOKS) : hyperChatBody(request);
-        token = await resolveCredentialValue(options.apiKey, { provider: id, name: "apiKey" });
-        secrets.push(token);
-        const response = await (options.fetch ?? fetch)(`${baseUrl}${route === "anthropic" ? "/messages" : "/chat/completions"}`, {
-          method: "POST",
-          headers: {
-            ...request.options?.headers,
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {}),
-            // Provider-owned Anthropic-route auth: `x-api-key` + `anthropic-version`
-            // (Claude Code compatibility). Applied last so callers cannot replace
-            // credential-bearing headers.
-            ...(route === "anthropic" && token ? { "x-api-key": token, "anthropic-version": "2023-06-01" } : {}),
-          },
-          body: JSON.stringify(body),
-          signal: request.signal,
-        });
-        if (!response.ok) {
-          const bodyText = await readBoundedResponseText(response, { secrets });
-          return yield providerError(
-            hyperHttpError(classifyHyperError({ status: response.status, headers: response.headers }), bodyText, secrets),
-            secrets,
-          );
-        }
-        if (!response.body) return yield providerError(new Error("Hyper response had no body"), secrets);
-        yield* route === "anthropic"
-          ? anthropicMessagesEvents(response.body, request.signal)
-          : hyperChatEvents(response.body, request.signal);
-      } catch (error) {
-        yield providerError(error, secrets);
-      }
-    },
+    ...(baseUsage ?? {}),
+    ...(hyper.usd !== undefined ? { cost: hyper.usd, currency: "USD" } : {}),
+    metadata,
   };
 }
 
-function routeFor(request: ProviderRequest): HyperRoute {
-  const route = request.model.compat?.route;
-  return route === "anthropic" || route === "responses" ? route : "openai";
+/**
+ * Classifies Hyper HTTP error responses into redacted errors with HTTP status codes.
+ * Treats 402 `billing_error` as a permanent, non-retryable error.
+ */
+function hyperHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error {
+  let parsedBody: unknown;
+  try {
+    parsedBody = JSON.parse(bodyText);
+  } catch {
+    parsedBody = undefined;
+  }
+  const errorBody = parseErrorBody(parsedBody);
+  const errorCode = typeof errorBody?.error?.code === "string" ? errorBody.error.code : undefined;
+  const retryAfterMs = readRetryAfterMs(response.headers);
+  const status = response.status;
+  const retryable = RETRYABLE_STATUSES.has(status);
+
+  return providerHttpError(
+    "Hyper",
+    {
+      status,
+      code: status,
+      errorCode,
+      retryAfterMs: retryable ? retryAfterMs : undefined,
+    },
+    bodyText,
+    secrets,
+  );
+}
+
+export function createHyperProvider(options: HyperProviderOptions = {}): ModelProvider {
+  return createRoutedProvider({
+    id: options.id ?? "hyper",
+    baseUrl: options.baseUrl ?? HYPER_DEFAULT_BASE_URL,
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    routeFor: (r) => (r.model.compat?.route as HyperRoute | undefined) ?? routeForHyperModel(r.model.model),
+    routes: {
+      openai: HYPER_CHAT_ROUTE,
+      anthropic: HYPER_MESSAGES_ROUTE,
+    },
+    mapUsage: withHyperCost,
+    mapHttpError: hyperHttpError,
+  });
 }

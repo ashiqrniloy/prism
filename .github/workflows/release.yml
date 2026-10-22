@@ -3,17 +3,16 @@ name: release
 on:
   push:
     branches: [main, master]
-    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "v0.8.0", "v0.9.0", "v0.10.0", "v0.11.0", "v0.11.1", "v0.12.0", "v0.12.1", "@arnilo/*@*"]
+    tags: ["v0.3.0", "v0.4.0", "v0.5.0", "v0.5.1", "v0.5.2", "v0.5.3", "v0.5.4", "v0.5.5", "v0.5.6", "v0.6.0", "v0.7.0", "v0.8.0", "v0.9.0", "v0.10.0", "v0.11.0", "v0.11.1", "v0.12.0", "v0.12.1", "v0.13.0", "@arnilo/*@*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# One release at a time. Two independent tags (e.g. @arnilo/prism-agent-sdk@0.1.0 and
-# @arnilo/prism-code@0.4.0) publish the same dependency closure, so concurrent runs race on npm and
-# the loser reports E409. The queued run resumes instead: `--resume` skips what the first one
-# published, and the post-publish smoke re-verifies the registry.
+# One release at a time. Two independent tags publish the same dependency closure, so concurrent
+# runs race on npm and the loser reports E409. The queued run resumes instead: `--resume` skips what
+# the first one published, and the post-publish smoke re-verifies the registry.
 concurrency:
   # Tag pushes serialize against each other (they publish the same closure and would race into E409);
   # branch and PR runs get their own group so a verify on main never blocks a release tag.
@@ -178,13 +177,7 @@ jobs:
       - run: bun audit --audit-level=moderate
       - run: |
           mkdir -p security-artifacts
-          # release-host registry toolchain — runner images ship Node; contributors never invoke npm
-          # npm is the registry toolchain here (pack/sbom, plan 125 Task 5): it runs on the
-          # runner image's preinstalled Node — no setup-node step.
-          # The repo builds with TypeScript 7 while @opentui/core's bun-ffi-structs peer-requires ^5;
-          # npm's tree validation rejects that peer edge (ESBOMPROBLEMS) even though bun installed a
-          # working tree, so the SBOM is read with peer resolution relaxed. Nothing ships from here.
-          npm sbom --sbom-format spdx --legacy-peer-deps > security-artifacts/sbom.spdx.json
+          bun scripts/sbom.mjs > security-artifacts/sbom.spdx.json
           bun scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
           git ls-files -z | xargs -0 bun scripts/scan-secrets.mjs
 
@@ -204,7 +197,7 @@ jobs:
       - name: install libreoffice headless
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc libreoffice-impress
       - name: run office golden validation
-        run: bun run --filter @arnilo/prism-work test:office
+        run: bun run --filter @arnilo/prism-tools-work test:office
 
   publish:
     name: publish (deterministic, resumable, provenance)
@@ -225,23 +218,16 @@ jobs:
           bun-version: "1.4.2"
       - run: bun ci
       - run: bun run build
-      # release-host registry toolchain — runner images ship Node; contributors never invoke npm
-      # Registry-toolchain exception (plan 125 Task 5): pack, publish, sbom and view run through
-      # npm on the runner image's preinstalled Node. Probed 2026-09-25 on Bun 1.4.2: `bun pack`
-      # does not exist and `bun publish` has no --provenance, so the registry contract stays npm's
-      # (publish itself goes through `bun run release:publish`). No setup-node step pins that Node
-      # on purpose.
+      # Bun-only release toolchain (plan 164 Task 8.4): pack the tarballs once, then attest and
+      # publish exactly those bytes. Bun 1.4.2 has no `--provenance`, so provenance is the GitHub
+      # build attestation below, not an npm sigstore statement.
       - name: pack release artifacts, checksums, SBOM, and secret scan
         run: |
           SAFE_REF=$(echo "$GITHUB_REF_NAME" | sed 's#[/@:]#-#g')
           echo "SAFE_REF=$SAFE_REF" >> "$GITHUB_ENV"
-          mkdir -p release-artifacts
-          npm pack --json --pack-destination release-artifacts > release-artifacts/core-pack.json
-          npm pack --workspaces --json --pack-destination release-artifacts > release-artifacts/workspace-pack.json
+          bun scripts/release.mjs pack --destination release-artifacts
           sha256sum release-artifacts/*.tgz > release-artifacts/SHA256SUMS
-          # Same peer edge as the supply-chain job: TypeScript 7 vs bun-ffi-structs' ^5 peer makes
-          # npm's tree validation abort before it writes the SBOM.
-          npm sbom --sbom-format spdx --legacy-peer-deps > release-artifacts/sbom.spdx.json
+          bun scripts/sbom.mjs > release-artifacts/sbom.spdx.json
           bun scripts/verify-sbom.mjs release-artifacts/sbom.spdx.json security/license-policy.json
           test "$(du -sb release-artifacts | cut -f1)" -le 134217728
           mkdir -p release-artifacts/unpacked
@@ -252,11 +238,6 @@ jobs:
           done
           bun scripts/scan-secrets.mjs release-artifacts/unpacked
           rm -rf release-artifacts/unpacked
-      # Plan 140 Task 2: install the packed app globally (`bun add -g` into a temp BUN_INSTALL) and
-      # run the installed bin (version, headless mock, doctor, PTY launch/exit, single core copy).
-      - name: pre-publish prism-code install smoke
-        run: bun scripts/prism-code-install-smoke.mjs --packs release-artifacts
-        timeout-minutes: 10
       - name: attest package artifacts
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
@@ -272,10 +253,9 @@ jobs:
           path: release-artifacts
           retention-days: 30
       - name: wire registry auth
-        # Registry auth reaches npm only through config keys (`//<registry>/:_authToken`) — and the
-        # release-host registry toolchain (plan 125 Task 5) dropped setup-node's `registry-url`
-        # write, so it is explicit here. The value stays the `${NODE_AUTH_TOKEN}` reference: npm
-        # expands it from the publish step's env at publish time instead of storing the secret.
+        # Registry auth reaches the client only through config keys (`//<registry>/:_authToken`).
+        # The value stays the `${NODE_AUTH_TOKEN}` reference: bun reads `.npmrc` and expands it from
+        # the publish step's env at publish time instead of storing the secret.
         run: |
           printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' >> "$HOME/.npmrc"
       - name: publish in dependency order
@@ -296,43 +276,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  post-publish-smoke:
-    name: post-publish smoke (registry install + curl installer)
-    needs: publish
-    if: startsWith(github.ref, 'refs/tags/@arnilo/prism-code@')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.2"
-      - run: bun ci
-      - name: resolve version
-        run: echo "VERSION=${GITHUB_REF_NAME#@arnilo/prism-code@}" >> "$GITHUB_ENV"
-      # Plan 140 Task 2: install from the registry the way users do and exercise the bin.
-      - name: registry install smoke
-        run: bun scripts/prism-code-install-smoke.mjs --registry --version "$VERSION"
-        timeout-minutes: 10
-      # Plan 140 Task 4: the real released archive through the real installer. The binaries
-      # workflow builds in parallel, so wait for the release's SHA256SUMS before installing;
-      # install.sh itself downloads and verifies the archive.
-      - name: curl installer against the published release
-        run: |
-          set -eu
-          tag="prism-code-v$VERSION"
-          for attempt in $(seq 1 40); do
-            if curl -fsIL "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/SHA256SUMS" >/dev/null; then
-              break
-            fi
-            if [ "$attempt" -eq 40 ]; then
-              echo "release $tag did not publish its assets within 20 minutes" >&2
-              exit 1
-            fi
-            sleep 30
-          done
-          curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/install.sh" | PRISM_HOME="$RUNNER_TEMP/prism-home" sh -s --
-          "$RUNNER_TEMP/prism-home/bin/prism-code" --version | grep -Fqx "$VERSION (binary)"
-        timeout-minutes: 30

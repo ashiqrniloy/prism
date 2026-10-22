@@ -2,9 +2,15 @@
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
 import type { ErrorInfo } from "./content.js";
 import type { SessionEntry } from "./session.js";
+import type { SessionContext } from "../session-context.js";
 
 export interface CompactionContext {
   readonly sessionId: string;
+  /**
+   * The slot owner's session view, when a package owns the `compaction` slot. Absent when the owner is
+   * `"host"` or `"kernel"`. Needs the owner's own capabilities for `background` and `entries`.
+   */
+  readonly session?: SessionContext;
   readonly entries: readonly SessionEntry[];
   readonly keepRecentEntries?: number;
   readonly trigger?: "manual" | "auto" | string;

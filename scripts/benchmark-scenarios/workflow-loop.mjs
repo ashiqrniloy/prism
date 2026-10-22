@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createWorkflowTransitionChannel } from "@arnilo/prism-workflows";
 /**
  * Plan 045 Task 3 network-free workflow-loop benchmark.
  * Five serial loop iterations run a mock-provider refinement body. The frozen
@@ -9,15 +10,10 @@
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
-import { createAgent, providerDone, providerTextDelta } from "../../dist/index.js";
-import {
-  createMemoryWorkflowCheckpoints,
-  defineWorkflow,
-  loopNode,
-  runWorkflow,
-} from "../../packages/prism-core/dist/runtime/workflows/index.js";
+import { createAgent, providerDone, providerTextDelta } from "../../src/index.ts";
+import { createMemoryWorkflowCheckpoints, defineWorkflow, loopNode, runWorkflow } from "@arnilo/prism-workflows";
 import { loadBudgets } from "../budget-gates.mjs";
-import { mockProvider } from "../../dist/testing/index.js";
+import { providerPackage } from "../../src/provider-kit/index.ts";
 
 export const LOOP_ITERATIONS = 5;
 export const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 5);
@@ -53,7 +49,7 @@ export async function runWorkflowLoop({ iterations = LOOP_ITERATIONS, runId = `w
   const events = [];
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [mockProvider([stats])],
+    packages: [providerPackage("mock", [createMockProvider(stats)])],
   });
   const workflow = defineWorkflow({
     id: "workflow-loop-benchmark",
@@ -73,7 +69,7 @@ export async function runWorkflowLoop({ iterations = LOOP_ITERATIONS, runId = `w
   const result = await runWorkflow(workflow, "seed", {
     checkpoints: createMemoryWorkflowCheckpoints(),
     runId,
-    onEvent: (event) => events.push(event),
+    transitions: workflowEvents((event) => events.push(event)),
   });
   const finishedIterations = events.filter((event) => event.type === "node_iteration_finished");
   return {
@@ -164,4 +160,12 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
+}
+
+function workflowEvents(consume) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
 }

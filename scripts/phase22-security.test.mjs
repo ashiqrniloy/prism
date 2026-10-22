@@ -27,12 +27,12 @@
  */
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createEventMultiplexer, EventMultiplexerError, SessionMetadataConflictError } from "@arnilo/prism";
-import { createMemoryModelRouterStateStore } from "@arnilo/prism-core/governance/model-router";
-import { createNatsAgentEventSource } from "@arnilo/prism-core/sessions/nats";
+import { SessionMetadataConflictError } from "@arnilo/prism";
+import { createEventMultiplexer, EventMultiplexerError } from "@arnilo/prism-workflows";
+import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
 import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 
-const BLOCKER_IDS = ["budget-reservation", "conversation-metadata-cas", "single-consumer", "nats-durable"];
+const BLOCKER_IDS = ["budget-reservation", "conversation-metadata-cas", "single-consumer"];
 const blockerIds = new Set();
 
 const ownership = { tenantId: "phase22", userId: "u1" };
@@ -205,111 +205,7 @@ describe("phase22 security conformance (plan 022 Task 5, built public entrypoint
     blockerIds.add("single-consumer");
   });
 
-  it("T4: the NATS durable consumer name is restart-stable and resumes from the last ack", async () => {
-    // Network-free structural NatsJetStream seam (the same narrow public
-    // interface createNatsJetStream adapts); consumers upsert by name so a
-    // restarting durable subscribe reuses the crash-left consumer at its ack.
-    const messages = new Map();
-    const consumers = new Map();
-    let nextSeq = 1;
-    const seam = {
-      async publish(subject, data, opts) {
-        const seq = nextSeq++;
-        messages.set(seq, { subject, data, msgID: opts.msgID });
-        return { stream: "test", seq, duplicate: false };
-      },
-      async addConsumer(_stream, cfg) {
-        const existing = consumers.get(cfg.name);
-        consumers.set(cfg.name, { cfg, acked: existing ? new Set(existing.acked) : new Set() });
-      },
-      async getConsumer(_stream, name) {
-        const state = consumers.get(name);
-        if (!state) throw new Error(`consumer not found: ${name}`);
-        return {
-          async fetch({ max_messages }) {
-            const filter = state.cfg.filter_subject;
-            const start = state.cfg.opt_start_seq ?? 1;
-            const candidates = [];
-            for (const [seq, message] of messages) {
-              if (seq < start) continue;
-              if (!filter.split(".").every((token, i) => token === "*" || token === message.subject.split(".")[i])) continue;
-              if (state.acked.has(seq)) continue;
-              candidates.push({ seq, data: message.data });
-            }
-            candidates.sort((left, right) => left.seq - right.seq);
-            const batch = candidates.slice(0, max_messages);
-            return {
-              async *[Symbol.asyncIterator]() {
-                for (const item of batch) {
-                  yield { seq: item.seq, data: item.data, ack: () => state.acked.add(item.seq) };
-                }
-              },
-            };
-          },
-        };
-      },
-      async deleteConsumer(_stream, name) {
-        consumers.delete(name);
-      },
-      async getMessage(_stream, seq) {
-        const message = messages.get(seq);
-        return message ? { data: message.data } : null;
-      },
-      async deleteMessage() {},
-    };
-
-    const stream = "phase22-stream";
-    const options = { connection: seam, stream, cursorSecret: "phase22-cursor-secret" };
-    const source = createNatsAgentEventSource(options);
-    const record = (id, type, owner = ownership) => ({
-      id,
-      ...owner,
-      sessionId: "s1",
-      runId: "r1",
-      type,
-      timestamp: "2026-08-13T00:00:00.000Z",
-      redacted: true,
-      event: { type, sessionId: "s1", runId: "r1", turn: 1 },
-    });
-    await source.append(record("event-1", "run.started"));
-    await source.append(record("event-2", "turn.started"));
-
-    const read = { ownership, sessionId: "s1", runId: "r1", limit: 10 };
-    const first = source.subscribe(read);
-    const iterator = first[Symbol.asyncIterator]();
-    const envelope1 = await iterator.next();
-    assert.equal(envelope1.value.record.id, "event-1");
-    const envelope2 = await iterator.next(); // resumes the yield: event-1 is now acked
-    assert.equal(envelope2.value.record.id, "event-2");
-    const name = [...consumers.keys()][0];
-    assert.match(name, /^prism_[0-9a-f]{16}$/, "durable name is prism_<hmac16> with no random suffix");
-
-    // Crash: no close(), no deleteConsumer — the consumer survives with event-1 acked.
-    // A fresh source subscribing without a cursor must resume after the ack, not replay.
-    const restarted = createNatsAgentEventSource(options);
-    const resumed = await restarted.subscribe(read)[Symbol.asyncIterator]().next();
-    assert.equal(resumed.value.record.id, "event-2", "restart must resume from the last ack, not the stream head");
-    assert.equal(resumed.value.record.sequence, 2);
-
-    // Cross-tenant ownership mints a different durable name (no cross-run collision).
-    const other = createNatsAgentEventSource({ ...options, connection: seam, stream });
-    await other.append(record("event-3", "turn.started", { tenantId: "phase22-b", userId: "u1" }));
-    const foreign = await other
-      .subscribe({ ...read, ownership: { ...ownership, tenantId: "phase22-b" } })
-      [Symbol.asyncIterator]()
-      .next();
-    assert.equal(foreign.value.record.id, "event-3");
-    assert.equal([...consumers.keys()].filter((key) => key !== name).length, 1, "cross-tenant subscribe mints a distinct durable name");
-    // close() aborts each parked subscriber's stop signal (a parked return() would
-    // queue forever behind the pending fetch), then the generator finally deletes
-    // the durable consumers.
-    await source.close();
-    await restarted.close();
-    await other.close();
-    blockerIds.add("nats-durable");
-  });
-
-  it("gate accounting: all four blocker IDs executed; none skipped or renamed away", () => {
+  it("gate accounting: all blocker IDs executed; none skipped or renamed away", () => {
     assert.deepEqual(
       [...blockerIds].sort(),
       [...BLOCKER_IDS].sort(),

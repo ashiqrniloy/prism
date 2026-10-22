@@ -33,9 +33,16 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
   await iterator.return?.();
 
   const terminal = await source.append(event("event-d", "run.completed", input, "2026-01-01T00:00:03.000Z"));
-  const final = await source.page({ ...input, after: secondPage.items[0]!.cursor, limit: 10 });
-  equal(final.items.at(-1)?.record.id, terminal.id, "terminal page must include its terminal event");
-  equal(final.terminal, true, "terminal event must close only after prior events are delivered");
+  // Page the tail one record at a time: a source may cap `limit` below any number this probe could
+  // name (the option is per-source), and walking the tail is the stronger cursor check anyway.
+  let tail = await source.page({ ...input, after: secondPage.items[0]!.cursor, limit: 1 });
+  const tailItems = [...tail.items];
+  while (tail.nextCursor) {
+    tail = await source.page({ ...input, after: tail.nextCursor, limit: 1 });
+    tailItems.push(...tail.items);
+  }
+  equal(tailItems.at(-1)?.record.id, terminal.id, "terminal page must include its terminal event");
+  equal(tail.terminal, true, "terminal event must close only after prior events are delivered");
 
   // A limit death is one terminal `run.failed` that already carries the breach and its attribution
   // (the former `run_limit_exceeded` + `budget_exhausted` + `error` triple).
@@ -45,7 +52,7 @@ export async function assertAgentEventSourceConforms(factory: AgentEventSourceCo
   if (!beforeLimitItem) throw new Error("limit-death precondition missing");
   const beforeLimit = beforeLimitItem.cursor;
   await source.append(event("event-limit", "run.failed", breached, "2026-01-01T00:00:05.000Z"));
-  const deadPage = await source.page({ ...breached, after: beforeLimit, limit: 10 });
+  const deadPage = await source.page({ ...breached, after: beforeLimit, limit: 1 });
   equal(deadPage.items.length, 1, "a limit death must page as one record");
   equal(deadPage.terminal, true, "a limit death is the run's terminal record");
   const death = source.subscribe(breached)[Symbol.asyncIterator]();

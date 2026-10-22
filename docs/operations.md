@@ -101,7 +101,7 @@ tenant's reads, writes, and lease takeover all fail closed.
 
 Metric hook labels: `outcome` and allowlisted `class` only.
 
-Network-free composition: [`examples/server-deployment-seams.ts`](../examples/server-deployment-seams.ts).
+Network-free composition: `examples/server-deployment-seams.ts`.
 
 ## Live probe (plans/064 Task 9)
 
@@ -109,7 +109,7 @@ The outbound webhook notifier has an operator-gated live probe against a receive
 
 ```bash
 PRISM_TEST_WEBHOOK_URL=https://ops.example.com/hooks/prism \
-PRISM_TEST_WEBHOOK_SECRET=<at-least-32-byte-shared-key> bun run --filter @arnilo/prism-core test
+PRISM_TEST_WEBHOOK_SECRET=<at-least-32-byte-shared-key> bun run --filter @arnilo/prism-store-postgres test
 ```
 
 Probes: one signed delivery to your receiver (verify `x-prism-signature: sha256=<hex>` over the raw body) and a retry-after-5xx leg over a local loopback receiver (500 then 200, signature verified, retries recorded). Bounded to 1 real request + ≤ 2 loopback requests. Registered in `scripts/live-matrix.json` as `core/webhooks-live`.
@@ -122,4 +122,4 @@ Probes: one signed delivery to your receiver (verify `x-prism-signature: sha256=
 - `createWorkflowCoordinator` (`admission`) and `createPrismOperatorHandler` — fair claim policy and ownership-scoped cancel/reconcile.
 - `defineSaga`/`runSaga`/`resumeSaga` — higher-level consumers with the same fencing/cursor semantics.
 - `scripts/phase27-ha-worker.mjs` / `scripts/phase27-ha.test.mjs` — the reproducible drill; `docs/_evidence/phase27-ha-evidence.json` — the recorded run.
-- [Signed, hash-chained audit export](audit-export.md) — the cursor/CAS pattern applied to audit exports.
+- [Signed, hash-chained audit export](../packages/policy/governance/README.md) — the cursor/CAS pattern applied to audit exports.

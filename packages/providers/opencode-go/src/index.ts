@@ -97,14 +97,14 @@ export function opencodeGo(options: OpenCodeGoProviderPackageOptions & OpenCodeG
   return providerPackageInstance(definition, definitionFor, ["id", "fetch"], options);
 }
 
-export { anthropicMessagesBody, anthropicMessagesEvents } from "@arnilo/prism/provider-kit";
 export {
-  applyOpencodeAnthropicCacheControl,
+  createOpenCodeGoProvider,
+  type OpenCodeGoProviderOptions,
+  OPENCODE_GO_CHAT_ROUTE,
+  OPENCODE_GO_MESSAGES_ROUTE,
+  opencodeSession,
   OPENCODE_SESSION_ID_MAX_LENGTH,
-  opencodeAnthropicCacheEnabled,
-  opencodeOwnedHeaders,
-  opencodeSessionId,
-} from "./cache.js";
+} from "./provider.js";
 export {
   defineOpenCodeGoModel,
   type ListOpenCodeGoModelsOptions,
@@ -119,12 +119,4 @@ export {
   openCodeGoThinkingLevels,
   routeForOpenCodeGoModel,
 } from "./models.js";
-export { openAIChatBody, openAIChatEvents, serializeOpenCodeGoChatMessage } from "./openai-chat.js";
-export { createOpenCodeGoProvider, type OpenCodeGoProviderOptions } from "./provider.js";
-export {
-  openCodeGoPreserveThinking,
-  openCodeGoReasoning,
-  openCodeGoReasoningEffort,
-  openCodeGoThinking,
-  stripOpenCodeGoOwnedCompat,
-} from "./thinking.js";
+

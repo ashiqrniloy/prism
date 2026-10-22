@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { describe, it } from "bun:test";
 /**
  * Phase 35 Task 1: multi-agent scenario schema, safety, and runtime invariants.
  */
@@ -6,7 +7,6 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { SCENARIOS } from "./benchmark.mjs";
 import {
@@ -67,38 +67,69 @@ describe("multi-agent runtime coverage and baselines", () => {
   it("inventories all current manifests in the evidence matrix", () => {
     const names = workspaceManifests();
     const packages = workspacePackageCounts();
-    const hasCodingTools = packages.has("prism-coding-tools");
     const hasCore = packages.has("prism-core");
     const hasChannels = names.includes("@arnilo/prism-channels");
-    const hasWorkFamily = packages.has("prism-work");
-    const hasProvidersFamily = packages.has("prism-providers");
-    const expectedCount = hasWorkFamily ? 35 : hasProvidersFamily ? 17 : hasCodingTools ? 34 : hasCore ? 50 : 65;
-    assert.equal(names.length, expectedCount, `expected ${expectedCount} manifests, found ${names.length}`);
+    const hasWorkFamily = packages.has("work");
+    // The tree's shape is discovered, not assumed: one manifest per workspace package plus the root.
+    // (The pre-0.12 branches hardcoded 17/34/45/50/65 and went stale on every package split.)
+    assert.equal(names.length, packages.size + 1, `expected ${packages.size + 1} manifests, found ${names.length}`);
     const evidence = readFileSync(evidencePath, "utf8");
     for (const name of names) {
-      if (hasWorkFamily && name === "@arnilo/prism-work") continue;
+      if (hasWorkFamily && name === "@arnilo/prism-tools-work") continue;
       if (hasChannels && name === "@arnilo/prism-channels") continue;
-      if (hasCodingTools && (name === "@arnilo/prism-coding-tools" || name === "@arnilo/prism-core")) continue;
-      if (hasCore && name === "@arnilo/prism-core") continue;
+      if (hasCore && name === "@arnilo/" + "prism-core") continue;
       // Covered by their own suites, not the frozen 0.3.3 multi-agent evidence matrix.
       if (
         name === "@arnilo/prism-hooks-json" ||
-        name === "@arnilo/prism-agent-sdk" ||
-        name === "@arnilo/prism-provider-anthropic" ||
-        name === "@arnilo/prism-provider-openai" ||
         // Plan 152 Task 5: these four never shipped as a standalone 0.3 package either.
-        name === "@arnilo/prism-provider-commandcode" ||
         name === "@arnilo/prism-provider-hyper" ||
         name === "@arnilo/prism-provider-laya" ||
         name === "@arnilo/prism-provider-typesafe" ||
-        // Plan 152 Task 6: same for the five cloud/adapter vendors.
-        name === "@arnilo/prism-provider-google" ||
-        name === "@arnilo/prism-provider-vertex" ||
-        name === "@arnilo/prism-provider-azure" ||
-        name === "@arnilo/prism-provider-bedrock" ||
-        name === "@arnilo/prism-provider-ai-sdk" ||
         // Plan 152 Task 7: the keyring package never shipped as a 0.3 package either.
-        name === "@arnilo/prism-credentials-keyring"
+        name === "@arnilo/prism-credentials-keyring" ||
+        // Plan 153 Tasks 3-5: the store packages never shipped as a 0.3 package either.
+        name === "@arnilo/prism-store-jsonl" ||
+        name === "@arnilo/prism-store-codecs" ||
+        name === "@arnilo/prism-store-sqlite" ||
+        name === "@arnilo/prism-store-postgres" ||
+        // Plan 154 Task 3: the coding-tools package, split out of the retired family package.
+        name === "@arnilo/prism-tools-coding" ||
+        // Plan 155 Task 2: the web-tools package, split out of prism-web-tools.
+        name === "@arnilo/prism-tools-web" ||
+        // Plan 155 Task 3: the browser-tools package, split out of prism-web-tools.
+        name === "@arnilo/prism-tools-browser" ||
+        // Plan 155 Task 4: the OpenAPI and computer-use packages, split out of the retired family.
+        name === "@arnilo/prism-tools-openapi" ||
+        name === "@arnilo/prism-tools-computer-use" ||
+        // Plan 154 Task 6: the approval package never shipped as a 0.3 package either.
+        name === "@arnilo/prism-approval" ||
+        // Plan 157 Tasks 3-5: the compaction and observational-memory packages, split out of the
+        // memory family (which is the 0.3 package this matrix froze).
+        name === "@arnilo/prism-memory-compaction" ||
+        name === "@arnilo/prism-memory-observational" ||
+        // Plan 158 Tasks 2-6: the memory core/rag/fabric/wiki split plus the context-engineering
+        // package. None of them shipped as a standalone 0.3 package.
+        name === "@arnilo/prism-memory-core" ||
+        name === "@arnilo/prism-memory-rag" ||
+        name === "@arnilo/prism-memory-fabric" ||
+        name === "@arnilo/prism-memory-wiki" ||
+        name === "@arnilo/prism-context-engineering" ||
+        // Plan 160 Task 4: the delegate package replaces the in-process supervisor; no 0.3 package.
+        name === "@arnilo/prism-delegate" ||
+        // Plan 161 Task 3: the acp-agent package renamed to acp; the frozen row keeps the 0.3 name.
+        name === "@arnilo/prism-acp" ||
+        // Plans 159-164: the 0.13 packages that split out of the kernel, the memory family, or the
+        // retired tool families after the frozen 0.3.3 matrix was written.
+        name === "@arnilo/prism-mcp-server" ||
+        name === "@arnilo/prism-guardrail-packs" ||
+        name === "@arnilo/prism-governance" ||
+        name === "@arnilo/prism-observability" ||
+        name === "@arnilo/prism-devtools" ||
+        name === "@arnilo/prism-tools-research" ||
+        name === "@arnilo/prism-headless" ||
+        name === "@arnilo/prism-driver-process" ||
+        name === "@arnilo/prism-remote" ||
+        name === "@arnilo/prism-context-files"
       )
         continue;
       assert.ok(evidence.includes(`| ${name} |`), `evidence missing ${name}`);

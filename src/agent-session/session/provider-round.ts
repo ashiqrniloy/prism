@@ -1,24 +1,16 @@
 /** Provider-round phase of runInternal (plan 059). */
 
-import { resolveInputCap } from "../../attention-compiler.js";
-import { cacheUsageReport } from "../../cache-helpers.js";
-import {
-  estimateMessageTokens,
-  estimateRequestExtrasTokens,
-  getContextBudgetReport,
-  resolveHostTokenEstimator,
-} from "../../context-budget.js";
+import { cacheUsageReport } from "../../provider-kit/cache-helpers.js";
+import { estimateMessageTokens, estimateRequestExtrasTokens, resolveInputCap } from "../../models/estimate.js";
 import type {
   ContentBlock,
   CostCatalog,
-  Message,
   ModelConfig,
   ProviderEvent,
   ProviderRequest,
   ProviderStopReason,
   ProviderTurnMetadata,
   ProviderTurnResult,
-  RunOptions,
   ResolvedRunOptions,
   ToolCallContent,
   ToolResult,
@@ -26,7 +18,6 @@ import type {
   Usage,
   UsageRecord,
 } from "../../contracts.js";
-import { GuardrailError } from "../../guardrails.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
 import { normalizeStopReason, providerError, providerToolCallDeltaContent } from "../../models/events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
@@ -51,7 +42,7 @@ function pushCoalescedContent(content: ContentBlock[], block: ContentBlock): voi
     content[content.length - 1] = { type: "text", text: last.text + block.text };
     return;
   }
-  if (last?.type === "thinking" && block.type === "thinking") {
+  if (last?.type === "thinking" && block.type === "thinking" && !last.redacted && !block.redacted) {
     content[content.length - 1] = {
       type: "thinking",
       text: last.text + block.text,
@@ -63,13 +54,10 @@ function pushCoalescedContent(content: ContentBlock[], block: ContentBlock): voi
 }
 
 /** Resolve the per-request input cap for turn-budget metadata (plan 087 T1). A model without a
- *  derivable cap (or a bad attention setting on an unrelated run) omits the field instead of
- *  failing an emitting turn; the attention compiler, when enabled, is the cap authority. */
-export function resolveTurnInputCap(session: SessionHost, model: ModelConfig): number | undefined {
-  const setting = session.agent.config.attentionCompiler;
-  const options = typeof setting === "object" && setting !== null ? setting : undefined;
+ *  derivable cap omits the field instead of failing an emitting turn. */
+export function resolveTurnInputCap(model: ModelConfig): number | undefined {
   try {
-    return resolveInputCap(options ? { maxInputTokens: options.maxInputTokens, reserveTokens: options.reserveTokens } : {}, model);
+    return resolveInputCap({}, model);
   } catch {
     return undefined;
   }
@@ -80,7 +68,7 @@ function turnBudgets(session: SessionHost, model: ModelConfig, usage: Usage | un
   const tracker = session.activeLimits;
   if (!tracker) return undefined;
   const snapshot = tracker.snapshot();
-  const inputCap = resolveTurnInputCap(session, model);
+  const inputCap = resolveTurnInputCap(model);
   const runInputBudget = tracker.limits.maxInputTokens;
   return {
     ...(usage?.inputTokens === undefined
@@ -117,11 +105,12 @@ async function withCatalogCost(catalog: CostCatalog | undefined, model: ModelCon
   try {
     const quote = await catalog.get(model.model, { signal });
     if (!quote || (quote.unit !== undefined && quote.unit !== "per_million_tokens")) return usage;
+    const uncachedInput = Math.max(0, (usage.inputTokens ?? 0) - (usage.cacheReadTokens ?? 0) - (usage.cacheWriteTokens ?? 0));
     const cost =
-      ((usage.inputTokens ?? 0) * (quote.input ?? 0) +
-        (usage.outputTokens ?? 0) * (quote.output ?? 0) +
+      (uncachedInput * (quote.input ?? 0) +
         (usage.cacheReadTokens ?? 0) * (quote.cacheRead ?? 0) +
-        (usage.cacheWriteTokens ?? 0) * (quote.cacheWrite ?? 0)) /
+        (usage.cacheWriteTokens ?? 0) * (quote.cacheWrite ?? 0) +
+        (usage.outputTokens ?? 0) * (quote.output ?? 0)) /
       1_000_000;
     if (!Number.isFinite(cost) || cost <= 0) return usage;
     return { ...usage, cost, ...(quote.currency !== undefined ? { currency: quote.currency } : {}) };
@@ -167,34 +156,18 @@ export async function recordProviderUsage(
 }
 
 /**
- * Plan 091 T2 missing-usage fallback, plan 103 T6 exact-measurement reuse: when the provider
- * reported nothing and the agent did not turn estimation off, label one estimate of the turn's
- * own request, preferring the most exact measurement that already exists —
- * 1. the budget pass's own `ContextBudgetReport.keptTokens` (whole request, post-eviction,
- *    the same figure that decided evictions; excludes content added after the budget pass),
- * 2. the host's `contextBudget.tokenEstimator`, projecting messages plus tool/context portions
- *    through the assembler's own `measureAll` text shapes,
- * 3. the plan-091 family heuristic for messages plus those same assembler shapes for extras
- *    (no `JSON.stringify` of the schemas, so no drift from what the assembler measured).
- * A host tokenizer's count is still an estimate (`confidence: "high"`, never `"reported"`);
- * a report measured by the built-in ÷4 basis is honestly `"low"`. Returns `undefined` when
- * estimation is not the fallback (`"off"` / `"strict"`) or the request is unavailable —
- * absent stays absent.
+ * Plan 091 T2 missing-usage fallback: when the provider reported nothing and the agent did not
+ * turn estimation off, label one estimate of the turn's own request — the plan-091 family
+ * heuristic for messages plus the assembler's own text shapes for tools and context (no
+ * `JSON.stringify` of the schemas, so no drift from what the assembler measured). The count is
+ * always an estimate (`Usage.estimated`, never `"reported"`), and its confidence is the family
+ * table's. Returns `undefined` when estimation is not the fallback (`"off"` / `"strict"`) or the
+ * request is unavailable — absent stays absent.
  */
 function estimateTurnUsage(session: SessionHost, model: ModelConfig, request: ProviderRequest | undefined): Usage | undefined {
   // Omitted is the documented default (`"fallback"`), not a reason to skip estimation.
   const mode = session.agent.config.usageEstimation ?? "fallback";
   if (!request || mode !== "fallback") return undefined;
-  const hostEstimator = resolveHostTokenEstimator(session.agent.config.contextBudget);
-  const report = getContextBudgetReport(request);
-  if (report) {
-    return { inputTokens: report.keptTokens, estimated: true, confidence: hostEstimator === undefined ? "low" : "high" };
-  }
-  if (hostEstimator) {
-    let tokens = estimateRequestExtrasTokens(request.tools, request.context, hostEstimator);
-    for (const message of request.messages) tokens += estimateMessageTokens(message, hostEstimator);
-    return { inputTokens: tokens, estimated: true, confidence: "high" };
-  }
   const estimate = estimateMessageTokens(request.messages, model.model);
   const extras = estimateRequestExtrasTokens(request.tools, request.context, (text) => estimateTextTokensForFamily(text, model.model));
   return { inputTokens: estimate.tokens + extras, estimated: true, confidence: estimate.confidence };
@@ -235,7 +208,7 @@ export async function generateWithRetry(
     sessionId: session.id,
     runId,
     signal,
-    passthrough: (error) => error instanceof GuardrailError || isSteerSoftInterrupt(error),
+    passthrough: (error) => isSteerSoftInterrupt(error),
     classify(error) {
       const failure = error instanceof ProviderTurnFailure ? error : undefined;
       return {
@@ -266,6 +239,7 @@ export async function generateProviderTurn(
   turn = 1,
   attempt = 1,
   recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>,
+  // biome-ignore lint/correctness/noUnusedFunctionParameters: the name is part of the published declaration surface (scripts/compat-baseline/arnilo__prism.txt).
   toolResults: readonly ToolResult[] = [],
 ): Promise<ProviderTurnResult> {
   session.activeLimits!.charge("maxProviderAttempts");
@@ -412,7 +386,7 @@ export async function generateProviderTurn(
       usage: effectiveUsage,
       error: info,
     });
-    if (error instanceof GuardrailError || error instanceof ProviderTurnFailure) throw error;
+    if (error instanceof ProviderTurnFailure) throw error;
     throw new ProviderTurnFailure(info, started);
   } finally {
     cleanupTurn();

@@ -1,6 +1,6 @@
 # Prism
 
-This page is the target design for `@arnilo/prism` 0.13.0. **Nothing here is shipped yet.** What ships today is `@arnilo/prism` 0.12.1, documented in [docs/index.md](docs/index.md). [roadmap.md](roadmap.md) has the full architecture and the build order.
+This page describes `@arnilo/prism` 0.13.0. The contract is documented page by page in [docs/index.md](docs/index.md), and [roadmap.md](roadmap.md) has the architecture and the build order.
 
 ## What Prism is
 
@@ -56,15 +56,15 @@ The **host** stays in control:
 ```ts
 import { createAgent } from "@arnilo/prism";
 import coding from "@arnilo/prism-tools-coding";
-import anthropic from "@arnilo/prism-provider-anthropic";
+import hyper from "@arnilo/prism-provider-hyper";
 import observationalMemory from "@arnilo/prism-memory-observational";
 
 const agent = await createAgent({
-  model: "anthropic/claude-sonnet-4-5",
+  model: "hyper/claude-sonnet-4-5",
   packages: [
-    anthropic(),
+    hyper({ apiKey: "env:HYPER_API_KEY" }),
     coding({ root: process.cwd() }),
-    observationalMemory({ observer: { model: "anthropic/claude-haiku-4-5" } }),
+    observationalMemory({ observer: { model: "hyper/claude-haiku-4-5" } }),
   ],
   host: { ui: myUi }, // answers approvals, questions, secrets
 });
@@ -84,7 +84,7 @@ import { definePackage } from "@arnilo/prism";
 export default definePackage({
   name: "@acme/prism-audit",
   version: "1.0.0",
-  requires: { prism: "^0.13" },
+  requires: { api: 1 },
   setup(prism) {
     prism.hooks.on("tool.call", (call) => (call.name === "shell" && isDangerous(call.args) ? { deny: "blocked by audit policy" } : undefined));
     prism.hooks.on("tool.completed", (event) => audit.write(event));
@@ -98,17 +98,17 @@ Prism's own packages are optional, just like third-party ones. None of them is i
 
 | Area | Packages |
 | --- | --- |
-| Model providers | `@arnilo/prism-provider-{anthropic, openai, google, azure, bedrock, vertex, …}` |
+| Model providers | `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` |
 | Tools | `@arnilo/prism-tools-{coding, web, browser, work, computer-use, openapi}` |
 | Memory and context | `@arnilo/prism-memory-{compaction, observational, rag, wiki, fabric}`, `@arnilo/prism-context-{files, engineering}` |
 | Session stores | `@arnilo/prism-store-{jsonl, sqlite, postgres}` |
 | Policy | `@arnilo/prism-approval`, `@arnilo/prism-governance`, `@arnilo/prism-guardrail-packs`, `@arnilo/prism-model-router` |
 | Integrations | `@arnilo/prism-mcp`, `@arnilo/prism-hooks-json`, `@arnilo/prism-observability`, `@arnilo/prism-workflows`, `@arnilo/prism-delegate` |
-| Vendor coding agents | `@arnilo/prism-driver-{claude-code, codex, antigravity}`: run a custom agent (system prompt, tools, skills, sub-agents) on the user's installed `claude`, `codex`, or `agy` binary, under the user's own subscription where the vendor's terms allow it, with every message, thinking block, skill activation, and tool call captured as events |
+| Vendor coding agents | `@arnilo/prism-driver-process`: a generic driver that runs a host-written adapter for any coding-agent binary (system prompt, tools, skills, sub-agents), under the user's own subscription where the vendor's terms allow it, with every message, thinking block, skill activation, and tool call captured as events. No vendor adapter is shipped. |
 
-**Surfaces** connect an agent to the outside world, so they are host libraries rather than packages. They take an `Agent` and serve it: `@arnilo/prism-acp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-mcp-server`, `@arnilo/prism-channels`.
+**Host libraries** connect an agent to the outside world or to a person, so they are libraries rather than packages. They take an `Agent` and serve it, or route its requests: `@arnilo/prism-acp`, `@arnilo/prism-ag-ui`, `@arnilo/prism-mcp-server`, `@arnilo/prism-channels`, `@arnilo/prism-remote` (serve an agent to remote clients, or connect to one), and `@arnilo/prism-headless` (answer host-port requests without a person).
 
-**Prism Code** is the reference host. It is a coding-agent TUI built only on `@arnilo/prism` and the manifest. It is not an embedding API.
+**Prism Agent** is the reference host. It is a coding agent built only on `@arnilo/prism` and the manifest, and it is not published. Its [walkthrough](apps/prism-agent/README.md) shows how a host assembles the pieces above.
 
 ## Principles
 

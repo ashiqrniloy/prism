@@ -10,6 +10,7 @@ import {
   type SystemOneClientOptions,
   SystemOneInvalidRequestError,
   SystemOneRetryExhaustedError,
+  warnIfPlaintextRemote,
 } from "../provider-kit/systemone.js";
 
 interface FakeCall {
@@ -176,4 +177,48 @@ describe("@arnilo/prism/provider-kit (systemone)", () => {
     await assert.rejects(postSystemOne(BODY, options(impl), controller.signal));
     assert.equal(calls.length, 0);
   });
+
+  it("plaintext_remote_endpoint_warns_for_both_vendors", () => {
+    const seen: string[] = [];
+    const warn = (msg: string) => seen.push(msg);
+
+    // Loopback stays silent
+    for (const loopback of [
+      "http://localhost:8000",
+      "http://127.0.0.1:8000",
+      "http://127.255.0.1:8000",
+      "http://[::1]:8000",
+      "https://remote.example.com",
+    ]) {
+      seen.length = 0;
+      assert.equal(warnIfPlaintextRemote("TypeSafe Jev", loopback, warn), false);
+      assert.equal(warnIfPlaintextRemote("Laya", loopback, warn), false);
+      assert.equal(seen.length, 0);
+    }
+
+    // Remote plaintext warns for both vendors
+    for (const vendor of ["TypeSafe Jev", "Laya"]) {
+      seen.length = 0;
+      const warned = warnIfPlaintextRemote(vendor, "http://10.0.0.5:8443", warn);
+      assert.equal(warned, true);
+      assert.equal(seen.length, 1);
+      assert.match(seen[0]!, new RegExp(vendor));
+      assert.match(seen[0]!, /plaintext/);
+      assert.match(seen[0]!, /http:\/\/10\.0\.0\.5:8443/);
+      assert.match(seen[0]!, /https:\/\//);
+    }
+  });
+
+  it("plaintext_warning_prints_origin_only", () => {
+    const seen: string[] = [];
+    const warn = (msg: string) => seen.push(msg);
+
+    warnIfPlaintextRemote("Laya", "http://user:super-secret-password@192.168.1.50:9000/path/to/resource", warn);
+    assert.equal(seen.length, 1);
+    assert.match(seen[0]!, /http:\/\/192\.168\.1\.50:9000/);
+    assert.doesNotMatch(seen[0]!, /super-secret-password/);
+    assert.doesNotMatch(seen[0]!, /user/);
+    assert.doesNotMatch(seen[0]!, /path\/to\/resource/);
+  });
 });
+

@@ -51,7 +51,7 @@ function writeGraph(dir, pkgs) {
   return loadRelease(dir);
 }
 
-const CORE = "@arnilo/prism-core";
+const CORE = "@arnilo/" + "prism-core";
 const CODING = "@arnilo/prism-coding-agent";
 const ROOT = "@arnilo/prism";
 

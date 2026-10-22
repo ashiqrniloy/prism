@@ -308,13 +308,15 @@ test("BARREL INTENT (Tasks 1-2 landed): src/contracts.ts and src/agents.ts are b
   assert.ok(!/^export type [A-Za-z0-9_]+ = \{/m.test(contracts), "contracts.ts has no inline object type aliases");
   assert.ok(contracts.split("\n").length < 40, "contracts.ts is a small barrel (< 40 lines)");
   // implementer alias re-exports stay in the barrel
+  // plan 159 Task 8: the `AgentIdentity` alias left the barrel with the identity module; `Principal`
+  // is the only identity type the kernel names.
   assert.ok(
-    /^export type AgentIdentity = import\("\.\/identity\.js"\)\.AgentIdentity;$/m.test(contracts),
-    "AgentIdentity alias stays in contracts.ts",
+    !/AgentIdentity/.test(contracts),
+    "AgentIdentity alias left contracts.ts (plan 159 Task 8)",
   );
   assert.ok(
-    /^export type PersistenceLifecycleStore = import\("\.\/persistence-lifecycle\.js"\)\.PersistenceLifecycleStore;$/m.test(contracts),
-    "PersistenceLifecycleStore alias stays in contracts.ts",
+    !/persistence-lifecycle/.test(contracts),
+    "PersistenceLifecycleStore left contracts.ts (plan 174 Task 2)",
   );
   // the split modules hold the moved declarations
   assert.ok(/^export interface AgentRunState\b/m.test(runState), "AgentRunState moved to contracts-run-state.ts");

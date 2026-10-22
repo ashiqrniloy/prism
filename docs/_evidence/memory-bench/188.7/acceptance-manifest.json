@@ -1,0 +1,733 @@
+{
+  "schemaVersion": 2,
+  "kind": "188.7-final-acceptance",
+  "ceiling": 106000000,
+  "priorReservation": 0,
+  "historicalSpendForAuditOnly": 112092487,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "judgeProtocol": "enum-json-v1",
+  "sourceRevision": "working-tree",
+  "dataset": "longmemeval-s@98d7416c",
+  "confirmatory": {
+    "seed": 1887,
+    "counts": {
+      "abstention": 20,
+      "knowledge-update": 20,
+      "multi-session": 20,
+      "single-session-assistant": 20,
+      "single-session-preference": 20,
+      "single-session-user": 20,
+      "temporal-reasoning": 20
+    },
+    "idsHash": "edb59a8b44a4b0c18534a21b4e8db268081751b51877263e6ac42b949a28bec9",
+    "fileSha256": "9a4dbce8af29ead99be6215b3c260d9b4c90a48644227a0bd2e70aef6e22f087",
+    "ids": {
+      "abstention": [
+        "f685340e_abs",
+        "edced276_abs",
+        "gpt4_c27434e8_abs",
+        "6456829e_abs",
+        "eeda8a6d_abs",
+        "6aeb4375_abs",
+        "88432d0a_abs",
+        "gpt4_372c3eed_abs",
+        "2311e44b_abs",
+        "60bf93ed_abs",
+        "a96c20ee_abs",
+        "f4f1d8a4_abs",
+        "gpt4_93159ced_abs",
+        "09ba9854_abs",
+        "031748ae_abs",
+        "gpt4_70e84552_abs",
+        "982b5123_abs",
+        "ba358f49_abs",
+        "2698e78f_abs",
+        "c8090214_abs"
+      ],
+      "knowledge-update": [
+        "45dc21b6",
+        "dad224aa",
+        "5831f84d",
+        "71315a70",
+        "69fee5aa",
+        "830ce83f",
+        "8fb83627",
+        "4b24c848",
+        "0ddfec37",
+        "5c40ec5b",
+        "ed4ddc30",
+        "e61a7584",
+        "7a87bd0c",
+        "9bbe84a2",
+        "f9e8c073",
+        "9ea5eabc",
+        "b01defab",
+        "e66b632c",
+        "6aeb4375",
+        "c4ea545c"
+      ],
+      "multi-session": [
+        "gpt4_31ff4165",
+        "a9f6b44c",
+        "3fdac837",
+        "dd2973ad",
+        "gpt4_15e38248",
+        "5a7937c8",
+        "3c1045c8",
+        "157a136e",
+        "d851d5ba",
+        "efc3f7c2",
+        "c4a1ceb8",
+        "681a1674",
+        "28dc39ac",
+        "92a0aa75",
+        "1c549ce4",
+        "720133ac",
+        "2311e44b",
+        "e831120c",
+        "129d1232",
+        "gpt4_731e37d7"
+      ],
+      "single-session-assistant": [
+        "7a8d0b71",
+        "cc539528",
+        "6222b6eb",
+        "e9327a54",
+        "c7cf7dfd",
+        "e3fc4d6e",
+        "71a3fd6b",
+        "41275add",
+        "fca762bc",
+        "e8a79c70",
+        "3e321797",
+        "c4f10528",
+        "d596882b",
+        "b759caee",
+        "2bf43736",
+        "e982271f",
+        "ac031881",
+        "1d4da289",
+        "58470ed2",
+        "89527b6b"
+      ],
+      "single-session-preference": [
+        "505af2f5",
+        "75f70248",
+        "afdc33df",
+        "b6025781",
+        "95228167",
+        "1d4e3b97",
+        "1da05512",
+        "06f04340",
+        "1c0ddc50",
+        "75832dbd",
+        "38146c39",
+        "b0479f84",
+        "1a1907b4",
+        "d24813b1",
+        "caf03d32",
+        "d6233ab6",
+        "a89d7624",
+        "54026fce",
+        "0a34ad58",
+        "6b7dfb22"
+      ],
+      "single-session-user": [
+        "dccbc061",
+        "3d86fd0a",
+        "6f9b354f",
+        "c19f7a0b",
+        "ad7109d1",
+        "a82c026e",
+        "51a45a95",
+        "c5e8278d",
+        "ec81a493",
+        "94f70d80",
+        "58bf7951",
+        "19b5f2b3",
+        "8ebdbe50",
+        "e01b8e2f",
+        "8550ddae",
+        "3f1e9474",
+        "86b68151",
+        "c960da58",
+        "60d45044",
+        "7527f7e2"
+      ],
+      "temporal-reasoning": [
+        "af082822",
+        "gpt4_d6585ce8",
+        "gpt4_68e94288",
+        "gpt4_d31cdae3",
+        "gpt4_e072b769",
+        "gpt4_1a1dc16d",
+        "2a1811e2",
+        "gpt4_65aabe59",
+        "9a707b82",
+        "982b5123",
+        "gpt4_ec93e27f",
+        "gpt4_61e13b3c",
+        "b46e15ed",
+        "gpt4_9a159967",
+        "gpt4_7de946e7",
+        "08f4fc43",
+        "gpt4_8279ba03",
+        "993da5e2",
+        "a3045048",
+        "gpt4_1e4a8aeb"
+      ]
+    }
+  },
+  "lifecycle": {
+    "seeds": [
+      1887,
+      1888,
+      1889,
+      1890,
+      1891,
+      1892,
+      1893,
+      1894,
+      1895,
+      1896,
+      1897,
+      1898
+    ],
+    "projects": 3,
+    "sessions": 8,
+    "clusterUnit": "persona"
+  },
+  "unavailable": [
+    {
+      "arm": "fabric-hybrid",
+      "reason": "No live embeddings model configured; hash embeddings are not a substitute."
+    }
+  ],
+  "limitations": [
+    "LoCoMo is comparison-only and capped; a capped run is partial.",
+    "The two Locomo conversations are the pinned comparison pair, not the whole dataset.",
+    "A pre-fix fabric arm is not run because the fix history is uncommitted; pre-fix claims stay unresolved.",
+    "Currency is not reported without authenticated rate semantics."
+  ],
+  "jobs": [
+    {
+      "id": "accept-lme-full",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "full",
+      "subset": "confirmatory",
+      "maxInputTokens": 22000000
+    },
+    {
+      "id": "accept-lme-om",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "om",
+      "subset": "confirmatory",
+      "maxInputTokens": 3000000
+    },
+    {
+      "id": "accept-lme-fabric",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "confirmatory",
+      "maxInputTokens": 3000000
+    },
+    {
+      "id": "accept-lme-fabric-agentic",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric-agentic",
+      "subset": "confirmatory",
+      "maxInputTokens": 8000000
+    },
+    {
+      "id": "accept-lme-om+fabric",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "om+fabric",
+      "subset": "confirmatory",
+      "maxInputTokens": 3000000
+    },
+    {
+      "id": "accept-mab-cr-full",
+      "family": "quality",
+      "suite": "memoryagentbench-cr",
+      "config": "full",
+      "maxInputTokens": 12000000
+    },
+    {
+      "id": "accept-mab-cr-fabric",
+      "family": "quality",
+      "suite": "memoryagentbench-cr",
+      "config": "fabric",
+      "maxInputTokens": 3000000
+    },
+    {
+      "id": "accept-locomo-full",
+      "family": "comparison",
+      "suite": "locomo",
+      "config": "full",
+      "maxInputTokens": 5000000
+    },
+    {
+      "id": "accept-lifecycle-full-p1887",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1887,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1887",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1887,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1887",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1887,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1887",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1887,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1888",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1888,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1888",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1888,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1888",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1888,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1888",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1888,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1889",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1889,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1889",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1889,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1889",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1889,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1889",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1889,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1890",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1890,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1890",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1890,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1890",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1890,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1890",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1890,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1891",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1891,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1891",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1891,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1891",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1891,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1891",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1891,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1892",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1892,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1892",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1892,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1892",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1892,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1892",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1892,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1893",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1893,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1893",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1893,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1893",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1893,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1893",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1893,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1894",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1894,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1894",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1894,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1894",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1894,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1894",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1894,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1895",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1895,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1895",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1895,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1895",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1895,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1895",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1895,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1896",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1896,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1896",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1896,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1896",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1896,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1896",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1896,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1897",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1897,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1897",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1897,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1897",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1897,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1897",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1897,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-full-p1898",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "full",
+      "ablate": [],
+      "seed": 1898,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1898",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [
+        "fabric.promote=off"
+      ],
+      "seed": 1898,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1898",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "fabric",
+      "ablate": [],
+      "seed": 1898,
+      "maxInputTokens": 500000
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1898",
+      "family": "safety",
+      "suite": "lifecycle",
+      "config": "om+fabric",
+      "ablate": [],
+      "seed": 1898,
+      "maxInputTokens": 500000
+    }
+  ]
+}

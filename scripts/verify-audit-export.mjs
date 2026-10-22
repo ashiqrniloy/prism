@@ -15,7 +15,7 @@
  * beyond the public verification key.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { verifyAuditBatch } from "@arnilo/prism-core/governance/policy";
+import { verifyAuditBatch } from "@arnilo/prism-governance";
 
 function usage() {
   console.error(

@@ -18,7 +18,6 @@ import type {
   ToolRegistry,
   ToolResult,
 } from "./contracts.js";
-import { GuardrailError } from "./guardrails.js";
 import { createId } from "./ids.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets, type SecretRedactor } from "./redaction.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
@@ -93,7 +92,7 @@ export interface DispatchToolCallOptions {
   readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
   /** Opaque host principal, passed through unchanged. */
-  readonly principal?: import("./identity.js").Principal;
+  readonly principal?: import("./contracts-core/principal.js").Principal;
   /** Shared run tracker; direct hosts may supply one for their call scope. */
   readonly limitTracker?: RunLimitTracker;
 }
@@ -186,7 +185,7 @@ export function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilte
   return tools.filter((tool) => !denied.has(tool.name) && allows.every((allow) => allow.has(tool.name)));
 }
 
-/** Cap matches tool-search index; run allow-lists never exceed the disclosed set. */
+/** Run allow-lists never exceed the disclosed set. */
 export const HARD_RUN_TOOL_NAMES = 1024;
 const MAX_RUN_TOOL_NAME_CHARS = 256;
 
@@ -363,7 +362,6 @@ export async function dispatchToolCall(options: DispatchToolCallOptions): Promis
     }
     if (effect && (effect.dispatched || dispatchAttempted)) return finishUnknownEffect(effect, mediatedCall, context, options, startedAt);
     await failBeforeEffect(effect, "failed_terminal");
-    if (error instanceof GuardrailError) throw error;
     const info = errorToErrorInfo(error, secrets);
     const result = { toolCallId: mediatedCall.id, name: mediatedCall.name, error: info };
     const finishedAt = new Date().toISOString();

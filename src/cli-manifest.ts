@@ -6,7 +6,9 @@ import { assignSlot, configure, install, list, ManifestError, type ManifestScope
 import { redactSecrets } from "./redaction.js";
 import { SLOT_NAMES, type SlotName } from "./slots/index.js";
 
-/** Subcommands this module owns. `runCli` dispatches on this set and nothing else. */
+/** Subcommands this module owns. `runCli` dispatches on this set and nothing else.
+ *  @deprecated No replacement: nothing reads it since the 0.13 split. Removed at the next breaking
+ *  cut (docs/_evidence/dead-export-verification-2026-09-03.md). */
 export const MANIFEST_COMMANDS: ReadonlySet<string> = new Set([
   "add",
   "remove",
@@ -41,7 +43,8 @@ export const manifestUsage = `       prism add <spec> [--user|--project] [--vers
        prism config <name> <key>=<value>... [--user|--project]    values are JSON when they parse, else text
        prism slot <slot> <owner> | --clear [--user|--project]     slots: ${SLOT_NAMES.join(", ")}
        prism verify [--json] [--trust-project]                    re-hash every install and re-check config
-       prism new package <name> [--dir <path>]                    scaffold a package
+       prism new package [--provider] <name> [--dir <path>]      scaffold a package
+       prism relay hook|mcp --run <run-dir>                       vendor hook/MCP byte relay
 `;
 
 class UsageError extends Error {}
@@ -54,6 +57,7 @@ interface Parsed {
   readonly trustProject: boolean;
   readonly version?: string;
   readonly dir?: string;
+  readonly provider?: boolean;
 }
 
 function parse(args: readonly string[], allowed: readonly string[]): Parsed {
@@ -64,6 +68,7 @@ function parse(args: readonly string[], allowed: readonly string[]): Parsed {
   let trustProject = false;
   let version: string | undefined;
   let dir: string | undefined;
+  let provider = false;
   const flag = (name: string): void => {
     if (!allowed.includes(name)) throw new UsageError(`Unknown option for this command: ${name}`);
   };
@@ -81,6 +86,7 @@ function parse(args: readonly string[], allowed: readonly string[]): Parsed {
     } else if (arg === "--json") json = true;
     else if (arg === "--clear") clear = true;
     else if (arg === "--trust-project") trustProject = true;
+    else if (arg === "--provider") provider = true;
     else if (arg === "--version" || arg === "--dir") {
       const value = args[++i];
       if (value === undefined || value.startsWith("--")) throw new UsageError(`${arg} needs a value.`);
@@ -96,6 +102,7 @@ function parse(args: readonly string[], allowed: readonly string[]): Parsed {
     trustProject,
     ...(version !== undefined ? { version } : {}),
     ...(dir !== undefined ? { dir } : {}),
+    ...(provider ? { provider } : {}),
   };
 }
 
@@ -268,10 +275,22 @@ const TEMPLATE_FILES: Readonly<Record<string, string>> = {
   "README.md": "README.md.tmpl",
 };
 
+const PROVIDER_TEMPLATE_FILES: Readonly<Record<string, string>> = {
+  "package.json": "package.json.tmpl",
+  "src/index.ts": "src/index.ts.tmpl",
+  "src/models.ts": "src/models.ts.tmpl",
+  "src/provider.ts": "src/provider.ts.tmpl",
+  "src/__tests__/package.test.ts": "package.test.ts.tmpl",
+  "src/__tests__/live.test.ts": "live.test.ts.tmpl",
+  "src/__tests__/wire/README.md": "wire-readme.md.tmpl",
+  "README.md": "README.md.tmpl",
+  "CHANGELOG.md": "CHANGELOG.md.tmpl",
+};
+
 async function newPackage(args: readonly string[], runtime: ManifestCliRuntime, cwd: string): Promise<number> {
-  const parsed = parse(args.slice(args[0] === "package" ? 1 : 0), ["--dir"]);
-  if (args[0] !== "package") throw new UsageError("Usage: prism new package <name> [--dir <path>]");
-  const [name] = need(parsed, 1, "new package <name> [--dir <path>]");
+  const parsed = parse(args.slice(args[0] === "package" ? 1 : 0), ["--dir", "--provider"]);
+  if (args[0] !== "package") throw new UsageError("Usage: prism new package [--provider] <name> [--dir <path>]");
+  const [name] = need(parsed, 1, "new package [--provider] <name> [--dir <path>]");
   if (!PACKAGE_NAME.test(name as string) || (name as string).length > 214)
     throw new UsageError("The package name is not a valid npm name.");
   const target = resolve(cwd, parsed.dir ?? basename(name as string));
@@ -282,9 +301,38 @@ async function newPackage(args: readonly string[], runtime: ManifestCliRuntime, 
   }
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
   const kernel = (JSON.parse(await readFile(join(root, "package.json"), "utf8")) as { version?: string }).version ?? "0.0.0";
-  for (const [file, template] of Object.entries(TEMPLATE_FILES)) {
-    const text = await readFile(join(root, "templates", "package", template), "utf8");
-    const body = text.replaceAll("{{name}}", name as string).replaceAll("{{kernelVersion}}", kernel);
+  const rawName = name as string;
+  const isProvider = Boolean(parsed.provider);
+  const templateDir = isProvider ? "provider" : "package";
+  const templateMap = isProvider ? PROVIDER_TEMPLATE_FILES : TEMPLATE_FILES;
+
+  const providerId =
+    rawName
+      .replace(/^@[^/]+\//, "")
+      .replace(/^prism-provider-/, "")
+      .replace(/-provider$/, "")
+      .toLowerCase() || "custom";
+  const providerPascal =
+    providerId
+      .split(/[-_]/)
+      .filter(Boolean)
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join("") || "Custom";
+  const providerUpper = providerId.toUpperCase().replaceAll(/[^A-Z0-9]/g, "_") || "CUSTOM";
+
+  for (const [file, template] of Object.entries(templateMap)) {
+    const text = await readFile(join(root, "templates", templateDir, template), "utf8");
+    const body = text
+      .replaceAll("{{name}}", rawName)
+      .replaceAll("__PACKAGE_NAME__", rawName)
+      .replaceAll("{{kernelVersion}}", kernel)
+      .replaceAll("__PRISM_VERSION__", kernel)
+      .replaceAll("{{providerId}}", providerId)
+      .replaceAll("__PROVIDER_ID__", providerId)
+      .replaceAll("{{providerPascal}}", providerPascal)
+      .replaceAll("__PROVIDER_PASCAL__", providerPascal)
+      .replaceAll("{{providerUpper}}", providerUpper)
+      .replaceAll("__PROVIDER_UPPER__", providerUpper);
     await mkdir(dirname(join(target, file)), { recursive: true });
     await writeFile(join(target, file), body, { flag: "wx" });
   }

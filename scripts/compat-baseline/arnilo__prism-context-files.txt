@@ -1,0 +1,12 @@
+ContextFileLayerOptions	export type { ContextFileLayerOptions, ContextFileLayersResult } from "./layers.js"
+ContextFileLayersResult	export type { ContextFileLayerOptions, ContextFileLayersResult } from "./layers.js"
+ContextFilesConfig	export type { ContextFilesConfig } from "./config.js"
+InstructionSourceOptions	export type { InstructionSourceOptions } from "./instructions.js"
+contextFiles	export declare function contextFiles(config: ContextFilesConfig): PackageInstance
+contextFilesConfigSchema	export declare const contextFilesConfigSchema: JsonSchema
+default	export default
+readContextFileLayers	export declare function readContextFileLayers(options?: ContextFileLayerOptions): Promise<readonly SystemPromptContribution[]>
+readFileMtime	export declare function readFileMtime(path: string): Promise<number | undefined>
+resolveContextFileLayers	export declare function resolveContextFileLayers(options?: ContextFileLayerOptions): Promise<ContextFileLayersResult>
+resolveInstructionSource	export declare function resolveInstructionSource(contribution: DiscoveredContribution, options?: InstructionSourceOptions): Promise<ContextSource | undefined>
+resolveInstructionSources	export declare function resolveInstructionSources(contributions: readonly DiscoveredContribution[], options?: InstructionSourceOptions): Promise<readonly ContextSource[]>

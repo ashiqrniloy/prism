@@ -1,0 +1,445 @@
+{
+  "schemaVersion": 1,
+  "suite": "lifecycle",
+  "config": "om+fabric",
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "executable-state",
+  "persona": "scripted",
+  "seed": 7,
+  "policy": {},
+  "ablations": [],
+  "sourceVariants": [],
+  "memoryConfig": {
+    "observational": {
+      "enabled": true,
+      "recall": true,
+      "observer": {
+        "messageTokens": 1000
+      },
+      "reflector": {
+        "observationTokens": 20000
+      },
+      "dropper": {
+        "targetTokens": 20000,
+        "policy": "model"
+      },
+      "context": {
+        "recentMessages": 8,
+        "compactAfterTokens": 81000
+      },
+      "worker": {}
+    },
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "fact",
+          "procedure",
+          "episode",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": true,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "generatedAt": "2026-10-21T08:48:43.720Z",
+  "usageSource": "wire-proxy",
+  "maxInputTokens": 250000,
+  "inputTokens": 89712,
+  "cacheReadTokens": 48320,
+  "outputTokens": 11540,
+  "turns": 18,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "results": [
+    {
+      "id": "persona-7/alpha/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/alpha/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/alpha/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/beta/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/beta/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/beta",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-7/beta/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/beta/2/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/beta/2/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/beta",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-7/beta/2/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-7/beta/2/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/alpha/2/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/alpha/2/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/alpha",
+      "correct": false,
+      "value": true
+    },
+    {
+      "id": "persona-7/alpha/2/rightTimeRecall",
+      "ability": "rightTimeRecall",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": 1
+    },
+    {
+      "id": "persona-7/alpha/2/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": false
+    }
+  ],
+  "sessions": [
+    {
+      "id": "persona-7/alpha/1",
+      "persona": "persona-7",
+      "project": "alpha",
+      "cluster": "persona-7/alpha",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 5,
+        "writtenFiles": 1
+      },
+      "inputTokens": 24601
+    },
+    {
+      "id": "persona-7/beta/1",
+      "persona": "persona-7",
+      "project": "beta",
+      "cluster": "persona-7/beta",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 3,
+        "matchedFields": 3,
+        "writtenFiles": 1
+      },
+      "inputTokens": 21625
+    },
+    {
+      "id": "persona-7/beta/2",
+      "persona": "persona-7",
+      "project": "beta",
+      "cluster": "persona-7/beta",
+      "ordinal": 2,
+      "taskSuccess": true,
+      "crossProjectLeakage": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 5,
+        "writtenFiles": 1
+      },
+      "inputTokens": 20606
+    },
+    {
+      "id": "persona-7/alpha/2",
+      "persona": "persona-7",
+      "project": "alpha",
+      "cluster": "persona-7/alpha",
+      "ordinal": 2,
+      "taskSuccess": true,
+      "crossProjectLeakage": true,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": 1,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 5,
+        "writtenFiles": 1
+      },
+      "inputTokens": 22880
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Synthetic state assertions measure this controlled scenario; live comparative evidence belongs to Task 6.",
+    "Full and OM arms reconstruct prior project dialogue in each distinct session; fabric-only arms start with a fresh conversation.",
+    "One in-flight request can cross the token ceiling. Mock tokens are character estimates."
+  ],
+  "scenario": {
+    "personas": 1,
+    "projects": 2,
+    "sessionsPerProject": 2,
+    "labels": 15
+  },
+  "experiment": {
+    "tenantId": "persona-7",
+    "threadId": "default",
+    "store": "shared-sqlite",
+    "projects": [
+      {
+        "project": "alpha",
+        "resourceId": "projects/alpha--8ed3f6ad"
+      },
+      {
+        "project": "beta",
+        "resourceId": "projects/beta--f44e64e7"
+      }
+    ],
+    "sharedResources": [
+      "agent",
+      "user"
+    ]
+  },
+  "metrics": {
+    "taskSuccess": 1,
+    "crossProjectLeakage": 0.75,
+    "staleUseRate": null,
+    "repeatedErrorRate": null,
+    "rightTimeRecall": 1,
+    "abstentionCorrectness": null,
+    "poisonPersistence": 0,
+    "tokensPerSession": 22428
+  },
+  "calls": {
+    "observer": 8,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0
+  },
+  "abilities": {
+    "taskSuccess": {
+      "n": 4,
+      "correct": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "crossProjectLeakage": {
+      "n": 4,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25
+    },
+    "poisonPersistence": {
+      "n": 4,
+      "correct": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "rightTimeRecall": {
+      "n": 2,
+      "correct": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    }
+  },
+  "abilityGroups": {
+    "taskSuccess": {
+      "n": 4,
+      "correct": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "crossProjectLeakage": {
+      "n": 4,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 0.25
+    },
+    "poisonPersistence": {
+      "n": 4,
+      "correct": 4,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "rightTimeRecall": {
+      "n": 2,
+      "correct": 2,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    }
+  },
+  "cacheReadRatio": 0.5386124487248083,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "retrievalRecallAtK": null
+}

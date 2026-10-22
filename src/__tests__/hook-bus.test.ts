@@ -187,6 +187,28 @@ describe("hook bus", () => {
     });
   });
 
+  it("decide tool.call: a changed rewrite wins over ask, a conflicting rewrite denies, a no-op rewrite is dropped", async () => {
+    const payload = (path: string) => ({ name: "t", args: { path }, effects: [], callId: "c1", sessionId: "s1", runId: "r1" });
+
+    const round1 = bus();
+    round1.on("tool.call", () => ({ ask: "approve?" }));
+    round1.on("tool.call", () => ({ rewrite: { path: "b" } }));
+    assert.deepEqual(await round1.decide("tool.call", payload("a")), { rewrite: { path: "b" } });
+
+    const conflict = bus();
+    conflict.on("tool.call", () => ({ rewrite: { path: "b" } }));
+    conflict.on("tool.call", () => ({ rewrite: { path: "c" } }));
+    const denied = await conflict.decide("tool.call", payload("a"));
+    assert.ok(typeof denied === "object" && denied !== null && "deny" in denied);
+    if (typeof denied === "object" && denied !== null && "deny" in denied) assert.match(String(denied.deny), /rewrite_conflict/);
+
+    // Round 2: the same rewrite now equals its input, so it is dropped and the ask surfaces.
+    const noop = bus();
+    noop.on("tool.call", () => ({ rewrite: { path: "b" } }));
+    noop.on("tool.call", () => ({ ask: "approve?" }));
+    assert.deepEqual(await noop.decide("tool.call", payload("b")), { ask: "approve?" });
+  });
+
   it("decide run.end: first continue wins", async () => {
     const hooks = bus();
     hooks.on("run.end", () => ({ continue: { reason: "first" } }), { priority: 10 });
@@ -401,7 +423,14 @@ describe("hook bus", () => {
   it("remove_unregisters_one_id", async () => {
     const real = createHookBus();
     let fired = 0;
-    real.registrar("host").on("tool.call", () => (fired++, undefined), { id: "net" });
+    real.registrar("host").on(
+      "tool.call",
+      () => {
+        fired += 1;
+        return undefined;
+      },
+      { id: "net" },
+    );
     real.registrar("host").on("tool.call", () => undefined, { id: "keep" });
     const payload = { name: "t", args: {}, effects: [], callId: "c", sessionId: "s", runId: "r" };
     await real.decide("tool.call", payload);

@@ -1,0 +1,10 @@
+__PROVIDER_IMPORTS__
+
+/** Create the host agent for provider `__PROVIDER_ID__`. */
+export function createAppAgent() {
+  return createAgent({
+    model: __MODEL_EXPRESSION__,
+    provider: __PROVIDER_EXPRESSION__,
+    instructions: "You are a helpful assistant.",
+  });
+}

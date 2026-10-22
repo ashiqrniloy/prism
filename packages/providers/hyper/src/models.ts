@@ -9,16 +9,15 @@ import {
 } from "@arnilo/prism";
 import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
 
-/** Official Hyper API base (`/chat/completions`, `/messages`, `/responses`, `/models`, `/credits`). */
+/** Official Hyper API base (`/chat/completions`, `/messages`, `/models`, `/credits`). */
 export const HYPER_DEFAULT_BASE_URL = "https://hyper.charm.land/v1";
 
-export type HyperRoute = "openai" | "anthropic" | "responses";
+export type HyperRoute = "openai" | "anthropic";
 
 export interface HyperModelConfig extends Omit<ModelConfig, "provider" | "compat"> {
   readonly provider?: "hyper";
   readonly compat?: JsonObject & {
-    /** Route selector: `"anthropic"` → `/v1/messages`; `"responses"` → `/v1/responses`
-     *  (OpenAI-standard pass-through, Codex-style clients); default `"openai"` → `/v1/chat/completions`. */
+    /** Route selector: `"anthropic"` → `/v1/messages`; default `"openai"` → `/v1/chat/completions`. */
     readonly route?: HyperRoute;
     /** Replay prior thinking (Anthropic thinking blocks / OpenAI `reasoning_content`). */
     readonly preserveThinking?: boolean;
@@ -82,10 +81,6 @@ interface HyperModelsResponse {
  *   gpt-oss-120b, kimi-k2.5, llama-*, minimax-m2.7, qwen3-coder, qwen3-next) —
  *   billed cache writes, zero read price. No cache knob is documented for the
  *   chat route; stays implicit with the write fee recorded in `cost.cacheWrite`.
- *
- * The `"responses"` route is never auto-selected here — it is an explicit
- * `compat.route` opt-in by callers who bring their own Responses-shaped model
- * metadata (Codex-style clients).
  */
 export function routeForHyperModel(modelId: string): HyperRoute {
   return modelId.toLowerCase().startsWith("qwen3.6-") ? "anthropic" : "openai";

@@ -5,31 +5,12 @@ import {
   createBoundedUploadCache,
   isPdfMediaType,
   mediaFingerprint,
-  openAIAudioFormat,
   providerUploadCacheKey,
   rejectProviderMediaBlock,
-  serializeOpenAIResponsesInputAudio,
-  serializeOpenAIResponsesInputFile,
   serializePdfDocumentWireBlock,
 } from "../provider-kit/media.js";
 
 describe("provider media primitives", () => {
-  it("serializes OpenAI Responses file and audio wire blocks", () => {
-    assert.deepEqual(serializeOpenAIResponsesInputFile({ filename: "report.pdf", fileData: "abc" }), {
-      type: "input_file",
-      filename: "report.pdf",
-      file_data: "abc",
-    });
-    assert.deepEqual(serializeOpenAIResponsesInputFile({ filename: "report.pdf", fileId: "file-1" }), {
-      type: "input_file",
-      file_id: "file-1",
-    });
-    assert.deepEqual(serializeOpenAIResponsesInputAudio({ data: "abc", format: "wav" }), {
-      type: "input_audio",
-      input_audio: { data: "abc", format: "wav" },
-    });
-  });
-
   it("serializes Anthropic PDF documents and rejects non-pdf", () => {
     assert.deepEqual(
       serializePdfDocumentWireBlock({
@@ -61,7 +42,6 @@ describe("provider media primitives", () => {
     const fingerprint = mediaFingerprint("application/pdf", bytes, "report.pdf");
     assert.match(providerUploadCacheKey({ sessionId: "s1" }, fingerprint), /^s1:/);
     assert.equal(bytesToBase64(bytes), Buffer.from(bytes).toString("base64"));
-    assert.equal(openAIAudioFormat("audio/wav"), "wav");
     assert.equal(isPdfMediaType("application/pdf"), true);
   });
 

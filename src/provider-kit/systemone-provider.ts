@@ -4,7 +4,9 @@
  * Jev and Laya share the wire and the schema compiler. Vendor packages supply
  * id, error label, and base URL; this file owns the gates and the event sequence.
  */
-import type { ModelProvider, JsonObject, ProviderEvent, ProviderRequest, StructuredOutputOptions } from "../contracts.js";
+import type { ModelConfig, ModelProvider, JsonObject, ProviderEvent, ProviderRequest, StructuredOutputOptions } from "../contracts.js";
+import type { PackageDefinition, PackageInstance } from "../packages/api.js";
+import type { JsonSchema } from "../packages/schema.js";
 import type { CredentialValueSource } from "../credentials/index.js";
 import {
   providerDone,
@@ -12,11 +14,20 @@ import {
   providerTextDelta,
   providerUsage,
 } from "../models/events.js";
-import { assertStructuredOutputRequestSupported } from "../structured-output.js";
-import { resolveCredentialValue } from "../credentials/index.js";
+import { assertStructuredOutputRequestSupported } from "./structured-output.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
-import { mapSystemOneUsage, postSystemOne } from "./systemone.js";
+import { mapSystemOneUsage, postSystemOne, warnIfPlaintextRemote } from "./systemone.js";
 import { compileSystemOneQuestions, compileSystemOneState, renderSystemOneOutput } from "./systemone-schema.js";
+import { assertNotAborted, resolveProviderApiKey } from "./routed-provider.js";
+import {
+  baseUrlProperty,
+  defineProviderPackage,
+  modelsProperty,
+  optionalRefSource,
+  providerPackageInstance,
+  refSource,
+  secretRefProperty,
+} from "./provider-package.js";
 
 export interface SystemOneDecisionProviderOptions {
   readonly id: string;
@@ -27,18 +38,22 @@ export interface SystemOneDecisionProviderOptions {
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt; forwarded to the shared client (default 2). */
   readonly maxRetries?: number;
+  /** Custom warning hook; defaults to console.warn. */
+  readonly warn?: (message: string) => void;
 }
 
 export function createSystemOneDecisionProvider(options: SystemOneDecisionProviderOptions): ModelProvider {
   const baseUrl = trimTrailingSlashes(options.baseUrl);
+  warnIfPlaintextRemote(options.label, baseUrl, options.warn ?? console.warn);
   return {
     id: options.id,
+
     async *generate(request: ProviderRequest): AsyncIterable<ProviderEvent> {
-      if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
+      assertNotAborted(request.signal);
       let apiKey: string | undefined;
       try {
         const structuredOutput = requireStructuredOutput(options.label, request);
-        apiKey = await resolveCredentialValue(options.apiKey, { provider: options.id, name: "apiKey" });
+        apiKey = await resolveProviderApiKey(options.apiKey, options.id);
         const booleanThreshold = readBooleanThreshold(options.label, request.options?.compat);
         const response = await postSystemOne(
           {
@@ -90,3 +105,128 @@ function readBooleanThreshold(label: string, compat: JsonObject | undefined): nu
   }
   return value;
 }
+
+export interface SystemOneProviderConfig {
+  /** An `env:`/`keyring:` ref; defaults to defaultKeyRef. */
+  readonly apiKey?: string;
+  /** Official base; defaults to defaultBaseUrl. */
+  readonly baseUrl?: string;
+  /** Retries after the first attempt; forwarded to the shared System One client (default 2). */
+  readonly maxRetries?: number;
+  /** Static catalog. When absent, `models()` returns the curated catalog. */
+  readonly models?: readonly ModelConfig[];
+}
+
+export interface SystemOneProviderPackageOptions {
+  /** Provider id override. */
+  readonly id?: string;
+  /** Test seam: custom fetch transport. */
+  readonly fetch?: typeof fetch;
+}
+
+export interface SystemOneProviderPackageSpec {
+  readonly name: string;
+  readonly providerId: string;
+  readonly label: string;
+  readonly defaultBaseUrl: string;
+  readonly defaultKeyRef: string;
+  readonly keyRequired: boolean;
+  readonly models: readonly ModelConfig[];
+  readonly createProvider?: (options: {
+    readonly id?: string;
+    readonly baseUrl?: string;
+    readonly apiKey?: CredentialValueSource;
+    readonly fetch?: typeof fetch;
+    readonly maxRetries?: number;
+    readonly warn?: (message: string) => void;
+  }) => ModelProvider;
+}
+
+export type SystemOnePackageInstanceFactory<
+  Config extends SystemOneProviderConfig = SystemOneProviderConfig,
+  Options extends SystemOneProviderPackageOptions = SystemOneProviderPackageOptions,
+> = (options?: Options & Config) => PackageInstance;
+
+export interface SystemOneProviderPackageResult<
+  Config extends SystemOneProviderConfig = SystemOneProviderConfig,
+  Options extends SystemOneProviderPackageOptions = SystemOneProviderPackageOptions,
+> {
+  readonly definition: PackageDefinition<Config>;
+  readonly package: SystemOnePackageInstanceFactory<Config, Options>;
+}
+
+export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): SystemOneProviderPackageResult {
+
+  const configSchema: JsonSchema = {
+    type: "object",
+    properties: {
+      apiKey: secretRefProperty(spec.defaultKeyRef),
+      baseUrl: baseUrlProperty("Official base; defaults to the vendor default."),
+      maxRetries: {
+        type: "number",
+        minimum: 0,
+        description: "Retries after the first attempt; forwarded to the shared System One client (default 2).",
+      },
+      models: modelsProperty("Static catalog. When absent, `models()` returns the curated catalog."),
+    },
+    additionalProperties: false,
+  };
+
+  function definitionFor(options: SystemOneProviderPackageOptions) {
+    return defineProviderPackage<SystemOneProviderConfig>({
+      name: spec.name,
+      description: `${spec.label} provider package for Prism.`,
+      config: configSchema,
+      setup: async (prism) => {
+        const id = options.id ?? spec.providerId;
+        const ref = prism.config.apiKey ?? spec.defaultKeyRef;
+        const resolve = (target: string) => prism.credentials.resolve(target);
+        const apiKey = spec.keyRequired ? refSource(resolve, ref) : optionalRefSource(resolve, ref);
+        if (spec.keyRequired && (await resolve(ref)) === undefined) {
+          prism.status.note("warn", `${spec.providerId}: no API key at ${ref}`);
+        }
+        const baseUrl = prism.config.baseUrl ?? spec.defaultBaseUrl;
+        const createFn =
+          spec.createProvider ??
+          ((o) =>
+            createSystemOneDecisionProvider({
+              id: o.id ?? id,
+              label: spec.label,
+              baseUrl: o.baseUrl ?? baseUrl,
+              apiKey: o.apiKey,
+              fetch: o.fetch,
+              maxRetries: o.maxRetries,
+              warn: o.warn,
+            }));
+        const provider = createFn({
+          id,
+          baseUrl,
+          apiKey,
+          fetch: options.fetch,
+          maxRetries: prism.config.maxRetries,
+          warn: (msg) => prism.status.note("warn", msg),
+        });
+        const configured = prism.config.models;
+        prism.providers.register({
+          ...provider,
+          async models() {
+            return configured ?? spec.models;
+          },
+        });
+      },
+    });
+  }
+
+  const definition = definitionFor({});
+
+  function instanceFactory(options: SystemOneProviderPackageOptions & SystemOneProviderConfig = {}): PackageInstance {
+    return providerPackageInstance(definition, definitionFor, ["id", "fetch"], options);
+  }
+
+  return {
+    definition,
+    package: instanceFactory,
+  };
+}
+
+

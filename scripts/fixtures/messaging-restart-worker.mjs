@@ -3,10 +3,10 @@
  * Plan 079 Task 8: sqlite-backed channel worker for SIGTERM / SIGKILL injection.
  * PRISM_CHANNELS_WORKER_INPUT = { filename, connectionId, eventId, chat, actor }
  */
-import { createAgent } from "../../dist/index.js";
-import { createMessagingRuntime } from "../../packages/prism-channels/dist/index.js";
+import { createAgent } from "../../src/index.ts";
+import { createChannelRuntime } from "@arnilo/prism-channels";
 import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import { providerPackage } from "../../dist/provider-kit/index.js";
+import { providerPackage } from "../../src/provider-kit/index.ts";
 
 const input = JSON.parse(process.env.PRISM_CHANNELS_WORKER_INPUT ?? "null");
 if (
@@ -50,9 +50,8 @@ const agent = await createAgent({
   slots: { store: persistence },
   runLedger: persistence,
 });
-const runtime = createMessagingRuntime({
-  authorize: () => ({ identity, agentAliases: ["primary"], grantRevision: "rev-1" }),
-  resolveAgent: () => agent,
+const runtime = createChannelRuntime(agent, {
+  authorize: () => ({ identity, grantRevision: "rev-1" }),
   deliver: () => ({ delivered: true }),
   checkpoints: persistence.checkpoints,
   leases: persistence.leases,

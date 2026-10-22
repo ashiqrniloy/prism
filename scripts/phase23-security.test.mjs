@@ -29,7 +29,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import { AGENT_RUN_STATE_NAMESPACE, AgentRunStateError, createAgent } from "@arnilo/prism";
+import { AGENT_RUN_STATE_SCHEMA_VERSION, AgentRunStateError, createAgent } from "@arnilo/prism";
 
 const ROOT = join(import.meta.dirname, "..");
 const LOCK = join(ROOT, "scripts", "with-build-lock.mjs");
@@ -44,7 +44,7 @@ const blockerIds = new Set();
 // load (phase22 precedent: threat-suites runs after a build in every chain).
 assert.equal(typeof createAgent, "function");
 assert.equal(typeof AgentRunStateError, "function");
-assert.equal(typeof AGENT_RUN_STATE_NAMESPACE, "string");
+assert.equal(typeof AGENT_RUN_STATE_SCHEMA_VERSION, "number");
 
 function spawn(cmd, args, options = {}) {
   return spawnSync(cmd, args, {
@@ -109,13 +109,6 @@ describe("phase23 security conformance (plan 023 Task 5, built public entrypoint
       const mcp = artifact.packages["@arnilo/prism-mcp"];
       assert.ok(mcp && typeof mcp.lines === "number", "mcp row must exist in the artifact");
       assert.ok(mcp.lines >= 80, `mcp lines ${mcp.lines} prove the core-dist-free denominator (0.2.2 polluted value was 45.47)`);
-      // Since the 0.4.0 consolidation the durable legs live in prism-core
-      // (packages/session-store-* moved to src/sessions/*); the protected
-      // class is recorded on the prism-core row, not a standalone package.
-      const core = artifact.packages["@arnilo/prism-core"];
-      assert.ok(core?.protectedException, "durable-leg packages must be recorded protected, never gated green");
-      assert.match(core.protectedException, /PRISM_TEST_(POSTGRES_URL|NATS_URL)/, "core durable legs must name their required env");
-      assert.equal(core.threshold, null, "protected rows are exempt from a line gate");
       assert.deepEqual(artifact.belowThreshold, [], "no non-protected package may sit below its threshold");
       const protectedRows = Object.entries(artifact.packages).filter(([, row]) => row.protectedException);
       assert.ok(protectedRows.length >= 1, `protected skip classes must be named (found ${protectedRows.length})`);

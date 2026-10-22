@@ -30,23 +30,23 @@ test("active suites are runnable-by-env; planned suites name plan 064", () => {
 });
 
 test("skip contract: missing credential skips with reason, never 'run'", () => {
-  const suite = matrix.suites.find((s) => s.id === "providers/openai");
+  const suite = matrix.suites.find((s) => s.id === "providers/hyper");
   const missing = resolveSuiteState(suite, { PRISM_LIVE_PROVIDER_TESTS: "1" });
   assert.equal(missing.state, "skip");
-  assert.match(missing.reason, /OPENAI_API_KEY/);
-  const present = resolveSuiteState(suite, { PRISM_LIVE_PROVIDER_TESTS: "1", OPENAI_API_KEY: "sk-x" });
+  assert.match(missing.reason, /HYPER_API_KEY/);
+  const present = resolveSuiteState(suite, { PRISM_LIVE_PROVIDER_TESTS: "1", HYPER_API_KEY: "sk-x" });
   assert.equal(present.state, "run");
   // Empty-string env counts as unset.
-  assert.equal(resolveSuiteState(suite, { PRISM_LIVE_PROVIDER_TESTS: "1", OPENAI_API_KEY: "" }).state, "skip");
+  assert.equal(resolveSuiteState(suite, { PRISM_LIVE_PROVIDER_TESTS: "1", HYPER_API_KEY: "" }).state, "skip");
 });
 
-test("requiresAny: google runs on either key, skips on neither", () => {
-  const google = matrix.suites.find((s) => s.id === "providers/google");
-  assert.equal(resolveSuiteState(google, { PRISM_LIVE_PROVIDER_TESTS: "1", GEMINI_API_KEY: "g" }).state, "run");
-  assert.equal(resolveSuiteState(google, { PRISM_LIVE_PROVIDER_TESTS: "1", GOOGLE_API_KEY: "g" }).state, "run");
-  const neither = resolveSuiteState(google, { PRISM_LIVE_PROVIDER_TESTS: "1" });
+test("requiresAny: tools-browser runs on either key, skips on neither", () => {
+  const browser = matrix.suites.find((s) => s.id === "tools-browser/browser-live");
+  assert.equal(resolveSuiteState(browser, { PRISM_LIVE_PLAYWRIGHT: "1" }).state, "run");
+  assert.equal(resolveSuiteState(browser, { PRISM_TEST_PLAYWRIGHT: "1" }).state, "run");
+  const neither = resolveSuiteState(browser, {});
   assert.equal(neither.state, "skip");
-  assert.match(neither.reason, /GEMINI_API_KEY, GOOGLE_API_KEY/);
+  assert.match(neither.reason, /PRISM_LIVE_PLAYWRIGHT, PRISM_TEST_PLAYWRIGHT/);
 });
 
 test("model selection: every provider suite reads its PRISM_LIVE_*_MODEL override (Task 4 retrofit complete)", () => {
@@ -60,19 +60,17 @@ test("model selection: every provider suite reads its PRISM_LIVE_*_MODEL overrid
       if (isProvider) assert.equal(m.wired, true, `${suite.id}: ${m.env} must be wired after the Task 4 retrofit`);
     }
   }
-  assert.equal(providerSuites, 20, "all 20 provider adapters have matrix entries");
-  const dash = matrix.suites.find((s) => s.id === "providers/alibaba").model[0];
-  assert.equal(dash.env, "PRISM_LIVE_DASHSCOPE_MODEL");
-  assert.equal(dash.wired, true);
+  assert.equal(providerSuites, 4, "all supported provider adapters have matrix entries");
+  const hyperModel = matrix.suites.find((s) => s.id === "providers/hyper").model[0];
+  assert.equal(hyperModel.env, "PRISM_LIVE_HYPER_CHAT_MODEL");
+  assert.equal(hyperModel.wired, true);
   for (const id of [
-    "providers/azure",
-    "providers/bedrock",
-    "providers/vertex",
-    "providers/ollama",
-    "providers/ai-sdk",
-    "providers/google-discovery",
+    "providers/hyper",
+    "providers/opencode-go",
+    "providers/typesafe",
+    "providers/laya",
   ]) {
-    assert.equal(matrix.suites.find((s) => s.id === id).status, "active", `${id} activated by Task 4`);
+    assert.equal(matrix.suites.find((s) => s.id === id).status, "active", `${id} is active`);
   }
 });
 

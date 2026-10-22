@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "path": "/zen/go/v1/chat/completions",
+  "requestBody": {
+    "model": "mimo-v2.5",
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "Warm prefix prompt for cache hit verification." }]
+      }
+    ],
+    "stream": true,
+    "stream_options": { "include_usage": true }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"chatcmpl-ocg-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776020,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776020,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Cache hit acknowledged.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776020,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-ocg-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776020,\"model\":\"mimo-v2.5\",\"choices\":[],\"usage\":{\"prompt_tokens\":150,\"completion_tokens\":8,\"total_tokens\":158,\"prompt_tokens_details\":{\"cached_tokens\":120}}}\n\ndata: [DONE]\n\n"
+}

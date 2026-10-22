@@ -28,7 +28,7 @@ for await (const item of source.subscribe({ ... })) {
 
 **Migration actions**
 - Keep reading past `run_limit_exceeded` and `budget_exhausted`; the stream ends on `error`. A consumer that wants the attribution reads until `isTerminalAgentEventType(type)` is `true` (or the iterator ends).
-- No configuration, no flag: this is the shipped delivery contract for pages, subscriptions, and replays. See [Agent events § Durable AgentEventSource](agent-events.md#durable-agenteventsource).
+- No configuration, no flag: this is the shipped delivery contract for pages, subscriptions, and replays. See [Agent events § Durable AgentEventSource](events.md).
 
 ### 2. `provider_turn_finished` carries stop reason, budgets, tools, and cache metrics
 
@@ -52,7 +52,7 @@ Late-expanding context (skill bodies, deferred tool schemas, loaded references) 
 await runPrefixStabilityConformance({ agent, minContinuity: 0.95 }); // ≥95% shared serialized prefix per turn
 ```
 
-Sizing: measured 100% / 95.7% / 95.8% shared prefix on the padded fixture for three consecutive requests; `minContinuity` defaults to `0.95` and is checked over messages **and** tool schemas. Cache reads/writes and per-turn hit rate are now recorded on usage records and `provider_turn_finished.metadata.cache`. See [Prefix stability conformance](prefix-stability-conformance.md) and [Provider caching](provider-caching.md).
+Sizing: measured 100% / 95.7% / 95.8% shared prefix on the padded fixture for three consecutive requests; `minContinuity` defaults to `0.95` and is checked over messages **and** tool schemas. Cache reads/writes and per-turn hit rate are now recorded on usage records and `provider_turn_finished.metadata.cache`. See [Prefix stability conformance](testing.md) and [Provider caching](models.md).
 
 ### 4. A provider that reports no usage is charged a labeled estimate
 
@@ -83,7 +83,7 @@ const attention = createAttentionCompiler(
 );
 ```
 
-Sizing: one session-store write per fold (not per turn); folding stays default-off, and `durable: true` requires a checkpoint store (`runState`) or the run throws `AgentRunStateError` before its first provider turn. See [Attention compiler](attention-compiler.md).
+Sizing: one session-store write per fold (not per turn); folding stays default-off, and `durable: true` requires a checkpoint store (`runState`) or the run throws `AgentRunStateError` before its first provider turn. See [Attention compiler](../packages/context/engineering/README.md).
 
 ### 6. Per-turn tool narrowing
 
@@ -106,7 +106,7 @@ const agent = createAgent({ /* … */, session: { guardrailPacks: ["secrets-hygi
 // compiled from existing seams: interruptBeforeTool, the extension kernel, enforceExecutionPolicy
 ```
 
-Sizing: `guardrailPacks` accepts at most 8 packs and 64 rules per pack; containment in `coding-standard` is lexical (`options.roots` defaults to `[process.cwd()]`, symlinks are not resolved), so an `ExecutionPolicy` stays the hard boundary. See [Guardrails](guardrails.md#guardrail-packs).
+Sizing: `guardrailPacks` accepts at most 8 packs and 64 rules per pack; containment in `coding-standard` is lexical (`options.roots` defaults to `[process.cwd()]`, symlinks are not resolved), so an `ExecutionPolicy` stays the hard boundary. See [Guardrails](../packages/policy/guardrail-packs/README.md).
 
 ### 8. Background (session-lifetime) child agents and child-event passthrough
 
@@ -117,7 +117,7 @@ const { delegationId } = await supervisor.delegateAsync({ childId: "researcher",
 supervisor.subscribe(); // … child_milestone … child_failed (on a limit or error)
 ```
 
-Sizing: child events per delegation 256/4096, child-event bytes 32 KiB/256 KiB, child events per second 10/1000 (default/hard, per child) — 10/s is trivial for a UI, raise it only for a child whose tool events are the UI. Exceeding rate coalesces into one `delegation_child_events_coalesced` marker with the dropped count (never throws). Defaults are exactly 0.8: `lifetime: "task"`, `report: "on-complete"`, no milestone, no share, no subscription. See [Supervisors](supervisors.md) and [Multi-agent patterns](multi-agent-patterns.md).
+Sizing: child events per delegation 256/4096, child-event bytes 32 KiB/256 KiB, child events per second 10/1000 (default/hard, per child) — 10/s is trivial for a UI, raise it only for a child whose tool events are the UI. Exceeding rate coalesces into one `delegation_child_events_coalesced` marker with the dropped count (never throws). Defaults are exactly 0.8: `lifetime: "task"`, `report: "on-complete"`, no milestone, no share, no subscription. See [Supervisors](../packages/integrations/delegate/README.md) and [Multi-agent patterns](../packages/integrations/delegate/README.md).
 
 ### 9. Checkpoint sidecar metadata and cross-layer restore hooks
 
@@ -128,7 +128,7 @@ createAgentRunLifecycle({ runState: { checkpointMetadata: () => ({ gitCommit: he
   restoreHooks: [async ({ metadata, signal }) => { await checkout(metadata.gitCommit, { signal }); }] });
 ```
 
-Sizing: `MAX_AGENT_RUN_METADATA_BYTES` is 4 KiB (fixed, no override), the whole map is redacted unconditionally (no public-key exemption), and each hook has a 10-second default timeout (`DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`) with sequential execution; any hook failure aborts the restore with `{ hook, error }`. Legacy records without metadata read as `undefined`, and an oversize or non-string map reads as absent rather than failing a resume — unused, behavior is unchanged. See [Durable runs](durable-runs.md).
+Sizing: `MAX_AGENT_RUN_METADATA_BYTES` is 4 KiB (fixed, no override), the whole map is redacted unconditionally (no public-key exemption), and each hook has a 10-second default timeout (`DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`) with sequential execution; any hook failure aborts the restore with `{ hook, error }`. Legacy records without metadata read as `undefined`, and an oversize or non-string map reads as absent rather than failing a resume — unused, behavior is unchanged. See [Durable runs](loop.md).
 
 ### 10. Bounded workspace session search
 
@@ -139,7 +139,7 @@ const page = await store.searchSessions!({ workspaceRoot: "/repo", query: "flake
 const { page } = await searchSessions({ bySession, leafBySession, query: "flake" }); // linear caps apply
 ```
 
-Sizing: on the 100k-turn fixture the index is 18.8% of transcript page bytes (stored tool output is never indexed) and query p95 is 38 ms against the 100 ms ceiling; unindexed stores are O(corpus) per query and accept `maxLinearSessions` / `maxLinearEntries` / `maxLinearBytes` overrides bounded by their hard caps. See [Session stores](session-stores.md) and `examples/session-search.ts`.
+Sizing: on the 100k-turn fixture the index is 18.8% of transcript page bytes (stored tool output is never indexed) and query p95 is 38 ms against the 100 ms ceiling; unindexed stores are O(corpus) per query and accept `maxLinearSessions` / `maxLinearEntries` / `maxLinearBytes` overrides bounded by their hard caps. See [Session stores](../packages/stores/jsonl/README.md) and `examples/session-search.ts`.
 
 ### 11. Deterministic no-model turns
 
@@ -152,7 +152,7 @@ middleware.use<BeforeProviderTurnPayload>("beforeProviderTurn", async (payload, 
     : next(payload));
 ```
 
-Sizing: no provider turn, no usage beyond a zero-cost record; the hook runs only for turns that reach the provider boundary (a turn already ended by a run limit, host turn policy, or suspension never reaches it), and host middleware is trusted code — it must not use the hook to bypass `RunLimits` or guardrails. See [Middleware hooks](middleware-hooks.md#no-model-turns-beforeproviderturn).
+Sizing: no provider turn, no usage beyond a zero-cost record; the hook runs only for turns that reach the provider boundary (a turn already ended by a run limit, host turn policy, or suspension never reaches it), and host middleware is trusted code — it must not use the hook to bypass `RunLimits` or guardrails. See [Middleware hooks](hooks.md).
 
 ### 12. Shared work scopes for observational memory
 
@@ -166,7 +166,7 @@ om.attach(session, {
 });
 ```
 
-Sizing: one local write per append (flush stays local — no second writer on a branch); one branch read plus fold per participating branch per context resolve and per shared-scope recall, not per observation; 1,024 principals per scope and 256-character principal ids, on top of the existing scope caps (256 scopes, depth 8, 4,096 binds, 512-character labels). Session-private scopes stay the default: with no `sharedScopes` configured, behavior is byte-identical to 0.8. See [Compaction and observational memory](compaction-observational-memory.md#shared-work-scopes-opt-in) and `examples/shared-work-scope.ts`.
+Sizing: one local write per append (flush stays local — no second writer on a branch); one branch read plus fold per participating branch per context resolve and per shared-scope recall, not per observation; 1,024 principals per scope and 256-character principal ids, on top of the existing scope caps (256 scopes, depth 8, 4,096 binds, 512-character labels). Session-private scopes stay the default: with no `sharedScopes` configured, behavior is byte-identical to 0.8. See [Compaction and observational memory](../packages/memory/observational/README.md) and `examples/shared-work-scope.ts`.
 
 ### 13. Retrieval revocation and a zero-service reranker
 
@@ -178,7 +178,7 @@ const access = createAccessRecheck({ store, onDenied: audit.warn });
 const propagator = createDeletionPropagator({ store, handlers: [createRagDeletionHandler(vectors), createWikiDeletionHandler(wiki)] });
 ```
 
-Sizing: the local reranker declares no inference dependency — the built-in loader resolves `@huggingface/transformers` at first use (pass `runtime` to inject your own, or `allowRemoteModels: false` for a no-network posture after the model is cached); propagation and repoint walks are bounded by `HARD_PROPAGATION_EDGES` / `HARD_REPOINT_RECORDS` and fail closed past them. See [RAG](rag.md#local-reranker), [Embeddings](embeddings.md), and [Knowledge sync](knowledge-sync.md).
+Sizing: the local reranker declares no inference dependency — the built-in loader resolves `@huggingface/transformers` at first use (pass `runtime` to inject your own, or `allowRemoteModels: false` for a no-network posture after the model is cached); propagation and repoint walks are bounded by `HARD_PROPAGATION_EDGES` / `HARD_REPOINT_RECORDS` and fail closed past them. See [RAG](../packages/memory/rag/README.md), [Embeddings](../packages/memory/rag/README.md), and [Knowledge sync](../packages/memory/wiki/README.md).
 
 ---
 
@@ -206,5 +206,5 @@ Pin the previous published line: `@arnilo/prism@0.8.0` and its siblings, exact p
 
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Migrate Prism 0.7 to 0.8](migrate-to-0.8.md): work-family import map, messaging channels, connected apps, durable runs.
-- [Release and install](release-and-install.md): packed surfaces, install rules, support matrix, and the offline test budget.
-- [Agent events](agent-events.md), [Runs and usage](runs-and-usage.md), [Observability](observability.md), [Tools](tools.md), [Guardrails](guardrails.md), [Supervisors](supervisors.md), [Session stores](session-stores.md): owning pages for the 0.9.0 additions.
+- [Release and install](release.md): packed surfaces, install rules, support matrix, and the offline test budget.
+- [Agent events](events.md), [Runs and usage](events.md), [Observability](../packages/integrations/observability/README.md), [Tools](tools.md), [Guardrails](../packages/policy/guardrail-packs/README.md), [Supervisors](../packages/integrations/delegate/README.md), [Session stores](../packages/stores/jsonl/README.md): owning pages for the 0.9.0 additions.

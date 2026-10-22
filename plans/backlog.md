@@ -1099,3 +1099,53 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Source: plans/174-Phase-11-Part-A-Kernel-Sweep-Family-Retirement-And-Kernel-Gates.md
 - What: `packages/hosts/headless/src/__tests__/scheduler-missed.test.ts:33`, `packages/hosts/headless/src/__tests__/fixtures/scheduler-restart.mjs:46`, and `packages/hosts/remote/src/__tests__/serve.test.ts:89` poll 200 times at 1 ms.
 - Implications: The Task 8 instance (`scheduler.test.ts`) failed as a false "scheduler did not settle" under full-run load and was converted to a 5 s wall-clock deadline. These three siblings carry the same fragility and pass in isolation.
+
+## Re-home benchmark rerun, ablations, calibration, and defaults to plan 188.6 Task 6
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- Compromise: Rerun, ablations, calibration, and defaults (Task 10) were dropped from plan 188.1 and deferred to plan 188.6 Task 6.
+- Implications: Deciding defaults before the scope hierarchy (188.2), consolidation (188.3), and retention (188.4) land would measure an intermediate system rather than the shipped architecture.
+
+## Address contained lifecycle defect fixes (D4, D5, D13) in plan 188.1
+- Section: Compromises Made
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- Compromise: Added Task 11 to address superseded reflections (D4), verification by use (D5), and archive separate from validity (D13) early in plan 188.1 rather than waiting for plans 188.3/188.4.
+- Implications: Avoids distorting retrieval benchmarks and subsequent phase experiments with unbounded retrieval touches or archive/validity conflation.
+
+## Execute Plan 188.2: Memory Scope Hierarchy
+- Section: Further Actions
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- What: Implement memory scope hierarchy covering user, agent, project, and path scopes (`plans/188.2-Phase-11-Part-O2-Memory-Scope-Hierarchy-User-Agent-Project-And-Path-Scopes.md`).
+- Why: Provides project identity, replaces flat scope with scoped configs, and supports union recall across hierarchy levels.
+
+## Execute Plan 188.3: Memory Session Consolidation and Gated Promotion
+- Section: Further Actions
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- What: Implement memory session consolidation and gated promotion from observational memory (`plans/188.3-Phase-11-Part-O3-Memory-Session-Consolidation-Gated-Promotion-From-Observational-Memory.md`).
+- Why: Replaces naive per-reflection promotion with structured candidate gathering, single-pass extraction, transparent promotion scoring, and reconsolidation.
+
+## Execute Plan 188.4: Memory Use-Based Verification, Retention, and Capacity
+- Section: Further Actions
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- What: Implement use-based verification, two-strength retention, capacity management, and scope widening (`plans/188.4-Phase-11-Part-O4-Memory-Use-Based-Verification-Two-Strength-Retention-Capacity-And-Scope-Widening.md`).
+- Why: Unifies lifecycle tracking, citation-based verification, ACT-R storage/retrieval decay, capacity merging/eviction, and scope replication.
+
+## Execute Plan 188.5: Memory Delivery Tiers
+- Section: Further Actions
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- What: Implement delivery tiers: pinned core block, path cues, and team store (`plans/188.5-Phase-11-Part-O5-Memory-Delivery-Tiers-Pinned-Core-Path-Cues-And-Team-Store.md`).
+- Why: Establishes cache-stable pinned core memory, once-per-session path cues in the prompt tail, and checked-in team store synchronization.
+
+## Execute Plan 188.6: Memory Lifecycle Evaluation, Ablations, and Defaults
+- Section: Further Actions
+- Priority: P1
+- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
+- What: Implement memory lifecycle evaluation, replay, longitudinal suites, ablations, calibration, and defaults (absorbs Task 10) (`plans/188.6-Phase-11-Part-O6-Memory-Lifecycle-Evaluation-Replay-Longitudinal-Suite-Ablations-And-Defaults.md`).
+- Why: Evaluates the complete shipped memory architecture with statistically rigorous ablations, decides final configuration defaults, and completes benchmark calibration.
+

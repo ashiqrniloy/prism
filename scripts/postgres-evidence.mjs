@@ -14,14 +14,15 @@ const BUN = process.platform === "win32" ? "bun.exe" : "bun";
 //   (pass) pendingDecisionsOf returns the new pendingDecisions when present [3.19ms]
 //   (fail) redaction benchmark scenario (plan 070) > runs through the parameterized runner within the frozen caps [279.18ms]
 // and one summary per leg (three workspace-prefixed plus one phase conformance):
-//   @arnilo/prism-core test:postgres: Ran 78 tests across 17 files. [8.46s]
+// Plan 158 Task 6: the memory leg moved from the deleted family to @arnilo/prism-memory-fabric.
+//   @arnilo/prism-store-postgres test:postgres: Ran 78 tests across 17 files. [8.46s]
 //   Ran 11 tests across 3 files. [7.86s]
 // Node's TAP (`ℹ pass N`, `# fail N`) is gone: every leg runs `bun test` (plan 124 Tasks 2/3).
 // Bun prints each failure twice (at its position and again in the end-of-run failure block), so
 // `counts.fail` can over-count — harmless here, because any `(fail)` line fails the leg closed.
 // `(pass)` lines print exactly once; counts sum all four leg summaries, never just the final one.
-const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory|channels) test:postgres: )?\((pass|fail)\) /gm;
-const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
+const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory-fabric|channels) test:postgres: )?\((pass|fail)\) /gm;
+const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory-fabric|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
 // Plan 153 Task 5: the session-store integrations moved to the store package, so its leg owns them.
 const REQUIRED_POSTGRES_CASES = [
   "scopes ordinary and leaf entry queries to the owning session",
@@ -53,9 +54,7 @@ export function evidenceDocument({ gitHead, captured, output }) {
   const counts = evidenceCounts(output);
   const legs = [...output.matchAll(SUMMARY)].map((summary) => summary[1] ?? "phase conformance");
   for (const leg of [
-    "@arnilo/prism-core test:postgres",
     "@arnilo/prism-store-postgres test:postgres",
-    "@arnilo/prism-memory test:postgres",
     "@arnilo/prism-channels test:postgres",
     "phase conformance",
   ]) {

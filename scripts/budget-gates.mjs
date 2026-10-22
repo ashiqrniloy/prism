@@ -1,7 +1,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { cpus, loadavg } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { cpus, loadavg, tmpdir } from "node:os";
+import { basename, dirname, join, sep } from "node:path";
+
+import { publishableWorkspaceDirs } from "./package-truth.mjs";
 
 // Shared performance-budget helpers (plan 079, Task 8). Used by
 // scripts/budget-gate.test.mjs (fast gate) and scripts/benchmark.mjs
@@ -44,12 +46,31 @@ export function checkCeiling(label, measured, ceiling) {
 }
 
 export function measureRootPack(cwd = process.cwd()) {
-  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const out = execFileSync("npm", ["pack", "--dry-run", "--json"], { cwd, stdio: ["pipe", "pipe", "pipe"] }).toString();
-  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
-  const parsed = JSON.parse(out);
-  const entry = (Array.isArray(parsed) ? parsed : Object.values(parsed))[0];
-  return { packedBytes: entry.size, unpackedBytes: entry.unpackedSize, fileCount: entry.files.length };
+  // Bun-only (plan 164 Task 8.4): the budget measures the tarball the release publishes,
+  // so pack for real and read the bytes back instead of npm's `--dry-run --json`.
+  const destination = mkdtempSync(join(tmpdir(), "prism-root-pack-"));
+  try {
+    const pack = spawnSync("bun", ["pm", "pack", "--destination", destination], { cwd, encoding: "utf8" });
+    if (pack.status !== 0) throw new Error(`bun pm pack failed: ${pack.stderr || pack.stdout}`);
+    const tarballs = readdirSync(destination).filter((name) => name.endsWith(".tgz"));
+    if (tarballs.length !== 1) throw new Error(`bun pm pack produced ${tarballs.length} tarballs`);
+    const tarball = join(destination, tarballs[0]);
+    const listing = spawnSync("tar", ["-tvzf", tarball], { encoding: "utf8" });
+    if (listing.status !== 0) throw new Error(`tar listing failed: ${listing.stderr}`);
+    let unpackedBytes = 0;
+    let fileCount = 0;
+    for (const line of listing.stdout.split("\n")) {
+      if (!line.trim()) continue;
+      const size = Number(line.split(/\s+/)[2]);
+      if (Number.isFinite(size)) {
+        unpackedBytes += size;
+        fileCount += 1;
+      }
+    }
+    return { packedBytes: statSync(tarball).size, unpackedBytes, fileCount };
+  } finally {
+    rmSync(destination, { recursive: true, force: true });
+  }
 }
 
 // Trimmed mean (min and max dropped) of the finite samples; 1–2 samples average
@@ -62,15 +83,17 @@ export function trimmedMean(samples) {
   return kept.length ? kept.reduce((sum, value) => sum + value, 0) / kept.length : Number.NaN;
 }
 
-// One cold-process import of `./dist/index.js` per run; each spawned process
-// prints its own import wall time. `spawn` is injectable so the trimming logic is
-// unit-testable without timing real processes.
+// One cold-process import of `./src/index.ts` per run; each spawned process
+// prints its own import wall time. Plan 174 Task 8: the kernel publishes TypeScript
+// source, so the measured entry is the source file (Bun strips the types).
+// `spawn` is injectable so the trimming logic is unit-testable without timing real
+// processes.
 export function sampleStartupMs(cwd = process.cwd(), runs = 5, spawn = spawnSync) {
   const samples = [];
   for (let i = 0; i < runs; i += 1) {
     const result = spawn(
       process.execPath,
-      ["-e", "const t=process.hrtime.bigint();import('./dist/index.js').then(()=>{console.log(Number(process.hrtime.bigint()-t)/1e6)})"],
+      ["-e", "const t=process.hrtime.bigint();import('./src/index.ts').then(()=>{console.log(Number(process.hrtime.bigint()-t)/1e6)})"],
       { cwd, stdio: ["pipe", "pipe", "pipe"] },
     );
     samples.push(Number(String(result.stdout).trim()));
@@ -169,20 +192,14 @@ function countDirExports(dir) {
 
 export function measureExportCounts(cwd = process.cwd()) {
   const counts = {};
-  counts[JSON.parse(readFileSync(join(cwd, "package.json"), "utf8")).name] = countDirExports(join(cwd, "src"));
-  const packagesDir = join(cwd, "packages");
-  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const direct = join(packagesDir, entry.name, "package.json");
-    const dirs = existsSync(direct)
-      ? [join(packagesDir, entry.name)]
-      : readdirSync(join(packagesDir, entry.name), { withFileTypes: true })
-          .filter((child) => child.isDirectory() && existsSync(join(packagesDir, entry.name, child.name, "package.json")))
-          .map((child) => join(packagesDir, entry.name, child.name));
-    for (const dir of dirs) {
-      const name = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name;
-      counts[name] = countDirExports(join(dir, "src"));
-    }
+  const rootManifest = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8"));
+  counts[rootManifest.name] = countDirExports(join(cwd, "src"));
+  // The root `workspaces` globs are the authority, so a package nested inside a family directory
+  // (`packages/memory/compaction`) is measured like any other. A glob matching nothing throws.
+  // Private apps have no export ceiling (plan 172 Task 3).
+  for (const dir of publishableWorkspaceDirs(cwd, rootManifest.workspaces ?? [])) {
+    const name = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name;
+    counts[name] = countDirExports(join(dir, "src"));
   }
   return counts;
 }
@@ -326,6 +343,54 @@ export function evaluateNonNullBudget({ budget, measured }) {
     checks.push({
       ok: entry.sites === 0,
       message: `${entry.pattern}: ${entry.sites} non-null assertion(s) in a path that must stay clean`,
+    });
+  }
+  return checks;
+}
+
+// --- kernel size budget (plan 174 Task 10) -----------------------------------
+//
+// The kernel is the one package whose size is a product decision, so its ceilings are
+// strict — a breach names the metric and the delta, and rebaselining means editing
+// `budgets.json` `kernel.<metric>` with a recorded reason (the `exportCounts`
+// convention). The tarball metrics are measured from the pack `scripts/release-gates.mjs`
+// already makes for the deny list, so this adds no second pack.
+
+/** Non-test lines under `<cwd>/src`, counting only newline-terminated content lines. */
+export function measureKernelSourceLines(cwd = process.cwd()) {
+  const walk = (dir) => {
+    let out = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) out = out.concat(walk(path));
+      else if (entry.isFile() && path.endsWith(".ts") && !path.includes(`${sep}__tests__${sep}`)) out.push(path);
+    }
+    return out;
+  };
+  let lines = 0;
+  for (const file of walk(join(cwd, "src"))) {
+    const text = readFileSync(file, "utf8");
+    if (text !== "") lines += text.replace(/\n$/, "").split("\n").length;
+  }
+  return lines;
+}
+
+/** Pure comparison so a breach is unit-testable without packing a tarball. */
+export function checkKernelBudget(budget, measured) {
+  const checks = [];
+  for (const metric of ["packedBytes", "unpackedBytes", "fileCount", "rootExports", "sourceLines"]) {
+    const ceiling = budget?.[metric]?.ceiling;
+    if (typeof ceiling !== "number") {
+      checks.push({ ok: false, message: `kernel ${metric}: budgets.json kernel.${metric}.ceiling is missing` });
+      continue;
+    }
+    const delta = measured[metric] - ceiling;
+    checks.push({
+      ok: delta <= 0,
+      message:
+        delta > 0
+          ? `kernel ${metric} grew: measured ${measured[metric]} vs ceiling ${ceiling} (+${delta}) — shrink it or rebaseline budgets.json kernel.${metric} with a reason`
+          : `kernel ${metric}: measured ${measured[metric]} vs ceiling ${ceiling}`,
     });
   }
   return checks;

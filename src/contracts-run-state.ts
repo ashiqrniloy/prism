@@ -1,18 +1,13 @@
-import type { CheckpointRestoreHandler } from "./checkpoint-restore.js";
 import type {
-  CheckpointRecord,
-  CheckpointStore,
   CompactionOptions,
   CompactionResult,
   ContentBlock,
   ContextMeter,
   ErrorInfo,
-  GuardrailPackRef,
   JsonObject,
   JsonValue,
   Message,
   ModelConfig,
-  OwnershipScope,
   RunLimitBreach,
   SessionEntry,
   SessionForkOptions,
@@ -120,6 +115,12 @@ export interface NestedRunRef {
 }
 
 /** Outcome of resuming a nested run through the host-supplied hook. */
+/** Reference to an agent run as a nested child identifies it (plan 168 Task 5: kept for the nested-run path). */
+export interface AgentRunRef {
+  readonly runId: string;
+  readonly sessionId?: string;
+}
+
 export type NestedRunOutcome =
   | { readonly status: "suspended"; readonly pendingDecisions: readonly PendingDecision[] }
   | { readonly status: "completed"; readonly value?: JsonValue }
@@ -187,60 +188,6 @@ export const MAX_ATTRIBUTION_DEPTH = 8;
 export const MAX_ACTION_CONSTRAINT_BYTES = 4 * 1024;
 export const HARD_MAX_ACTION_CONSTRAINT_BYTES = 16 * 1024;
 
-/**
- * Opaque host sidecar pinned to one checkpoint *record* (git commit, document version,
- * workspace fingerprint) — never part of the run-state value, so it costs no `maxStateBytes`
- * budget and is invisible to state parsing. Bounded to `MAX_AGENT_RUN_METADATA_BYTES` (4 KiB)
- * and redacted like the state value at every write.
- */
-export type AgentRunCheckpointMetadata = Readonly<Record<string, string>>;
-/** Host source for checkpoint sidecar metadata: a fixed map or a live provider resolved per write. */
-export type AgentRunCheckpointMetadataSource = AgentRunCheckpointMetadata | (() => AgentRunCheckpointMetadata | undefined);
-
-export interface AgentRunStateOptions {
-  readonly checkpoints: CheckpointStore;
-  /** Host-authored immutable revision required for durable runs. */
-  readonly definitionRevision: string;
-  /**
-   * Durable checkpoint cadence (plan 084 Task 1). `"decision"` (default) persists only on
-   * suspension and terminal status. `"every-turn"` additionally persists a running-state
-   * checkpoint at each provider-turn boundary — after the previous turn's tool results are in
-   * the session store, before the next provider request — so a host process that dies mid-run
-   * can `resumeAgentRun(..., { decision: "continue" })` from the last turn instead of re-running
-   * the investigation. Costs one bounded, redacted checkpoint write per provider turn; the
-   * policy is recorded in the checkpoint, so a later resume keeps checkpointing without the host
-   * repeating the option.
-   */
-  readonly checkpointPolicy?: "decision" | "every-turn";
-  /**
-   * Sidecar metadata written with every checkpoint of this run (and carried into a resumed
-   * run). A provider is resolved at each checkpoint write, so a host closure can pin state
-   * that moves mid-run (e.g. the current git commit). Absent = records stay byte-identical.
-   */
-  readonly checkpointMetadata?: AgentRunCheckpointMetadataSource;
-  readonly maxStateBytes?: number;
-  readonly fencingToken?: number;
-  /** Enables sticky auto-apply when a nested suspension first surfaces during this run. */
-  readonly resumeNestedRun?: ResumeNestedRun;
-  /**
-   * Opt-in (plan 015 Task 4): persist the session's loaded-skill names in the run-state
-   * checkpoint and restore them on resume. Names only — bodies reload via `load_skill`.
-   * Default off: checkpoint shape is identical to 0.1.2.
-   */
-  readonly persistSessionState?: boolean;
-  /**
-   * Opt-in (plan 018 Task 6 closeout `checkpoint-bodies`): alongside
-   * `persistSessionState`, persist the exact loaded-skill instructions
-   * (`{name, instructions}` pairs, redacted at the checkpoint boundary like all state)
-   * so resume re-renders them registry-independently — no `load_skill` round-trip, no
-   * drift when the live registry changed or lost the skill. Both the run and the resume
-   * options must set it. Bounds: ≤64 bodies, ≤256-char names, ≤262144-byte bodies,
-   * ≤1 MiB total; the `maxStateBytes` ceiling refuses oversize with a recorded error
-   * (never silently truncates). Default off: checkpoint shape is identical to 0.1.3.
-   */
-  readonly includeSkillBodies?: boolean;
-}
-
 /** Versioned, redacted checkpoint payload. Treat as opaque except status/version/interruption. */
 export interface AgentRunState {
   readonly schemaVersion: 1;
@@ -250,95 +197,10 @@ export interface AgentRunState {
   readonly runId: string;
   readonly sessionId: string;
   readonly leafId?: string;
-  readonly model: ModelConfig;
+  readonly model?: ModelConfig;
   readonly status: AgentRunStatus | "running";
   readonly interruption?: AgentRunInterruption;
   readonly version?: number;
-}
-
-export interface AgentRunResume {
-  readonly expectedVersion: number;
-  /**
-   * Legacy decision path. `approve` allows all pending decisions once; `deny` terminates the run
-   * as `denied`; `continue` resumes a running-state `"every-turn"` checkpoint that has no pending
-   * decisions (crash recovery). A suspended run still requires `approve`/`deny` or a decision
-   * batch — `continue` never bypasses an approval gate and is a host-API-only action.
-   */
-  readonly decision?: "approve" | "deny" | "continue";
-  /** Batch decision path; exactly one of decision/decisions. Applied as one atomic CAS transition. */
-  readonly decisions?: readonly Decision[];
-}
-
-/**
- * Checkpoint handed to a restore hook (plan 094 Task 3). `checkpoint.value` is the raw stored
- * run-state value; `metadata` is the redacted, bounded sidecar map hosts write via
- * `AgentRunStateOptions.checkpointMetadata`.
- */
-export interface AgentCheckpointRestoreContext {
-  readonly runId: string;
-  readonly sessionId: string;
-  /** Version of the checkpoint being claimed; a hook may pass it to an external system's own CAS. */
-  readonly version: number;
-  /** State being claimed: `running` for crash recovery, `suspended` for a decision resume. */
-  readonly status: AgentRunStatus | "running";
-  readonly metadata?: AgentRunCheckpointMetadata;
-  readonly checkpoint: CheckpointRecord;
-}
-
-/** Host code restoring or compensating one external layer before a durable resume applies. */
-export type AgentCheckpointRestoreHook = CheckpointRestoreHandler<AgentCheckpointRestoreContext>;
-
-export interface AgentRunResumeOptions {
-  readonly checkpoints: CheckpointStore;
-  /** Current host-authored revision; must exactly match the checkpoint. */
-  readonly definitionRevision: string;
-  readonly ownership?: OwnershipScope;
-  readonly fencingToken?: number;
-  /** Host abort for the resume: checked between steps and threaded into the resumed provider/tool turn. */
-  readonly signal?: AbortSignal;
-  /** Routes root decisions for nested-run approvals back to the child (e.g. supervisor). */
-  readonly resumeNestedRun?: ResumeNestedRun;
-  /**
-   * Opt-in (plan 078 Task 7): receives the reconstructed session before the resumed run
-   * starts, so an observer (e.g. the supervisor's child-event pump) can subscribe while the
-   * run is still live. The session is valid only for the duration of this resume.
-   */
-  readonly onSession?: (session: Session) => void;
-  /** Opt-in (plan 015 Task 4): restore persisted loaded-skill names into the resumed session catalog. */
-  readonly persistSessionState?: boolean;
-  /** Opt-in (plan 018 Task 6): restore persisted loaded-skill bodies (requires `persistSessionState` too). */
-  readonly includeSkillBodies?: boolean;
-  /**
-   * Checkpoint sidecar metadata for the claim write (and the resumed run's later checkpoints).
-   * Absent = the record's existing metadata is preserved unchanged.
-   */
-  readonly checkpointMetadata?: AgentRunCheckpointMetadataSource;
-  /**
-   * Plan 094 Task 3: external-state restore hooks. Every hook must succeed (sequentially, each
-   * within `restoreHookTimeoutMs`) before the claim write and the conversation restore apply;
-   * the first failure throws `CheckpointRestoreError` naming the hook and leaves the checkpoint
-   * suspended. Plan 109 Task 2: an entry may be `{ id?, restore, compensate? }`, and on failure the
-   * applied layers are compensated in reverse order (best-effort) before the throw. Hosts that
-   * register hooks on the lifecycle instead pass them once there.
-   */
-  readonly restoreHooks?: readonly AgentCheckpointRestoreHook[];
-  /** Per-hook restore ceiling in ms; defaults to `DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS`. */
-  readonly restoreHookTimeoutMs?: number;
-}
-
-/** Bounded live-event options for `resumeAgentRunStream()`; `signal` is inherited from the base resume options. */
-export interface AgentRunResumeStreamOptions extends AgentRunResumeOptions, SubscribeOptions {}
-
-export interface AgentRunRef {
-  readonly runId: string;
-  readonly sessionId?: string;
-}
-
-export interface AgentRunStatusResult {
-  readonly state: AgentRunState;
-  readonly version: number;
-  /** Checkpoint sidecar metadata; absent when the record carries none (or carries only malformed entries). */
-  readonly metadata?: AgentRunCheckpointMetadata;
 }
 
 export class AgentRunStateError extends Error {
@@ -442,12 +304,6 @@ export interface SteerOptions {
 
 export interface Session {
   readonly id: string;
-  /**
-   * Plan 104 Task 2: guardrail pack refs this session enforces (the restored rows after a durable
-   * resume); `undefined` when it enforces none. Pass to `snapshotRunBundle({ packs })` for the
-   * recorded identity that matches enforcement.
-   */
-  readonly guardrailPackRefs?: readonly GuardrailPackRef[];
   /** Current branch leaf entry id; advances on every append/run and is re-pointed by `checkout`.
    *  Undefined until the first entry lands (a fresh session with no history). */
   readonly leafId: string | undefined;
@@ -490,9 +346,11 @@ export interface Session {
    * from the session's branch, so it works on a fresh `agent.session({ id })` in a new process over the
    * same store. Every pending id must be decided exactly once: an unknown, duplicate, or missing id, no
    * pending suspension, or a drifted agent (fingerprint, hook ids, loop revision) fails closed. It yields
-   * `decision.resolved`, then the resumed run's events from `run.started { resumed: true }`.
+   * `decision.resolved`, then the resumed run's events from `run.started { resumed: true }`. The
+   * `SubscribeOptions` bound this resume's own subscriber, so a slow consumer fails loudly
+   * (plan 168 Task 5 kept the guarantee when the checkpoint resume stream was retired).
    */
-  resume(decisions: readonly Decision[], options?: RunOptions): AsyncIterable<AgentEvent>;
+  resume(decisions: readonly Decision[], options?: RunOptions & SubscribeOptions): AsyncIterable<AgentEvent>;
   /** Kernel member: re-point this session at another entry of its own branch tree (Prism Code branching). */
   checkout(leafId?: string): Promise<void>;
   /**

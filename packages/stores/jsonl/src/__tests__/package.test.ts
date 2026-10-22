@@ -1,9 +1,9 @@
+import { afterEach, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, it } from "bun:test";
-import { createAgent, createSessionEntry } from "@arnilo/prism";
+import { createAgent, createSessionEntry, definePackage } from "@arnilo/prism";
 import { mockProvider, packageConformance } from "@arnilo/prism/testing";
 import jsonlStore, { createJsonlSessionStore, jsonlStore as jsonlStoreInstance, readJsonlSessionEntries } from "../index.js";
 
@@ -75,5 +75,31 @@ describe("jsonl store package", () => {
     assert.equal(summary?.leafId, "e1");
     assert.deepEqual(await createJsonlSessionStore({ dir }).list("s1"), [session]);
     assert.equal((await readJsonlSessionEntries(join(dir, "s1.jsonl"))).entries.length, 1);
+  });
+
+  it("jsonl_provides_no_workflow_services", async () => {
+    // The JSONL store is single-process: it provides no `checkpoints`/`leases` service, so a workflow
+    // package listed with it falls back to the in-process memory defaults (plan 168 Task 4).
+    const dir = await tempDir();
+    const seen: { checkpoints?: unknown; leases?: unknown } = {};
+    const spy = definePackage({
+      name: "@prism-test/workflow-services-spy",
+      version: "0.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        seen.checkpoints = prism.services.consume("checkpoints");
+        seen.leases = prism.services.consume("leases");
+      },
+    });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [mockProvider(), jsonlStore({ dir }), spy],
+    });
+    try {
+      assert.equal(seen.checkpoints, undefined);
+      assert.equal(seen.leases, undefined);
+    } finally {
+      await agent.dispose();
+    }
   });
 });

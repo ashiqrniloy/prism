@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 import { lockWorkspace, readBunLock } from "./bun-lock.mjs";
 import { runGates } from "./release-gates.mjs";
 
-// The registry interface is the ONLY npm surface left in this repository (plan 125 Task 5).
-// Probed 2026-09-25 on Bun 1.4.2: `bun pack`, `bun dist-tag` and `bun deprecate` do not exist
-// ("error: Script not found"), and `bun publish --help` has no --provenance flag. OIDC
-// attestations are a shipped security artifact, so `bun publish` is rejected rather than
-// deferred: pack, publish, sbom and view stay on npm, on the release host only.
+// Release toolchain is Bun-only (plan 164 Task 8.4): `bun pm pack` writes the release
+// tarballs and `bun publish <tarball>` ships exactly those bytes, so the GitHub build
+// attestation covers the published artifact. npm registry provenance is retired with npm;
+// `npm dist-tag`/`npm deprecate` survive only for the plan 054 legacy retirement path
+// (Phase 11), where Bun 1.4.2 has no equivalent.
 
 const INTERNAL_SCOPE = "@arnilo/";
 const DEPENDENCY_FIELDS = ["dependencies", "optionalDependencies", "peerDependencies"];
@@ -20,16 +20,20 @@ export function loadRelease(root = process.cwd()) {
   const paths = ["."];
   const packagesDir = join(root, "packages");
   if (existsSync(packagesDir)) {
+    const children = (dir) =>
+      readdirSync(dir, { withFileTypes: true })
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .filter((entry) => entry.isDirectory() && existsSync(join(dir, entry.name, "package.json")));
     for (const entry of readdirSync(packagesDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       if (!entry.isDirectory()) continue;
-      if (existsSync(join(packagesDir, entry.name, "package.json"))) {
+      const dir = join(packagesDir, entry.name);
+      if (existsSync(join(dir, "package.json"))) {
         paths.push(`packages/${entry.name}`);
+        // A family directory may also nest packages (`packages/memory/compaction`).
+        for (const child of children(dir)) paths.push(`packages/${entry.name}/${child.name}`);
         continue;
       }
-      const group = join(packagesDir, entry.name);
-      for (const child of readdirSync(group, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-        if (child.isDirectory() && existsSync(join(group, child.name, "package.json"))) paths.push(`packages/${entry.name}/${child.name}`);
-      }
+      for (const child of children(dir)) paths.push(`packages/${entry.name}/${child.name}`);
     }
   }
   // Packages that own their version line (plan 140) come from release tooling data, never from a
@@ -78,6 +82,13 @@ export function validateRelease(release, version) {
     if (pkg.manifest.publishConfig?.access !== "public") errors.push(`${pkg.manifest.name} must set publishConfig.access to public`);
     for (const field of DEPENDENCY_FIELDS) {
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
+        // The kernel peer is the API-level window, not a cut pin: every package admits the whole
+        // 0.x line (`>=0.13.0 <1.0.0`), so a kernel minor never needs a package rewrite. A floor at
+        // or below this cut is valid (docs/compatibility.md).
+        if (field === "peerDependencies" && name === "@arnilo/prism") {
+          const wide = /^>=(\d+\.\d+\.\d+) <1\.0\.0$/.exec(range);
+          if (wide && cmpSemver(version, wide[1]) >= 0) continue;
+        }
         // Lockstep cuts pin every first-party range at the cut version — exact
         // (`<version>`) or caret (`^<version>`). A range that merely *satisfies*
         // it (one minor behind at the cut) means two installs of one release line
@@ -295,6 +306,11 @@ export function validateReleaseIndependent(release, { baseline, gitDiff = defaul
       for (const [name, range] of Object.entries(pkg.manifest[field] ?? {})) {
         const target = release.byName.get(name);
         if (!target) continue;
+        // The kernel peer is the API-level window, not a cut pin: a floor at or below the kernel is fine.
+        if (field === "peerDependencies" && name === "@arnilo/prism") {
+          const wide = /^>=(\d+\.\d+\.\d+) <1\.0\.0$/.exec(range);
+          if (wide && cmpSemver(target.manifest.version, wide[1]) >= 0) continue;
+        }
         if (!satisfiesInternalRange(range, target.manifest.version)) {
           errors.push(`${pkg.manifest.name} ${field}.${name} range ${range} does not satisfy ${name}@${target.manifest.version}`);
         }
@@ -382,11 +398,28 @@ function saveReport(path, report) {
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
 }
 
-export function publishArgs(pkg, dryRun = false, provenance = process.env.GITHUB_ACTIONS === "true") {
-  const args = ["publish", pkg.path === "." ? "." : `./${pkg.path}`, "--access", "public", "--tag", "latest"];
-  if (provenance) args.splice(4, 0, "--provenance");
+export function publishArgs(pkg, version, { dryRun = false, registry, artifactsDir = "release-artifacts" } = {}) {
+  const args = ["publish", join(artifactsDir, tarballName(pkg.manifest.name, version)), "--access", "public", "--tag", "latest"];
+  if (registry) args.push("--registry", registry);
   if (dryRun) args.push("--dry-run");
   return args;
+}
+
+/** `bun pm pack` tarball name: `@arnilo/prism@0.13.0` -> `arnilo-prism-0.13.0.tgz`. */
+export function tarballName(name, version) {
+  return `${name.replace(/^@/, "").replace("/", "-")}-${version}.tgz`;
+}
+
+/** Pack every release package once, so the attested tarballs are the published bytes. */
+export function packRelease(release, destination = "release-artifacts") {
+  const dir = resolve(release.root, destination);
+  mkdirSync(dir, { recursive: true });
+  for (const pkg of release.packages) {
+    const cwd = pkg.path === "." ? release.root : join(release.root, pkg.path);
+    const result = spawnSync("bun", ["pm", "pack", "--destination", dir], { cwd, encoding: "utf8", stdio: "inherit" });
+    if (result.status !== 0) throw new Error(`bun pm pack failed for ${pkg.manifest.name}`);
+  }
+  return dir;
 }
 
 export async function runRelease({
@@ -398,6 +431,7 @@ export async function runRelease({
   resume = false,
   dryRun = false,
   registry,
+  artifactsDir = "release-artifacts",
   fetcher = fetch,
   reportPath,
   publisher,
@@ -416,14 +450,14 @@ export async function runRelease({
   const publish =
     publisher ??
     ((pkg) => {
-      // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-      const result = spawnSync("npm", publishArgs(pkg, dryRun), {
+      const pubVersion = independent ? pkg.manifest.version : version;
+      const result = spawnSync("bun", publishArgs(pkg, pubVersion, { dryRun, registry, artifactsDir }), {
         cwd: release.root,
         encoding: "utf8",
         stdio: "inherit",
         env: process.env,
       });
-      if (result.status !== 0) throw new Error(`npm publish failed for ${pkg.manifest.name}`);
+      if (result.status !== 0) throw new Error(`bun publish failed for ${pkg.manifest.name}`);
     });
 
   for (const pkg of order) {
@@ -511,14 +545,16 @@ export function parseArgs(argv) {
     else if (arg === "--package") options.package = argv[++i];
     else if (arg === "--type") options.type = argv[++i];
     else if (arg === "--baseline") options.baseline = argv[++i];
+    else if (arg === "--destination") options.destination = argv[++i];
     else if (["--version", "--root", "--registry", "--report"].includes(arg))
       options[arg.slice(2).replace("report", "reportPath")] = argv[++i];
     else throw new Error(`unknown argument: ${arg}`);
   }
-  if (!["check", "publish", "gate", "bump", "changed"].includes(options.mode))
+  if (!["check", "publish", "gate", "bump", "changed", "pack"].includes(options.mode))
     throw new Error(
-      "usage: release.mjs <check|publish|gate|bump|changed> [--lockstep --version <version>|--independent] [--resume] [--dry-run]",
+      "usage: release.mjs <check|publish|gate|bump|changed|pack> [--lockstep --version <version>|--independent] [--resume] [--dry-run]",
     );
+  if (options.mode === "pack") return options;
   if (options.mode === "gate") {
     if (options.lockstep && options.independent) throw new Error("--lockstep and --independent are mutually exclusive");
     if (!options.lockstep) options.independent = true;
@@ -550,6 +586,11 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const root = resolve(options.root ?? process.cwd());
   const release = loadRelease(root);
+  if (options.mode === "pack") {
+    const dir = packRelease(release, options.destination ?? "release-artifacts");
+    console.log(`packed ${release.packages.length} packages into ${dir}`);
+    return;
+  }
   if (options.mode === "changed") {
     const list = changedPackages(release, { baseline: options.baseline });
     for (const pkg of list) console.log(pkg.manifest.name);
@@ -571,6 +612,11 @@ async function main() {
     return;
   }
   if (options.mode === "gate") {
+    // The gate packs with `bun pm pack` and lists tarballs with tar; fail closed on any other runtime.
+    if (typeof Bun === "undefined") {
+      console.error("release gate runs on Bun only: bun scripts/release.mjs gate");
+      process.exit(1);
+    }
     checkReleaseEvidence({ root }); // fail fast on blocked/unexplained surfaces before the long gates
     const report = runGates({
       release,
@@ -579,6 +625,7 @@ async function main() {
       allowBreak: options.allowBreak,
       updateBaseline: options.updateBaseline,
       skipTarball: options.skipTarball,
+      packageName: options.package,
     });
     console.log(JSON.stringify(report, null, 2));
     return;

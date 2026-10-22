@@ -6,8 +6,11 @@ import { parseSkillFile } from "../contribution-parsing.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission } from "../security.js";
 import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
-import { isNodeErrorCode } from "./config.js";
 import { isPathInsideReal } from "./trust.js";
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && (error as { code?: unknown }).code === code;
+}
 
 export interface DiscoveryRoot {
   readonly dir: string;

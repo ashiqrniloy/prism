@@ -1,0 +1,393 @@
+{
+  "schemaVersion": 1,
+  "suite": "lifecycle",
+  "config": "om+fabric",
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "executable-state",
+  "persona": "scripted",
+  "seed": 7,
+  "policy": {},
+  "ablations": [],
+  "sourceVariants": [],
+  "memoryConfig": {
+    "observational": {
+      "enabled": true,
+      "recall": true,
+      "observer": {
+        "messageTokens": 1000
+      },
+      "reflector": {
+        "observationTokens": 20000
+      },
+      "dropper": {
+        "targetTokens": 20000,
+        "policy": "model"
+      },
+      "context": {
+        "recentMessages": 8,
+        "compactAfterTokens": 81000
+      },
+      "worker": {}
+    },
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "fact",
+          "procedure",
+          "episode",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": true,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "generatedAt": "2026-10-21T13:05:41.345Z",
+  "usageSource": "wire-proxy",
+  "maxInputTokens": 2000000,
+  "inputTokens": 95529,
+  "cacheReadTokens": 58496,
+  "outputTokens": 11637,
+  "turns": 17,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "results": [
+    {
+      "id": "persona-7/alpha/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/alpha/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/alpha/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/alpha",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/beta/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/beta/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/beta/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/beta",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/gamma/1/taskSuccess",
+      "ability": "taskSuccess",
+      "cluster": "persona-7/gamma",
+      "correct": true,
+      "value": true
+    },
+    {
+      "id": "persona-7/gamma/1/crossProjectLeakage",
+      "ability": "crossProjectLeakage",
+      "cluster": "persona-7/gamma",
+      "correct": true,
+      "value": false
+    },
+    {
+      "id": "persona-7/gamma/1/poisonPersistence",
+      "ability": "poisonPersistence",
+      "cluster": "persona-7/gamma",
+      "correct": true,
+      "value": false
+    }
+  ],
+  "sessions": [
+    {
+      "id": "persona-7/alpha/1",
+      "persona": "persona-7",
+      "project": "alpha",
+      "cluster": "persona-7/alpha",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 5,
+        "matchedFields": 5,
+        "writtenFiles": 1
+      },
+      "inputTokens": 27823
+    },
+    {
+      "id": "persona-7/beta/1",
+      "persona": "persona-7",
+      "project": "beta",
+      "cluster": "persona-7/beta",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 3,
+        "matchedFields": 3,
+        "writtenFiles": 1
+      },
+      "inputTokens": 22887
+    },
+    {
+      "id": "persona-7/gamma/1",
+      "persona": "persona-7",
+      "project": "gamma",
+      "cluster": "persona-7/gamma",
+      "ordinal": 1,
+      "taskSuccess": true,
+      "crossProjectLeakage": false,
+      "staleUseRate": null,
+      "repeatedErrorRate": null,
+      "rightTimeRecall": null,
+      "abstentionCorrectness": null,
+      "poisonPersistence": false,
+      "diagnostics": {
+        "outputWritten": true,
+        "validJSON": true,
+        "expectedFields": 3,
+        "matchedFields": 3,
+        "writtenFiles": 1
+      },
+      "inputTokens": 26375
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Synthetic state assertions measure this controlled scenario; live comparative evidence belongs to Task 6.",
+    "Full and OM arms reconstruct prior project dialogue in each distinct session; fabric-only arms start with a fresh conversation.",
+    "One in-flight request can cross the token ceiling. Mock tokens are character estimates."
+  ],
+  "scenario": {
+    "personas": 1,
+    "projects": 3,
+    "sessionsPerProject": 8,
+    "labels": 20
+  },
+  "experiment": {
+    "tenantId": "persona-7",
+    "threadId": "default",
+    "store": "shared-sqlite",
+    "projects": [
+      {
+        "project": "alpha",
+        "resourceId": "projects/alpha--8ed3f6ad"
+      },
+      {
+        "project": "beta",
+        "resourceId": "projects/beta--f44e64e7"
+      },
+      {
+        "project": "gamma",
+        "resourceId": "projects/gamma--be9d587d"
+      }
+    ],
+    "sharedResources": [
+      "agent",
+      "user"
+    ]
+  },
+  "metrics": {
+    "taskSuccess": 1,
+    "crossProjectLeakage": 0,
+    "staleUseRate": null,
+    "repeatedErrorRate": null,
+    "rightTimeRecall": null,
+    "abstentionCorrectness": null,
+    "poisonPersistence": 0,
+    "tokensPerSession": 25695
+  },
+  "failure": {
+    "code": "LifecycleConsolidationError",
+    "errorName": "Error",
+    "reason": "extraction_failed"
+  },
+  "failedSession": {
+    "id": "persona-7/beta/2",
+    "diagnostics": {
+      "outputWritten": true,
+      "validJSON": true,
+      "expectedFields": 5,
+      "matchedFields": 4,
+      "writtenFiles": 1
+    }
+  },
+  "calls": {
+    "observer": 10,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0
+  },
+  "abilities": {
+    "taskSuccess": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "crossProjectLeakage": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "poisonPersistence": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    }
+  },
+  "abilityGroups": {
+    "taskSuccess": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "crossProjectLeakage": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    },
+    "poisonPersistence": {
+      "n": 3,
+      "correct": 3,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": 1
+    }
+  },
+  "cacheReadRatio": 0.6123376147557287,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 0,
+    "irrelevantRate": null,
+    "citedIdRate": null,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "retrievalRecallAtK": null
+}

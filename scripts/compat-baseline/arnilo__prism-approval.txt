@@ -1,0 +1,10 @@
+ApprovalConfig	export type { ApprovalConfig, ApprovalMode, ApprovalRule } from "./config.js"
+ApprovalMode	export type { ApprovalConfig, ApprovalMode, ApprovalRule } from "./config.js"
+ApprovalRule	export type { ApprovalConfig, ApprovalMode, ApprovalRule } from "./config.js"
+approvalConfigSchema	export declare const approvalConfigSchema: JsonSchema
+approvalControls	export declare function approvalControls(instance: PackageInstance): ApprovalControls | undefined
+approvalPackage	export declare function approvalPackage(config?: ApprovalConfig): PackageInstance
+commandPrefix	export declare function commandPrefix(command: string): string
+decideApproval	export declare function decideApproval(input:
+default	export default
+grantKey	export declare function grantKey(tool: string, command?: string): string

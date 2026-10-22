@@ -13,6 +13,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { expandWorkspaceDirs } from "./package-truth.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const reportPath = join(root, "scripts", "unused-report.json");
@@ -73,18 +74,26 @@ const docFiles = [
 const docText = docFiles.map((f) => [relative(root, f), readFileSync(f, "utf8")]);
 
 // --- package name per candidate + compat baseline -----------------------------
+// Plan 181 Task 3: workspaces live at `packages/<group>/<pkg>` (and `apps/<name>`), so the map is
+// built from the root `workspaces` globs and a candidate resolves to its longest owning workspace.
 const pkgName = new Map();
-for (const p of readdirSync(join(root, "packages"))) {
-  const j = join(root, "packages", p, "package.json");
-  if (existsSync(j)) pkgName.set(join("packages", p), JSON.parse(readFileSync(j, "utf8")).name);
+for (const dir of expandWorkspaceDirs(root, JSON.parse(readFileSync(join(root, "package.json"), "utf8")).workspaces)) {
+  const manifest = join(dir, "package.json");
+  if (existsSync(manifest)) pkgName.set(relative(root, dir), JSON.parse(readFileSync(manifest, "utf8")).name);
 }
 pkgName.set("src", "@arnilo/prism");
 const pkgOf = (file) => {
-  if (file.startsWith("packages/")) return pkgName.get(file.split("/").slice(0, 2).join("/"));
-  return pkgName.get(file.split("/")[0]);
+  let best;
+  for (const dir of pkgName.keys()) {
+    if (dir === "src") continue;
+    if (file.startsWith(`${dir}/`) && (best === undefined || dir.length > best.length)) best = dir;
+  }
+  if (best !== undefined) return pkgName.get(best);
+  return file.startsWith("src/") ? pkgName.get("src") : undefined;
 };
 const baselineCache = new Map();
 function baselineHits(pkg, name) {
+  if (pkg === undefined) return false;
   if (!baselineCache.has(pkg)) {
     const f = join(root, "scripts", "compat-baseline", `${pkg.replace("@arnilo/", "arnilo__").replace(/\//g, "__")}.txt`);
     const rows = new Set();
@@ -109,7 +118,9 @@ for (const dir of [...pkgName.keys()]) {
   const exportsField = manifest.exports || { ".": manifest.main };
   for (const value of typeof exportsField === "string" ? [exportsField] : Object.values(exportsField)) {
     const target = typeof value === "string" ? value : value?.default || value?.types;
-    if (target?.includes("dist/")) {
+    // 0.13 packages publish TypeScript source, so an entry point is either a `dist/` target or a
+    // `src/**/*.ts` one (plan 174 Task 8).
+    if (target && (target.includes("dist/") || target.endsWith(".ts"))) {
       const src = join(pkgRoot, distToSrc(target));
       if (existsSync(src)) entries.add(src);
     }

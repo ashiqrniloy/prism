@@ -1,26 +1,23 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "bun:test";
 import type {
   AgentConfig,
   AgentDefinition,
   AgentDefinitionResolutionContext,
   AgentEvent,
-  ModelProvider,
   AssembleProviderInputOptions,
-  CacheUsageReport,
-  CommandDefinition,
   CompactionOptions,
   Compactor,
-  ConfigLayer,
-  ConfigProvider,
   CredentialResolver,
   DefaultInputBuildContext,
   DispatchToolCallOptions,
   InputAssemblyLayout,
   ModelCacheCapabilities,
+  ModelProvider,
   OAuthLoginCallbacks,
   OAuthProvider,
+  PackageCommand,
   PromptCacheHints,
   PromptCacheKind,
   PromptTemplateOptions,
@@ -38,36 +35,37 @@ import type {
   SkillRegistry,
   StoreFactory,
   SystemPromptConfig,
-  SystemPromptContribution,
   SystemPromptMode,
   ToolDefinition,
   ToolFilter,
   ToolValidator,
 } from "../index.js";
 import {
-  applyDefaultProviderRequestOptions,
   assembleProviderInput,
-  cacheUsageReport,
   composeSystemPrompt,
   createAgent,
   createDefaultCompactor,
   createDefaultInputBuilder,
   createDefaultRetryPolicy,
-  withContextBlocks,
   createMemorySessionStore,
   createSessionEntry,
   createSkillRegistry,
   createToolRegistry,
   dispatchToolCall,
   filterTools,
-  mergeProviderRequestOptions,
-  ProviderRequirementError,
   rebuildSessionContext,
   renderPromptTemplate,
   resolveActiveSkills,
-  resolveAgentDefinition,
+  withContextBlocks,
 } from "../index.js";
-import { providerPackage } from "../provider-kit/index.js";
+import type { CacheUsageReport } from "../provider-kit/index.js";
+import {
+  applyDefaultProviderRequestOptions,
+  cacheUsageReport,
+  mergeProviderRequestOptions,
+  ProviderRequirementError,
+  providerPackage,
+} from "../provider-kit/index.js";
 
 const provider: ModelProvider = {
   id: "mock",
@@ -102,7 +100,7 @@ describe("public contracts", () => {
     };
 
     assert.equal(config.packages?.length, 1);
-    assert.equal(Array.isArray(config.tools), true);
+    assert.equal(config.tools?.add?.length, 1);
   });
 
   it("host can type resource settings and credentials", async () => {
@@ -238,9 +236,10 @@ describe("public contracts", () => {
   });
 
   it("host can type phase 2 contribution contracts", async () => {
-    const command: CommandDefinition = {
+    const command: PackageCommand = {
       name: "say",
-      execute() {
+      description: "Say a word.",
+      run() {
         return { name: "say", value: "ok" };
       },
     };
@@ -341,7 +340,8 @@ describe("public contracts", () => {
   it("host can create minimal phase 6 agent sessions", async () => {
     const definition: AgentDefinition = {
       name: "runtime-agent",
-      create: async () => await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] }),
+      create: async () =>
+        await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] }),
     };
     const agent = await definition.create!();
     const session = await agent.session({ id: "s1", leafId: undefined, create: true });
@@ -369,9 +369,6 @@ describe("public contracts", () => {
       overrides: { model: { provider: "mock", model: "override" } },
     };
     assert.equal(ctx.overrides?.model !== undefined, true);
-
-    // Resolver is exported.
-    assert.equal(typeof resolveAgentDefinition, "function");
   });
 
   it("public contracts accept branch aware session entries", () => {
@@ -459,7 +456,9 @@ describe("public contracts", () => {
   });
 
   it("public contracts do not mention app-specific tool categories", () => {
-    const files = ["src/index.ts", "src/contracts.ts", "dist/index.d.ts", "dist/contracts.d.ts"];
+    // Plan 174 Task 8: the kernel publishes TypeScript source, so the checked surfaces are the
+    // source modules themselves.
+    const files = ["src/index.ts", "src/contracts.ts"];
     const banned = [/safe.?tool/i, /dangerous/i, /shell/i, /filesystem/i, /browser/i];
 
     for (const file of files) {

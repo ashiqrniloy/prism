@@ -1,0 +1,33 @@
+{
+  "method": "POST",
+  "path": "/zen/go/v1/chat/completions",
+  "requestBody": {
+    "model": "mimo-v2.5",
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "Return city information for Paris as JSON." }]
+      }
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "city_info",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "country": { "type": "string" }
+          },
+          "required": ["name", "country"]
+        },
+        "strict": true
+      }
+    },
+    "stream": true,
+    "stream_options": { "include_usage": true }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"chatcmpl-ocg-so-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776030,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-so-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776030,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"{\\\"name\\\":\\\"Paris\\\",\\\"country\\\":\\\"France\\\"}\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-ocg-so-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776030,\"model\":\"mimo-v2.5\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-ocg-so-01\",\"object\":\"chat.completion.chunk\",\"created\":1760776030,\"model\":\"mimo-v2.5\",\"choices\":[],\"usage\":{\"prompt_tokens\":30,\"completion_tokens\":10,\"total_tokens\":40}}\n\ndata: [DONE]\n\n"
+}

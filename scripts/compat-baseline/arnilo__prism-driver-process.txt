@@ -1,0 +1,17 @@
+AdapterConformanceError	export declare class AdapterConformanceError extends Error
+ProcessDriverError	export declare class ProcessDriverError extends Error
+ProcessDriverInspection	export type { ProcessDriverInspection } from "./inspect.js"
+adapterConformance	export declare function adapterConformance(adapter: AgentAdapter, options: AdapterConformanceOptions): Promise<DriverConformanceResult>
+adapterDriver	export declare function adapterDriver(adapter: AgentAdapter): DriverDefinition<ProcessDriverConfig>
+assertAdapter	export declare function assertAdapter(adapter: AgentAdapter): void
+createTurn	export declare function createTurn(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>, redact: <T>(value: T) => T, beforeNextTurn?: (encoding: import("./adapter.js").EncodeContext) => Promise<void>):
+extendAdapter	export declare function extendAdapter(base: AgentAdapter, overrides: AdapterOverrides): AgentAdapter
+inspectDriver	export declare function inspectDriver(adapter: AgentAdapter, config: DriverConfig<ProcessDriverConfig>, binary?: DriverBinary): ProcessDriverInspection
+jsonRpc	export declare function jsonRpc(child: ChildProcessWithoutNullStreams, adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>, encoding: EncodeContext, redact: <T>(value: T) => T): Transport
+jsonlStream	export declare function jsonlStream(child: ChildProcessWithoutNullStreams, redact: (text: string) => string): Transport
+processDriver	export declare function processDriver(adapter: AgentAdapter): PackageDefinition<DriverConfig<ProcessDriverConfig>>
+processSession	export declare function processSession(adapter: AgentAdapter, ctx: DriverRunContext<ProcessDriverConfig>, context: SessionContext, redact: <T>(value: T) => T): Promise<
+processShutdown	export declare function processShutdown(child: ChildProcessWithoutNullStreams, exited: Promise<void>, adapter: AgentAdapter, transport: Transport, encoding: EncodeContext, graceMs: number):
+quoteCommand	export declare function quoteCommand(argv: readonly string[]): string
+type AdapterOverrides	export { type AdapterOverrides, extendAdapter } from "./extend.js"
+type ProcessDriverErrorCode	export { ProcessDriverError, type ProcessDriverErrorCode } from "./errors.js"

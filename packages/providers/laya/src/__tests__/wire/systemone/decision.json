@@ -1,0 +1,42 @@
+{
+  "request": {
+    "model": { "provider": "laya", "model": "laya" },
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "rm -rf ./build" }]
+      }
+    ],
+    "options": {
+      "structuredOutput": {
+        "name": "decision",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "type": "string",
+              "enum": ["run", "reject"],
+              "description": "How should this be handled?"
+            }
+          }
+        }
+      }
+    }
+  },
+  "method": "POST",
+  "path": "/v1/systemone",
+  "requestBody": {
+    "model": "laya",
+    "state": "rm -rf ./build",
+    "questions": {
+      "verdict": {
+        "type": "choice",
+        "instructions": "How should this be handled?",
+        "criteria": { "run": "run", "reject": "reject" }
+      }
+    }
+  },
+  "status": 200,
+  "contentType": "application/json",
+  "responseBody": "{\"model\":\"laya-router-picked\",\"answers\":{\"verdict\":{\"type\":\"choice\",\"choice\":\"reject\"}},\"usage\":{\"input_tokens\":12,\"output_tokens\":0}}"
+}

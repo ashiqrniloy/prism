@@ -1,4 +1,4 @@
-import { RunFeedbackError } from "@arnilo/prism";
+import { RunFeedbackError } from "./run-feedback.js";
 
 export function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {

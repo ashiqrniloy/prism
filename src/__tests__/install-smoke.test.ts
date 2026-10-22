@@ -6,10 +6,10 @@ import { tmpdir } from "node:os";
 // Root manifest version drives the core tarball name (arnilo-prism-<v>.tgz).
 const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 // Plan 066 lockstep bump: all manifests carry the 0.5.1 cut.
-const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-provider-anthropic";
+const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-provider-hyper";
 
-import { dirname, join } from "node:path";
 import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -17,45 +17,53 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 // ponytail: one config entry per published package; adding a package is one line
 const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?: boolean; isMeta?: boolean }> = [
   { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/memory", name: "@arnilo/prism-memory", isSubpaths: true },
-  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools", isSubpaths: true },
-  { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
-  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools", isSubpaths: true },
-  { dir: "packages/prism-core", name: "@arnilo/prism-core", isSubpaths: true },
-  { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
+  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/integrations/workflows", name: "@arnilo/prism-workflows" },
+  { dir: "packages/hosts/mcp-server", name: "@arnilo/prism-mcp-server" },
+  { dir: "packages/hosts/acp", name: "@arnilo/prism-acp" },
+  { dir: "packages/memory/core", name: "@arnilo/prism-memory-core" },
+  { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction" },
+  { dir: "packages/memory/observational", name: "@arnilo/prism-memory-observational" },
+  { dir: "packages/memory/rag", name: "@arnilo/prism-memory-rag" },
+  { dir: "packages/memory/fabric", name: "@arnilo/prism-memory-fabric" },
+  { dir: "packages/memory/wiki", name: "@arnilo/prism-memory-wiki" },
+  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
+  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
+  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
+  { dir: "packages/tools/web", name: "@arnilo/prism-tools-web" },
+  { dir: "packages/tools/openapi", name: "@arnilo/prism-tools-openapi" },
+  { dir: "packages/tools/computer-use", name: "@arnilo/prism-tools-computer-use" },
+  { dir: "packages/policy/approval", name: "@arnilo/prism-approval" },
+  // Plan 174 Task 8: security22.mjs exercises the packed router state store, so its tarball
+  // must be in the offline install set.
+  { dir: "packages/policy/model-router", name: "@arnilo/prism-model-router" },
+  // Plan 159 Task 7: the readiness report and field policy moved to @arnilo/prism-governance.
+  { dir: "packages/policy/governance", name: "@arnilo/prism-governance" },
+  { dir: "packages/context/files", name: "@arnilo/prism-context-files" },
+  { dir: "packages/context/engineering", name: "@arnilo/prism-context-engineering" },
+  { dir: "packages/hosts/channels", name: "@arnilo/prism-channels" },
+  { dir: "packages/hosts/evals", name: "@arnilo/prism-evals" },
+  { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools" },
   { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
+  // Plan 175 Task 7: the 0.13 host libraries and integration packages that the truth graph ships.
+  { dir: "packages/drivers/process", name: "@arnilo/prism-driver-process" },
+  { dir: "packages/hosts/headless", name: "@arnilo/prism-headless" },
+  { dir: "packages/hosts/remote", name: "@arnilo/prism-remote" },
+  { dir: "packages/integrations/delegate", name: "@arnilo/prism-delegate" },
+  { dir: "packages/integrations/observability", name: "@arnilo/prism-observability" },
+  { dir: "packages/policy/guardrail-packs", name: "@arnilo/prism-guardrail-packs" },
+  { dir: "packages/tools/research", name: "@arnilo/prism-tools-research" },
   { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring" },
   { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl" },
   { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs" },
   { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite" },
   { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres" },
-  { dir: "packages/providers/anthropic", name: "@arnilo/prism-provider-anthropic" },
-  { dir: "packages/providers/openai", name: "@arnilo/prism-provider-openai" },
-  { dir: "packages/providers/deepseek", name: "@arnilo/prism-provider-deepseek" },
-  { dir: "packages/providers/xai", name: "@arnilo/prism-provider-xai" },
-  { dir: "packages/providers/zai", name: "@arnilo/prism-provider-zai" },
-  { dir: "packages/providers/alibaba", name: "@arnilo/prism-provider-alibaba" },
-  { dir: "packages/providers/kimi", name: "@arnilo/prism-provider-kimi" },
-  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter" },
-  { dir: "packages/providers/ollama", name: "@arnilo/prism-provider-ollama" },
-  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/providers/neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
-  { dir: "packages/providers/clinepass", name: "@arnilo/prism-provider-clinepass" },
-  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode" },
   { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
+  { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
-  { dir: "packages/providers/google", name: "@arnilo/prism-provider-google" },
-  { dir: "packages/providers/vertex", name: "@arnilo/prism-provider-vertex" },
-  { dir: "packages/providers/azure", name: "@arnilo/prism-provider-azure" },
-  { dir: "packages/providers/bedrock", name: "@arnilo/prism-provider-bedrock" },
-  { dir: "packages/providers/ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
-  { dir: "packages/agent-sdk", name: "@arnilo/prism-agent-sdk" },
-  { dir: "packages/prism-code", name: "@arnilo/prism-code" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
-  { dir: "packages/prism-work", name: "@arnilo/prism-work", isSubpaths: true },
+  { dir: "packages/tools/work", name: "@arnilo/prism-tools-work", isSubpaths: true },
 ];
 
 // Derive every documented core import specifier from the root `exports` map and
@@ -66,10 +74,6 @@ function coreSpecifiers(): string[] {
   for (const key of Object.keys(pkg.exports)) {
     if (key === ".") continue;
     specs.push(`@arnilo/prism${key.slice(1)}`); // "./node/config" -> "@arnilo/prism/node/config"
-  }
-  const corePkg = JSON.parse(readFileSync(join(repoRoot, "packages/prism-core/package.json"), "utf8"));
-  for (const key of Object.keys(corePkg.exports)) {
-    specs.push(`@arnilo/prism-core${key.slice(1)}`);
   }
   return specs;
 }
@@ -130,7 +134,7 @@ before(() => {
   // 2. Fresh consumer project; install all tarballs together so the required
   //    `prism` peer is satisfied locally with no registry traffic. `overrides`
   //    pin the packed names to their tarballs: internal ranges (e.g.
-  //    `@arnilo/prism-core@^0.12.0`) are unpublished at gate time, so bun must
+  //    unpublished internal ranges at gate time, so bun must
   //    not resolve them from the registry.
   const overrides = Object.fromEntries(
     packages.map((pkg) => {
@@ -152,7 +156,7 @@ before(() => {
   // release-host registry toolchain). `bun install --offline` needs cached manifests for
   // third-party ranges — a fresh CI cache has none — so the retry is `--prefer-offline`:
   // registry metadata for externals only, first-party content always from the tarballs.
-  const installArgs = ["install", ...tarballs, "@ai-sdk/provider@4.0.13", "--no-audit", "--no-fund", "--no-update-notifier"];
+  const installArgs = ["install", ...tarballs, "--no-audit", "--no-fund", "--no-update-notifier"];
   let install = run("bun", ["install", "--offline", ...installArgs], consumer);
   if (install.status !== 0) {
     install = run("bun", ["install", "--prefer-offline", ...installArgs], consumer);
@@ -167,44 +171,31 @@ before(() => {
   const specs = [
     ...coreSpecifiers(),
     ...packages.filter((p) => !p.isCore && !p.isMeta && !p.isSubpaths).map((p) => p.name),
-    "@arnilo/prism-ag-ui/acp",
+    "@arnilo/prism-acp",
     "@arnilo/prism-ag-ui/renderer",
-    "@arnilo/prism-memory/rag",
-    "@arnilo/prism-memory/compaction/llm",
-    "@arnilo/prism-memory/compaction/observational-memory",
-    "@arnilo/prism-memory/fabric",
-    "@arnilo/prism-memory/scoped",
-    "@arnilo/prism-memory/wiki",
-    "@arnilo/prism-web-tools/browser",
-    "@arnilo/prism-web-tools/obscura",
-    "@arnilo/prism-provider-ai-sdk",
-    "@arnilo/prism-provider-alibaba",
-    "@arnilo/prism-provider-azure",
-    "@arnilo/prism-provider-bedrock",
-    "@arnilo/prism-provider-clinepass",
-    "@arnilo/prism-provider-commandcode",
-    "@arnilo/prism-provider-deepseek",
-    "@arnilo/prism-provider-google",
+    "@arnilo/prism-memory-rag",
+    "@arnilo/prism-memory-fabric",
+    "@arnilo/prism-memory-compaction",
+    "@arnilo/prism-memory-observational",
+    "@arnilo/prism-memory-wiki",
+    "@arnilo/prism-tools-browser",
+    "@arnilo/prism-tools-web",
+    "@arnilo/prism-tools-openapi",
+    "@arnilo/prism-tools-computer-use",
     "@arnilo/prism-provider-hyper",
-    "@arnilo/prism-provider-kimi",
     "@arnilo/prism-provider-laya",
-    "@arnilo/prism-provider-neuralwatt",
-    "@arnilo/prism-provider-ollama",
     "@arnilo/prism-provider-opencode-go",
-    "@arnilo/prism-provider-openrouter",
     "@arnilo/prism-provider-typesafe",
-    "@arnilo/prism-provider-vertex",
-    "@arnilo/prism-provider-xai",
-    "@arnilo/prism-provider-zai",
-    "@arnilo/prism-work/connectors",
-    "@arnilo/prism-work/connectors/microsoft365",
-    "@arnilo/prism-work/connectors/google-workspace",
-    "@arnilo/prism-work/connectors/drafts",
-    "@arnilo/prism-work/documents",
-    "@arnilo/prism-work/sheets",
-    "@arnilo/prism-work/diagrams",
-    "@arnilo/prism-work/document-extraction",
-    "@arnilo/prism-work/document-reader",
+    "@arnilo/prism-tools-work",
+    "@arnilo/prism-tools-work/connectors",
+    "@arnilo/prism-tools-work/connectors/microsoft365",
+    "@arnilo/prism-tools-work/connectors/google-workspace",
+    "@arnilo/prism-tools-work/connectors/drafts",
+    "@arnilo/prism-tools-work/documents",
+    "@arnilo/prism-tools-work/sheets",
+    "@arnilo/prism-tools-work/diagrams",
+    "@arnilo/prism-tools-work/document-extraction",
+    "@arnilo/prism-tools-work/document-reader",
     "@arnilo/prism-channels/telegram",
     "@arnilo/prism-channels/signal",
   ];
@@ -216,8 +207,8 @@ before(() => {
       "  catch (e) { console.error('IMPORT FAILED:', s, e.message); process.exit(1); }\n" +
       "}\n" +
       "const prism = await import('@arnilo/prism');\n" +
-      "const compaction = await import('@arnilo/prism-memory/compaction/llm');\n" +
-      "if (typeof prism.resumeAgentRunStream !== 'function' || typeof compaction.createCodingCompactionStrategy !== 'function') process.exit(1);\n" +
+      "const compaction = await import('@arnilo/prism-memory-compaction');\n" +
+      "if (typeof prism.agentFingerprint !== 'function' || typeof compaction.default !== 'function') process.exit(1);\n" +
       "console.log('ALL IMPORTS OK');\n",
   );
   const smoke = run("bun", ["smoke.mjs"], consumer);
@@ -230,14 +221,19 @@ before(() => {
     `
 import assert from "node:assert/strict";
 import {
-  createAgent, createSecretRedactor, createToolRegistry, dispatchToolCall,
+  createAgent, createSecretRedactor, createToolParameterValidator, createToolRegistry, dispatchToolCall,
   providerDone, providerTextDelta,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createShellTool, createWriteTool } from "@arnilo/prism-coding-tools/agent";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-tools/security";
+import { createShellTool, createWriteTool, assertPathInsideRoots } from "@arnilo/prism-tools-coding";
 import { mapMcpToolsToDefinitions } from "@arnilo/prism-mcp";
-import { createJsonSchemaToolArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
+import { validateJsonSchema } from "@arnilo/prism";
+const createJsonSchemaToolArgumentValidator = () => ({
+  validate(schema, value) {
+    const result = validateJsonSchema(schema, value);
+    return result.ok ? { ok: true, value: result.value } : { ok: false, errors: result.errors };
+  },
+});
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let active = 0;
@@ -261,7 +257,17 @@ const [mcp] = mapMcpToolsToDefinitions(
   },
 );
 const approvals = [];
-const policy = createCodingApprovalPolicy({ roots: [process.cwd()], approve: (request) => { approvals.push(request.action.kind); return true; } });
+const containmentPolicy = ({ roots, readOnly = false }) => ({
+  check: async (action) => {
+    if (readOnly && action.kind !== "read") return { allowed: false, reason: "read-only" };
+    for (const path of action.paths ?? []) {
+      if (!(await assertPathInsideRoots(roots, path))) return { allowed: false, reason: "path outside trusted roots: " + path };
+    }
+    if (action.kind === "shell") approvals.push(action.kind);
+    return { allowed: true, exclusive: action.kind === "shell" };
+  },
+});
+const policy = containmentPolicy({ roots: [process.cwd()] });
 const shell = createShellTool(process.cwd(), {
   executionPolicy: policy,
   operations: { exec: async () => ({ exitCode: await run("shell", 15, 0) }) },
@@ -278,8 +284,8 @@ const provider = { id: "mock", async *generate() {
 } };
 const canary = "packed-integration-secret";
 const agent = await createAgent({
-  model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools,
-  validator: createJsonSchemaToolArgumentValidator(), redactor: createSecretRedactor([canary]),
+  model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: tools },
+  validator: createToolParameterValidator(createJsonSchemaToolArgumentValidator()), redactor: createSecretRedactor([canary]),
 });
 const session = await agent.session();
 const events = [];
@@ -299,17 +305,17 @@ const registry = createToolRegistry(tools);
 const startsBeforeInvalid = starts.length;
 const invalid = await dispatchToolCall({
   registry, call: { type: "tool_call", id: "bad", name: "local", arguments: { text: 1 } },
-  context: { sessionId: "s", runId: "r", toolCallId: "bad" }, validate: createJsonSchemaToolArgumentValidator(),
+  context: { sessionId: "s", runId: "r", toolCallId: "bad" }, validate: createToolParameterValidator(createJsonSchemaToolArgumentValidator()),
 });
 assert.match(invalid.error?.message ?? "", /string/i);
 assert.equal(starts.length, startsBeforeInvalid, "invalid args reached handler");
 const deniedWrite = createWriteTool(process.cwd(), {
-  executionPolicy: createCodingApprovalPolicy({ roots: [process.cwd()], readOnly: true }),
+  executionPolicy: containmentPolicy({ roots: [process.cwd()], readOnly: true }),
   operations: { mkdir: async () => assert.fail("denied write reached mkdir"), writeFile: async () => assert.fail("denied write reached writeFile") },
 });
 const denied = await dispatchToolCall({
   registry: createToolRegistry([deniedWrite]), call: { type: "tool_call", id: "deny", name: "write", arguments: { path: "blocked.txt", content: "x" } },
-  context: { sessionId: "s", runId: "r", toolCallId: "deny" }, validate: createJsonSchemaToolArgumentValidator(),
+  context: { sessionId: "s", runId: "r", toolCallId: "deny" }, validate: createToolParameterValidator(createJsonSchemaToolArgumentValidator()),
 });
 assert.ok(denied.error, "read-only policy allowed write");
 console.log("PACKED INTEGRATION OK");
@@ -325,42 +331,39 @@ console.log("PACKED INTEGRATION OK");
     `
 import assert from "node:assert/strict";
 import {
-  createAgent, createMemoryCheckpointStore, createMemoryLeaseStore, createMemoryRunFeedbackStore,
+  createAgent,
   providerDone, providerTextDelta,
 } from "@arnilo/prism";
+import { createMemoryRunFeedbackStore } from "@arnilo/prism-store-codecs";
 import { createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createAiSdkProvider } from "@arnilo/prism-provider-ai-sdk";
-import { appendEvaluationFeedback, createMemoryEvaluationStore, defineScorer, scoreRun } from "@arnilo/prism-core/governance/evals";
-import { createHashEmbedder, createMemory, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-memory/rag";
+import { createHyperProvider } from "@arnilo/prism-provider-hyper";
+import { appendEvaluationFeedback, createMemoryEvaluationStore, defineScorer, scoreRun } from "@arnilo/prism-evals";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { createMemory } from "@arnilo/prism-memory-fabric";
+import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";
 import {
-  createMemoryWorkflowCheckpoints, createWorkflowCheckpoints, createWorkflowCoordinator, createWorkflowSchedules,
+  createMemoryWorkflowCheckpoints, createWorkflowCheckpoints,
   defineWorkflow, functionNode, replayWorkflow, resumeWorkflow, runWorkflow, suspend,
-} from "@arnilo/prism-core/runtime/workflows";
-import { createPrismHandler } from "@arnilo/prism-core/runtime/server";
-import { createPrismMcpServer } from "@arnilo/prism-mcp";
-import { createA2AClient, createA2AHandler, createSupervisor } from "@arnilo/prism-core/runtime/supervisor";
+} from "@arnilo/prism-workflows";
+import { mcpHost, serveMcp } from "@arnilo/prism-mcp-server";
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/client";
 
 const ownership = { tenantId: "packed", userId: "operator" };
-const fakeModel = {
-  specificationVersion: "v4", provider: "fake", modelId: "packed", supportedUrls: {},
-  async doGenerate() { throw new Error("stream only"); },
-  async doStream() { return { stream: new ReadableStream({ start(controller) {
-    controller.enqueue({ type: "text-delta", id: "t1", delta: "packed-result" });
-    controller.enqueue({ type: "finish", finishReason: { unified: "stop", raw: "stop" }, usage: {
-      inputTokens: { total: 1, noCache: 1 }, outputTokens: { total: 1, text: 1 },
-    } });
-    controller.close();
-  } }) }; },
-};
-const aiProvider = createAiSdkProvider({ model: fakeModel });
-const aiAgent = await createAgent({ packages: [providerPackage("test-provider", [aiProvider])], model: { provider: aiProvider.id, model: "packed" } });
+const sse = [
+  'data: {"choices":[{"delta":{"content":"packed-result"},"finish_reason":null}]}',
+  'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}',
+  'data: [DONE]',
+].join("\\n\\n") + "\\n\\n";
+const hyperProvider = createHyperProvider({
+  apiKey: "packed",
+  fetch: async () => new Response(sse, { status: 200, headers: { "content-type": "text/event-stream" } }),
+});
+const hyperAgent = await createAgent({ packages: [providerPackage("test-provider", [hyperProvider])], model: { provider: hyperProvider.id, model: "packed" } });
 const streamed = [];
-for await (const event of (await aiAgent.session()).stream("stream")) streamed.push(event.type);
-const runResult = await (await aiAgent.session()).run("run");
+for await (const event of (await hyperAgent.session()).stream("stream")) streamed.push(event.type);
+const runResult = await (await hyperAgent.session()).run("run");
 assert.equal(runResult.text, "packed-result");
 assert.ok(streamed.includes("message.delta"));
 
@@ -395,41 +398,23 @@ assert.equal(waiting.status, "suspended");
 const approved = await resumeWorkflow(approvalFlow, { runId: waiting.runId }, { checkpoints: approvalCheckpoints, ownership, resume: { decision: "approve", expectedVersion: waiting.version, input: { reviewer: "operator" } } });
 assert.equal(approved.status, "succeeded");
 
-const store = createMemoryCheckpointStore();
-const leases = createMemoryLeaseStore();
+// Plan 168 Task 7: the 0.12 schedules/coordinator are gone (Phase 16 Part B rebuilds them), so the
+// durable-replay leg runs its source run directly.
+const store = (await import("@arnilo/prism-workflows")).createMemoryCheckpointStore();
 const checkpoints = createWorkflowCheckpoints({ store });
-const scheduledFlow = defineWorkflow({ revision: "1", id: "scheduled", nodes: { done: functionNode({ execute: () => ({ done: true }) }) } });
-const schedules = createWorkflowSchedules({ store, leases, checkpoints, workflows: { scheduled: scheduledFlow }, ownership, ownerId: "packed-scheduler" });
-await schedules.create({ id: "once", workflowId: "scheduled", nextRunAt: "2026-01-01T00:00:00.000Z", input: {} });
-await schedules.pollOnce({ now: new Date("2026-01-02T00:00:00.000Z") });
-const coordinator = createWorkflowCoordinator({ coordinatorId: "packed-worker", workflows: { scheduled: scheduledFlow }, checkpoints, leases, ownership });
-await coordinator.pollOnce();
-while (coordinator.activeRuns) await new Promise((resolve) => setTimeout(resolve, 1));
-const schedule = await schedules.get("once");
-assert.ok(schedule.lastRunId);
-const replay = await replayWorkflow(scheduledFlow, { sourceRunId: schedule.lastRunId, fromNodeId: "done" }, { checkpoints, ownership });
-assert.equal(replay.lineage.sourceRunId, schedule.lastRunId);
+const replayableFlow = defineWorkflow({ revision: "1", id: "replayable", nodes: { done: functionNode({ execute: () => ({ done: true }) }) } });
+const source = await runWorkflow(replayableFlow, {}, { checkpoints, ownership, runId: "replay-source" });
+const replay = await replayWorkflow(replayableFlow, { sourceRunId: source.runId, fromNodeId: "done" }, { checkpoints, ownership });
+assert.equal(replay.lineage.sourceRunId, source.runId);
 
 const servedAgent = async () => await createAgent({ model: { provider: "mock", model: "served" }, packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("served"), providerDone()])])] });
-const handler = createPrismHandler({ agents: { demo: await servedAgent() }, authorize: () => ({ ownership }) });
-const served = await handler(new Request("https://packed.test/prism/agents/demo/runs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: "hello" }) }));
-assert.equal(served.status, 200);
-assert.equal((await served.json()).text, "served");
-
-const mcpServer = createPrismMcpServer({ tools: [{ name: "echo", parameters: { type: "object" }, execute: (args, ctx) => ({ toolCallId: ctx.toolCallId, name: "echo", value: args }) }], authorize: () => ({ allowed: true, ownership }) });
+const mcpAgent = await createAgent({ model: { provider: "mock", model: "packed-mcp" }, host: mcpHost(), packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("mcp packed"), providerDone()])])] });
 const mcpClient = new Client({ name: "packed", version: "1" }, { capabilities: {} });
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-await mcpServer.connect(serverTransport); await mcpClient.connect(clientTransport);
-assert.equal((await mcpClient.callTool({ name: "echo", arguments: { ok: true } })).isError, false);
-await mcpClient.close(); await mcpServer.close();
-
-const supervisor = createSupervisor({ ownership, children: { child: { createAgent: servedAgent } } });
-assert.equal((await supervisor.delegate({ childId: "child", input: "hello" })).text, "served");
-const endpoint = "https://packed-agent.test/a2a/v1";
-const card = { name: "Packed", description: "Packed test agent", supportedInterfaces: [{ url: endpoint, protocolBinding: "JSONRPC", protocolVersion: "1.0" }], version: "1", capabilities: { streaming: false }, defaultInputModes: ["text/plain"], defaultOutputModes: ["text/plain"], skills: [] };
-const a2aHandler = createA2AHandler({ card, exposure: { sessionFactory: async () => (await servedAgent()).session() }, authorize: () => ({ ownership }) });
-const a2a = createA2AClient({ endpoint, allowedOrigins: ["https://packed-agent.test"], fetch: (input, init) => a2aHandler(new Request(input, init)) });
-assert.equal((await a2a.send("hello")).text, "served");
+const mcpHandle = serveMcp(mcpAgent, { transport: serverTransport, authorize: () => ({ allowed: true, ownership }) });
+await mcpClient.connect(clientTransport);
+assert.equal((await mcpClient.callTool({ name: "prompt", arguments: { prompt: "hello" } })).isError ?? false, false);
+await mcpClient.close(); await mcpHandle.close();
 
 // FR-6: durable AgentEventSource resolves from the packed package root (no dist/... subpath).
 const { createPostgresAgentEventSource } = await import("@arnilo/prism-store-postgres");
@@ -457,12 +442,12 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AgentDecisionError, askEveryTool, createAgent, createMemoryCheckpointStore, createMemorySessionStore,
-  providerDone, providerTextDelta, resumeAgentRun, toolCallContent,
+  AgentDecisionError, askEveryTool, createAgent, createMemorySessionStore,
+  providerDone, providerTextDelta, toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createCodingApprovalPolicy, createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-coding-tools/security";
-import { createCliRunner } from "@arnilo/prism-work/connectors";
+import { createSandboxCodingComposition, resolveSandboxCapabilities } from "@arnilo/prism-tools-coding";
+import { createCliRunner } from "@arnilo/prism-tools-work/connectors";
 
 // --- phase20 blocker 1: unknown durable-resume decision fails closed, no tool call ---
 const executed = [];
@@ -477,22 +462,19 @@ const agent = await createAgent({
   slots: { store: createMemorySessionStore() }, packages: [providerPackage("test-provider", [provider])], hooks: askEveryTool(),
   tools: { add: [{ name: "write", parameters: {}, execute: (args, ctx) => { executed.push(ctx.toolCallId); return { toolCallId: ctx.toolCallId, name: "write", value: "done" }; } }] },
 });
-const checkpoints = createMemoryCheckpointStore();
-const first = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
+const session = await agent.session();
+const first = await session.run("go");
 assert.equal(first.status, "suspended");
 const pending = first.pending;
 assert.equal(pending.length, 1);
-const version = first.runState.version;
-const ref = { runId: first.runId, sessionId: first.sessionId };
 let sidewaysError = null;
 try {
-  await resumeAgentRun(agent, ref, { expectedVersion: version, decision: "sideways" }, { checkpoints, definitionRevision: "1" });
+  for await (const _event of session.resume([{ approvalId: pending[0].approvalId, outcome: "sideways" }])) { /* drain */ }
 } catch (error) { sidewaysError = error; }
 assert.ok(sidewaysError instanceof AgentDecisionError, "sideways must throw AgentDecisionError");
 assert.equal(sidewaysError.code, "ERR_PRISM_DECISION_INVALID");
 assert.deepEqual(executed, [], "invalid resume executed a tool");
-const approved = await resumeAgentRun(agent, ref, { expectedVersion: version, decisions: [{ approvalId: pending[0].approvalId, outcome: "allow_once" }] }, { checkpoints, definitionRevision: "1" });
-assert.equal(approved.status, "completed");
+for await (const _event of session.resume([{ approvalId: pending[0].approvalId, outcome: "allow_once" }])) { /* drain */ }
 assert.equal(executed.length, 1, "valid resume must run exactly once");
 
 // --- phase20 blocker 2: work-tool child env isolation (no ambient host env, token isolated, fixed keys) ---
@@ -512,8 +494,7 @@ delete process.env.PRISM_PROOF_SECRET;
 // --- phase20 blocker 3: un-attested sandbox cannot claim filesystem isolation ---
 const cwd = mkdtempSync(join(tmpdir(), "packed-phase20-sandbox-"));
 const unattested = { execFile: async () => ({ exitCode: 0, stdout: "", stderr: "" }), close: async () => {} };
-const policy = createCodingApprovalPolicy({ roots: [cwd], approve: async () => true });
-const { composition } = createSandboxCodingComposition(cwd, { workspaceMode: "sandbox", sandbox: unattested, executionPolicy: policy });
+const { composition } = createSandboxCodingComposition(cwd, { workspaceMode: "sandbox", sandbox: unattested });
 assert.equal(composition.capabilities.filesystemIsolated, false, "un-attested sandbox claimed filesystem isolation");
 assert.equal(composition.capabilities.workspaceCoherent, true);
 assert.equal(composition.containmentClaim, false);
@@ -529,14 +510,13 @@ console.log("PACKED PHASE20 SECURITY OK");
   // 5c. Packed plain-JavaScript phase21 security regressions (plan 021 Task 7):
   //     the 0.2.1 trust-boundary changes proven through the installed tarballs
   //     with no TypeScript compiler — truncated streams reject, oversized
-  //     bodies abort, pinned fetch fails closed on private answers, device-code
-  //     polls redact secrets, and overflow cache telemetry never mixes costs.
+  //     bodies abort, and pinned fetch fails closed on private answers.
   writeFileSync(
     join(consumer, "security21.mjs"),
     `
 import assert from "node:assert/strict";
-import { createCacheTelemetry, MediaContentError, pinnedFetch } from "@arnilo/prism";
-import { createOpenAICompatibleProvider, pollDeviceCodeToken, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
+import { MediaContentError, pinnedFetch } from "@arnilo/prism";
+import { createOpenAICompatibleProvider, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
 
 // Truncated OpenAI-compatible stream rejects (strictCompletion shared default).
 const truncated = new Response("data: [DONE]\\n\\n", { status: 200, headers: { "content-type": "text/event-stream" } });
@@ -565,38 +545,6 @@ const privateAnswer = await pinnedFetch(new URL("https://jwks.example.com/jwks.j
 assert.ok(privateAnswer instanceof MediaContentError);
 assert.equal(privateAnswer.code, "ssrf_denied");
 
-// Device-code poll redacts device_code/user_code from terminal errors.
-const terminal = await pollDeviceCodeToken({
-  errorPrefix: "Packed21",
-  deviceCodeUrl: "https://id.example.com/device",
-  tokenUrl: "https://id.example.com/token",
-  clientId: "client",
-  now: () => 1000000,
-  sleep: async () => {},
-  parseTokenCredentials: (json) => ({ accessToken: json.access_token }),
-  fetchImpl: async (input) => {
-    if (String(input).endsWith("/device")) {
-      return new Response(JSON.stringify({ device_code: "dev-secret", user_code: "USER-CODE", verification_uri: "https://id.example.com/activate", expires_in: 600 }), { status: 200 });
-    }
-    return new Response(JSON.stringify({ error: "access_denied", error_description: "rejected device_code=dev-secret user_code=USER-CODE" }), { status: 400 });
-  },
-}).then(() => null, (error) => error);
-assert.ok(terminal instanceof Error);
-assert.ok(terminal.message.includes("[REDACTED]"));
-assert.equal(terminal.message.includes("dev-secret"), false);
-assert.equal(terminal.message.includes("USER-CODE"), false);
-
-// Overflow cache telemetry never mixes model costs.
-const telemetry = createCacheTelemetry({ maxKeys: 2 });
-const usage = (cacheReadTokens) => ({ inputTokens: 100, cacheReadTokens });
-const model = (name) => ({ provider: "mock", model: name, cost: { input: 2, cacheRead: 0.5 } });
-telemetry.record(usage(100), model("a"));
-telemetry.record(usage(100), model("b"));
-telemetry.record(usage(50), model("c"));
-const overflow = telemetry.report().samples.find((sample) => sample.model === "__overflow__");
-assert.ok(overflow);
-assert.equal(overflow.estimatedSavings, undefined);
-assert.equal(overflow.currency, undefined);
 console.log("PACKED PHASE21 SECURITY OK");
 `,
   );
@@ -616,10 +564,10 @@ console.log("PACKED PHASE21 SECURITY OK");
     join(consumer, "security22.mjs"),
     `
 import assert from "node:assert/strict";
-import { EventMultiplexerError, SessionMetadataConflictError, createEventMultiplexer } from "@arnilo/prism";
-import { createMemoryModelRouterStateStore } from "@arnilo/prism-core/governance/model-router";
+import { SessionMetadataConflictError } from "@arnilo/prism";
+import { EventMultiplexerError, createEventMultiplexer } from "@arnilo/prism-workflows";
+import { createMemoryModelRouterStateStore } from "@arnilo/prism-model-router";
 import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
-import { createNatsAgentEventSource } from "@arnilo/prism-core/sessions/nats";
 
 // --- phase22 blocker 1 (matrix item 9): parallel admissions cannot exceed the reserved budget ---
 const store = createMemoryModelRouterStateStore();
@@ -688,51 +636,6 @@ await assert.rejects(
 await first.return(undefined);
 await multiplexer.close();
 
-// --- phase22 blocker 4: NATS durable consumer name is restart-stable and resumes from the last ack ---
-const messages = new Map();
-const consumers = new Map();
-let nextSeq = 1;
-const seam = {
-  async publish(subject, data, opts) { const seq = nextSeq++; messages.set(seq, { subject, data, msgID: opts.msgID }); return { stream: "test", seq, duplicate: false }; },
-  async addConsumer(_stream, cfg) { const existing = consumers.get(cfg.name); consumers.set(cfg.name, { cfg, acked: existing ? new Set(existing.acked) : new Set() }); },
-  async getConsumer(_stream, name) {
-    const state = consumers.get(name);
-    if (!state) throw new Error("consumer not found: " + name);
-    return { async fetch({ max_messages }) {
-      const filter = state.cfg.filter_subject;
-      const start = state.cfg.opt_start_seq ?? 1;
-      const candidates = [];
-      for (const [seq, message] of messages) {
-        if (seq < start) continue;
-        if (!filter.split(".").every((token, i) => token === "*" || token === message.subject.split(".")[i])) continue;
-        if (state.acked.has(seq)) continue;
-        candidates.push({ seq, data: message.data });
-      }
-      candidates.sort((l, r) => l.seq - r.seq);
-      const batch = candidates.slice(0, max_messages);
-      return { async *[Symbol.asyncIterator]() { for (const item of batch) yield { seq: item.seq, data: item.data, ack: () => state.acked.add(item.seq) }; } };
-    } };
-  },
-  async deleteConsumer(_stream, name) { consumers.delete(name); },
-  async getMessage(_stream, seq) { const m = messages.get(seq); return m ? { data: m.data } : null; },
-  async deleteMessage() {},
-};
-const options = { connection: seam, stream: "packed22-stream", cursorSecret: "packed22-cursor-secret" };
-const source = createNatsAgentEventSource(options);
-const event = (id, type) => ({ id, ...ownership, sessionId: "s1", runId: "r1", type, timestamp: "2026-08-13T00:00:00.000Z", redacted: true, event: { type, sessionId: "s1", runId: "r1", turn: 1 } });
-await source.append(event("n-1", "run.started"));
-await source.append(event("n-2", "turn.started"));
-const read = { ownership, sessionId: "s1", runId: "r1", limit: 10 };
-const iterator = source.subscribe(read)[Symbol.asyncIterator]();
-assert.equal((await iterator.next()).value.record.id, "n-1");
-assert.equal((await iterator.next()).value.record.id, "n-2");
-const name = [...consumers.keys()][0];
-assert.match(name, /^prism_[0-9a-f]{16}$/, "durable name is prism_<hmac16> with no random suffix");
-const restarted = createNatsAgentEventSource(options); // crash: no close, consumer survives at its ack
-const resumed = await restarted.subscribe(read)[Symbol.asyncIterator]().next();
-assert.equal(resumed.value.record.id, "n-2", "restart resumes from the last ack, not the stream head");
-await source.close();
-await restarted.close();
 console.log("PACKED PHASE22 SECURITY OK");
 `,
   );
@@ -753,7 +656,7 @@ console.log("PACKED PHASE22 SECURITY OK");
     join(consumer, "security23.mjs"),
     `
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -768,7 +671,7 @@ for (const spec of specs) {
   const mod = await import(spec);
   if (spec === "@arnilo/prism") {
     assert.equal(mod.version, corePkg.version, "installed core must expose the manifest version");
-    for (const name of ["createAgent", "AgentRunStateError", "resumeAgentRunStream", "createMemoryCheckpointStore"]) {
+    for (const name of ["createAgent", "AgentRunStateError", "agentFingerprint", "createMemorySessionStore"]) {
       assert.equal(typeof mod[name], "function", "installed core must export " + name);
     }
   }
@@ -787,13 +690,14 @@ while (stack.length) {
     if (entry.name === "node_modules") stack.push(path); // hunt for nested duplicate cores
     else if (entry.name === "prism" && dir === scopedRoot) continue; // the shared core itself
     else if (entry.name === "prism") nestedCores.push(path);
-    else if (entry.name === "__tests__" && path.includes("dist")) testDirs.push(path);
+    else if (entry.name === "__tests__" && path.includes("src")) testDirs.push(path);
     else stack.push(path);
   }
 }
 assert.deepEqual(nestedCores, [], "no nested @arnilo/prism duplicate may exist in the packed layout");
-assert.deepEqual(testDirs, [], "packed packages must not ship dist test artifacts");
-assert.ok(statSync(join(coreDir, "dist", "index.js")).isFile(), "installed core dist/index.js must exist");
+assert.deepEqual(testDirs, [], "packed packages must not ship test artifacts");
+assert.ok(statSync(join(coreDir, "src", "index.ts")).isFile(), "installed core src/index.ts must exist");
+assert.equal(existsSync(join(coreDir, "dist")), false, "installed core must not ship a dist/ build output");
 console.log("PACKED PHASE23 SECURITY OK");
 `,
   );
@@ -801,52 +705,56 @@ console.log("PACKED PHASE23 SECURITY OK");
   result.security23Status = security23.status;
   result.security23Out = security23.stdout + security23.stderr;
 
-  // 5f. Packed plain-JavaScript host compositions and readiness enforcement (plan 073 Task 5)
+  // 5f. Packed plain-JavaScript host compositions and readiness enforcement (plan 073 Task 5;
+  //     `createSecureAgent` is gone and the readiness report moved to @arnilo/prism-governance in
+  //     plan 159 Task 7)
   writeFileSync(
     join(consumer, "host-compositions.mjs"),
     `
 import assert from "node:assert/strict";
 import {
   createAgent,
-  createMemoryCheckpointStore,
+  createMemorySessionStore,
   createSecretRedactor,
-  createSecureAgent,
-  createStaticPermissionPolicy,
   createStaticTrustPolicy,
-  inspectHostComposition,
-  assertHostCompositionReadiness,
-  HostCompositionError,
+  createToolParameterValidator,
   providerDone,
   providerTextDelta,
 } from "@arnilo/prism";
+import { assertHostCompositionReadiness, HostCompositionError, inspectHostComposition } from "@arnilo/prism-governance";
 import { createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
-import { inspectDevInspector } from "@arnilo/prism-coding-tools/dev";
+import { validateJsonSchema } from "@arnilo/prism";
+const createJsonSchemaArgumentValidator = () => ({
+  validate(schema, value) {
+    const result = validateJsonSchema(schema, value);
+    return result.ok ? { ok: true, value: result.value } : { ok: false, errors: result.errors };
+  },
+});
+import { serveDevtools } from "@arnilo/prism-devtools";
 
 const canary = "packed-host-composition-secret";
 const redactor = createSecretRedactor([canary]);
-const validator = createJsonSchemaArgumentValidator();
+const validator = createToolParameterValidator(createJsonSchemaArgumentValidator(), { missingSchema: "reject" });
 
 // 1. Valid Personal Composition
-const personalAgent = await createSecureAgent({
+const personalAgent = await createAgent({
   id: "packed-personal-assistant",
-  definitionRevision: "1",
   ownership: { userId: "operator" },
   redactor,
-  permission: createStaticPermissionPolicy(true),
   trust: createStaticTrustPolicy(true),
-  toolArgumentValidator: validator,
+  validator,
   limits: { maxToolRounds: 5 },
-  runState: { checkpoints: createMemoryCheckpointStore() },
-  tools: [
-    {
-      name: "status",
-      description: "Reports personal status",
-      parameters: { type: "object", properties: { q: { type: "string" } }, additionalProperties: false },
-      execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "status", value: { ok: true } }),
-    },
-  ],
+  tools: {
+    add: [
+      {
+        name: "status",
+        description: "Reports personal status",
+        parameters: { type: "object", properties: { q: { type: "string" } }, additionalProperties: false },
+        execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "status", value: { ok: true } }),
+      },
+    ],
+  },
   packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("personal ready"), providerDone()])])],
   model: { provider: "mock", model: "p1" },
 });
@@ -854,7 +762,7 @@ const personalAgent = await createSecureAgent({
 const personalReport = inspectHostComposition({
   profile: "personal",
   agent: personalAgent,
-  store: createMemoryCheckpointStore(),
+  store: createMemorySessionStore(),
   credentialRefs: ["PERSONAL_KEY", canary],
 });
 
@@ -869,39 +777,37 @@ const personalSession = await personalAgent.session();
 const personalRun = await personalSession.run("hello");
 assert.equal(personalRun.text, "personal ready");
 
-// Dev inspector composition check
-const devReport = inspectDevInspector({ agent: personalAgent });
-assert.equal(devReport.profile, "personal");
-assert.equal(devReport.storage.durable, false);
+// Developer inspector over the same agent: the inspection route answers from the public Agent API.
+const devtools = serveDevtools(personalAgent, { port: 0 });
+try {
+  const response = await fetch(devtools.url + "/api/inspect");
+  const inspection = await response.json();
+  assert.ok(Array.isArray(inspection.packages), "the devtools inspection route answers with the agent's packages");
+} finally {
+  await devtools.close();
+}
 
 // 2. Valid Business Worker Composition
 const tenantId = "packed-tenant-corp";
-const businessAgent = await createSecureAgent({
+const businessAgent = await createAgent({
   id: "packed-business-worker",
-  definitionRevision: "1",
   ownership: { tenantId, userId: "worker-1" },
-  identity: {
-    tenantId,
-    userId: "worker-1",
-    principal: { kind: "user", id: "worker-1" },
-    scopes: ["work"],
-    verified: true,
-    issuedAt: "2026-09-01T00:00:00.000Z",
-  },
+  principal: { kind: "user", id: "worker-1" },
   redactor,
-  permission: createStaticPermissionPolicy(true),
   trust: createStaticTrustPolicy(true),
-  toolArgumentValidator: validator,
+  validator,
   limits: { maxToolRounds: 5 },
-  runState: { checkpoints: createMemoryCheckpointStore() },
-  tools: [
-    {
-      name: "work_task",
-      description: "Business task",
-      parameters: { type: "object", properties: { id: { type: "string" } }, additionalProperties: false },
-      execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "work_task", value: { ok: true } }),
-    },
-  ],
+  hooks: (hooks) => hooks.on("tool.call", () => ({ ask: "business tool gate" })),
+  tools: {
+    add: [
+      {
+        name: "work_task",
+        description: "Business task",
+        parameters: { type: "object", properties: { id: { type: "string" } }, additionalProperties: false },
+        execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "work_task", value: { ok: true } }),
+      },
+    ],
+  },
   packages: [providerPackage("test-provider", [createMockProvider([providerTextDelta("business ready"), providerDone()])])],
   model: { provider: "mock", model: "b1" },
 });
@@ -914,6 +820,14 @@ const businessReport = inspectHostComposition({
   workspaceRoot: "/var/tenant-corp",
   sandboxRoots: ["/var/tenant-corp/run"],
   credentialRefs: ["BUSINESS_KEY"],
+  identity: {
+    tenantId,
+    userId: "worker-1",
+    principal: { kind: "user", id: "worker-1" },
+    scopes: ["work"],
+    verified: true,
+    issuedAt: "2026-09-01T00:00:00.000Z",
+  },
 });
 
 assert.equal(businessReport.profile, "business");
@@ -929,6 +843,14 @@ assert.doesNotThrow(() =>
     store: businessDurableStore,
     workspaceRoot: "/var/tenant-corp",
     sandboxRoots: ["/var/tenant-corp/run"],
+    identity: {
+      tenantId,
+      userId: "worker-1",
+      principal: { kind: "user", id: "worker-1" },
+      scopes: ["work"],
+      verified: true,
+      issuedAt: "2026-09-01T00:00:00.000Z",
+    },
   })
 );
 const businessSession = await businessAgent.session();
@@ -954,9 +876,9 @@ assert.throws(
       agent: {
         ownership: { tenantId: "tenant-A" },
         identity: { tenantId: "tenant-B", principal: { kind: "user", id: "u" }, scopes: [], verified: true, issuedAt: "2026-09-01T00:00:00.000Z" },
-        permission: createStaticPermissionPolicy(true),
         trust: createStaticTrustPolicy(true),
         redactor,
+        hooks: () => {},
       },
       store: businessDurableStore,
     }),
@@ -964,7 +886,7 @@ assert.throws(
 );
 // memory-only business store
 assert.throws(
-  () => assertHostCompositionReadiness({ profile: "business", agent: businessAgent, store: createMemoryCheckpointStore() }),
+  () => assertHostCompositionReadiness({ profile: "business", agent: businessAgent, store: createMemorySessionStore() }),
   HostCompositionError,
 );
 // missing redactor/provider
@@ -998,14 +920,19 @@ assert.throws(
 console.log("PACKED HOST COMPOSITIONS OK");
 `,
   );
+
   const hostComp = run("bun", ["host-compositions.mjs"], consumer);
   result.hostCompositionsStatus = hostComp.status;
   result.hostCompositionsOut = hostComp.stdout + hostComp.stderr;
 
-  const scaffold = run("bun", ["./node_modules/@arnilo/prism/dist/cli.js", "new", "package", "@acme/prism-smoke", "--dir", "scaffold-pkg"], consumer);
+  const scaffold = run(
+    "bun",
+    ["./node_modules/@arnilo/prism/src/cli.ts", "new", "package", "@acme/prism-smoke", "--dir", "scaffold-pkg"],
+    consumer,
+  );
   assert.equal(scaffold.status, 0, scaffold.stdout + scaffold.stderr);
   assert.ok(existsSync(join(consumer, "scaffold-pkg", "src", "index.ts")));
-  const listed = run("bun", ["./node_modules/@arnilo/prism/dist/cli.js", "list"], consumer);
+  const listed = run("bun", ["./node_modules/@arnilo/prism/src/cli.ts", "list"], consumer);
   assert.equal(listed.status, 0, listed.stdout + listed.stderr);
 
   // 6. Walk the installed @arnilo/prism* packages for leaked test artifacts / source maps.
@@ -1102,7 +1029,7 @@ describe("install smoke (fresh offline tarball install)", () => {
     assert.equal(result.tarballNames.length, packages.length, "tarball count must match package count");
     // Plan 152 Task 8: the provider family workspace is deleted, so no family tarball is packed;
     // the work umbrella still is.
-    assert.ok(result.tarballNames.includes(`arnilo-prism-work-${ROOT_VERSION}.tgz`), "missing work umbrella tarball");
+    assert.ok(result.tarballNames.includes(`arnilo-prism-tools-work-${ROOT_VERSION}.tgz`), "missing tools-work tarball");
     assert.ok(
       !result.tarballNames.some((name) => name.startsWith("arnilo-prism-providers-")),
       "the retired @arnilo/prism-providers workspace must not pack a tarball",
@@ -1117,22 +1044,29 @@ describe("install smoke (fresh offline tarball install)", () => {
 // Plan 030 Task 9: peer-version policy (Decision B — caret ranges). Replaced
 // runtime npm resolver invocation (ERESOLVE) with manifest-metadata assertion
 // for the declared peer-dependency caret window across workspace packages (Plan 128 Task 2).
-describe("peer-version policy (plan 030 Task 9, Decision B: caret ranges)", () => {
-  it(`declares caret peer dependencies bounded to the ${ROOT_VERSION.split(".").slice(0, 2).join(".")}.x window`, () => {
+describe("peer-version policy (plan 030 Task 9, Decision B: the 0.x kernel window)", () => {
+  it("declares the kernel API window `>=0.13.0 <1.0.0` on every packed package", () => {
     const [major, minor] = ROOT_VERSION.split(".").map((part: string) => Number(part));
-    const expectedPrefix = `^${major}.${minor}.`;
-    const pkgs = readdirSync(join(repoRoot, "packages"));
+    const expected = `>=${major}.${minor}.0 <1.0.0`;
+    // Packed packages live at packages/<group>/<name>/ since plan 152-172; the old flat scan missed
+    // every grouped workspace, so after plan 174 Task 7 removed the last flat ones it found none.
+    const manifests: Array<{ name: string; peerDependencies?: Record<string, string> }> = [];
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          if (entry.name === "node_modules" || entry.name === "dist" || entry.name === "__tests__") continue;
+          walk(join(dir, entry.name));
+        } else if (entry.name === "package.json") {
+          manifests.push(JSON.parse(readFileSync(join(dir, entry.name), "utf8")));
+        }
+      }
+    };
+    walk(join(repoRoot, "packages"));
     let checkedCount = 0;
-    for (const p of pkgs) {
-      const pkgPath = join(repoRoot, "packages", p, "package.json");
-      if (!existsSync(pkgPath)) continue;
-      const manifest = JSON.parse(readFileSync(pkgPath, "utf8"));
-      if (manifest.peerDependencies?.["@arnilo/prism"]) {
-        const peerRange = manifest.peerDependencies["@arnilo/prism"];
-        assert.ok(
-          peerRange.startsWith(expectedPrefix),
-          `${manifest.name} peer @arnilo/prism range ${peerRange} must match window ${expectedPrefix}`,
-        );
+    for (const manifest of manifests) {
+      const peerRange = manifest.peerDependencies?.["@arnilo/prism"];
+      if (peerRange) {
+        assert.equal(peerRange, expected, `${manifest.name} peer @arnilo/prism range must be ${expected}, got ${peerRange}`);
         checkedCount++;
       }
     }
@@ -1173,20 +1107,19 @@ describe("packed truth conformance (plan 024 Task 5)", () => {
       "the retired @arnilo/prism-providers tarball must not be installed",
     );
     assert.ok(truth.umbrella["prism-providers"] === undefined, "the retired family must not appear as an umbrella closure");
-    assert.ok(existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-anthropic")), "a standalone adapter must install");
+    assert.ok(existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-hyper")), "a standalone adapter must install");
   });
 
   it("the installed work tarball exports work and document subpaths", () => {
     if (skipIfInstallFailed()) return;
-    const workRoot = join(consumer, "node_modules", "@arnilo", "prism-work");
+    const workRoot = join(consumer, "node_modules", "@arnilo", "prism-tools-work");
     for (const sub of ["connectors", "documents", "sheets", "diagrams", "document-extraction", "document-reader"]) {
-      assert.ok(existsSync(join(workRoot, "dist", sub, "index.js")), `work tarball missing ${sub} subpath`);
+      assert.ok(existsSync(join(workRoot, "src", sub, "index.ts")), `work tarball missing ${sub} subpath`);
     }
-    // Plan 152 Task 6: every adapter is a standalone source-export package, so the family tarball
-    // ships no subpath and the Azure adapter ships its own src/index.ts.
+    // Plan 182 Task 2: OpenCode Go adapter ships its own src/index.ts.
     assert.ok(
-      existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-azure", "src", "index.ts")),
-      "Azure adapter must ship as its own provider package",
+      existsSync(join(consumer, "node_modules", "@arnilo", "prism-provider-opencode-go", "src", "index.ts")),
+      "OpenCode Go adapter must ship as its own provider package",
     );
   });
 

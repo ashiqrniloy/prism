@@ -1,7 +1,5 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { compileAttention, createAttentionCompiler } from "../attention-compiler.js";
-import type { ContextBudgetMessageGroups } from "../context-budget.js";
 import {
   type Session,
   type ModelProvider,
@@ -10,19 +8,14 @@ import {
   createAgent,
   createMemorySessionStore,
   type HookRegistrar,
-  type Message,
   type ModelConfig,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
-  providerToolCall,
   type ResolveShouldCompactInput,
-  rebuildSessionContext,
   resolveInputCap,
   resolveShouldCompact,
   type SessionEntry,
-  type ToolDefinition,
-  toolCallContent,
 } from "../index.js";
 import { failedRun } from "./run-result-helpers.js";
 import { providerPackage } from "../provider-kit/index.js";
@@ -317,7 +310,7 @@ describe("session auto-compaction trigger", () => {
       { type: "custom", shouldCompact: (context) => context.estimatedInputTokens / context.inputCapTokens >= 0.9 },
     ];
 
-    for (const [index, trigger] of triggers.entries()) {
+    for (const [_index, trigger] of triggers.entries()) {
       const { provider } = recordingProvider();
       const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], compaction: { thresholdEntries: 1 }, hooks: whenTrigger(trigger) });
       const session = await agent.session();
@@ -435,75 +428,5 @@ describe("compaction.when hook", () => {
     assert.equal(result.error?.name, "HookError");
     assert.equal(result.error?.owner, "host");
     assert.equal(result.error?.hook, "compaction.when");
-  });
-});
-
-describe("compiler after compaction", () => {
-  const big: ToolDefinition = {
-    name: "big",
-    parameters: { type: "object", properties: {} },
-    execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "big", value: "y".repeat(400) }),
-  };
-
-  it("never rewrites the summary and may still stub the kept tail", async () => {
-    let turn = 0;
-    const provider: ModelProvider = {
-      id: "mock",
-      async *generate() {
-        turn += 1;
-        if (turn === 1) yield providerToolCall(toolCallContent("c1", "big", {}));
-        yield providerTextDelta(`reply ${turn}`);
-        yield providerDone();
-      },
-    };
-    const agent = await createAgent({ model, packages: [providerPackage("test-provider", [provider])], tools: { add: [big] }, compaction: { thresholdEntries: 1, keepRecentEntries: 3 } });
-    const session = await agent.session({ id: "s1", create: true });
-
-    await session.run("use the big tool");
-    await session.run("and again");
-
-    const snapshot = rebuildSessionContext(await session.entries(), { leafId: session.leafId });
-    assert.ok(snapshot.summaries.length > 0, "the branch carries a compaction summary");
-    assert.equal(
-      snapshot.messages.some((message) => message.content.some((block) => block.type === "tool_result")),
-      true,
-      "the kept tail still holds the tool round",
-    );
-    // The keep cut moves back to the assistant tool call that owns the first kept tool result,
-    // so the tail never starts with an orphaned result and the summary covers only old entries.
-    assert.equal(
-      snapshot.messages.some((message) => message.content.some((block) => block.type === "tool_call" && block.name === "big")),
-      true,
-      "the kept tail keeps the call that owns the kept result",
-    );
-    const summaries: Message[] = snapshot.summaries.map((summary) => ({
-      role: "system",
-      content: [{ type: "text", text: `Summary:\n${summary}` }],
-    }));
-    const groups: ContextBudgetMessageGroups = {
-      instructions: [{ role: "system", content: [{ type: "text", text: "system rules" }] }],
-      summaries,
-      history: snapshot.messages,
-      input: [{ role: "user", content: [{ type: "text", text: "next" }] }],
-      attachments: [],
-      toolResults: [],
-    };
-
-    // keepLast 0 leaves every tool row eligible, and the tail estimate is far over the 75-token trigger.
-    const compiled = await compileAttention({
-      compiler: createAttentionCompiler({ maxInputTokens: 100, keepLast: 0 }, { model }),
-      groups,
-    });
-
-    assert.deepEqual(compiled.groups.summaries, summaries, "the compiler never rewrites the summary");
-    assert.equal(
-      JSON.stringify(compiled.groups.summaries).includes(snapshot.summaries[0] ?? "\u0000"),
-      true,
-      "the summary text is passed through",
-    );
-    assert.deepEqual(compiled.groups.instructions, groups.instructions, "the frozen prefix is untouched");
-    assert.deepEqual(compiled.groups.input, groups.input);
-    assert.equal(compiled.report.stubbedToolResults, 1, "the kept tail is still subject to stubbing");
-    assert.equal(JSON.stringify(compiled.groups.history).includes("y".repeat(50)), false);
   });
 });

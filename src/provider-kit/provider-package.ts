@@ -13,7 +13,7 @@ import { definePackage } from "../packages/define.js";
 import type { JsonSchema } from "../packages/schema.js";
 import type { Secret } from "../contracts-core/resources.js";
 import { CredentialUnavailableError } from "../credentials/errors.js";
-import { KERNEL_VERSION } from "../version.js";
+import { KERNEL_API_LEVEL, KERNEL_VERSION } from "../version.js";
 
 /** The description every ref-only secret property carries unless a vendor passes its own. */
 const DEFAULT_SECRET_REF_DESCRIPTION = "An `env:` or `keyring:` ref the credentials slot resolves. A literal key is rejected.";
@@ -86,7 +86,7 @@ export function optionalRefSource(resolve: (ref: string) => Promise<Secret | und
 }
 
 export interface ProviderPackageDefinitionSpec<Config> {
-  /** npm name, e.g. `@arnilo/prism-provider-deepseek`. */
+  /** npm name, e.g. `@arnilo/prism-provider-hyper`. */
   readonly name: string;
   /** One line, shown in `agent.inspect()`. */
   readonly description: string;
@@ -109,7 +109,7 @@ export function defineProviderPackage<Config extends object = Readonly<Record<st
     name: spec.name,
     version: KERNEL_VERSION,
     description: spec.description,
-    requires: { prism: `^${KERNEL_VERSION}` },
+    requires: { api: KERNEL_API_LEVEL },
     capabilities: spec.capabilities ?? ["credentials"],
     config: spec.config,
     setup: spec.setup,

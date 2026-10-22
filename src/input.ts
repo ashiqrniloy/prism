@@ -1,11 +1,6 @@
-import { type AttentionFoldLedger, type AttentionStickyFrontier, compileAttention, createAttentionCompiler } from "./attention-compiler.js";
 import { deferSkillCatalog } from "./skills-catalog.js";
 import { assertMessagesSupportModelCapabilities } from "./content.js";
-import { applyContextBudget, CONTEXT_BUDGET_REPORT_METADATA_KEY, type ContextBudget, type ContextBudgetReport } from "./context-budget.js";
 import type {
-  AttentionCompiler,
-  AttentionCompilerOptions,
-  AttentionReport,
   ContentBlock,
   ContextBlock,
   InputAssemblyLayout,
@@ -21,7 +16,7 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "./contracts.js";
-import { applyDefaultProviderRequestOptions } from "./provider-request-policy.js";
+import { applyDefaultProviderRequestOptions } from "./provider-kit/provider-request-policy.js";
 import type { SecretRedactor } from "./redaction.js";
 import { loadTextResource } from "./resources.js";
 import {
@@ -32,9 +27,6 @@ import {
   type LoadedSkillSet,
   type SkillsDisclosure,
 } from "./skill-disclosure.js";
-import { foldToolResultHistory, foldToolResults, type ResolvedToolResultFoldOptions } from "./tool-result-fold.js";
-import { selectDisclosedTools, type ToolsDisclosure, type ToolsSearchOptions } from "./tool-search.js";
-
 export type AgentInput = string | Message | readonly Message[];
 
 /**
@@ -93,252 +85,7 @@ export interface AssembleProviderInputOptions extends DefaultInputBuildContext {
   /** Run-owned append-only segments. Omit outside a session to retain existing assembly exactly. */
   readonly tailSegments?: Map<string, Message>;
   readonly tools?: readonly ToolDefinition[];
-  /** Tools disclosure: "search" narrows the disclosed tool list (activated ∪ top-k); default "all" is unchanged. */
-  readonly toolsDisclosure?: ToolsDisclosure;
-  readonly toolsSearch?: ToolsSearchOptions;
-  /** Per-run activated names from `search_tools`; intersected at disclosure only — dispatch re-checks. */
-  readonly activatedTools?: { has(name: string): boolean };
   readonly providerOptions?: ProviderRequestOptions;
-  /** Assembler-time eviction; does not delete session store history. */
-  readonly contextBudget?: ContextBudget;
-  /** Resolved tool-result fold; projection-only, store untouched. */
-  readonly toolResultFold?: ResolvedToolResultFoldOptions;
-  /**
-   * Opt-in attention compiler: options are validated here (per call) or pass an existing
-   * `AttentionCompiler` to reuse one validation. Mutually exclusive with `contextBudget`,
-   * which would otherwise evict as a silent last resort after the compiler's stages.
-   */
-  readonly attentionCompiler?: AttentionCompilerOptions | AttentionCompiler;
-  /** Per-session-leaf sticky frontier; omit for one-shot assemblies (no cross-turn stickiness). */
-  readonly attentionSticky?: AttentionStickyFrontier;
-  /** Per-session folded bodies; omit to re-summarize every folded row on every turn. */
-  readonly attentionFold?: AttentionFoldLedger;
-  /** Called once per *mutated* turn with the report, so a host can emit telemetry: under-ratio
-   *  turns never call it, and it runs before the `context.build` hook. */
-  readonly onAttentionReport?: (report: AttentionReport) => void;
-  /** Run input tokens already charged this run; feeds the `run_input_ratio` axis projection
-   *  (default 0). The run budget itself rides the resolved `AttentionCompiler` handle. */
-  readonly runInputTokens?: number;
-}
-
-export function createDefaultInputBuilder(): DefaultInputBuilder {
-  return {
-    name: "default-input",
-    async build(input, context = {}) {
-      const groups = await buildDefaultInputMessageGroups(input, context);
-      // The default builder is not a security seam: `assembleProviderInput` owns what
-      // happens after it returns, so a host cannot slip unassembled messages past it.
-      return flattenInputGroups(groups, context.inputLayout ?? "cache_aware");
-    },
-  };
-}
-
-/**
- * The kernel's own `context.build`-point contribution (roadmap §2.4 "Replaces: skills catalog"):
- * skills, tool declarations, and context blocks are folded into the provider view here, once per
- * turn, ahead of the dynamic transcript. Module-private since `PromptBuilder` is retired (plan 145
- * Task 4) — a host that wants a different composition registers a `context.build` handler, which
- * runs after this and so composes on top of it rather than replacing the skills catalog.
- */
-function buildProviderMessages(request: PromptComposition): readonly Message[] {
-  // Tool-capable models receive schemas via request.tools; the text list only serves
-  // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
-  const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
-  const context = contextMessages(request.context);
-  const skills = request.deferSkillsCatalog
-    ? []
-    : buildSkillMessages(
-        request.skills,
-        request.tailSkillBodies
-          ? {
-              disclosure: "progressive",
-              demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
-            }
-          : {
-              disclosure: request.skillsDisclosure,
-              loaded: request.loadedSkills,
-              demotedBodies: request.demotedSkillBodies?.length ? new Set(request.demotedSkillBodies) : undefined,
-            },
-      );
-  const declarations = toolMessages(tools);
-  if ((request.inputLayout ?? "cache_aware") === "legacy") {
-    return [...context, ...skills, ...declarations, ...request.messages];
-  }
-
-  // Default input assembly keeps stable instruction messages at the front. Keep that
-  // boundary ahead of dynamic context/skills; legacy retains the old whole-prompt order.
-  const firstNonSystem = request.messages.findIndex((message) => message.role !== "system");
-  const stable = firstNonSystem < 0 ? request.messages : request.messages.slice(0, firstNonSystem);
-  const dynamic = firstNonSystem < 0 ? [] : request.messages.slice(firstNonSystem);
-  return [...stable, ...context, ...skills, ...declarations, ...dynamic];
-}
-
-interface PromptComposition {
-  readonly deferSkillsCatalog?: boolean;
-  readonly messages: readonly Message[];
-  readonly inputLayout?: InputAssemblyLayout;
-  readonly context?: readonly ContextBlock[];
-  readonly skills?: readonly Skill[];
-  readonly skillsDisclosure?: SkillsDisclosure;
-  readonly loadedSkills?: LoadedSkillSet;
-  readonly tailSkillBodies?: boolean;
-  readonly demotedSkillBodies?: readonly string[];
-  readonly tools?: readonly ToolDefinition[];
-  readonly model?: ModelConfig;
-}
-
-export function renderPromptTemplate(template: string, variables: JsonObject, options: PromptTemplateOptions = {}): string {
-  return template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, name: string) => {
-    if (!Object.hasOwn(variables, name)) {
-      if (options.missing === "preserve") return match;
-      throw new Error(`Missing prompt template variable: ${name}`);
-    }
-    return templateValue(variables[name]!);
-  });
-}
-
-export async function assembleProviderInput(options: AssembleProviderInputOptions): Promise<ProviderRequest> {
-  const baseContext = {
-    sessionId: options.sessionId,
-    runId: options.runId,
-    metadata: options.metadata,
-    signal: options.signal,
-  };
-  const turn = options.turn ?? 1;
-  const foldContext = {
-    sessionId: options.sessionId ?? "",
-    runId: options.runId ?? "",
-    turn,
-    signal: options.signal,
-  };
-  const foldedHistory = options.toolResultFold
-    ? await foldToolResultHistory(options.history ?? [], options.toolResultFold, foldContext)
-    : (options.history ?? []);
-  const foldedToolResults =
-    options.toolResultFold && options.toolResults?.length
-      ? await foldToolResults(options.toolResults, options.toolResultFold, foldContext)
-      : options.toolResults;
-  const buildContext: DefaultInputBuildContext = {
-    ...options,
-    ...baseContext,
-    history: foldedHistory,
-    toolResults: foldedToolResults,
-  };
-  const layout = buildContext.inputLayout ?? "cache_aware";
-
-  let messages: readonly Message[];
-  // No host provider contributes blocks any more (plan 145 Task 4): a `context.build` handler
-  // appends its own. The list stays because the budget/compiler stages measure and trim it.
-  let context: readonly ContextBlock[] | undefined;
-  let skills = options.skills;
-  let tools = options.tools;
-  if (options.toolsDisclosure === "search" && tools?.length) {
-    tools = selectDisclosedTools({ tools, input: options.input, search: options.toolsSearch, activated: options.activatedTools });
-  }
-  let demotedSkillBodies: readonly string[] | undefined;
-  let budgetReport: ContextBudgetReport | undefined;
-
-  if (options.attentionCompiler) {
-    if (options.contextBudget) {
-      throw new TypeError(
-        "attentionCompiler and contextBudget are mutually exclusive: the compiler raises AttentionBudgetError instead of evicting",
-      );
-    }
-    // Same default-groups path as the budget branch: the compiler needs the assembled groups
-    // (and the provider context blocks) to measure one cost for the whole request.
-    const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
-    const compiled = await compileAttention({
-      compiler: resolveAttentionCompiler(options.attentionCompiler, options.model),
-      groups,
-      context,
-      skills,
-      tools,
-      fold: options.toolResultFold,
-      frontier: options.attentionSticky,
-      attentionFold: options.attentionFold,
-      redactor: options.redactor,
-      signal: options.signal,
-      turn,
-      runInputTokens: options.runInputTokens,
-      sessionId: options.sessionId,
-      runId: options.runId,
-    });
-    if (compiled.mutated) options.onAttentionReport?.(compiled.report);
-    messages = flattenInputGroups(compiled.groups, layout);
-  } else if (options.contextBudget) {
-    // ponytail: budget path always uses default groups so eviction kinds stay deterministic;
-    const groups = await buildDefaultInputMessageGroups(options.input, buildContext);
-    const applied = applyContextBudget({
-      groups,
-      context,
-      skills: skills ?? [],
-      tools,
-      budget: options.contextBudget,
-      layout,
-      skillsDisclosure: options.skillsDisclosure,
-      loadedSkills: options.loadedSkills,
-    });
-    messages = flattenInputGroups(applied.groups, layout);
-    context = applied.context;
-    skills = applied.skills;
-    tools = applied.tools;
-    demotedSkillBodies = applied.demotedSkillBodies;
-    if (options.contextBudget.reportOmissions) budgetReport = applied.report;
-  } else {
-    messages = await createDefaultInputBuilder().build(options.input, buildContext);
-  }
-
-  const tailSegments = options.tailSegments;
-  const tailSkillBodies = tailSegments !== undefined;
-  if (tailSegments) {
-    const activeTailSegments = new Set<string>();
-    messages = moveResourceMessagesToTail(messages, options, tailSegments, activeTailSegments);
-    appendSkillTailSegments(tailSegments, activeTailSegments, skills, options.skillsDisclosure, options.loadedSkills, demotedSkillBodies);
-    messages = [...messages, ...tailMessages(tailSegments, activeTailSegments)];
-  }
-
-  const providerMessages = buildProviderMessages({
-    messages,
-    inputLayout: layout,
-    deferSkillsCatalog: options.deferSkillsCatalog,
-    context,
-    skills,
-    skillsDisclosure: options.skillsDisclosure,
-    loadedSkills: options.loadedSkills,
-    tailSkillBodies,
-    demotedSkillBodies,
-    tools,
-    model: options.model,
-  });
-  assertMessagesSupportModelCapabilities(options.model, providerMessages);
-
-  const metadata = budgetReport ? { ...options.metadata, [CONTEXT_BUDGET_REPORT_METADATA_KEY]: budgetReport } : options.metadata;
-
-  const request = applyDefaultProviderRequestOptions(
-    {
-      model: options.model,
-      messages: providerMessages,
-      tools,
-      context,
-      options: options.providerOptions,
-      metadata,
-      signal: options.signal,
-    },
-    { sessionId: options.sessionId },
-  );
-  if (options.deferSkillsCatalog) {
-    deferSkillCatalog(request, skills ?? [], {
-      disclosure: tailSkillBodies ? "progressive" : options.skillsDisclosure,
-      loaded: tailSkillBodies ? undefined : options.loadedSkills,
-      demotedBodies: demotedSkillBodies?.length ? new Set(demotedSkillBodies) : undefined,
-    });
-  }
-  return request;
-}
-
-/** A resolved handle is reused as-is; raw options are validated for this call only. */
-function resolveAttentionCompiler(value: AttentionCompilerOptions | AttentionCompiler, model: ModelConfig): AttentionCompiler {
-  return "inputCap" in value ? (value as AttentionCompiler) : createAttentionCompiler(value, { model });
 }
 
 async function buildDefaultInputMessageGroups(input: AgentInput, context: DefaultInputBuildContext): Promise<DefaultInputMessageGroups> {
@@ -386,6 +133,129 @@ function flattenInputGroups(groups: DefaultInputMessageGroups, layout: InputAsse
         ...groups.toolResults,
       ];
   }
+}
+
+export function createDefaultInputBuilder(): DefaultInputBuilder {
+  return {
+    name: "default-input",
+    async build(input, context = {}) {
+      const groups = await buildDefaultInputMessageGroups(input, context);
+      // The default builder is not a security seam: `assembleProviderInput` owns what
+      // happens after it returns, so a host cannot slip unassembled messages past it.
+      return flattenInputGroups(groups, context.inputLayout ?? "cache_aware");
+    },
+  };
+}
+
+/**
+ * The kernel's own `context.build`-point contribution (roadmap §2.4 "Replaces: skills catalog"):
+ * skills, tool declarations, and context blocks are folded into the provider view here, once per
+ * turn, ahead of the dynamic transcript. Module-private since `PromptBuilder` is retired (plan 145
+ * Task 4) — a host that wants a different composition registers a `context.build` handler, which
+ * runs after this and so composes on top of it rather than replacing the skills catalog.
+ */
+function buildProviderMessages(request: PromptComposition): readonly Message[] {
+  // Tool-capable models receive schemas via request.tools; the text list only serves
+  // text-only (or unknown-capability) models — duplicating it doubles tool tokens per turn.
+  const tools = request.model?.capabilities?.tools === true ? undefined : request.tools;
+  const context = contextMessages(request.context);
+  const skills = request.deferSkillsCatalog
+    ? []
+    : buildSkillMessages(
+        request.skills,
+        request.tailSkillBodies
+          ? { disclosure: "progressive" }
+          : { disclosure: request.skillsDisclosure, loaded: request.loadedSkills },
+      );
+  const declarations = toolMessages(tools);
+  if ((request.inputLayout ?? "cache_aware") === "legacy") {
+    return [...context, ...skills, ...declarations, ...request.messages];
+  }
+
+  // Default input assembly keeps stable instruction messages at the front. Keep that
+  // boundary ahead of dynamic context/skills; legacy retains the old whole-prompt order.
+  const firstNonSystem = request.messages.findIndex((message) => message.role !== "system");
+  const stable = firstNonSystem < 0 ? request.messages : request.messages.slice(0, firstNonSystem);
+  const dynamic = firstNonSystem < 0 ? [] : request.messages.slice(firstNonSystem);
+  return [...stable, ...context, ...skills, ...declarations, ...dynamic];
+}
+
+interface PromptComposition {
+  readonly deferSkillsCatalog?: boolean;
+  readonly messages: readonly Message[];
+  readonly inputLayout?: InputAssemblyLayout;
+  readonly context?: readonly ContextBlock[];
+  readonly skills?: readonly Skill[];
+  readonly skillsDisclosure?: SkillsDisclosure;
+  readonly loadedSkills?: LoadedSkillSet;
+  readonly tailSkillBodies?: boolean;
+  readonly tools?: readonly ToolDefinition[];
+  readonly model?: ModelConfig;
+}
+
+export function renderPromptTemplate(template: string, variables: JsonObject, options: PromptTemplateOptions = {}): string {
+  return template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, name: string) => {
+    if (!Object.hasOwn(variables, name)) {
+      if (options.missing === "preserve") return match;
+      throw new Error(`Missing prompt template variable: ${name}`);
+    }
+    return templateValue(variables[name]!);
+  });
+}
+
+export async function assembleProviderInput(options: AssembleProviderInputOptions): Promise<ProviderRequest> {
+  const baseContext = {
+    sessionId: options.sessionId,
+    runId: options.runId,
+    metadata: options.metadata,
+    signal: options.signal,
+  };
+  const buildContext: DefaultInputBuildContext = { ...options, ...baseContext };
+  const layout = buildContext.inputLayout ?? "cache_aware";
+  const skills = options.skills;
+  const tools = options.tools;
+  let messages: readonly Message[] = await createDefaultInputBuilder().build(options.input, buildContext);
+
+  const tailSegments = options.tailSegments;
+  const tailSkillBodies = tailSegments !== undefined;
+  if (tailSegments) {
+    const activeTailSegments = new Set<string>();
+    messages = moveResourceMessagesToTail(messages, options, tailSegments, activeTailSegments);
+    appendSkillTailSegments(tailSegments, activeTailSegments, skills, options.skillsDisclosure, options.loadedSkills);
+    messages = [...messages, ...tailMessages(tailSegments, activeTailSegments)];
+  }
+
+  const providerMessages = buildProviderMessages({
+    messages,
+    inputLayout: layout,
+    deferSkillsCatalog: options.deferSkillsCatalog,
+    skills,
+    skillsDisclosure: options.skillsDisclosure,
+    loadedSkills: options.loadedSkills,
+    tailSkillBodies,
+    tools,
+    model: options.model,
+  });
+  assertMessagesSupportModelCapabilities(options.model, providerMessages);
+
+  const request = applyDefaultProviderRequestOptions(
+    {
+      model: options.model,
+      messages: providerMessages,
+      tools,
+      options: options.providerOptions,
+      metadata: options.metadata,
+      signal: options.signal,
+    },
+    { sessionId: options.sessionId },
+  );
+  if (options.deferSkillsCatalog) {
+    deferSkillCatalog(request, skills ?? [], {
+      disclosure: tailSkillBodies ? "progressive" : options.skillsDisclosure,
+      loaded: tailSkillBodies ? undefined : options.loadedSkills,
+    });
+  }
+  return request;
 }
 
 export function inputMessages(input: AgentInput): Message[] {
@@ -521,13 +391,8 @@ function appendSkillTailSegments(
   skills: readonly Skill[] | undefined,
   disclosure: SkillsDisclosure | undefined,
   loaded: LoadedSkillSet | undefined,
-  demotedSkillBodies: readonly string[] | undefined,
 ): void {
-  const renderContext = {
-    disclosure,
-    loaded,
-    demotedBodies: demotedSkillBodies?.length ? new Set(demotedSkillBodies) : undefined,
-  };
+  const renderContext = { disclosure, loaded };
   const selected = capSkillCatalog(selectSkillsForPrompt(skills ?? [], renderContext));
   const byName = new Map(selected.map((skill) => [skill.name, skill]));
   const ordered =

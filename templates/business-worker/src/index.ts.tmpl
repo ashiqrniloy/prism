@@ -1,0 +1,13 @@
+import { createAppAgent } from "./agent.js";
+
+async function main() {
+  const agent = createAppAgent({ tenantId: "tenant-acme", userId: "worker-prod-1" });
+  const session = agent.createSession({ id: "biz-session-1" });
+  const result = await session.run("Process batch queue item");
+  console.log(result.text);
+}
+
+main().catch((error) => {
+  console.error("Business worker failed:", error);
+  process.exit(1);
+});

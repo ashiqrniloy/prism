@@ -1,25 +1,30 @@
 // scripts/phase23-build-race.test.mjs — Task 1 stress regression.
 //
-// Proves build serialization (scripts/with-build-lock.mjs, Option A): a concurrent dist
-// consumer must never observe a partially-emitted dist/. Runs inside `bun run test`'s gate
-// segment (unwrapped — the gate segment is not a dist-consuming leaf), so its own children
+// Proves build serialization (scripts/with-build-lock.mjs, Option A): a concurrent consumer
+// must never observe a partially-emitted artifact. Runs inside `bun run test`'s gate
+// segment (unwrapped — the gate segment is not a consuming leaf), so its own children
 // acquire the REAL lock.
+//
+// Plan 174 Task 8: the kernel publishes TypeScript source, so the emit under test is
+// `manifest/schema.json` (the one file `build:core` writes) and the importer leaf is the source
+// suite. There is no compiled module graph left to observe half-written.
 //
 // The four named orchestrator combos (build+test, two builds, typecheck+test, coverage+test)
 // reduce to the same wrapped leaves, so each scenario runs the actual leaf commands
 // concurrently. Spawning full `bun run test` inside `bun run test` would recurse (phase23 runs in
 // the gate segment); the leaves are what the orchestrators serialize.
 //
-// Deterministic pre-fix repro: the "partial dist" sensitivity test proves the importer's
-// consistency check catches a partial module graph (the failure a pre-fix race could
+// Deterministic pre-fix repro: the "partial schema" sensitivity test proves the importer's
+// consistency check catches a partial artifact (the failure a pre-fix race could
 // produce for real). The lock-behavior tests prove the serialization primitive; the
 // concurrency scenarios prove the wrapped leaves hold up under the four named combos.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 
 const ROOT = join(import.meta.dirname, "..");
 const LOCK = join(ROOT, "node_modules", ".prism-build.lock");
@@ -50,27 +55,34 @@ const helper = (...args) => run(process.execPath, [join("scripts", "with-build-l
 const helperWithEnv = (env, ...args) => run(process.execPath, [join("scripts", "with-build-lock.mjs"), ...args], { env });
 
 // The importer leaf (the consume side of `bun test`): run one small core test file that
-// imports the full dist module graph (dist/__tests__/index.test.js imports ../index.js).
-const IMPORTER = ["test", "--timeout=0", join("dist", "__tests__", "index.test.js")];
+// imports the kernel entry and its transitive graph.
+const IMPORTER = ["test", "--timeout=0", join("src", "__tests__", "index.test.ts")];
 // The importer must actually run tests (a vacuous run exits 0 having skipped everything):
 // Node reports `ℹ pass N`, Bun reports ` N pass` — either runner counts only above zero.
 function importerRan(r) {
   return /^ℹ pass [1-9]/m.test(r.out) || /^\s*[1-9]\d* pass\b/m.test(r.out);
 }
-// The post-consistency export check: a partial dist missing a known export fails it.
-const KNOWN_EXPORTS = ["AgentRunStateError", "AGENT_RUN_STATE_NAMESPACE"];
+// The post-consistency export check: a partial kernel entry missing a known export fails it.
+const KNOWN_EXPORTS = ["AgentRunStateError", "AGENT_RUN_STATE_SCHEMA_VERSION"];
 const EXPORT_CHECK = [
   "-e",
   `import('@arnilo/prism').then(m=>{for(const k of ${JSON.stringify(KNOWN_EXPORTS)}){if(!(k in m)){console.error('missing export: '+k);process.exit(3)}}})`,
 ];
 
-async function distConsistent() {
-  // Export check against the real root dist + a sample of expected test files present.
+// Plan 174 Task 8: the only emitted artifact is `manifest/schema.json`, so consistency means
+// the entry resolves, that file parses, and the source suite the importer names is present.
+async function kernelConsistent() {
   const exportsOk = await run(process.execPath, EXPORT_CHECK);
   if (exportsOk.code !== 0) return false;
-  for (const f of ["index.test.js", "agent-config.types.test.js"]) {
+  try {
+    const schema = JSON.parse(readFileSync(join(ROOT, "manifest", "schema.json"), "utf8"));
+    if (typeof schema !== "object" || schema === null) return false;
+  } catch {
+    return false;
+  }
+  for (const f of ["index.test.ts", "agent-config.types.test.ts"]) {
     try {
-      readFileSync(join(ROOT, "dist", "__tests__", f));
+      readFileSync(join(ROOT, "src", "__tests__", f));
     } catch {
       return false;
     }
@@ -78,20 +90,22 @@ async function distConsistent() {
   return true;
 }
 
-test("sensitivity: the consistency check catches a partial dist (deterministic pre-fix repro)", async () => {
+test("sensitivity: the consistency check catches a truncated schema (deterministic pre-fix repro)", async () => {
   // mkdtemp: atomically unique dir, no pid/time collision or overwrite of an attacker-precreated path.
   const dir = mkdtempSync(join(tmpdir(), "prism-partial-"));
   try {
-    const dist = join(dir, "dist");
-    // A module graph missing one known export — the shape a mid-emit tsc could leave behind.
-    mkdirSync(dist, { recursive: true });
-    writeFileSync(join(dist, "index.js"), "export const AgentRunStateError = class {};\n");
-    const partial = await run(process.execPath, [
-      "-e",
-      `import('file://${join(dist, "index.js")}').then(m=>{for(const k of ${JSON.stringify(KNOWN_EXPORTS)}){if(!(k in m)){process.exit(3)}}})`,
-    ]);
-    assert.notEqual(partial.code, 0, "partial dist must fail the consistency check");
-    assert.equal(await distConsistent(), true, "real dist must pass the consistency check");
+    // A schema cut mid-write by a non-atomic `writeFileSync` — the shape a pre-fix race could
+    // leave for a concurrent reader.
+    const truncated = join(dir, "schema.json");
+    writeFileSync(truncated, '{ "$schema": "https://json-schema.org/draft/2020-12/schema", "properties": { "pa');
+    let parsed = true;
+    try {
+      JSON.parse(readFileSync(truncated, "utf8"));
+    } catch {
+      parsed = false;
+    }
+    assert.equal(parsed, false, "a truncated schema must fail the consistency check");
+    assert.equal(await kernelConsistent(), true, "the real artifact must pass the consistency check");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -139,7 +153,7 @@ test("live lock is not stolen: the second acquirer fails closed on timeout", asy
 
 test("clean stays standalone and unwrapped", () => {
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  assert.equal(pkg.scripts.clean, "rm -rf dist packages/*/dist");
+  assert.equal(pkg.scripts.clean, "rm -rf .types manifest/schema.json");
 });
 
 const sleepMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -206,40 +220,40 @@ test("a writer reclaims a dead reader marker and an abandoned unparseable one", 
   assert.equal(existsSync(abandoned), false, "abandoned reader marker must be reclaimed");
 });
 
-test("scenario 1: concurrent bun run build + importer never observe partial dist", async () => {
+test("scenario 1: concurrent bun run build + importer never observe a partial artifact", async () => {
   const [build, importer] = await Promise.all([bunRun("run", "build"), run("bun", IMPORTER)]);
   assert.equal(build.code, 0, `concurrent build failed:\n${build.out}`);
-  assert.equal(importer.code, 0, `importer observed a bad dist:\n${importer.out}`);
+  assert.equal(importer.code, 0, `importer observed a bad artifact:\n${importer.out}`);
   assert.ok(importerRan(importer), `importer must actually run tests:\n${importer.out}`);
-  assert.equal(await distConsistent(), true);
+  assert.equal(await kernelConsistent(), true);
 });
 
-test("scenario 2: two concurrent builds both complete, dist stays consistent", async () => {
+test("scenario 2: two concurrent builds both complete, the artifact stays consistent", async () => {
   const [a, b, importer] = await Promise.all([bunRun("run", "build:core"), bunRun("run", "build:core"), run("bun", IMPORTER)]);
   assert.equal(a.code, 0, `build A failed:\n${a.out}`);
   assert.equal(b.code, 0, `build B failed:\n${b.out}`);
-  assert.equal(importer.code, 0, `importer observed a bad dist:\n${importer.out}`);
+  assert.equal(importer.code, 0, `importer observed a bad artifact:\n${importer.out}`);
   assert.ok(importerRan(importer), `importer must actually run tests:\n${importer.out}`);
-  assert.equal(await distConsistent(), true);
+  assert.equal(await kernelConsistent(), true);
 });
 
-test("scenario 3: concurrent bun run typecheck + importer never observe partial dist", async () => {
+test("scenario 3: concurrent bun run typecheck + importer never observe a partial artifact", async () => {
   const [tc, importer] = await Promise.all([bunRun("run", "typecheck"), run("bun", IMPORTER)]);
   assert.equal(tc.code, 0, `concurrent typecheck failed:\n${tc.out}`);
-  assert.equal(importer.code, 0, `importer observed a bad dist:\n${importer.out}`);
+  assert.equal(importer.code, 0, `importer observed a bad artifact:\n${importer.out}`);
   assert.ok(importerRan(importer), `importer must actually run tests:\n${importer.out}`);
-  assert.equal(await distConsistent(), true);
+  assert.equal(await kernelConsistent(), true);
 });
 
-test("scenario 4: concurrent coverage leaf + build never observe partial dist", async () => {
+test("scenario 4: concurrent coverage leaf + build never observe a partial artifact", async () => {
   // The real leaf: `bun test --coverage --timeout=0` from the repo root, scoped by the root
   // bunfig (Bun 1.4.2 has no --coverage-exclude flag; the instrument that ships is Bun's).
   // No gate thresholds here: the point is the emit/consume race, not the core gate (which is
   // enforced by the real test:coverage leaf over the full suite).
-  const coverage = ["test", "--coverage", "--timeout=0", join("dist", "__tests__", "index.test.js")];
+  const coverage = ["test", "--coverage", "--timeout=0", join("src", "__tests__", "index.test.ts")];
   const [cov, build] = await Promise.all([run("bun", coverage), bunRun("run", "build:core")]);
   assert.equal(cov.code, 0, `coverage leaf failed:\n${cov.out}`);
   assert.ok(importerRan(cov), `coverage leaf must actually run tests:\n${cov.out}`);
   assert.equal(build.code, 0, `concurrent build failed:\n${build.out}`);
-  assert.equal(await distConsistent(), true);
+  assert.equal(await kernelConsistent(), true);
 });

@@ -12,6 +12,13 @@
   a run with `credential_unavailable`. The raw factory, the wire helpers, the cache/thinking helpers, and the
   catalog stay named exports.
 
+### Changed
+
+- Rebuilt on `systemOneProviderPackage` from `@arnilo/prism/provider-kit` sharing single-shape decision-provider implementation with Laya.
+- Added `TYPESAFE_DEFAULT_API_KEY_REF` to named exports.
+- Plaintext remote endpoint warning now warns through System One in `provider-kit`, printing only the origin without userinfo.
+- Implemented `systemOneConformance` coverage with offline wire recordings and symmetrical source equivalence check (`jev_and_laya_sources_match_with_vendor_masked`).
+
 ## [0.1.0] - 2026-08-09
 
 - Release-graph anchor: every first-party manifest carries `0.1.0` and `0.0.28` changelog sections.

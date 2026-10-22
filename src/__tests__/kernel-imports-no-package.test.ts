@@ -24,4 +24,20 @@ describe("kernel imports no package", () => {
     }
     assert.deepEqual(offenders, [], `kernel source must not import @arnilo/prism-*:\n${offenders.join("\n")}`);
   });
+
+  // Plan 159 Task 8: identity left the kernel. `Principal` is the only identity type it names.
+  it("kernel_has_no_identity_module", () => {
+    const hits: string[] = [];
+    const banned = /\b(AgentIdentity|IdentityVerifier|IdentityError|assertIdentityActive)\b/;
+    for (const file of tsFiles("src")) {
+      if (file.includes("__tests__")) continue;
+      const text = readFileSync(file, "utf8");
+      if (banned.test(text)) hits.push(file);
+    }
+    assert.deepEqual(hits, [], `kernel source still names a moved identity symbol:\n${hits.join("\n")}`);
+    assert.equal(
+      tsFiles("src").some((file) => file.endsWith("src/identity.ts")),
+      false,
+    );
+  });
 });

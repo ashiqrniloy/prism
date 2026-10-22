@@ -2,14 +2,14 @@ import { afterAll as after, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { assertPersistenceSearchQueryParity, storeConformance } from "@arnilo/prism/testing";
-import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
+import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import {
   assertPersistenceBranchQueryConforms,
   assertPersistenceQueryPaginationConforms,
   assertTenantScopedQueryIsolation,
   createPersistenceMigrationContract,
-} from "@arnilo/prism/testing/persistence-schema";
-import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
+  runFeedbackConformance,
+} from "@arnilo/prism-store-codecs";
 import { Pool } from "pg";
 import {
   buildMigration001Ddl,
@@ -299,6 +299,7 @@ describeIntegration("createPostgresPersistence integration", () => {
       "007_agent_event_retention_index",
       "008_session_version",
       "009_run_prompt_version",
+      "010_session_links",
     ]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
@@ -677,7 +678,8 @@ describeIntegration("createPostgresPersistence integration", () => {
     ]);
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
-    assert.equal(migrations.items.length, 9);
+    // Migration 010_session_links landed after this test was written; the count is the real set.
+    assert.equal(migrations.items.length, 10);
     await persistence.close();
   });
 

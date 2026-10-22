@@ -40,6 +40,7 @@ cannot come from a manifest.
 
 - **A decision model, not a chat model.** A request must carry `options.structuredOutput` with a JSON schema; tools are rejected up front and there is no streaming. One `POST /v1/systemone` round trip returns the rendered, schema-valid JSON as a single text delta.
 - **Raw answers stay raw.** Nothing is coerced: a probability is never rounded, a choice never flattened to a boolean, and a timeout is an error rather than a synthetic neutral answer.
+- **Plaintext remote warning.** A remote plaintext non-loopback `baseUrl` (e.g. `http://...`) emits a warning printing the origin only (no path or userinfo), alerting users while protecting credentials.
 - **The typed decision call lives in the kit.** `askSystemOneDecisions` (with its question/answer types, typed error family, and the schema compiler) is exported from `@arnilo/prism/provider-kit`, not from this package, because both System One vendors share the wire.
 - **Missing key.** `createAgent` still succeeds. Setup records
   `status.note("warn", "typesafe: no API key at <ref>")` and registers the provider anyway, so
@@ -52,7 +53,7 @@ cannot come from a manifest.
 
 ## Named exports
 
-`createTypeSafeProvider`, `TYPESAFE_DEFAULT_BASE_URL`, `TYPESAFE_API_KEY_ENV`, and the catalog (`typeSafeModels`, `defineTypeSafeModel`).
+`createTypeSafeProvider`, `TYPESAFE_DEFAULT_BASE_URL`, `TYPESAFE_API_KEY_ENV`, `TYPESAFE_DEFAULT_API_KEY_REF`, and the catalog (`typeSafeModels`, `defineTypeSafeModel`, `type TypeSafeModelConfig`).
 
 ## License
 

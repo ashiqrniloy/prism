@@ -2,23 +2,26 @@
 /**
  * Tool-search scenario (plan 041 Task 2): token reduction of provider-request tool bytes.
  *
- * Builds a fixture registry of 128 tools (mixed realistic + distractor descriptions) and
- * assembles the provider input once per mode through `assembleProviderInput`:
- *   - toolsDisclosure "all" (default; today's behavior)
- *   - toolsDisclosure "search" (topK 16, activation via the generated `search_tools` tool)
+ * Builds a fixture registry of 128 tools (mixed realistic + distractor descriptions) and discloses
+ * once per mode through the package's own selector (`selectDisclosedTools`, the call the
+ * `context.build` handler makes):
+ *   - disclosure "all": the full registry, today's behavior
+ *   - disclosure "search": topK 16 plus the generated `search_tools` tool
  * and asserts provider-request tool-definition bytes shrink >= 60% in search mode.
  * Network-free; exits 1 on envelope breach.
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
+// Plan 158 Task 8: tool disclosure is package-owned, so the scenario measures the package's own
+// selector and index rather than a kernel assembly pass.
 import {
-  assembleProviderInput,
   createActiveToolSet,
   createSearchToolsTool,
   createToolSearchIndex,
   createToolSearchState,
   scoreTools,
-} from "../../dist/index.js";
+  selectDisclosedTools,
+} from "../../packages/context/engineering/src/exports.js";
 
 const TOOL_COUNT = 128;
 const TOP_K = 16;
@@ -63,37 +66,13 @@ async function runScenario() {
   const searchState = createToolSearchState({ tools, activated, search: { topK: TOP_K } });
   const searchTools = [createSearchToolsTool(searchState)];
 
-  const base = {
-    model: { provider: "mock", model: "demo" },
-    input: void 0,
-    history: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "Audit the latest invoices, then page the on-call engineer if totals drift, and file a ticket for the discrepancy.",
-          },
-        ],
-      },
-      { role: "assistant", content: [{ type: "text", text: "Understood; reviewing invoices and on-call state." }] },
-    ],
-    metadata: {},
-  };
-
-  const allRequest = await assembleProviderInput({ ...base, input: "Audit the latest invoices and page on-call if totals drift.", tools });
+  // The turn text the disclosure query scores against: the same sentence the request carried.
+  const QUERY = "Audit the latest invoices and page on-call if totals drift.";
   const searchToolList = [...tools, ...searchTools];
-  const searchRequest = await assembleProviderInput({
-    ...base,
-    input: "Audit the latest invoices and page on-call if totals drift.",
-    tools: searchToolList,
-    toolsDisclosure: "search",
-    toolsSearch: { topK: TOP_K },
-    activatedTools: activated,
-  });
+  const disclosed = selectDisclosedTools({ tools: searchToolList, input: QUERY, search: { topK: TOP_K }, activated });
 
-  const allBytes = Buffer.byteLength(JSON.stringify(allRequest.tools ?? []), "utf8");
-  const searchBytes = Buffer.byteLength(JSON.stringify(searchRequest.tools ?? []), "utf8");
+  const allBytes = Buffer.byteLength(JSON.stringify(tools), "utf8");
+  const searchBytes = Buffer.byteLength(JSON.stringify(disclosed), "utf8");
   const reduction = 1 - searchBytes / allBytes;
 
   // Search-path latency envelope: index + score over the full fixture must stay well under a turn.
@@ -129,11 +108,11 @@ async function runScenario() {
       { name: "tool_request_bytes_search", value: searchBytes, unit: "bytes" },
       { name: "tool_request_reduction", value: Number(reduction.toFixed(4)), unit: "ratio" },
       { name: "index_score_ms", value: Number(indexScoreMs.toFixed(3)), unit: "ms" },
-      { name: "disclosed_tool_count_search", value: (searchRequest.tools ?? []).length, unit: "tools" },
+      { name: "disclosed_tool_count_search", value: disclosed.length, unit: "tools" },
     ],
     checks: [
       // disclosed: top-k + search_tools + any prior activations from the execute probe.
-      { name: "disclosed_le_top_k", pass: (searchRequest.tools ?? []).length <= TOP_K + TOP_K + 1 },
+      { name: "disclosed_le_top_k", pass: disclosed.length <= TOP_K + TOP_K + 1 },
       { name: "reduction_ge_min", pass: reduction >= MIN_REDUCTION },
       { name: "activation_bounded", pass: activatedViaTool.count <= TOP_K },
     ],

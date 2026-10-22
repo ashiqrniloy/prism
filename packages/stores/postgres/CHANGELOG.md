@@ -17,6 +17,13 @@
   `deleteSession` (one transaction, fail-closed scope check, no row left behind), and
   `mergeSessionMetadata` (the session-record merge the kernel's title path writes through).
 
+### Changed
+
+- `setup` registers `prism.services.provide("checkpoints", …)` and `prism.services.provide("leases", …)`
+  over the same pool the store slot uses (plan 168 Task 4), so a listed workflows package gets durable
+  checkpoints and leases with no second connection. The store contracts (`CheckpointStore`,
+  `LeaseStore`) now come from `@arnilo/prism-workflows` as `import type` only.
+
 ## [0.1.0] - 2026-08-09
 
 - Initial `@arnilo/prism-store-postgres` package skeleton.

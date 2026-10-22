@@ -2,18 +2,20 @@
 // packs, exports, and installs (consolidated from src/__tests__/packaging /
 // install-smoke, data-driven from computePackageTruth()). Zero hard-coded
 // package names or counts: the package set derives from the workspace globs.
-// Offline: npm pack --dry-run and the Bun consumer install never fetch first-party content.
-// Plan 125 Task 2: the consumer simulation is Bun — tarballs still come from `npm pack` (the
-// release-host registry toolchain), but they are installed and executed on Bun only.
+// Offline: bun pm pack --dry-run and the Bun consumer install never fetch first-party content.
+// Plan 164 Task 8.4: tarballs come from `bun pm pack`; they are installed and executed on Bun only.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { test } from "bun:test";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { installedVersion } from "./fixtures/packed-consumer.mjs";
-import { computePackageTruth, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { computePackageTruth, publishableWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { loadRelease, packRelease } from "./release.mjs";
+import { packedFilePaths } from "./release-gates.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DENIED = [
@@ -31,7 +33,7 @@ const DENIED = [
 
 const truth = computePackageTruth(ROOT);
 const rootManifest = readManifest(join(ROOT, "package.json"));
-const workspaceDirs = expandWorkspaceDirs(ROOT, rootManifest.workspaces).sort();
+const workspaceDirs = publishableWorkspaceDirs(ROOT, rootManifest.workspaces).sort();
 const nameToDir = new Map(workspaceDirs.map((d) => [readManifest(join(d, "package.json")).name, d]));
 const packages = [
   { dir: ROOT, name: rootManifest.name, isCore: true },
@@ -42,13 +44,8 @@ const packCache = new Map();
 function packList(dir, name) {
   const cached = packCache.get(dir);
   if (cached) return cached;
-  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const result = spawnSync("npm", ["pack", "--dry-run", "--json"], { cwd: dir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-  assert.equal(result.status, 0, `npm pack --dry-run failed for ${name}: ${result.stderr}`);
-  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
-  const parsed = JSON.parse(result.stdout);
-  const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
-  const files = (entries[0]?.files ?? []).map((f) => f.path);
+  const files = packedFilePaths(ROOT, dir === ROOT ? "." : relative(ROOT, dir));
+  assert.ok(files.length > 0, `bun pm pack produced no files for ${name}`);
   packCache.set(dir, files);
   return files;
 }
@@ -98,7 +95,13 @@ for (const pkg of packages) {
   if (pkg.isCore) {
     test(`${pkg.name} (core): ships docs hub, CLI bin, and package scaffold`, () => {
       const files = packList(pkg.dir, pkg.name);
-      for (const required of ["docs/index.md", "dist/cli.js", "templates/package/package.json.tmpl", "templates/package/src/index.ts.tmpl", "templates/README.md"]) {
+      for (const required of [
+        "docs/index.md",
+        "src/cli.ts",
+        "templates/package/package.json.tmpl",
+        "templates/package/src/index.ts.tmpl",
+        "templates/README.md",
+      ]) {
         assert.ok(files.includes(required), `${pkg.name} missing ${required} in pack`);
       }
     });
@@ -130,37 +133,53 @@ test("dist-stage hand lists (packaging/install-smoke) still name every truth pac
  */
 const FAMILY_CALLS = [
   { name: "@arnilo/prism", spec: "@arnilo/prism", call: "(m) => m.isJsonObject({})", expect: true },
-  { name: "@arnilo/prism-core", spec: "@arnilo/prism-core/runtime/server", call: '(m) => m.isAdmitOperation("agent.run")', expect: true },
-  { name: "@arnilo/prism-memory", spec: "@arnilo/prism-memory", call: "(m) => m.resolveMemoryLimits().topK", expect: 5 },
+  { name: "@arnilo/prism-memory-core", spec: "@arnilo/prism-memory-core", call: "(m) => m.resolveMemoryLimits().topK", expect: 5 },
   {
-    name: "@arnilo/prism-provider-openai",
-    spec: "@arnilo/prism-provider-openai",
+    name: "@arnilo/prism-provider-hyper",
+    spec: "@arnilo/prism-provider-hyper",
     call: "(m) => m.default().definition.name",
-    expect: "@arnilo/prism-provider-openai",
+    expect: "@arnilo/prism-provider-hyper",
   },
   {
-    name: "@arnilo/prism-coding-tools",
-    spec: "@arnilo/prism-coding-tools/agent",
+    name: "@arnilo/prism-tools-coding",
+    spec: "@arnilo/prism-tools-coding",
     call: "(m) => m.fingerprintJson({ a: 1 })",
     expect: "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
   },
-  { name: "@arnilo/prism-work", spec: "@arnilo/prism-work/documents", call: '(m) => m.escapeHtml("<b>&")', expect: "&lt;b&gt;&amp;" },
   {
-    name: "@arnilo/prism-web-tools",
-    spec: "@arnilo/prism-web-tools",
+    name: "@arnilo/prism-tools-work",
+    spec: "@arnilo/prism-tools-work/documents",
+    call: '(m) => m.escapeHtml("<b>&")',
+    expect: "&lt;b&gt;&amp;",
+  },
+  {
+    name: "@arnilo/prism-tools-browser",
+    spec: "@arnilo/prism-tools-browser",
+    call: "(m) => m.resolveBrowserLimits().maxPages",
+    expect: 4,
+  },
+  {
+    name: "@arnilo/prism-tools-web",
+    spec: "@arnilo/prism-tools-web",
     call: '(m) => m.canonicalUrl("https://EXAMPLE.com/a?b=1#f")',
     expect: "https://example.com/a?b=1",
+  },
+  {
+    name: "@arnilo/prism-tools-openapi",
+    spec: "@arnilo/prism-tools-openapi",
+    call: "(m) => m.DEFAULT_OPENAPI_LIMITS.maxDocumentBytes",
+    expect: 2097152,
+  },
+  {
+    name: "@arnilo/prism-tools-computer-use",
+    spec: "@arnilo/prism-tools-computer-use",
+    call: '(m) => m.classifyComputerUseLinuxTool("screenshot")',
+    expect: "read",
   },
   { name: "@arnilo/prism-channels", spec: "@arnilo/prism-channels", call: "(m) => m.resolveChannelLimits().maxInputBytes", expect: 32768 },
   { name: "@arnilo/prism-mcp", spec: "@arnilo/prism-mcp", call: '(m) => m.defaultMcpNamePrefix("srv")', expect: "mcp:srv:" },
   { name: "@arnilo/prism-hooks-json", spec: "@arnilo/prism-hooks-json", call: '(m) => m.estimateContextTokens("hello world")', expect: 3 },
   { name: "@arnilo/prism-ag-ui", spec: "@arnilo/prism-ag-ui", call: "(m) => m.resolveAgUiLimits().maxEventBytes", expect: 65536 },
-  {
-    name: "@arnilo/prism-acp-agent",
-    spec: "@arnilo/prism-acp-agent",
-    call: `(m) => m.parseConfig('{"userId":"probe","cwd":"/tmp"}', "/tmp").userId`,
-    expect: "probe",
-  },
 ];
 
 /**
@@ -210,22 +229,9 @@ const CALLS = ${JSON.stringify(calls)};
 })();
 `;
 
-/** Pack every publishable tarball with `npm pack` (the release-host registry toolchain). */
+/** Pack every publishable tarball with `bun pm pack` (plan 164 Task 8.4). */
 function packTarballs(staging) {
-  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const workspaces = spawnSync("npm", ["pack", "--workspaces", "--pack-destination", staging, "--json"], {
-    cwd: ROOT,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-  });
-  assert.equal(workspaces.status, 0, `npm pack --workspaces failed: ${workspaces.stderr}`);
-  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const root = spawnSync("npm", ["pack", "--pack-destination", staging, "--json"], {
-    cwd: ROOT,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "ignore"],
-  });
-  assert.equal(root.status, 0, `npm pack failed: ${root.stderr}`);
+  packRelease(loadRelease(ROOT), staging);
   return readdirSync(staging)
     .filter((file) => file.endsWith(".tgz"))
     .map((file) => join(staging, file));
@@ -252,7 +258,7 @@ test("Bun consumer: every packed tarball installs, imports, and answers one call
   try {
     const tarballs = packTarballs(staging);
     assert.equal(tarballs.length, packages.length, `expected ${packages.length} tarballs, got ${tarballs.length}`);
-    // Internal ranges (e.g. `@arnilo/prism-core@^0.12.0`) are unpublished at gate time,
+    // Internal ranges are unpublished at gate time,
     // so `overrides` pin every packed name to its tarball and keep resolution local.
     const overrides = Object.fromEntries(
       packages.map((pkg) => {

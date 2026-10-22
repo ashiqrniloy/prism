@@ -1,4 +1,3 @@
-import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import {
   assertCheckpointInput,
   decodeCheckpointCursor,
@@ -9,6 +8,7 @@ import {
   staleCheckpointFence,
   throwIfAborted,
 } from "@arnilo/prism-store-codecs";
+import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism-workflows";
 import type { Pool } from "pg";
 import { qualifyTable } from "./identifiers.js";
 
@@ -121,7 +121,10 @@ RETURNING *`,
         const low = `$${params.length}`;
         params.push(`${query.keyPrefix}\uffff`);
         const high = `$${params.length}`;
-        clauses.push(`key >= ${low} AND key < ${high}`);
+        // `COLLATE "C"` is load-bearing: this range's high sentinel only sorts last by code point,
+        // and a locale collation (en_US.utf8, the default in the CI image) treats U+FFFF as
+        // ignorable, so `key < prefix + U+FFFF` is false and the page comes back empty.
+        clauses.push(`key COLLATE "C" >= ${low} COLLATE "C" AND key COLLATE "C" < ${high} COLLATE "C"`);
       }
       if (query.tenantId !== undefined) add("tenant_id = ?", query.tenantId);
       if (query.accountId !== undefined) add("account_id = ?", query.accountId);

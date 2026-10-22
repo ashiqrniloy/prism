@@ -1,24 +1,28 @@
 import {
   type ModelProvider,
   assembleProviderInput,
-  cacheHitRate,
-  cacheSavings,
-  cacheUsageReport,
   type ModelConfig,
   type ProviderRequest,
   type Usage,
 } from "@arnilo/prism";
-import { createNeuralWattProvider, defineNeuralWattModel } from "@arnilo/prism-provider-neuralwatt";
-import { createOpenRouterProvider, defineOpenRouterModel } from "@arnilo/prism-provider-openrouter";
+import {
+  cacheHitRate,
+  cacheSavings,
+  cacheUsageReport,
+} from "@arnilo/prism/provider-kit";
+import { createHyperProvider, defineHyperModel } from "@arnilo/prism-provider-hyper";
+import { createOpenCodeGoProvider, defineOpenCodeGoModel } from "@arnilo/prism-provider-opencode-go";
 
-const explicitCacheModel = defineOpenRouterModel({
-  model: "anthropic/claude-sonnet-4",
+const explicitCacheModel = defineHyperModel({
+  model: "claude-sonnet-4",
+  compat: { route: "openai" },
   cache: { kind: "cache_control", maxBreakpoints: 4, longRetention: true },
   cost: { input: 3, output: 15, cacheRead: 0.3, currency: "USD", unit: "1m_tokens" },
 });
 
-const implicitCacheModel = defineNeuralWattModel({
-  model: "glm-5.2",
+const implicitCacheModel = defineOpenCodeGoModel({
+  model: "gpt-5.1-go",
+  compat: { route: "openai" },
   cache: { kind: "implicit" },
   cost: { input: 1, output: 3, cacheRead: 0.25, currency: "USD", unit: "1m_tokens" },
 });
@@ -94,12 +98,12 @@ function ok(body: ReadableStream<Uint8Array>) {
 }
 
 export async function demo() {
-  const openrouterProvider = createOpenRouterProvider({
-    apiKey: () => "fake-openrouter-key",
+  const hyperProvider = createHyperProvider({
+    apiKey: () => "fake-hyper-key",
     fetch: () =>
       ok(
         sse([
-          { choices: [{ delta: { content: "OpenRouter" } }] },
+          { choices: [{ delta: { content: "Hyper" } }] },
           { choices: [{ delta: {}, finish_reason: "stop" }] },
           {
             usage: {
@@ -112,26 +116,26 @@ export async function demo() {
         ]),
       ),
   });
-  const neuralwattProvider = createNeuralWattProvider({
-    apiKey: () => "fake-neuralwatt-key",
+  const opencodeGoProvider = createOpenCodeGoProvider({
+    apiKey: () => "fake-opencode-go-key",
     fetch: () =>
       ok(
         sse([
-          { choices: [{ delta: { content: "NeuralWatt" } }] },
+          { choices: [{ delta: { content: "OpenCodeGo" } }] },
           { choices: [{ delta: {}, finish_reason: "stop" }] },
           { usage: { prompt_tokens: 2000, completion_tokens: 20, total_tokens: 2020, prompt_tokens_details: { cached_tokens: 1600 } } },
         ]),
       ),
   });
 
-  const openrouter = await assemble(explicitCacheModel);
-  const neuralwatt = await assemble(implicitCacheModel);
+  const hyper = await assemble(explicitCacheModel);
+  const opencodeGo = await assemble(implicitCacheModel);
 
   return {
-    openrouter: summarize(explicitCacheModel, await run(openrouterProvider, openrouter)),
-    neuralwatt: {
-      ...summarize(implicitCacheModel, await run(neuralwattProvider, neuralwatt)),
-      note: "NeuralWatt receives stable-prefix input; its provider sends no explicit cache payload.",
+    hyper: summarize(explicitCacheModel, await run(hyperProvider, hyper)),
+    opencodeGo: {
+      ...summarize(implicitCacheModel, await run(opencodeGoProvider, opencodeGo)),
+      note: "OpenCode Go receives stable-prefix input; its provider sends no explicit cache payload.",
     },
   };
 }

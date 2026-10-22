@@ -1,8 +1,10 @@
-import type { AgentEvent, JsonObject } from "../contracts.js";
+import type { AgentEvent, JsonObject, JsonValue } from "../contracts.js";
 import type { SessionContext } from "../session-context.js";
 import { errorToErrorInfo, redactSecrets } from "../redaction.js";
 import { type DecideCombination, HOOK_CATALOG, HOOK_COMBINATION } from "./catalog.js";
+import { packageEventFor, RAW_EMIT } from "./emit.js";
 import { HookError, HookRejectedError, UnknownHookError } from "./errors.js";
+import { jsonEqual } from "./json.js";
 import type {
   AroundHook,
   AroundHookName,
@@ -48,7 +50,7 @@ function isRejection(value: unknown): value is HookRejection {
   return isRecord(value) && typeof value.__prismHookRejection === "string";
 }
 
-function combine(name: DecideHookName, values: readonly unknown[]): unknown {
+function combine(name: DecideHookName, values: readonly unknown[], payload?: unknown): unknown {
   const rule: DecideCombination = HOOK_COMBINATION[name];
   switch (rule) {
     case "any-stop":
@@ -65,16 +67,29 @@ function combine(name: DecideHookName, values: readonly unknown[]): unknown {
     case "tool-call": {
       let ask: unknown;
       let respond: unknown;
-      const rewrites: JsonObject[] = [];
+      let rewrite: Record<string, JsonValue> | undefined;
       for (const value of values) {
         if (!isRecord(value)) continue;
         if (typeof value.deny === "string") return { deny: value.deny };
         if (typeof value.ask === "string" && ask === undefined) ask = value;
-        if (isRecord(value.rewrite)) rewrites.push(value.rewrite as JsonObject);
+        if (isRecord(value.rewrite)) {
+          rewrite ??= {};
+          for (const [key, next] of Object.entries(value.rewrite)) {
+            // Two rewrites that set one key to different values are unauditable by load order: fail closed.
+            if (key in rewrite && !jsonEqual(rewrite[key] as JsonValue, next as JsonValue)) {
+              return { deny: `rewrite_conflict: ${key}` };
+            }
+            rewrite[key] = next as JsonValue;
+          }
+        }
         if (isRecord(value.respond) && respond === undefined) respond = value;
       }
+      // A rewrite equal to this round's input changes nothing: drop it, so the round's `ask`/`respond`
+      // is not hidden by the rewriter's own no-op on the already-rewritten arguments (plan 177 Task 2).
+      const input = isRecord(payload) && isRecord(payload.args) ? (payload.args as JsonObject) : undefined;
+      if (rewrite !== undefined && input !== undefined && jsonEqual(rewrite, input)) rewrite = undefined;
+      if (rewrite !== undefined) return { rewrite };
       if (ask !== undefined) return ask;
-      if (rewrites.length > 0) return { rewrite: Object.assign({}, ...rewrites) };
       if (respond !== undefined) return respond;
       return undefined;
     }
@@ -113,7 +128,8 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
     return {
       sessionId: typeof source.sessionId === "string" ? source.sessionId : "",
       runId: typeof source.runId === "string" ? source.runId : "",
-      emit: (event: AgentEvent) => options.onEvent?.(event),
+      // Replaced per registration by `viewOf`, which knows the owner; a bare context emits nothing.
+      emit: () => undefined,
       reject: (reason: string): HookRejection => ({ __prismHookRejection: redactSecrets(reason, secrets) }),
     };
   };
@@ -185,16 +201,21 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
     return removed;
   };
 
-  /** Per-dispatch, per-owner context views. Only a bound bus (see {@link HookBus.bound}) builds any. */
-  type Views = Map<string, HookContext> | undefined;
+  /** Per-dispatch, per-owner context views. */
+  type Views = Map<string, HookContext>;
 
   const dispatchers = (sessionFor: ((owner: string) => SessionContext) | undefined) => {
-    const viewsFor = (): Views => (sessionFor ? new Map() : undefined);
+    const viewsFor = (): Views => new Map();
+    /** Each registration gets a context whose `emit` is a `package.event` owned by that registration. */
     const viewOf = (views: Views, base: HookContext, owner: string): HookContext => {
-      if (!views || !sessionFor) return base;
       let view = views.get(owner);
       if (!view) {
-        view = { ...base, session: sessionFor(owner) };
+        view = {
+          ...base,
+          emit: (name, data) => options.onEvent?.(packageEventFor(owner, base.sessionId, base.runId, name, data)),
+          ...(sessionFor ? { session: sessionFor(owner) } : {}),
+        };
+        Object.defineProperty(view, RAW_EMIT, { value: (event: AgentEvent) => options.onEvent?.(event) });
         views.set(owner, view);
       }
       return view;
@@ -264,7 +285,7 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
           throw new HookError(messageOf(error), { owner: registration.owner, hook: name });
         }
       }
-      return combine(name, values) as HookDecision<N> | undefined;
+      return combine(name, values, payload) as HookDecision<N> | undefined;
     };
 
     const around = async <N extends AroundHookName>(

@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-store-postgres",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "The PostgreSQL session store (leases, lifecycle, event source, and schema migrations included) as the Prism store slot, over `pg`.",
   "type": "module",
   "exports": {
@@ -17,18 +17,17 @@
   "scripts": {
     "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
     "test:postgres": "bun ../../../scripts/require-postgres-url.mjs && bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "postinstall": "rm -rf node_modules/@arnilo/prism && mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.12.1"
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
   },
   "dependencies": {
-    "@arnilo/prism-store-codecs": "^0.12.1",
+    "@arnilo/prism-store-codecs": "^0.13.0",
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@arnilo/prism": "file:../../..",
+    "@arnilo/prism-workflows": "file:../../integrations/workflows",
     "@types/bun": "1.4.2",
     "@types/node": "^22.20.0",
     "@types/pg": "^8.23.1",

@@ -1,8 +1,8 @@
 # Prism Roadmap — SDK kernel and native packages
 
-Updated: **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
+Updated: **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
 
-Shipped baseline: `@arnilo/prism` **0.12.1** and the 0.12.1 family packages. `@arnilo/prism-agent-sdk` **0.1.0** is published. Its unreleased in-tree Phase 1 work (plan 142) is covered under [In-flight work](#in-flight-work). `@arnilo/prism-code` **0.4.1** is the terminal lab.
+Shipped baseline: `@arnilo/prism` **0.12.1** and the 0.12.1 family packages. `@arnilo/prism-agent-sdk` **0.1.0** is published. Its unreleased in-tree Phase 1 work (plan 142) is covered under [In-flight work](#in-flight-work). `@arnilo/prism-code` **0.4.1** is the terminal lab; it is deleted, and Prism Agent, an unpublished reference host, takes over its proving role (Phase 12).
 
 Target: `@arnilo/prism` **0.13.0**, an SDK kernel that everything else extends through packages.
 
@@ -41,15 +41,15 @@ A package is a Bun-native TypeScript module. It receives the SDK's API when it l
 - running background work
 - calling other models
 - taking over the whole agent loop
-- running a custom agent on a vendor coding agent (Claude Code, Codex, Antigravity CLI), driven as the unmodified vendor binary under the user's own sign-in, as the agent's loop
+- running a custom agent on a vendor coding agent (for example Claude Code, Codex, or the Antigravity CLI) as the agent's loop. The unmodified vendor binary runs under the user's own sign-in, driven by Prism's generic process driver through an adapter the host writes or installs
 
 A package that is installed and listed is active. The host does not wire it up.
 
 A **manifest** that Prism maintains records which packages are installed, with their versions, integrity hashes, config, enabled state, and slot ownership. Hosts can load packages from the manifest or pass them in code.
 
-The **host** is the program embedding the SDK: Prism Code, a server, a bot. The host chooses packages, overrides their config, can disable any single contribution, assigns contested slots, and answers requests that need a person through one host port.
+The **host** is the program embedding the SDK: an orchestrator, a product, a server, a bot. Prism is always embedded by a host; it ships no agent product of its own (§2.13). The host chooses packages, overrides their config, can disable any single contribution, assigns contested slots, and answers requests that need a person through one host port.
 
-A host can also **orchestrate several agents as one workflow**: its own Prism agents and custom agents that run on vendor coding agents (Claude Code, Codex, Antigravity CLI) under the user's own subscription where the vendor's terms allow it, in one graph with deterministic gates. The host defines those agents' system prompts, tools, skills, and sub-agents, lends them its own Prism tools under its own approval policy, captures everything they do (messages, thinking, skill activation, tool calls, file changes) as attributed events, and keeps every agent's sessions in one Prism store for search. Prism ships the primitives for this; the host ships the product. §2.12 is the design, and Phases 13–16 deliver it.
+A host can also **orchestrate several agents as one workflow**: its own Prism agents and custom agents that run on vendor coding agents (Claude Code, Codex, Antigravity CLI) under the user's own subscription where the vendor's terms allow it, in one graph with deterministic gates. The host defines those agents' system prompts, tools, skills, and sub-agents, lends them its own Prism tools under its own approval policy, captures everything they do (messages, thinking, skill activation, tool calls, file changes) as attributed events, and keeps every agent's sessions in one Prism store for search. Prism ships the primitives and a generic driver for this. The host writes or installs an adapter for each vendor agent it supports, and ships the product. §2.12 is the design, and Phases 13–16 deliver it.
 
 ### 1.2 Why this and not the previous direction
 
@@ -86,7 +86,7 @@ The primitives largely exist. This roadmap unifies them into one hook model and 
 ### 1.3 Architecture at a glance
 
 ```
-┌──────────────────────────── Host (Prism Code, server, bot, …) ─────────────────────────────┐
+┌──────────────────────────── Host (orchestrator, server, bot, …) ───────────────────────────┐
 │ chooses packages · overrides config · disables contributions · assigns slots · answers UI  │
 └───────────────┬────────────────────────────────────────────────────────────────▲───────────┘
                 │ createAgent({ model, packages, host, … })                      │ host.ui.request(…)
@@ -100,14 +100,16 @@ The primitives largely exist. This roadmap unifies them into one hook model and 
 └───────────────▲────────────────────────────────────────────────────────────────────────────┘
                 │ definePackage({ setup(prism) { prism.hooks / slots / tools / … } })
    ┌────────────┼──────────────┬───────────────┬───────────────┬──────────────┬─────────────┬─────────────┐
- provider-*   tools-*       memory-*        store-*         approval       mcp          driver-*      third-party
-                                                            governance     hooks-json   (loop slot:   packages
-                                                                           workflows    claude-code,
-                                                                                        codex,
-                                                                                        antigravity)
+ provider-*   tools-*       memory-*        store-*         approval       mcp          driver-       third-party
+                                                            governance     hooks-json   process       packages
+                                                                           workflows    (loop slot;
+                                                                                        host-written
+                                                                                        adapters)
 
- Surfaces (host libraries, not packages): acp · ag-ui · mcp-server · channels — take an Agent, serve it.
+ Surfaces (host libraries, not packages): acp · ag-ui · mcp-server · channels · remote · headless — take an Agent, serve it.
+ Reference host (§2.13): Prism Agent, unpublished — proves the SDK end to end. Prism ships no agent product.
  Driver kit (kernel subpath @arnilo/prism/driver-kit): the contract a driver package fills to run an external agent as a loop.
+ Vendor adapters (Claude Code, Codex, …) are host code on driver-process; Prism ships none.
 ```
 
 ### 1.4 Rules for every phase
@@ -116,7 +118,7 @@ The primitives largely exist. This roadmap unifies them into one hook model and 
 - **Installed = listed = active.** Nothing loads unless the host lists it, either in code or through a manifest the host chose to load. A loaded package needs no host wiring.
 - **Replacing the loop cannot bypass safety gates.** Tools execute only through `RunController.executeTools`, which always fires `tool.call`. Model calls go only through `RunController.turn`, which always fires `context.build`, `model.request`, and `model.call`.
 - **External activity is attributed, never impersonated.** What an external agent reports doing is recorded through `RunController.observe` with `origin.executedBy: "external"`. Only `RunController` primitives emit catalog events, so no loop or driver can claim that Prism executed or gated something it did not. Tools that Prism serves to an external agent still execute through `executeTools` and still fire `tool.call`.
-- **Subscription credentials never pass through Prism.** A person signs in to each vendor binary through the vendor's own flow. Prism drives only the unmodified binary, binds each subscription profile to one principal, paces it as individual use, and refuses any sign-in mode the vendor's terms do not permit for the declared deployment (§2.12.5).
+- **Subscription credentials never pass through Prism.** A person signs in to each vendor binary through the vendor's own flow. Prism drives only the unmodified binary, binds each subscription profile to one principal, paces it as individual use, and refuses any sign-in mode that the adapter's declared auth policy does not permit for the declared deployment (§2.12.5). The adapter's author owns the vendor's terms.
 - **A driver that cannot enforce a requested control fails closed.** If the host asks for a control (replacing the system prompt, a built-in tool allow-list, gating an effect before it runs, steering, resume) and the driver's capability descriptor does not offer it, `createAgent` fails and names the missing control.
 - **Fail closed.** Each of these is an error, never a warning:
   - an unknown hook name, slot, or config key
@@ -147,10 +149,10 @@ The primitives largely exist. This roadmap unifies them into one hook model and 
 | --- | --- | --- |
 | Agent / session | `createAgent`, `Agent`, `Session`, run/stream/steer/abort/resume, fork, messages, session index, model-less agents whose loop never calls a model (§2.12.9 K1), session links to a parent session and workflow run (K4) | Protocol surfaces |
 | Loop | `LoopStrategy` contract, `RunController` primitives (including the driver primitives `observe`, `ask`, `steers`; K2), a default tool loop | Workflows, generate-validate-revise, plan/execute/verify |
-| Vendor coding agents | `@arnilo/prism/driver-kit` subpath: `ExternalAgentSpec`, driver contract, capability descriptor, subscription profiles and sign-in handoff, the vendor-terms guard, configuration materializer, callback broker, tool bridge, normalization and protocol helpers, `driverConformance`; the `prism relay` bin (§2.12.10) | Concrete drivers (Claude Code, Codex, Antigravity CLI), installing vendor binaries, holding subscription credentials |
+| Vendor coding agents | `@arnilo/prism/driver-kit` subpath: `ExternalAgentSpec`, driver contract, capability descriptor, subscription profiles and sign-in handoff, the policy guard over driver-declared auth policy, configuration materializer, callback broker, tool bridge, normalization and protocol helpers, `driverConformance`; the `prism relay` bin (§2.12.10) | The generic process driver (a package, `prism-driver-process`); vendor adapters (host code); installing vendor binaries; holding subscription credentials |
 | Hooks | Typed hook bus: observe, transform, decide, around | Hook-file formats (hooks.json) |
 | Slots | `loop`, `compaction`, `store`, `credentials`, with defaults | Alternative implementations |
-| Models | `ModelProvider` contract, provider registry, `ModelRef`, streaming normalization, retry/backoff, usage and stop-reason normalization, built-in `openai-compatible` provider, `models.client` | Vendor adapters, OAuth flows, model catalogs |
+| Models | `ModelProvider` contract, provider registry, `ModelRef`, streaming normalization, retry/backoff, usage and stop-reason normalization, built-in `openai-compatible` provider, `models.client`, `models.embeddings` | Vendor adapters, OAuth flows, model catalogs |
 | Credentials | `CredentialResolver` contract, `env:` resolver default | Keyring, encrypted vaults |
 | Tools | `ToolDefinition`, registry, JSON-schema argument validation, dispatch, effect annotations | Any concrete tool, sandboxing, approval policy |
 | Skills | `Skill`, registry, `SKILL.md` directory discovery, progressive/eager disclosure, `load_skill` | Wiki or bundled skill sets |
@@ -326,7 +328,7 @@ export type UiRequest =
 - `package.status`
 - `package.event` (`{ package, name, data }`, for namespaced custom events such as `om.status`)
 
-Every event may carry an optional `origin` (K3, §2.12.9) that says which agent produced it and who executed it: `{ kind: "prism" | "external", agent, vendor?, profile?, agentId, delegationId?, parentSessionId?, parentToolCallId?, subagentId?, depth, executedBy? }`. `origin` replaces the 0.12-era `child: { childId, delegationId, depth }` field. It adds no event types: the catalog stays at its frozen count, so a generic UI renders a vendor agent's tool calls, thinking, and sub-agents with the same code it uses for Prism's. Activity with no catalog event (skill activation, file changes, plans, vendor sub-agents, compaction, notices such as rate limits) uses the driver kit's standard `agent.*` package events.
+Every event may carry an optional `origin` (K3, §2.12.9) that says which agent produced it and who executed it: `{ kind: "prism" | "external", agent, vendor?, profile?, agentId, remote?, delegationId?, parentSessionId?, parentToolCallId?, subagentId?, depth, executedBy? }`. `origin` replaces the 0.12-era `child: { childId, delegationId, depth }` field. It adds no event types: the catalog stays at its frozen count, so a generic UI renders a vendor agent's tool calls, thinking, and sub-agents with the same code it uses for Prism's. Activity with no catalog event (skill activation, file changes, plans, vendor sub-agents, compaction, notices such as rate limits) uses the driver kit's standard `agent.*` package events.
 
 ### 2.4 Hooks
 
@@ -431,7 +433,7 @@ Slots:
 | `store` | `SessionStore` | in-memory |
 | `credentials` | `CredentialResolver { resolve(ref, ctx) }` | `env:NAME` only |
 
-A loop that runs a custom agent on a vendor coding agent binary is still a `LoopStrategy`. It comes from a driver package built with `@arnilo/prism/driver-kit`, which adds a capability descriptor (`usesModel: false`, the controls it can enforce, what it can capture, which sign-in modes the vendor permits) that `createAgent` checks against the host's requirements (§2.12.10).
+A loop that runs a custom agent on a vendor coding agent binary is still a `LoopStrategy`. It comes from a driver package built with `@arnilo/prism/driver-kit`, usually `@arnilo/prism-driver-process` with a host-written adapter. The driver adds a capability descriptor (`usesModel: false`, the controls it can enforce, what it can capture, which sign-in modes its auth policy permits) that `createAgent` checks against the host's requirements (§2.12.10).
 
 A package claims a slot with `prism.slots.<slot>.provide(impl)`. `prism.slots.<slot>.default` exposes the kernel default so a package can delegate to it.
 
@@ -536,7 +538,7 @@ Prism maintains the manifest. Hosts choose whether to read it.
 {
   "version": 1,
   "packages": [
-    { "name": "@arnilo/prism-provider-anthropic", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["models"] },
+    { "name": "@arnilo/prism-provider-hyper", "version": "^0.13.0", "integrity": "sha512-…", "capabilities": ["models"] },
     { "name": "@arnilo/prism-tools-coding", "version": "^0.13.0", "integrity": "sha512-…",
       "config": { "root": "." } },
     { "name": "@arnilo/prism-approval", "version": "^0.13.0", "integrity": "sha512-…",
@@ -544,7 +546,7 @@ Prism maintains the manifest. Hosts choose whether to read it.
     { "name": "@arnilo/prism-tools-web", "version": "^0.13.0", "integrity": "sha512-…", "optional": true,
       "config": { "backend": "brave", "apiKey": "env:BRAVE_API_KEY" } },
     { "name": "@arnilo/prism-memory-observational", "version": "^0.13.0", "integrity": "sha512-…", "enabled": false,
-      "config": { "observer": { "model": "anthropic/claude-haiku-4-5" } } }
+      "config": { "observer": { "model": "hyper/claude-haiku-4-5" } } }
   ],
   "slots": { "store": "@arnilo/prism-store-jsonl" }
 }
@@ -573,13 +575,15 @@ ACP, AG-UI, MCP-server, and messaging channels drive an agent from outside. They
 - `createAgUiHandler(agent)`
 - `serveMcp(agent, …)`
 - `connectTelegram(agent, …)`
+- `serveAgent(agent, …)` and `connectAgent(endpoint)` (`@arnilo/prism-remote`, Phase 17): any `Agent` served out of process over a versioned JSON-RPC protocol that carries the full event catalog and `HostUi` requests, and a client that returns an `Agent` proxy whose events carry `origin.remote` (§2.13.4)
+- `routeHostUi(routes)` and `createScheduler(…)` (`@arnilo/prism-headless`, Phase 17): `HostUi` routing from an attached client to a channel to a policy default, with durable suspension when nobody answers, and scheduled or triggered runs
 
 Each surface implements `HostUi` for its protocol. For example, ACP maps `confirm` to a client permission request. Each surface uses only the public SDK API.
 
 `@arnilo/prism-mcp-server` serves in two ways:
 
 - `serveMcp(agent, …)` serves a whole agent: a prompt goes in and an answer comes out.
-- `serveTools(run, …)` serves an allow-list of the running agent's tools, and optionally a permission-prompt tool, over MCP to a vendor coding agent for the length of one run (§2.12.12). Claude Code and the Antigravity CLI take Prism tools this way; Codex can also take them as dynamic tools. Every call goes through `run.executeTools`, so approval, governance, redaction, and persistence still apply.
+- `serveTools(run, …)` serves an allow-list of the running agent's tools, and optionally a permission-prompt tool, over MCP to an external agent for the length of one run (§2.12.12). It returns a neutral endpoint, which the driver's adapter maps into its binary's MCP configuration. An adapter whose binary has its own client-tool channel can route calls through `bridgeTools` instead. Every call goes through `run.executeTools`, so approval, governance, redaction, and persistence still apply.
 
 ### 2.9 Native package catalog
 
@@ -587,7 +591,7 @@ Native packages are ordinary packages. None is installed by default.
 
 | Package | What it does | Mechanisms | Built from (0.12.1) |
 | --- | --- | --- | --- |
-| `@arnilo/prism-provider-{anthropic, openai, google, azure, bedrock, vertex, deepseek, xai, zai, alibaba, kimi, clinepass, commandcode, hyper, laya, neuralwatt, ollama, opencode-go, openrouter, typesafe, ai-sdk}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` | `providers.register`, credentials | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
+| `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages) | `providers.register`, credentials | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
 | `@arnilo/prism-credentials-keyring` | OS keyring and encrypted credential store | `credentials` slot | `prism-core/credentials`, `prism-code` `credentials.ts` |
 | `@arnilo/prism-tools-coding` | fs, edit, grep, shell, sandbox, execution policy, git, checks, todo with a continuation stop hook, `ask_user`; the `workspace` service (worktree create/dispose, bounded `diff`, merge with conflicts reported; §2.12.14) | tools, `tool.call` hard denies, `run.end`, `host.ui`, `services.provide("workspace")` | `prism-coding-tools/agent`, `/security`, `createCodingWorkspaceLifecycle` |
 | `@arnilo/prism-tools-web` | search and fetch: Brave, Exa, Firecrawl, Obscura | tools, `services.provide("web.fetch")` | `web-tools` |
@@ -595,15 +599,17 @@ Native packages are ordinary packages. None is installed by default.
 | `@arnilo/prism-tools-work` | Office documents, sheets, diagrams, document reader, M365/Google connectors | tools, skills | `prism-work` |
 | `@arnilo/prism-tools-computer-use` | Linux desktop control | tools, `tool.call` | `prism-coding-tools/computer-use-linux` |
 | `@arnilo/prism-tools-openapi` | Tools generated from OpenAPI specs | tools | `prism-coding-tools/openapi` |
+| `@arnilo/prism-tools-research` | Research skills (scoping, source triage, synthesis, reporting), a source ledger with citation ids, the `cite` tool, and a `run.end` check that every cited source was actually read (§2.13.5, Phase 12) | tools, skills, `run.end`, state | new |
 | `@arnilo/prism-approval` | Approval modes `deny` / `ask` / `edits` / `auto` over tool `effects` and roots; hard denies stay on | `tool.call` | `prism-code` `approval.ts`, the policy half of `PermissionPolicy` |
 | `@arnilo/prism-context-files` | AGENTS.md / SYSTEM.md layering with a trust policy | `context.build` | SDK instructions plane, `node/instruction-sources`, `node/system-prompts` |
 | `@arnilo/prism-context-engineering` | Context budget, tool-result fold, tool search, attention compiler | `context.build`, `compaction.when` | `src/context-budget.ts`, `tool-result-fold.ts`, `tool-search.ts`, `attention-compiler.ts` |
 | `@arnilo/prism-memory-compaction` | LLM summary compaction | `compaction` slot, `models` | `memory/compaction/llm` |
 | `@arnilo/prism-memory-observational` | Observer and reflector agents on a separate model, observation-based compaction, `recall` tool, per-session toggle, `/om` commands | `compaction` slot, `context.build`, `turn.completed` + background, state, tools, commands, events | `memory/compaction/observational-memory`, `prism-code` `observational-memory.ts` |
-| `@arnilo/prism-memory-rag` | Retrieval over indexed sources; owns the embeddings contract | tools, `context.build` | `memory/rag` |
+| `@arnilo/prism-memory-rag` | Retrieval over indexed sources; owns memory's `Embedder` (batching, chunking, caps) and provides it as the `embeddings` service | tools, `context.build` | `memory/rag` |
 | `@arnilo/prism-memory-wiki` | Wiki ingest and query with bundled skills | tools, skills, commands, consumes `web.fetch` | `memory/wiki`, `prism-code` `wiki.ts` |
+| `@arnilo/prism-memory-core` | Shared memory contracts, in-memory and Postgres vector stores, lineage, deletion propagation, source repointing, recall scoring, limits, and schema helpers used by the memory packages; a plain library with no slot and no capability (`pg` loads only under `./postgres`) | — | `memory` core |
 | `@arnilo/prism-memory-fabric` | Working, semantic, and scoped memory | tools, `context.build`, state | `memory/fabric`, `memory/scoped`, `memory` core |
-| `@arnilo/prism-store-{jsonl, sqlite, postgres}` | Durable session stores (Postgres loads `pg` only in its own package), with session links and list/search filters (K4). SQLite and Postgres also provide the `checkpoints` and `leases` services that workflows use (§2.12.13), and the `external_state` entries that vendor drivers archive and resume from (K5) | `store` slot, services | `node/session-store-jsonl`, `prism-core/sessions`, `src/checkpoints.ts`, `src/leases.ts` |
+| `@arnilo/prism-store-{jsonl, sqlite, postgres}` | Durable session stores (Postgres loads `pg` only in its own package), with session links and list/search filters (K4). SQLite and Postgres also provide the `checkpoints` and `leases` services that workflows use (§2.12.13), and the `external_state` entries that drivers archive and resume from (K5) | `store` slot, services | `node/session-store-jsonl`, `prism-core/sessions`, `src/checkpoints.ts`, `src/leases.ts` |
 | `@arnilo/prism-store-codecs` | Row, cursor, and ownership-scope codecs plus dialect-local query semantics shared by the SQLite and Postgres stores; a plain library with no slot and no capability | — | `prism-core/sessions/codecs`, `prism-core/sessions/query-semantics.ts` |
 | `@arnilo/prism-mcp` | MCP client: servers, trust over `host.ui`, header refs, status/reconnect as commands and events | tools, commands, events | `mcp` client, SDK MCP plane, `prism-code` `mcp.ts` |
 | `@arnilo/prism-hooks-json` | Claude/Codex-compatible `hooks.json` mapped onto hooks | hooks | `hooks` |
@@ -613,9 +619,7 @@ Native packages are ordinary packages. None is installed by default.
 | `@arnilo/prism-observability` | OpenTelemetry export; spans carry `origin` attributes, and workflow spans parent their child sessions' spans | observe | `prism-core/governance/observability` |
 | `@arnilo/prism-workflows` | Typed graph workflows (DAG and cyclic) that orchestrate any set of `Agent`s, including driver agents, from outside their sessions: `agentNode`, `gateNode`, `humanGate`, routed `fanOut`, checkpoints, suspend/resume, a merged event stream, `workflowCommand`. Also a `workflowLoop` adapter for single-agent workflows in the `loop` slot (§2.12.13) | library over `Agent`/`Session`, `loop` slot, commands, consumes `checkpoints`/`leases`/`workspace` | `prism-core/runtime/workflows` |
 | `@arnilo/prism-delegate` | Sub-agents as a tool, inheriting a chosen package set; events carry `origin.kind: "prism"` | tools, `createAgent` | `src/delegated-agent-step.ts` |
-| `@arnilo/prism-driver-claude-code` | Custom agents on the user's installed, unmodified `claude` binary (`-p`, `stream-json` in and out) under a subscription profile (`claude auth login` through a host terminal) or an API key: `--system-prompt[-file]`/append, `--tools`/`--disallowedTools`, Prism tools and the permission-prompt tool over MCP (`serveTools`, `--strict-mcp-config`), skills as a generated `--plugin-dir`, `--agents`, `PreToolUse`/`Stop` hooks through `prism relay` (fail closed), every stream message → `observe` (text and thinking deltas, `Skill` activations, nested sub-agents, compaction, retries and rate limits, usage), transcript archived for resume (§2.12.11) | `slot:loop` via driver-kit | new |
-| `@arnilo/prism-driver-codex` | Custom agents on the user's `codex` binary through Prism's own TypeScript client of `codex app-server`, under a ChatGPT-plan profile (local deployments; hosted needs Sign in with ChatGPT) or an API key: `baseInstructions`/`developerInstructions`, Prism tools as `dynamicTools` or MCP, skills through extra roots, `turn/steer`/`turn/interrupt`, approval requests → `ask`, every item and delta → `observe` (reasoning, commands, file diffs, plans) (§2.12.11) | `slot:loop` via driver-kit | new |
-| `@arnilo/prism-driver-antigravity` | Custom agents on the user's `agy` binary (`stream-json` in and out, generated `--agent`) with configuration written as a worktree `.agents/` overlay: system prompt, tools, rules, skills, MCP, hooks through `prism relay`; `step_update` → `observe` (text deltas, tool calls, `IsSkillFile` skill reads, sub-agent summaries, thinking token counts). Runs under the user's own Google sign-in (Google AI Pro/Ultra quotas) for `deployment: "local"`, or a Gemini API key; account sign-in on a hosted deployment fails closed (§2.12.5, §2.12.11) | `slot:loop` via driver-kit | new |
+| `@arnilo/prism-driver-process` | Generic driver for external coding agents run as a local process. A host-written adapter (`AgentAdapter`) describes one binary: flags and files from `ExternalAgentSpec`, the `jsonl-stream` or `json-rpc` transport, event decoding into `observe`, the relay hook codec and fail-closed response, server-to-client request handlers, resume, abort, signal classification, and auth policy. `extendAdapter` customizes an existing adapter. Ships no vendor adapter; offline reference adapters live in `examples/adapters/` (Phase 15) | `slot:loop` via driver-kit | new |
 
 Host libraries (not packages):
 
@@ -623,10 +627,12 @@ Host libraries (not packages):
 | --- | --- |
 | `@arnilo/prism-acp` | `ag-ui/acp`, `acp-agent`, `prism-code` `acp.ts` |
 | `@arnilo/prism-ag-ui` | `ag-ui` |
-| `@arnilo/prism-mcp-server` (`serveMcp`, and `serveTools` for vendor coding agents, §2.12.12) | `mcp` server (`createPrismMcpServer`, `createPrismMcpWebHandler`, `servePrismMcpStdio`) |
+| `@arnilo/prism-mcp-server` (`serveMcp`, and `serveTools` for external agents, §2.12.12) | `mcp` server (`createPrismMcpServer`, `createPrismMcpWebHandler`, `servePrismMcpStdio`) |
 | `@arnilo/prism-channels` (Telegram, Signal) | `prism-channels` |
 | `@arnilo/prism-evals` | `prism-core/governance/evals` |
 | `@arnilo/prism-devtools` | `prism-coding-tools/dev` |
+| `@arnilo/prism-remote` (`serveAgent`, `connectAgent`; Phase 17) | `src/rpc.ts` (`prism --mode rpc`) |
+| `@arnilo/prism-headless` (`routeHostUi`, `createScheduler`; Phase 17) | new |
 
 Retired:
 
@@ -639,7 +645,9 @@ Retired:
   - presets → removed
 - The 0.12 family packages (`prism-providers`, `prism-coding-tools`, `web-tools`, `memory`, `prism-core`, `prism-work`, `hooks`, `mcp`, `ag-ui`, `prism-channels`) are deprecated on npm once their native replacements ship.
 
-The phase that moves each remaining 0.12.1 runtime module out of the kernel decides where it goes or whether it is deleted. This covers `artifacts`, `devices`, `feedback`, `rpc`, `run-bundle`, `run-ledger`, `conversations`, `use-case-model`, `cache-telemetry`, and the speech, transcription, video, moderation, batch, and realtime contracts.
+The phase that moves each remaining 0.12.1 runtime module out of the kernel decides where it goes or whether it is deleted. This covers `artifacts`, `devices`, `feedback`, `run-bundle`, `run-ledger`, `conversations`, `use-case-model`, `cache-telemetry`, and the speech, transcription, video, moderation, batch, and realtime contracts.
+
+`rpc` (`src/rpc.ts`) already has a destination: `@arnilo/prism-remote` (Phase 17).
 
 Two modules already have a destination, set by Phase 16 (§2.12.13). `checkpoints` (`src/checkpoints.ts`) and `leases` (`src/leases.ts`) move into `@arnilo/prism-workflows` as the `checkpoints` and `leases` service contracts, with in-memory defaults. Their SQLite and Postgres implementations go into the store packages. The execution-timeline projector (plan 072) moves to `@arnilo/prism-observability` and groups steps by `origin`.
 
@@ -651,15 +659,15 @@ prism/
 ├─ packages/
 │  ├─ providers/<vendor>/            @arnilo/prism-provider-<vendor>
 │  ├─ credentials/keyring/           @arnilo/prism-credentials-keyring
-│  ├─ tools/{coding,web,browser,work,computer-use,openapi}/
+│  ├─ tools/{coding,web,browser,work,computer-use,openapi,research}/
 │  ├─ context/{files,engineering}/
-│  ├─ memory/{compaction,observational,rag,wiki,fabric}/
+│  ├─ memory/{core,compaction,observational,rag,wiki,fabric}/
 │  ├─ stores/{jsonl,sqlite,postgres}/
 │  ├─ policy/{approval,governance,guardrail-packs,model-router}/
 │  ├─ integrations/{mcp,hooks-json,observability,workflows,delegate}/
-│  ├─ drivers/{claude-code,codex,antigravity}/   @arnilo/prism-driver-<name>
-│  └─ hosts/{acp,ag-ui,mcp-server,channels,evals,devtools}/   host libraries
-├─ apps/prism-code/                  reference host (TUI), @arnilo/prism-code
+│  ├─ drivers/process/               @arnilo/prism-driver-process (vendor adapters are host code)
+│  └─ hosts/{acp,ag-ui,mcp-server,channels,evals,devtools,remote,headless}/   host libraries
+├─ apps/prism-agent/                 Prism Agent, the reference host (private, never published; §2.13.3)
 ├─ examples/                         host and package examples, execution-gated
 └─ docs/
 ```
@@ -686,19 +694,16 @@ const agent = await createAgent({
 const result = await (await agent.session()).run("Weather in Oslo?");
 ```
 
-**Prism Code.** Manifest-driven, TUI-only host.
+**Prism Agent, the reference host.** Unpublished; it proves the SDK and is not an API (§2.13.3). Its shape, in brief:
 
 ```ts
-const agent = await createAgent({
-  model: config.model,
-  packages: await loadManifest({ root: cwd, trustProject: (m) => tui.confirmProjectPackages(m) }),
-  // the manifest holds: provider-*, tools-coding, approval, tools-web, context-files,
-  // hooks-json, memory-observational, store-jsonl
-  host: { ui: tuiHostUi },
-});
-// The TUI renders events (including package.event such as om.status), lists agent.commands
-// (which include /om and /om:model from the OM package), answers host.ui requests, and shows
-// agent.inspect() as `doctor`. It imports nothing but @arnilo/prism.
+const host = { ui: routeHostUi([attachedClient, telegramRoute, policyDefault]) };   // @arnilo/prism-headless
+const lead = await createAgent({ model, packages: [store, delegate, workflows], host });
+const coder = await createAgent({ model, packages: [store, toolsCoding({ root }), approval({ mode: "ask" }), contextFiles], host });
+const researcher = await createAgent({ model, packages: [store, toolsWeb, toolsBrowser, memoryRag, toolsResearch], host });
+const remote = await connectAgent(endpoint, { mirror: store });                       // @arnilo/prism-remote
+createScheduler({ store, targets: { nightly: buildWorkflow } }).every("0 2 * * *", "nightly");
+// Everything comes from published packages and public APIs; a missing seam is fixed in the SDK, never worked around here.
 ```
 
 **The observational memory package.** This replaces the host-side coordinator entirely.
@@ -707,7 +712,7 @@ const agent = await createAgent({
 export default definePackage({
   name: "@arnilo/prism-memory-observational",
   version: "0.13.0",
-  requires: { prism: "^0.13" },
+  requires: { api: 1 },
   capabilities: ["models", "session-state", "background", "slot:compaction"],
   config: omConfigSchema, // enabled (default false), observer.model, reflector.model, thresholds
   setup(prism) {
@@ -734,7 +739,7 @@ If `@arnilo/prism-memory-compaction` is also installed, both packages claim the 
 export default definePackage({
   name: "@acme/prism-plan-execute-verify",
   version: "0.13.0",
-  requires: { prism: "^0.13" },
+  requires: { api: 1 },
   capabilities: ["slot:loop"],
   setup(prism) {
     prism.slots.loop.provide({
@@ -770,7 +775,7 @@ await createAgent({
 });
 ```
 
-**A host orchestrating Prism agents and custom agents on vendor coding agents in one workflow** (the full design is in §2.12):
+**A host orchestrating Prism agents and custom agents on vendor coding agents in one workflow** (the full design is in §2.12). The host wrote the two adapters itself on `@arnilo/prism-driver-process`:
 
 ```ts
 import { createAgent, definePackage } from "@arnilo/prism";
@@ -779,11 +784,13 @@ import { defineWorkflow, agentNode, gateNode, humanGate, fanOut, workflowCommand
 import sqlite from "@arnilo/prism-store-sqlite";
 import toolsCoding from "@arnilo/prism-tools-coding";
 import approval from "@arnilo/prism-approval";
-import claudeCode from "@arnilo/prism-driver-claude-code";
-import codex from "@arnilo/prism-driver-codex";
+import { processDriver } from "@arnilo/prism-driver-process";
+import { claudeCodeAdapter, codexAdapter } from "./adapters";   // host-written adapters (Phase 15); Prism ships none
 import workflows from "@arnilo/prism-workflows";
 
 const store = sqlite({ path: ".build/prism.db" });   // one file holds every agent's sessions and vendor state
+const claudeCode = processDriver(claudeCodeAdapter); // the adapter declares Claude Code's flags, events, hook codec, and auth policy
+const codex = processDriver(codexAdapter);
 const shared = { slots: { store: "@arnilo/prism-store-sqlite" }, host: { ui }, principal: user };
 const skills = { dirs: ["./skills"] };               // one skill library; drivers materialize what each spec selects
 
@@ -793,8 +800,8 @@ await profiles.ensure("claude-code", "alice-claude", { principal: user, deployme
 await profiles.ensure("codex", "alice-codex", { principal: user, deployment: "local", credential: "chatgpt" });
 
 // /build is a host package; the definition is resolved lazily because it references the agents below.
-const buildCommand = definePackage({ name: "acme-build", version: "0.13.0", requires: { prism: "^0.13" },
-  setup: (prism) => prism.commands.register(workflowCommand("build", () => build)) });
+const buildCommand = definePackage({ name: "acme-build", version: "0.13.0", requires: { api: 1 },
+  setup: (prism) => prism.commands.register(workflowCommand(prism, "build", () => build)) });
 
 const host = await createAgent({ model: "anthropic/claude-sonnet-4-5", skills,
   packages: [store, toolsCoding({ root }), approval({ mode: "ask" }), workflows, buildCommand], ...shared });
@@ -805,7 +812,7 @@ const planner = await createAgent({ skills, packages: [store, toolsCoding({ root
     systemPrompt: { replace: PLANNER_PROMPT },
     model: "opus",
     builtinTools: { allow: ["Read", "Grep", "Glob"] },     // its own tools, narrowed
-    prismTools: ["repo_search"],                          // served over MCP, gated by approval
+    prismTools: ["grep"],                          // served over MCP, gated by approval
     skills: ["architecture-review"],
     requires: { systemPrompt: "replace", builtinTools: "per-tool", thinking: "deltas", subscription: "permitted" },
   })], ...shared });
@@ -825,7 +832,7 @@ const validator = await createAgent({ skills, packages: [store, toolsCoding({ ro
   codex({
     name: "validator", profile: "alice-codex",            // runs on Alice's ChatGPT plan (local deployment)
     systemPrompt: { append: VALIDATOR_PROMPT },
-    prismTools: ["run_checks", "repo_search"],
+    prismTools: ["run_checks", "grep"],
     skills: ["test-triage"],
     vendor: { sandbox: "read-only", approvalPolicy: "on-request" },
   })], ...shared });
@@ -851,7 +858,24 @@ const build = defineWorkflow({ id: "build", revision: "1", limits: { maxSuperste
 
 ### 2.12 Vendor coding agents and orchestration
 
-This section is the design input for Phases 13–16. Each phase plan should start from it. The research in §2.12.4 and §2.12.5 was done on 2026-10-04 against the linked sources. Vendor CLIs and terms change quickly, so Phase 15's review re-verifies every claim and records what changed.
+This section is the design input for Phases 13–16. Each phase plan should start from it. The research in §2.12.4 and §2.12.5 was done on 2026-10-04 against the linked sources. Vendor CLIs and terms change quickly.
+
+> **Re-scoped on 2026-10-10.** Prism now ships only the generic layer:
+>
+> - the kernel additions (§2.12.9)
+> - a vendor-neutral driver kit (§2.12.10)
+> - `serveTools` and the `workspace` service (§2.12.12, §2.12.14)
+> - the generic `@arnilo/prism-driver-process` with its adapter contract (Phase 15)
+> - workflows (§2.12.13)
+>
+> Hosts write or install an adapter for each vendor binary. Read the vendor-specific parts of this section with that in mind:
+>
+> - §2.12.4, the spec-mapping and capture tables in §2.12.7, and §2.12.11 are **non-normative research** that Phase 15 moves into the adapter authoring guide as dated worked mappings. They also describe the three integration shapes the adapter contract must support.
+> - In §2.12.5, rules 1–4 are enforced generically by the policy guard. Rules 5–6 and every per-vendor condition become auth policy that an adapter declares and the guard enforces. Prism hardcodes no vendor's terms.
+> - Where this section names `driver-claude-code`, `driver-codex`, or `driver-antigravity`, read "a host adapter for that binary on `prism-driver-process`".
+> - Vendor-named dialects in the relay, `materializeSkills`, `createScriptedCli`, and the `serveTools` MCP config become adapter-supplied codecs and layouts over neutral defaults (Phases 13–14).
+>
+> The phases in Part 4 are authoritative where they differ from this section.
 
 #### 2.12.1 The use case
 
@@ -917,6 +941,8 @@ The SDK route is recorded in §2.12.17 as an API-key-only option and is not in 0
 | A `hooks.json` command-hook model | `@arnilo/prism-hooks-json` (Claude/Codex-compatible) | §2.9 |
 
 #### 2.12.4 The three binaries (research, 2026-10-04)
+
+> Phase 15 moved this into [Writing an adapter](docs/next/agent-adapters.md#worked-mappings-non-normative) as dated worked mappings, verified 2026-10-11 and re-read 2026-10-12. This section stays as the 2026-10-04 record.
 
 **Claude Code: `claude`.** Sources: [CLI reference](https://code.claude.com/docs/en/cli-reference), [headless](https://code.claude.com/docs/en/headless), [hooks](https://code.claude.com/docs/en/hooks).
 
@@ -1007,13 +1033,15 @@ The SDK route is recorded in §2.12.17 as an API-key-only option and is not in 0
 
 #### 2.12.5 Subscriptions and vendor terms (2026-10-04)
 
+> The three vendor rows are carried as dated worked mappings in [Writing an adapter](docs/next/agent-adapters.md#worked-mappings-non-normative), re-verified 2026-10-11 and re-read 2026-10-12. This section stays as the 2026-10-04 record.
+
 | Vendor | Can the user's subscription drive the binary from a Prism host? | Conditions, quoted from the source |
 | --- | --- | --- |
 | **Anthropic.** Claude Pro / Max (and Team / Enterprise seats) with `claude` | **Yes, with conditions.** "Nor does it prevent an end user from signing in to the unmodified Claude Code binary with their own Claude subscription, including where a platform hosts Claude Code." | From [Legal and compliance](https://code.claude.com/docs/en/legal-and-compliance):<br>• Running Claude Code in a product "requires agreeing to our Commercial Terms of Service".<br>• "The Claude Code binary must not be modified", and authentication methods must not be removed or restricted.<br>• "Customers may not pay for, resell, or intermediate Claude usage on their end users' behalf. Each end user must authenticate with their own … Claude subscription plan credentials".<br>• "Developers may not collect, store, or intermediate Claude.ai credentials or session tokens — sign-in to a Claude account must complete through Anthropic's own flow".<br>• "Advertised usage limits for Pro and Max plans assume ordinary, individual usage of Claude Code and the Agent SDK".<br>• **Caveat:** the headless page describes `claude -p` as "the Agent SDK via the CLI", and the developer guidance asks products built on the Agent SDK to use API keys. The binary-hosting clause is the one that covers an unmodified binary the user signed into, but this is a policy boundary. A host that distributes commercially should confirm with Anthropic. |
 | **OpenAI.** ChatGPT plans with `codex` | **Yes for local or open-source apps; hosted or commercial services need Sign in with ChatGPT.** | From the app-server docs:<br>• "If you've built a local or open-source application using Codex app-server authentication, you can continue using it".<br>• "App-server authentication has never been permitted for commercial or hosted services"; Sign in with ChatGPT (a partner program) supports those.<br>• The [auth](https://learn.chatgpt.com/docs/auth) page: "The ChatGPT desktop app, Codex CLI, and IDE extension support both sign-in methods for local work", and "Use API key authentication for programmatic Codex CLI workflows, such as CI/CD jobs". |
 | **Google.** Google AI Pro / Ultra with `agy` | **Yes for local use on the user's own machine. Hosted or commercial services: not without Google's confirmation.** | Google documents driving `agy` programmatically with the user's cached sign-in. [Headless mode](https://antigravity.google/docs/cli/headless): "Run Antigravity CLI non-interactively to script agent tasks, integrate with CI pipelines, and capture machine-readable output"; "Headless mode uses your cached credentials. Authenticate once with an interactive `agy` session first". Its "Drive a session programmatically" section spawns `agy --input-format stream-json --output-format stream-json` from a program.<br>The [Antigravity Terms](https://antigravity.google/terms) say: "You must not abuse, harm, interfere with, or disrupt the Service. This includes, but is not limited to, using the Service in connection with products not provided by us. Using third party software, tools, or services to access the Service (e.g. using OpenClaw with Antigravity OAuth) is a breach of this Agreement. Such actions may be grounds for suspension or termination of your Antigravity and/or Gemini CLI accounts."<br>**Interpretation (2026-10-04):** the example names third-party software that reuses Antigravity's OAuth to reach the service directly, bypassing `agy`. A person whose own installed, unmodified `agy`, signed in through Google's flow, is driven by a local program through the documented headless interface is the case the headless docs describe; that is the same as a person's own script. The broad "in connection with products not provided by us" clause most plausibly bites when a third-party product runs `agy` as a service for others, or resells or pools access. So: local deployments yes; hosted or commercial deployments only with Google's written confirmation. A Gemini API key is permitted in every deployment. This reading is not legal advice, and the clause is broad enough that a conservative host may choose the API key everywhere. |
 
-**What Prism enforces.** This is the driver kit's terms guard, configured per driver; a violation fails closed:
+**What Prism enforces.** This is the driver kit's policy guard. Rules 1–4 apply to every driver. Rules 5–6 are examples of the auth policy an adapter declares for its vendor; since 2026-10-10 Prism ships no adapter, so it hardcodes neither (Phase 13). A violation fails closed:
 
 1. **Unmodified binaries only.** Prism runs the vendor-published binary the user installed. It never patches it, replaces it, or strips one of its authentication methods. The probed path and version are recorded in `inspect()`.
 2. **No subscription credentials in Prism.**
@@ -1135,7 +1163,7 @@ For `agy`, whose configuration is workspace files, the driver writes `.agents/ag
 
 It listens on loopback HTTP with a random per-run bearer token, and on a per-run Unix socket for the `prism relay` bin. **Gating hooks always go through `prism relay hook`, a command hook.** It forwards the hook's stdin JSON to the broker and prints the broker's answer. If the broker is unreachable or slow, it exits with code 2 for Claude or prints `deny` for `agy`. Gating therefore fails closed. HTTP hooks are used only for observation.
 
-**How the spec reaches each binary** (Phase 15 re-verifies every cell):
+**How the spec reaches each binary** (non-normative since 2026-10-10: this is what a host adapter for each binary would do, and Phase 15's authoring guide carries it as a dated worked mapping; the dated copy with verification dates is [Writing an adapter](docs/next/agent-adapters.md#worked-mappings-non-normative)):
 
 | Spec field | Claude Code (`claude -p`) | Codex (`codex app-server`) | Antigravity (`agy`) |
 | --- | --- | --- | --- |
@@ -1178,9 +1206,9 @@ It listens on loopback HTTP with a random per-run bearer token, and on a per-run
 
 | Layer | Owns |
 | --- | --- |
-| **Host** | The `/build` command and graph definition. Deterministic gate functions. Routing rules. Each custom agent's `ExternalAgentSpec`. Which profiles exist and who signs into them. The deployment declaration and terms acknowledgements. A terminal for vendor sign-in. Worktree merge and conflict policy. Answering `host.ui` requests. Rendering the merged stream. Installing the vendor binaries. |
+| **Host** | One adapter per vendor binary it supports (or one it installs), and compliance with that vendor's terms. The `/build` command and graph definition. Deterministic gate functions. Routing rules. Each custom agent's `ExternalAgentSpec`. Which profiles exist and who signs into them. The deployment declaration and terms acknowledgements. A terminal for vendor sign-in. Worktree merge and conflict policy. Answering `host.ui` requests. Rendering the merged stream. Installing the vendor binaries. |
 | **Kernel** (`@arnilo/prism`) | Model-less agents (K1). Driver primitives (K2). `origin` and the narrowed `emit` (K3). Session links and search across agents (K4). Vendor-state entries (K5). The `terminal` host request (K6). The `driver-kit` subpath, the `prism relay` bin, and `driverConformance`. All dependency-free. |
-| **Packages** | `driver-claude-code`, `driver-codex`, `driver-antigravity`. The MCP tool server (`prism-mcp-server` `serveTools`). The graph runner (`prism-workflows`). The `workspace` service (`tools-coding`). Checkpoint and lease implementations (store packages). Origin-aware telemetry (`prism-observability`). |
+| **Packages** | `driver-process`, the generic driver that host adapters extend. The MCP tool server (`prism-mcp-server` `serveTools`). The graph runner (`prism-workflows`). The `workspace` service (`tools-coding`). Checkpoint and lease implementations (store packages). Origin-aware telemetry (`prism-observability`). |
 | **Out of scope** | Installing or updating vendor binaries. Holding or relaying subscription credentials. Pooling or reselling subscriptions. Any UI. Using an LLM's judgment as a gate. Sandboxing vendor agents beyond their own sandboxes. |
 
 #### 2.12.9 Kernel additions (Phase 13)
@@ -1247,6 +1275,7 @@ interface EventOrigin {
   readonly vendor?: string;            // "claude-code" | "codex" | "antigravity"
   readonly profile?: string;           // profile name, never credentials
   readonly agentId: string;
+  readonly remote?: string;           // endpoint id when the event crossed serveAgent/connectAgent (Phase 17)
   readonly delegationId?: string;
   readonly parentSessionId?: string;
   readonly parentToolCallId?: string;
@@ -1327,31 +1356,32 @@ A zero-dependency kernel subpath, following the `provider-kit` precedent.
   ```
 
 - **Host requirements.** `requires: { systemPrompt?, builtinTools?, gated?: ToolEffect[], steer?, resume?, thinking?, skillActivation?, subagents?, subscription? }` is checked against the descriptor. A miss fails `createAgent` with `driver_capability_missing`, naming the control.
-- **Profiles.** `profiles.create`, `ensure` (create if missing, check status, and sign in through K6 if needed), `login` (K6), `status`, `bind(principal)`, `remove`. The profile record is described in §2.12.7. The terms guard enforces §2.12.5 rules 1–6:
+- **Profiles.** `profiles.create`, `ensure` (create if missing, check status, and sign in through K6 if needed), `login` (K6), `status`, `bind(principal)`, `remove`. The profile record is described in §2.12.7. The policy guard enforces §2.12.5 rules 1–4 and the auth policy the driver declares:
   - `credential_required`
   - `plan_login_not_permitted`
   - `profile_principal_mismatch`
   - `auth_required`
   - `profile_busy` (over `maxConcurrentRuns`)
-- **Configuration materializer.** It writes the per-run directory and the worktree overlays (§2.12.7), writes the `.git/info/exclude` entries, and cleans up on dispose. `materializeSkills` supports the `claude-plugin`, `codex-root`, and `agy-workspace` layouts and returns the path-to-skill map.
+- **Configuration materializer.** It writes the per-run directory and the worktree overlays (§2.12.7), writes the `.git/info/exclude` entries, and cleans up on dispose. `materializeSkills` writes a neutral `skill-dirs` layout and returns the path-to-skill map. A driver wraps it through a layout callback, for example as a plugin directory, an extra skills root, or a workspace skills directory.
 - **Callback broker.** Per-run loopback HTTP and Unix socket, with a per-run token. It routes:
   - MCP (to `serveTools`)
   - the permission-prompt tool (to `run.ask`)
   - hook events (to `run.ask`, `run.end`, `observe`)
 
   It closes on run end.
-- **`prism relay` bin** (in the kernel `prism` CLI, no dependencies):
-  - `prism relay hook --socket <path> --vendor <v>` forwards one hook's stdin and prints the answer. If the broker is unreachable or too slow, gating events fail closed: exit 2 for Claude, `deny` for `agy`.
-  - `prism relay mcp --socket <path>` bridges stdio MCP to the broker for vendors that only take stdio servers.
+- **`prism relay` bin** (in the kernel `prism` CLI, no dependencies, no vendor dialect):
+  - The broker writes a per-run relay descriptor (socket, timeout, and the driver's fail-closed response) before the process starts.
+  - `prism relay hook --run <run-dir>` forwards one hook's stdin and prints the answer, which the driver's hook codec encodes. If the broker is unreachable or too slow, the relay prints the descriptor's fail-closed response. For example, an adapter for Claude would declare exit 2, and one for `agy` would declare a printed `deny`.
+  - `prism relay mcp --run <run-dir>` bridges stdio MCP to the broker for binaries that only take stdio servers.
 - **Tool bridge.** `bridgeTools(run, names, { origin })` resolves the allow-list and fails on unknown names. `invoke` calls `run.executeTools`.
-- **Normalization helpers.** Per-vendor tool-name → `effects` tables (unknown tools get every effect), plus diff, usage, plan, and sub-agent scope mapping.
+- **Normalization helpers.** `effectsTable(entries)` builds a tool-name → `effects` table that the driver supplies (unknown tools get every effect), plus diff, usage, plan, and sub-agent scope mapping.
 - **Process and protocol helpers:**
   - bounded JSONL and JSON-RPC 2.0
   - stdin message writers with backpressure
   - a SIGINT → SIGTERM → SIGKILL ladder with grace timeouts
   - redacted stderr
   - a child environment built only from non-secret paths and resolved API-key refs
-- **Conformance.** `/testing` gains `createScriptedCli`, a fake binary per vendor dialect: Claude `stream-json`, Codex app-server JSON-RPC, and `agy` `stream-json`. It replays recorded event shapes and calls hooks through the relay. `driverConformance` covers:
+- **Conformance.** `/testing` gains `createScriptedCli`, a fake binary with two neutral reference dialects, `jsonl-stream` and `json-rpc`, plus `defineScriptedDialect` for a driver's own frames. It replays recorded event shapes and calls hooks through the relay. `driverConformance` covers:
   - flag and file materialization
   - gating through the relay, including fail-closed when the broker is down
   - `observe` mapping for every activity kind
@@ -1361,7 +1391,9 @@ A zero-dependency kernel subpath, following the `provider-kit` precedent.
   - no secret in events or `inspect()`
   - no read of vendor credential files: a canary token file in the fake profile must never be opened
 
-#### 2.12.11 Drivers (Phase 15)
+#### 2.12.11 Per-vendor mappings (reference for adapter authors)
+
+Since 2026-10-10 this is non-normative. It records what a host adapter for each binary would declare and do, as researched on 2026-10-04. Prism ships none of these. Phase 15 moved this into [Writing an adapter](docs/next/agent-adapters.md#worked-mappings-non-normative) as dated worked mappings, verified 2026-10-11 and re-read 2026-10-12, and built an offline reference adapter for each of the three shapes. This section stays as the 2026-10-04 record.
 
 | | `driver-claude-code` | `driver-codex` | `driver-antigravity` |
 | --- | --- | --- | --- |
@@ -1447,7 +1479,7 @@ serveTools(run: RunController, options: {
 - **One stream for the UI.** `workflowRun.stream()` merges every child session's events, each with `origin`. `steer(nodeId)` and `abort()` reach the children.
 - **Durability.** After a process kill, finished nodes are not re-run, suspended children resume, and unfinished nodes re-run under their idempotency policy.
 - **Checkpoints and leases (G6)** become service contracts in `prism-workflows`. `store-sqlite` and `store-postgres` implement them, and the kernel copies are deleted.
-- **`workflowCommand(name, def | () => def)`** registers `/build`. **`workflowLoop(def)`** remains for single-agent workflows, including generate-validate-revise.
+- **`workflowCommand(prism, name, def | () => def, { args? })`** builds the `/build` command that the host package registers. **`workflowLoop(def)`** remains for single-agent workflows, including generate-validate-revise.
 
 #### 2.12.14 Coding workspace service (Phase 14)
 
@@ -1468,7 +1500,7 @@ Worktree paths join the coding roots for the delegated session only.
 
 #### 2.12.16 Security, terms, and limits
 
-- **Terms are enforced in code** (§2.12.5): unmodified binaries, no subscription credentials in Prism, one end user per profile, individual-usage pacing, deployment rules (Codex and Antigravity sign-in local only). The terms can change. Each driver pins the dated sources it was verified against, and a terms change is a release blocker for that driver.
+- **Terms are enforced in code, as declared policy** (§2.12.5). The guard enforces rules 1–4 for every driver: unmodified binaries, no subscription credentials in Prism, one end user per profile, and individual-usage pacing. Deployment rules and other per-vendor conditions are auth policy that each adapter declares. The adapter's author pins the dated sources it was verified against, and a terms change is that author's release blocker, not Prism's.
 - **Control is uneven, and the descriptor says so.** Claude and Antigravity gate every built-in tool through the relay. Codex gates through approvals and its sandbox, and cannot remove its core tools. `requires` turns a missing control into a `createAgent` failure.
 - **Gating fails closed.** Gating hooks run through `prism relay hook`, which blocks when Prism is unreachable. HTTP hooks are never used to gate, because vendors treat their failures as non-blocking.
 - **Observed is not executed.** Vendor built-in tool events are reports, marked `executedBy: "external"` and backed by the worktree diff.
@@ -1487,6 +1519,72 @@ Worktree paths join the coding roots for the delegated session only.
 - **Generic ACP client driver and other CLI agents.** Deferred. The driver kit does not preclude them.
 - **Hosted agent services** (Anthropic Managed Agents, OpenAI hosted agents). Deferred.
 
+### 2.13 Hosts own the agent; Prism Agent is the reference host
+
+This section was added on 2026-10-10. It is the design input for Phase 12 and Phase 17.
+
+**Prism is always embedded by a host.** There is no first-party agent product and no standalone agent binary. A host (an orchestrator, a product, a server, a bot) decides which agents exist and what each can do, by choosing packages. Prism ships three things:
+
+- the SDK
+- native packages: harness capabilities and domain packs
+- host libraries
+
+#### 2.13.1 Where things go
+
+| Layer | Contains | A thing belongs here when |
+| --- | --- | --- |
+| **SDK kernel** (`@arnilo/prism`) | loop, hooks, slots, sessions, store, events, host port, driver kit | the default loop or the package system cannot work without it |
+| **Native packages and host libraries** | harness capabilities (memory, compaction, context engineering, workflows, approval, MCP, `driver-process`); domain packs (`tools-coding`, `tools-research`, and later candidates such as `tools-media`); host libraries (`acp`, `channels`, `prism-remote`, `prism-headless`) | any harness or host could want it, whatever the product |
+| **The host** | which agents exist, their instructions and package sets, the workflows and gates, routing rules, vendor adapters, the UI or channels, and deployment | it is an opinion about one product |
+
+#### 2.13.2 Building an orchestrator
+
+An orchestrator is host code on the SDK. Nothing sits between the host and the SDK.
+
+- **The orchestration program** is the graph, the deterministic gates, the routing, the profiles and stores, and how people answer requests. It is built from `createAgent`, `prism-workflows`, adapters on `driver-process`, `prism-remote`, and `prism-headless`.
+- **An orchestrator agent**, meaning an LLM that plans and delegates, is an `Agent` created with `prism-delegate`, `prism-workflows`, and whatever tools the host chooses.
+- **Workers** can be any mix of:
+  - the host's own `Agent`s
+  - external agents through the host's adapters (Phase 15)
+  - remote `Agent`s through `connectAgent` (Phase 17)
+
+#### 2.13.3 Prism Agent, the reference host
+
+Prism Agent (`apps/prism-agent/`, `"private": true`, never published) is a realistic headless, multi-agent host built from published packages and public APIs only. It replaces Prism Code, which is deleted, not ported.
+
+Its purpose is **testing and proof**: to show that a real host can be built on the SDK, and to find SDK gaps before the 0.13.0 freeze. It is not an API. Its agents, prompts, and config belong to it and can change at any time. Hosts copy from it; they never depend on it.
+
+Rules:
+
+- It imports only `@arnilo/prism`, its public subpaths, and published packages.
+- When it needs a seam the SDK lacks, the seam is added to the SDK, or recorded in the backlog with a reason. The host never carries a workaround. This prevents a repeat of Prism Code, which grew its own memory coordinator, approval engine, and MCP trust logic (§1.2).
+- It runs offline in CI on the mock provider and scripted CLIs, as part of `release:gate`.
+- It has **no TUI** and depends on no terminal UI library. For manual interactive testing it serves ACP (`serveAcp`) to an ACP-capable editor, and its one-shot mode writes JSONL events. A terminal client, if one is built later, is a separate `@arnilo/prism-devtools` client of `serveAgent` that attaches to any served agent. It would use `@mariozechner/pi-tui` (pure TypeScript, no native binaries) rather than `@opentui/core` (eight platform-native binaries), after a spike confirms pi-tui under Bun: it declares `engines: node >=20`.
+
+#### 2.13.4 Headless pieces are host libraries
+
+What a headless host needs, apart from its own opinions, ships as SDK-side host libraries (Phase 17), so every host gets it:
+
+- **`@arnilo/prism-remote`:** `serveAgent` and `connectAgent`. Any `Agent` can be served out of process, and used remotely as an `Agent`, with the full event catalog. Tools that run in the remote process are gated by the remote's policy, so their events carry `origin.remote` and `executedBy: "external"` and never claim the host's gate (§1.4). A host that wants its own gates lends its tools over `serveTools`.
+- **`@arnilo/prism-headless`:**
+  - `routeHostUi` sends each `HostUi` request to the attached client, then a channel (`prism-channels`), then a policy default. A request that no route answers suspends the run durably, and an answer from any route resumes it. Headless means the person is remote and asynchronous, not absent.
+  - `createScheduler` handles scheduled and triggered runs over durable sessions and workflows.
+
+`driver-process` is not used for Prism-built agents. An adapter would normalize, with loss, a protocol that Prism controls at both ends. Adapters are for binaries Prism cannot see into.
+
+#### 2.13.5 Domain packs in 0.13.0
+
+0.13.0 ships two domain packs: coding (`tools-coding`) and research (`tools-research`, new in Phase 12).
+
+`@arnilo/prism-tools-research` provides:
+
+- research skills: scoping, source triage, synthesis, reporting
+- a **source ledger** that records every fetched source with a citation id
+- a `cite` tool
+- a `run.end` check that every citation in a report resolves to a ledger entry
+
+It works alongside `tools-web`, `tools-browser`, and `memory-rag`. Further domain packs, such as `tools-media` for video and media production, are candidates after 0.13.0.
+
 ---
 
 ## Part 3 — Versions and in-flight work
@@ -1496,11 +1594,13 @@ Worktree paths join the coding roots for the delegated session only.
 | Package | Target | When |
 | --- | --- | --- |
 | `@arnilo/prism` | **0.13.0**, the kernel | Phase 11, once. No publish per phase. `next` pre-release tags are optional for lab testing. |
-| Native packages and host libraries | **0.13.0** each, `requires.prism: "^0.13"` | Alongside the kernel in Phase 11, in lockstep. After that, each is versioned independently. On a 0.x kernel a caret range pins the minor (`^0.13` is `>=0.13.0 <0.14.0`), so a kernel 0.14 needs each package to widen its range. |
-| External-agent orchestration: the kernel additions and `driver-kit` (Phase 13), `serveTools` and the `workspace` service (Phase 14), `prism-driver-{claude-code, codex, antigravity}` (Phase 15), re-scoped `prism-workflows` (Phase 16) | Same as the kernel and native packages | In the same Phase 11 publish. Phase 11 does not start until Phases 13–16 are done. |
+| Native packages and host libraries | **0.13.0** each, `requires.api: 1` | Alongside the kernel in Phase 11, in lockstep. After that, each is versioned independently. A package names the kernel **API level** it was written against (`requires.api: 1`), so it loads on every kernel that supports level 1 — a kernel 0.14 or 0.15 needs no package change. A breaking kernel change introduces API level 2 instead of bumping the floor. `requires.prism` stays optional, for a package that needs a fix from one release. |
+| External-agent orchestration: the kernel additions and `driver-kit` (Phase 13), `serveTools` and the `workspace` service (Phase 14), `prism-driver-process` (Phase 15), re-scoped `prism-workflows` (Phase 16) | Same as the kernel and native packages | In the same Phase 11 publish. Phase 11 does not start until Phases 12–17 are done. |
 | `@arnilo/prism-agent-sdk` | Deprecated on npm, pointing to `@arnilo/prism` | Phase 11 |
 | 0.12 family packages | Deprecated on npm, pointing to their replacements | Phase 11 |
-| `@arnilo/prism-code` | **0.5.0**, lab on the kernel only | Phase 12 |
+| `@arnilo/prism-remote`, `@arnilo/prism-headless` (Phase 17), `@arnilo/prism-tools-research` (Phase 12) | **0.13.0**, with the native packages and host libraries | Phase 11 |
+| Prism Agent (`apps/prism-agent`) | Never published: a private reference host | Phase 12 |
+| `@arnilo/prism-code` | Deprecated on npm, pointing to `@arnilo/prism` and the reference host | Phase 11 |
 
 ### In-flight work
 
@@ -1686,18 +1786,18 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
   - the built-in `openai-compatible` provider
 - **Subpaths:** `@arnilo/prism/provider-kit` (SSE, HTTP transport, OpenAI-compatible wire mapping, provider conformance) and the mock provider in `/testing`.
 - **Credentials slot:** `env:` default resolver; OAuth token persistence through the slot.
-- **Provider packages:** port each vendor to `@arnilo/prism-provider-<vendor>`. OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
+- **Provider packages:** ship `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` (owner decision 2026-10-16; others build on `@arnilo/prism/provider-kit`). OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
 - **`@arnilo/prism-credentials-keyring`.**
 - **Examples:**
   - an OpenAI-compatible endpoint with no packages
-  - the Anthropic package with a per-run model switch
+  - the Hyper package with a per-run model switch
   - a package making a side call via `models.client`
 
 **Done.**
 
 - A host with no provider package can reach any OpenAI-compatible endpoint.
 - Loading one provider package never evaluates another.
-- Each provider package passes provider conformance.
+- Each shipped provider package passes provider conformance.
 - `agent.models.list()` returns an empty list, not a throw, when no package offers discovery.
 
 ### Phase 6 — Session stores
@@ -1822,33 +1922,59 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
 - `examples/acp.ts` serves ACP in-process against the mock provider, with approval over ACP.
 - A repo search finds no surface constructing its own agent outside `createAgent`.
 
-### Phases 13–16 — Vendor coding agents and orchestration
+### Phases 13–16 — External agents and orchestration
 
 These four phases deliver §2.12. They were added on 2026-10-04 and re-scoped the same day: first from CLI agents to SDK runtimes, then to vendor binaries driven under the user's own subscription (§2.12.2). They ship in 0.13.0: Phase 11 needs all of them. They are numbered after Phase 12 so that existing references to Phases 11 and 12 stay valid. They are listed here because they come before Phase 11 in execution order (see [Order](#order)).
+
+**Re-scoped on 2026-10-10 to a generic implementation.** The 2026-10-04 phases shipped Prism-maintained drivers for Claude Code, Codex, and the Antigravity CLI. Now Prism ships the generic layer:
+
+- the kernel contracts
+- the gating, capture, profile, and isolation machinery
+- one generic process driver
+- the workflow engine
+
+A host supports a particular coding agent by writing an **adapter** for that agent's binary, or by installing one that someone else wrote, and can extend an existing adapter. Prism ships no vendor adapter, and no published Prism code names a vendor.
+
+What moved, and where:
+
+| Was in Prism (2026-10-04) | Now |
+| --- | --- |
+| `prism-driver-{claude-code, codex, antigravity}` packages | Host-side adapters on `@arnilo/prism-driver-process` (Phase 15). Three offline reference adapters in `examples/adapters/` show the three integration shapes from §2.12.4. |
+| A vendor-terms guard with per-vendor rules (§2.12.5 rules 5–6) | A generic policy guard that enforces the auth policy each adapter declares (Phase 13). The adapter's author owns the vendor's terms. |
+| Vendor dialects in `prism relay`, `materializeSkills`, `createScriptedCli`, and the `serveTools` MCP config | Adapter-supplied codecs and layouts over neutral defaults (Phases 13–14) |
+| Per-vendor research and the control matrix (§2.12.4, §2.12.5, §2.12.11) | Dated, non-normative worked mappings in the adapter authoring guide (Phase 15) |
+| Live legs on vendor subscriptions that block the release | The host's own CI, running `adapterConformance` with fixtures recorded from the binary it pins |
 
 Gap coverage:
 
 | Gap / change (§2.12) | Phase |
 | --- | --- |
-| G1 no vendor-agent driver | 13 (driver kit), 15 (drivers) |
+| G1 no vendor-agent driver | 13 (driver kit), 15 (generic process driver and adapter contract; vendor adapters are host-side) |
 | G2 workflows scoped as a loop | 16 |
 | G3 no gated tool execution for non-loop callers | 13 (re-entrant `executeTools`, `bridgeTools`), 14 (`serveTools`) |
 | G4 no honest record of foreign activity; no steering for loops without `turn()` | 13 (`observe`, `ask`, `steers`, `origin`, narrowed `emit`) |
 | G5 no model-less agents; no session links; no search across agents | 13 (K1, K4) |
 | G6 no home for checkpoints and leases | 16 |
-| G7 no portable agent definition; no materialization; no isolation | 13 (`ExternalAgentSpec`, configuration materializer, isolation), 15 (per-vendor mapping) |
-| G8 vendor activity with no normalized form | 13 (`ExternalActivity`, `agent.*` events), 15 (full mapping per vendor) |
-| G9 vendor session state | 13 (K5), 15 (Claude transcript archive, Codex thread archive) |
-| G10 no sign-in path; no subscription profile model | 13 (K6 `terminal`, profiles, terms guard), 15 (per-vendor login and status) |
-| G11 no fail-closed callback channel | 13 (callback broker, `prism relay`), 14 (`serveTools`, permission tool) |
+| G7 no portable agent definition; no materialization; no isolation | 13 (`ExternalAgentSpec`, configuration materializer, isolation), 15 (the adapter's `configure`) |
+| G8 vendor activity with no normalized form | 13 (`ExternalActivity`, `agent.*` events), 15 (the adapter's `decode`, `agent.raw` fallback) |
+| G9 vendor session state | 13 (K5), 15 (`store` and `vendor` resume strategies) |
+| G10 no sign-in path; no subscription profile model | 13 (K6 `terminal`, profiles, policy guard), 15 (the adapter's login and status) |
+| G11 no fail-closed callback channel | 13 (callback broker, `prism relay` with the adapter's fail-closed response), 14 (`serveTools`, permission tool) |
 | Worktree isolation, overlays, and the diff of record | 14 (`workspace` service), 16 (`agentNode` `worktree`) |
 | Origin-aware telemetry and timeline | 16 |
 
-### Phase 13 — Vendor-driver kernel primitives and driver kit
+### Phase 13 — External-agent kernel primitives and driver kit
 
-**Goal.** The kernel can host an agent whose loop is an unmodified vendor binary running under a person's own subscription, without Prism touching that person's credentials. Every event says who produced it and who executed it, nothing the vendor reports is dropped, gating fails closed, and sessions from several agents can be linked and searched in one store.
+**Goal.** The kernel can host an agent whose loop is an external agent process: any coding-agent binary a host chooses, running under a person's own sign-in, without Prism touching that person's credentials. The guarantees:
 
-**Why.** Gaps G3–G5 and G7–G11 (§2.12.6) are kernel contracts. The subscription terms (§2.12.5) can only be honored if profiles, sign-in, and pacing are enforced below the drivers.
+- Every event says who produced it and who executed it.
+- Nothing the external agent reports is dropped.
+- Gating fails closed.
+- Sessions from several agents can be linked and searched in one store.
+
+The kernel and the driver kit name no vendor.
+
+**Why.** Gaps G3–G5 and G7–G11 (§2.12.6) are kernel contracts. Profiles, sign-in, pacing, and deployment rules can only be honored if they are enforced below every driver, whatever binary it targets. Keeping vendor knowledge out of this layer lets a host add an agent without changing Prism.
 
 **Depends on.** Phase 3; Phase 5 (K1); Phase 6 (K4, K5).
 
@@ -1858,9 +1984,9 @@ Gap coverage:
   - optional model, `run.model`
   - `observe` with every `ExternalActivity` kind
   - `ask`, including `rewrite`/`respond` support flags
-  - `run.end` reachable from vendor `Stop` hooks
+  - `run.end` reachable from an external agent's stop callback
   - `steers()`, re-entrant `executeTools`, narrowed `emit`
-  - `EventOrigin` with `vendor` and `profile`, replacing `child` repo-wide
+  - `EventOrigin` with `vendor`, `profile`, and `remote` (used by Phase 17), replacing `child` repo-wide; `vendor` is an opaque string the driver sets
   - session links, filters, `createSessionIndex`
   - `external_state` entries
   - each item with its conformance legs and the invariant tests
@@ -1869,44 +1995,76 @@ Gap coverage:
   - `createScriptedHostUi` support
   - `docs/next/host.md` updated
   - the guarantee that the kernel and packages never see terminal input or output
-- **`@arnilo/prism/driver-kit`** (§2.12.10):
-  - `ExternalAgentSpec`, `defineDriver`, `driverPackage`
-  - `DriverDescriptor` (controls, capture, auth) and the `requires` check
-  - profiles (`create`, `ensure`, `login` through K6, `status`, `bind`, `remove`)
-  - the terms guard (§2.12.5 rules 1–6) with its error codes
-  - the configuration materializer and `materializeSkills`
+- **`@arnilo/prism/driver-kit`** (§2.12.10), vendor-neutral:
+  - `ExternalAgentSpec`, `defineDriver`, `driverPackage`. A driver's config schema extends the spec, and the driver's own schema validates the spec's `vendor` options.
+  - `DriverDescriptor` (controls, capture, auth) and the `requires` check.
+  - **Auth policy as data.** The descriptor's `auth` lists the sign-in modes the driver supports. Each mode declares:
+    - its kind (`account` or `api-key`)
+    - the deployments it permits (`local`, `hosted`)
+    - the acknowledgements a hosted deployment must record
+    - the profile-home paths and environment variables that hold its credentials (protected)
+    - its login and status commands
+  - **The policy guard** enforces the declared policy plus §2.12.5 rules 1–4 for every driver:
+    - the probed, unmodified binary, recorded in `inspect()`
+    - protected credential paths and variables are never read, copied, or accepted as credential refs
+    - one principal per account profile
+    - `maxConcurrentRuns`
+    - rate-limit and quota signals stop or defer the run
+
+    Its error codes are `credential_required`, `plan_login_not_permitted`, `profile_principal_mismatch`, `auth_required`, and `profile_busy`. Which vendor permits which deployment is the driver's declaration, never kernel code.
+  - Profiles: `create`, `ensure`, `login` through K6, `status`, `bind`, `remove`. The home-directory variable, login command, and status command come from the driver.
+  - The configuration materializer:
+    - a per-run directory, file writers, and worktree overlays with `.git/info/exclude` entries, all cleaned up on dispose
+    - `materializeSkills(selection, layout)`, with a neutral `skill-dirs` layout (one `SKILL.md` directory per skill, plus the path-to-skill map for path-based activation) and a layout callback a driver uses to wrap it, for example as a plugin manifest or a settings entry
   - the callback broker
   - `bridgeTools`
-  - normalization, process, and protocol helpers
+  - Normalization helpers: `effectsTable(entries)` (unknown tool names get every effect), plus diff, usage, plan, and sub-agent scope mappers.
+  - Process and protocol helpers:
+    - bounded JSONL
+    - a JSON-RPC 2.0 peer that handles server-to-client requests
+    - stdin writers with backpressure
+    - the signal ladder
+    - redacted stderr
+    - the child environment builder
   - the standard `agent.*` events
-- **`prism relay` bin** in the kernel CLI: `relay hook` (fail-closed per vendor dialect) and `relay mcp`.
-- **`/testing`:** `createScriptedCli` (Claude `stream-json`, Codex app-server, and `agy` `stream-json` dialects, calling hooks through the relay) and `driverConformance`, covering the cases in §2.12.10, including the canary credential file that must never be opened.
+- **`prism relay` bin** in the kernel CLI, with no vendor dialect built in:
+  - Before the external process starts, the broker writes a per-run relay descriptor: the socket path, the timeout, and the driver's **fail-closed response** (an exit code and stdout).
+  - `prism relay hook --run <run-dir>` forwards one hook's stdin to the broker and prints the broker's answer, which the driver's hook codec has encoded. If the broker is unreachable or too slow, the relay prints the fail-closed response from the descriptor. Gating fails closed without the relay knowing the vendor.
+  - `prism relay mcp --run <run-dir>` bridges stdio MCP to the broker.
+- **`/testing`:**
+  - `createScriptedCli({ dialect, script })`, a fake external binary. It ships two neutral reference dialects that cover the transport shapes in §2.12.4:
+    - `jsonl-stream`: one process per conversation, JSONL in and out, gating through command hooks called via the relay
+    - `json-rpc`: a JSON-RPC 2.0 app-server over stdio that sends approval requests to the client
+
+    `defineScriptedDialect` lets a driver author describe their own binary's frames.
+  - `driverConformance(driver, { dialect, fixtures })` covers the cases in §2.12.10 for any driver. It includes the canary: a file at each protected credential path the driver declares, which must never be opened.
 - **Docs:**
-  - `docs/next/drivers.md`: driver kit, spec, descriptor, profiles and sign-in, terms guard, callback broker and relay, `agent.*` events
+  - `docs/next/drivers.md`: driver kit, spec, descriptor and auth policy, profiles and sign-in, policy guard, callback broker and relay, `agent.*` events, conformance
   - updates to `docs/next/loop.md`, `events.md`, `agent.md`, and `host.md`
-- **Example:** `examples/external-agent.ts` (offline). It:
-  - creates a profile and signs in through a scripted `terminal` response
-  - runs a spec with a replaced prompt, two bridged tools, and one skill against `createScriptedCli`
+- **Example:** `examples/external-agent.ts` (offline). A minimal driver written inline with `defineDriver` runs against the `jsonl-stream` scripted CLI. The example:
+  - declares an account mode limited to `local`, creates a profile, and signs in through a scripted `terminal` response
+  - runs a spec with a replaced prompt, two bridged tools, and one skill
   - shows text and thinking deltas, a skill activation, and a nested sub-agent
-  - gates a vendor write through the relay with a scripted `HostUi`, and shows the relay failing closed when the broker is stopped
+  - gates a write through the relay with a scripted `HostUi`, and shows the relay failing closed when the broker is stopped
   - steers and resumes
   - searches with `createSessionIndex`
-  - shows `profile_principal_mismatch` and `profile_busy`
+  - shows `plan_login_not_permitted` on `deployment: "hosted"`, `profile_principal_mismatch`, and `profile_busy`
 
 **Done.**
 
-- `driverConformance` passes for all three scripted dialects.
+- `driverConformance` passes for the example driver on both reference dialects.
 - The invariant tests pass from the default loop and from a driver loop.
 - `storeConformance` with the K4 and K5 legs passes on every store.
 - No event carries `child`.
-- No code path in the kernel or the driver kit opens a vendor credential file (the canary test).
+- No code path in the kernel or the driver kit opens a protected credential path a driver declares (the canary test).
+- A repo test finds no vendor or binary name (`claude`, `codex`, `agy`, `antigravity`, `gemini`) in `src/driver-kit/`, `src/testing/`, or the relay.
 - `bun run typecheck` is green.
 
 ### Phase 14 — Tool and approval bridge, and the coding workspace service
 
-**Goal.** Vendor agents call the host's Prism tools and ask the host for permissions over MCP, with every call gated, persisted, and attributed. Delegated work runs in worktrees that also carry driver overlays, and the worktree diff is the record of what changed.
+**Goal.** External agents call the host's Prism tools and ask the host for permissions over MCP, with every call gated, persisted, and attributed. Delegated work runs in worktrees that also carry driver overlays, and the worktree diff is the record of what changed. Neither part is specific to a vendor.
 
-**Why.** Gap G3 and G11 for the MCP path, which Claude Code and `agy` require for Prism tools and which Claude's `--permission-prompt-tool` uses. Worktrees make parallel delegations safe to merge and give `agy` a place for its workspace configuration.
+**Why.** Gaps G3 and G11 for the MCP path. MCP is the tool channel that most coding-agent binaries accept, so serving tools over it once covers any adapter that can point its binary at an MCP server. Worktrees make parallel delegations safe to merge, and give agents configured through workspace files a place for that configuration.
 
 **Depends on.** Phase 13; Phase 7 (`tools-coding`, `approval`); Phase 10 (`@arnilo/prism-mcp-server`).
 
@@ -1914,22 +2072,22 @@ Gap coverage:
 
 - **`serveTools(run, options)`** (§2.12.12):
   - an allow-list that fails closed
-  - the optional permission-prompt tool backed by `run.ask`
+  - the optional permission tool backed by `run.ask`. It has a neutral input and output schema: `{ toolName, input, toolCallId? }` in, `{ behavior: "allow" | "deny", updatedInput?, message? }` out. A driver supplies a `permissionCodec` when its binary expects a different shape.
   - `loopback-http` with a per-run bearer token and `createPrismMcpWebHandler` gates
   - `stdio-relay` through `prism relay mcp`
   - MCP resources, name prefixing, bounds
   - closing on run end, abort, or suspension
-  - `mcpConfig` output in each vendor's config shape
+  - a neutral `endpoint` in the result: `{ transport: "http", url, headerEnv }` or `{ transport: "stdio", command, args }`. The driver maps it into its binary's MCP configuration, so `prism-mcp-server` contains no vendor config shape.
 - **`workspace` service** in `tools-coding` (§2.12.14): `worktree.create`/`dispose`, bounded `diff`, `merge` with reported conflicts, and `excludeOverlay`.
 - **Tests:**
   - a served tool under `approval` in `ask` mode prompts through a scripted `HostUi`, and a deny reaches the client
-  - the permission tool maps allow, deny, and `updatedInput`
+  - the permission tool maps allow, deny, and `updatedInput`, both through the neutral schema and through a custom codec
   - a wrong token, a wrong Origin, and a late call are rejected
   - tools outside the allow-list are invisible
   - no token appears in events
   - worktree create, diff, merge (with a conflict), exclude, and dispose round-trip
-- **Docs:** the `prism-mcp-server` README "Serving tools and permissions to a vendor agent", and the `tools-coding` README "Workspace service".
-- **Example:** `examples/serve-tools.ts`, with a scripted Claude-dialect CLI calling a served `edit` tool and the permission tool.
+- **Docs:** the `prism-mcp-server` README "Serving tools and permissions to an external agent", and the `tools-coding` README "Workspace service".
+- **Example:** `examples/serve-tools.ts`, with a scripted `jsonl-stream` CLI calling a served `edit` tool and the permission tool.
 
 **Done.**
 
@@ -1937,80 +2095,106 @@ Gap coverage:
 - Unauthenticated and late callers are rejected.
 - A fixture run produces a worktree diff with its overlay excluded, and a conflicting merge is reported, not resolved.
 
-### Phase 15 — Vendor drivers: Claude Code, Codex, Antigravity CLI
+### Phase 15 — Generic process driver and the adapter contract
 
-**Goal.** A host defines a custom agent once and runs it on Claude Code, Codex, or the Antigravity CLI under the user's subscription where the vendor permits it, or under an API key otherwise. Prism captures everything the binary reports and refuses requirements or sign-in modes the binary or the vendor's terms do not allow.
+**Goal.** A host supports a coding agent by writing an **adapter**: a small module that describes that agent's binary to Prism's generic process driver. The agent can be Claude Code, Codex, the Antigravity CLI, or one Prism has never heard of. The driver does the rest. A host can also take an adapter someone else wrote and extend it.
 
-**Why.** Gaps G1, G7–G10 per vendor. This is where the uneven controls (§2.12.11) and the terms (§2.12.5) have to be precise.
+Prism ships the driver, the adapter contract, conformance, an authoring guide, and reference adapters as examples. It ships no vendor adapter; adapters belong to hosts (§2.13).
+
+**Why.** Gap G1, and the per-vendor halves of G7–G10. Every driver for a coding-agent binary repeats the same work:
+
+- spawn and supervise a process
+- speak JSONL or JSON-RPC over stdio
+- materialize the spec
+- route hooks and permission prompts through the broker
+- normalize events through `observe`
+- archive or record session state
+- pace sign-ins
+- stop the process
+
+That work belongs in Prism, once. What differs per vendor (flags, file layouts, event shapes, terms, version churn) belongs to the host, which chooses the agents it supports and accepts their terms.
 
 **Depends on.** Phases 13 and 14.
 
 **Scope.**
 
-- **Phase review first.** Re-verify §2.12.4, §2.12.5, and the §2.12.11 matrix against each vendor's current documentation and terms, using the `find-docs` skill and primary sources. Pin binary versions. Record every cell with a source link and date in the plan and in each descriptor and README. Run each "to verify" item:
-  - Claude: excluding `CLAUDE.md` without `--bare`; delivery of stdin messages mid-turn
-  - Codex: dynamic tools; which tools can be disabled
-  - `agy`: replace semantics; skills and MCP config locations; home relocation and keyring behavior; interrupt
-- **Terms gate.** If a vendor's terms changed, the driver's `auth` descriptor and terms guard are updated before its code ships. The Antigravity local-only reading (§2.12.5) is re-checked against the then-current terms and headless docs. If Google has published guidance on third-party orchestration, it decides the rule.
-- **`@arnilo/prism-driver-claude-code`** (`packages/drivers/claude-code/`):
-  - `claude -p` with `stream-json` in and out, plus the full flag set in §2.12.7 and §2.12.11
-  - a profile `CLAUDE_CONFIG_DIR` with login through `claude auth login` (K6) and status through `claude auth status`
-  - gating through the relay `PreToolUse` hook and `--permission-prompt-tool`
-  - Prism tools through `serveTools`
-  - skills as a generated plugin; sub-agents through `--agents`
-  - every stream message mapped (deltas, thinking, `Skill`, nested sub-agents, compaction, retries, permission denials, usage and cost)
-  - rate-limit, billing, and auth signals paced, not retried
-  - the transcript archived to K5 and resume from it
-  - SIGINT/SIGTERM abort
-- **`@arnilo/prism-driver-codex`** (`packages/drivers/codex/`):
-  - a TypeScript app-server client (`generate-ts` types for the pinned version)
-  - a profile `CODEX_HOME`, with login through `codex login` (K6) or `account/login/start` (URL only), and status through `account/read`
-  - the credential and deployment rules
-  - `baseInstructions`/`developerInstructions`
-  - Prism tools through `dynamicTools` or `serveTools`
-  - skills through extra roots and `skill` inputs
-  - `turn/steer`, `turn/interrupt`
-  - approval requests mapped to `run.ask`, and user input and elicitation to `host.ui`
-  - every item, delta, and notification mapped, with `turn/diff/updated` as the diff of record
-  - the thread archived to K5
-- **`@arnilo/prism-driver-antigravity`** (`packages/drivers/antigravity/`):
-  - `agy` with `stream-json` in and out and a generated `--agent`
-  - worktree overlays (agent, rules, hooks, skills, MCP config) excluded from git
-  - gating through the relay `PreToolUse` hook; `Stop` mapped to `run.end`
-  - every `step_update` mapped (text deltas, `tool_info`, `IsSkillFile` skill reads, `subagent_info`, checkpoints, usage including thinking tokens)
-  - `--conversation` resume
-  - credentials: the user's own `agy` sign-in (local deployments) or a Gemini API key; account mode on a hosted deployment without recorded confirmation fails with `plan_login_not_permitted`
-- **Every driver:**
-  - a config schema extending `ExternalAgentSpec`
-  - a binary probe and version in `inspect()`
-  - `driverConformance` with fixtures recorded from the real binary
-  - package conformance and an effect table
-  - live smoke legs: a signed-in subscription profile (Claude, Codex) and an API-key profile (all three), protected
-  - a README with the matrix, terms, pacing, and security
-- **Examples:**
-  - `examples/driver-claude-code.ts` and `examples/driver-codex.ts`: live, on a signed-in subscription profile
-  - `examples/driver-antigravity.ts`: live, on the user's own `agy` sign-in (Google AI Pro/Ultra), with an API-key variant
+- **Phase review first.** Check the adapter contract against the three integration shapes recorded in §2.12.4:
+  - a flag-configured stream CLI
+  - a JSON-RPC app-server
+  - a stream CLI configured through workspace files
 
-  Each defines a custom agent with a replaced prompt, a bridged Prism tool, and a skill; edits in a worktree under `approval`; and prints the captured activity.
+  Confirm that each can be expressed without a contract change, and record any change in the plan before code starts. Re-verify and date the §2.12.4 facts that the authoring guide's worked mappings cite.
+- **`@arnilo/prism-driver-process`** (`packages/drivers/process/`):
+  - `processDriver(adapter)` returns a driver package factory. `processDriver(adapter)(spec)` is a package that claims `slot:loop`.
+  - Transports:
+    - `jsonl-stream`: one process per conversation, input written to stdin, a turn ended by a frame the adapter recognizes
+    - `json-rpc`: a JSON-RPC 2.0 peer over stdio; every server-to-client request must have a handler, and an unknown one fails the run
+  - Runs the policy guard, the profile checks, and the `requires` check before spawning.
+  - Per run, starts the broker and `serveTools`, writes the relay descriptor, and materializes the spec through the adapter's `configure`.
+  - Feeds decoded activity to `observe`, gates through `ask`, maps stop callbacks to `run.end`, and delivers `steers()` according to the descriptor's `steer` mode.
+  - Runs the adapter's abort ladder within the grace timeout.
+  - Resume strategies:
+    - `store`: the adapter archives vendor session state into K5 after each turn and restores it to a file before resume
+    - `vendor`: the adapter records the vendor's session id and passes it back
+    - `none`
+  - Classifies rate-limit, quota, billing, and auth signals through the adapter, then stops or defers the run. These signals are never retried.
+  - Sends frames the adapter does not map to `agent.raw` under `capture: "all"`, and counts them otherwise. Nothing is dropped silently.
+  - Records the probed binary path and version, the adapter name and revision, and the effective policy in `inspect()`.
+- **The adapter contract** (`AgentAdapter`). All of it is plain data and functions:
+  - `name`, `revision`, `descriptor` (a `DriverDescriptor`)
+  - `binary`: the default command and a version probe. A major-version mismatch on resume fails with `driver_revision_mismatch`.
+  - `profile`: the home-directory variable, protected credential paths and variables, the login and status commands, and a status parser
+  - `configure(spec, ctx)` → `{ args, env, files, overlays }`, built with the materializer, `materializeSkills` layouts, and the `serveTools` `endpoint`
+  - `encode` (a prompt, a steer, a stop-continue reason) and `decode(frame)`, which returns `ExternalActivity[]` plus control signals (turn end, session id, stop request)
+  - `hooks`: the hook codec for the relay. It decodes a gating request, encodes `allow` / `deny` / `ask` / `rewrite`, and defines the fail-closed response.
+  - `requests` (`json-rpc` only): handlers that route approvals to `run.ask`, questions and elicitation to `host.ui`, and client tool calls to `bridgeTools`
+  - `session`: the resume strategy, with its archive and restore functions
+  - `abort`: the ladder steps (an RPC interrupt, closing stdin, signals)
+  - `notices`: the signal classifier
+- **Extending adapters.** `extendAdapter(base, overrides)` returns a new adapter with some parts replaced or wrapped, for example:
+  - extra flags
+  - a decoder for frames the base sends to `agent.raw`
+  - a narrower policy
+
+  The driver re-checks the merged descriptor, and `inspect()` names both the base and the extension.
+- **`/testing` additions:**
+  - `adapterConformance(adapter, { dialect, fixtures })` runs `driverConformance` against `processDriver(adapter)`.
+  - `recordFixtures` copies a real session's frames into a fixture file, with redaction, so a host can test its adapter offline against the binary version it pins.
+- **Reference adapters, as examples only.** They live in `examples/adapters/`, are not published, and run offline against `createScriptedCli`:
+  - `stream-cli.ts`, the shape of Claude Code in §2.12.4: flag-configured, `jsonl-stream`, relay command-hook gating with input rewrite, MCP tools, skills as a wrapped layout, sub-agents, `store` resume
+  - `rpc-server.ts`, the shape of the Codex app-server: `json-rpc`, approval requests answered through `run.ask`, client tools as RPC calls, mid-turn steer, `vendor` resume
+  - `workspace-config.ts`, the shape of the Antigravity CLI: configuration written as a worktree overlay, `jsonl-stream`, relay gating without rewrite, `next-turn` steer, thinking token counts only
+- **Authoring guide:** the package README and `docs/next/agent-adapters.md`. It covers:
+  - the contract and choosing a transport
+  - mapping each spec field and each activity kind
+  - writing the hook codec and its fail-closed response
+  - declaring the auth policy honestly
+  - recording fixtures and running `adapterConformance` in the host's CI
+
+  The vendor research in §2.12.4, §2.12.5, and §2.12.11 moves into the guide as **dated, non-normative worked mappings** for Claude Code, Codex, and the Antigravity CLI. The guide warns that vendor binaries and terms change, and that the adapter's author is responsible for complying with the vendor's terms.
+- **Example:** `examples/custom-adapter.ts`. A host extends `rpc-server.ts` with `extendAdapter`, then defines a custom agent with a replaced prompt, a bridged Prism tool, and a skill. The agent edits in a worktree under `approval`, and the example prints the captured activity.
 
 **Done.**
 
-- All three drivers pass `driverConformance` offline.
-- Live legs pass on a Claude Pro/Max profile, a ChatGPT-plan Codex profile, a Google AI Pro/Ultra `agy` sign-in, and API-key profiles. Missing sign-in or keys block the release.
-- Live Claude, Codex, and `agy` runs on subscription sign-ins capture text, thinking (token counts only for `agy`), a skill activation, a built-in tool call, a gated bridged tool call, and usage.
-- The terms guard is proven:
-  - Codex `chatgpt` sign-in with `deployment: "hosted"` fails
-  - Antigravity account sign-in with `deployment: "hosted"` fails without a recorded confirmation
+- The three reference adapters pass `adapterConformance` offline.
+- An adapter in a temporary workspace passes `adapterConformance` while importing only `@arnilo/prism`, `@arnilo/prism/driver-kit`, `@arnilo/prism/testing`, and `@arnilo/prism-driver-process`. This proves a host needs no internal import.
+- `extendAdapter` replaces a decoder and narrows a policy, and `inspect()` shows both.
+- The policy guard holds against policies that adapters declare:
+  - an account mode limited to `local` fails on `deployment: "hosted"` with `plan_login_not_permitted`
+  - a hosted mode without its recorded acknowledgement fails
   - a profile used by a second principal fails
   - a run beyond `maxConcurrentRuns` waits or fails with `profile_busy`
-  - no Prism process opens a vendor credential file (canary)
-- Strict isolation is proven: a planted user hook, skill, or MCP server in the user's normal vendor home is not loaded.
-- A gating hook fails closed when the broker is killed.
-- Abort stops the binary within the grace timeout. A Claude conversation resumes in a new process from Prism's store.
+  - the canary file is never opened
+- Strict isolation holds: a hook, skill, or MCP server planted in a fake user home is not loaded.
+- A gating hook fails closed when the broker is killed, both for a fail-closed response that is a non-zero exit and for one that prints a deny.
+- Abort stops the scripted binary within the grace timeout on both transports.
+- A conversation that uses `store` resume resumes in a new process from Prism's store.
+- Unmapped frames reach `agent.raw` under `capture: "all"`.
+- No vendor or binary name appears in `packages/drivers/process/src/` (the same check as Phase 13). The authoring guide is exempt.
 
 ### Phase 16 — Graph workflows across agents
 
-**Goal.** A host defines `/build` as a graph of Prism and vendor agents with deterministic gates, runs it as one durable workflow within each subscription's pacing, and renders it from one event stream. Every session is searchable in one store.
+**Goal.** A host defines `/build` as a graph of Prism agents and external agents with deterministic gates. It runs the graph as one durable workflow within each profile's pacing, and renders it from one event stream. Every session is searchable in one store. The engine sees only `Agent`s, so it works with any adapter a host writes.
 
 **Why.** Gaps G2 and G6, and the end-to-end proof of §2.12.
 
@@ -2031,20 +2215,139 @@ Gap coverage:
 - **Observability** (§2.12.15): origin span attributes and the timeline projector.
 - **Docs:** the `prism-workflows` and `observability` READMEs.
 - **Examples:**
-  - `examples/build-workflow.ts`, offline: the §2.11 orchestration example with the host on the mock provider and the planner, UI engineer, and validator on `createScriptedCli` drivers. It runs research → plan → gate (failing once and routing back) → `humanGate` → `fanOut` (tasks 2, 5, and 6 to the UI engineer in worktrees, the rest to the host) → merge gate → validate → tests gate, all in one SQLite file.
-  - `examples/build-workflow-live.ts`, on signed-in Claude and Codex subscription profiles.
+  - `examples/build-workflow.ts`, offline: the §2.11 orchestration example. The host agent runs on the mock provider. The planner and the UI engineer run on the `stream-cli` reference adapter, and the validator runs on the `rpc-server` reference adapter, all over `createScriptedCli`. All state is in one SQLite file. The workflow runs:
+    1. research
+    2. plan
+    3. a gate that fails once and routes back
+    4. `humanGate`
+    5. `fanOut`: tasks 2, 5, and 6 to the UI engineer in worktrees, the rest to the host
+    6. a merge gate
+    7. validate
+    8. a tests gate
   - `examples/workflow-loop.ts` (moved from Phase 9).
+
+  Running the build workflow live on real vendor binaries is the host's job, on its own adapters.
 
 **Done.**
 
 - `examples/build-workflow.ts` runs offline end to end.
-- `createSessionIndex(store).search({ text, workflowRunId })` finds a vendor agent's message and the host's.
-- The merged stream carries every agent's events, including vendor sub-agents and thinking, with the correct `origin`.
+- `createSessionIndex(store).search({ text, workflowRunId })` finds both an external agent's message and the host's.
+- The merged stream carries every agent's events, including external sub-agents and thinking, with the correct `origin`.
 - `fanOut` never exceeds a profile's cap.
 - Kill-and-resume finishes without re-running completed nodes.
 - A failing gate routes back within `maxSupersteps`.
 - `workflowLoop` gates tools under `approval`.
 - The kernel no longer contains `checkpoints` or `leases`.
+
+### Phase 17 — Headless host libraries: remote agents, `HostUi` routing, and scheduling
+
+**Goal.** Every host gets the pieces a headless, multi-agent host needs:
+
+- any Prism `Agent` can be served out of process and used remotely as an `Agent`, with the full event catalog, `HostUi` requests, steering, abort, and resume intact
+- `HostUi` requests route to whoever can answer, and suspend durably when nobody can
+- runs and workflows can be scheduled or triggered
+
+A workflow can mix in-process agents and connected ones without telling them apart, except through `origin`.
+
+**Why.** Hosts need these whatever their product (§2.13.4). They were designed as Prism Agent runtime parts until 2026-10-10, when Prism Agent became an unpublished reference host. ACP, AG-UI, and MCP each carry only part of the event catalog, and a `driver-process` adapter would normalize, with loss, a protocol Prism controls at both ends.
+
+It is a separate phase because Phase 10 was already underway when this was added. It also settles where the 0.12 `rpc` module goes (§2.9).
+
+**Depends on.** Phase 3; Phase 10 (the host-library pattern, `createPrismMcpWebHandler`'s Host/Origin gates, `prism-channels`); Phase 13 (`origin`, including `origin.remote`). The scheduler's guard against double firing across processes uses Phase 16's `leases` service.
+
+**Scope.**
+
+- **`@arnilo/prism-remote`** (`packages/hosts/remote/`), a host library built from `src/rpc.ts` (the 0.12 `prism --mode rpc`):
+  - A versioned JSON-RPC 2.0 protocol (`prism.remote/1`) with capability negotiation:
+    - sessions: open, list, resume
+    - `run`, with events streamed as notifications that carry `AgentEvent`s unchanged
+    - `steer`, `abort`
+    - `commands.list` and `commands.run`
+    - `inspect`
+    - `hostUi.request`, sent from server to client
+  - Transports: stdio, WebSocket, and HTTP with SSE.
+  - Authentication: a loopback bearer token by default, or a host-supplied `authenticate` hook that maps a caller to a `principal`. The HTTP transports reuse the Host/Origin gates and bounded bodies. Tokens never appear in events, `inspect()`, or errors.
+  - **`serveAgent(agent, { transport, authenticate?, limits? })`.** A `HostUi` request goes to the connected client. If no client is connected, or the client disconnects, the run suspends durably, and it resumes when a client answers.
+  - **`connectAgent(endpoint, { mirror? })`** returns an `Agent` proxy:
+    - forwarded events keep their catalog type and gain `origin.remote` (the endpoint id)
+    - tool events gated by the remote's policy carry `executedBy: "external"`
+    - the remote's `HostUi` requests go to the local `host.ui`
+    - `mirror: store` archives the remote session into the local store with `parent` links (K4), so `createSessionIndex` finds it
+- **`@arnilo/prism-headless`** (`packages/hosts/headless/`), a host library:
+  - **`routeHostUi(routes)`** returns a `HostUi` that tries its routes in order: an attached client, then a channel (`prism-channels`), then a policy default.
+    - Routes can be limited by request kind; for example, `terminal` goes only to an attached client.
+    - A request that no route answers suspends the run durably. An answer from any route later resumes it.
+    - Each answer is recorded with the route that gave it.
+  - **`createScheduler({ store, targets })`** handles cron schedules, one-off schedules, and host-invoked triggers over `Agent`s and workflow definitions:
+    - each firing opens a session or a workflow run with `parent` links
+    - schedule state is persisted in the store
+    - the `leases` service, when present, makes each firing run once across processes
+    - a policy decides what happens to firings missed while the host was down: skip them, or run once
+- **K3 addition.** `EventOrigin` gains `remote?: string` (§2.12.9). If Phase 13 has not landed yet, it lands there.
+- **`/testing`:** `remoteConformance(agentFactory)` runs the agent conformance legs (run, stream, steer, abort, resume, `HostUi`, commands, suspension on disconnect) through `serveAgent` and `connectAgent` on every transport.
+- **Docs:** the `prism-remote` README (protocol, transports, authentication, attribution, mirroring), the `prism-headless` README (routing, suspension, scheduling), and `docs/next/events.md` for `origin.remote`.
+- **Examples:**
+  - `examples/remote-agent.ts`, offline. It serves a mock-provider agent over stdio, connects to it, uses it in a workflow `agentNode` next to an in-process agent, answers an approval through the local `HostUi`, and searches the mirrored session.
+  - `examples/headless-host.ts`, offline. An approval goes unanswered by the client, falls through to a scripted channel, suspends, is answered later, and resumes. A scheduled workflow fires on a fake clock.
+
+**Done.**
+
+- `remoteConformance` passes on stdio, WebSocket, and HTTP with SSE.
+- A connected agent's tool events carry `origin.remote` and `executedBy: "external"`, and never claim the local `tool.call` gate.
+- A disconnect during a pending approval suspends the run, and a later answer resumes it.
+- A wrong token, a wrong Origin, and an oversized body are rejected.
+- `routeHostUi` follows its route order, honors limits by request kind, and suspends when no route answers.
+- Two scheduler processes sharing a store fire each scheduled run exactly once, and the missed-firing policy is honored after a restart.
+- `src/rpc.ts` is gone from the kernel.
+
+### Phase 12 — Prism Agent, the reference host
+
+**Goal.** Prism Agent, an unpublished reference host (§2.13.3), proves before the 0.13.0 freeze that a realistic headless, multi-agent host can be built from published packages and public APIs alone. The research domain pack for 0.13.0 ships from this phase.
+
+**Why.** Without a first-party consumer, SDK gaps surface only when an outside host hits them, after the contracts are frozen. Prism Code played this role for 0.12, but it grew app-side logic (§1.2), so it is deleted rather than ported.
+
+This phase was re-scoped on 2026-10-10, from "Prism Code on the SDK" to a reference host, and it now runs **before** Phase 11. Its number is kept so that existing references stay valid.
+
+**Depends on.** Phases 7–10 and 13–17. It is the last phase before Phase 11.
+
+**Scope.**
+
+- **Written from scratch** in `apps/prism-agent/`, with `"private": true`.
+  - `packages/prism-code` is deleted.
+  - `@arnilo/prism-code` is deprecated on npm in Phase 11, with a notice that points to `@arnilo/prism` and this reference host.
+- **The host:**
+  - an orchestrator agent: `createAgent` with `delegate`, `workflows`, and a store
+  - a coding worker: `tools-coding`, `approval`, `context-files`, `hooks-json`
+  - a research worker: `tools-web`, `tools-browser`, `memory-rag`, `tools-research`
+  - `memory-observational` and `memory-compaction` on both workers
+  - one external worker on a Phase 15 reference adapter over `createScriptedCli`
+  - one worker reached over `connectAgent`, from a second process that runs `serveAgent`
+  - a `prism-workflows` graph with deterministic gates, a `humanGate`, and a `fanOut` across these workers
+  - `HostUi` through `routeHostUi`: a scripted client, then a scripted channel, then the policy default, then suspension
+  - a scheduled run through the Phase 17 scheduler
+  - headless entry points: a one-shot run with JSONL output and documented exit codes, resume, and `serveAcp` for manual interactive testing
+- **`@arnilo/prism-tools-research`** (`packages/tools/research/`), a new native package (§2.13.5).
+- **Gap log.** Every seam the host needed and the SDK lacked is recorded in the plan. Each gap is fixed in the SDK before Phase 11, or moved to `plans/backlog.md` with a reason. The host contains no workaround for a missing seam.
+- **No TUI** (§2.13.3).
+- **Docs:**
+  - `apps/prism-agent/README.md`: a walkthrough of how a host is built, not a product page. It is linked from the docs index as a guide.
+  - the `tools-research` README
+- **CI:** the reference host's scenarios run offline in `release:gate`.
+
+**Done.**
+
+- A repo test proves that `apps/prism-agent/src` imports only `@arnilo/prism`, its public subpaths, and published packages.
+- These scenarios pass offline in CI:
+  - The orchestrated workflow runs end to end, and each worker's events carry the correct `origin`.
+  - The host's `approval` gates the coding worker's tools.
+  - The external worker's events carry `executedBy: "external"`, and the remote worker's events carry `origin.remote`.
+  - Headless approval works: a run suspends, a scripted channel answers, and the run resumes and completes.
+  - A scheduled run fires once per tick across two processes.
+  - The one-shot JSONL stream matches a golden file.
+  - A research report's citations all resolve to ledger entries, and an unresolved citation fails the `run.end` check.
+- The gap log is closed: every gap is either fixed or in the backlog, and the host contains no workarounds.
+- No terminal UI library (`@opentui/*`, `@mariozechner/pi-tui`, or another) is in the host's dependencies.
+- `packages/prism-code` is gone.
 
 ### Phase 11 — Kernel freeze and 0.13.0
 
@@ -2057,8 +2360,9 @@ Gap coverage:
 - **Sweep** the remaining non-kernel modules (§2.9, "decides where it goes"): move each to a package or delete it. `checkpoints`, `leases`, and the execution timeline are already gone (Phase 16).
 - **External-agent orchestration in the release:**
   - the export-surface review covers `driver-kit` and the §2.5/§2.12.9 `RunController` additions, the K6 `terminal` host request, and the `prism relay` bin
-  - `release:gate` covers the three drivers, with their live legs as protected checks
+  - `release:gate` covers `prism-driver-process`, `adapterConformance` for the three reference adapters, and the no-vendor-name check. There are no live vendor legs: those belong to hosts.
   - the examples gallery includes `examples/build-workflow.ts`
+  - `release:gate` runs the Prism Agent reference host's scenarios offline (Phase 12)
 - **Kernel constraints:**
   - zero runtime dependencies
   - an export-surface review against §2.3 and §2.6
@@ -2075,38 +2379,22 @@ Gap coverage:
   - compat baseline regenerated
   - `release:gate` covers every package
   - changelog and migration note from 0.12 `createAgent` / `defineAgent`
-  - `prism-agent-sdk` and the 0.12 family packages deprecated on npm
+  - `prism-agent-sdk`, `prism-code`, and the 0.12 family packages deprecated on npm
   - a grep over `scripts/`, `examples/`, and every workspace for retired names and error strings
+- **Evaluation rigor (owner decision 2026-10-19):** `@arnilo/prism-evals` ships with:
+  - correct, fail-closed scorers: approvals correlated per tool call, declared requirements and invariants
+  - item-level statistics with confidence intervals, pass^k, and paired regression gates
+  - calibrated judges: rubric, position-swapped pairwise, and panel judges
+  - agentic evals: scenario items, simulated users, state grading, and a prompt-injection suite
+  - hashed datasets with a held-out split, and durable evaluation stores with telemetry
+  - an eval gate in the reference host
+  - Plans 197–201 carry this.
 
 **Done.**
 
-- `@arnilo/prism` 0.13.0 and the native packages are published, including `driver-kit`, the three drivers, the re-scoped `prism-workflows`, and `serveTools`.
+- `@arnilo/prism` 0.13.0 and the native packages are published, including `driver-kit`, `prism-driver-process`, the re-scoped `prism-workflows`, `serveTools`, `prism-remote`, `prism-headless`, and `prism-tools-research`.
 - A new reader builds an agent from `README.md` alone.
 - `release:gate` is green.
-
-### Phase 12 — Prism Code on the SDK
-
-**Goal.** Prism Code is a reference host. It builds its agent through `createAgent` and the manifest, and owns only the TUI.
-
-**Why.** It proves the architecture end to end. Every capability the lab had before must now come from a package, with the TUI rendering generically.
-
-**Scope.**
-
-- **Move** to `apps/prism-code/`.
-- **Agent setup:**
-  - `createAgent` with `loadManifest`
-  - lab config maps onto the manifest and `packageConfig`
-  - first run offers to install a default package set
-- **The TUI implements** `HostUi` (approval prompt, `ask_user` picker, secret input, OAuth URL, project trust). It renders `AgentEvent`s including `package.event`, lists `agent.commands` generically, and renders `agent.inspect()` as `doctor`.
-- **Delete** providers, credentials, OAuth, sessions policy, compaction selection, OM coordinator, web/wiki resolution, MCP trust logic, approval engine, ACP assembly, tool-module loading, and the headless assembler. A print/json mode may remain as a thin `session.stream` sink.
-- **Version** `@arnilo/prism-code` 0.5.0: "reference TUI host for `@arnilo/prism`; not an embedding API."
-
-**Done.**
-
-- `apps/prism-code/src` imports only `@arnilo/prism` (and `@arnilo/prism/manifest`).
-- A coding session edits a file under approval.
-- `/om` toggles observational memory from the package.
-- Disabling a package in the manifest removes its tools and commands on the next launch.
 
 ### Order
 
@@ -2127,9 +2415,23 @@ External-agent orchestration (§2.12):
 
 The execution order is 13 → 14 → 15 → 16.
 
-Phase 11 needs Phases 0–10 and 13–16. Phase 12 needs Phase 11, but the lab may adopt `next` builds from Phase 4 onward to find gaps early.
+Phase 17 (headless host libraries) needs Phases 10 and 13, and can start alongside Phases 14–16. The scheduler's guard against double firing lands after Phase 16's `leases`.
+
+Phase 12 (the Prism Agent reference host) needs Phases 7–10 and 13–17. It is the last phase before the freeze, so that the gaps it finds are fixed before the contracts are published.
+
+Phase 11 needs Phases 0–10 and 12–17. From Phase 13 on, the execution order is 13 → 14 → 15 → 16 → 17 → 12 → 11, and Phase 17 may start early.
 
 Each phase, when started, becomes a numbered file in `plans/` in the repo's task format. This roadmap is the cut line.
+
+### Documentation truth criteria
+
+These five acceptance criteria stay in force for the truth suite (`scripts/phase24-truth.test.mjs`):
+
+- truth: no page claims “every” or “all” unless dependency closure proves it.
+- truth: packed-install tests assert documented contents, not just that a file exists.
+- truth: generated checks catch drift between manifests, docs and evidence.
+- truth: stale 0.1.1/0.0.23 “current line” text and contradictory provider counts are gone.
+- truth: docs tests fail on wrong package closure/version/navigation while permitting editorial changes.
 
 ## Out of scope
 
@@ -2137,12 +2439,16 @@ Each phase, when started, becomes a numbered file in `plans/` in the repo's task
 - A package registry or marketplace beyond npm, and loading packages from arbitrary URLs.
 - Node.js as a supported runtime.
 - A TUI, GUI, or slash-palette rendering in the kernel.
+- A first-party agent product or standalone agent binary. Prism is always embedded by a host. Prism Agent is a private reference host for testing and proof, never published and not an API (§2.13).
+- A TUI in the reference host. Manual interactive testing goes through ACP clients. A terminal client, if one is built, is a separate `@arnilo/prism-devtools` client of `serveAgent` (§2.13.3).
+- Domain packs beyond coding and research in 0.13.0. `tools-media` is a candidate after 0.13.0 (§2.13.5).
 - A god config that names every package's options. Package config belongs to packages.
 - Compatibility aliases for 0.12 configuration.
+- Vendor adapters for specific coding agents (Claude Code, Codex, the Antigravity CLI, or any other). Hosts write or install them on `prism-driver-process`. Prism ships the adapter contract, the generic driver, conformance, an authoring guide, and offline reference adapters as examples (Phase 15).
 - Bundling, installing, or updating vendor coding agent binaries (`claude`, `codex`, `agy`). Drivers probe for them and report it; the host or the user installs them.
-- Reading, storing, relaying, pooling, or reselling subscription credentials or usage. Users sign in to each vendor binary through the vendor's own flow; Prism only enforces the vendor-terms guard (§2.12.5).
+- Reading, storing, relaying, pooling, or reselling subscription credentials or usage. Users sign in to each vendor binary through the vendor's own flow; Prism only enforces the policy guard over the auth policy each adapter declares (§2.12.5).
 - Modified, patched, or re-wrapped vendor binaries.
 - Vendor SDK runtimes, the Agent SDK control protocol, a generic ACP client driver, and hosted agent services in 0.13.0 (§2.12.17).
 - Sandboxing vendor coding agents beyond the sandboxes they offer. Prism gates what drivers route to it, and attributes what they report.
-- A product-level orchestrator: no built-in `/build`, task classifier, prompt library, or merge-conflict resolver. Hosts compose these from `prism-workflows`, drivers, and gates.
+- A product-level orchestrator: no built-in `/build`, task classifier, prompt library, or merge-conflict resolver. Hosts compose these from `prism-workflows`, their adapters, and gates.
 - Gates that use a model's judgment as the deciding check. `gateNode` is deterministic code; a host can run a model in an `agentNode` before a gate.

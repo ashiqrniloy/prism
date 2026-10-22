@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { createAgent, type JsonObject, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
+import { createAgent, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
 import { packageConformance } from "@arnilo/prism/testing";
 import { providerConformance } from "@arnilo/prism/provider-kit";
-import hyperDefinition, { hyper, createHyperProvider, hyperModels, listHyperModels, HYPER_DEFAULT_API_KEY_REF } from "../index.js";
+import hyperDefinition, { hyper, createHyperProvider, hyperModels, HYPER_DEFAULT_API_KEY_REF } from "../index.js";
 
 const UNSET_REF = "env:PRISM_TEST_UNSET_HYPER_KEY";
 
@@ -104,6 +104,16 @@ describe("@arnilo/prism-provider-hyper package", () => {
       },
       expect: { text: "hello" },
     });
+  });
+
+  it("hyper_passes_recorded_conformance", async () => {
+    const key = "sk-hyper-conformance-key-should-not-surface";
+    const result = await providerConformance((fetchImpl) => createHyperProvider({ apiKey: key, fetch: fetchImpl }), {
+      recordings: new URL("./wire/", import.meta.url),
+      models: hyperModels,
+      secrets: [key],
+    });
+    assert.equal(result.ok, true);
   });
 
   it("hyper_default_api_key_ref_is_the_vendor_env_var", () => {

@@ -11,7 +11,7 @@ Lists every third-party peer a Prism package declares, what importing that peer 
 - Debugging a "peer not installed" error from a gated subpath.
 - Auditing which of your already-installed packages a Prism surface will reuse.
 
-Internal `@arnilo/*` peers are not listed here: every first-party package declares a required `@arnilo/prism` peer, and the release gate keeps all internal ranges locked to the cut version. This page covers the **10 third-party declarations across 6 packages**.
+Internal `@arnilo/*` peers are not listed here: every first-party package declares a required `@arnilo/prism` peer, and the release gate keeps all internal ranges locked to the cut version. This page covers the **12 third-party declarations across 10 packages**.
 
 ## Matrix
 
@@ -19,61 +19,53 @@ One row per declaration. `Unlocks` names the subpath whose import reaches the pe
 
 | Peer | Declared range | Optional | Declared by | Unlocks | Install | Network |
 | --- | --- | --- | --- | --- | --- | --- |
-| `zod` | `^3.25.0 \|\| ^4.0.0` | no | `@arnilo/prism-ag-ui` | `./acp` | `bun add zod` | no |
-| `@firecrawl/anydoc` | `0.2.4` | yes | `@arnilo/prism-work` | `./document-extraction` | `bun add @firecrawl/anydoc@0.2.4` | no |
-| `mammoth` | `^1.8.0` | yes | `@arnilo/prism-work` | `./document-reader` | `bun add mammoth` | no |
-| `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-work` | `./document-reader` | `bun add pdf-parse` | no |
-| `e2b` | `2.49.1` | yes | `@arnilo/prism-coding-tools` | `./security` | `bun add e2b@2.49.1` | yes |
-| `pg` | `^8.23.0` | yes | `@arnilo/prism-core` | `./enterprise/postgres`, `./governance/prompts` | `bun add pg` | yes |
-| `@nats-io/jetstream` | `^3.4.0` | yes | `@arnilo/prism-core` | `./sessions/nats` | `bun add @nats-io/jetstream @nats-io/transport-node` | yes |
-| `@nats-io/transport-node` | `^3.4.0` | yes | `@arnilo/prism-core` | `./sessions/nats` | `bun add @nats-io/transport-node` | yes |
-| `@ai-sdk/provider` | `4.0.13` | yes | `@arnilo/prism-provider-ai-sdk` | `.` | `bun add @ai-sdk/provider@4.0.13` | no |
-| `playwright-core` | `1.63.0` | yes | `@arnilo/prism-web-tools` | `./browser`, `./obscura` | `bun add playwright-core@1.63.0` | yes |
+| `@firecrawl/anydoc` | `0.2.4` | yes | `@arnilo/prism-tools-work` | `./document-extraction` | `bun add @firecrawl/anydoc@0.2.4` | no |
+| `mammoth` | `^1.8.0` | yes | `@arnilo/prism-tools-work` | `./document-reader` | `bun add mammoth` | no |
+| `pdf-parse` | `^2.4.5` | yes | `@arnilo/prism-tools-work` | `./document-reader` | `bun add pdf-parse` | no |
+| `e2b` | `2.49.1` | yes | `@arnilo/prism-tools-coding` | `.` | `bun add e2b@2.49.1` | yes |
+| `pg` | `^8.23.0` | yes | `@arnilo/prism-memory-core` | `./postgres` | `bun add pg` | yes |
+| `pg` | `^8.23.0` | yes | `@arnilo/prism-memory-fabric` | `.` | `bun add pg` | yes |
+| `pg` | `^8.23.0` | yes | `@arnilo/prism-memory-rag` | `.` | `bun add pg` | yes |
+| `playwright-core` | `1.63.0` | yes | `@arnilo/prism-tools-browser` | `.` | `bun add playwright-core@1.63.0` | yes |
+| `playwright-core` | `1.63.0` | yes | `@arnilo/prism-tools-web` | `.` | `bun add playwright-core@1.63.0` | yes |
+| `@opentelemetry/api` | `^1.9.0` | yes | `@arnilo/prism-observability` | `.` | `bun add @opentelemetry/api` | no |
 
 ## Exact pins and why
 
-Two peers are pinned to an exact version instead of a range, because the pin is a contract rather than a convenience:
+Three peers are pinned to an exact version instead of a range, because the pin is a contract rather than a convenience:
 
-- **`playwright-core@1.63.0`** (`@arnilo/prism-web-tools/browser`, `/obscura`). Browser automation rides Playwright's CDP transport and accessibility snapshot shapes, which move between minors. Prism never launches, downloads, or bundles a browser: the host supplies the binary, the image, and the cache, and must match the pinned client. See [Browser automation](browser-automation.md).
-- **`@ai-sdk/provider@4.0.13`** (`@arnilo/prism-provider-ai-sdk`). The adapter consumes deterministic specification-versioned types (`LanguageModelV4`) and gates on an exact supported-version matrix at construction, so an unlisted version fails closed instead of silently mis-mapping. See [AI SDK provider](providers/ai-sdk.md).
-- **`e2b@2.49.1`** (`@arnilo/prism-coding-tools/security`). Pause `keepMemory`, `Sandbox.connect` auto-resume, and `ServiceBusyError` 503 semantics are version-specific. Hosts may inject `{ client }` instead of installing the peer. See [Hosted sandboxes](hosted-sandboxes.md).
-- **`@firecrawl/anydoc@0.2.4`** (`@arnilo/prism-work/document-extraction`). Error codes and the wrapper's optional third argument were checked against this release. The wrapper can upload a PDF when `ocr` is `'hosted'`; the Prism subpath never passes that argument and does not read an API key.
+- **`playwright-core@1.63.0`** (`@arnilo/prism-tools-browser`, `@arnilo/prism-tools-web`). Browser automation rides Playwright's CDP transport and accessibility snapshot shapes, which move between minors. Prism never launches, downloads, or bundles a browser: the host supplies the binary, the image, and the cache, and must match the pinned client. See [Browser automation](../packages/tools/browser/README.md).
+- **`e2b@2.49.1`** (`@arnilo/prism-tools-coding`). Pause `keepMemory`, `Sandbox.connect` auto-resume, and `ServiceBusyError` 503 semantics are version-specific. Hosts may inject `{ client }` instead of installing the peer. See [Hosted sandboxes](../packages/tools/coding/README.md).
+- **`@firecrawl/anydoc@0.2.4`** (`@arnilo/prism-tools-work/document-extraction`). Error codes and the wrapper's optional third argument were checked against this release. The wrapper can upload a PDF when `ocr` is `'hosted'`; the Prism subpath never passes that argument and does not read an API key.
 
-`zod` is the only **required** third-party peer. `@agentclientprotocol/sdk` — a hard dependency of `@arnilo/prism-ag-ui` — declares `zod: ^3.25.0 || ^4.0.0` as its own peer, so `@arnilo/prism-ag-ui` re-declares the same range to keep the install tree satisfiable; the range is deliberately identical to the SDK's. Nothing in Prism imports zod directly.
 
 ## Peers that touch the network
 
-`pg`, `@nats-io/jetstream`, `@nats-io/transport-node`, `playwright-core`, and `e2b` open sockets. For a supply-chain review of those five:
+`pg`, `playwright-core`, and `e2b` open sockets. For a supply-chain review of those three:
 
 - **Connection targets are host-owned.** Every one of them is passed a host-supplied connection string, endpoint list, browser instance, API key, or service URL. Prism holds no default endpoint, and no peer is reachable from the root import.
-- **Bytes stay local otherwise.** `mammoth`, `pdf-parse`, and `@firecrawl/anydoc` (as called by Prism) are filesystem/process peers; the remaining two (`zod`, `@ai-sdk/provider`) are pure types/schemas. SQLite is the runtime's `bun:sqlite`, not a peer. The anydoc package also ships a hosted-OCR option; `@arnilo/prism-work/document-extraction` does not call it.
+- **Bytes stay local otherwise.** `mammoth`, `pdf-parse`, and `@firecrawl/anydoc` (as called by Prism) are filesystem/process peers; the remaining one (`@opentelemetry/api`) is pure types/schemas. SQLite is the runtime's `bun:sqlite`, not a peer. The anydoc package also ships a hosted-OCR option; `@arnilo/prism-tools-work/document-extraction` does not call it.
 - **No secrets are read by the peers.** Prism resolves credentials through host providers and redacts them at the boundary; peers only ever receive a resolved connection string or model object. See [Credentials and redaction](credentials-and-redaction.md) and [Host security guide](host-security.md).
-- **Nothing is installed implicitly.** Optional peers are never auto-installed by npm; a missing one fails closed at the call site with a typed error naming the peer and the subpath. Required peers (today only `zod`) are installed by npm with the package.
+- **Nothing is installed implicitly.** Optional peers are never auto-installed by npm; a missing one fails closed at the call site with a typed error naming the peer and the subpath.
 
-Test-only dependencies are *not* peers. `playwright-core` appears in `@arnilo/prism-work` as a devDependency only, because the office diagrams embed takes a host-supplied iframe and the sole consumer is the gated live draw.io conformance test.
+Test-only dependencies are *not* peers. `playwright-core` appears in `@arnilo/prism-tools-work` as a devDependency only, because the office diagrams embed takes a host-supplied iframe and the sole consumer is the gated live draw.io conformance test.
 
 ## Implementation example
 
 ```bash
 # Browser automation: pinned client, host-owned browser binary
-bun add @arnilo/prism-web-tools playwright-core@1.63.0
+bun add @arnilo/prism-tools-browser playwright-core@1.63.0
 
-# PostgreSQL store: the driver ships with the store package (nothing to add)
-bun add @arnilo/prism-store-postgres
-
-# Enterprise adapters and the prompt registry still peer on the driver in prism-core
-bun add @arnilo/prism-core pg
-
-# NATS JetStream event source: transport + jetstream together
-bun add @arnilo/prism-core @nats-io/transport-node @nats-io/jetstream
+# PostgreSQL session store: pool driver only
+bun add @arnilo/prism-memory-core pg
 
 # Document reader: pick the parser you need (both are independent)
-bun add @arnilo/prism-work pdf-parse mammoth
+bun add @arnilo/prism-tools-work pdf-parse mammoth
 ```
 
 ```ts
 import { chromium } from "playwright-core"; // host supplies the binary/image
-import { createBrowserTools } from "@arnilo/prism-web-tools/browser";
+import { createBrowserTools } from "@arnilo/prism-tools-browser";
 
 const browser = await chromium.launch({ headless: true }); // host-owned, never Prism's
 const tools = await createBrowserTools({ browser });
@@ -81,14 +73,9 @@ const tools = await createBrowserTools({ browser });
 
 ## Extension and configuration notes
 
-`@arnilo/prism-store-postgres` (plan 153 Task 5) declares `pg` as a **dependency**, not a peer: the
-store cannot work without its driver, and the driver loads lazily inside that package alone, so an
-agent that lists `store-sqlite` (or no store package at all) never loads it. `@arnilo/prism-core`
-keeps the optional `pg` peer for `enterprise/postgres` and the prompt registry.
-
 - A peer is an *implementation the host owns*. When a peer's default wiring is not what you want, pass your own implementation instead of installing theirs: the document reader accepts host parsers (`createReadTool({ documentReader })`), and the browser surfaces accept a host `Browser`.
 - Subpaths that need a peer isolate that import, so importing another subpath of the same package never evaluates it. The office family is the extreme case: zero peers, because it takes structural inputs. `@arnilo/prism-channels` also has no third-party peers: Telegram uses native `fetch`, and signal-cli is a host-operated binary rather than an npm peer.
-- Adding a peer to a Prism package is a release-gated change: the declaration must be optional unless a hard dependency's own peer forces it (the `zod` case), and exact pins must come with a version-gate or compatibility rationale.
+- Adding a peer to a Prism package is a release-gated change: the declaration must be optional unless a hard dependency's own peer forces it, and exact pins must come with a version-gate or compatibility rationale.
 
 ## Security and performance notes
 
@@ -98,6 +85,5 @@ keeps the optional `pg` peer for `enterprise/postgres` and the prompt registry.
 
 ## Related APIs
 
-- [Release and install](release-and-install.md): install profiles that pair with each peer.
-- [Configuration options index](options-index.md): the option surfaces each peer unlocks.
-- Package-level detail: [Coding tools](coding-tools.md), [Core runtime](core.md), [Session stores](session-stores.md), [Browser automation](browser-automation.md), [Document reader](document-reader.md), [Document extraction](document-extraction.md), [Provider packages](provider-packages.md), [Messaging channels](messaging-channels.md).
+- [Release and install](release.md): install profiles that pair with each peer.
+- Package-level detail: [Coding tools](../packages/tools/coding/README.md), [Core runtime](agent.md), [Session stores](../packages/stores/jsonl/README.md), [Browser automation](../packages/tools/browser/README.md), [Document reader](../packages/tools/work/README.md), [Document extraction](../packages/tools/work/README.md), [Provider packages](models.md), [Messaging channels](../packages/hosts/channels/README.md).

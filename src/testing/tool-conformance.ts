@@ -7,8 +7,14 @@
 // Error; no test runner, no network. Execution is observed via the
 // tool.started / tool.completed(status: "blocked") events the runtime emits,
 // not by mutating the caller's tool.
+//
+// `assertGateIntegrity` (plan 177 Task 6) is the agent-level companion: it runs the safety-gate
+// invariants against a caller-supplied agent factory, so a custom loop or driver proves it keeps them.
+// It uses the mock provider only and never touches the network.
 
 import type {
+  Agent,
+  AgentConfig,
   AgentEvent,
   JsonObject,
   ToolCallContent,
@@ -16,16 +22,14 @@ import type {
   ToolExecutionContext,
   ToolRegistry,
   ToolResult,
+  Decision,
+  ErrorInfo,
+  SessionEntry,
 } from "../contracts.js";
-import {
-  createActiveToolSet,
-  createSearchToolsTool,
-  createToolSearchState,
-  HARD_MAX_TOOLS_INDEX,
-  SEARCH_TOOLS_TOOL_NAME,
-  selectDisclosedTools,
-} from "../tool-search.js";
-import { dispatchToolCall, filterTools, type ToolFilterInput, type ToolValidator } from "../tools.js";
+import { providerPackage } from "../provider-kit/package.js";
+import { dispatchToolCall, type ToolFilterInput, type ToolValidator } from "../tools.js";
+import { createScriptedHostUi } from "./host-ui.js";
+import { twoTurnProvider } from "./loop-conformance.js";
 
 export interface ToolDispatchProbeOptions {
   readonly call: ToolCallContent;
@@ -163,146 +167,6 @@ export async function dispatchAndCollect(probe: ToolDispatchProbeOptions): Promi
   return { result, events };
 }
 
-export interface ToolDisclosureConformanceOptions {
-  /** Host-active tool definitions; may include schema-bearing and oversized-description tools. */
-  readonly tools: readonly ToolDefinition[];
-  /** Host allow/deny bounds applied before disclosure (same input the runtime narrows). */
-  readonly filter?: ToolFilterInput;
-  /** Search options under test (topK). */
-  readonly search?: { readonly topK?: number };
-  /** Turn text used for the relevance query. Defaults to a zero-match probe. */
-  readonly input?: string;
-  /** Secret values that must never appear in model-facing search output. */
-  readonly secrets?: readonly (string | undefined)[];
-}
-
-/**
- * Assert the tool-disclosure contract (plan 041) against the same narrowing the
- * runtime applies: search mode only narrows (disclosed set is a subset of the
- * allow/deny-filtered input, never wider, never zero, deterministic order); a
- * denied tool is never described; the generated `search_tools` tool is always
- * kept and its output is inert — names plus byte-truncated descriptions only,
- * no JSON structure, no secret values — and activation stays disclosed beside
- * the turn top-k next turn. Fails closed: an index over the hard cap discloses
- * the full eligible list. Throws on the first violation.
- */
-export function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void {
-  const eligible = filterTools(options.tools, options.filter);
-  if (eligible.length === 0) throw new Error("Disclosure conformance needs at least one eligible tool");
-  const activated = createActiveToolSet();
-  const topK = options.search?.topK ?? 16;
-  const state = createToolSearchState({ tools: eligible, activated, search: options.search });
-  const searchTool = createSearchToolsTool(state);
-  const runTools = [...eligible, searchTool];
-  const input = options.input ?? "zzzqqq unmatchable zero-match probe";
-
-  // 1. Narrowing stays a subset of the eligible list and always keeps search_tools.
-  const disclosed = selectDisclosedTools({ tools: runTools, input, search: options.search, activated });
-  const eligibleNames = new Set(eligible.map((tool) => tool.name));
-  eligibleNames.add(SEARCH_TOOLS_TOOL_NAME);
-  for (const tool of disclosed) {
-    if (!eligibleNames.has(tool.name)) {
-      throw new Error(`Disclosed tool ${tool.name} is not in the eligible list; search must never widen`);
-    }
-  }
-  if (!disclosed.some((tool) => tool.name === SEARCH_TOOLS_TOOL_NAME)) {
-    throw new Error("Disclosed set dropped the generated search_tools tool");
-  }
-  if (disclosed.length === 0) throw new Error("Disclosure disclosed zero tools; fail closed to a bounded non-empty set");
-
-  // 2. A deny-listed tool is never described to the provider.
-  const deniedName = eligible[0]!.name;
-  const deniedDisclosed = selectDisclosedTools({
-    tools: filterTools(runTools, { deny: [deniedName] }),
-    input,
-    search: options.search,
-    activated,
-  });
-  if (deniedDisclosed.some((tool) => tool.name === deniedName)) {
-    throw new Error(`Denied tool ${deniedName} was described to the provider`);
-  }
-
-  // 3. Deterministic order for identical turns.
-  const again = selectDisclosedTools({ tools: runTools, input, search: options.search, activated });
-  if (JSON.stringify(again.map((tool) => tool.name)) !== JSON.stringify(disclosed.map((tool) => tool.name))) {
-    throw new Error("Disclosure order is not deterministic for identical turns");
-  }
-
-  // 4. Fail closed past the index hard cap: full eligible list, never zero, never wider.
-  const oversized = Array.from({ length: HARD_MAX_TOOLS_INDEX + 1 }, (_, index) => ({
-    name: `cap_${index}`,
-    description: "Fixture tool beyond the frozen index cap.",
-    parameters: { type: "object", properties: {} },
-    execute: (): ToolResult => ({ toolCallId: "x", name: "cap" }),
-  }));
-  const overflowed = selectDisclosedTools({ tools: oversized, input, search: options.search });
-  if (overflowed.length !== oversized.length) {
-    throw new Error(`Index overflow must disclose the full list; disclosed ${overflowed.length} of ${oversized.length}`);
-  }
-
-  // 5. search_tools output is inert: names + byte-truncated descriptions, no JSON
-  //    structure, no secret values; activation bounded to the eligible set.
-  const oversizedDescription = `${"padding ".repeat(160)}TAIL-MARKER-BEYOND-TRUNCATION`;
-  const probeEligible = [
-    ...eligible,
-    {
-      name: "oversized_desc_tool",
-      description: oversizedDescription,
-      parameters: { type: "object", properties: { untrusted: { type: "string" } } },
-      execute: (): ToolResult => ({ toolCallId: "x", name: "oversized_desc_tool" }),
-    },
-  ];
-  const probeState = createToolSearchState({ tools: probeEligible, activated, search: options.search });
-  const probeTool = createSearchToolsTool(probeState);
-  const probeResult = probeTool.execute({ query: "oversized_desc_tool" }, context("probe")) as ToolResult;
-  if (probeResult.error) throw new Error(`search_tools rejected a valid bounded query: ${probeResult.error.message}`);
-  const text = probeResult.content?.find((block) => block.type === "text");
-  if (text?.type !== "text" || !text.text.startsWith("- ")) {
-    throw new Error("search_tools returned no bounded name+description lines");
-  }
-  if (text.text.includes("TAIL-MARKER-BEYOND-TRUNCATION")) {
-    throw new Error(
-      "search_tools emitted an untruncated oversized description; descriptions are truncated, descriptions are never executed",
-    );
-  }
-  if (/[{}]/.test(text.text)) {
-    throw new Error("search_tools text carries JSON structure; output must be inert name+description lines only");
-  }
-  const activatedCount = activated.list().length;
-  if (activatedCount === 0 || activatedCount > topK) throw new Error(`activation not bounded: ${activatedCount} names`);
-  const probeNames = new Set(probeEligible.map((tool) => tool.name));
-  for (const name of activated.list()) {
-    if (!probeNames.has(name)) throw new Error(`activated ${name} is not in the eligible set`);
-  }
-
-  // 5b. Secret scan: query every eligible tool by name; configured secret values
-  //     must never surface in model-facing search output even when a host
-  //     description carries one.
-  for (const tool of eligible) {
-    const probe = probeTool.execute({ query: tool.name }, context("probe-secret")) as ToolResult;
-    const probeBlob = JSON.stringify(probe);
-    for (const secret of options.secrets ?? []) {
-      if (secret && probeBlob.includes(secret)) {
-        throw new Error("search output leaked a configured secret");
-      }
-    }
-  }
-
-  // 6. Activated tools stay disclosed on the next turn, beside the turn top-k.
-  //    (Names outside the runtime list are inert by design — e.g. the probe's
-  //    synthetic tool above — so only eligible names are asserted.)
-  const nextTurn = selectDisclosedTools({
-    tools: runTools,
-    input: "zzzqqq unmatchable next-turn probe",
-    search: options.search,
-    activated,
-  });
-  for (const name of activated.list()) {
-    if (eligibleNames.has(name) && !nextTurn.some((tool) => tool.name === name)) {
-      throw new Error(`activated tool ${name} was dropped from the next turn's disclosed set`);
-    }
-  }
-}
 
 function pickPolicy(options: ToolConformanceOptions): {
   beforeExecute?: (call: ToolCallContent, tool: ToolDefinition, context: ToolExecutionContext) => void | Promise<void>;
@@ -312,6 +176,208 @@ function pickPolicy(options: ToolConformanceOptions): {
   return { beforeExecute: options.beforeExecute, validate: options.validate, filter: options.filter };
 }
 
-function context(toolCallId: string): ToolExecutionContext {
+function _context(toolCallId: string): ToolExecutionContext {
   return { sessionId: "conformance", runId: "r", toolCallId };
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Gate integrity (plan 177 Task 6)
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Builds the agent under test; a custom loop or driver injects itself here. */
+export interface GateIntegrityOptions {
+  /**
+   * Builds the agent each probe runs against. A custom loop passes its strategy through `slots.loop`
+   * (or a loop package) here, so the check exercises the loop that will ship, not a stand-in:
+   * `(config) => createAgent({ ...config, slots: { ...config.slots, loop: myLoop } })`.
+   */
+  readonly createAgent: (config: AgentConfig) => Promise<Agent>;
+}
+
+const GATE_MODEL = { provider: "mock", model: "demo" } as const;
+const GATE_PROVIDER = "gate-integrity-provider";
+/** The tool every probe registers; the provider calls it by this name. */
+const GATE_TOOL = "echo";
+
+/** A tool that records every executed argument object, so an un-gated call is visible. */
+function gatedTool(executed: JsonObject[]): ToolDefinition {
+  return {
+    name: GATE_TOOL,
+    parameters: {},
+    execute: (args, execution) => {
+      executed.push(args);
+      return { toolCallId: execution.toolCallId, name: GATE_TOOL, value: "ok" };
+    },
+  };
+}
+
+/** One tool call, then a final text turn: the shape every probe needs. */
+function gateProvider(args: JsonObject) {
+  return providerPackage(GATE_PROVIDER, [twoTurnProvider({ id: "call-1", name: GATE_TOOL, args })]);
+}
+
+function toolResultErrors(entries: readonly SessionEntry[]): ErrorInfo[] {
+  return entries.flatMap((entry) =>
+    entry.kind === "message" && entry.message
+      ? entry.message.content.flatMap((block) => (block.type === "tool_result" && block.error ? [block.error] : []))
+      : [],
+  );
+}
+
+/**
+ * Assert the safety-gate invariants a loop must preserve, against `options.createAgent`:
+ *
+ * 1. a rewritten call is re-gated, so a denial reached on the final arguments stops it;
+ * 2. an `ask` keeps every other handler's rewrite, so a sanitized call is what executes;
+ * 3. a resumed call is re-gated, so an approval cannot carry arguments the gate would deny;
+ * 4. `agent.dispose()` stops an in-flight tool, so no call runs once disposal has begun.
+ *
+ * Each probe asserts the outcome the gate must produce (a denial recorded, the sanitized arguments
+ * executed, the disposal denied) as well as the absence of an un-gated execution, so a loop that
+ * skips the tool pipeline fails rather than passing vacuously. Throws on the first violation, naming
+ * the probe; returns normally when all four hold. The mock provider is the only dependency.
+ *
+ * An external-agent driver loop (`usesModel: false`, tools relayed through `RunController.ask`) does
+ * not drive `executeTools` at all; `driverConformance`'s `gating`/`fail_closed`/`resume` legs cover it.
+ */
+export async function assertGateIntegrity(options: GateIntegrityOptions): Promise<void> {
+  const probes: readonly { readonly name: string; readonly run: () => Promise<void> }[] = [
+    { name: "rewrite_is_regated", run: () => rewriteIsRegated(options.createAgent) },
+    { name: "ask_keeps_rewrite", run: () => askKeepsRewrite(options.createAgent) },
+    { name: "resume_is_regated", run: () => resumeIsRegated(options.createAgent) },
+    { name: "dispose_is_fail_closed", run: () => disposeIsFailClosed(options.createAgent) },
+  ];
+  for (const probe of probes) {
+    try {
+      await probe.run();
+    } catch (error) {
+      throw new Error(`gate integrity: ${probe.name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+}
+
+/** Shared shape: build the agent, run one session, dispose. */
+async function withGatedAgent(
+  create: GateIntegrityOptions["createAgent"],
+  config: AgentConfig,
+  sessionId: string,
+  body: (session: Awaited<ReturnType<Agent["session"]>>) => Promise<void>,
+): Promise<void> {
+  const agent = await create(config);
+  try {
+    await body(await agent.session({ id: sessionId, create: true }));
+  } finally {
+    await agent.dispose();
+  }
+}
+
+async function rewriteIsRegated(create: GateIntegrityOptions["createAgent"]): Promise<void> {
+  const executed: JsonObject[] = [];
+  await withGatedAgent(
+    create,
+    {
+      model: GATE_MODEL,
+      packages: [gateProvider({ path: "/tmp/inside" })],
+      tools: { add: [gatedTool(executed)] },
+      hooks: (hooks) => {
+        hooks.on("tool.call", (call) => ({ rewrite: { path: String(call.args.path).replace("/tmp/inside", "/etc/shadow") } }));
+        hooks.on("tool.call", (call) => (String(call.args.path).startsWith("/etc") ? { deny: "outside root" } : undefined));
+      },
+    },
+    "gate-integrity-rewrite",
+    async (session) => {
+      await session.run("go");
+      if (executed.length > 0) throw new Error(`a rewritten call executed (${JSON.stringify(executed[0])}) instead of being re-gated`);
+      if (!toolResultErrors(await session.entries()).some((error) => /outside root/.test(error.message))) {
+        throw new Error("the re-gated call produced no denial in the transcript");
+      }
+    },
+  );
+}
+
+async function askKeepsRewrite(create: GateIntegrityOptions["createAgent"]): Promise<void> {
+  const executed: JsonObject[] = [];
+  const scripted = createScriptedHostUi({ confirm: true });
+  await withGatedAgent(
+    create,
+    {
+      model: GATE_MODEL,
+      packages: [gateProvider({ path: "/tmp/raw" })],
+      tools: { add: [gatedTool(executed)] },
+      host: { ui: scripted.ui },
+      hooks: (hooks) => {
+        hooks.on("tool.call", () => ({ ask: "approve the sanitized call?" }));
+        hooks.on("tool.call", (call) => ({ rewrite: { path: String(call.args.path).replace("/tmp/raw", "/tmp/sanitized") } }));
+      },
+    },
+    "gate-integrity-ask",
+    async (session) => {
+      await session.run("go");
+      if (executed.length !== 1) throw new Error(`an approved call executed ${executed.length} times, expected once`);
+      if (executed[0]?.path !== "/tmp/sanitized") throw new Error(`the sanitizing rewrite was dropped: executed ${JSON.stringify(executed[0])}`);
+    },
+  );
+}
+
+async function resumeIsRegated(create: GateIntegrityOptions["createAgent"]): Promise<void> {
+  const executed: JsonObject[] = [];
+  await withGatedAgent(
+    create,
+    {
+      model: GATE_MODEL,
+      packages: [gateProvider({ path: "/tmp/ok" })],
+      tools: { add: [gatedTool(executed)] },
+      hooks: (hooks) => {
+        hooks.on("tool.call", () => ({ ask: "approve the call?" }));
+        hooks.on("tool.call", (call) => (String(call.args.path).startsWith("/etc") ? { deny: "outside root" } : undefined));
+      },
+    },
+    "gate-integrity-resume",
+    async (session) => {
+      const first = await session.run("go");
+      // A loop that cannot suspend denies the ask outright, which is the same outcome: no execution.
+      if (first.status === "suspended") {
+        const decisions: Decision[] = (first.pending ?? []).map((pending) => ({
+          approvalId: pending.approvalId,
+          outcome: "allow_once" as const,
+          modifiedArguments: { path: "/etc/shadow" },
+        }));
+        for await (const _event of session.resume(decisions)) {
+          // Drain: the resumed run's outcome is checked through the recorded executions.
+        }
+      }
+      if (executed.length > 0) throw new Error(`a resumed call executed (${JSON.stringify(executed[0])}) instead of being re-gated`);
+    },
+  );
+}
+
+async function disposeIsFailClosed(create: GateIntegrityOptions["createAgent"]): Promise<void> {
+  const executed: JsonObject[] = [];
+  let agent: Agent | undefined;
+  agent = await create({
+    model: GATE_MODEL,
+    packages: [gateProvider({})],
+    tools: { add: [gatedTool(executed)] },
+    hooks: (hooks) => {
+      // Dispose while the run is mid-tool-round: the call must not execute.
+      hooks.on("tool.call", async () => {
+        await agent!.dispose();
+        return undefined;
+      });
+    },
+  });
+  const built = agent;
+  try {
+    const session = await built.session({ id: "gate-integrity-dispose", create: true });
+    let completed = false;
+    try {
+      completed = (await session.run("go")).status === "completed";
+    } catch {
+      // A loop that surfaces the abort as a rejection is fine; only a clean completion is not.
+    }
+    if (executed.length > 0) throw new Error("a tool executed after dispose() was called");
+    if (completed) throw new Error("a run reported success after dispose() was called mid-round");
+  } finally {
+    await built.dispose();
+  }
 }

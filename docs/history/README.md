@@ -16,3 +16,14 @@ page instead and note the archive where provenance matters.
 - `083-prism-work-primitive-review.md`: work-family, sandbox, and vendored-skills primitive review (083; page written in 083 Task 1).
 - `084-primitive-review.md`: host long-run durability, steering, and honesty primitive review (084; page written in 084 Task 0).
 - `085-honesty-and-cut-primitive-review.md`: release/coverage/wiki honesty, OM worker and channel lease boundaries, private runtime split, dedupe scope, and 0.8.0 cut inventory (085; page written in Task 0).
+
+## Retired 0.12 pages
+
+Pages that described the 0.12 runtime and have no 0.13 counterpart. The live contract is in the [docs index](../index.md).
+
+- `agent-sdk-0.12.md`, `agent-definitions-0.12.md`: the `defineAgent` / `@arnilo/prism-agent-sdk` facade.
+- `core-0.12.md`, `conversations-0.12.md`, `server-0.12.md`, `enterprise-postgres-state-0.12.md`, `prompt-registry-0.12.md`: the `@arnilo/prism-core` family surface.
+- `prism-code-0.12.md`, `acp-agent-0.12.md`, `a2a-0.12.md`: the Prism Code app and its protocol pages.
+- `process-sessions-0.12.md`, `language-intelligence-0.12.md`, `impeccable-0.12.md`: the `@arnilo/prism-coding-tools` 0.12 subpaths.
+- `batch-jobs-0.12.md`, `moderation-0.12.md`, `realtime-voice-0.12.md`: the `@arnilo/prism-providers` 0.12 capability pages.
+- `use-case-model-selection-0.12.md`, `options-index-0.12.md`, `synapta-integration-review-0.12.md`: the 0.12 option index and integration review.

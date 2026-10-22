@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "frozenBy": "plan 188.7 Task 1, corrected by Task 3",
+  "metricVersion": 2,
+  "partition": {
+    "longmemevalS": {
+      "questions": 140,
+      "perAbility": 20,
+      "abilities": 7,
+      "seed": 1887,
+      "disjointFromDevelopment": 70
+    },
+    "lifecycle": {
+      "personas": 12,
+      "seed": 1887,
+      "projectsPerPersona": 3,
+      "sessionsPerProject": 8,
+      "independentStoresPerPersona": true
+    },
+    "memoryagentbenchCR": {
+      "questions": 40
+    }
+  },
+  "clusters": {
+    "lifecycle": "persona",
+    "longmemeval": "shared haystack session set",
+    "minimumConfirmatoryClusters": 8
+  },
+  "families": [
+    "Q quality",
+    "S safety",
+    "R reliability",
+    "C cost"
+  ],
+  "primaries": {
+    "accuracyDelta": 0.03,
+    "leakagePointEstimateMax": 0.05,
+    "leakageUpper95Max": 0.15,
+    "poisonAndStaleMargin": 0
+  },
+  "retries": {
+    "solver": 2,
+    "judge": 2,
+    "consolidationRepair": 1,
+    "armInfrastructureRerun": 1
+  },
+  "stopRules": [
+    "no paid launch without an owner-approved numeric cap and a dry-run manifest",
+    "halt on any deterministic safety or secret violation",
+    "no confirmatory verdict below 8 independent clusters"
+  ]
+}

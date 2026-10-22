@@ -9,7 +9,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createReadOnlyTools } from "@arnilo/prism-coding-tools/agent";
+import { createReadOnlyTools } from "@arnilo/prism-tools-coding";
 import {
   assertEvaluationThreshold,
   defineDataset,
@@ -18,8 +18,8 @@ import {
   runExperiment,
   scoreRun,
   serializeEvaluationReport,
-} from "@arnilo/prism-core/governance/evals";
-import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-web-tools/browser";
+} from "@arnilo/prism-evals";
+import { classifyBrowserUrl, normalizeTarget } from "@arnilo/prism-tools-browser";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const scorer = defineScorer<{ kind: string }, { pass: boolean }>({

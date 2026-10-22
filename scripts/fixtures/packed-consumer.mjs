@@ -6,20 +6,20 @@
  * graph — never workspace source paths.
  *
  * Plan 125 Task 2: the consumer simulation is Bun. Tarballs still come from
- * `npm pack` (the release-host registry toolchain); install and execution are
+ * `bun pm pack`; install and execution are
  * Bun only. `--offline` cannot resolve third-party ranges from a cold cache
  * (bun needs cached manifests), so the retry is `--prefer-offline`: registry
  * metadata for externals only — first-party content always comes from the
  * tarballs, which the consumer lockfile records by path.
  *
  * `overrides` pin every packed name to its tarball: internal ranges like
- * `@arnilo/prism-core@^0.12.0` are unpublished during a readiness gate, so
+ * unpublished internal ranges during a readiness gate, so
  * without the pin bun resolves them from the registry and the install fails.
  *
  * Plan 153 Task 4: the fixtures name their entry points, and the helper packs
  * their first-party closure too — a dependency such as
  * `@arnilo/prism-store-sqlite` reaching `@arnilo/prism-store-codecs`, or
- * `@arnilo/prism-core` reaching it for the Postgres tree, cannot resolve from
+ * a retired family package reaching it for the Postgres tree, cannot resolve from
  * the registry either, and a fixture should not have to re-list every internal
  * edge a package grows.
  */
@@ -39,9 +39,10 @@ export const repoRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..",
  */
 export function withFirstPartyClosure(packages) {
   const rootManifest = readManifest(join(repoRoot, "package.json"));
-  const manifests = [".", ...expandWorkspaceDirs(repoRoot, rootManifest.workspaces).map((dir) => relative(repoRoot, dir))].map(
-    (dir) => ({ dir, manifest: readManifest(join(repoRoot, dir, "package.json")) }),
-  );
+  const manifests = [".", ...expandWorkspaceDirs(repoRoot, rootManifest.workspaces).map((dir) => relative(repoRoot, dir))].map((dir) => ({
+    dir,
+    manifest: readManifest(join(repoRoot, dir, "package.json")),
+  }));
   const dirByName = new Map(manifests.map(({ dir, manifest }) => [manifest.name, dir]));
   const seen = new Map(packages.map((pkg) => [pkg.name, pkg]));
   const queue = [...packages];
@@ -66,12 +67,11 @@ export function createPackedConsumer(requested) {
   const staging = mkdtempSync(join(tmpdir(), "prism-e2e-pack-"));
   const consumer = mkdtempSync(join(tmpdir(), "prism-e2e-consumer-"));
   for (const pkg of packages) {
-    // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-    const r = spawnSync("npm", ["pack", "--pack-destination", staging], {
+    const r = spawnSync("bun", ["pm", "pack", "--destination", staging], {
       cwd: join(repoRoot, pkg.dir),
       encoding: "utf8",
     });
-    if (r.status !== 0) throw new Error(`npm pack failed for ${pkg.name}:\n${r.stdout}\n${r.stderr}`);
+    if (r.status !== 0) throw new Error(`bun pm pack failed for ${pkg.name}:\n${r.stdout}\n${r.stderr}`);
   }
   const tarballs = readdirSync(staging)
     .filter((f) => f.endsWith(".tgz"))

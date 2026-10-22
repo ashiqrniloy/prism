@@ -1,9 +1,18 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
-import { type ModelProvider, createAgent, providerDone, providerTextDelta, providerToolCallDelta, type ToolDefinition } from "@arnilo/prism";
+import {
+  createAgent,
+  type ModelProvider,
+  providerDone,
+  providerTextDelta,
+  providerToolCallDelta,
+  type ToolDefinition,
+} from "@arnilo/prism";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { mockProvider } from "@arnilo/prism/testing";
 import {
   type CommandHookHandler,
   type HooksJsonConfig,
@@ -12,8 +21,6 @@ import {
   hookCommandHash,
   hooksJson,
 } from "../index.js";
-import { mockProvider } from "@arnilo/prism/testing";
-import { providerPackage } from "@arnilo/prism/provider-kit";
 
 async function until(predicate: () => boolean, what: string): Promise<void> {
   for (let attempt = 0; attempt < 80 && !predicate(); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 25));
@@ -21,7 +28,7 @@ async function until(predicate: () => boolean, what: string): Promise<void> {
 }
 
 /** Collect guardrail decision reasons as they are emitted; the model-visible text stays neutral. */
-function collectGuardrailReasons(session: { subscribe(): AsyncIterable<{ type: string; record?: { reason?: string } }> }): string[] {
+function _collectGuardrailReasons(session: { subscribe(): AsyncIterable<{ type: string; record?: { reason?: string } }> }): string[] {
   const reasons: string[] = [];
   void (async () => {
     for await (const event of session.subscribe()) {
@@ -42,7 +49,7 @@ function jsonDecision(value: unknown): string {
   return `process.stdout.write(${JSON.stringify(JSON.stringify(value))})`;
 }
 
-function hooksPackage(raw: object, options: HooksJsonOptions = {}): ReturnType<typeof hooksJson> {
+function _hooksPackage(raw: object, options: HooksJsonOptions = {}): ReturnType<typeof hooksJson> {
   return hooksJson({ ...options, config: { ...(raw as HooksJsonConfig), allowCommands: "all" } });
 }
 
@@ -122,9 +129,30 @@ describe("compileFixture: PreToolUse", () => {
 
     const result = await (await agent.session({ id: "pre-rewrite", create: true })).run("write it");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(executed.length, 1);
     assert.deepEqual(executed[0], { path: "rewritten.txt" }, "the tool sees exactly the rewritten input");
+  });
+
+  it("rewrite_does_not_double_run_pre_tool_use", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "prism-hooks-json-once-"));
+    const counter = join(dir, "runs.txt");
+    try {
+      const handler = script(
+        `require("node:fs").appendFileSync(${JSON.stringify(counter)}, "x"); ${jsonDecision({ hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { path: "rewritten.txt" } } })}`,
+      );
+      const hooks = compileFixture(parseHooksConfig({ PreToolUse: [{ matcher: "write", hooks: [handler] }] }), { trusted: "all" });
+      const { activated } = await loadHooks(hooks);
+      const executed: Record<string, unknown>[] = [];
+      const agent = await toolAgent({ requests: [], execute: (args) => void executed.push(args), hooks: activated.hooks });
+
+      await (await agent.session({ id: "pre-rewrite-once", create: true })).run("write it");
+
+      assert.deepEqual(executed[0], { path: "rewritten.txt" });
+      assert.equal(readFileSync(counter, "utf8"), "x", "the PreToolUse handler runs once for a rewritten call");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("denies through the tool_input guardrail when a handler exits 2", async () => {
@@ -144,7 +172,7 @@ describe("compileFixture: PreToolUse", () => {
     const session = await agent.session({ id: "pre-deny", create: true });
     const result = await session.run("write it");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(executed.length, 0, "a denied call never reaches the tool");
     assert.match(JSON.stringify(requests[1]), /no writes today/, "the model sees the hook's denial reason");
   });
@@ -170,7 +198,7 @@ describe("compileFixture: PostToolUse", () => {
     const session = await agent.session({ id: "post-deny", create: true });
     const result = await session.run("write it");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(executed.length, 1, "the tool ran; only its result was withheld");
     assert.match(JSON.stringify(requests[1]), /result not allowed/);
   });
@@ -186,14 +214,19 @@ describe("compileFixture: Stop", () => {
     let turns = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [activated.hooks, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turns += 1;
-          yield providerTextDelta(`turn ${turns}`);
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        activated.hooks,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turns += 1;
+              yield providerTextDelta(`turn ${turns}`);
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
 
     const result = await (await agent.session({ id: "stop-cap", create: true })).run("go");
@@ -220,19 +253,24 @@ describe("compileFixture: Stop", () => {
     let turns = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [activated.hooks, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turns += 1;
-          yield providerTextDelta(`turn ${turns}`);
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        activated.hooks,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turns += 1;
+              yield providerTextDelta(`turn ${turns}`);
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
 
     const result = await (await agent.session({ id: "stop-continue-false", create: true })).run("go");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.stopReason, undefined, "continue: false ends the run instead of continuing it");
     assert.equal(turns, 1, "no continuation turn runs");
   });
@@ -247,7 +285,7 @@ describe("compileFixture: Stop", () => {
 
     const result = await (await agent.session({ id: "stop-natural", create: true })).run("go");
 
-    assert.equal(result.status, "succeeded");
+    assert.equal(result.status, "completed");
     assert.equal(result.stopReason, undefined);
   });
 });
@@ -268,14 +306,19 @@ describe("compileFixture: context injection", () => {
     const requests: { messages: readonly unknown[] }[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [activated.hooks, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate(request) {
-          requests.push(request);
-          yield providerTextDelta("ok");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        activated.hooks,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate(request) {
+              requests.push(request);
+              yield providerTextDelta("ok");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     const session = await agent.session({ id: "ctx", create: true });
 
@@ -308,13 +351,18 @@ describe("compileFixture: context injection", () => {
       const requests: unknown[] = [];
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        packages: [activated.hooks, providerPackage("test-provider", [{
-          id: "mock",
-          async *generate(request) {
-            requests.push(request);
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          activated.hooks,
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate(request) {
+                requests.push(request);
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
       });
 
       await (await agent.session({ id: "handler-limit", create: true })).run("go");
@@ -376,13 +424,18 @@ describe("compileFixture: context injection", () => {
       const requests: unknown[] = [];
       const agent = await createAgent({
         model: { provider: "mock", model: "demo" },
-        packages: [activated.hooks, providerPackage("test-provider", [{
-          id: "mock",
-          async *generate(request) {
-            requests.push(request);
-            yield providerDone();
-          },
-        }])],
+        packages: [
+          activated.hooks,
+          providerPackage("test-provider", [
+            {
+              id: "mock",
+              async *generate(request) {
+                requests.push(request);
+                yield providerDone();
+              },
+            },
+          ]),
+        ],
       });
 
       await (await agent.session({ id: "spill", create: true })).run("go");
@@ -418,14 +471,19 @@ describe("compileFixture: context injection", () => {
     const requests: unknown[] = [];
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [activated.hooks, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate(request) {
-          requests.push(request);
-          yield providerTextDelta("ok");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        activated.hooks,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate(request) {
+              requests.push(request);
+              yield providerTextDelta("ok");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     const session = await agent.session({ id: "async", create: true });
 
@@ -518,7 +576,7 @@ describe("compileFixture: mcp_tool handlers", () => {
 
     const result = await (await agent.session({ id: "mcp-error", create: true })).run("write it");
 
-    assert.equal(result.status, "succeeded", "a failing hook never fails the run");
+    assert.equal(result.status, "completed", "a failing hook never fails the run");
     assert.equal(executed.length, 1);
     await until(() => warnings.length > 0, "handler_failed warning");
     assert.ok(warnings.includes("handler_failed"), `expected a handler_failed warning, got ${warnings.join(", ")}`);

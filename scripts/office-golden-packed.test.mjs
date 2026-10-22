@@ -1,5 +1,5 @@
 // Plan 060 office golden validation: the golden corpus round-trips
-// (generate→parse→compare) against the PACKED tarball (`npm pack` output),
+// (generate→parse→compare) against the PACKED tarball (`bun pm pack` output),
 // not workspace source — packaging regressions (missing dist files, broken
 // entry points) fail here while unit tests stay green. Single test body so a
 // failure names the first diffing file only, never a log wall. Network-free;
@@ -12,7 +12,7 @@ import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const GOLDEN = join(ROOT, "packages", "prism-work", "golden");
+const GOLDEN = join(ROOT, "packages", "tools", "work", "golden");
 
 // Synthetic diagrams pair: same model, permuted attributes/whitespace.
 const DIAGRAM_A = `<mxfile host="prism.test" version="24.0.0"><diagram id="d1" name="P1"><mxGraphModel dx="1000" dy="800"><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" parent="1" value="A" vertex="1"><mxGeometry as="geometry" x="10" y="10" width="30" height="60"/></mxCell></root></mxGraphModel></diagram></mxfile>`;
@@ -27,7 +27,7 @@ before(async () => {
   // hoisted prod deps; removed in after().
   packedDir = mkdtempSync(join(ROOT, "node_modules", ".prism-work-packed-"));
   // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-work", "--pack-destination", packedDir], {
+  const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-tools-work", "--pack-destination", packedDir], {
     cwd: ROOT,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -37,9 +37,9 @@ before(async () => {
     .at(-1)
     .trim();
   execFileSync("tar", ["-xzf", join(packedDir, tgz), "-C", packedDir], { stdio: "pipe" });
-  const base = join(packedDir, "package", "dist");
-  documents = await import(pathToFileURL(join(base, "documents", "index.js")).href);
-  diagrams = await import(pathToFileURL(join(base, "diagrams", "index.js")).href);
+  const base = join(packedDir, "package", "src");
+  documents = await import(pathToFileURL(join(base, "documents", "index.ts")).href);
+  diagrams = await import(pathToFileURL(join(base, "diagrams", "index.ts")).href);
 });
 
 after(() => {
@@ -48,7 +48,7 @@ after(() => {
 
 test("packed office golden round-trip (docx/xlsx/pptx) + diagrams canonicalize", async () => {
   const { assertDocModelEqual, assertSheetModelEqual, assertDeckModelEqual } = await import(
-    pathToFileURL(join(ROOT, "packages", "prism-work", "dist", "documents", "__tests__", "equality.js")).href
+    pathToFileURL(join(ROOT, "packages", "tools", "work", "src", "documents", "__tests__", "equality.ts")).href
   );
   for (const c of [
     { format: "docx", kind: "doc", model: "golden.doc.model.json", equal: assertDocModelEqual },

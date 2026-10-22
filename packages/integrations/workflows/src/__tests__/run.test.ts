@@ -1,0 +1,1229 @@
+import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import { createAgent, createSecretRedactor, providerDone, providerTextDelta } from "@arnilo/prism";
+import { CheckpointRestoreError } from "../checkpoint-restore.js";
+import { mockProvider } from "@arnilo/prism/testing";
+import {
+  agentNode,
+  conditionalNode,
+  createMemoryWorkflowCheckpoints,
+  createWorkflowTransitionChannel,
+  defineWorkflow,
+  fanOut,
+  functionNode,
+  joinNode,
+  loopNode,
+  replayWorkflow,
+  resumeWorkflow,
+  runWorkflow,
+  suspend,
+  WorkflowAbortError,
+  type WorkflowCheckpointAdapter,
+  WorkflowCheckpointError,
+  type WorkflowCheckpointListInput,
+  type WorkflowCheckpointLoadInput,
+  type WorkflowEvent,
+  WorkflowLoopLimitError,
+  WorkflowRuntimeError,
+  workflowNode,
+} from "../index.js";
+
+/** 0.13: the 0.12 `status.ts` surface is retired; read the checkpoint directly. */
+const getWorkflowRun = (checkpoints: WorkflowCheckpointAdapter, input: WorkflowCheckpointLoadInput) => checkpoints.load(input);
+const listWorkflowRuns = (checkpoints: WorkflowCheckpointAdapter, input: WorkflowCheckpointListInput = {}) => {
+  if (!checkpoints.list) throw new WorkflowCheckpointError("Checkpoint adapter does not support list()");
+  return checkpoints.list(input);
+};
+
+describe("runWorkflow", () => {
+  it("executes a diamond join with deterministic event order", async () => {
+    const events: WorkflowEvent[] = [];
+    const left = functionNode({ execute: async () => "L" });
+    const right = functionNode({ execute: async () => "R" });
+    const join = functionNode({
+      execute: async (ctx) => `${ctx.upstream.left}:${ctx.upstream.right}`,
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "diamond",
+      nodes: { left, right, join },
+      edges: [
+        ["left", "join"],
+        ["right", "join"],
+      ],
+      limits: { maxConcurrency: 2 },
+    });
+    const result = await runWorkflow(workflow, null, {
+      concurrency: 2,
+      transitions: workflowEvents((event) => events.push(event)),
+    });
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.outputs.join, "L:R");
+    const sequences = events.map((event) => event.sequence);
+    assert.deepEqual(
+      sequences,
+      [...sequences].sort((a, b) => a - b),
+    );
+    assert.ok(events.some((event) => event.type === "workflow_started"));
+    assert.ok(events.some((event) => event.type === "workflow_finished"));
+  });
+
+  it("skips conditional else-path when predicate is false", async () => {
+    const gate = conditionalNode({
+      when: async () => false,
+      else: ["fallback"],
+    });
+    const expensive = functionNode({ execute: async () => "nope" });
+    const fallback = functionNode({ execute: async () => "ok" });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "cond",
+      nodes: { gate, expensive, fallback },
+      edges: [
+        ["gate", "expensive"],
+        ["gate", "fallback"],
+      ],
+    });
+    const result = await runWorkflow(workflow, null);
+    assert.equal(result.status, "succeeded");
+    assert.equal(result.outputs.fallback, "ok");
+    assert.equal(result.outputs.expensive, undefined);
+  });
+
+  it("enforces fan-out bounds", async () => {
+    const expand = fanOut({
+      items: async () => [1, 2, 3, 4],
+      route: (item) => functionNode({ execute: async () => item }),
+      maxFanOut: 2,
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "fan",
+      nodes: { expand },
+    });
+    await assert.rejects(
+      () => runWorkflow(workflow, null),
+      (error: unknown) => error instanceof WorkflowRuntimeError && /maxFanOut/i.test(error.message),
+    );
+  });
+
+  it("executes bounded loops, breaks at first or middle iteration, and feeds prior output", async () => {
+    let firstCalls = 0;
+    const first = loopNode({
+      execute: async () => {
+        firstCalls += 1;
+        return "first";
+      },
+      until: async (ctx) => ctx.previousOutput === "first",
+      maxIterations: 5,
+    });
+    const firstResult = await runWorkflow(defineWorkflow({ revision: "1", id: "loop-first", nodes: { first } }), null);
+    assert.equal(firstResult.status, "succeeded");
+    assert.equal(firstResult.outputs.first, "first");
+    assert.equal(firstCalls, 1);
+
+    const iterations: number[] = [];
+    const middle = loopNode({
+      execute: async (ctx) => {
+        iterations.push(ctx.iteration);
+        return ((ctx.previousOutput as number | undefined) ?? 0) + 1;
+      },
+      until: async (ctx) => ctx.previousOutput === 3,
+      maxIterations: 5,
+    });
+    const middleResult = await runWorkflow(defineWorkflow({ revision: "1", id: "loop-middle", nodes: { middle } }), null);
+    assert.equal(middleResult.outputs.middle, 3);
+    assert.deepEqual(iterations, [0, 1, 2]);
+  });
+
+  it("fails closed at maxIterations with bounded last output and checkpoints iteration state", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const loop = loopNode({
+      execute: async (ctx) => ({ iteration: ctx.iteration, value: ctx.previousOutput ?? "start" }),
+      until: async () => false,
+      maxIterations: 2,
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "loop-limit", nodes: { loop } });
+    await assert.rejects(
+      () => runWorkflow(workflow, null, { checkpoints, runId: "loop-limit-run" }),
+      (error: unknown) =>
+        error instanceof WorkflowLoopLimitError &&
+        error.code === "ERR_PRISM_WORKFLOW_LOOP_LIMIT" &&
+        error.iterations === 2 &&
+        (error.lastOutput as { iteration?: number } | undefined)?.iteration === 1,
+    );
+    const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: "loop-limit-run" });
+    assert.equal(saved?.value.nodes.loop?.iteration, 2);
+    assert.equal((saved?.value.nodes.loop?.lastOutput as { iteration?: number } | undefined)?.iteration, 1);
+  });
+
+  it("reuses node output bounds for each loop iteration", async () => {
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "loop-output-bound",
+      limits: { maxNodeOutputBytes: 32 },
+      nodes: {
+        loop: loopNode({
+          execute: async () => "x".repeat(64),
+          until: async () => false,
+          maxIterations: 2,
+        }),
+      },
+    });
+    await assert.rejects(() => runWorkflow(workflow, null), /Node output exceeds max bytes/);
+  });
+
+  it("replays a completed loop with iteration outputs in the new event stream", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let calls = 0;
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "loop-replay",
+      nodes: {
+        loop: loopNode({
+          execute: async (ctx) => {
+            calls += 1;
+            return ctx.iteration + 1;
+          },
+          until: (ctx) => ctx.previousOutput === 3,
+          maxIterations: 3,
+        }),
+      },
+    });
+    const source = await runWorkflow(workflow, null, { checkpoints, runId: "loop-source" });
+    assert.equal(source.status, "succeeded");
+    const sourceRecord = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: source.runId });
+    assert.deepEqual(
+      sourceRecord?.value.nodes.loop?.iterations?.map((record) => record.output),
+      [1, 2, 3],
+    );
+
+    const events: WorkflowEvent[] = [];
+    const replay = await replayWorkflow(
+      workflow,
+      { sourceRunId: source.runId, fromNodeId: "loop", runId: "loop-replay-run" },
+      { checkpoints, transitions: workflowEvents((event) => events.push(event)) },
+    );
+    assert.equal(replay.status, "succeeded");
+    assert.equal(calls, 6);
+    assert.deepEqual(
+      events.filter((event) => event.type === "node_iteration_finished").map((event) => event.output),
+      [1, 2, 3],
+    );
+  });
+
+  it("does not repeat a terminalized iteration after its final checkpoint fails", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    let saves = 0;
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        saves += 1;
+        if (saves === 4) throw new Error("final checkpoint interrupted");
+        return inner.save(input);
+      },
+    };
+    let calls = 0;
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "loop-crash-boundary",
+      nodes: {
+        loop: loopNode({
+          execute: async (ctx) => {
+            calls += 1;
+            return ctx.iteration + 1;
+          },
+          until: () => true,
+          maxIterations: 1,
+        }),
+      },
+    });
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "loop-crash-run" }), /final checkpoint interrupted/);
+    const resumed = await resumeWorkflow(workflow, { runId: "loop-crash-run" }, { checkpoints });
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(calls, 1);
+    assert.equal(resumed.outputs.loop, 1);
+  });
+
+  it("redacts loop iteration outputs in checkpoints and events", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints({ secrets: ["sekrit"] });
+    const events: WorkflowEvent[] = [];
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "loop-redact",
+      nodes: {
+        loop: loopNode({
+          execute: async () => ({ token: "sekrit" }),
+          until: () => true,
+          maxIterations: 1,
+        }),
+      },
+    });
+    await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "loop-redact-run",
+      redactor: createSecretRedactor(["sekrit"]),
+      transitions: workflowEvents((event) => events.push(event)),
+    });
+    const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: "loop-redact-run" });
+    assert.match(JSON.stringify(saved?.value.nodes.loop?.iterations), /REDACTED/);
+    const finished = events.find((event) => event.type === "node_iteration_finished");
+    assert.match(JSON.stringify(finished), /REDACTED/);
+    assert.doesNotMatch(JSON.stringify(finished), /sekrit/);
+  });
+
+  it("maps fan-out and join", async () => {
+    const expand = fanOut({
+      items: async (ctx) => ctx.workflowInput as number[],
+      route: (item) => functionNode({ execute: async () => Number(item) * 2 }),
+    });
+    const reduce = joinNode({
+      from: "expand",
+      reduce: async (items) => (items as number[]).reduce((sum, n) => sum + n, 0),
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "mapjoin",
+      nodes: { expand, reduce },
+      edges: [["expand", "reduce"]],
+      limits: { maxFanOut: 8 },
+    });
+    const result = await runWorkflow(workflow, [1, 2, 3]);
+    assert.equal(result.outputs.reduce, 12);
+  });
+
+  it("maps fan-out concurrently in input order under maxConcurrency", async () => {
+    let active = 0;
+    let peak = 0;
+    const expand = fanOut({
+      items: async () => [3, 1, 2, 0],
+      route: (item, index) =>
+        functionNode({
+          execute: async () => {
+            active += 1;
+            peak = Math.max(peak, active);
+            await new Promise((resolve) => setTimeout(resolve, index === 0 ? 25 : 5));
+            active -= 1;
+            return Number(item) * 10;
+          },
+        }),
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "fan-parallel",
+      nodes: { expand },
+      limits: { maxConcurrency: 2, maxFanOut: 8 },
+    });
+    const result = await runWorkflow(workflow, null);
+    assert.deepEqual(result.outputs.expand, [30, 10, 20, 0]);
+    assert.equal(peak, 2);
+  });
+
+  it("stops further fan-out items after the first failure and persists failed state", async () => {
+    let started = 0;
+    let finished = 0;
+    const expand = fanOut({
+      items: async () => [0, 1, 2, 3],
+      route: (item, _index) =>
+        functionNode({
+          execute: async () => {
+            started += 1;
+            if (item === 0) {
+              await new Promise((resolve) => setTimeout(resolve, 15));
+              throw new Error("boom");
+            }
+            await new Promise((resolve) => setTimeout(resolve, 40));
+            finished += 1;
+            return item;
+          },
+        }),
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "fan-fail",
+      nodes: { expand },
+      limits: { maxConcurrency: 2, maxFanOut: 8 },
+    });
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "fan-fail" }), /boom/);
+    const saved = await getWorkflowRun(checkpoints, { workflowId: "fan-fail", runId: "fan-fail" });
+    assert.equal(saved?.value.status, "failed");
+    assert.equal(started, 2);
+    assert.equal(finished, 1);
+  });
+
+  it("executes a bounded 1,000-node DAG without rescanning failures", async () => {
+    const nodes: Record<string, ReturnType<typeof functionNode>> = {};
+    const edges: [string, string][] = [];
+    for (let index = 0; index < 1_000; index += 1) {
+      const id = `n${index}`;
+      nodes[id] = functionNode({ execute: async () => index });
+      if (index > 0) edges.push([`n${index - 1}`, id]);
+    }
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "thousand-node-chain",
+      nodes,
+      edges,
+      limits: { maxNodes: 1_000, maxConcurrency: 8 },
+    });
+    const result = await runWorkflow(workflow, null, { concurrency: 8 });
+    assert.equal(result.status, "succeeded");
+    assert.equal(Object.keys(result.outputs).length, 1_000);
+    assert.equal(result.outputs.n999, 999);
+  });
+
+  it("retries then succeeds", async () => {
+    let attempts = 0;
+    const flaky = functionNode({
+      retries: 2,
+      execute: async () => {
+        attempts += 1;
+        if (attempts < 3) throw new Error("transient");
+        return "ok";
+      },
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "retry", nodes: { flaky } });
+    const result = await runWorkflow(workflow, null);
+    assert.equal(result.outputs.flaky, "ok");
+    assert.equal(attempts, 3);
+  });
+
+  it("times out a hung node", async () => {
+    const hung = functionNode({
+      timeoutMs: 20,
+      execute: async (ctx) => {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(resolve, 500);
+          ctx.signal?.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        });
+        return "late";
+      },
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "timeout", nodes: { hung } });
+    await assert.rejects(() => runWorkflow(workflow, null), /Abort|timeout|failed|Workflow/i);
+  });
+
+  it("aborts mid-node via signal", async () => {
+    const ac = new AbortController();
+    const slow = functionNode({
+      execute: async (ctx) => {
+        ac.abort();
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(resolve, 200);
+          ctx.signal?.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        });
+        return "done";
+      },
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "abort", nodes: { slow } });
+    await assert.rejects(
+      () => runWorkflow(workflow, null, { signal: ac.signal }),
+      (error: unknown) => error instanceof WorkflowAbortError || isAbortLike(error),
+    );
+  });
+
+  it("runs agent nodes through Session.run", async () => {
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [mockProvider([[providerTextDelta("hello-agent"), providerDone()]])],
+    });
+    const research = agentNode({
+      agent,
+      input: (ctx) => String(ctx.workflowInput),
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "agentic", nodes: { research } });
+    const result = await runWorkflow(workflow, "topic");
+    assert.equal(result.outputs.research, "hello-agent");
+  });
+
+  it("runs restore hooks before a resume applies and audits them on workflow_resumed", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const events: WorkflowEvent[] = [];
+    let executions = 0;
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "restore-hooks",
+      nodes: {
+        publish: functionNode({
+          execute: async (ctx) => {
+            if (!ctx.resume) return suspend({ reason: "publish release" });
+            executions += 1;
+            return { published: true };
+          },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "restore-hooks-run",
+      metadata: { gitCommit: "commit-1", docVersion: "v12" },
+    });
+    assert.equal(suspended.status, "suspended");
+
+    const order: string[] = [];
+    const seen: unknown[] = [];
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: suspended.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: suspended.version },
+        transitions: workflowEvents((event) => events.push(event)),
+        restoreHooks: [
+          async function restoreGit(context) {
+            seen.push(context);
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            order.push("git");
+          },
+          function restoreDocs() {
+            order.push("docs");
+          },
+        ],
+      },
+    );
+
+    assert.deepEqual(order, ["git", "docs"]);
+    assert.equal(seen.length, 1);
+    const context = seen[0] as {
+      workflowId: string;
+      runId: string;
+      version: number;
+      status: string;
+      metadata?: Record<string, unknown>;
+      checkpoint: { value: { metadata?: unknown } };
+    };
+    assert.equal(context.workflowId, "restore-hooks");
+    assert.equal(context.runId, suspended.runId);
+    assert.equal(context.version, suspended.version);
+    assert.equal(context.status, "suspended");
+    assert.deepEqual(context.metadata, { gitCommit: "commit-1", docVersion: "v12" });
+    assert.deepEqual(context.checkpoint.value.metadata, { gitCommit: "commit-1", docVersion: "v12" });
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(executions, 1);
+    const audit = events.find((event) => event.type === "workflow_resumed");
+    assert.ok(audit && audit.type === "workflow_resumed");
+    assert.deepEqual(
+      audit.restore?.hooks.map((entry) => entry.hook),
+      ["restoreGit", "restoreDocs"],
+    );
+    // The sidecar map is not re-stated by the host and survives the resume.
+    const stored = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks", runId: suspended.runId });
+    assert.deepEqual(stored?.value.metadata, { gitCommit: "commit-1", docVersion: "v12" });
+  });
+
+  it("aborts a workflow resume when a restore hook fails, leaving the checkpoint untouched", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let executions = 0;
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "restore-hooks-fail",
+      nodes: {
+        publish: functionNode({
+          execute: async (ctx) => {
+            if (!ctx.resume) return suspend({ reason: "publish release" });
+            executions += 1;
+            return { published: true };
+          },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, { checkpoints, runId: "restore-hooks-fail-run" });
+    assert.equal(suspended.status, "suspended");
+
+    const order: string[] = [];
+    await assert.rejects(
+      resumeWorkflow(
+        workflow,
+        { runId: suspended.runId },
+        {
+          checkpoints,
+          resume: { decision: "approve", expectedVersion: suspended.version },
+          restoreHooks: [
+            function restoreGit() {
+              order.push("git");
+            },
+            function restoreDocs() {
+              throw new Error("docs store unavailable");
+            },
+            function neverRuns() {
+              order.push("never");
+            },
+          ],
+        },
+      ),
+      (error: unknown) =>
+        error instanceof Error &&
+        "code" in error &&
+        (error as { code: string }).code === "ERR_PRISM_CHECKPOINT_RESTORE" &&
+        (error as { hook?: string }).hook === "restoreDocs" &&
+        /docs store unavailable/.test(error.message),
+    );
+    assert.deepEqual(order, ["git"]);
+    assert.equal(executions, 0);
+    const after = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks-fail", runId: suspended.runId });
+    assert.equal(after?.value.status, "suspended");
+    assert.equal(after?.version, suspended.version);
+  });
+
+  it("compensates applied workflow layers in reverse when a restore hook fails", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let executions = 0;
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "restore-hooks-compensate",
+      nodes: {
+        publish: functionNode({
+          execute: async (ctx) => {
+            if (!ctx.resume) return suspend({ reason: "publish release" });
+            executions += 1;
+            return { published: true };
+          },
+        }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, { checkpoints, runId: "restore-hooks-compensate-run" });
+    assert.equal(suspended.status, "suspended");
+
+    const layers = { docs: "v1", git: "c1" };
+    const compensation: string[] = [];
+    await assert.rejects(
+      resumeWorkflow(
+        workflow,
+        { runId: suspended.runId },
+        {
+          checkpoints,
+          resume: { decision: "approve", expectedVersion: suspended.version },
+          restoreHooks: [
+            {
+              id: "docs",
+              restore: () => {
+                layers.docs = "v2";
+              },
+              compensate: () => {
+                compensation.push("docs");
+                layers.docs = "v1";
+              },
+            },
+            {
+              id: "git",
+              restore: () => {
+                layers.git = "c2";
+                throw new Error("git store unavailable");
+              },
+              compensate: () => {
+                compensation.push("git");
+                layers.git = "c1";
+              },
+            },
+          ],
+        },
+      ),
+      (error: unknown) => {
+        assert.ok(error instanceof CheckpointRestoreError);
+        assert.equal(error.hook, "git");
+        assert.deepEqual(error.compensation?.ran, ["git", "docs"]);
+        return true;
+      },
+    );
+    assert.deepEqual(compensation, ["git", "docs"]);
+    assert.deepEqual(layers, { docs: "v1", git: "c1" });
+    assert.equal(executions, 0);
+    const after = await getWorkflowRun(checkpoints, { workflowId: "restore-hooks-compensate", runId: suspended.runId });
+    assert.equal(after?.value.status, "suspended");
+    assert.equal(after?.version, suspended.version);
+  });
+
+  it("checkpoints and resumes within process after failure", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let shouldFail = true;
+    const first = functionNode({ execute: async () => "one" });
+    const second = functionNode({
+      execute: async () => {
+        if (shouldFail) throw new Error("boom");
+        return "two";
+      },
+    });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "resume",
+      nodes: { first, second },
+      edges: [["first", "second"]],
+    });
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "run-resume" }), /boom/);
+    const saved = await getWorkflowRun(checkpoints, { workflowId: "resume", runId: "run-resume" });
+    assert.equal(saved?.value.nodes.first?.status, "succeeded");
+    assert.equal(saved?.value.nodes.second?.status, "failed");
+
+    shouldFail = false;
+    const resumed = await resumeWorkflow(workflow, { runId: "run-resume" }, { checkpoints });
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(resumed.outputs.first, "one");
+    assert.equal(resumed.outputs.second, "two");
+
+    const listed = await listWorkflowRuns(checkpoints, { workflowId: "resume" });
+    assert.equal(listed.items.length, 1);
+  });
+
+  it("durably suspends and resumes exactly once after restart", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let sideEffects = 0;
+    const publish = functionNode({
+      execute: async (ctx) => {
+        if (!ctx.resume) {
+          return suspend<{ reviewer: string }>({
+            reason: "publish",
+            data: { artifactId: "a1" },
+            resumeSchema: {
+              type: "object",
+              properties: { reviewer: { type: "string" } },
+              required: ["reviewer"],
+            },
+          });
+        }
+        sideEffects += 1;
+        return { approvedBy: (ctx.resume.input as { reviewer: string }).reviewer };
+      },
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "human-publish", nodes: { publish } });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "suspend-1",
+      ownership: { tenantId: "t1" },
+    });
+    assert.equal(suspended.status, "suspended");
+    assert.equal(suspended.suspension?.reason, "publish");
+    assert.equal(sideEffects, 0);
+
+    const options = {
+      checkpoints,
+      ownership: { tenantId: "t1" },
+      resume: {
+        decision: "approve" as const,
+        input: { reviewer: "Ada" },
+        expectedVersion: suspended.version,
+      },
+      validateResume: ({ value }: { value: unknown }) => {
+        assert.equal(typeof (value as { reviewer?: unknown }).reviewer, "string");
+      },
+    };
+    const [first, second] = await Promise.allSettled([
+      resumeWorkflow(workflow, { runId: suspended.runId }, options),
+      resumeWorkflow(workflow, { runId: suspended.runId }, options),
+    ]);
+    assert.equal([first, second].filter((result) => result.status === "fulfilled").length, 1);
+    assert.equal([first, second].filter((result) => result.status === "rejected").length, 1);
+    const fulfilled = [first, second].find(
+      (result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof resumeWorkflow>>> => result.status === "fulfilled",
+    );
+    assert.equal(fulfilled?.value.status, "succeeded");
+    assert.deepEqual(fulfilled?.value.outputs.publish, { approvedBy: "Ada" });
+    assert.equal(sideEffects, 1);
+  });
+
+  it("serializes concurrent suspension requests without losing a node", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const reviewed = new Set<string>();
+    const reviewNode = (id: string) =>
+      functionNode({
+        execute: async (ctx) => {
+          if (!ctx.resume) return suspend({ reason: `review-${id}` });
+          reviewed.add(id);
+          return id;
+        },
+      });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "two-reviews",
+      nodes: { a: reviewNode("a"), b: reviewNode("b") },
+      edges: [],
+      limits: { maxConcurrency: 2 },
+    });
+    let result = await runWorkflow(workflow, null, { checkpoints, runId: "two-reviews-1" });
+    assert.equal(result.status, "suspended");
+    result = await resumeWorkflow(
+      workflow,
+      { runId: result.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: result.version },
+      },
+    );
+    assert.equal(result.status, "suspended");
+    result = await resumeWorkflow(
+      workflow,
+      { runId: result.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: result.version },
+      },
+    );
+    assert.equal(result.status, "succeeded");
+    assert.deepEqual([...reviewed].sort(), ["a", "b"]);
+  });
+
+  it("denies a suspended run as a terminal attributable outcome", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    let invoked = 0;
+    const node = functionNode({
+      execute: async (ctx) => {
+        if (!ctx.resume) return suspend({ reason: "review" });
+        invoked += 1;
+        return "done";
+      },
+    });
+    const workflow = defineWorkflow({ revision: "1", id: "human-deny", nodes: { node } });
+    const deniedStart = await runWorkflow(workflow, null, { checkpoints, runId: "deny-1" });
+    const denied = await resumeWorkflow(
+      workflow,
+      { runId: deniedStart.runId },
+      {
+        checkpoints,
+        resume: { decision: "deny", input: { reason: "unsafe" }, expectedVersion: deniedStart.version },
+      },
+    );
+    assert.equal(denied.status, "denied");
+    assert.equal(denied.resume?.decision, "deny");
+    assert.equal(invoked, 0);
+    await assert.rejects(
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: deniedStart.runId },
+          {
+            checkpoints,
+            resume: { decision: "approve", expectedVersion: denied.version },
+          },
+        ),
+      /already denied/i,
+    );
+  });
+
+  it("resumes a suspended checkpoint left by a fenced coordinator", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "fenced-human",
+      nodes: { node: functionNode({ execute: async (ctx) => (ctx.resume ? "ok" : suspend({ reason: "review" })) }) },
+    });
+    const resumable = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "fenced-resume",
+      fencingToken: 3,
+    });
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: resumable.runId },
+      {
+        checkpoints,
+        resume: { decision: "approve", expectedVersion: resumable.version },
+      },
+    );
+    assert.equal(resumed.status, "succeeded");
+  });
+
+  it("validates suspended resume input and rejects wrong ownership or stale versions", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "validate-resume",
+      nodes: {
+        node: functionNode({
+          execute: async (ctx) => (ctx.resume ? "ok" : suspend({ reason: "review", resumeSchema: { type: "object" } })),
+        }),
+      },
+    });
+    const result = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "validate-1",
+      ownership: { tenantId: "t1" },
+    });
+    await assert.rejects(
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: result.runId },
+          {
+            checkpoints,
+            ownership: { tenantId: "t1" },
+            resume: { decision: "approve", expectedVersion: result.version },
+          },
+        ),
+      /validateResume/,
+    );
+    await assert.rejects(
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: result.runId },
+          {
+            checkpoints,
+            ownership: { tenantId: "t2" },
+            resume: { decision: "approve", expectedVersion: result.version },
+            validateResume: () => undefined,
+          },
+        ),
+      /ownership|tenant|No checkpoint for workflow/i,
+    );
+    await assert.rejects(
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: result.runId },
+          {
+            checkpoints,
+            ownership: { tenantId: "t1" },
+            resume: { decision: "approve", expectedVersion: result.version - 1 },
+            validateResume: () => undefined,
+          },
+        ),
+      (error: unknown) => error instanceof WorkflowCheckpointError && /Stale resume version/.test(error.message),
+    );
+  });
+
+  it("redacts suspension and resume payloads in durable checkpoints", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints({ secrets: ["sekrit"] });
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "redact-suspend",
+      nodes: {
+        node: functionNode({ execute: async (ctx) => (ctx.resume ? "ok" : suspend({ reason: "review", data: { token: "sekrit" } })) }),
+      },
+    });
+    const suspended = await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "redact-suspend-1",
+      redactor: createSecretRedactor(["sekrit"]),
+    });
+    const resumed = await resumeWorkflow(
+      workflow,
+      { runId: suspended.runId },
+      {
+        checkpoints,
+        redactor: createSecretRedactor(["sekrit"]),
+        resume: { decision: "approve", input: { token: "sekrit" }, expectedVersion: suspended.version },
+      },
+    );
+    const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: resumed.runId });
+    assert.doesNotMatch(JSON.stringify(suspended), /sekrit/);
+    assert.doesNotMatch(JSON.stringify(resumed), /sekrit/);
+    assert.doesNotMatch(JSON.stringify(saved), /sekrit/);
+  });
+
+  it("redacts node outputs before checkpoint persistence", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints({ secrets: ["sekrit"] });
+    const node = functionNode({ execute: async () => "carry-sekrit-please" });
+    const workflow = defineWorkflow({ revision: "1", id: "redact", nodes: { node } });
+    await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "r-redact",
+      redactor: createSecretRedactor(["sekrit"]),
+    });
+    const saved = await getWorkflowRun(checkpoints, { workflowId: "redact", runId: "r-redact" });
+    assert.match(String(saved?.value.nodes.node?.output), /\[REDACTED\]/);
+  });
+
+  it("recovers state updates after a rejected patch", async () => {
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "recover-state",
+      limits: { maxStateBytes: 32 },
+      nodes: {
+        update: functionNode({
+          execute: async (ctx) => {
+            await assert.rejects(() => ctx.updateState({ value: "x".repeat(64) }), /Workflow state exceeds max bytes/);
+            return ctx.updateState({ value: "ok" });
+          },
+        }),
+      },
+    });
+    const result = await runWorkflow(workflow, null);
+    assert.deepEqual(result.state, { value: "ok" });
+    assert.deepEqual(result.outputs.update, { value: "ok" });
+  });
+
+  it("never retries effects after a post-execution checkpoint failure", async () => {
+    for (const kind of ["function", "agent"] as const) {
+      const inner = createMemoryWorkflowCheckpoints();
+      const failure = new Error(`${kind} checkpoint rejected`);
+      let saves = 0;
+      let effects = 0;
+      const checkpoints = {
+        ...inner,
+        async save(input: Parameters<typeof inner.save>[0]) {
+          if (++saves === 3) throw failure;
+          return inner.save(input);
+        },
+      };
+      const agent = await createAgent({
+        model: { provider: "mock", model: "demo" },
+        packages: [mockProvider([[providerTextDelta("done"), providerDone()]])],
+      });
+      const node =
+        kind === "function"
+          ? functionNode({
+              retries: 1,
+              idempotent: "fail",
+              execute: () => {
+                effects += 1;
+                return "done";
+              },
+            })
+          : agentNode({
+              agent,
+              retries: 1,
+              idempotent: "fail",
+              session: async () => {
+                effects += 1;
+                return await agent.session({ id: "effect-session", create: true });
+              },
+            });
+      const workflow = defineWorkflow({ revision: "1", id: `checkpoint-${kind}`, nodes: { node } });
+      const events: WorkflowEvent[] = [];
+      await assert.rejects(
+        () =>
+          runWorkflow(workflow, null, {
+            checkpoints,
+            runId: "test-run",
+            transitions: workflowEvents((event) => events.push(event)),
+          }),
+        (error: unknown) => error === failure,
+      );
+      assert.equal(effects, 1, kind);
+      assert.equal(saves, 3, kind);
+      assert.ok(!events.some((event) => event.type === "node_finished" || event.type === "workflow_finished"));
+      const saved = await getWorkflowRun(checkpoints, { workflowId: workflow.id, runId: "test-run" });
+      assert.equal(saved?.value.nodes.node?.status, "running");
+      await assert.rejects(
+        () => resumeWorkflow(workflow, { runId: "test-run" }, { checkpoints }),
+        (error: unknown) => (error as { code?: string }).code === "not_idempotent",
+      );
+      assert.equal(effects, 1, kind);
+    }
+  });
+
+  it("retries execution failures but not failed loop iteration or suspension saves", async () => {
+    const transient = createMemoryWorkflowCheckpoints();
+    let calls = 0;
+    const retry = defineWorkflow({
+      revision: "1",
+      id: "retry-execution",
+      nodes: {
+        node: functionNode({
+          retries: 1,
+          execute: () => {
+            if (++calls === 1) throw new Error("transient");
+            return "ok";
+          },
+        }),
+      },
+    });
+    assert.equal((await runWorkflow(retry, null, { checkpoints: transient })).outputs.node, "ok");
+    assert.equal(calls, 2);
+
+    for (const kind of ["loop", "suspend"] as const) {
+      const inner = createMemoryWorkflowCheckpoints();
+      const failure = new Error(`${kind} save rejected`);
+      let saves = 0;
+      let effects = 0;
+      const checkpoints = {
+        ...inner,
+        async save(input: Parameters<typeof inner.save>[0]) {
+          if (++saves === 3) throw failure;
+          return inner.save(input);
+        },
+      };
+      const node =
+        kind === "loop"
+          ? loopNode({
+              retries: 1,
+              maxIterations: 2,
+              execute: () => {
+                effects += 1;
+                return effects;
+              },
+              until: () => false,
+            })
+          : functionNode({
+              retries: 1,
+              execute: () => {
+                effects += 1;
+                return suspend({ reason: "review" });
+              },
+            });
+      const workflow = defineWorkflow({ revision: "1", id: `checkpoint-${kind}`, nodes: { node } });
+      const events: WorkflowEvent[] = [];
+      await assert.rejects(
+        () =>
+          runWorkflow(workflow, null, {
+            checkpoints,
+            runId: "test-run",
+            transitions: workflowEvents((event) => events.push(event)),
+          }),
+        (error: unknown) => error === failure,
+      );
+      assert.equal(effects, 1, kind);
+      assert.equal(saves, 3, kind);
+      assert.ok(
+        !events.some(
+          (event) => event.type === "node_iteration_finished" || event.type === "workflow_suspended" || event.type === "workflow_finished",
+        ),
+      );
+    }
+  });
+
+  it("does not retry a parent when a nested workflow checkpoint rejects", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    const failure = new Error("child checkpoint rejected");
+    let effects = 0;
+    let childSaves = 0;
+    const child = defineWorkflow({
+      revision: "1",
+      id: "child-effect",
+      nodes: {
+        effect: functionNode({
+          execute: () => {
+            effects += 1;
+            return "done";
+          },
+        }),
+      },
+    });
+    const parent = defineWorkflow({
+      revision: "1",
+      id: "parent-effect",
+      nodes: {
+        nested: workflowNode({ workflow: child, retries: 1 }),
+      },
+    });
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        if (input.workflowId === child.id && ++childSaves === 3) throw failure;
+        return inner.save(input);
+      },
+    };
+    await assert.rejects(
+      () => runWorkflow(parent, null, { checkpoints }),
+      (error: unknown) => error === failure,
+    );
+    assert.equal(effects, 1);
+    assert.equal(childSaves, 3);
+  });
+
+  it("does not report a superstep node finished before the wave checkpoint lands", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    const failure = new Error("wave checkpoint rejected");
+    let saves = 0;
+    let effects = 0;
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        if (++saves === 2) throw failure;
+        return inner.save(input);
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "checkpoint-wave",
+      limits: { maxSupersteps: 2 },
+      nodes: {
+        node: functionNode({
+          retries: 1,
+          execute: () => {
+            effects += 1;
+            return "done";
+          },
+        }),
+      },
+    });
+    const events: WorkflowEvent[] = [];
+    await assert.rejects(
+      () =>
+        runWorkflow(workflow, null, {
+          checkpoints,
+          runId: "test-run",
+          transitions: workflowEvents((event) => events.push(event)),
+        }),
+      (error: unknown) => error === failure,
+    );
+    assert.equal(effects, 1);
+    assert.equal(saves, 2);
+    assert.ok(!events.some((event) => event.type === "node_finished" || event.type === "workflow_finished"));
+    // A function node defaults to `idempotent: "rerun"`, so the interrupted wave runs again.
+    const resumed = await resumeWorkflow(workflow, { runId: "test-run" }, { checkpoints });
+    assert.equal(resumed.status, "succeeded");
+    assert.equal(effects, 2);
+  });
+
+  it("recovers checkpoint saves after an injected rejection", async () => {
+    const inner = createMemoryWorkflowCheckpoints();
+    let saves = 0;
+    const checkpoints = {
+      ...inner,
+      async save(input: Parameters<typeof inner.save>[0]) {
+        saves += 1;
+        if (saves === 2) throw new Error("injected checkpoint failure");
+        return inner.save(input);
+      },
+    };
+    const workflow = defineWorkflow({
+      revision: "1",
+      id: "recover-checkpoint",
+      nodes: { done: functionNode({ execute: () => "ok" }) },
+    });
+    await assert.rejects(() => runWorkflow(workflow, null, { checkpoints, runId: "r-recover" }), /injected checkpoint failure/);
+    const saved = await getWorkflowRun(checkpoints, { workflowId: "recover-checkpoint", runId: "r-recover" });
+    assert.equal(saved?.value.status, "running");
+    assert.equal(saves, 2, "failed write must not be replaced by a false terminal checkpoint");
+  });
+
+  it("rejects resume across tenants", async () => {
+    const checkpoints = createMemoryWorkflowCheckpoints();
+    const node = functionNode({ execute: async () => 1 });
+    const workflow = defineWorkflow({ revision: "1", id: "tenant", nodes: { node } });
+    await runWorkflow(workflow, null, {
+      checkpoints,
+      runId: "r-tenant",
+      ownership: { tenantId: "t1" },
+    });
+    await assert.rejects(
+      () =>
+        resumeWorkflow(
+          workflow,
+          { runId: "r-tenant" },
+          {
+            checkpoints,
+            ownership: { tenantId: "t2" },
+          },
+        ),
+      /ownership|tenant|No checkpoint for workflow/i,
+    );
+  });
+});
+
+function isAbortLike(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && (error as { name?: string }).name === "AbortError");
+}
+
+function workflowEvents(consume: (event: WorkflowEvent) => void) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
+}

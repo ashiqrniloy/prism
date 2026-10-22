@@ -1,4 +1,4 @@
-import { estimateTextBytes } from "./context-budget.js";
+import { estimateTextBytes } from "./models/estimate.js";
 import type { JsonObject, Skill, SkillRegistry, ToolDefinition, ToolExecutionContext, ToolResult } from "./contracts.js";
 import { HARD_MAX_SKILL_INSTRUCTION_BYTES, type LoadedSkillSet } from "./skill-disclosure.js";
 

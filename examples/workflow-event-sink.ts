@@ -1,20 +1,12 @@
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
-import {
-  agentNode,
-  conditionalNode,
-  createWorkflowEventBus,
-  defineWorkflow,
-  functionNode,
-  runWorkflow,
-  type WorkflowEvent,
-} from "@arnilo/prism-core/runtime/workflows";
+import { agentNode, conditionalNode, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // Observability / event sink: a workflow with a conditional path produces
 // events that the host collects and inspects. Demonstrates:
-// - `onEvent` callback for inline logging
-// - `WorkflowEventBus` for decoupled subscribers
+// - `WorkflowTransitionChannel` for bounded async subscribers
 // - event-type classification post-run
 // - conditional node skip reports
 // Uses mock providers — no network.
@@ -31,7 +23,7 @@ const agent = await createAgent({
 });
 
 const research = agentNode({
-  agent: "demo",
+  agent,
   input: (ctx) => ctx.workflowInput,
 });
 
@@ -64,13 +56,12 @@ const workflow = defineWorkflow({
 
 export async function demo() {
   const redactor = createSecretRedactor([]);
-  const bus = createWorkflowEventBus({
+  const bus = createWorkflowTransitionChannel({
     workflowId: workflow.id,
     runId: "event-sink-run",
     maxQueuedEvents: 256,
   });
 
-  const inlineEvents: WorkflowEvent[] = [];
   const busEvents: WorkflowEvent[] = [];
 
   const drain = (async () => {
@@ -83,13 +74,11 @@ export async function demo() {
     workflow,
     { query: "status" },
     {
-      agentFactory: () => agent.session(),
       redactor,
       ownership: { tenantId: "demo" },
       signal: AbortSignal.timeout(30_000),
-      eventBus: bus,
       runId: "event-sink-run",
-      onEvent: (e) => inlineEvents.push(e),
+      transitions: bus,
     },
   );
 
@@ -109,13 +98,10 @@ export async function demo() {
 
   return {
     status: result.status,
-    inlineEventCount: inlineEvents.length,
-    busEventCount: busEvents.length,
-    inlineByType: byType(inlineEvents),
-    busByType: byType(busEvents),
-    matched: inlineEvents.length > 0 && busEvents.length > 0,
+    eventCount: busEvents.length,
+    byType: byType(busEvents),
     hasAgentEvents: busEvents.some((e) => e.type === "agent_event"),
-    hasSkipped: inlineEvents.some((e) => e.type === "node_skipped"),
+    hasSkipped: busEvents.some((e) => e.type === "node_skipped"),
   };
 }
 

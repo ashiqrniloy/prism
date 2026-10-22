@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
 import { fileURLToPath } from "node:url";
-import { createMemoryToolEffectStore } from "../dist/index.js";
+import { createMemoryToolEffectStore } from "../src/index.ts";
 import {
   createBoundGitRunner,
   createGitAwareRepositoryOperations,
@@ -26,10 +26,10 @@ import {
   ForgeError,
   LanguageIntelligenceError,
   ProcessSessionError,
-} from "../packages/prism-coding-tools/dist/agent/index.js";
-import { createAllowListEgressProxy, createEgressPolicy } from "../packages/prism-coding-tools/dist/security/index.js";
+} from "@arnilo/prism-tools-coding";
+import { createAllowListEgressProxy, createEgressPolicy } from "@arnilo/prism-tools-coding";
 
-const FAKE_LSP = fileURLToPath(new URL("../packages/prism-coding-tools/src/agent/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
+const FAKE_LSP = fileURLToPath(new URL("../packages/tools/coding/src/agent/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
 const IDENTITY = {
   tenantId: "tenant-1",
   userId: "u1",

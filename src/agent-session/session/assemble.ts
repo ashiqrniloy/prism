@@ -1,47 +1,44 @@
 /** Context-assembly + runInternal orchestrator (plan 059). */
 
+import { ModelError } from "../model-errors.js";
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import { AgentRunSuspended } from "../../agent-approval.js";
 import { agentFingerprint, validateRunStateOptions } from "../../agent-run-state.js";
 import { activeTools } from "../../agent-tool-dispatch.js";
-import { resolveRunAttentionCompiler } from "../../attention-compiler.js";
 import type {
   AgentFinishReason,
   AgentRunStatus,
-  RunResult,
-  AttentionReport,
   ErrorInfo,
   JsonObject,
   JsonValue,
   Message,
   PromptVersionRef,
-  ResolvedRunLimits,
-  RunOptions,
   ResolvedRunOptions,
   RunRecord,
+  RunResult,
   ToolDefinition,
+  ToolCallContent,
   Usage,
 } from "../../contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "../../contracts.js";
 import { HookError } from "../../hooks/errors.js";
+import { jsonEqual } from "../../hooks/json.js";
 import type { AgentInput } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
 import type { AskRequest, AskResolution, LoopStrategy, RunTurnOptions } from "../../loop/index.js";
 import { createRunController } from "../../loop/index.js";
-import { applyDefaultProviderRequestOptions } from "../../provider-request-policy.js";
+import { applyDefaultProviderRequestOptions } from "../../provider-kit/provider-request-policy.js";
 import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
 import { describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
 import { createSessionEntry } from "../../session-stores.js";
 import { applyRestoredSkillBodies, createLoadSkillTool } from "../../skill-load.js";
 import { createSkillRegistry } from "../../skills.js";
-import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "../../structured-output.js";
+import { assertStructuredOutputRequestSupported, resolveRunProviderOptions } from "../../provider-kit/structured-output.js";
 import { composeSystemPrompt, mergeSystemPromptConfig } from "../../system-prompts.js";
-import { resolveToolResultFold } from "../../tool-result-fold.js";
-import { createSearchToolsTool, createToolSearchState, resolveToolsDisclosure } from "../../tool-search.js";
 import { clampTurnToolNames, createToolRegistry, resolveToolEffects, selectRunTools } from "../../tools.js";
 import { bridgeAbort, createUsageAccumulator, inputToMessages, isDurableLoop, isSteerSoftInterrupt, throwIfAborted } from "../helpers.js";
 import { assignedLoop, tryAgentRuntime } from "../runtime-registry.js";
-import { checkpointDurableFold, checkpointDurableTurn, cleanupRun, persistDurable, persistSucceeded, suspendDurable } from "./persist.js";
+import { cleanupRun, persistDurable, persistSucceeded } from "./persist.js";
 import { generateWithRetry, recordProviderUsage } from "./provider-round.js";
 import {
   bindChargeToolRound,
@@ -81,30 +78,74 @@ function askArgumentPreview(session: SessionHost, args: JsonObject): string {
 }
 
 /**
+ * Plan 177 Task 3: on a resumed run the decision that answered an `ask` satisfies it again for exactly
+ * the call it approved, so the replay never re-prompts a host that already decided. `allow_for_run` /
+ * `reject_for_run` are already matched as sticky decisions; this covers `allow_once` and re-checks the
+ * arguments, so a rewrite that moved the call after approval is staged again (fail closed).
+ * `undefined` means the call was not pending when the run suspended (a fresh turn's call).
+ */
+function resumedAsk(
+  ctx: RoundContext,
+  call: ToolCallContent,
+): { readonly resolution: AskResolution } | { readonly stale: true } | undefined {
+  const resumed = ctx.resumed;
+  if (!resumed?.decisions?.size) return undefined;
+  const entry = resumed.state?.pendingCalls?.find((pending) => pending.call.id === call.id);
+  const legacy = resumed.state?.pending?.call.id === call.id ? resumed.state.pending.call : undefined;
+  const approvedCall = entry?.call ?? legacy;
+  if (!approvedCall) return undefined;
+  const decision = resumed.decisions.get(entry?.approvalId ?? call.id);
+  if (!decision) return { stale: true };
+  if (decision.outcome === "reject_once" || decision.outcome === "reject_for_run") {
+    return { resolution: { kind: "deny", reason: decision.reason ?? "Approval rejected" } };
+  }
+  const approvedArguments = decision.modifiedArguments ?? approvedCall.arguments;
+  return jsonEqual(approvedArguments, call.arguments) ? { resolution: { kind: "allow" } } : { stale: true };
+}
+
+/**
  * Resolve a `tool.call` `{ ask }` (roadmap §2.4). An attached `HostUi` answers a `confirm` inline:
  * `answered: true` executes the call, `answered: false` and `dismissed` refuse it, and an absent,
  * `unavailable`, or non-interactive run suspends it. A loop cannot bypass this: the controller's
  * `tool.call` gate calls here.
  */
-async function resolveAskDecisions(ctx: RoundContext, requests: readonly AskRequest[]): Promise<ReadonlyMap<string, AskResolution>> {
+async function resolveAskDecisions(
+  ctx: RoundContext,
+  requests: readonly AskRequest[],
+  options: { readonly suspend?: boolean } = {},
+): Promise<ReadonlyMap<string, AskResolution>> {
   const resolutions = new Map<string, AskResolution>();
   // A sticky decision from an earlier approval in this run short-circuits the ask without
   // re-prompting; `tool.call` still fired, so a host gate cannot be bypassed.
   const unresolved: AskRequest[] = [];
+  // A replayed call the resumed decision no longer covers (a rewrite changed the arguments): staged
+  // again, never prompted, because the host answered for the arguments it saw.
+  const staleResumed: AskRequest[] = [];
   for (const request of requests) {
     const sticky = matchStickyDecision(ctx.session, request.call, ctx.registry);
     if (sticky?.outcome === "allow_for_run") {
       resolutions.set(request.call.id, { kind: "allow" });
-    } else if (sticky?.outcome === "reject_for_run") {
-      resolutions.set(request.call.id, { kind: "deny", reason: sticky.reason ?? "Rejected for this run" });
-    } else {
-      unresolved.push(request);
+      continue;
     }
+    if (sticky?.outcome === "reject_for_run") {
+      resolutions.set(request.call.id, { kind: "deny", reason: sticky.reason ?? "Rejected for this run" });
+      continue;
+    }
+    const prior = resumedAsk(ctx, request.call);
+    if (prior !== undefined && "resolution" in prior) {
+      resolutions.set(request.call.id, prior.resolution);
+      continue;
+    }
+    if (prior !== undefined) {
+      staleResumed.push(request);
+      continue;
+    }
+    unresolved.push(request);
   }
-  if (unresolved.length === 0) return resolutions;
+  if (unresolved.length === 0 && staleResumed.length === 0) return resolutions;
   const ui = ctx.session.agent.config.host?.ui;
   const interactive = ctx.options.interactive ?? true;
-  const toSuspend: AskRequest[] = [];
+  const toSuspend: AskRequest[] = [...staleResumed];
   const inlineResolved: { readonly toolCallId: string; readonly outcome: "allow" | "deny" }[] = [];
   for (const request of unresolved) {
     if (!ui || !interactive) {
@@ -131,7 +172,10 @@ async function resolveAskDecisions(ctx: RoundContext, requests: readonly AskRequ
   if (inlineResolved.length > 0) {
     ctx.session.emit({ type: "decision.resolved", sessionId: ctx.session.id, runId: ctx.runId, decisions: inlineResolved, via: "inline" });
   }
-  if (toSuspend.length > 0) {
+  if (toSuspend.length > 0 && options.suspend === false) {
+    // The loop cannot resume (an external-agent driver without `snapshot`/`restore`): refuse instead of staging.
+    for (const { call } of toSuspend) resolutions.set(call.id, { kind: "suspend" });
+  } else if (toSuspend.length > 0) {
     // Stage for suspension; the round's allowed calls still run first and the run suspends at the
     // next turn boundary / loop end (`suspendGatedRound`).
     for (const { call } of toSuspend) resolutions.set(call.id, { kind: "suspend" });
@@ -163,13 +207,20 @@ type LoopInternals = {
     requestSecrets?: readonly (string | undefined)[],
   ): Promise<import("../../contracts.js").ProviderTurnResult>;
   isToolCallExclusive(call: import("../../contracts.js").ToolCallContent): boolean;
-  dispatchToolCall(call: import("../../contracts.js").ToolCallContent): Promise<import("../../contracts.js").ToolResult>;
+  dispatchToolCall(
+    call: import("../../contracts.js").ToolCallContent,
+    origin?: import("../../contracts.js").EventOrigin,
+  ): Promise<import("../../contracts.js").ToolResult>;
   ask(
     requests: readonly import("../../loop/index.js").AskRequest[],
+    options?: { readonly suspend?: boolean },
   ): Promise<ReadonlyMap<string, import("../../loop/index.js").AskResolution>>;
   appendMessage(message: Message): Promise<void>;
   hasPendingSteers(): boolean;
   applyPendingSteers(): Promise<boolean>;
+  drainSteers(): Promise<readonly Message[]>;
+  onSteer(listener: () => void): () => void;
+  addUsage(usage: import("../../contracts.js").Usage): void;
   emit(event: import("../../contracts.js").AgentEvent): void;
   /** The loop's turn counter advanced; the provider attempt emits the catalog's `turn.started`. */
   onTurnStart?(turn: number): void;
@@ -177,7 +228,7 @@ type LoopInternals = {
 /** Cap on the host stop detail that reaches the result, ledger, and timeline (plan 084 Task 2). */
 const TURN_STOP_DETAIL_MAX_BYTES = 256;
 
-function lastAssistantText(history: readonly Message[]): string | undefined {
+function _lastAssistantText(history: readonly Message[]): string | undefined {
   for (let i = history.length - 1; i >= 0; i -= 1) {
     const message = history[i];
     if (message?.role !== "assistant") continue;
@@ -232,7 +283,7 @@ async function assembleRoundContext(params: {
   runId: string;
   resumed: ActiveDurableRun | undefined;
   controller: AbortController;
-  model: import("../../contracts.js").ModelConfig;
+  model: import("../../contracts.js").ModelConfig | undefined;
   startedAt: string;
   promptVersion: PromptVersionRef | undefined;
   metadata: Readonly<Record<string, unknown>>;
@@ -240,21 +291,25 @@ async function assembleRoundContext(params: {
   runUsage: RoundContext["runUsage"];
 }): Promise<RoundContext> {
   const { session, input, options, runId, resumed, controller, model, startedAt, promptVersion, metadata, limits, runUsage } = params;
-  session.resolveRunProvider(options);
+  const loop = session.slots().resolve("loop", session.agent.config.slots?.loop);
+  if (options.model && loop.runModel === "none") {
+    throw new ModelError("run_model_unsupported", `Loop "${loop.name}" does not accept RunOptions.model`);
+  }
+  // A loop that never takes a turn has no use for a Prism provider: `RunOptions.model` is only passed through.
+  session.resolveRunProvider(options, loop.usesModel === false);
   throwIfAborted(controller.signal);
   session.emit({
     type: "run.started",
     sessionId: session.id,
     runId,
     ...(resumed ? { resumed: true } : {}),
-    ...(resumed?.restore ? { restore: resumed.restore } : {}),
   });
   const startRecord: RunRecord = {
     id: runId,
     sessionId: session.id,
     branchId: session.currentLeafId,
     model,
-    provider: model.provider,
+    ...(model ? { provider: model.provider } : {}),
     idempotencyKey: session.activeIdempotencyKey,
     status: "running",
     startedAt,
@@ -269,27 +324,14 @@ async function assembleRoundContext(params: {
   session.activeToolNames = selected.grant;
   // Run-local snapshot: concurrent runs and MCP refresh must not mutate this registry.
   const activeToolList = selected.tools;
-  const toolsDisclosure = resolveToolsDisclosure(options.toolsDisclosure, session.agent.config.toolsDisclosure);
-  const toolSearch =
-    toolsDisclosure === "search" && activeToolList.length > 0
-      ? {
-          state: createToolSearchState({
-            tools: activeToolList,
-            activated: session.activatedTools,
-            search: session.agent.config.toolsSearch,
-          }),
-        }
-      : undefined;
-  const searchTool = toolSearch ? createSearchToolsTool(toolSearch.state) : undefined;
-  const narrowedTools = searchTool ? [...activeToolList, searchTool] : activeToolList;
-  const activeSkills = session.resolveRunSkills(narrowedTools);
+  const activeSkills = session.resolveRunSkills(activeToolList);
   // Progressive disclosure registers the `load_skill` bridge; eager renders every body up front.
   const disclosure = session.agent.config.skills?.disclosure ?? "progressive";
   const loadSkill =
     activeSkills.length > 0 && disclosure === "progressive"
       ? createLoadSkillTool({ registry: createSkillRegistry(activeSkills) })
       : undefined;
-  const tools = loadSkill ? [...narrowedTools, loadSkill] : narrowedTools;
+  const tools = loadSkill ? [...activeToolList, loadSkill] : activeToolList;
   // `duplicate: "error"` fails closed when a host tool already owns `load_skill`/`search_tools`.
   const registry = createToolRegistry(tools, { duplicate: "error" });
   session.activeRunSkills = activeSkills;
@@ -320,55 +362,9 @@ async function assembleRoundContext(params: {
     base: session.agent.config.instructions,
   });
   const providerOptions = resolveRunProviderOptions(options, session.agent.config);
-  assertStructuredOutputRequestSupported(options.model ?? session.agent.config.model, providerOptions);
+  const runModel = options.model ?? session.agent.config.model;
+  if (runModel) assertStructuredOutputRequestSupported(runModel, providerOptions);
   const validate = options.validate ?? session.agent.config.validator;
-  // Resolved once per run, before any provider turn: a bad setting or a widening run overlay
-  // fails here rather than on the turn that happens to cross the ratio (plan 074 C12). The
-  // resolved run input budget rides the handle so `run_input_ratio` folds against the same cap
-  // the run limit enforces (plan 086 T2); `null` (disabled) leaves that axis on the input cap.
-  const attentionCompiler = resolveRunAttentionCompiler(
-    session.agent.config.attentionCompiler,
-    options.attentionCompiler,
-    options.model ?? session.agent.config.model,
-    limits.limits.maxInputTokens,
-  );
-  // Plan 086 T3: durable folding writes the fold ledger to the run checkpoint, so it needs a
-  // durable run (the session's durable state is set before this call). Fail at run start, before
-  // any provider turn, rather than folding into memory only. The fold state rides that
-  // checkpoint independently of `persistSessionState`.
-  if (attentionCompiler?.durable && !session.activeDurable) {
-    throw new AgentRunStateError(
-      "attentionCompiler.durable requires a durable run: set AgentConfig or RunOptions runState with a checkpoint store",
-    );
-  }
-  session.attentionDurable = attentionCompiler?.durable === true;
-  // Telemetry seam (plan 074 T6): one `attention_compiled` per mutated turn, counts and the
-  // measured ratio inputs only. Under-ratio turns and compiler-off runs emit nothing.
-  // Plan 086 T3: a turn that folded new bodies is the fold-boundary durability signal, so it is
-  // remembered here (the callback is synchronous) and checkpointed by the assembler below.
-  let foldCheckpointPending = false;
-  const onAttentionReport = attentionCompiler
-    ? (report: AttentionReport) => {
-        if (report.newFoldedBodies > 0) foldCheckpointPending = true;
-        session.emit({
-          type: "package.event",
-          sessionId: session.id,
-          runId,
-          package: "kernel",
-          name: "attention.compiled",
-          data: {
-            used: report.used,
-            usedAfter: report.usedAfter,
-            inputCap: report.inputCap,
-            triggerRatio: report.triggerRatio,
-            droppedThinkingTurns: report.droppedThinkingTurns,
-            stubbedToolResults: report.stubbedToolResults,
-            stubbedBytes: report.stubbedBytes,
-            truncated: report.truncated,
-          },
-        });
-      }
-    : undefined;
   const inputLayout = options.inputLayout ?? session.agent.config.inputLayout;
   session.activeLoopTurn = 1;
 
@@ -394,7 +390,6 @@ async function assembleRoundContext(params: {
     loop: undefined as unknown as LoopStrategy,
     runController: undefined as unknown as import("../../loop/index.js").RunController,
     dispatchToolCall: undefined as unknown as RoundContext["dispatchToolCall"],
-    toolsDisclosure,
     assembledTurn: false,
     toolCalls: 0,
     toolResults: [],
@@ -449,8 +444,10 @@ async function assembleRoundContext(params: {
         turnTools = clamped.tools;
         ctx.turnAllow = turnTools.map((tool) => tool.name);
       }
+      const turnModel = options.model ?? session.agent.config.model;
+      if (!turnModel) throw new ModelError("no_model", "A provider turn needs a model, and this agent was created without one");
       const request = await assembleProviderInput({
-        model: options.model ?? session.agent.config.model,
+        model: turnModel,
         input: nextInput,
         history: session.history,
         summaries: (await session.snapshot()).summaries,
@@ -461,22 +458,6 @@ async function assembleRoundContext(params: {
         skills: session.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, session.restoredSkillBodies) : activeSkills,
         skillsDisclosure: session.agent.config.skills?.disclosure,
         deferSkillsCatalog: true,
-        toolsDisclosure,
-        toolsSearch: session.agent.config.toolsSearch,
-        activatedTools: session.activatedTools,
-        toolResultFold: resolveToolResultFold(options.toolResultFold, session.agent.config.toolResultFold),
-        contextBudget: session.agent.config.contextBudget,
-        attentionCompiler,
-        // Session-owned: a stub made earlier stays applied even on a later under-ratio turn, so
-        // the prompt-cache prefix is not rewritten (C10). Undefined when the compiler is off.
-        attentionSticky: attentionCompiler ? session.attentionStickyFor() : undefined,
-        // Folded bodies (plan 086 T3): a row summarized once is re-applied, never re-summarized,
-        // so sticky rows stay byte-identical and a resumed run reuses the persisted bodies.
-        attentionFold: attentionCompiler ? session.attentionFoldFor() : undefined,
-        // Charge-so-far for the `run_input_ratio` axis: the counter only holds completed turns,
-        // so the axis projects this turn's estimate onto it.
-        runInputTokens: limits.snapshot().inputTokens,
-        onAttentionReport,
         loadedSkills: session.loadedSkills,
         tailSegments: session.tailSegments,
         tools: turnTools,
@@ -490,13 +471,6 @@ async function assembleRoundContext(params: {
         signal: controller.signal,
       });
       ctx.assembledTurn = true;
-      if (foldCheckpointPending) {
-        foldCheckpointPending = false;
-        // Fold-boundary durability (plan 086 T3): one write per turn that added folded bodies,
-        // after the request is assembled and before the provider sees it, so a crash during this
-        // turn resumes with the same ledger. No-op unless the compiler is durable.
-        await checkpointDurableFold(session, { runId, model, limits });
-      }
       return request;
     },
     chargeToolRound: bindChargeToolRound(ctx),
@@ -504,13 +478,6 @@ async function assembleRoundContext(params: {
       await suspendGatedRound(ctx);
       if (!ctx.assembledTurn) limits.charge("maxTurns");
       ctx.assembledTurn = false;
-      // `turn.before` decided this turn in `RunController.turn`, before assembly, so a host stop
-      // never reaches here. Crash-recovery boundary (plan 084 Task 1): after the previous turn's
-      // tool results are in
-      // the store and before this provider request. No-op unless `checkpointPolicy: "every-turn"`.
-      if (session.activeDurable?.options.checkpointPolicy === "every-turn") {
-        await checkpointDurableTurn(session, { runId, model, limits });
-      }
       // `model.request` transforms already ran in the controller; redaction is last so a transform
       // cannot un-redact. A `model.call` handler answers without a provider request by skipping `next`.
       // Fill-if-missing sessionId / cacheKey / cache defaults and the portable thinking intent, then
@@ -541,10 +508,16 @@ async function assembleRoundContext(params: {
     },
     isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,
     dispatchToolCall: dispatchBound,
-    ask: (requests) => resolveAskDecisions(ctx, requests),
+    ask: (requests, askOptions) => resolveAskDecisions(ctx, requests, askOptions),
     appendMessage: (message) => session.appendMessage(message, runId),
     hasPendingSteers: () => session.pendingSteers.length > 0,
     applyPendingSteers: () => session.applyPendingSteers(runId, metadata, controller.signal),
+    drainSteers: () => session.drainSteers(runId, controller.signal),
+    onSteer: (listener) => session.onSteer(listener),
+    addUsage: (usage) => {
+      limits.recordUsage(usage);
+      runUsage.add(usage);
+    },
     onTurnStart: (turn) => {
       session.activeLoopTurn = turn;
     },
@@ -555,10 +528,14 @@ async function assembleRoundContext(params: {
   ctx.runController = createRunController({
     ...loopInternals,
     session: session as unknown as import("../../contracts.js").Session,
+    model: options.model ?? session.agent.config.model,
+    loopOwner: session.slots().ownerOf("loop", session.agent.config.slots?.loop),
+    resumable: isDurableLoop(ctx.loop),
     limits,
     hooks: session.hooks(),
     maxContinuations: limits.limits.maxContinuations,
     assemble: (nextInput, turn, runOptions) => loopInternals.assemble(nextInput, undefined, turn, runOptions),
+    externalState: (key) => session.externalState(ctx.loop.name, key),
     effectsFor: (call) => {
       const tool = registry.get(call.name);
       return tool ? resolveToolEffects(tool) : ALL_TOOL_CAPABILITY_KINDS;
@@ -575,7 +552,7 @@ async function assembleRoundContext(params: {
       try {
         // Same path a host steer takes: same redaction and the same 8-message / 64 KiB caps.
         session.steer(messages);
-      } catch (error) {
+      } catch (_error) {
         throw new HookError("run.end continuation could not be queued", { owner: "kernel", hook: "run.end" });
       }
     },
@@ -625,22 +602,10 @@ export async function executeRun(
     throw new TypeError("RunOptions.maxToolRounds was removed in 0.1.5; use RunOptions.limits.maxToolRounds instead");
   }
   const promptVersion = assertPromptVersionRef(options.promptVersion);
-  if (
-    session.agent.config.secure &&
-    (options.redactor !== undefined ||
-      options.ownership !== undefined ||
-      options.validate !== undefined ||
-      options.effectStore !== undefined ||
-      options.runState !== undefined)
-  ) {
-    throw new AgentRunStateError("Secure agent defaults cannot be replaced per run");
-  }
   const requestedLimits = options.limits;
   const resolvedLimits = resolveRunLimits(session.agent.config.limits, requestedLimits);
-  const durableOptions = options.runState ?? session.agent.config.runState ?? resumed?.options;
-  if (session.agent.config.runState && options.runState && session.agent.config.runState !== options.runState) {
-    throw new AgentRunStateError("RunOptions cannot replace agent durable run-state configuration");
-  }
+  // Only a resume has durable options: a fresh run allocates its private cell at suspension.
+  const durableOptions = resumed?.options;
   if (durableOptions) {
     validateRunStateOptions(durableOptions);
     if (options.model || options.effectStore)
@@ -675,16 +640,11 @@ export async function executeRun(
   session.activeRedactor = session.runRedactor(options.redactor ?? session.agent.config.redactor);
   session.activeLedger = options.runLedger ?? session.agent.config.runLedger;
   session.activeEffectStore = options.effectStore ?? session.agent.config.effectStore;
-  session.activeOwnership = options.ownership ?? session.agent.config.ownership;
+  session.activeOwnership = options.ownership;
   session.activePrincipal = options.principal ?? session.agent.config.principal;
   session.activeIdempotencyKey = options.idempotencyKey ?? session.agent.config.idempotencyKey;
-  session.activeDurable = resumed ?? (durableOptions ? { options: durableOptions, version: 0 } : undefined);
-  // Plan 104 T3: pack `deny`/`tripwire`/`ask` rules run as the session's `tool.call` hook, so
-  // Plan 086 T3: reset here, so a suspension before the compiler is resolved (input guardrail)
-  // cannot inherit the previous run's durable-folding flag. `assembleRoundContext` sets it true.
-  session.attentionDurable = false;
+  session.activeDurable = resumed;
   session.activeGatedRound = undefined;
-  session.packAskRecords = undefined;
   if (resumed) session.invalidateSnapshot();
 
   const model = options.model ?? session.agent.config.model;
@@ -760,6 +720,10 @@ export async function executeRun(
       return session.buildRunResult({ runId, status: "suspended", runState: error.state, interruption: error.interruption });
     }
     runError = errorToErrorInfo(error);
+    // A dispose abort wins over whatever the interrupted await threw, so the run's code is stable.
+    if (controller.signal.aborted && (controller.signal.reason as { code?: unknown } | null)?.code === "agent_disposed") {
+      runError = errorToErrorInfo(controller.signal.reason);
+    }
     const breach = error instanceof RunLimitError ? error.breach : limits.breach;
     // Built once: the event and the terminal result carry the same attribution payload (plan 108 T5).
     const exhaustion = breach ? describeBudgetExhaustion(limits, breach, session.activeRecentToolCalls ?? []) : undefined;

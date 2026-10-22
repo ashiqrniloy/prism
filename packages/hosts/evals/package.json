@@ -1,0 +1,57 @@
+{
+  "name": "@arnilo/prism-evals",
+  "version": "0.13.0",
+  "description": "Host library providing evaluations, datasets, scorers, judges, and multi-turn scenarios for Prism agents.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism-observability": "file:../../integrations/observability",
+    "@arnilo/prism-store-codecs": "file:../../stores/codecs",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/hosts/evals"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/hosts/evals#readme",
+  "keywords": [
+    "prism",
+    "evals",
+    "evaluations",
+    "benchmarks",
+    "scorers",
+    "judges",
+    "scenarios",
+    "host"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

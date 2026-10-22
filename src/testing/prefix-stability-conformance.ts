@@ -5,12 +5,22 @@
 // Throws plain Error; no test runner, no network, no credentials.
 
 import assert from "node:assert/strict";
+import { createAgent } from "../agent-session/create-agent.js";
+import type {
+  AgentConfig,
+  JsonObject,
+  Message,
+  ModelProvider,
+  ModelRef,
+  ProviderRequest,
+  RunResult,
+  Session,
+  Skill,
+  ToolDefinition,
+} from "../contracts.js";
+import { providerDone, providerThinkingDelta, toolCallContent } from "../models/events.js";
 import { parseModelRef } from "../models/ref.js";
 import { providerPackage } from "../provider-kit/package.js";
-import { createAgent } from "../agent-session/create-agent.js";
-import type { AgentConfig, Session, ModelProvider, JsonObject, Message, ProviderRequest, Skill, ToolDefinition } from "../contracts.js";
-import { providerDone, providerThinkingDelta, toolCallContent } from "../models/events.js";
-import { createLoadSkillTool } from "../skill-load.js";
 import { createSkillRegistry } from "../skills.js";
 
 export interface PrefixStabilityConformanceOptions {
@@ -36,18 +46,24 @@ export interface PrefixStabilityConformanceOptions {
   readonly inputs?: readonly [string, string];
   /**
    * How many request pairs may break below `minContinuity` (default `0`, today's behavior). Use
-   * `1` for an assembly that folds or evicts exactly one boundary — an attention-compiler fold,
-   * a compaction, a budget eviction. More resets than declared fail, and fewer fail too: the
+   * `1` for an assembly that folds or evicts exactly one boundary — a host fold, a compaction,
+   * a budget eviction. More resets than declared fail, and fewer fail too: the
    * fixture was supposed to invalidate the prefix, so a run that never did cannot pass vacuously.
    */
   readonly allowedResets?: number;
   /**
    * Install a runner-owned fixture tool (name constant) that returns exactly this many bytes of
    * generated text, and add a second tool call for it alongside `load_skill` in the same round, so
-   * the attention compiler's tool-result stage has one row worth stubbing. The payload is
-   * `"x".repeat(bytes)`, never host content. Unset: the capture is byte-identical to today.
+   * a host's own tool-result stage has one row worth folding. The payload is `"x".repeat(bytes)`,
+   * never host content. Unset: the capture is byte-identical to today.
    */
   readonly foldableToolResultBytes?: number;
+  /**
+   * Fixture knob: each skill-load round also carries a deterministic reasoning block, so a host's
+   * own stage that strips aged reasoning has real content to strip. Off by default; the block is
+   * generated text, never host content.
+   */
+  readonly reasoningFixture?: boolean;
 }
 
 export interface PrefixStabilityConformanceResult {
@@ -174,24 +190,21 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   );
   const registry = createSkillRegistry([...skills]);
   const hostTools: readonly ToolDefinition[] = host.tools?.add ?? [];
-  const fixture = fixtureProvider(
-    requests,
-    [first.name, second.name],
-    host.attentionCompiler === true || typeof host.attentionCompiler === "object",
-    foldableBytes !== undefined,
-  );
+  const fixture = fixtureProvider(requests, [first.name, second.name], options.reasoningFixture === true, foldableBytes !== undefined);
   const agent = await createAgent({
     ...host,
     skills: { add: registry.list(), disclosure: options.skillsDisclosure },
     tools: { add: [...hostTools, ...(foldableBytes === undefined ? [] : [createFoldableToolResultTool(foldableBytes)])] },
-    model: { ...parseModelRef(host.model), provider: fixture.id },
+    model: { ...parseModelRef(host.model as ModelRef), provider: fixture.id },
     packages: [...(host.packages ?? []), providerPackage("prefix-stability-fixture", [fixture])],
   });
   const session = (await agent.session()) as Session & { readonly tailSegments: ReadonlyMap<string, Message> };
   const [firstInput, secondInput] = options.inputs ?? ["Prefix stability turn one", "Prefix stability turn two"];
   const runOptions = { limits: { maxToolRounds: 1 } } as const;
-  await session.run(firstInput, runOptions);
-  await session.run(secondInput, runOptions);
+  // A failed run resolves (it does not throw) and captures nothing, so an unchecked run would surface
+  // as a confusing "0 provider requests". Name the run's own error instead.
+  assertRunSucceeded(await session.run(firstInput, runOptions), "first");
+  assertRunSucceeded(await session.run(secondInput, runOptions), "second");
 
   assert.equal(
     requests.length,
@@ -264,11 +277,21 @@ function projectResetDetail(
   };
 }
 
+/** A fixture run must succeed; otherwise the capture is empty and the measurement below is vacuous. */
+function assertRunSucceeded(result: RunResult, which: string): void {
+  assert.equal(
+    result.status,
+    "completed",
+    `prefix stability conformance: the ${which} fixture run did not succeed (${result.status})` +
+      (result.error === undefined ? "" : `: ${result.error.message}`),
+  );
+}
+
 /**
- * Deterministic reasoning block the fixture provider emits before each skill load when the host
- * runs an attention compiler. Sized to be a real fraction of the request so the compiler's
- * thinking stage (`thinkingKeepTurns`) has something to strip and the resulting fold is visible
- * in the measured prefix.
+ * Deterministic reasoning block the fixture provider emits before each skill load when
+ * `reasoningFixture` is set. Sized to be a real fraction of the request so a host stage that
+ * strips aged reasoning has something to strip and the resulting fold is visible in the measured
+ * prefix.
  */
 const FIXTURE_THINKING =
   "Prefix-stability fixture reasoning: the harness measures a byte-shared provider prefix, so this block exists only to give the attention-compiler thinking stage deterministic content to strip. ".repeat(
@@ -292,9 +315,9 @@ function createFoldableToolResultTool(bytes: number): ToolDefinition {
 
 /**
  * Fixture provider: turn 1 loads `skillNames[0]`, turn 2 loads `skillNames[1]`, everything else
- * completes. With `reasoning` (the host runs an attention compiler) each skill-load round also
- * carries a thinking block, so the compiler's thinking stage has real content to fold. With `bulk`
- * the same round also calls the runner-owned bulk tool, so the tool-result stage has a foldable row.
+ * completes. With `reasoning` each skill-load round also carries a thinking block, so a host stage
+ * that strips aged reasoning has real content to fold. With `bulk` the same round also calls the
+ * runner-owned bulk tool, so a tool-result stage has a foldable row.
  */
 function fixtureProvider(requests: ProviderRequest[], skillNames: readonly string[], reasoning: boolean, bulk: boolean): ModelProvider {
   let call = 0;

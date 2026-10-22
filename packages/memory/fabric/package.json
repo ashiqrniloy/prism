@@ -1,0 +1,66 @@
+{
+  "name": "@arnilo/prism-memory-fabric",
+  "version": "0.13.0",
+  "description": "Working, semantic, and scoped memory for Prism agents: the memory.* tools, a context block, and per-session state, plus the family's cross-package integration suites.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "!src/**/fixtures",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "test:postgres": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src/__tests__/postgres-memory.integration.test.ts src/__tests__/postgres-vector.integration.test.ts src/__tests__/postgres-propagation.integration.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "pg": "^8.23.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@arnilo/prism-memory-core": "^0.13.0",
+    "@arnilo/prism-memory-observational": "^0.13.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism-memory-rag": "file:../rag",
+    "@arnilo/prism-memory-wiki": "file:../wiki",
+    "@types/node": "^22.20.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/memory/fabric"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/memory/fabric#readme",
+  "keywords": [
+    "prism",
+    "memory",
+    "fabric",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -12,6 +12,8 @@ export type PackageLoadErrorCode =
   | "definition_invalid"
   /** The kernel version does not satisfy `requires.prism`. */
   | "kernel_range"
+  /** `requires.api` is not an API level this kernel supports. */
+  | "kernel_api"
   /** A required package is not loaded, or its version does not satisfy the range. */
   | "missing_package"
   /** A required service is provided by no loaded package. */
@@ -46,8 +48,19 @@ export type PackageLoadErrorCode =
   | "state_not_json"
   /** A session state value is over the 64 KiB bound. */
   | "state_too_large"
+  /** An `external_state` append would pass the per-key entry or byte cap, or one entry is over 64 KiB. */
+  | "external_state_limit"
+  | "terminal_env_secret"
   /** `SessionState.get` ran before the session read its branch. */
-  | "state_not_ready";
+  | "state_not_ready"
+  /** A queried package is not loaded. */
+  | "unknown_package"
+  /** A queried package is disabled. */
+  | "package_disabled"
+  /** A package queried its own instance. */
+  | "self_instance"
+  /** Tool or contribution registration attempted after package setup was complete. */
+  | "registration_closed";
 
 export interface PackageLoadErrorOptions {
   readonly package?: string;

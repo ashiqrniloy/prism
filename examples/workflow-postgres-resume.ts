@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-core/runtime/workflows";
+import { createWorkflowCheckpoints, defineWorkflow, functionNode, resumeWorkflow, runWorkflow } from "@arnilo/prism-workflows";
 import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
 import { Pool } from "pg";
 

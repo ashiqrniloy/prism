@@ -1,58 +1,9 @@
-import assert from "node:assert/strict";
-import { describe, it } from "bun:test";
-import type { ProviderRequest } from "@arnilo/prism";
-import { assertAbortIsObserved, assertNoSecretLeak, collectProviderEvents } from "@arnilo/prism/provider-kit";
-import { createTypeSafeProvider, typeSafeModels } from "../index.js";
+import { runSystemOneLiveScenarios } from "@arnilo/prism/testing";
+import { typesafe } from "../index.js";
 
-// Env-gated live smoke tests for @arnilo/prism-provider-typesafe.
-//
-// Network-free by default: these tests skip unless BOTH
-// `PRISM_LIVE_PROVIDER_TESTS=1` AND `TYPESAFE_API_KEY` are set. The default
-// `bun run test` and CI release verification never set these. To run locally:
-//
-//   PRISM_LIVE_PROVIDER_TESTS=1 TYPESAFE_API_KEY=... \
-//     npm run test --workspace=@arnilo/prism-provider-typesafe
-//
-// Security: the API key is read from the env and used only as a bearer token;
-// it is never logged. `assertNoSecretLeak` verifies the key value does not
-// appear in any streamed event. The state is a non-sensitive command string.
-
-const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
-const API_KEY = process.env.TYPESAFE_API_KEY;
-const skip: string | false =
-  !LIVE || !API_KEY ? "set PRISM_LIVE_PROVIDER_TESTS=1 and TYPESAFE_API_KEY to run live TypeSafe Jev smoke tests" : false;
-
-const model = typeSafeModels[0]!;
-const apiKey = () => process.env.TYPESAFE_API_KEY;
-
-const request: ProviderRequest = {
-  model,
-  messages: [{ role: "user", content: [{ type: "text", text: "rm -rf ./build" }] }],
-  options: {
-    structuredOutput: {
-      name: "decision",
-      schema: {
-        type: "object",
-        properties: { risky: { type: "boolean", description: "Would running this destroy data or leak secrets?" } },
-      },
-    },
-  },
-};
-
-(skip ? describe.skip : describe)("@arnilo/prism-provider-typesafe live tests", () => {
-  it("live_decision_renders_schema_valid_json_and_leaks_no_secret", async () => {
-    const events = await collectProviderEvents(createTypeSafeProvider({ apiKey }), request);
-    const terminal = events.at(-1);
-    assert.ok(terminal && terminal.type === "done", "live request completed");
-    const text = events
-      .map((event) => (event.type === "content_delta" && event.content.type === "text" ? event.content.text : ""))
-      .join("");
-    const parsed = JSON.parse(text);
-    assert.equal(typeof parsed.risky, "boolean", "rendered decision is schema-valid");
-    assertNoSecretLeak(events, [API_KEY!]);
-  });
-
-  it("live_abort_signal_is_observed_before_first_request", async () => {
-    await assertAbortIsObserved({ provider: createTypeSafeProvider({ apiKey }), request });
-  });
+await runSystemOneLiveScenarios({
+  provider: (opts) => typesafe({ apiKey: "env:TYPESAFE_API_KEY", fetch: opts?.fetch }),
+  model: process.env.PRISM_LIVE_TYPESAFE_MODEL ?? "jev-latest",
+  secretEnv: "TYPESAFE_API_KEY",
+  title: "@arnilo/prism-provider-typesafe live tests",
 });

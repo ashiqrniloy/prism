@@ -1,11 +1,10 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ProviderRequest } from "@arnilo/prism";
-import { createAgent, createSkillRegistry, providerDone } from "@arnilo/prism";
-import { createMockProvider } from "@arnilo/prism/testing";
+import { createAgent, createPathTrustPolicy, providerDone } from "@arnilo/prism";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
-import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createMockProvider } from "@arnilo/prism/testing";
 
 // Workspace contribution discovery, end-to-end with the mock provider.
 // Scans a committed example workspace for a SKILL.md, registers the realized

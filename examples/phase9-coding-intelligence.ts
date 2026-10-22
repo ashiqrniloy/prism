@@ -11,8 +11,8 @@ import {
   createGitHubForge,
   createLanguageIntelligence,
   createProcessSessions,
-} from "@arnilo/prism-coding-tools/agent";
-import { createAllowListEgressProxy, createEgressPolicy } from "@arnilo/prism-coding-tools/security";
+} from "@arnilo/prism-tools-coding";
+import { createAllowListEgressProxy, createEgressPolicy } from "@arnilo/prism-tools-coding";
 
 /**
  * Network-free Phase 9 composed example (plan 009 Task 7).
@@ -21,7 +21,7 @@ import { createAllowListEgressProxy, createEgressPolicy } from "@arnilo/prism-co
  * (github+registry presets; unlisted host denied). No network, no credentials.
  */
 
-const FAKE_LSP = fileURLToPath(new URL("../packages/prism-coding-tools/src/agent/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
+const FAKE_LSP = fileURLToPath(new URL("../packages/tools/coding/src/agent/__tests__/fixtures/fake-lsp.mjs", import.meta.url));
 const IDENTITY = {
   tenantId: "tenant-1",
   userId: "u1",

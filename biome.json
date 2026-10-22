@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -81,7 +81,7 @@
     },
     {
       "includes": [
-        "packages/acp-agent/src/**"
+        "packages/hosts/acp/src/**"
       ],
       "linter": {
         "rules": {
@@ -93,7 +93,7 @@
     },
     {
       "includes": [
-        "packages/ag-ui/src/**"
+        "packages/hosts/ag-ui/src/**"
       ],
       "linter": {
         "rules": {
@@ -105,7 +105,7 @@
     },
     {
       "includes": [
-        "packages/mcp/src/**"
+        "packages/integrations/mcp/src/**"
       ],
       "linter": {
         "rules": {
@@ -117,7 +117,7 @@
     },
     {
       "includes": [
-        "packages/memory/src/**"
+        "packages/memory/core/src/**"
       ],
       "linter": {
         "rules": {
@@ -129,7 +129,7 @@
     },
     {
       "includes": [
-        "packages/prism-work/src/**"
+        "packages/memory/fabric/src/**"
       ],
       "linter": {
         "rules": {
@@ -141,7 +141,7 @@
     },
     {
       "includes": [
-        "packages/prism-coding-tools/src/**"
+        "packages/context/engineering/src/**"
       ],
       "linter": {
         "rules": {
@@ -153,7 +153,55 @@
     },
     {
       "includes": [
-        "packages/prism-core/src/**"
+        "packages/memory/rag/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/tools/work/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/tools/coding/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/tools/web/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/policy/governance/src/**"
       ],
       "linter": {
         "rules": {
@@ -177,7 +225,187 @@
     },
     {
       "includes": [
-        "packages/web-tools/src/**"
+        "packages/tools/browser/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/tools/openapi/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/tools/computer-use/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/memory/compaction/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/memory/observational/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "apps/prism-agent/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/drivers/process/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/hosts/devtools/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/hosts/evals/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/hosts/headless/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/hosts/remote/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/integrations/observability/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/integrations/workflows/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/policy/guardrail-packs/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/policy/model-router/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/stores/codecs/src/**"
       ],
       "linter": {
         "rules": {
@@ -191,12 +419,12 @@
       "includes": [
         "src/agent-approval.ts",
         "src/agent-tool-dispatch.ts",
-        "packages/prism-coding-tools/src/agent/delete.ts",
-        "packages/prism-coding-tools/src/agent/git*.ts",
-        "packages/prism-coding-tools/src/agent/glob-match.ts",
-        "packages/prism-coding-tools/src/agent/language/framing.ts",
-        "packages/prism-coding-tools/src/security/sandbox-fs-operations.ts",
-        "packages/prism-coding-tools/src/security/sandbox-tar.ts"
+        "packages/tools/coding/src/agent/delete.ts",
+        "packages/tools/coding/src/agent/git*.ts",
+        "packages/tools/coding/src/agent/glob-match.ts",
+        "packages/tools/coding/src/agent/language/framing.ts",
+        "packages/tools/coding/src/security/sandbox-fs-operations.ts",
+        "packages/tools/coding/src/security/sandbox-tar.ts"
       ],
       "linter": {
         "rules": {

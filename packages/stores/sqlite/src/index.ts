@@ -14,17 +14,13 @@
  * });
  * ```
  */
+
 import { definePackage, type JsonSchema, type PackageInstance } from "@arnilo/prism";
+import manifest from "../package.json" with { type: "json" };
 
 import { createSqlitePersistence } from "./persistence.js";
 
-export {
-  applySqliteMigrations,
-  assertSqliteSchemaReady,
-  configureSqliteDatabase,
-  maybeRestrictFileMode,
-  verifyMigrationIdempotency,
-} from "./migrations.js";
+export { createSqliteCheckpointStore } from "./checkpoints.js";
 export {
   ADAPTER_INDEX_NAMES,
   ADAPTER_TABLE_NAMES,
@@ -37,10 +33,17 @@ export {
   MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
   MIGRATION_008_SESSION_VERSION,
   MIGRATION_009_RUN_PROMPT_VERSION,
+  MIGRATION_010_SESSION_LINKS,
 } from "./ddl.js";
-export { createSqliteCheckpointStore } from "./checkpoints.js";
 export { createSqliteLeaseStore } from "./leases.js";
 export { createSqlitePersistenceLifecycle } from "./lifecycle.js";
+export {
+  applySqliteMigrations,
+  assertSqliteSchemaReady,
+  configureSqliteDatabase,
+  maybeRestrictFileMode,
+  verifyMigrationIdempotency,
+} from "./migrations.js";
 export type { SqlitePersistence } from "./persistence.js";
 export { createSqlitePersistence, DEFAULT_BUSY_TIMEOUT_MS, reopenSqlitePersistence } from "./persistence.js";
 export type { SqlitePersistenceOptions } from "./types.js";
@@ -64,9 +67,9 @@ const configSchema: JsonSchema = {
 
 const definition = definePackage<SqliteStoreConfig>({
   name: "@arnilo/prism-store-sqlite",
-  version: "0.12.1",
+  version: manifest.version,
   description: "SQLite session store with leases, lifecycle, and schema migrations.",
-  requires: { prism: "^0.12.1 || ^0.13.0-0" },
+  requires: { api: 1 },
   capabilities: ["slot:store"],
   config: configSchema,
   setup: (prism) => {
@@ -74,7 +77,12 @@ const definition = definePackage<SqliteStoreConfig>({
     if (typeof path !== "string" || path.length === 0) {
       throw new Error("prism-store-sqlite: config needs path (the SQLite database file; use :memory: for tests)");
     }
-    prism.slots.store.provide(createSqlitePersistence({ filename: path, busyTimeoutMs: prism.config.busyTimeoutMs }));
+    const persistence = createSqlitePersistence({ filename: path, busyTimeoutMs: prism.config.busyTimeoutMs });
+    prism.slots.store.provide(persistence);
+    // The workflows service names are the cross-package contract (plan 168 Task 4); both stores share the
+    // one open `Database` above, so providing them opens no second handle.
+    prism.services.provide("checkpoints", persistence.checkpoints);
+    prism.services.provide("leases", persistence.leases);
   },
 });
 

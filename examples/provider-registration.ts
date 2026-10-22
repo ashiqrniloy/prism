@@ -1,5 +1,5 @@
 import { createAgent, createModelRegistry, createProviderRegistry, providerDone } from "@arnilo/prism";
-import { openai } from "@arnilo/prism-provider-openai";
+import { hyper } from "@arnilo/prism-provider-hyper";
 import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 
 // Load a provider package, then resolve a host-owned mock from host registries.
@@ -7,7 +7,7 @@ import { mockProvider, createMockProvider } from "@arnilo/prism/testing";
 export async function demo() {
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [openai({ apiKey: "env:OPENAI_API_KEY" }), mockProvider([[providerDone()]], { id: "mock" })],
+    packages: [hyper({ apiKey: "env:HYPER_API_KEY" }), mockProvider([[providerDone()]], { id: "mock" })],
   });
   await agent.dispose();
 

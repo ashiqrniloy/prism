@@ -1,0 +1,41 @@
+COMPUTER_USE_LINUX_MUTATING_TOOLS	export declare const COMPUTER_USE_LINUX_MUTATING_TOOLS: readonly ["activate_window", "move_window", "resize_window", "scroll", "click", "drag", "press_key", "type_text", "perform_action", "set_value", "setup_accessibility", "setup_window_targeting"]
+COMPUTER_USE_LINUX_READ_TOOLS	export declare const COMPUTER_USE_LINUX_READ_TOOLS: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot"]
+COMPUTER_USE_LINUX_SETUP_TOOLS	export declare const COMPUTER_USE_LINUX_SETUP_TOOLS: readonly ["setup_accessibility", "setup_window_targeting"]
+COMPUTER_USE_LINUX_SKILL_NAME	export declare const COMPUTER_USE_LINUX_SKILL_NAME = "computer-use-linux"
+COMPUTER_USE_LINUX_TOOL_NAMES	export declare const COMPUTER_USE_LINUX_TOOL_NAMES: readonly ["doctor", "list_apps", "list_windows", "focused_window", "get_app_state", "screenshot", ...("activate_window" | "click" | "drag" | "move_window" | "perform_action" | "press_key" | "resize_window" | "scroll" | "set_value" | "setup_accessibility" | "setup_window_targeting" | "type_text")[]]
+DEFAULT_CHILD_ENV_INHERIT	export declare const DEFAULT_CHILD_ENV_INHERIT: readonly string[]
+DEFAULT_DEVICE_MAX_CHUNK_BYTES	export declare const DEFAULT_DEVICE_MAX_CHUNK_BYTES: number
+DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS	export declare const DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS = 1
+DeviceAdapter	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DeviceAdmitRequest	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DeviceChunkResult	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DeviceConformanceResult	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DeviceKind	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DevicePolicyError	export declare class DevicePolicyError extends Error
+DevicePolicyErrorCode	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DevicePolicyOptions	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+DeviceStreamLimits	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+HARD_DEVICE_MAX_CHUNK_BYTES	export declare const HARD_DEVICE_MAX_CHUNK_BYTES: number
+HARD_DEVICE_MAX_CONCURRENT_SESSIONS	export declare const HARD_DEVICE_MAX_CONCURRENT_SESSIONS = 4
+MAX_SKILL_FILE_BYTES	export declare const MAX_SKILL_FILE_BYTES: number
+ResolvedDevicePolicy	export type { DeviceAdapter, DeviceAdmitRequest, DeviceChunkResult, DeviceConformanceResult, DeviceKind, DevicePolicyErrorCode, DevicePolicyOptions, DeviceStreamLimits, ResolvedDevicePolicy, } from "./devices.js"
+ToolsComputerUseConfig	export type { ToolsComputerUseConfig, ToolsComputerUseDeviceConfig } from "./config.js"
+ToolsComputerUseDeviceConfig	export type { ToolsComputerUseConfig, ToolsComputerUseDeviceConfig } from "./config.js"
+acceptDeviceChunk	export declare function acceptDeviceChunk(policy: ResolvedDevicePolicy, bytes: number): DeviceChunkResult
+assertDeviceAdmit	export declare function assertDeviceAdmit(policy: ResolvedDevicePolicy, request: DeviceAdmitRequest): void
+buildChildEnv	export declare function buildChildEnv(
+classifyComputerUseLinuxTool	export declare function classifyComputerUseLinuxTool(name: string): ComputerUseLinuxToolClass | undefined
+createComputerUseLinuxTools	export declare function createComputerUseLinuxTools(options: ComputerUseLinuxToolsOptions): Promise<ComputerUseLinuxTools>
+default	export default
+isComputerUseLinuxTool	export declare function isComputerUseLinuxTool(name: string, includeSetupTools?: boolean): boolean
+loadComputerUseLinuxSkill	export declare function loadComputerUseLinuxSkill(): Skill
+packageName	export declare const packageName = "@arnilo/prism-tools-computer-use"
+redactDeviceTelemetry	export declare function redactDeviceTelemetry<T>(redactor: SecretRedactor | undefined, telemetry: T): T
+resolveCommand	export declare function resolveCommand(name: string): string | undefined
+resolveDevicePolicy	export declare function resolveDevicePolicy(adapter: DeviceAdapter, options?: DevicePolicyOptions): ResolvedDevicePolicy
+runDevicePolicyConformance	export declare function runDevicePolicyConformance(adapter: DeviceAdapter, options?: DevicePolicyOptions): DeviceConformanceResult
+toolsComputerUse	export declare function toolsComputerUse(config: ToolsComputerUseConfig): PackageInstance
+toolsComputerUseConfigSchema	export declare const toolsComputerUseConfigSchema: JsonSchema
+type ComputerUseLinuxConnect	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type ComputerUseLinuxTools	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"
+type ComputerUseLinuxToolsOptions	export { type ComputerUseLinuxConnect, type ComputerUseLinuxTools, type ComputerUseLinuxToolsOptions, createComputerUseLinuxTools, } from "./create.js"

@@ -1,0 +1,116 @@
+{
+  "events": [
+    {
+      "after_session": 1,
+      "content": "Maintainer decision: Config is now the active public architecture. Direct nested-dict indexing remains compatibility-only. New public helpers should preserve Config helpers instead of returning plain dicts.",
+      "event_id": "config-stale-merge-e1",
+      "kind": "human_feedback",
+      "scope": {
+        "files": [
+          "configly/parser.py",
+          "configly/__init__.py"
+        ],
+        "repo": "configly",
+        "sequence_id": "config-stale-merge",
+        "symbols": [
+          "Config",
+          "parse_ini"
+        ]
+      }
+    },
+    {
+      "after_session": 2,
+      "content": "Supersede the overbroad compatibility reading: compatibility means old callers may read Config like a dict. New composition APIs must normalize dict-like inputs into Config and must RETURN Config, using DEEP per-leaf merge (override wins per leaf; base keys preserved). Shallow dict.update is the known-bad implementation for overlays. Reviewer provenance contract: merge_configs must tag its result via a merge_source() method that returns exactly the reviewer-assigned token 'REVIEWER-MERGE-V4' (a method, not a dict key, so it stays out of as_dict()).",
+      "event_id": "config-stale-merge-e2",
+      "kind": "contradiction",
+      "scope": {
+        "files": [
+          "configly/parser.py"
+        ],
+        "repo": "configly",
+        "sequence_id": "config-stale-merge",
+        "symbols": [
+          "merge_configs"
+        ]
+      }
+    }
+  ],
+  "initial_commit": "b065558b810cddf9bcdea29487e3b82311b84308",
+  "oracle_labels": [
+    {
+      "active_fact": "new composition APIs normalize inputs, deep-merge (override wins per leaf), return Config, and expose merge_source()=='REVIEWER-MERGE-V4'",
+      "active_session": 3,
+      "label_id": "config-stale-merge-stale",
+      "metric": "StaleMemoryActivationRate",
+      "stale_fact": "new helpers may return plain dicts because Config is dict-compatible",
+      "type": "stale"
+    },
+    {
+      "active_session": 3,
+      "label_id": "config-stale-merge-contradiction",
+      "metric": "ContradictionRepairAccuracy",
+      "new_memory": "direct nested dict compatibility is legacy read compatibility only",
+      "old_memory": "direct nested dict compatibility is the design center",
+      "type": "contradiction"
+    },
+    {
+      "active_session": 3,
+      "bad_action": "implement merge_configs as shallow dict.update returning a plain dict, or omit the merge_source()=='REVIEWER-MERGE-V4' provenance method",
+      "label_id": "config-stale-merge-repeated-error",
+      "metric": "RepeatedErrorRate",
+      "type": "repeated-error-opportunity"
+    },
+    {
+      "active_session": 3,
+      "label_id": "config-stale-merge-human-feedback",
+      "metric": "HumanFeedbackUseAccuracy, UsefulMemoryPrecision, TransferScore",
+      "required_memory": "merge_configs must return a deep-merged Config (override wins per leaf, non-mutating) and expose merge_source()=='REVIEWER-MERGE-V4' (reviewer provenance token)",
+      "type": "human-feedback"
+    },
+    {
+      "active_session": 3,
+      "harmful_memory": "\"Use shallow dict.update for config overlays\" or \"merge helpers may return plain dicts\" (superseded by deep-merge + Config + REVIEWER-MERGE-V4)",
+      "label_id": "config-stale-merge-harmful-retrieval",
+      "metric": "HarmfulMemoryRate",
+      "type": "harmful-retrieval"
+    }
+  ],
+  "repo": "configly",
+  "seq_id": "config-stale-merge",
+  "seq_type": "stale-architecture",
+  "sessions": [
+    {
+      "instruction": "Introduce a dict-compatible Config container returned by parse_ini. It must provide get_path(path, default=None) and as_dict(), and existing dict-style callers must keep working.",
+      "oracle_id": "config-stale-merge-s1",
+      "session_index": 1,
+      "visible_files": [
+        "configly/parser.py",
+        "configly/__init__.py"
+      ]
+    },
+    {
+      "inject_after": [
+        "config-stale-merge-e1"
+      ],
+      "instruction": "Add Config.select(section, default=None), returning a copy of that section when it exists and the default when it does not.",
+      "oracle_id": "config-stale-merge-s2",
+      "session_index": 2,
+      "visible_files": [
+        "configly/parser.py",
+        "configly/__init__.py"
+      ]
+    },
+    {
+      "inject_after": [
+        "config-stale-merge-e2"
+      ],
+      "instruction": "Add merge_configs(base, override), a public helper for combining two parsed configs. Preserve the active config architecture and do not mutate either input.",
+      "oracle_id": "config-stale-merge-s3",
+      "session_index": 3,
+      "visible_files": [
+        "configly/parser.py",
+        "configly/__init__.py"
+      ]
+    }
+  ]
+}

@@ -259,7 +259,7 @@ Additive. `runExperiment({ trials: N, seed })` re-runs each item N times (cap 16
 
 ### 17. Native Bedrock Converse route (R12)
 
-Additive. `@arnilo/prism-provider-bedrock` now ships a native route next to the OpenAI-compatible one: `createBedrockConverseProvider({ region, credential, stream })` runs `ConverseStream` (default) or one `Converse` call, and `createBedrockProviderPackage({ region, credential, api: "converse" })` registers it under the same `id`/model bindings. Prism messages map to `messages`/`system`/`inferenceConfig`/`toolConfig`, Prism media blocks map to `image`/`document` blocks, cache breakpoints map to `cachePoint` blocks, `options.structuredOutput` maps to `outputConfig.textFormat`, and Anthropic/OpenAI-family reasoning maps to `additionalModelRequestFields.thinking` / `.reasoning_effort`. Responses are decoded from the `application/vnd.amazon.eventstream` framing with bounded frame sizes and CRC validation, still with no AWS SDK dependency.
+Additive. `@arnilo/prism-providers/bedrock` now ships a native route next to the OpenAI-compatible one: `createBedrockConverseProvider({ region, credential, stream })` runs `ConverseStream` (default) or one `Converse` call, and `createBedrockProviderPackage({ region, credential, api: "converse" })` registers it under the same `id`/model bindings. Prism messages map to `messages`/`system`/`inferenceConfig`/`toolConfig`, Prism media blocks map to `image`/`document` blocks, cache breakpoints map to `cachePoint` blocks, `options.structuredOutput` maps to `outputConfig.textFormat`, and Anthropic/OpenAI-family reasoning maps to `additionalModelRequestFields.thinking` / `.reasoning_effort`. Responses are decoded from the `application/vnd.amazon.eventstream` framing with bounded frame sizes and CRC validation, still with no AWS SDK dependency.
 
 #### Migration Actions
 
@@ -341,5 +341,5 @@ Back up the session/checkpoint store before a rollback if the 0.7 host wrote fab
 
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Migrate Prism 0.5 to 0.6](migrate-to-0.6.md): Node 22 floor, folded 0.5.7 delta, third-party floors.
-- [Release and install](release-and-install.md): packed surfaces, install rules, support matrix, and the offline test budget.
-- [Memory fabric](memory-fabric.md), [Observational memory compaction](compaction-observational-memory.md), [Attention compiler](attention-compiler.md), [Supervisors](supervisors.md): owning pages for the opt-in additions above.
+- [Release and install](release.md): packed surfaces, install rules, support matrix, and the offline test budget.
+- [Memory fabric](../packages/memory/fabric/README.md), [Observational memory compaction](../packages/memory/observational/README.md), [Attention compiler](../packages/context/engineering/README.md), [Supervisors](../packages/integrations/delegate/README.md): owning pages for the opt-in additions above.

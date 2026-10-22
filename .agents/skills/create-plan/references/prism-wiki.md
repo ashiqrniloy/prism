@@ -2,22 +2,18 @@
 
 Apply these to every Prism plan task.
 
-## Where docs go during the 0.13.0 train
+## Where docs go
 
-Three homes exist until the publish phase (roadmap Phase 11). Pick by what the task changes.
+The `docs/next/` staging tree was promoted into `/docs` before the 0.13.0 publish, and `src/__tests__/docs.test.ts` (`docs_next_is_promoted`) fails if it comes back. `/docs` now describes the 0.13.0 contract; the 0.12 pages live in `docs/history/` as archives. There are two homes. Pick by what the task changes.
 
 | Task changes… | Document in | Rules |
 | --- | --- | --- |
-| Released 0.12.1 behavior that still ships (a fix to the current line) | `/docs/<page>.md` plus its `docs/index.md` entry | Current-contract rules below. |
-| A kernel contract (`@arnilo/prism` 0.13.0: agent, session, loop, hooks, slots, packages, manifest, models, tools and skills, host port, events) | `docs/next/<page>.md`, using the API page structure | Written in the same task that ships the API, never deferred to publish. Not linked from `docs/index.md`. The publish phase promotes each page into `/docs` and writes the index entries. |
-| A native package or host library | that package's `README.md`, using the package page structure | Written in the task that creates the package. It becomes the package's published page. |
+| A kernel contract (`@arnilo/prism`: agent, session, loop, hooks, slots, packages, manifest, models, provider-kit, tools and skills, host port, events, testing) | the matching `/docs/<page>.md` (`docs/index.md` "Kernel" section lists them), using the API page structure | Edited in the same task that ships the change. A new page gets one `docs/index.md` link and an entry in the `kernelPages` or `apiPages` list in `src/__tests__/docs.test.ts`. |
+| A native package or host library | that package's `README.md`, using the package page structure | Written in the task that creates or changes the package. It is the package's published page and is linked once from `docs/index.md` (`docs.test.ts` checks every package README has a link). |
 
-Never describe the target (`createAgent` with `packages`, `definePackage`, `loadManifest`, hooks, slots, `host.ui`) in released `/docs` pages before 0.13.0 ships. `src/__tests__/docs.test.ts` pins this.
+The reference host walkthrough (`apps/prism-agent/README.md`) is linked from `docs/index.md`. It is a host walkthrough, not a package README.
 
-The first plan that creates `docs/next/` excludes it in the same task from:
-- the "one index link per docs page" test
-- the root `files` tarball list (as `!docs/next`)
-- any docs-tree scan that forbids target tokens
+Never edit a page under `docs/history/`: it is a frozen 0.12 archive.
 
 Record every task's user-visible change under `## [Unreleased]` in `CHANGELOG.md` as it lands, not at publish.
 
@@ -27,7 +23,7 @@ Every task includes a `Documentation/Wiki Assessment` with:
 
 - `Public API or behavior impacted`: yes/no and why.
 - `Docs pages to create/edit`: concrete paths in whichever home the table above selects, or `none` with a reason.
-- `docs/index.md update`: yes/no and the entry. This is always `no` for `docs/next/` pages and package READMEs during the train. It is also `no` whenever the answer above is `no`.
+- `docs/index.md update`: yes/no and the entry. It is `yes` for a new `/docs` page or a new package README, and when an existing page's scope sentence changes. It is `no` for edits inside an already-indexed page, and whenever the answer above is `no`.
 - `Documentation structure reference`: this file.
 
 Documentation is required when a task adds or changes any of the following:
@@ -42,12 +38,12 @@ Documentation is required when a task adds or changes any of the following:
 
 ## Current-contract rules
 
-- A page documents the current contract of what its home describes. `/docs` describes the latest release, `docs/next/` the unreleased kernel, and a README its package. Release narrative is history.
+- A page documents the current contract of what its home describes. `/docs` describes the kernel on `main`, and a README its package. Release narrative is history. A kernel page carries no phase or plan narrative (`docs.test.ts` rejects `Phase N` and `plan NNN` in kernel pages).
 - A `docs/index.md` entry is one sentence describing what the page covers. No plan numbers, version narrative ("0.2.6 adds"), changed-package cuts, or line counts.
 - Historical content (migration cuts, publish handoffs, readiness records, reviews) goes to `docs/history/` or `CHANGELOG.md`, never into a page body or index entry.
 - An opt-in feature that adds model calls, writes, or latency states that cost and the default that avoids it on its page.
 
-## API page structure (`/docs` and `docs/next/`)
+## API page structure (`/docs`)
 
 ````markdown
 # <API name>

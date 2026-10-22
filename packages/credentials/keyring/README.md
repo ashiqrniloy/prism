@@ -14,14 +14,14 @@ bun add @arnilo/prism-credentials-keyring
 
 ```ts
 import keyring from "@arnilo/prism-credentials-keyring";
-import anthropic from "@arnilo/prism-provider-anthropic";
+import hyper from "@arnilo/prism-provider-hyper";
 import { createAgent } from "@arnilo/prism";
 
 const agent = await createAgent({
-  model: "anthropic/claude-sonnet-4-5",
+  model: "hyper/hyper",
   packages: [
     keyring({ backend: "os", service: "prism" }),
-    anthropic({ apiKey: "keyring:anthropic" }),
+    hyper({ apiKey: "keyring:hyper" }),
   ],
 });
 ```

@@ -1,6 +1,6 @@
-import { createMemoryCheckpointStore } from "@arnilo/prism";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { type KnowledgeConnector, retrieveContext, syncKnowledge } from "@arnilo/prism-memory/rag";
+import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { type KnowledgeConnector, retrieveContext, syncKnowledge } from "@arnilo/prism-memory-rag";
 
 const scope = { tenantId: "demo", resourceId: "docs", corpusId: "drive" };
 const store = createMemoryVectorStore();

@@ -1,6 +1,6 @@
 /**
  * `@arnilo/prism-provider-hyper` — Charm Hyper provider package for Prism: registers the hyper provider,
- * resolves its key from an `env:`/`keyring:` ref per request, and ships the triple-route wire (OpenAI Responses, Anthropic Messages, and OpenAI Chat), quota/telemetry helpers, cache/thinking helpers, and the model catalog.
+ * resolves its key from an `env:`/`keyring:` ref per request, and ships the dual-route wire (Anthropic Messages and OpenAI Chat), quota/telemetry helpers, and the model catalog.
  *
  * ```ts
  * import hyper from "@arnilo/prism-provider-hyper";
@@ -98,7 +98,6 @@ export function hyper(options: HyperProviderPackageOptions & HyperProviderConfig
   return providerPackageInstance(definition, definitionFor, ["id", "fetch"], options);
 }
 
-export { applyHyperAnthropicCacheControl, hyperAnthropicCacheEnabled } from "./cache.js";
 export {
   costFromHyperPricing,
   defineHyperModel,
@@ -111,14 +110,12 @@ export {
   mapHyperModel,
   routeForHyperModel,
 } from "./models.js";
-export { hyperChatBody, hyperChatEvents, serializeHyperChatMessage } from "./openai-chat.js";
-export { createHyperProvider, type HyperProviderOptions } from "./provider.js";
-export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js";
-export { classifyHyperError, type HyperErrorInput, type HyperRetryDecision, hyperHttpError } from "./retry.js";
-export { type HyperUsageCost, parseHyperUsageCost } from "./telemetry.js";
 export {
-  hyperPreserveThinking,
-  hyperReasoningEffort,
-  hyperThinking,
-  stripHyperOwnedCompat,
-} from "./thinking.js";
+  createHyperProvider,
+  type HyperProviderOptions,
+  HYPER_CHAT_ROUTE,
+  HYPER_MESSAGES_ROUTE,
+  withHyperCost,
+} from "./provider.js";
+export { type GetHyperCreditsOptions, getHyperCredits, type HyperCreditsBalance } from "./quota.js";
+export { type HyperUsageCost, parseHyperUsageCost } from "./telemetry.js";

@@ -1,69 +1,224 @@
 {
-  "captured": "2026-09-23",
+  "captured": "2026-10-15",
   "marginPp": 3,
   "core": {
     "lines": 91.48,
     "functions": 92.21
   },
   "packages": {
-    "@arnilo/prism-acp-agent": {
-      "lines": 94.14,
+    "@arnilo/prism-acp": {
+      "lines": 80.89,
       "branches": null,
-      "functions": 89.2
+      "functions": 92.16
     },
     "@arnilo/prism-ag-ui": {
-      "lines": 92.5,
+      "lines": 85.39,
       "branches": null,
-      "functions": 98.38
+      "functions": 94.9
+    },
+    "@arnilo/prism-approval": {
+      "lines": 78.21,
+      "branches": null,
+      "functions": 85
     },
     "@arnilo/prism-channels": {
-      "lines": 92.94,
+      "lines": 92.64,
       "branches": null,
-      "functions": 94.47
+      "functions": 94.74
     },
-    "@arnilo/prism-coding-tools": {
-      "lines": 90.32,
+    "@arnilo/prism-context-engineering": {
+      "lines": 94.07,
       "branches": null,
-      "functions": 95.28
+      "functions": 93.95
     },
-    "@arnilo/prism-core": {
-      "protectedException": "requires PRISM_TEST_POSTGRES_URL / PRISM_TEST_NATS_URL (enterprise and durable session store legs)"
+    "@arnilo/prism-context-files": {
+      "lines": 95.99,
+      "branches": null,
+      "functions": 98.91
+    },
+    "@arnilo/prism-credentials-keyring": {
+      "lines": 86.15,
+      "branches": null,
+      "functions": 83.78
+    },
+    "@arnilo/prism-delegate": {
+      "lines": 95.05,
+      "branches": null,
+      "functions": 95.06
+    },
+    "@arnilo/prism-devtools": {
+      "lines": 80.22,
+      "branches": null,
+      "functions": 92.42
+    },
+    "@arnilo/prism-driver-process": {
+      "lines": 96.64,
+      "branches": null,
+      "functions": 95.1
+    },
+    "@arnilo/prism-evals": {
+      "lines": 91.21,
+      "branches": null,
+      "functions": 94.61
+    },
+    "@arnilo/prism-governance": {
+      "lines": 88.88,
+      "branches": null,
+      "functions": 94.75
+    },
+    "@arnilo/prism-guardrail-packs": {
+      "lines": 93.23,
+      "branches": null,
+      "functions": 97.63
+    },
+    "@arnilo/prism-headless": {
+      "lines": 95.36,
+      "branches": null,
+      "functions": 98.52
     },
     "@arnilo/prism-hooks-json": {
-      "lines": 91.72,
+      "lines": 92.11,
       "branches": null,
-      "functions": 94.01
+      "functions": 92.73
     },
     "@arnilo/prism-mcp": {
-      "lines": 91.32,
+      "lines": 85.38,
       "branches": null,
-      "functions": 96.86
+      "functions": 90.84
     },
-    "@arnilo/prism-memory": {
-      "lines": 91.38,
+    "@arnilo/prism-mcp-server": {
+      "lines": 94.68,
       "branches": null,
-      "functions": 94.32
+      "functions": 94.37
     },
-    "@arnilo/prism-work": {
-      "lines": 83.04,
+    "@arnilo/prism-memory-compaction": {
+      "lines": 92.44,
       "branches": null,
-      "functions": 87.94
+      "functions": 98.57
     },
-    "@arnilo/prism-web-tools": {
-      "lines": 83.76,
+    "@arnilo/prism-memory-core": {
+      "lines": 25.93,
       "branches": null,
-      "functions": 89.55
+      "functions": 17.02
     },
-    "@arnilo/prism-agent-sdk": {
-      "lines": 88.95,
+    "@arnilo/prism-memory-fabric": {
+      "lines": 92.55,
       "branches": null,
-      "functions": 97.08
+      "functions": 93.19,
+      "protectedException": "requires PRISM_TEST_POSTGRES_URL (postgres memory, propagation, and vector legs skip in the measuring environment)"
     },
-    "@arnilo/prism-code": {
-      "lines": 76.35,
+    "@arnilo/prism-memory-observational": {
+      "lines": 88.21,
       "branches": null,
-      "functions": 79.78
+      "functions": 90.68
+    },
+    "@arnilo/prism-memory-rag": {
+      "lines": 92.05,
+      "branches": null,
+      "functions": 97.52
+    },
+    "@arnilo/prism-memory-wiki": {
+      "lines": 90.12,
+      "branches": null,
+      "functions": 89.06
+    },
+    "@arnilo/prism-model-router": {
+      "lines": 89.95,
+      "branches": null,
+      "functions": 91.26
+    },
+    "@arnilo/prism-observability": {
+      "lines": 90.68,
+      "branches": null,
+      "functions": 90.36
+    },
+    "@arnilo/prism-provider-hyper": {
+      "lines": 92.67,
+      "branches": null,
+      "functions": 97.92
+    },
+    "@arnilo/prism-provider-laya": {
+      "lines": 96.38,
+      "branches": null,
+      "functions": 100
+    },
+    "@arnilo/prism-provider-opencode-go": {
+      "lines": 90.99,
+      "branches": null,
+      "functions": 97.62
+    },
+    "@arnilo/prism-provider-typesafe": {
+      "lines": 97,
+      "branches": null,
+      "functions": 100
+    },
+    "@arnilo/prism-remote": {
+      "lines": 93.61,
+      "branches": null,
+      "functions": 94.87
+    },
+    "@arnilo/prism-store-codecs": {
+      "lines": 50.36,
+      "branches": null,
+      "functions": 47.7
+    },
+    "@arnilo/prism-store-jsonl": {
+      "lines": 97,
+      "branches": null,
+      "functions": 99.24
+    },
+    "@arnilo/prism-store-postgres": {
+      "lines": 43.97,
+      "branches": null,
+      "functions": 43.97,
+      "protectedException": "requires PRISM_TEST_POSTGRES_URL (durable session-store / run-ledger / event-source legs skip in the measuring environment)"
+    },
+    "@arnilo/prism-store-sqlite": {
+      "lines": 89.53,
+      "branches": null,
+      "functions": 87.24
+    },
+    "@arnilo/prism-tools-browser": {
+      "lines": 80.04,
+      "branches": null,
+      "functions": 87.06
+    },
+    "@arnilo/prism-tools-coding": {
+      "lines": 93.09,
+      "branches": null,
+      "functions": 95.13,
+      "protectedException": "OS-capability legs probe `unshare --net` (NETNS) at load and skip where the kernel/container cannot create a network namespace"
+    },
+    "@arnilo/prism-tools-computer-use": {
+      "lines": 88.81,
+      "branches": null,
+      "functions": 90.83
+    },
+    "@arnilo/prism-tools-openapi": {
+      "lines": 92.39,
+      "branches": null,
+      "functions": 96.74
+    },
+    "@arnilo/prism-tools-research": {
+      "lines": 90.4,
+      "branches": null,
+      "functions": 93.27
+    },
+    "@arnilo/prism-tools-web": {
+      "lines": 92.8,
+      "branches": null,
+      "functions": 92.52
+    },
+    "@arnilo/prism-tools-work": {
+      "lines": 82.23,
+      "branches": null,
+      "functions": 87.52
+    },
+    "@arnilo/prism-workflows": {
+      "lines": 87.73,
+      "branches": null,
+      "functions": 89.79
     }
   },
-  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException — its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured). [2026-09-06] plan 064 Task 12 re-capture after plan-064 live-suite additions (repairs @arnilo/prism-providers missing branches/functions; dormant packages keep frozen thresholds). [2026-09-11] plan 070 Task 7: pruned 23 retired package rows; coverage-summary now discovers workspaces by dist test files (nested dist/src/__tests__ and dist/<area>/__tests__ included), so @arnilo/prism-acp-agent is measured (row added) and the @arnilo/prism-work placeholder (75/70/75) is replaced by measured evidence. Threshold = min(two back-to-back runs 2026-09-11) - 3pp; the two runs differed by <= 0.02pp on lines. Rows sorted by name. [2026-09-16] plan 079 Task 4: @arnilo/prism-channels measured 89.13 lines / 75.92 branches / 87.90 functions in two local runs; its 86.13 line threshold is the standard 3pp margin. [2026-09-17] plan 085 Task 1: @arnilo/prism-work was re-captured after plan 083 consolidated the office family; two back-to-back runs measured 83.24 lines / 72.10 branches / 83.84 functions, so its 80.24 line threshold preserves the standard 3pp margin. [2026-09-21] plan 106 Task 9: @arnilo/prism-hooks (new in this cut) measured 87.70 lines / 78.67 branches / 90.00 functions in two byte-identical runs; its 84.70 line threshold is the standard 3pp margin. [2026-09-23] plan 114 Task 2: the instrument moved to Bun 1.4.2 `bun test --coverage`; every row was re-measured, threshold = min(two back-to-back runs) - 3pp on lines, and the two runs differed by <= 0.05pp. Bun emits no branch data at all (lcov carries no BRDA/BRF/BRH and the text table has no branch column), so `branches` is null for every row and the branch floor is dropped — evidence: docs/_evidence/phase114-bun-coverage.md §2.5. functions are recorded from the freeze runs, not gated. Core: lines 91.48 / functions 92.21 = 94.48/95.21 measured - 3pp; the old Node core gate 60/70/75 and the archived Node per-package floors live in that evidence file §2.3 and were not carried forward. [2026-09-27] plan 135 Task 10: @arnilo/prism-code measured 79.35 lines / 79.78 functions; threshold 76.35 = measured - 3pp. The @arnilo/prism-agent-sdk row (88.95 lines / 97.08 functions) records the plan 134 pre-release measurement."
+  "note": "Freeze 2026-08-14: two back-to-back post-fix runs were byte-identical (max lines delta 0.000pp). Threshold = min(run1,run2) - 3pp on lines; branches/functions recorded from the freeze runs, not gated. Protected packages (durable legs needing PRISM_TEST_POSTGRES_URL, real NATS, or OS-capability legs that skip in the measuring environment) are exempt and shown separately. CI remediation 2026-08-14: @arnilo/prism-coding-security moved to protectedException — its native-sandbox legs probe `unshare --net` (NETNS) at load and skip on GitHub Actions runners (measured 72.80 lines there vs 80.18 on a host with NETNS; the 77.18 freeze threshold was host-captured). [2026-09-06] plan 064 Task 12 re-capture after plan-064 live-suite additions (repairs @arnilo/prism-providers missing branches/functions; dormant packages keep frozen thresholds). [2026-09-11] plan 070 Task 7: pruned 23 retired package rows; coverage-summary now discovers workspaces by dist test files (nested dist/src/__tests__ and dist/<area>/__tests__ included), so the ACP adapter workspace is measured (row added) and the @arnilo/prism-tools-work placeholder (75/70/75) is replaced by measured evidence. Threshold = min(two back-to-back runs 2026-09-11) - 3pp; the two runs differed by <= 0.02pp on lines. Rows sorted by name. [2026-09-16] plan 079 Task 4: @arnilo/prism-channels measured 89.13 lines / 75.92 branches / 87.90 functions in two local runs; its 86.13 line threshold is the standard 3pp margin. [2026-09-17] plan 085 Task 1: @arnilo/prism-tools-work was re-captured after plan 083 consolidated the office family; two back-to-back runs measured 83.24 lines / 72.10 branches / 83.84 functions, so its 80.24 line threshold preserves the standard 3pp margin. [2026-09-21] plan 106 Task 9: @arnilo/prism-hooks (new in this cut) measured 87.70 lines / 78.67 branches / 90.00 functions in two byte-identical runs; its 84.70 line threshold is the standard 3pp margin. [2026-09-23] plan 114 Task 2: the instrument moved to Bun 1.4.2 `bun test --coverage`; every row was re-measured, threshold = min(two back-to-back runs) - 3pp on lines, and the two runs differed by <= 0.05pp. Bun emits no branch data at all (lcov carries no BRDA/BRF/BRH and the text table has no branch column), so `branches` is null for every row and the branch floor is dropped — evidence: docs/_evidence/phase114-bun-coverage.md §2.5. functions are recorded from the freeze runs, not gated. Core: lines 91.48 / functions 92.21 = 94.48/95.21 measured - 3pp; the old Node core gate 60/70/75 and the archived Node per-package floors live in that evidence file §2.3 and were not carried forward. [2026-09-27] plan 135 Task 10: the agent-SDK row (88.95 lines / 97.08 functions) recorded the plan 134 pre-release measurement. Plan 174 Task 7 retires that workspace and its row (and the coding-tools and acp-agent rows). [2026-10-15] plan 176 Task 1: coverage-summary now discovers workspaces by expanding the root `workspaces` globs through the shared `expandWorkspaceDirs` (grouped `packages/<group>/<name>` and `apps/*`), replacing the flat `packages/*` readdir that measured 0 workspaces; every gated workspace bunfig is re-scoped to `[\"../**\"]` so a row measures only its own sources. All 59 workspaces re-measured in two back-to-back runs that agreed exactly on lines and functions; threshold = min(run1,run2) - 3pp on lines. Retired rows (@arnilo/prism-core, -agent-sdk, -coding-tools, -acp-agent, -work, -web-tools, -hooks, -providers, -prism-code, ...) deleted. Protected rows: @arnilo/prism-store-postgres and @arnilo/prism-memory-fabric (PRISM_TEST_POSTGRES_URL durable legs), @arnilo/prism-tools-coding (unshare/NETNS OS-capability legs). [2026-10-17] plan 181 Task 3 P1: the core row's floors were NOT re-captured (they still date from plan 114/176: lines 91.48 / functions 92.21 = the 94.48/95.21 freeze minus 3pp). The row had drifted below them after plans 177-179 (measured 90.22 lines / 89.90 functions on 2026-10-17) because the kernel's host-facing testing helpers (`src/testing/**`), the provider wire helpers (`src/provider-kit/**`), and the guardrail stage runner had no root test — their consumers are package suites, which the core row does not measure. Four new root suites (`guardrails.test.ts`, `agent-event-source-conformance.test.ts`, `provider-kit-wire-helpers.test.ts`, plus the regenerated `test:coverage` glob and root bunfig `apps/**` exclusion) put the row at 93.47 lines / 93.25 functions in the captured run, above the unchanged floor, so the ceiling stands."
 }

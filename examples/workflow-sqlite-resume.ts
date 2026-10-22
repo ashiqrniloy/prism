@@ -1,3 +1,4 @@
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
 import { unlinkSync } from "node:fs";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
@@ -8,9 +9,8 @@ import {
   functionNode,
   resumeWorkflow,
   runWorkflow,
-  type WorkflowEvent,
   type WorkflowRunResult,
-} from "@arnilo/prism-core/runtime/workflows";
+} from "@arnilo/prism-workflows";
 import { createSqlitePersistence } from "@arnilo/prism-store-sqlite";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
@@ -40,7 +40,7 @@ const echoNode = functionNode({
 });
 
 const agentNodeDef = agentNode({
-  agent: "demo",
+  agent,
   input: (ctx) => ctx.upstream.echo,
 });
 
@@ -62,12 +62,11 @@ async function runFresh(): Promise<WorkflowRunResult> {
     workflow,
     { input: "hello" },
     {
-      agentFactory: () => agent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },
       signal: AbortSignal.timeout(30_000),
-      onEvent: (e) => events.push(e),
+      transitions: workflowEvents((e) => events.push(e)),
     },
   );
 
@@ -85,12 +84,11 @@ async function resumeRun(runId: string): Promise<WorkflowRunResult> {
     workflow,
     { runId },
     {
-      agentFactory: () => agent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },
       signal: AbortSignal.timeout(30_000),
-      onEvent: (e) => events.push(e),
+      transitions: workflowEvents((e) => events.push(e)),
     },
   );
 
@@ -154,4 +152,12 @@ export async function main() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   await main();
+}
+
+function workflowEvents(consume: (event: WorkflowEvent) => void) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
 }

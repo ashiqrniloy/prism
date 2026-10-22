@@ -53,13 +53,28 @@ export interface HostUiNotifyRequest extends HostUiRequestBase {
   readonly message: string;
 }
 
+/**
+ * Run an interactive command (a vendor login) in the host's terminal. `command` is untrusted package text
+ * a host shows, never shell-interprets. `env` holds non-secret values such as paths: the kernel rejects a
+ * credential ref (`env:`/`keyring:`) with `terminal_env_secret`. The terminal's input and output never reach
+ * the kernel or the package; the answer carries only the exit code.
+ */
+export interface HostUiTerminalRequest extends HostUiRequestBase {
+  readonly kind: "terminal";
+  readonly title: string;
+  readonly command: readonly string[];
+  readonly env?: Readonly<Record<string, string>>;
+  readonly cwd?: string;
+}
+
 export type HostUiRequest =
   | HostUiConfirmRequest
   | HostUiSelectRequest
   | HostUiInputRequest
   | HostUiSecretRequest
   | HostUiOpenUrlRequest
-  | HostUiNotifyRequest;
+  | HostUiNotifyRequest
+  | HostUiTerminalRequest;
 
 /**
  * Answer value per request kind. `select` is a list when the request set `multiple`, else a single
@@ -73,6 +88,7 @@ export interface HostUiAnswerMap {
   secret: string | undefined;
   "open-url": undefined;
   notify: undefined;
+  terminal: { readonly exitCode: number };
 }
 
 export type HostUiRequestKind = keyof HostUiAnswerMap;

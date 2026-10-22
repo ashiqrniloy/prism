@@ -335,6 +335,21 @@ export const MIGRATION_009_RUN_PROMPT_VERSION = `
 ALTER TABLE prism_runs ADD COLUMN prompt_version TEXT;
 `;
 
+// Session links (K4): nullable columns mirror the session's links entry; legacy rows stay NULL and list with absent links.
+export const MIGRATION_010_SESSION_LINKS = `
+ALTER TABLE prism_sessions ADD COLUMN agent_id TEXT;
+ALTER TABLE prism_sessions ADD COLUMN workflow_run_id TEXT;
+ALTER TABLE prism_sessions ADD COLUMN delegation_id TEXT;
+ALTER TABLE prism_sessions ADD COLUMN actor_kind TEXT;
+ALTER TABLE prism_sessions ADD COLUMN actor_agent TEXT;
+ALTER TABLE prism_sessions ADD COLUMN actor_vendor TEXT;
+CREATE INDEX IF NOT EXISTS prism_sessions_link_parent_idx ON prism_sessions (parent_session_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_agent_idx ON prism_sessions (agent_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_workflow_idx ON prism_sessions (workflow_run_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_delegation_idx ON prism_sessions (delegation_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_actor_idx ON prism_sessions (actor_kind, actor_agent, updated_at);
+`;
+
 export const MIGRATION_005_LIFECYCLE_HOLD_QUOTA = `
 CREATE TABLE IF NOT EXISTS prism_legal_holds (
   id TEXT NOT NULL PRIMARY KEY,
@@ -391,6 +406,11 @@ export const ADAPTER_TABLE_NAMES = [
 export const ADAPTER_INDEX_NAMES = [
   "prism_sessions_tenant_created_idx",
   "prism_sessions_expires_idx",
+  "prism_sessions_link_parent_idx",
+  "prism_sessions_link_agent_idx",
+  "prism_sessions_link_workflow_idx",
+  "prism_sessions_link_delegation_idx",
+  "prism_sessions_link_actor_idx",
   "prism_branches_session_name_idx",
   "prism_branches_leaf_idx",
   "prism_session_entries_session_parent_idx",

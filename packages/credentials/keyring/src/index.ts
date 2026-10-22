@@ -24,23 +24,25 @@
  * Cost: one backend read per `resolve` for the OS backend (no cache); the file backend decrypts once
  * at setup and serves reads from memory.
  */
+
 import {
-  createEnvRefCredentialResolver,
-  definePackage,
   type CredentialContext,
   type CredentialResolver,
+  createEnvRefCredentialResolver,
+  definePackage,
   type JsonSchema,
   type PackageInstance,
   type Secret,
 } from "@arnilo/prism";
+import manifest from "../package.json" with { type: "json" };
 
 import { openEncryptedCredentialStore, type StoredCredentialStore } from "./encrypted-store.js";
 import { CredentialStoreError, KeyringUnavailableError } from "./errors.js";
 import {
   createKeychainCredentialStore,
-  probeKeychainAvailability,
   type KeychainProbeOptions,
   type KeychainProbeResult,
+  probeKeychainAvailability,
 } from "./keychain-store.js";
 
 export type { EncryptedCredentialStore, StoredCredentialStore } from "./encrypted-store.js";
@@ -65,7 +67,12 @@ export {
 export type { FileCredentialStore, FileCredentialStoreLimits, FileCredentialStoreOptions } from "./file-store.js";
 export { createFileCredentialStore } from "./file-store.js";
 export type { KeychainCredentialStore, KeychainProbeOptions, KeychainProbeResult } from "./keychain-store.js";
-export { createKeychainCredentialStore, KEYCHAIN_PROBE_ACCOUNT, probeKeychainAvailability, runKeychainOperation } from "./keychain-store.js";
+export {
+  createKeychainCredentialStore,
+  KEYCHAIN_PROBE_ACCOUNT,
+  probeKeychainAvailability,
+  runKeychainOperation,
+} from "./keychain-store.js";
 export type { HostKms, HostKmsCryptoOptions, KmsEnvelope } from "./kms.js";
 export { createMemoryHostKms, decryptWithHostKms, encryptWithHostKms, KMS_ENVELOPE_VERSION, kmsBuffersEqual } from "./kms.js";
 export {
@@ -225,10 +232,7 @@ async function openOsBackend(service: string, ctx: BackendContext): Promise<Stor
   return undefined;
 }
 
-async function openFileBackend(
-  file: KeyringConfig["file"],
-  ctx: BackendContext,
-): Promise<StoredCredentialStore | undefined> {
+async function openFileBackend(file: KeyringConfig["file"], ctx: BackendContext): Promise<StoredCredentialStore | undefined> {
   if (!file?.path || !file.keyRef) {
     ctx.note('credentials-keyring: backend "file" needs file.path and file.keyRef; keyring: refs answer undefined');
     return undefined;
@@ -254,9 +258,9 @@ async function openFileBackend(
 function definitionFor(options: KeyringPackageOptions) {
   return definePackage<KeyringConfig>({
     name: "@arnilo/prism-credentials-keyring",
-    version: "0.12.1",
+    version: manifest.version,
     description: "OS keyring and encrypted-file backends for the Prism credentials slot.",
-    requires: { prism: "^0.12.1" },
+    requires: { api: 1 },
     capabilities: ["slot:credentials"],
     config: configSchema,
     setup: async (prism) => {

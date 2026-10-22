@@ -1,0 +1,31 @@
+DEFAULT_KEEP_RECENT_TOKENS	export declare const DEFAULT_KEEP_RECENT_TOKENS = 20000
+DEFAULT_MAX_SUMMARY_ERROR_BYTES	export declare const DEFAULT_MAX_SUMMARY_ERROR_BYTES = 1024
+DEFAULT_MAX_SUMMARY_TOKENS	export declare const DEFAULT_MAX_SUMMARY_TOKENS = 16384
+DEFAULT_RESERVE_TOKENS	export declare const DEFAULT_RESERVE_TOKENS = 16384
+HARD_MAX_SUMMARY_ERROR_BYTES	export declare const HARD_MAX_SUMMARY_ERROR_BYTES: number
+HARD_MAX_SUMMARY_TOKENS	export declare const HARD_MAX_SUMMARY_TOKENS = 131072
+HARD_RESERVE_TOKENS	export declare const HARD_RESERVE_TOKENS = 131072
+HISTORY_SUMMARIZATION_PROMPT	export declare const HISTORY_SUMMARIZATION_PROMPT = "Summarize the conversation inside <conversation>."
+MemoryCompactionConfig	export type { MemoryCompactionConfig, MemoryCompactionProfile } from "./config.js"
+MemoryCompactionProfile	export type { MemoryCompactionConfig, MemoryCompactionProfile } from "./config.js"
+SUMMARIZATION_SYSTEM_PROMPT	export declare const SUMMARIZATION_SYSTEM_PROMPT = "You summarize Prism agent history for future context.\nWrite concise structured markdown with these sections:\n## Goal\n## Constraints & Preferences\n## Progress\n### Done\n### In Progress\n### Blocked\n## Key Decisions\n## Next Steps\n## Critical Context\nPreserve exact file paths, commands, errors, IDs, decisions, and user constraints. Do not continue the conversation."
+TURN_PREFIX_SYSTEM_PROMPT	export declare const TURN_PREFIX_SYSTEM_PROMPT = "You summarize the early part of one oversized current turn.\nWrite concise structured markdown with these sections:\n## Original Request\n## Early Progress\n## Context for Suffix\nPreserve exact file paths, commands, errors, IDs, decisions, and constraints. Do not continue the conversation."
+UPDATE_SUMMARIZATION_PROMPT	export declare const UPDATE_SUMMARIZATION_PROMPT = "Update <previous-summary> using only the new conversation inside <conversation>."
+collectFileOperations	export declare function collectFileOperations(messages: readonly Message[]): FileOperationDetails
+createCodingCompactor	export declare function createCodingCompactor(options: CodingCompactorOptions): Compactor
+createLlmCompactor	export declare function createLlmCompactor(options: LlmCompactorOptions): Compactor
+default	export default
+estimateEntryTokens	export declare function estimateEntryTokens(entry: SessionEntry): number
+estimateMessageTokens	export declare function estimateMessageTokens(message: Message): number
+estimateTextTokens	export declare function estimateTextTokens(text: string): number
+fallbackReason	export declare function fallbackReason(error: unknown, secrets: readonly (string | undefined)[], maxBytes?: number): string
+findLlmCompactionCutPoint	export declare function findLlmCompactionCutPoint(entries: readonly SessionEntry[], options?:
+formatFileOperations	export declare function formatFileOperations(details: FileOperationDetails): string
+keepLatestPlanTurn	export declare function keepLatestPlanTurn(compactor: Compactor): Compactor
+memoryCompactionConfigSchema	export declare const memoryCompactionConfigSchema: JsonSchema
+planTurnEntryIds	export declare function planTurnEntryIds(entries: readonly SessionEntry[]): readonly string[]
+prepareLlmCompaction	export declare function prepareLlmCompaction(context: Pick<CompactionContext, "entries" | "trigger">, options?: PrepareLlmCompactionOptions): LlmCompactionPreparation
+resolveMemoryCompactionConfig	export declare function resolveMemoryCompactionConfig(config?: MemoryCompactionConfig): ResolvedMemoryCompactionConfig
+serializeCompactionConversation	export declare function serializeCompactionConversation(entries: readonly SessionEntry[], options?: SerializeCompactionConversationOptions): string
+truncateUtf8	export declare function truncateUtf8(text: string, maxBytes: number): string
+validateCompactionLimit	export declare function validateCompactionLimit(name: string, value: number, hardCap: number): number

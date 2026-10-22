@@ -3,7 +3,6 @@ import { describe, it } from "bun:test";
 import { createAgentWith } from "../agent-session/create-agent.js";
 import { agentFingerprint } from "../agent-run-state.js";
 import { activeTools } from "../agent-tool-dispatch.js";
-import { snapshotRunBundle } from "../run-bundle.js";
 import {
   type AgentEvent,
   type ModelProvider,
@@ -29,7 +28,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
 
 const tool = (name: string, onRun?: () => void): ToolDefinition => ({
   name,
@@ -74,11 +73,12 @@ describe("package tools", () => {
     // Against the host's tools (`tools.add`; the 0.12 registry input no longer exists).
     await rejects(createAgent({ model: MODEL, packages: [a, providerPackage("test-provider", [textProvider()])], tools: { add: [tool("net")] } }), "tool_conflict");
     // Against the names the kernel generates tools under.
-    for (const reserved of ["load_skill", "search_tools"]) {
-      const p = pkg("@acme/shadow", ({ tools }) => tools.register(tool(reserved)));
-      const failure = await rejects(createAgent({ model: MODEL, packages: [p, providerPackage("test-provider", [textProvider()])] }), "tool_conflict");
-      assert.match(failure.message, /the kernel/);
-    }
+    const shadow = pkg("@acme/shadow", ({ tools }) => tools.register(tool("load_skill")));
+    const failure = await rejects(
+      createAgent({ model: MODEL, packages: [shadow, providerPackage("test-provider", [textProvider()])] }),
+      "tool_conflict",
+    );
+    assert.match(failure.message, /the kernel/);
     // A failed load leaves no registration behind: the first package was unwound.
     const events: string[] = [];
     const first = pkg("@acme/first", ({ tools, onDispose }) => {
@@ -87,6 +87,15 @@ describe("package tools", () => {
     });
     await rejects(createAgent({ model: MODEL, packages: [first, a, b, providerPackage("test-provider", [textProvider()])] }), "tool_conflict");
     assert.deepEqual(events, ["first disposed"]);
+  });
+
+  it("search_tools_is_a_package_owned_name", async () => {
+    // Plan 158 Tasks 7-8: the activation tool belongs to `@arnilo/prism-context-engineering`, and
+    // the kernel no longer generates one, so the name carries no reservation.
+    const owner = pkg("@acme/search", ({ tools }) => tools.register(tool("search_tools")));
+    const agent = await createAgent({ model: MODEL, packages: [owner, providerPackage("test-provider", [textProvider()])] });
+    assert.ok(agent.inspect().tools.some((entry) => entry.name === "search_tools"), "a package may register the name");
+    await agent.dispose();
   });
 
   it("package_tools_reach_every_reader", async () => {
@@ -112,11 +121,6 @@ describe("package tools", () => {
       ["added"],
     );
     assert.ok(activeTools(agent).registry.get("added"));
-    // The run bundle and the durable fingerprint cover it, so a different package set cannot resume.
-    assert.deepEqual(
-      snapshotRunBundle({ agent }).tools.map((t: { name: string }) => t.name),
-      ["added"],
-    );
     assert.notEqual(agentFingerprint(agent, "r1"), agentFingerprint(bare, "r1"));
     // And dispatch runs it.
     const result = await (await agent.session()).run("go");
@@ -271,7 +275,7 @@ describe("package skills and providers", () => {
       skills: { add: [skill("host-skill")] },
       disable: { skills: ["pkg-skill", "host-skill"] },
     });
-    const names = snapshotRunBundle({ agent }).skills.map((s: { name: string }) => s.name);
+    const names = agent.inspect().skills.map((s) => s.name);
     assert.deepEqual(names, ["other"]);
     // A host registry is never mutated.
     let unregistered = 0;
@@ -292,7 +296,7 @@ describe("package skills and providers", () => {
       disable: { skills: ["h", "pkg-skill"] },
     });
     assert.deepEqual(
-      snapshotRunBundle({ agent: withRegistry }).skills.map((s: { name: string }) => s.name),
+      withRegistry.inspect().skills.map((s) => s.name),
       ["other"],
     );
     assert.equal(unregistered, 0);
@@ -315,7 +319,7 @@ describe("package skills and providers", () => {
     );
     assert.deepEqual(reads, ["/skills/a"]);
     assert.deepEqual(
-      snapshotRunBundle({ agent }).skills.map((s: { name: string }) => s.name),
+      agent.inspect().skills.map((s) => s.name),
       ["from-dir"],
     );
     // A read failure fails this package's setup, and an optional one is skipped with a note.
@@ -452,7 +456,7 @@ describe("services", () => {
     let late: unknown;
     const agent = await createAgent({
       model: MODEL,
-      packages: [pkg("@acme/user", ({ services }) => void (late = () => services.require("svc")), { requires: { prism: "*", services: ["svc"] } }), pkg("@acme/provider", ({ services }) => services.provide("svc", impl)), providerPackage("test-provider", [textProvider()])],
+      packages: [pkg("@acme/user", ({ services }) => void (late = () => services.require("svc")), { requires: { api: 1, services: ["svc"] } }), pkg("@acme/provider", ({ services }) => services.provide("svc", impl)), providerPackage("test-provider", [textProvider()])],
     });
     assert.equal((late as () => unknown)(), impl, "visible to an earlier package at call time");
     await agent.dispose();
@@ -466,7 +470,7 @@ describe("services", () => {
     await rejects(
       createAgent({
         model: MODEL,
-        packages: [pkg("@a/a", () => {}, { requires: { prism: "*", services: ["absent"] } }), providerPackage("test-provider", [textProvider()])],
+        packages: [pkg("@a/a", () => {}, { requires: { api: 1, services: ["absent"] } }), providerPackage("test-provider", [textProvider()])],
       }),
       "missing_service",
     );

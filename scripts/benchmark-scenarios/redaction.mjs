@@ -15,7 +15,7 @@
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
-import { redactSecrets } from "../../dist/index.js";
+import { redactSecrets } from "../../src/index.ts";
 import { loadBudgets, wallClockBudget } from "../budget-gates.mjs";
 
 const REDACTED = "[REDACTED]";

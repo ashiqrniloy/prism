@@ -1,0 +1,31 @@
+{
+  "request": {
+    "model": { "provider": "typesafe", "model": "jev-latest" },
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "rm -rf ./build" }]
+      }
+    ],
+    "options": {
+      "structuredOutput": {
+        "name": "decision",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "type": "string",
+              "enum": ["run"],
+              "description": "How should this be handled?"
+            }
+          }
+        }
+      }
+    }
+  },
+  "method": "POST",
+  "path": "/v1/systemone",
+  "status": 422,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"message\":\"questions.verdict.criteria: expected at least 2 options\",\"code\":\"invalid_request\"}}"
+}

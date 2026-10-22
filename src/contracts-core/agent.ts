@@ -5,28 +5,26 @@ import type {
   AgentEvent,
   InputAssemblyLayout,
   RunLedger,
-  RunOptions,
   ToolCapabilityKind,
   ToolDefinition,
   ToolEffectStore,
   ToolRegistry,
 } from "../contracts-protocol.js";
-import type { RunResult, AgentRunStateOptions, Session } from "../contracts-run-state.js";
-import type { HostPort } from "../host/types.js";
+import type { Session } from "../contracts-run-state.js";
 import type { HookRegistrar } from "../hooks/types.js";
+import type { HostPort } from "../host/types.js";
 import type { SecretRedactor } from "../redaction.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import type { SlotAssignments } from "../slots/types.js";
 import type { ToolValidator } from "../tools.js";
 import type { CompactionOptions, RetryOptions } from "./compaction.js";
-import type { ContentBlock, ErrorInfo, JsonObject, Message, ModelConfig, ModelRef, ModelSpec } from "./content.js";
-import type { SystemPromptConfig } from "./system-prompt.js";
-import type { GuardrailPackRef } from "./guardrail-packs.js";
+import type { ContentBlock, JsonObject, ModelConfig, ModelRef, ModelSpec } from "./content.js";
 import type { OwnershipScope, PersistencePage } from "./persistence.js";
-import type { ModelProvider, ProviderRequestOptions, ProviderResolver } from "./provider.js";
+import type { ModelProvider, ProviderRequestOptions } from "./provider.js";
 import type { ResourceLoader } from "./resources.js";
 import type { RunLimits } from "./run-limits.js";
-import type { SessionListQuery, SessionSearchHit, SessionSearchQuery, SessionStore, SessionSummary } from "./session.js";
+import type { SessionActor, SessionListQuery, SessionParentLink, SessionSearchHit, SessionSearchQuery, SessionSummary } from "./session.js";
+import type { SystemPromptConfig } from "./system-prompt.js";
 
 export interface AgentDefinition {
   readonly name: string;
@@ -42,11 +40,9 @@ export interface AgentDefinition {
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Optional escape hatch. When present, overrides declarative resolution. */
   create?(config?: AgentConfig): Promise<Agent> | Agent;
-  /** Opt-in attention compiler for the agent this definition resolves to (plan 074 C1). */
-  readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
 }
 
-/** Input to {@link resolveAgentDefinition}. All fields are optional; the host
+/** Host registries a definition resolver used to receive. All fields are optional; the host
  *  controls scope by which tools, skills, and provider source it passes. */
 export interface AgentDefinitionResolutionContext {
   readonly tools?: ToolRegistry | readonly ToolDefinition[];
@@ -60,7 +56,11 @@ export interface AgentConfig {
   readonly id?: string;
   readonly name?: string;
   readonly instructions?: string;
-  readonly model: ModelRef;
+  /**
+   * Required unless the `loop` slot's strategy declares `usesModel: false` (an external-agent driver);
+   * otherwise `createAgent` fails with `model_required`. Never falls back to a default provider.
+   */
+  readonly model?: ModelRef;
   readonly tools?: { readonly add?: readonly ToolDefinition[] };
   readonly skills?: {
     readonly dirs?: readonly string[];
@@ -68,16 +68,8 @@ export interface AgentConfig {
     /** Progressive: catalog (name+description) unless loaded; eager: full instructions every turn. Default progressive. */
     readonly disclosure?: import("../skill-disclosure.js").SkillsDisclosure;
   };
-  /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
-  readonly toolsDisclosure?: import("../tool-search.js").ToolsDisclosure;
-  readonly toolsSearch?: import("../tool-search.js").ToolsSearchOptions;
-  /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
-  readonly toolResultFold?: import("../tool-result-fold.js").ToolResultFoldOptions;
   /** Opt-in: tools hidden by a `RunOptions.tools` scoping stay callable by name (default off). */
   readonly allowHiddenToolCalls?: true;
-  /** Opt-in attention compiler (plan 074): `true` for defaults, an object to tune ratios/depth.
-   *  Omitted keeps today's request bytes; per-run options may only relax this setting. */
-  readonly attentionCompiler?: import("./attention.js").AttentionCompilerSetting;
   /**
    * Missing-usage handling (plan 091 T2, plan 103 T5): `"fallback"` (default) records a labeled
    * estimate when a provider turn reports no usage; `"off"` leaves usage absent — never zero;
@@ -87,16 +79,6 @@ export interface AgentConfig {
    * `failureClass` and is never retried. Estimates are marked `Usage.estimated` and never priced.
    */
   readonly usageEstimation?: "fallback" | "off" | "strict";
-  /**
-   * Session-turn context budget (plan 103 T6): forwarded to every `assembleProviderInput`
-   * call this agent's sessions make, so a session gets the same eviction, `tokenEstimator`,
-   * and `reportOmissions` semantics as a direct assembler caller. Mutually exclusive with
-   * `attentionCompiler` (rejected at assembly). With `usageEstimation: "fallback"`, the
-   * missing-usage estimate prefers this budget's own measurement: the request's
-   * `ContextBudgetReport.keptTokens` when `reportOmissions` is on, else the `tokenEstimator`
-   * projection — see [Runs and usage](../../docs/runs-and-usage.md).
-   */
-  readonly contextBudget?: import("../context-budget.js").ContextBudget;
   readonly resourceLoader?: ResourceLoader;
   /** Optional trust check for tool and resource targets. */
   readonly trust?: TrustPolicy;
@@ -112,7 +94,7 @@ export interface AgentConfig {
   readonly effectStore?: ToolEffectStore;
   readonly ownership?: OwnershipScope;
   /** Opaque optional host principal. Packages own verification and enforcement. */
-  readonly principal?: import("../identity.js").Principal;
+  readonly principal?: import("./principal.js").Principal;
   readonly idempotencyKey?: string;
   readonly compaction?: false | CompactionOptions;
   readonly retry?: false | RetryOptions;
@@ -140,35 +122,19 @@ export interface AgentConfig {
   readonly disable?: AgentDisable;
   /** Host capabilities (UI, …). A host without `ui` answers every request `unavailable`. */
   readonly host?: HostPort;
-  /** Opt-in durable interruption/checkpointing default for this agent. */
-  readonly runState?: AgentRunStateOptions;
-  /** Internal marker set by createSecureAgent(); makes security defaults immutable per run. */
-  readonly secure?: true;
 }
 
-/** Opt-in fail-closed composition over the normal explicit AgentConfig API. */
-export interface SecureAgentOptions
-  extends Omit<AgentConfig, "tools" | "validator" | "redactor" | "trust" | "ownership" | "principal" | "limits" | "runState" | "secure"> {
-  readonly id: string;
-  readonly tools: readonly ToolDefinition[];
-  readonly toolArgumentValidator: import("../tools.js").ToolArgumentValidator;
-  readonly redactor: SecretRedactor;
-  readonly trust: TrustPolicy;
-  readonly ownership: OwnershipScope;
-  /** Optional host-verified identity; when set must match `ownership`. */
-  readonly identity?: import("../identity.js").AgentIdentity;
-  readonly limits: RunLimits;
-  readonly definitionRevision: string;
-  readonly runState: Omit<AgentRunStateOptions, "definitionRevision">;
-  /** Optional host composition readiness assertions evaluated on creation. */
-  readonly composition?: import("../host-composition.js").HostCompositionOptions;
-}
-
+/**
+ * Plan 159 Task 7: `createSecureAgent`/`SecureAgentOptions` are gone. The guarantees it enforced at
+ * build time live in `@arnilo/prism-governance` as `governance({ require: { principal, ownership } })`
+ * plus the kernel's fail-closed defaults.
+ */
 export interface AgentDisable {
   readonly tools?: readonly string[];
   readonly hooks?: readonly string[];
   readonly commands?: readonly string[];
   readonly skills?: readonly string[];
+  readonly packages?: readonly string[];
 }
 
 export interface AgentCommandRunOptions {
@@ -240,7 +206,22 @@ export interface ModelIndex {
 }
 
 /** `AgentConfig` after `createAgent` parsed `model` into a `ModelSpec`. */
-export type ResolvedAgentConfig = Omit<AgentConfig, "model"> & { readonly model: ModelSpec };
+export type ResolvedAgentConfig = Omit<AgentConfig, "model"> & { readonly model?: ModelSpec };
+
+export const AGENT_DISPOSED_CODE = "ERR_PRISM_AGENT_DISPOSED";
+
+/**
+ * Raised by `agent.session()` and `agent.commands.run()` once `dispose()` has started (plan 177 Task 5).
+ * A live run is aborted with the lowercase code `agent_disposed` instead, which is also the code a tool
+ * round gets when a loop keeps dispatching after that abort.
+ */
+export class AgentDisposedError extends Error {
+  readonly code = AGENT_DISPOSED_CODE;
+  constructor(message = "Agent has been disposed") {
+    super(message);
+    this.name = "AgentDisposedError";
+  }
+}
 
 export interface Agent {
   /** `AgentConfig.id`, then `name`, else an id generated for this agent. */
@@ -261,8 +242,11 @@ export interface Agent {
    */
   subscribe(options?: SubscribeOptions): AsyncIterable<AgentEvent>;
   /**
-   * Disposes loaded packages in reverse load order and removes every hook and slot registration they
-   * made. A throwing `onDispose` is reported as a `hook.error` and does not stop the rest. Idempotent.
+   * Aborts every active run, closes every open session (settling background tasks within the existing
+   * bound), then disposes loaded packages in reverse load order and removes every hook and slot
+   * registration they made. A throwing `onDispose` is reported as a `hook.error` and does not stop the
+   * rest. After it starts, `session()` and `commands.run()` throw `AgentDisposedError`, and an active run
+   * ends as an abort whose code is `agent_disposed`. Idempotent; a second call awaits the first.
    */
   dispose(): Promise<void>;
   /**
@@ -283,13 +267,22 @@ export interface SessionOptions {
    */
   readonly create?: boolean;
   readonly leafId?: string;
+  /**
+   * Links a newly created session to a parent session, agent, run, or delegation. Persisted once in
+   * the session's first entry and read by `SessionIndex` filters; ignored when the session already exists.
+   */
+  readonly parent?: SessionParentLink;
+  /** Who drives the session. Persisted with `parent`; never derived. Ignored when the session already exists. */
+  readonly actor?: SessionActor;
   readonly metadata?: Readonly<Record<string, unknown>>;
   /**
-   * Restrictive-only guardrail packs compiled once per session onto the existing tool interception
-   * seams (plan 092). Built-in ids are versioned; an input object with `rules` is an inline pack.
-   * Compiled rules can only deny or tripwire — they never grant permissions.
+   * Narrows the agent's declared `ownership` for this session (plan 177 Task 4): it may add fields the
+   * agent left undefined or repeat them, but a field that changes the agent's value throws
+   * `OwnershipScopeError` (`ERR_PRISM_OWNERSHIP_WIDEN`). A run on the session may narrow it further by the
+   * same rule. The effective scope stamps every entry the session writes and is checked against the
+   * branch on open and before every run.
    */
-  readonly guardrailPacks?: readonly GuardrailPackRef[];
+  readonly ownership?: OwnershipScope;
   /**
    * TTL of the in-memory `session.snapshot()` branch cache in milliseconds.
    * Default `DEFAULT_SNAPSHOT_CACHE_TTL_MS`; `0` disables the cache (every snapshot read
@@ -324,52 +317,6 @@ export interface SubscribeOptions {
   readonly maxQueuedEvents?: number;
   /** What to do when `maxQueuedEvents` is reached. Defaults to `close`. */
   readonly overflow?: SubscriberOverflowPolicy;
-}
-
-export interface CommandDefinition {
-  readonly name: string;
-  readonly description?: string;
-  readonly parameters?: JsonObject;
-  execute(args: JsonObject, context: CommandExecutionContext): Promise<CommandResult> | CommandResult;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-export interface CommandExecutionContext {
-  readonly sessionId?: string;
-  readonly runId?: string;
-  readonly signal?: AbortSignal;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-  /** Host-injected driver capabilities (host-opt-in; never package-supplied).
-   *  Absent in hosts that don't supply them — commands stay inert data there. */
-  readonly drivers?: CommandDrivers;
-}
-
-/** Minimal run reference returned by {@link CommandDrivers.startWorkflow}. */
-export interface CommandWorkflowRun {
-  readonly runId: string;
-  readonly status: string;
-}
-
-/** Host-injected capabilities a contributed command may act through when the
- *  host opts in. Drivers are supplied by the host at context construction
- *  (e.g. the RPC session factory), never by packages; core only types and
- *  forwards them. `metadata.trust` labeling is unaffected. */
-export interface CommandDrivers {
-  /** Start a session run. */
-  startRun(input: string, options?: RunOptions): Promise<RunResult> | RunResult;
-  /** Start a run on a host-understood orchestration definition. Returns at
-   *  minimum the run id and status; richer host shapes pass through as-is. */
-  startWorkflow(definition: object, input: unknown, options?: Readonly<Record<string, unknown>>): Promise<CommandWorkflowRun>;
-  /** Steer an active run with additional input. */
-  steer(runId: string, input: string): Promise<void> | void;
-}
-
-export interface CommandResult {
-  readonly name: string;
-  readonly content?: readonly ContentBlock[];
-  readonly value?: unknown;
-  readonly error?: ErrorInfo;
-  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
 export interface ContextBlock {

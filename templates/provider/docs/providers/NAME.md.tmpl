@@ -1,0 +1,61 @@
+# __PROVIDER_ID__ provider
+
+> Scaffold stub — replace with docs-verified provider documentation before publishing.
+
+## What it does
+
+`__PACKAGE_NAME__` is an OpenAI-compatible provider package for Prism
+(chat-completions style). It builds on `createOpenAICompatibleProvider` from
+`@arnilo/prism/providers/openai-compatible`.
+
+## When to use it
+
+Use it for OpenAI-compatible endpoints that follow the Chat Completions
+convention. Skip it for providers with bespoke serialization or auth.
+
+## Inputs / request
+
+- Base URL: `__BASE_URL__` (`--base-url` at scaffold time).
+- Auth: `api_key` auth method; hosts resolve the credential value (e.g. from
+  `__ENV_KEY__`).
+
+## Outputs / response / events
+
+Standard `ProviderEvent` stream: `content_delta`, `done` (with usage), or
+`error`. Tool calls arrive as deltas and are reconstructed by the host.
+
+## Request/response example
+
+```ts
+import { createResolver } from "@arnilo/prism";
+import { create__PROVIDER_PASCAL__ProviderPackage } from "__PACKAGE_NAME__";
+
+const resolver = createResolver();
+resolver.registerProviderPackage(
+  create__PROVIDER_PASCAL__ProviderPackage({ apiKey: () => process.env.__ENV_KEY__ }),
+);
+```
+
+## Implementation example
+
+`src/provider.ts` calls `createOpenAICompatibleProvider` with the scaffolded
+base URL, api key, and `doneUsage: true`. Model metadata lives in `src/models.ts`;
+cache-hint mapping helpers live in `src/cache.ts`.
+
+## Extension and configuration notes
+
+- Override `baseUrl`, `id`, `models`, `apiKey`, and `fetch` per provider
+  package/instance.
+- Cache behavior is scaffolded as `cache: { kind: "implicit" }` — confirm
+  against the provider's actual caching before relying on it.
+
+## Security and performance notes
+
+- API keys are host-resolved credentials; generated code stores no secrets.
+- Cache keys are identifiers only, sanitized via shared core helpers.
+
+## Related APIs
+
+- [OpenAI-compatible provider base](../../providers/openai-compatible.md)
+- [Provider conformance](../../provider-conformance.md)
+- [Provider layer](../../provider-layer.md)

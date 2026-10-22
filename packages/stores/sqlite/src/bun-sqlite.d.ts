@@ -9,10 +9,15 @@ declare module "bun:sqlite" {
     all(...params: any[]): any[];
   }
   class Database {
-    constructor(filename: string, options?: { readonly?: boolean });
+    constructor(filename: string, options?: { readonly?: boolean; strict?: boolean });
     exec(sql: string): this;
     prepare(sql: string): Statement;
-    transaction<F extends (...args: any[]) => any>(fn: F): F;
+    query<T = any, Params extends any[] = any[]>(sql: string): {
+      run(...params: Params): { changes: number; lastInsertRowid: number | bigint };
+      get(...params: Params): T | null;
+      all(...params: Params): T[];
+    };
+    transaction<F extends (...args: any[]) => any>(fn: F): F & { immediate: F };
     close(): void;
   }
   export { Database, Statement };

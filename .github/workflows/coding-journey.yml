@@ -48,13 +48,13 @@ jobs:
           # Resides inside the workspace so the bare provider specifier
           # resolves through the repo node_modules (never a /tmp import path).
           cat > .github/prism-journey-provider.mjs <<'EOF'
-          import { createOpenAIResponsesProvider, openAIModels } from "@arnilo/prism-provider-openai";
+          import { createHyperProvider, hyperModels } from "@arnilo/prism-provider-hyper";
           export function createJourneyProvider() {
             const model = process.env.PRISM_CODING_PROVIDER_MODEL
-              ? { provider: "openai", model: process.env.PRISM_CODING_PROVIDER_MODEL }
-              : openAIModels[0];
+              ? { provider: "hyper", model: process.env.PRISM_CODING_PROVIDER_MODEL }
+              : hyperModels[0];
             return {
-              provider: createOpenAIResponsesProvider({ apiKey: process.env.PRISM_CODING_PROVIDER_API_KEY }),
+              provider: createHyperProvider({ apiKey: "env:HYPER_API_KEY" }),
               request: {
                 model,
                 messages: [{ role: "user", content: [{ type: "text", text: "Reply with exactly the word: pong" }] }],
@@ -62,7 +62,7 @@ jobs:
             };
           }
           export function journeySecrets() {
-            return [process.env.PRISM_CODING_PROVIDER_API_KEY].filter(Boolean);
+            return [process.env.HYPER_API_KEY, process.env.PRISM_CODING_PROVIDER_API_KEY].filter(Boolean);
           }
           EOF
       - name: materialize host PTY adapter (python3 pty.fork + TIOCSWINSZ, no node-pty)
@@ -186,6 +186,7 @@ jobs:
           PRISM_CODING_FORGE_TOKEN: ${{ secrets.PRISM_CODING_FORGE_TOKEN }}
           PRISM_CODING_PROVIDER: ${{ github.workspace }}/.github/prism-journey-provider.mjs
           PRISM_CODING_PROVIDER_API_KEY: ${{ secrets.PRISM_CODING_PROVIDER_API_KEY }}
+          HYPER_API_KEY: ${{ secrets.HYPER_API_KEY || secrets.PRISM_CODING_PROVIDER_API_KEY }}
           PRISM_CODING_PROVIDER_MODEL: ${{ vars.PRISM_CODING_PROVIDER_MODEL }}
           PRISM_TEST_PTY_BACKEND: /tmp/prism-journey-pty-host.mjs
         run: bun test --timeout=0 scripts/phase26-coding-journey.test.mjs
@@ -198,18 +199,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-  hermetic-pty-tui-e2e:
-    name: "hermetic PTY TUI end-to-end (plan 139 Task 7)"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.2"
-      - run: bun ci
-      - run: bun run build
-      - name: run the hermetic PTY TUI journeys (mock provider, temp PRISM_HOME)
-        run: bun test scripts/e2e-prism-code-tui.test.mjs

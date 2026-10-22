@@ -1,8 +1,8 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it } from "bun:test";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -19,486 +19,289 @@ function readTree(dir: string, suffix: string): string {
 
 // ponytail: SDK surface freeze. The root `@arnilo/prism` barrel is the public
 // API; these two snapshots pin every value and type export of `src/index.ts` so
-// any add/remove is a deliberate test update, not silent drift. Value exports
-// are additionally resolved against the built `dist/index.js` runtime module
-// and type exports against `dist/index.d.ts`, so a build that drops/renames an
-// export fails the gate. Update both arrays together when the surface changes.
+// any add/remove is a deliberate test update, not silent drift. Plan 174 Task 8:
+// the kernel publishes TypeScript source, so value exports are resolved against the
+// live `src/index.ts` module (Bun strips the types) and type exports against the
+// source declaration surface `src/index.ts` re-exports — there is no `dist/` emit
+// to check any more. Update both arrays together when the surface changes.
 const FROZEN_VALUE_EXPORTS: readonly string[] = [
-  "boundResponse",
-  "defaultResolver",
-  "isLoopbackAddress",
-  "isLoopbackHostname",
-  "normalizeHostname",
-  "pinnedFetch",
-  "raceAbort",
-  "requestPinned",
-  "resolvePinnedAddress",
-  "trimTrailingSlashes",
-  "ToolEffectError",
-  "createMemoryToolEffectStore",
-  "HostCompositionError",
+  "AGENT_DISPOSED_CODE",
+  "AGENT_RUN_STATE_SCHEMA_VERSION",
+  "ARTIFACT_BODY_ERROR_CODES",
+  "ARTIFACT_CHECKPOINT_NAMESPACE",
+  "AgentDisposedError",
+  "AgentDecisionError",
+  "AgentDelegationSuspendedError",
+  "AgentEventSourceError",
+  "AgentLoopStateError",
+  "AgentRunStateError",
+  "ArtifactBodyStoreError",
+  "ArtifactError",
+  "CredentialUnavailableError",
+  "DEFAULT_INPUT_RESERVE_TOKENS",
+  "DEFAULT_LOAD_SKILL_TOOL_NAME",
+  "DEFAULT_MAX_AGENT_RUN_STATE_BYTES",
+  "DEFAULT_MAX_AUDIO_DURATION_MS",
+  "DEFAULT_MAX_MEDIA_ITEMS_PER_REQUEST",
+  "DEFAULT_MAX_MEDIA_ITEM_BYTES",
+  "DEFAULT_MAX_MEDIA_REQUEST_BYTES",
+  "DEFAULT_MAX_PENDING_DECISIONS",
+  "DEFAULT_MAX_PENDING_STEERS",
+  "DEFAULT_MAX_PENDING_STEER_BYTES",
+  "DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES",
+  "DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES",
+  "DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES",
+  "DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES",
+  "DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS",
+  "DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES",
+  "DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES",
+  "DEFAULT_MAX_SKILL_CATALOG_ENTRIES",
+  "DEFAULT_MAX_SKILL_DESCRIPTION_BYTES",
+  "DEFAULT_MAX_SKILL_INSTRUCTION_BYTES",
+  "DEFAULT_MAX_STICKY_DECISIONS",
+  "DEFAULT_MEDIA_FETCH_TIMEOUT_MS",
+  "DEFAULT_RUN_LIMITS",
+  "DEFAULT_SESSION_LIST_LIMIT",
+  "DEFAULT_SESSION_SEARCH_LIMIT",
+  "DEFAULT_SNAPSHOT_CACHE_TTL_MS",
+  "EMPTY_SKILL_DESCRIPTION",
+  "EMPTY_TOOL_RESULT_TEXT",
+  "EmbeddingsError",
+  "EventSubscriber",
+  "GuardrailError",
+  "HARD_CITATION_EXCERPT_BYTES",
+  "HARD_MAX_ACTION_CONSTRAINTS",
+  "HARD_MAX_ACTION_CONSTRAINT_BYTES",
+  "HARD_MAX_AGENT_RUN_STATE_BYTES",
+  "HARD_MAX_DECISION_REASON_BYTES",
+  "HARD_MAX_ELICITATION_BYTES",
+  "HARD_MAX_PENDING_DECISIONS",
+  "HARD_MAX_PENDING_STEERS",
+  "HARD_MAX_PENDING_STEER_BYTES",
+  "HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES",
+  "HARD_MAX_SESSION_LIST_LIMIT",
+  "HARD_MAX_SESSION_SEARCH_CURSOR_BYTES",
+  "HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES",
+  "HARD_MAX_SESSION_SEARCH_LIMIT",
+  "HARD_MAX_SESSION_SEARCH_LINEAR_BYTES",
+  "HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES",
+  "HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS",
+  "HARD_MAX_SESSION_SEARCH_QUERY_BYTES",
+  "HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES",
+  "HARD_MAX_SKILL_CATALOG_ENTRIES",
+  "HARD_MAX_SKILL_DESCRIPTION_BYTES",
+  "HARD_MAX_SKILL_INSTRUCTION_BYTES",
+  "HARD_MAX_SNAPSHOT_CACHE_TTL_MS",
+  "HARD_MAX_STICKY_DECISIONS",
+  "HARD_RUN_LIMITS",
   "HOOK_CATALOG",
   "HookError",
   "HookRejectedError",
-  "UnknownHookError",
-  "defaultLoop",
-  "createEnvRefCredentialResolver",
-  "createSlotDefaults",
-  "createSlotRegistry",
-  "SlotConflictError",
-  "UnknownSlotError",
-  "PackageLoadError",
-  "definePackage",
-  "UnknownSlotOwnerError",
-  "assertHostCompositionReadiness",
-  "inspectHostComposition",
-  "RUN_BUNDLE_SCHEMA_VERSION",
-  "snapshotRunBundle",
-  "AGENT_RUN_STATE_NAMESPACE",
-  "AGENT_RUN_STATE_SCHEMA_VERSION",
-  "MAX_AGENT_RUN_METADATA_BYTES",
-  "boundCheckpointMetadata",
-  "readCheckpointMetadata",
-  "resolveCheckpointMetadata",
-  "CheckpointRestoreError",
-  "DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS",
-  "runCheckpointRestoreHooks",
-  "AgentDecisionError",
-  "AgentDelegationSuspendedError",
-  "AgentLoopStateError",
-  "DEFAULT_MAX_PENDING_DECISIONS",
-  "DEFAULT_MAX_STICKY_DECISIONS",
-  "HARD_MAX_PENDING_DECISIONS",
-  "HARD_MAX_STICKY_DECISIONS",
+  "KERNEL_API_LEVEL",
   "MAX_ACTION_CONSTRAINTS",
-  "MAX_ATTRIBUTION_DEPTH",
   "MAX_ACTION_CONSTRAINT_BYTES",
+  "MAX_ATTRIBUTION_DEPTH",
   "MAX_DECISION_REASON_BYTES",
   "MAX_ELICITATION_BYTES",
-  "HARD_MAX_ACTION_CONSTRAINTS",
-  "HARD_MAX_ACTION_CONSTRAINT_BYTES",
-  "HARD_MAX_DECISION_REASON_BYTES",
-  "HARD_MAX_ELICITATION_BYTES",
-  "AgentRunStateError",
-  "AgentEventSourceError",
-  "CHECKPOINT_CONFLICT_CODE",
-  "CheckpointConflictError",
-  "CONVERSATION_METADATA_KEY",
-  "ConversationError",
-  "EMPTY_SKILL_DESCRIPTION",
-  "EMPTY_TOOL_RESULT_TEXT",
-  "DEFAULT_MAX_AGENT_RUN_STATE_BYTES",
-  "DEFAULT_RUN_LIMITS",
-  "ARTIFACT_BODY_ERROR_CODES",
-  "ARTIFACT_CHECKPOINT_NAMESPACE",
-  "ArtifactBodyStoreError",
-  "ArtifactError",
-  "approvalEvidenceIntact",
-  "artifactApprovalState",
-  "artifactCheckpointKey",
-  "checkCitationIntegrity",
-  "citationBindingDigest",
-  "createClaimGroundingGuardrail",
-  "createFieldEvidenceGuardrail",
-  "HARD_CITATION_EXCERPT_BYTES",
-  "DEFAULT_DEVICE_MAX_CHUNK_BYTES",
-  "DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS",
-  "DelegatedAgentStepError",
-  "MAX_DELEGATED_AGENT_DURATION_MS",
-  "MAX_DELEGATED_AGENT_EVENT_BYTES",
-  "MAX_DELEGATED_AGENT_ID_BYTES",
-  "MAX_DELEGATED_AGENT_NAME_BYTES",
-  "MAX_DELEGATED_AGENT_STEP_INDEX",
-  "MAX_DELEGATED_AGENT_TOKEN_COUNT",
-  "createDelegatedAgentStep",
-  "DevicePolicyError",
-  "HARD_DEVICE_MAX_CHUNK_BYTES",
-  "HARD_DEVICE_MAX_CONCURRENT_SESSIONS",
-  "acceptDeviceChunk",
-  "assertDeviceAdmit",
-  "redactDeviceTelemetry",
-  "resolveDevicePolicy",
-  "runDevicePolicyConformance",
-  "BUILT_IN_GUARDRAIL_PACK_IDS",
-  "compileGuardrailPacks",
-  "describeGuardrailPacks",
-  "GuardrailError",
-  "GuardrailPackError",
-  "HARD_MAX_AGENT_RUN_STATE_BYTES",
-  "HARD_RUN_LIMITS",
-  "LEASE_CONFLICT_CODE",
-  "LeaseConflictError",
   "MAX_GUARDRAIL_CONCURRENCY",
-  "MAX_GUARDRAIL_PACK_RULES",
-  "MAX_GUARDRAIL_PACKS",
+  "MAX_LOAD_SKILL_RESULT_BYTES",
+  "MAX_PERSISTED_SKILL_BODIES",
+  "MAX_PERSISTED_SKILL_BODY_BYTES",
+  "MAX_PERSISTED_SKILL_BODY_NAME_CHARS",
+  "MAX_SESSION_LINK_ID_LENGTH",
+  "MODEL_FAMILY_TOKENS",
+  "MODEL_INPUT_CAPABILITIES",
+  "MediaContentError",
+  "ModelRefError",
+  "PackageLoadError",
+  "OWNERSHIP_WIDEN_CODE",
   "PermissionDeniedError",
-  "PersistenceLifecycleError",
-  "ProviderRequirementError",
   "RunLimitError",
   "RunLimitTracker",
   "SESSION_APPEND_CONFLICT_CODE",
   "SESSION_ENTRY_KINDS",
   "SESSION_ENTRY_SCHEMA_VERSION",
+  "SESSION_LINKS_DATA_KEY",
   "SESSION_METADATA_CONFLICT_CODE",
-  "SESSION_SEARCH_WORKSPACE_METADATA_KEY",
-  "SESSION_TITLE_METADATA_KEY",
-  "SESSION_TITLE_MAX_LENGTH",
   "SESSION_NOT_FOUND_CODE",
   "SESSION_SEARCH_UNSUPPORTED_CODE",
+  "SESSION_SEARCH_WORKSPACE_METADATA_KEY",
+  "SESSION_TITLE_MAX_LENGTH",
+  "SESSION_TITLE_METADATA_KEY",
+  "SKILL_LOAD_ERROR_CODE",
+  "SUSPENDED_RUN_ENTRY_SCHEMA_VERSION",
   "SessionAppendConflictError",
   "SessionMetadataConflictError",
   "SessionNotFoundError",
+  "OwnershipScopeError",
   "SessionSearchUnsupportedError",
-  "UNSUPPORTED_STORE_CAPABILITY_CODE",
-  "UnsupportedStoreCapabilityError",
   "SkillDisclosureError",
   "SkillLoadError",
-  "ToolDisclosureError",
-  "RunFeedbackError",
+  "SlotConflictError",
+  "SubscriberOverflowError",
+  "ToolDefinitionError",
+  "ToolEffectError",
   "TrustDeniedError",
-  "DEFAULT_SESSION_LIST_LIMIT",
-  "DEFAULT_SESSION_SEARCH_LIMIT",
-  "DEFAULT_SNAPSHOT_CACHE_TTL_MS",
-  "HARD_MAX_SESSION_LIST_LIMIT",
-  "HARD_MAX_SESSION_SEARCH_LIMIT",
-  "HARD_MAX_SNAPSHOT_CACHE_TTL_MS",
-  "DEFAULT_MAX_SESSION_SEARCH_QUERY_BYTES",
-  "HARD_MAX_SESSION_SEARCH_QUERY_BYTES",
-  "DEFAULT_MAX_SESSION_SEARCH_SNIPPET_BYTES",
-  "DEFAULT_MAX_SKILL_CATALOG_ENTRIES",
-  "DEFAULT_MAX_SKILL_DESCRIPTION_BYTES",
-  "DEFAULT_MAX_SKILL_INSTRUCTION_BYTES",
-  "HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES",
-  "DEFAULT_MAX_SESSION_SEARCH_CURSOR_BYTES",
-  "HARD_MAX_SESSION_SEARCH_CURSOR_BYTES",
-  "DEFAULT_MAX_SESSION_SEARCH_LINEAR_SESSIONS",
-  "HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS",
-  "DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES",
-  "HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES",
-  "DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES",
-  "HARD_MAX_SESSION_SEARCH_LINEAR_BYTES",
-  "DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES",
-  "HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES",
-  "HARD_MAX_SKILL_CATALOG_ENTRIES",
-  "HARD_MAX_SKILL_DESCRIPTION_BYTES",
-  "HARD_MAX_SKILL_INSTRUCTION_BYTES",
-  "HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES",
-  "resolveSessionSearchQuery",
-  "isSessionNotFound",
-  "isSessionSearchUnsupported",
-  "isUnsupportedStoreCapability",
-  "applyContextBudget",
-  "applyRestoredSkillBodies",
-  "CONTEXT_BUDGET_ERROR_CODE",
-  "CONTEXT_BUDGET_REPORT_METADATA_KEY",
-  "ContextBudgetError",
-  "DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS",
-  "HARD_MAX_CONTEXT_BUDGET_BYTES",
-  "HARD_MAX_CONTEXT_BUDGET_OMISSIONS",
-  "HARD_MAX_CONTEXT_BUDGET_TOKENS",
-  "MODEL_FAMILY_TOKENS",
-  "estimateAssemblyTokens",
-  "estimateMessageBytes",
-  "estimateMessageTokens",
-  "estimateTextBytes",
-  "estimateTextTokens",
-  "getContextBudgetReport",
-  "isContextBudgetError",
-  "isSkillDisclosureError",
-  "isSkillLoadError",
-  "isToolDisclosureError",
-  "resolveToolsDisclosure",
-  "SKILL_LOAD_ERROR_CODE",
-  "TOOL_DISCLOSURE_ERROR_CODE",
-  "resolveContextBudget",
-  "resolveModelFamily",
-  "DEFAULT_LEDGER_BATCH_ENTRIES",
-  "HARD_LEDGER_BATCH_ENTRIES",
-  "DEFAULT_LEDGER_BATCH_BYTES",
-  "HARD_LEDGER_BATCH_BYTES",
-  "DEFAULT_LEDGER_BATCH_DELAY_MS",
-  "HARD_LEDGER_BATCH_DELAY_MS",
+  "UNSUPPORTED_STORE_CAPABILITY_CODE",
+  "UnknownHookError",
+  "UnknownSlotError",
+  "UnknownSlotOwnerError",
+  "UnsupportedModalityError",
+  "UnsupportedStoreCapabilityError",
   "agentFingerprint",
-  "systemCacheControlField",
-  "applyCacheControl",
-  "applyDefaultProviderRequestOptions",
-  "applyExecutionDecision",
-  "applyThinkingLevel",
-  "applyThinkingLevelForModel",
+  "applyRestoredSkillBodies",
+  "artifactApprovalState",
+  "artifactCheckpointKey",
+  "askEveryTool",
   "assembleProviderInput",
+  "assertCompactionTrigger",
   "assertDeclaredMediaTypeMatches",
-  "assertAgentEventSourceConforms",
-  "isTerminalAgentEventType",
-  "assertExecutionAllowed",
+  "assertEmbeddingsSupported",
   "assertGuardrailsAllowed",
   "assertJsonObject",
   "assertMediaBlocksWithinBounds",
   "assertMessagesSupportModelCapabilities",
   "assertModelSupportsContentBlocks",
   "assertPermission",
-  "assertIdentityActive",
-  "assertIdentityMatchesOwnership",
-  "assertIdentityPropagation",
-  "assertEmbeddingsSupported",
-  "assertBatchJobsSupported",
-  "assertImageGenerationSupported",
-  "assertModerationSupported",
-  "assertVideoGenerationSupported",
-  "isBatchJobTerminal",
-  "modelSupportsBatchJobs",
-  "pollBatch",
+  "assertSessionLinkFilter",
+  "assertSessionLinks",
   "assertSessionMetadataKey",
-  "assertSpeechSupported",
   "assertSsrfAllowedUrl",
-  "assertStructuredOutputRequestSupported",
-  "assertTranscriptionSupported",
-  "artifactStructuredOutputRequest",
   "assertTrusted",
-  "cacheHitRate",
-  "cacheSavings",
-  "cacheUsageReport",
-  "CACHE_TELEMETRY_OVERFLOW_KEY",
-  "capToolResultSummary",
-  "CacheTelemetryError",
-  "createCacheTelemetry",
-  "DEFAULT_CACHE_TELEMETRY_CAP",
-  "checkExecution",
+  "boundResponse",
   "checkPermission",
+  "citationBindingDigest",
   "collectMessageContentBlocks",
   "composeSystemPrompt",
   "contentBlockInputModality",
-  "conversationMarkerMetadata",
-  "conversationThreadFromRecord",
   "createAgent",
-  "createAgentRunLifecycle",
-  "createBatchedRunLedger",
-  "createRunLimitTracker",
-  "createSecureAgent",
-  "createChainedSettingsProvider",
   "createDefaultCompactor",
   "createDefaultInputBuilder",
   "createDefaultRetryPolicy",
-  "createEventMultiplexer",
-  "EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE",
-  "EventMultiplexerError",
-  "EventSubscriber",
-  "createLoadedSkillSet",
+  "createEnvRefCredentialResolver",
   "createLoadSkillTool",
-  "createMemoryAgentEventSource",
-  "createMemoryCheckpointStore",
-  "createMemoryLeaseStore",
-  "createMemoryPersistenceLifecycle",
-  "createMemoryRunFeedbackStore",
+  "createLoadedSkillSet",
   "createMemorySessionStore",
+  "createMemoryToolEffectStore",
   "createModelRegistry",
-  "createProviderCapture",
+  "createPathTrustPolicy",
   "createProviderRegistry",
   "createProviderResolver",
   "createProviderTurnMetadata",
+  "createRunLimitTracker",
   "createSecretRedactor",
   "createSessionEntry",
+  "createSessionIndex",
   "createSkillRegistry",
+  "createSlotDefaults",
+  "createSlotRegistry",
   "createStaticPermissionPolicy",
-  "createStaticSettingsProvider",
   "createStaticTrustPolicy",
   "createToolParameterValidator",
   "createToolRegistry",
-  "ToolDefinitionError",
-  "resolveToolEffects",
-  "createActiveToolSet",
-  "createSearchToolsTool",
-  "createToolSearchIndex",
-  "createToolSearchState",
-  "DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES",
-  "DEFAULT_TOOLS_SEARCH_TOP_K",
-  "HARD_MAX_TOOLS_INDEX",
-  "HARD_MAX_TOOLS_SEARCH_QUERY_BYTES",
-  "HARD_MAX_TOOLS_SEARCH_TOP_K",
-  "scoreTools",
-  "SEARCH_TOOLS_TOOL_NAME",
-  "selectDisclosedTools",
-  "DEFAULT_LOAD_SKILL_TOOL_NAME",
-  "DEFAULT_MAX_AUDIO_DURATION_MS",
-  "DEFAULT_MAX_CONVERSATION_CURSOR_BYTES",
-  "DEFAULT_MAX_MEDIA_ITEM_BYTES",
-  "DEFAULT_MAX_MEDIA_ITEMS_PER_REQUEST",
-  "DEFAULT_MAX_MEDIA_REQUEST_BYTES",
-  "DEFAULT_MAX_PENDING_STEER_BYTES",
-  "DEFAULT_MAX_PENDING_STEERS",
-  "DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH",
-  "DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES",
-  "HARD_MAX_PENDING_STEER_BYTES",
-  "HARD_MAX_PENDING_STEERS",
-  "DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES",
-  "DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS",
-  "DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES",
-  "DEFAULT_MEDIA_FETCH_TIMEOUT_MS",
-  "DEFAULT_IDENTITY_LIMITS",
-  "DEFAULT_LIFECYCLE_PAGE_SIZE",
-  "DEFAULT_MAX_HOLD_REASON_BYTES",
-  "decodeConversationReplayCursor",
+  "defaultLoop",
+  "defaultResolver",
+  "definePackage",
   "denialToErrorInfo",
   "description",
   "dispatchToolCall",
   "errorToErrorInfo",
-  "ExecutionDeniedError",
-  "encodeConversationReplayCursor",
+  "estimateAssemblyTokens",
+  "estimateMessageBytes",
+  "estimateMessageTokens",
+  "estimateTextBytes",
+  "estimateTextTokens",
   "filterTools",
-  "foldToolResultHistory",
-  "foldToolResults",
-  "foldedToolResultHeader",
-  "formatFoldedToolResult",
   "getSessionBranchEntries",
-  "HARD_IDENTITY_LIMITS",
-  "HARD_LIFECYCLE_PAGE_SIZE",
-  "HARD_MAX_CONVERSATION_CURSOR_BYTES",
-  "HARD_MAX_HOLD_REASON_BYTES",
-  "IdentityError",
-  "identityTelemetryAttributes",
-  "isResourceHeld",
+  "guardrailRefusalText",
   "isCompactionEntryData",
   "isFlushableRunLedger",
   "isJsonObject",
+  "isLoopbackAddress",
+  "isLoopbackHostname",
+  "isPathInside",
+  "isPathInsideReal",
   "isSessionAppendConflict",
   "isSessionEntryKind",
   "isSessionMetadataConflict",
+  "isSessionNotFound",
+  "isSessionSearchUnsupported",
+  "isSkillDisclosureError",
+  "isSkillLoadError",
+  "isTerminalAgentEventType",
   "isTransientErrorInfo",
   "isTrusted",
-  "isThinkingLevel",
-  "isSupportedThinkingLevel",
+  "isUnsupportedStoreCapability",
   "listSessionBranches",
   "loadBinaryResource",
   "loadBoundedBinaryResource",
   "loadConfigLayers",
   "loadJsonResource",
-  "askEveryTool",
-  "loadAgentRunState",
   "loadSuspendedRunEntry",
-  "parseSuspendedRunEntry",
-  "SUSPENDED_RUN_ENTRY_SCHEMA_VERSION",
   "loadTextResource",
-  "mapCacheRetention",
+  "mapProviderStopReason",
   "mergeConfigLayers",
-  "HARD_MAX_PERSISTED_SKILL_BODY_TOTAL_BYTES",
-  "MAX_LOAD_SKILL_RESULT_BYTES",
-  "MAX_PERSISTED_SKILL_BODIES",
-  "MAX_PERSISTED_SKILL_BODY_BYTES",
-  "MAX_PERSISTED_SKILL_BODY_NAME_CHARS",
-  "mergeProviderRequestOptions",
   "mergeSystemPromptConfig",
-  "MediaContentError",
-  "CredentialUnavailableError",
-  "ModelRefError",
-  "MODEL_INPUT_CAPABILITIES",
   "modelSupportsEmbeddings",
-  "modelSupportsImageGeneration",
-  "modelSupportsModeration",
-  "modelSupportsVideoGeneration",
-  "modelSupportsSpeech",
-  "modelSupportsStructuredOutput",
-  "modelSupportsTranscription",
   "name",
-  "narrowIdentity",
-  "normalizeThinkingLevel",
-  "ownershipFromIdentity",
+  "normalizeHostname",
   "parseAgentFile",
   "parseModelRef",
-  "parseThinkingLevel",
   "parseSkillFile",
-  "prepareRunFeedback",
+  "parseSuspendedRunEntry",
+  "pinnedFetch",
   "providerContentDelta",
   "providerContinuationRequired",
   "providerDone",
-  "mapProviderStopReason",
   "providerError",
   "providerTextDelta",
   "providerThinkingDelta",
   "providerToolCall",
   "providerToolCallDelta",
   "providerUsage",
+  "raceAbort",
   "readProviderHttpStatus",
   "rebuildSessionContext",
-  "sessionStoreCapabilities",
   "redactAgentEvent",
   "redactMessage",
   "redactProviderRequest",
   "redactRunLedgerRecord",
   "redactSecrets",
   "redactSessionEntry",
-  "resolveBreakpoint",
-  "resolveRedactor",
-  "resumeAgentRun",
-  "resumeAgentRunStream",
+  "registerContextSources",
   "renderPromptTemplate",
-  "requireRunFeedbackOwnership",
+  "requestPinned",
   "resolveActiveSkills",
-  "resolveToolResultFold",
-  "resolveSkillLoad",
-  "snapThinkingLevel",
-  "snapshotLoadedSkillBodies",
-  "resolveSkillsDisclosure",
-  "resolveAgentDefinition",
   "resolveCredentialValue",
-  "resolveIdentityLimits",
+  "resolveInputCap",
   "resolveMediaContentBlock",
   "resolveMediaContentBlocks",
+  "resolveModelFamily",
+  "resolvePinnedAddress",
+  "resolveRedactor",
   "resolveRunLimits",
-  "resolveRunProviderOptions",
-  "resolveUseCaseModel",
-  "resolveUseCaseModelBinding",
-  "runFeedbackPageLimit",
-  "registerContextSources",
-  "withContextBlocks",
-  "sanitizeCacheKey",
+  "resolveSessionSearchQuery",
+  "resolveShouldCompact",
+  "resolveSkillLoad",
+  "resolveSkillsDisclosure",
+  "resolveToolEffects",
+  "runGuardrailList",
+  "sessionLinksMatch",
+  "sessionLinksOf",
+  "sessionLinksOfEntry",
+  "sessionStoreCapabilities",
+  "snapshotLoadedSkillBodies",
   "sniffMediaMimeType",
-  "EmbeddingsError",
-  "ImageGenerationError",
-  "ModerationError",
-  "SpeechError",
-  "BatchJobsError",
-  "StructuredOutputError",
-  "SubscriberOverflowError",
-  "TranscriptionError",
-  "VideoGenerationError",
-  "TOOL_RESULT_FOLD_TURN_METADATA_KEY",
-  "THINKING_LEVELS",
-  "thinkingCompatFor",
-  "thinkingFamilyForModel",
-  "thinkingLevelsForModel",
+  "summaryLinkFields",
   "toRunResultStatus",
   "toolCallContent",
   "toolCallFromArgumentsText",
-  "UnsupportedModalityError",
-  "useCaseCredentialProviderId",
+  "trimTrailingSlashes",
+  "validateJsonSchema",
   "validateLoadedSkillBodies",
-  "validateStructuredOutputOptions",
-  "withoutStructuredOutput",
   "version",
   "waitForRetry",
-  "ALLOW_FIELD_POLICY",
-  "applyFieldPolicy",
-  "createAuditFieldRedactor",
-  "createProtectedFieldPolicy",
-  "FieldPolicyError",
-  "FIELD_POLICY_LIMITS",
-  "ATTENTION_BUDGET_ERROR_CODE",
-  "AttentionBudgetError",
-  "assertCompactionTrigger",
-  "createAttentionCompiler",
-  "createAttentionTruncationTrigger",
-  "resolveShouldCompact",
-  "DEFAULT_ATTENTION_COMPACT_RATIO",
-  "DEFAULT_ATTENTION_KEEP_LAST",
-  "DEFAULT_ATTENTION_RESERVE_TOKENS",
-  "DEFAULT_ATTENTION_THINKING_KEEP_TURNS",
-  "DEFAULT_ATTENTION_TRIGGER_RATIO",
-  "DEFAULT_ATTENTION_TRUNCATION_THRESHOLD",
-  "isAttentionBudgetError",
-  "resolveAttentionReserveTokens",
-  "resolveRunAttentionCompiler",
-  "resolveInputCap",
-  "guardrailRefusalText",
-  "runGuardrailList",
+  "withContextBlocks",
 ];
 
 const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
@@ -516,16 +319,18 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
   "RunResult",
   "AgentRunStatus",
   "AgentRunState",
-  "AgentRunStateOptions",
   "AgentRunInterruption",
-  "AgentRunResume",
-  "AgentRunResumeOptions",
-  "AgentRunResumeStreamOptions",
   "AgentRunRef",
-  "AgentIdentity",
+  // Plan 168 Task 5 retired the checkpoint lifecycle: the durable run contracts that stay are the
+  // decision/nested-run shapes, not a host-supplied checkpoint store.
+  "Decision",
+  "DecisionScope",
+  "PendingDecision",
+  "NestedRunRef",
+  "NestedRunOutcome",
+  "ResumeNestedRun",
   "AgentEventSource",
   "Principal",
-  "IdentityVerifier",
   "Guardrail",
   "GuardrailDecision",
   "GuardrailRecord",
@@ -558,10 +363,7 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
   "DelegatedAgentStepState",
   "DelegatedAgentStepUsage",
   "RunFeedbackStore",
-  "CheckpointStore",
-  "LeaseStore",
   "ProductionPersistenceStore",
-  "PersistenceLifecycleStore",
   "RetryPolicy",
   "CredentialResolver",
   "CredentialContext",
@@ -569,78 +371,13 @@ const REQUIRED_SDK_CONTRACT_TYPES: readonly string[] = [
 ];
 
 const FROZEN_TYPE_EXPORTS: readonly string[] = [
-  "PinnedFetchOptions",
   "AgentEventSourceErrorCode",
   "AgentInput",
+  "AgentInspection",
+  "AgentState",
   "ApprovalOutcome",
-  "BudgetExhaustionAttribution",
-  "DecisionScope",
-  "NestedRunApproval",
-  "NestedRunOutcome",
-  "NestedRunRef",
-  "PendingDecision",
-  "PendingDecisionKind",
-  "ResumeNestedRun",
-  "Decision",
-  "StickyDecision",
-  "ApplyCacheControlOptions",
-  "ApplyDefaultProviderRequestOptionsContext",
-  "ResolvedIdentityLimits",
-  "Principal",
-  "NarrowIdentityOptions",
-  "IdentityVerifier",
-  "IdentityLimits",
-  "AssertIdentityActiveOptions",
-  "AgentIdentity",
-  "ApplyRetentionInput",
-  "ApplyRetentionResult",
-  "ConsumeTenantQuotaInput",
-  "ExportUnderHoldInput",
-  "LegalHoldExportItem",
-  "LegalHoldQuery",
-  "LegalHoldRecord",
-  "PersistenceLifecycleStore",
-  "PersistenceResourceKind",
-  "PutLegalHoldInput",
-  "ReleaseLegalHoldInput",
-  "SetTenantQuotaInput",
-  "TenantQuota",
-  "AssembleProviderInputOptions",
-  "AudioContent",
-  "BatchedRunLedgerOptions",
-  "CacheControlValue",
-  "CacheControlledContentBlock",
-  "CacheControlledMessage",
-  "CacheUsageReport",
-  "CacheTelemetry",
-  "CacheTelemetryOptions",
-  "CacheTelemetryReport",
-  "CacheTelemetrySample",
-  "CheckpointRestoreAudit",
-  "CheckpointRestoreAuditEntry",
-  "CheckpointRestoreCompensation",
-  "CheckpointRestoreHandler",
-  "CheckpointRestoreHook",
-  "RunCheckpointRestoreHooksOptions",
-  "ComposeSystemPromptOptions",
-  "ConfigLayer",
-  "ConfigLoadContext",
-  "ContextBudget",
-  "ContextBudgetMessageGroups",
-  "ContextBudgetOmission",
-  "ContextBudgetOmissionKind",
-  "ContextBudgetReport",
-  "ContextMeter",
-  "TokenEstimator",
-  "TokenEstimate",
-  "TokenEstimateConfidence",
-  "ModelFamily",
-  "ModelFamilyTokens",
-  "ConfigProvider",
-  "ConversationBranchRef",
-  "ConversationReplayCursor",
-  "ConversationThread",
-  "ConversationThreadState",
+  "AroundHook",
+  "AroundHookName",
   "ArtifactApproval",
   "ArtifactApprovalState",
   "ArtifactBodyErrorCode",
@@ -649,40 +386,38 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "ArtifactBodyStore",
   "ArtifactBodyTransferOptions",
   "ArtifactCitation",
-  "CitationIntegrityReason",
-  "CitationIntegrityResult",
-  "CitationLiveSource",
-  "CitationSupport",
-  "ClaimGroundingEvidence",
-  "ClaimGroundingEvidenceExtractor",
-  "ClaimGroundingEvidenceExtractorContext",
-  "ClaimGroundingGuardrailOptions",
-  "FieldEvidenceContext",
-  "FieldEvidenceGuardrailOptions",
-  "FieldEvidenceNormalizer",
-  "FieldEvidenceRecord",
-  "FieldEvidenceSource",
-  "FieldEvidenceViolation",
-  "FieldProvenanceClaim",
   "ArtifactDecisionState",
   "ArtifactDeliveryToken",
   "ArtifactRecord",
   "ArtifactRevision",
-  "DeviceAdapter",
-  "DeviceAdmitRequest",
-  "DeviceChunkResult",
-  "DeviceConformanceResult",
-  "DeviceKind",
-  "DevicePolicyErrorCode",
-  "DevicePolicyOptions",
-  "DelegatedAgentStepInput",
-  "DeviceStreamLimits",
-  "ResolvedDevicePolicy",
-  "CreateMemorySessionStoreOptions",
+  "AssembleProviderInputOptions",
+  "AudioContent",
+  "BudgetExhaustionAttribution",
+  "Capability",
+  "CheckpointRestoreAudit",
+  "CheckpointRestoreAuditEntry",
+  "CitationSupport",
+  "CompactionTrigger",
+  "CompactionTriggerContext",
+  "CompactionWhenDecision",
+  "CompactionWhenPayload",
+  "Compactor",
+  "ComposeSystemPromptOptions",
+  "ConfigLayer",
+  "ConfigLoadContext",
+  "ConfigProvider",
+  "ContextDraft",
+  "ContextMeter",
+  "ContextSource",
   "CreateLoadSkillToolOptions",
+  "CreateMemorySessionStoreOptions",
   "CreateSessionEntryOptions",
   "CredentialRecord",
   "CredentialValueSource",
+  "DecideHook",
+  "DecideHookName",
+  "Decision",
+  "DecisionScope",
   "DefaultCompactorOptions",
   "DefaultInputBuildContext",
   "DefaultInputBuilder",
@@ -690,56 +425,27 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "DispatchToolCallOptions",
   "DocumentContent",
   "DuplicateRegistrationOptions",
-  "GuardrailPackRow",
-  "GuardrailRunResult",
-  "HostCompositionGovernance",
-  "HostCompositionOptions",
-  "HostCompositionProfile",
-  "HostCompositionReport",
-  "RunBundleSnapshot",
-  "RunBundleSnapshotInput",
-  "HostCompositionToolReport",
   "DuplicateRegistrationPolicy",
-  "EventMultiplexer",
-  "EventMultiplexerOptions",
-  "EventOverflowInfo",
-  "EventOverflowPolicy",
-  "LoadedSkillBodiesEntry",
-  "LoadedSkillSet",
-  "ActiveToolSet",
-  "ToolSearchIndex",
-  "ToolSearchMatch",
-  "ToolSearchState",
-  "ToolsDisclosure",
-  "ToolsSearchOptions",
+  "ExternalActivity",
+  "ExternalAskSupport",
+  "ExternalStateData",
+  "ExternalStateHandle",
+  "ExternalToolDecision",
+  "ExternalToolRequest",
   "FileContent",
-  "FoldToolResultsContext",
-  "ExecutionAction",
-  "ExecutionDecision",
-  "ExecutionPolicy",
-  "ExecutionRisk",
-  "InputAttachment",
-  "LoadBinaryResourceOptions",
-  "MediaContentBlock",
-  "MediaContentBounds",
-  "MediaHostAddress",
-  "MediaHostnameResolver",
-  "MediaMimePolicy",
-  "MediaUrlRequest",
-  "MediaUrlRequester",
-  "MemoryCheckpointStoreOptions",
-  "MemoryRunFeedbackStoreOptions",
-  "MemorySessionSearchMode",
-  "AroundHook",
-  "AroundHookName",
-  "CompactionWhenDecision",
-  "CompactionWhenPayload",
-  "ContextDraft",
-  "DecideHook",
-  "DecideHookName",
+  "GuardrailRunResult",
   "HookCatalog",
   "HookContext",
-  "Compactor",
+  "HookDecision",
+  "HookHandler",
+  "HookKind",
+  "HookName",
+  "HookOptions",
+  "HookPayload",
+  "HookRegistrar",
+  "HookRegistrationInfo",
+  "HookRejection",
+  "HookResult",
   "HostPort",
   "HostUi",
   "HostUiAnswerMap",
@@ -754,174 +460,422 @@ const FROZEN_TYPE_EXPORTS: readonly string[] = [
   "HostUiSecretRequest",
   "HostUiSelectOption",
   "HostUiSelectRequest",
+  "HostUiTerminalRequest",
+  "InputAttachment",
+  "InputCapOptions",
+  "InspectedContribution",
+  "InspectedHook",
+  "InspectedPackage",
+  "JsonSchema",
+  "LoadBinaryResourceOptions",
+  "LoadedSkillBodiesEntry",
+  "LoadedSkillSet",
+  "Logger",
   "LoopStrategy",
-  "RunController",
-  "RunEndResult",
-  "RunTurnOptions",
-  "RunTurnResult",
-  "SlotAssignments",
-  "SlotContracts",
-  "SlotName",
-  "SlotProvider",
-  "SlotRegistry",
-  "HookDecision",
-  "HookHandler",
-  "HookKind",
-  "HookName",
-  "HookOptions",
-  "HookPayload",
-  "HookRegistrar",
-  "HookRegistrationInfo",
-  "HookRejection",
-  "HookResult",
-  "ContextSource",
-  "ModelRequestTransformResult",
-  "NamedHookCatalog",
-  "NamedHookName",
-  "ObserveHook",
-  "ObserveHookName",
-  "RunEndDecision",
-  "RunEndPayload",
-  "ToolCallDecision",
-  "ToolCallHookPayload",
-  "ToolExecuteHookPayload",
-  "TransformHook",
-  "TransformHookName",
-  "TurnBeforeDecision",
-  "TurnBeforePayload",
-  "ProviderCapture",
-  "ProviderCaptureEntry",
-  "ProviderCaptureOptions",
-  "ProviderCapturePolicy",
+  "MediaContentBlock",
+  "MediaContentBounds",
+  "MediaHostAddress",
+  "MediaHostnameResolver",
+  "MediaMimePolicy",
+  "MediaUrlRequest",
+  "MediaUrlRequester",
+  "MemorySessionSearchMode",
+  "ModelClient",
+  "ModelFamily",
+  "ModelFamilyTokens",
   "ModelInputCapability",
   "ModelRegistry",
   "ModelRegistryOptions",
-  "PermissionDecision",
-  "JsonSchema",
-  "PackageLoadErrorCode",
-  "Capability",
-  "ModelClient",
+  "ModelRequestTransformResult",
+  "NamedHookCatalog",
+  "NamedHookName",
+  "NestedRunApproval",
+  "NestedRunOutcome",
+  "NestedRunRef",
+  "ObserveHook",
+  "ObserveHookName",
   "PackageAPI",
   "PackageCommand",
   "PackageCommandContext",
   "PackageCommandInfo",
-  "PackageToolOptions",
+  "PackageConfigSource",
   "PackageDefinition",
   "PackageDefinitionInput",
   "PackageInput",
   "PackageInstance",
   "PackageInstanceOptions",
-  "PackageSource",
+  "PackageLoadErrorCode",
   "PackageRequires",
-  "SessionContext",
-  "SessionState",
-  "AgentState",
-  "AgentInspection",
-  "InspectedContribution",
-  "InspectedHook",
-  "InspectedPackage",
-  "SlotRegistrar",
-  "SlotRegistrarEntry",
-  "Logger",
+  "PackageSource",
+  "PackageToolOptions",
+  "PendingDecision",
+  "PendingDecisionKind",
+  "PendingToolCall",
+  "PermissionDecision",
   "PermissionPolicy",
   "PermissionRequest",
+  "PinnedFetchOptions",
+  "Principal",
   "PromptInstruction",
   "PromptTemplateOptions",
-  "PrepareRunFeedbackOptions",
   "ProviderRegistry",
   "ProviderRegistryOptions",
   "ProviderResolver",
-  "ResolvedMediaContent",
-  "ResolveMediaContentOptions",
   "ResolveActiveSkillsOptions",
+  "ResolveMediaContentOptions",
+  "ResolveShouldCompactInput",
+  "ResolveShouldCompactOptions",
   "ResolveSkillLoadOptions",
-  "ResolvedToolResultFoldOptions",
-  "RunFeedbackLimits",
-  "RunFeedbackRun",
-  "RunFeedbackRunResolver",
+  "ResolvedMediaContent",
+  "ResumeNestedRun",
+  "RunController",
+  "RunEndDecision",
+  "RunEndPayload",
+  "RunEndResult",
+  "RunGuardrailListOptions",
+  "RunLimitCounters",
+  "RunLimitName",
+  "RunLimitTrackerOptions",
+  "RunTurnOptions",
+  "RunTurnResult",
   "SecretRedactor",
   "SessionBranch",
   "SessionBranchOptions",
-  "ResolveUseCaseModelInput",
-  "ResolvedUseCaseModel",
+  "SessionContext",
   "SessionContextSnapshot",
+  "SessionLog",
+  "SessionState",
   "SkillRegistryOptions",
   "SkillRenderContext",
   "SkillsDisclosure",
+  "SlotAssignments",
+  "SlotContracts",
+  "SlotName",
+  "SlotProvider",
+  "SlotRegistrar",
+  "SlotRegistrarEntry",
+  "SlotRegistry",
   "SsrfPolicy",
-  "RealtimeCaps",
-  "RealtimeEvent",
-  "RealtimeSession",
-  "RealtimeSessionFactory",
-  "RealtimeSessionOptions",
+  "StickyDecision",
+  "StoredAgentRunState",
+  "SuspendedRunEntryData",
+  "SuspendedRunLoopRef",
+  "TokenEstimate",
+  "TokenEstimateConfidence",
+  "TokenEstimator",
+  "ToolArgumentValidationError",
+  "ToolArgumentValidationResult",
+  "ToolArgumentValidator",
   "ToolCallAuthority",
+  "ToolCallDecision",
+  "ToolCallHookPayload",
+  "ToolCapabilityKind",
   "ToolEffectClassifier",
   "ToolEffectDeclaration",
   "ToolEffectErrorCode",
   "ToolEffectIdempotency",
   "ToolEffectKey",
   "ToolEffectKind",
-  "ToolCapabilityKind",
   "ToolEffectRecord",
   "ToolEffectStatus",
   "ToolEffectStore",
   "ToolEffectTransition",
-  "ThinkingCompatFamily",
-  "ThinkingLevel",
-  "ToolArgumentValidationError",
-  "ToolArgumentValidationResult",
-  "AgentRunLifecycle",
-  "AgentRunLifecycleAgent",
-  "AgentRunLifecycleOptions",
-  "AgentRunLifecycleRequest",
-  "AgentRunLifecycleStreamRequest",
-  "RunLimitCounters",
-  "RunLimitName",
-  "RunLimitTrackerOptions",
-  "SecureAgentOptions",
-  "PendingToolCall",
-  "StoredAgentRunState",
-  "SuspendedRunEntryData",
-  "SuspendedRunLoopRef",
-  "UseCaseModelBinding",
-  "ToolArgumentValidator",
+  "ToolElicitationRequest",
+  "ToolExecuteHookPayload",
   "ToolFilter",
   "ToolFilterInput",
-  "ToolResultFoldInput",
-  "ToolResultFoldOptions",
   "ToolParameterValidatorOptions",
   "ToolRegistryOptions",
   "ToolValidator",
+  "TransformHook",
+  "TransformHookName",
   "TrustDecision",
   "TrustPolicy",
   "TrustRequest",
-  "ToolElicitationRequest",
-  "ApplyFieldPolicyOptions",
-  "AuditFieldRedaction",
-  "AuditFieldRedactorLike",
-  "AuditFieldRedactorOptions",
-  "FieldPolicy",
-  "FieldPolicyAction",
-  "FieldPolicyDecision",
-  "FieldPolicyInput",
-  "ProtectedFieldPolicyOptions",
-  "AttentionCompiler",
-  "AttentionCompilerContext",
-  "AttentionCompilerOptions",
-  "AttentionCompilerSetting",
-  "AttentionInputCapOptions",
-  "AttentionReport",
-  "AttentionTruncationTrigger",
-  "AttentionTruncationTriggerOptions",
-  "PersistedAttentionStickyFrontier",
-  "CompactionTrigger",
-  "CompactionTriggerContext",
-  "ResolveShouldCompactInput",
-  "ResolveShouldCompactOptions",
-  "CompiledGuardrailPacks",
-  "CompiledGuardrailRules",
-  "RunGuardrailListOptions",
+  "TurnBeforeDecision",
+  "TurnBeforePayload",
 ];
+
+// Plan 174 Task 9: every published subpath carries its own frozen surface, so an add or a removal on
+// `provider-kit`, `driver-kit`, `manifest`, or `testing` fails here rather than shipping silently.
+// The frozen unit is the runtime namespace (`Object.keys`), which is what a consumer imports; type-only
+// subpath exports are covered by the root `FROZEN_TYPE_EXPORTS` where the kernel re-exports them.
+const FROZEN_PROVIDER_KIT_EXPORTS: readonly string[] = [
+  "DEFAULT_MAX_ARGUMENT_BYTES",
+  "DEFAULT_MAX_BUFFER_BYTES",
+  "DEFAULT_MAX_EVENT_BYTES",
+  "DEFAULT_MAX_RESPONSE_BODY_BYTES",
+  "DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH",
+  "DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES",
+  "DEFAULT_MAX_SYSTEMONE_STATE_BYTES",
+  "DEFAULT_OWNED_COMPAT_KEYS",
+  "DEFAULT_PROVIDER_MEDIA_ITEM_BYTES",
+  "DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES",
+  "DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD",
+  "DEFAULT_SYSTEMONE_MAX_RETRIES",
+  "MAX_SYSTEMONE_CHOICE_OPTIONS",
+  "MAX_SYSTEMONE_QUESTIONS",
+  "MAX_SYSTEMONE_SCORE_LEVELS",
+  "ProviderRequirementError",
+  "ProviderTransportError",
+  "RETRYABLE_STATUSES",
+  "StructuredOutputError",
+  "SystemOneAbortedError",
+  "SystemOneAuthError",
+  "SystemOneError",
+  "SystemOneInvalidRequestError",
+  "SystemOneRetryExhaustedError",
+  "SystemOneSchemaError",
+  "THINKING_LEVELS",
+  "anthropicCacheEnabled",
+  "anthropicMessagesBody",
+  "anthropicMessagesEvents",
+  "applyCacheControl",
+  "applyDefaultProviderRequestOptions",
+  "applyOpenAIChatStructuredOutput",
+  "applyThinkingLevel",
+  "applyThinkingLevelForModel",
+  "artifactStructuredOutputRequest",
+  "askSystemOneDecisions",
+  "assertAbortIsObserved",
+  "assertAuthDescriptorsWellFormed",
+  "assertCanonicalToolParameters",
+  "assertModelsListValid",
+  "assertNoFetches",
+  "assertNoForeignCacheFields",
+  "assertNoSecretLeak",
+  "assertNotAborted",
+  "assertOpenAIChatMessage",
+  "assertProviderMediaCapability",
+  "assertProviderOwnedHeadersWin",
+  "assertProviderStreamConforms",
+  "assertRecordedStreamConforms",
+  "assertSerializedRequestCoversContent",
+  "assertStructuredOutputRequestSupported",
+  "assertToolCallDeltasReconstruct",
+  "assertUsageAccounting",
+  "baseUrlProperty",
+  "buildOpenAIChatBody",
+  "bytesToBase64",
+  "cacheHitRate",
+  "cacheSavings",
+  "cacheUsageReport",
+  "canonicalizeJsonSchema",
+  "classifyProviderFailure",
+  "collectProviderEvents",
+  "compileSystemOneQuestions",
+  "compileSystemOneState",
+  "createBoundedUploadCache",
+  "createOpenAICompatibleProvider",
+  "createRoutedProvider",
+  "createSystemOneDecisionProvider",
+  "defaultProviderFilename",
+  "defineProviderPackage",
+  "httpStatusError",
+  "isPdfMediaType",
+  "isLoopbackHost",
+  "isPlaintextRemote",
+  "isRetryableSystemOneStatus",
+  "isSupportedThinkingLevel",
+  "isSystemOneAnswer",
+  "isSystemOneResponse",
+  "isThinkingLevel",
+  "mapCacheRetention",
+  "mapOpenAIChatUsage",
+  "mapSystemOneUsage",
+  "mediaFingerprint",
+  "mergeProviderRequestOptions",
+  "modelEntrySchema",
+  "modelSupportsStructuredOutput",
+  "modelsProperty",
+  "normalizeThinkingLevel",
+  "OMITTED_TOOL_RESULT_IMAGE_NOTE",
+  "normalizeUsage",
+  "openAIChatBody",
+  "openAIChatEvents",
+  "optionalRefSource",
+  "parseErrorBody",
+  "parseJsonObjectArguments",
+  "parseRetryAfterMs",
+  "plaintextRemoteOrigin",
+  "parseThinkingLevel",
+  "postSystemOne",
+  "preserveThinking",
+  "providerConformance",
+  "providerHttpError",
+  "providerPackage",
+  "providerPackageInstance",
+  "providerUploadCacheKey",
+  "readBoundedResponseJson",
+  "readBoundedResponseText",
+  "readRetryAfterMs",
+  "readSseData",
+  "readSseEvents",
+  "reasoningEffort",
+  "reasoningObject",
+  "refSource",
+  "replayFetch",
+  "rejectProviderMediaBlock",
+  "renderSystemOneOutput",
+  "resolveBreakpoint",
+  "resolvePreserveThinking",
+  "resolvePromptCachePlan",
+  "resolveProviderApiKey",
+  "resolveProviderMediaMessages",
+  "resolveReasoningEffort",
+  "resolveReasoningObject",
+  "resolveRunProviderOptions",
+  "resolveThinkingObject",
+  "runEmbeddingsConformance",
+  "sanitizeCacheKey",
+  "secretRefProperty",
+  "serializeOpenAIChatMessage",
+  "serializeOpenAIChatStructuredOutput",
+  "serializeOpenAITool",
+  "serializePdfDocumentWireBlock",
+  "serializeToolResultText",
+  "snapThinkingLevel",
+  "stripOwnedCompat",
+  "systemCacheControlField",
+  "systemOneConformance",
+  "systemOneProviderPackage",
+  "thinkingCompatFor",
+  "thinkingFamilyForModel",
+  "thinkingLevelsForModel",
+  "thinkingObject",
+  "tryParseJsonObjectArguments",
+  "validateStructuredOutputOptions",
+  "warnIfPlaintextRemote",
+  "withoutStructuredOutput",
+];
+
+const FROZEN_DRIVER_KIT_EXPORTS: readonly string[] = [
+  "ALL_TOOL_EFFECTS",
+  "DEFAULT_ENV_ALLOWLIST",
+  "DriverError",
+  "EMPTY_VENDOR_SCHEMA",
+  "EXTERNAL_ACTIVITY_EVENTS",
+  "EXTERNAL_AGENT_SPEC_KEYS",
+  "JsonRpcError",
+  "agentEventGuards",
+  "assertDriverDescriptor",
+  "assertDriverRequires",
+  "assertIsolation",
+  "bridgeTools",
+  "buildChildEnv",
+  "createCallbackBroker",
+  "createDriverLoop",
+  "createJsonRpcPeer",
+  "createPolicyGuard",
+  "createProfiles",
+  "createRunDirectory",
+  "createStdinWriter",
+  "defineDriver",
+  "driverPackage",
+  "effectsTable",
+  "externalAgentSpecSchema",
+  "isAgentEventName",
+  "isInside",
+  "mapDiff",
+  "mapPlan",
+  "mapUsage",
+  "materializeSkills",
+  "probeBinary",
+  "readJsonl",
+  "redactedStderr",
+  "relayCommand",
+  "resolveGitExclude",
+  "resolveProtected",
+  "signalLadder",
+  "subagentScopes",
+  "writeExcludeBlock",
+];
+
+const FROZEN_MANIFEST_EXPORTS: readonly string[] = [
+  "MANIFEST_V1_SCHEMA",
+  "MAX_CLOSURE_PACKAGES",
+  "ManifestError",
+  "assignSlot",
+  "configure",
+  "hashPackageClosure",
+  "hashPackageTree",
+  "importDefinition",
+  "install",
+  "installedPackageDir",
+  "isInstalledEntry",
+  "list",
+  "loadManifest",
+  "manifestSchemaDocument",
+  "mergeManifestScopes",
+  "parseManifest",
+  "readManifest",
+  "remove",
+  "resolveUserHome",
+  "scopeDirs",
+  "setEnabled",
+  "toPackageDefinition",
+  "verify",
+  "verifyInstalled",
+  "writeManifest",
+];
+
+const FROZEN_TESTING_EXPORTS: readonly string[] = [
+  "DriverConformanceError",
+  "DEFAULT_LIVE_CACHE_PREFIX",
+  "LIVE_WEATHER_TOOL",
+  "STORE_CONFORMANCE_STEPS",
+  "assertAgentEventSourceConforms",
+  "assertPersistenceSearchQueryParity",
+  "bindManifestInstance",
+  "checkLayaServerReachable",
+  "createMemoryAgentEventSource",
+  "createMockProvider",
+  "createScriptedCli",
+  "createScriptedHostUi",
+  "defineScriptedDialect",
+  "driverConformance",
+  "echoTool",
+  "executeProviderLiveScenarios",
+  "executeSystemOneLiveScenarios",
+  "jsonRpcDialect",
+  "jsonlStreamDialect",
+  "loadProviderPackage",
+  "loopConformance",
+  "mockProvider",
+  "packageConformance",
+  "providerDone",
+  "providerTextDelta",
+  "providerToolCall",
+  "providerToolCallDelta",
+  "providerUsage",
+  "recordFixtures",
+  "runProviderLiveScenarios",
+  "runSystemOneLiveScenarios",
+  "storeConformance",
+  "textProvider",
+  "toolCallContent",
+  "twoTurnProvider",
+];
+
+// A dynamic import of kernel source by path. A literal `import("../x.ts")` needs
+// `allowImportingTsExtensions`; resolving through a URL keeps the tests on source and the tsconfig strict.
+const importSource = (relative: string) => import(new URL(relative, import.meta.url).href);
+
+// The brace-matched body of one exported interface, so a named-contract assertion cannot be satisfied
+// by a declaration in a neighbouring type.
+function interfaceBody(src: string, name: string): string {
+  const start = src.indexOf(`export interface ${name}`);
+  assert.notEqual(start, -1, `src has no export interface ${name}`);
+  let depth = 0;
+  for (let i = src.indexOf("{", start); i < src.length; i++) {
+    if (src[i] === "{") depth += 1;
+    else if (src[i] === "}") {
+      depth -= 1;
+      if (depth === 0) return src.slice(start, i + 1);
+    }
+  }
+  return src.slice(start);
+}
 
 // Parse `src/index.ts` into { value, type } export identifier sets. Mirrors the
 // extraction used to derive FROZEN_*_EXPORTS so the snapshot stays self-checking.
@@ -955,13 +909,22 @@ function extractIndexExports(src: string): { value: Set<string>; type: Set<strin
   return { value, type };
 }
 
+// Every non-test TypeScript module the kernel publishes: the declaration surface a consumer
+// sees is this source tree, since every `exports` target points at `src/**/*.ts`.
+function readShippedSource(dir = join(repoRoot, "src")): string {
+  const out: string[] = [];
+  for (const ent of readdirSync(dir, { withFileTypes: true })) {
+    if (ent.name === "__tests__" || ent.name === "fixtures") continue;
+    const full = join(dir, ent.name);
+    if (ent.isDirectory()) out.push(readShippedSource(full));
+    else if (ent.name.endsWith(".ts")) out.push(readFileSync(full, "utf8"));
+  }
+  return out.join("\n");
+}
+
 // ponytail: data-driven contract; one entry per published package (shared shape
 // with packaging.test.ts / install-smoke.test.ts). Adding a package is one line.
-const packages = [
-  { dir: ".", name: "@arnilo/prism", isCore: true },
-  { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
-];
+const packages = [{ dir: ".", name: "@arnilo/prism", isCore: true }];
 
 type Manifest = {
   exports?: Record<string, Record<string, string> | string>;
@@ -1008,6 +971,17 @@ function norm(p: string): string {
 }
 
 describe("public-export contract (build-time, pre-pack)", () => {
+  it("testing_fixture_recorder_is_exported_from_built_subpath", async () => {
+    const testing = (await import(new URL("../testing/index.ts", import.meta.url).href)) as Record<string, Record<string, unknown>>;
+    for (const method of ["command", "finish", "load"] as const) {
+      assert.equal(typeof testing.recordFixtures[method], "function");
+    }
+    const declarations = readFileSync(join(repoRoot, "src/testing/scripted-cli.ts"), "utf8");
+    assert.ok(declarations.includes("locate?"));
+    assert.ok(declarations.includes("readonly raw: string"));
+    assert.ok(declarations.includes("readonly home?: string"));
+  });
+
   it("root export surface is frozen (no silent add/remove)", async () => {
     const src = readFileSync(join(repoRoot, "src/index.ts"), "utf8");
     const { value, type } = extractIndexExports(src);
@@ -1026,32 +1000,53 @@ describe("public-export contract (build-time, pre-pack)", () => {
   it("every frozen value export resolves at runtime in the built module", async () => {
     const built = (await import("../index.js")) as Record<string, unknown>;
     const missing = FROZEN_VALUE_EXPORTS.filter((name) => built[name] === undefined);
-    assert.deepEqual(missing, [], `built dist/index.js is missing value exports: ${missing.join(", ")}`);
+    assert.deepEqual(missing, [], `src/index.ts is missing value exports: ${missing.join(", ")}`);
   });
 
-  it("every frozen type export appears in the built type declarations", () => {
-    const dts = readFileSync(join(repoRoot, "dist/index.d.ts"), "utf8");
-    const missing = FROZEN_TYPE_EXPORTS.filter((name) => !new RegExp(`\\b${name}\\b`).test(dts));
-    assert.deepEqual(missing, [], `built dist/index.d.ts is missing type exports: ${missing.join(", ")}`);
+  it("every frozen type export appears in the published declaration surface", () => {
+    const source = readShippedSource();
+    const missing = FROZEN_TYPE_EXPORTS.filter((name) => !new RegExp(`\\b${name}\\b`).test(source));
+    assert.deepEqual(missing, [], `the kernel source tree is missing type exports: ${missing.join(", ")}`);
   });
 
   it("root SDK contract type surface keeps important implementer contracts", () => {
-    const indexDts = readFileSync(join(repoRoot, "dist/index.d.ts"), "utf8");
-    // 0.1.4 split: the declarations live in the split contract d.ts modules, resolved through
-    // the contracts.d.ts barrel; scan the union so the check is layout-agnostic.
-    // 0.2.5 plan 025 Task 1: contracts-core split into contracts-core/*.d.ts; scan the tree
-    // (layout-agnostic) so the SDK contract types are found regardless of split depth.
-    const contractsDts = [
-      readFileSync(join(repoRoot, "dist/contracts.d.ts"), "utf8"),
-      readTree(join(repoRoot, "dist/contracts-core"), ".d.ts"),
-      readFileSync(join(repoRoot, "dist/contracts-run-state.d.ts"), "utf8"),
-      readFileSync(join(repoRoot, "dist/contracts-protocol.d.ts"), "utf8"),
+    const indexSource = readFileSync(join(repoRoot, "src/index.ts"), "utf8");
+    // 0.1.4 split: the declarations live in the split contract modules, resolved through the
+    // contracts.ts barrel; scan the union so the check is layout-agnostic. 0.2.5 plan 025 Task 1:
+    // contracts-core split into contracts-core/*.ts; scan the tree (layout-agnostic) so the SDK
+    // contract types are found regardless of split depth. Plan 174 Task 8: scan the TypeScript
+    // source instead of the emitted `.d.ts` — the source is what ships.
+    const contractsSource = [
+      readFileSync(join(repoRoot, "src/contracts.ts"), "utf8"),
+      readTree(join(repoRoot, "src/contracts-core"), ".ts"),
+      readFileSync(join(repoRoot, "src/contracts-run-state.ts"), "utf8"),
+      readFileSync(join(repoRoot, "src/contracts-protocol.ts"), "utf8"),
     ].join("\n");
-    assert.ok(indexDts.includes('export type * from "./contracts.js"'), "root index.d.ts must re-export contract types");
+    assert.ok(indexSource.includes('export type * from "./contracts.js"'), "src/index.ts must re-export contract types");
     const missing = REQUIRED_SDK_CONTRACT_TYPES.filter(
-      (name) => !new RegExp(`export\\s+(?:interface|type|class)\\s+${name}\\b`).test(contractsDts),
+      (name) => !new RegExp(`export\\s+(?:interface|type|class)\\s+${name}\\b`).test(contractsSource),
     );
-    assert.deepEqual(missing, [], `dist/contracts*.d.ts is missing SDK contract types: ${missing.join(", ")}`);
+    assert.deepEqual(missing, [], `src/contracts*.ts is missing SDK contract types: ${missing.join(", ")}`);
+  });
+
+  it("kernel_subpaths_removed (plan 154 Task 7)", async () => {
+    const manifest = readPkg(".");
+    for (const subpath of ["./node/trust", "./node/instruction-sources", "./node/system-prompts"]) {
+      assert.equal(manifest.exports?.[subpath], undefined, `${subpath} must not be exported from the kernel`);
+      await assert.rejects(
+        async () => await import(`@arnilo/prism/${subpath.slice(2)}`),
+        (error: unknown) =>
+          ["ERR_MODULE_NOT_FOUND", "ERR_PACKAGE_PATH_NOT_EXPORTED", "ERR_UNSUPPORTED_ESM_URL_SCHEME"].includes(
+            (error as { code?: string }).code ?? "",
+          ),
+        `${subpath} must fail to resolve`,
+      );
+    }
+    // The functions an external context/files package reuses are root exports now.
+    const prism = (await import("../index.js")) as Record<string, unknown>;
+    for (const name of ["createPathTrustPolicy", "isPathInside", "isPathInsideReal"]) {
+      assert.equal(typeof prism[name], "function", `@arnilo/prism must export ${name}`);
+    }
   });
 
   it("phase39_public_protocol_exports_and_types_do_not_drift", async () => {
@@ -1065,76 +1060,231 @@ describe("public-export contract (build-time, pre-pack)", () => {
     ].join("\n");
     assert.ok(contractsSrc.includes("export interface ToolCallDeltaContent"));
     assert.ok(readFileSync(join(repoRoot, "src/index.ts"), "utf8").includes('export type * from "./contracts.js"'));
-    assert.deepEqual(readPkg(".").exports?.["./testing"], {
-      types: "./dist/testing/index.d.ts",
-      default: "./dist/testing/index.js",
-    });
-    assert.deepEqual(readPkg(".").exports?.["./provider-kit"], {
-      types: "./dist/provider-kit/index.d.ts",
-      default: "./dist/provider-kit/index.js",
-    });
+    assert.deepEqual(readPkg(".").exports?.["./testing"], "./src/testing/index.ts");
+    assert.deepEqual(readPkg(".").exports?.["./provider-kit"], "./src/provider-kit/index.ts");
+    assert.deepEqual(readPkg(".").exports?.["./driver-kit"], "./src/driver-kit/index.ts");
 
     const hooksJson = readPkg("packages/integrations/hooks-json");
     assert.equal(hooksJson.exports?.["."], "./src/index.ts");
     assert.equal(existsSync(join(repoRoot, "packages/integrations/hooks-json/src/index.d.ts")), false);
 
-    const memoryRuntimeDts = readFileSync(join(repoRoot, "packages/memory/dist/compaction/observational-memory/runtime.d.ts"), "utf8");
-    assert.ok(memoryRuntimeDts.includes("appendEntry"), "observational-memory runtime d.ts missing appendEntry");
-    assert.equal(memoryRuntimeDts.includes("readonly store"), false, "observational-memory runtime d.ts still exposes store option");
+    // The observational-memory runtime moved to `@arnilo/prism-memory-observational` (plan 157 Task 4),
+    // its 0.12 attach surface was deleted with the family subpath (plan 157 Task 5), and the family
+    // workspace itself is deleted (plan 158 Task 6) — so the 0.12 subpath can only be gone.
+    assert.equal(
+      existsSync(join(repoRoot, "packages", "memory", "package.json")),
+      false,
+      "the @arnilo/prism-memory family workspace is deleted, not shimmed",
+    );
+    const observationalPkg = readPkg("packages/memory/observational");
+    assert.equal(observationalPkg.exports?.["."], "./src/index.ts", "the OM package is source-exported");
+  });
+
+  it("process driver publishes a TypeScript source root with its named API", async () => {
+    const pkg = readPkg("packages/drivers/process");
+    assert.equal(pkg.exports?.["."], "./src/index.ts");
+    const api = await import(new URL("../../packages/drivers/process/src/index.ts", import.meta.url).href);
+    assert.deepEqual(Object.keys(api).sort(), ["ProcessDriverError", "adapterDriver", "extendAdapter", "processDriver"].sort());
+  });
+
+  it("kernel_exports_typescript_source", () => {
+    // Plan 174 Task 8: every kernel export target is the source module itself, so there is no
+    // build step to consume it. A `dist` target (or a `types`/`default` pair) fails here.
+    const pkg = readPkg(".");
+    const exportsMap = (pkg.exports ?? {}) as Record<string, unknown>;
+    assert.ok(Object.keys(exportsMap).length > 0, "the kernel publishes an export map");
+    for (const [subpath, target] of Object.entries(exportsMap)) {
+      assert.equal(typeof target, "string", `${subpath} must map to one source target, not a types/default pair`);
+      if (target === "./manifest/schema.json") continue;
+      assert.ok(
+        (target as string).startsWith("./src/") && (target as string).endsWith(".ts"),
+        `${subpath} -> ${String(target)} must be TypeScript source, never dist`,
+      );
+      assert.ok(existsSync(join(repoRoot, (target as string).slice(2))), `${subpath} -> ${String(target)} missing from disk`);
+    }
+    assert.equal(pkg.main, undefined, "a source kernel declares no main");
+    assert.equal(pkg.types, undefined, "a source kernel declares no types");
+    assert.deepEqual(pkg.bin, { prism: "./src/cli.ts" }, "the prism bin runs TypeScript source");
   });
 
   for (const pkg of packages) {
     describe(pkg.name, () => {
       const targets = collectTargets(pkg);
       const pkgRoot = join(repoRoot, pkg.dir);
-      const distDir = join(pkgRoot, "dist");
-
-      it("dist/ exists (run `npm run build` before this test)", () => {
-        // ponytail: fail closed with a directing message instead of a cryptic ENOENT
-        assert.ok(existsSync(distDir), `${pkg.name}: dist/ missing — run \`npm run build\` first`);
-      });
 
       for (const [label, target] of targets) {
-        it(`${label} (${target}) resolves to a built file under dist/`, () => {
+        it(`${label} (${target}) resolves to a published file`, () => {
           const rel = norm(target);
-          // boundary: public targets must live under dist/ — no src/ or examples/ leak
-          // via a manifest misconfiguration.
-          assert.ok(
-            rel.startsWith("dist/") && !rel.includes("/src/") && !rel.startsWith("examples/"),
-            `${pkg.name} ${label} -> ${rel} must target dist/ (not src/ or examples/)`,
-          );
+          // Plan 174 Task 8: the kernel publishes TypeScript source, so every public target is
+          // either `src/**/*.ts` (the types and the runtime are the same file) or the emitted
+          // manifest JSON Schema. No examples/, no dist/.
+          const isSource = rel.startsWith("src/") && rel.endsWith(".ts");
+          const isSchema = rel === "manifest/schema.json";
+          assert.ok(isSource || isSchema, `${pkg.name} ${label} -> ${rel} must target src/**/*.ts or the manifest schema`);
           assert.ok(
             existsSync(join(pkgRoot, rel)),
-            `${pkg.name} ${label} -> ${rel} missing from disk (built output not found; run \`npm run build\`)`,
+            `${pkg.name} ${label} -> ${rel} missing from disk (run \`bun run build:core\` for the schema)`,
           );
         });
-
-        // types/d.ts pair check: every .js target should have a sibling .d.ts so
-        // TypeScript consumers resolve types at the published specifier.
-        const rel = norm(target);
-        if (rel.endsWith(".js")) {
-          const dts = `${rel.slice(0, -".js".length)}.d.ts`;
-          it(`${label} has a sibling .d.ts (${dts})`, () => {
-            assert.ok(
-              existsSync(join(pkgRoot, dts)),
-              `${pkg.name} ${label} -> ${rel} has no sibling ${dts} (types missing for the published specifier)`,
-            );
-          });
-        }
       }
 
-      // negative guard: NO target of any kind escapes dist/. Catches a future
-      // manifest edit that points main/exports/bin at source or examples.
-      it("no public target escapes dist/", () => {
+      // negative guard: NO target of any kind escapes the published source tree. Catches a future
+      // manifest edit that points main/exports/bin at a build output or at examples.
+      it("no public target escapes the published source tree", () => {
         for (const [label, target] of targets) {
           const rel = norm(target);
-          if (isAbsolute(target) || !rel.startsWith("dist/")) {
-            assert.fail(`${pkg.name} ${label} -> ${target} escapes dist/`);
+          if (isAbsolute(target) || !(rel.startsWith("src/") || rel === "manifest/schema.json")) {
+            assert.fail(`${pkg.name} ${label} -> ${target} escapes src/`);
           }
-          const inside = relative(join(pkgRoot, "dist"), join(pkgRoot, rel));
-          assert.ok(!inside.startsWith(".."), `${pkg.name} ${label} -> ${rel} resolves outside dist/ (-> ${inside})`);
         }
       });
     });
   }
+
+  // ---- Plan 174 Task 9: the reviewed 0.13 surface --------------------------------------------
+
+  // One row per published subpath. `target` is the manifest entry a consumer resolves, `entry` the
+  // module this test imports, `frozen` the namespace it must export exactly.
+  const subpathSurfaces = [
+    {
+      label: "provider_kit",
+      subpath: "./provider-kit",
+      target: "./src/provider-kit/index.ts",
+      entry: "../provider-kit/index.ts",
+      frozen: FROZEN_PROVIDER_KIT_EXPORTS,
+    },
+    {
+      label: "driver_kit",
+      subpath: "./driver-kit",
+      target: "./src/driver-kit/index.ts",
+      entry: "../driver-kit/index.ts",
+      frozen: FROZEN_DRIVER_KIT_EXPORTS,
+    },
+    {
+      label: "manifest",
+      subpath: "./manifest",
+      target: "./src/manifest/index.ts",
+      entry: "../manifest/index.ts",
+      frozen: FROZEN_MANIFEST_EXPORTS,
+    },
+    {
+      label: "testing",
+      subpath: "./testing",
+      target: "./src/testing/index.ts",
+      entry: "../testing/index.ts",
+      frozen: FROZEN_TESTING_EXPORTS,
+    },
+  ];
+
+  for (const surface of subpathSurfaces) {
+    it(`${surface.label}_surface_is_frozen`, async () => {
+      assert.equal(readPkg(".").exports?.[surface.subpath], surface.target, `${surface.subpath} must publish its source entry`);
+      const module = (await importSource(surface.entry)) as Record<string, unknown>;
+      assert.deepEqual(
+        Object.keys(module).sort(),
+        [...surface.frozen].sort(),
+        `${surface.subpath} surface drifted; update FROZEN_${surface.label.toUpperCase()}_EXPORTS deliberately`,
+      );
+    });
+  }
+
+  it("driver_kit_named_contract_is_frozen", async () => {
+    // §2.12.9: one row per contract the subpath owes, so a rename inside the kit fails here by name.
+    const kit = (await importSource("../driver-kit/index.ts")) as Record<string, unknown>;
+    const contracts: Readonly<Record<string, string>> = {
+      "driver contract": "defineDriver",
+      "driver package": "driverPackage",
+      "capability descriptor": "assertDriverDescriptor",
+      "requires preflight": "assertDriverRequires",
+      "isolation policy": "assertIsolation",
+      "external agent spec schema": "externalAgentSpecSchema",
+      "event name guard": "isAgentEventName",
+      "subscription profiles": "createProfiles",
+      "sign-in handoff": "createCallbackBroker",
+      "auth policy guard": "createPolicyGuard",
+      "tool bridge": "bridgeTools",
+      "configuration materializer": "materializeSkills",
+      "child environment": "buildChildEnv",
+      "run directory": "createRunDirectory",
+      "json-rpc peer": "createJsonRpcPeer",
+      "stdin writer": "createStdinWriter",
+      "diff normalization": "mapDiff",
+      "plan normalization": "mapPlan",
+      "usage normalization": "mapUsage",
+      "signal ladder": "signalLadder",
+      "subagent scopes": "subagentScopes",
+      "relay command": "relayCommand",
+    };
+    for (const [contract, name] of Object.entries(contracts)) {
+      assert.equal(typeof kit[name], "function", `driver-kit must export ${name} for the ${contract}`);
+    }
+    assert.ok(
+      Array.isArray(kit.EXTERNAL_AGENT_SPEC_KEYS) && Array.isArray(kit.ALL_TOOL_EFFECTS) && Array.isArray(kit.DEFAULT_ENV_ALLOWLIST),
+    );
+    assert.equal(typeof kit.EMPTY_VENDOR_SCHEMA, "object");
+    // §2.12.9 lists `driverConformance` with the driver kit; it ships from `./testing` so a host
+    // imports the harness without the runtime kit (§2.2 puts conformance harnesses in `testing`).
+    const testing = (await importSource("../testing/index.ts")) as Record<string, unknown>;
+    assert.equal(typeof testing.driverConformance, "function");
+  });
+
+  it("run_controller_driver_primitives_are_named", () => {
+    // §2.12.9 K2: the loop contract carries `observe`, `ask`, and `steers`, not only `turn`/`executeTools`.
+    const body = interfaceBody(readFileSync(join(repoRoot, "src/loop/types.ts"), "utf8"), "RunController");
+    for (const primitive of ["observe", "ask", "steers"]) {
+      assert.ok(new RegExp(`\\b${primitive}\\??\\s*[:<(]`).test(body), `RunController must declare the driver primitive ${primitive}`);
+    }
+    const factory = readFileSync(join(repoRoot, "src/loop/run-controller.ts"), "utf8");
+    for (const primitive of ["observe", "ask", "steers"]) {
+      assert.ok(new RegExp(`^\\s+${primitive},$`, "m").test(factory), `createRunController must return ${primitive}`);
+    }
+    assert.ok(FROZEN_TYPE_EXPORTS.includes("RunController"), "RunController is a root type export");
+  });
+
+  it("terminal_host_request_kind_is_frozen", () => {
+    // §2.12.9 K6: the one host request that runs a vendor login keeps its own kind and never
+    // carries a secret (`env` is rejected when it names a credential ref).
+    const body = interfaceBody(readFileSync(join(repoRoot, "src/host/types.ts"), "utf8"), "HostUiTerminalRequest");
+    assert.ok(body.includes('readonly kind: "terminal"'), 'HostUiTerminalRequest must declare kind: "terminal"');
+    for (const field of ["title", "command"]) assert.ok(body.includes(`readonly ${field}`), `the terminal request must carry ${field}`);
+    assert.ok(FROZEN_TYPE_EXPORTS.includes("HostUiTerminalRequest"), "the terminal request is a root type export");
+    assert.ok(FROZEN_TYPE_EXPORTS.includes("HostUiRequest"), "the terminal request is joined to HostUiRequest");
+  });
+
+  it("prism_relay_bin_is_frozen", async () => {
+    assert.deepEqual(readPkg(".").bin, { prism: "./src/cli.ts" }, "the prism bin is the source entry");
+    const relay = (await importSource("../cli-relay.ts")) as Record<string, unknown>;
+    assert.equal(typeof relay.runRelay, "function", "the relay entry point stays exported");
+    const cli = readFileSync(join(repoRoot, "src/cli.ts"), "utf8");
+    assert.ok(cli.includes('argv[0] === "relay"'), "the bin dispatches the relay subcommand");
+    assert.ok(cli.includes("./cli-relay.js"), "relay stays a dynamic import so a vendor hook loads it alone");
+  });
+
+  it("redaction_surface_is_closed", async () => {
+    // The freeze ships no helper that reads or emits a secret past the redactor: the redaction
+    // exports are exactly the reviewed set, and nothing is named like a bypass.
+    const exported = FROZEN_VALUE_EXPORTS.filter((name) => /redact/i.test(name)).sort();
+    assert.deepEqual(
+      exported,
+      [
+        "createSecretRedactor",
+        "redactAgentEvent",
+        "redactMessage",
+        "redactProviderRequest",
+        "redactRunLedgerRecord",
+        "redactSecrets",
+        "redactSessionEntry",
+        "resolveRedactor",
+      ],
+      "the redaction exports changed; a new one is a new trust boundary",
+    );
+    const bypass = /unredacted|rawsecret|leaksecret|revealsecret|bypassredact|skipredact|disableredact|plaintextsecret/i;
+    assert.deepEqual(
+      FROZEN_VALUE_EXPORTS.filter((name) => bypass.test(name)),
+      [],
+      "no export may bypass redaction",
+    );
+    const prism = (await import("../index.js")) as Record<string, unknown>;
+    for (const name of exported) assert.notEqual(prism[name], undefined, `${name} must resolve at runtime`);
+  });
 });

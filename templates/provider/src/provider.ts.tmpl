@@ -1,0 +1,29 @@
+import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
+import { createRoutedProvider } from "@arnilo/prism/provider-kit";
+import { {{providerId}}Models } from "./models.js";
+
+export const {{providerUpper}}_DEFAULT_BASE_URL = "https://api.{{providerId}}.example/v1";
+
+export interface {{providerPascal}}ProviderOptions {
+  readonly id?: string;
+  readonly baseUrl?: string;
+  readonly apiKey?: CredentialValueSource;
+  readonly fetch?: typeof fetch;
+}
+
+export function create{{providerPascal}}Provider(options: {{providerPascal}}ProviderOptions = {}): ModelProvider {
+  return createRoutedProvider({
+    id: options.id ?? "{{providerId}}",
+    baseUrl: (options.baseUrl ?? {{providerUpper}}_DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    apiKey: options.apiKey,
+    fetch: options.fetch,
+    models: () => Promise.resolve({{providerId}}Models),
+    routes: {
+      openai: {
+        format: "openai-chat",
+        path: "/chat/completions",
+        auth: "bearer",
+      },
+    },
+  });
+}

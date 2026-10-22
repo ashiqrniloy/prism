@@ -4,7 +4,7 @@ import type { ToolCallContent, ToolDefinition, ToolEffectKey, ToolEffectStore } 
 import {
   askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
+  
   createMemorySessionStore,
   createMemoryToolEffectStore,
   createSecretRedactor,
@@ -12,7 +12,7 @@ import {
   dispatchToolCall,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
+  
   toolCallContent,
 } from "../index.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
@@ -349,7 +349,6 @@ describe("tool effect dispatch", () => {
   });
 
   it("uses an agent-configured store after durable approval without opening a safe replay window", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const store = createMemoryToolEffectStore();
     let calls = 0;
     let turns = 0;
@@ -375,18 +374,15 @@ describe("tool effect dispatch", () => {
       }])],
       tools: { add: [mutation(() => ({ toolCallId: "call", name: "mutate", value: ++calls }))] },
     });
-    const suspended = await (await agent.session({ id: "effect-durable-session", create: true })).run("go", {
-      runState: { checkpoints, definitionRevision: "1" },
-    });
+    const session = await agent.session({ id: "effect-durable-session", create: true });
+    const suspended = await session.run("go");
     assert.equal(suspended.status, "suspended");
     assert.equal(calls, 0);
-    const resumed = await resumeAgentRun(
-      agent,
-      { runId: suspended.runId, sessionId: suspended.sessionId },
-      { decision: "approve", expectedVersion: suspended.runState!.version! },
-      { checkpoints, definitionRevision: "1", ownership },
-    );
-    assert.equal(resumed.status, "completed");
+    for await (const _event of session.resume(
+      suspended.pending!.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
+    )) {
+      // drain: the resumed leg executes the gated tool exactly once
+    }
     assert.equal(calls, 1);
   });
 

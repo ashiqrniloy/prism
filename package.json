@@ -1,103 +1,33 @@
 {
   "name": "@arnilo/prism",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Agent harness for AI providers, agents, sessions, and tools.",
   "type": "module",
   "packageManager": "bun@1.4.2",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./provider-kit": {
-      "types": "./dist/provider-kit/index.d.ts",
-      "default": "./dist/provider-kit/index.js"
-    },
-    "./manifest": {
-      "types": "./dist/manifest/index.d.ts",
-      "default": "./dist/manifest/index.js"
-    },
-    "./manifest/schema.json": "./dist/manifest/packages.v1.schema.json",
-    "./testing": {
-      "types": "./dist/testing/index.d.ts",
-      "default": "./dist/testing/index.js"
-    },
-    "./testing/agent-event-source-conformance": {
-      "types": "./dist/testing/agent-event-source-conformance.d.ts",
-      "default": "./dist/testing/agent-event-source-conformance.js"
-    },
-    "./testing/state-concurrency-conformance": {
-      "types": "./dist/testing/state-concurrency-conformance.d.ts",
-      "default": "./dist/testing/state-concurrency-conformance.js"
-    },
-    "./testing/compaction-conformance": {
-      "types": "./dist/testing/compaction-conformance.d.ts",
-      "default": "./dist/testing/compaction-conformance.js"
-    },
-    "./testing/prefix-stability-conformance": {
-      "types": "./dist/testing/prefix-stability-conformance.d.ts",
-      "default": "./dist/testing/prefix-stability-conformance.js"
-    },
-    "./testing/tool-conformance": {
-      "types": "./dist/testing/tool-conformance.d.ts",
-      "default": "./dist/testing/tool-conformance.js"
-    },
-    "./testing/tool-effect-store-conformance": {
-      "types": "./dist/testing/tool-effect-store-conformance.d.ts",
-      "default": "./dist/testing/tool-effect-store-conformance.js"
-    },
-    "./testing/persistence-schema": {
-      "types": "./dist/testing/persistence-schema.d.ts",
-      "default": "./dist/testing/persistence-schema.js"
-    },
-    "./testing/run-ledger-conformance": {
-      "types": "./dist/testing/run-ledger-conformance.d.ts",
-      "default": "./dist/testing/run-ledger-conformance.js"
-    },
-    "./testing/feedback": {
-      "types": "./dist/testing/feedback.d.ts",
-      "default": "./dist/testing/feedback.js"
-    },
-    "./node/config": {
-      "types": "./dist/node/config.d.ts",
-      "default": "./dist/node/config.js"
-    },
-    "./node/settings": {
-      "types": "./dist/node/settings.d.ts",
-      "default": "./dist/node/settings.js"
-    },
-    "./node/trust": {
-      "types": "./dist/node/trust.d.ts",
-      "default": "./dist/node/trust.js"
-    },
-    "./node/contribution-discovery": {
-      "types": "./dist/node/contribution-discovery.d.ts",
-      "default": "./dist/node/contribution-discovery.js"
-    },
-    "./node/instruction-sources": {
-      "types": "./dist/node/instruction-sources.d.ts",
-      "default": "./dist/node/instruction-sources.js"
-    },
-    "./node/system-prompts": {
-      "types": "./dist/node/system-project-prompts.d.ts",
-      "default": "./dist/node/system-project-prompts.js"
-    },
-    "./node/agent-definitions": {
-      "types": "./dist/node/agent-definitions.d.ts",
-      "default": "./dist/node/agent-definitions.js"
-    }
+    ".": "./src/index.ts",
+    "./provider-kit": "./src/provider-kit/index.ts",
+    "./driver-kit": "./src/driver-kit/index.ts",
+    "./manifest": "./src/manifest/index.ts",
+    "./manifest/schema.json": "./manifest/schema.json",
+    "./testing": "./src/testing/index.ts",
+    "./testing/state-concurrency-conformance": "./src/testing/state-concurrency-conformance.ts",
+    "./testing/compaction-conformance": "./src/testing/compaction-conformance.ts",
+    "./testing/prefix-stability-conformance": "./src/testing/prefix-stability-conformance.ts",
+    "./testing/tool-conformance": "./src/testing/tool-conformance.ts",
+    "./testing/tool-effect-store-conformance": "./src/testing/tool-effect-store-conformance.ts",
+    "./testing/run-ledger-conformance": "./src/testing/run-ledger-conformance.ts",
+    "./node/contribution-discovery": "./src/node/contribution-discovery.ts"
   },
   "bin": {
-    "prism": "dist/cli.js"
+    "prism": "./src/cli.ts"
   },
   "files": [
-    "dist",
-    "!dist/**/__tests__",
-    "!dist/**/*.map",
+    "src",
+    "!src/**/__tests__",
+    "!src/**/*.map",
+    "manifest/schema.json",
     "docs",
-    "!docs/next",
     "!docs/_evidence",
     "!docs/release-*-evidence.md",
     "!docs/api-page-template.md",
@@ -105,49 +35,45 @@
     "CHANGELOG.md"
   ],
   "workspaces": [
-    "packages/mcp",
+    "packages/context/*",
+    "packages/credentials/*",
+    "packages/drivers/*",
+    "packages/hosts/*",
+    "packages/integrations/*",
+    "packages/memory/*",
+    "packages/policy/*",
     "packages/providers/*",
     "packages/stores/*",
-    "packages/credentials/*",
-    "packages/memory",
-    "packages/prism-work",
-    "packages/prism-core",
-    "packages/prism-channels",
-    "packages/prism-coding-tools",
-    "packages/ag-ui",
-    "packages/web-tools",
-    "packages/acp-agent",
-    "packages/integrations/hooks-json",
-    "packages/agent-sdk",
-    "packages/prism-code"
+    "packages/tools/*",
+    "apps/*"
   ],
   "scripts": {
     "build:core": "bun scripts/with-build-lock.mjs tsc && bun scripts/emit-manifest-schema.mjs",
-    "clean": "rm -rf dist packages/*/dist",
-    "build": "bun run build:core && for p in @arnilo/prism-mcp @arnilo/prism-memory @arnilo/prism-work @arnilo/prism-core @arnilo/prism-channels @arnilo/prism-coding-tools @arnilo/prism-ag-ui @arnilo/prism-web-tools @arnilo/prism-acp-agent @arnilo/prism-agent-sdk @arnilo/prism-code; do bun run --filter \"$p\" build || exit 1; done",
+    "clean": "rm -rf .types manifest/schema.json",
+    "build": "bun run build:core",
     "typecheck": "bun run build && bun run --workspaces --if-present typecheck && tsc -p examples --noEmit",
     "sweep:unused": "bun scripts/sweep-unused.mjs --json",
     "test:live": "bun scripts/live-matrix.mjs",
     "test": "bun scripts/run-all-tests.mjs",
-    "test:coverage": "bun scripts/with-build-lock.mjs bun test --coverage --timeout=0 --path-ignore-patterns=packages/** dist/__tests__/*.test.js > node_modules/.prism-core-coverage.out 2>&1; core_exit=$?; cat node_modules/.prism-core-coverage.out; PRISM_COVERAGE_CORE_OUTPUT=node_modules/.prism-core-coverage.out PRISM_COVERAGE_CORE_EXIT=$core_exit bun scripts/with-build-lock.mjs bun scripts/coverage-summary.mjs && bun test --timeout=0 scripts/phase23-coverage.test.mjs && bun test --timeout=0 scripts/phase23-skip-manifest.test.mjs; stage_exit=$?; rm -f node_modules/.prism-core-coverage.out; exit $stage_exit",
+    "test:coverage": "bun scripts/with-build-lock.mjs bun test --coverage --timeout=0 --path-ignore-patterns=packages/** src > node_modules/.prism-core-coverage.out 2>&1; core_exit=$?; cat node_modules/.prism-core-coverage.out; PRISM_COVERAGE_CORE_OUTPUT=node_modules/.prism-core-coverage.out PRISM_COVERAGE_CORE_EXIT=$core_exit bun scripts/with-build-lock.mjs bun scripts/coverage-summary.mjs && bun test --timeout=0 scripts/phase23-coverage.test.mjs && bun test --timeout=0 scripts/phase23-skip-manifest.test.mjs; stage_exit=$?; rm -f node_modules/.prism-core-coverage.out; if [ $core_exit -ne 0 ]; then echo \"core coverage run failed (exit $core_exit)\" >&2; exit $core_exit; fi; exit $stage_exit",
     "coverage:summary": "bun scripts/with-build-lock.mjs bun scripts/coverage-summary.mjs",
     "lint": "biome lint . --reporter=sarif --reporter-file=scripts/lint-report.sarif",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "pack:dry-run": "npm pack --dry-run && bun run --filter '*' pack:dry-run",
+    "pack:dry-run": "bun pm pack --dry-run && bun run --filter '*' pack:dry-run",
     "test:postgres": "bun scripts/postgres-evidence.mjs",
-    "test:postgres:run": "bun scripts/require-postgres-url.mjs && bun run --filter @arnilo/prism-core test:postgres && bun run --filter @arnilo/prism-store-postgres test:postgres && bun run --filter @arnilo/prism-memory test:postgres && bun run --filter @arnilo/prism-channels test:postgres && bun test --timeout=0 scripts/phase7-conformance.test.mjs scripts/phase12-restart-recovery.test.mjs scripts/phase22-conformance.test.mjs",
-    "test:nats": "bun scripts/require-nats-url.mjs && bun run --filter @arnilo/prism-core test:nats",
+    "test:postgres:run": "bun scripts/require-postgres-url.mjs && bun run --filter @arnilo/prism-store-postgres test:postgres && bun run --filter @arnilo/prism-channels test:postgres && bun test --timeout=0 scripts/phase7-conformance.test.mjs scripts/phase22-conformance.test.mjs",
     "release:dry-run": "bun run sdk:ready",
     "post-publish:smoke": "bun scripts/post-publish-smoke.mjs",
     "release:check": "bun scripts/release.mjs check",
     "release:publish": "bun scripts/release.mjs publish",
     "release:evidence": "bun scripts/release-skip-manifest.mjs",
     "sdk:ready": "bun run typecheck && bun run lint && bun run format:check && bun run test && bun run test:coverage && bun run pack:dry-run && bun run release:gate",
-    "release:gate": "bun scripts/release-skip-manifest.mjs && bun scripts/check-client-neutrality.mjs && bun scripts/release.mjs gate",
-    "security:threat-suites": "bun test --timeout=0 scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase10-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs scripts/phase22-security.test.mjs scripts/phase23-security.test.mjs scripts/phase38-codeql-regression.test.mjs scripts/phase40-security.test.mjs scripts/phase46-webhooks-security.test.mjs dist/__tests__/pinned-fetch.test.js packages/prism-core/dist/runtime/server/__tests__/webhooks.test.js"
+    "release:gate": "bun scripts/release-skip-manifest.mjs && bun scripts/check-client-neutrality.mjs && bun run --filter @arnilo/prism-agent test && bun run --filter @arnilo/prism-driver-process test && bun examples/adapters/conformance.ts && bun test --timeout=0 src/__tests__/driver-kit-vendor-neutral.test.ts src/__tests__/kernel-constraints.test.ts && bun test --timeout=0 scripts/install-idempotence.test.mjs && bun scripts/release.mjs gate",
+    "security:threat-suites": "bun test --timeout=0 scripts/phase8-conformance.test.mjs scripts/phase9-conformance.test.mjs scripts/phase11-conformance.test.mjs scripts/phase20-security.test.mjs scripts/phase21-security.test.mjs scripts/phase22-security.test.mjs scripts/phase23-security.test.mjs scripts/phase38-codeql-regression.test.mjs src/__tests__/pinned-fetch.test.ts"
   },
   "devDependencies": {
+    "@arnilo/prism": "file:.",
     "@biomejs/biome": "^2.5.13",
     "@types/bun": "^1.4.2",
     "@types/node": "^22.20.0",
@@ -175,7 +101,7 @@
     "chatbot"
   ],
   "sideEffects": [
-    "dist/cli.js"
+    "src/cli.ts"
   ],
   "publishConfig": {
     "access": "public"

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PersistenceLifecycleError } from "@arnilo/prism";
+import { PersistenceLifecycleError } from "@arnilo/prism-store-codecs";
 import { createSqlitePersistence } from "../index.js";
 
 const dirs: string[] = [];

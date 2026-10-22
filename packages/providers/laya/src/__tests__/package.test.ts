@@ -78,30 +78,40 @@ describe("@arnilo/prism-provider-laya package", () => {
     assert.equal(layaDefinition.config?.properties?.apiKey?.["x-prism-secret"], true);
   });
 
-  it("laya_missing_key_notes_status_and_still_registers_the_provider", async () => {
+  it("laya_without_key_sends_no_auth_and_notes_nothing", async () => {
+    let capturedAuth: string | null = "initial";
     const agent = await createAgent({
       model: { provider: "laya", model: model.model },
-      packages: [laya({ apiKey: UNSET_REF })],
+      packages: [
+        laya({
+          apiKey: UNSET_REF,
+          fetch: (async (_input: unknown, init?: RequestInit) => {
+            capturedAuth = new Headers(init?.headers).get("authorization");
+            return ok(completion());
+          }) as typeof fetch,
+        }),
+      ],
     });
     try {
-      const notes = agent.inspect().statusNotes.filter((note) => note.message === `laya: no API key at ${UNSET_REF}`);
-      assert.equal(notes.length, 1, "a missing key is a status note, not a failed load");
-      assert.equal(notes[0]?.level, "warn");
+      const notes = agent.inspect().statusNotes.filter((note) => note.message.includes("no API key"));
+      assert.equal(notes.length, 0, "a missing key notes nothing for Laya");
       // Registration and the curated catalog must not depend on the credential.
       const listed = await agent.models.list();
       assert.ok(listed.some((entry) => entry.model === model.model), "the catalog still lists");
-      // The decision gate runs before credential resolution, so a plain session run fails on the
-      // gate (never on `Unknown provider`); the unresolvable ref still throws inside `generate`.
-      const session = await agent.session();
-      const result = await session.run("hi");
-      assert.equal(result.status, "failed");
-      const message = String((result as { error?: { message?: string } }).error?.message);
-      assert.match(message, /options\.structuredOutput/);
-      assert.doesNotMatch(message, /Unknown provider/);
+
+      const events = await collectProviderEvents(createLayaProvider({
+        fetch: (async (_input: unknown, init?: RequestInit) => {
+          capturedAuth = new Headers(init?.headers).get("authorization");
+          return ok(completion());
+        }) as typeof fetch,
+      }), request);
+      assert.equal(capturedAuth, null, "sends no authorization header without key");
+      assert.equal(events.at(-1)?.type, "done");
     } finally {
       await agent.dispose();
     }
   });
+
 
   it("laya_literal_api_key_fails_config_validation", async () => {
     await assert.rejects(

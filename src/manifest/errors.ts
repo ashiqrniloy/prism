@@ -43,6 +43,7 @@ export interface ManifestErrorOptions {
   /** The field inside the manifest, as a JSON pointer. */
   readonly field?: string;
   readonly package?: string;
+  readonly dependency?: string;
 }
 
 /**
@@ -55,6 +56,7 @@ export class ManifestError extends Error {
   readonly path?: string;
   readonly field?: string;
   readonly package?: string;
+  readonly dependency?: string;
 
   constructor(code: ManifestErrorCode, message: string, options: ManifestErrorOptions = {}) {
     super(message);
@@ -64,5 +66,6 @@ export class ManifestError extends Error {
     if (options.path !== undefined) this.path = options.path;
     if (options.field !== undefined) this.field = options.field;
     if (options.package !== undefined) this.package = options.package;
+    if (options.dependency !== undefined) this.dependency = options.dependency;
   }
 }

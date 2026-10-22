@@ -1,13 +1,20 @@
-import type { CacheUsageReport } from "./cache-helpers.js";
-import type { CheckpointRestoreAudit } from "./checkpoint-restore.js";
+import type { CacheUsageReport } from "./provider-kit/cache-helpers.js";
+
+/** One hook that completed during a restore. The runner lives in `@arnilo/prism-workflows`. */
+export interface CheckpointRestoreAuditEntry {
+  readonly hook: string;
+  readonly durationMs: number;
+}
+
+/** Audit of a completed restore: every hook that ran, in order. */
+export interface CheckpointRestoreAudit {
+  readonly hooks: readonly CheckpointRestoreAuditEntry[];
+  readonly durationMs: number;
+}
 import type {
-  ArtifactValidation,
-  BudgetAxisUsage,
-  BudgetConsumedCounters,
   CompactionOptions,
   ContentBlock,
   ErrorInfo,
-  GuardrailRecord,
   JsonObject,
   JsonValue,
   Message,
@@ -16,22 +23,17 @@ import type {
   ModelSpec,
   OwnershipScope,
   ProviderRequestOptions,
-  ProviderResolver,
   ProviderStopReason,
   RetryOptions,
   RunLimitBreach,
-  RunLimitName,
   RunLimits,
-  Skill,
-  SubscriberOverflowPolicy,
   SystemPromptConfig,
   ToolCallAuthority,
   ToolCallContent,
-  ToolCallSummary,
   TurnBudgets,
   Usage,
 } from "./contracts-core.js";
-import type { AgentRunInterruption, AgentRunStateOptions, PendingDecision } from "./contracts-run-state.js";
+import type { AgentRunInterruption, PendingDecision } from "./contracts-run-state.js";
 import type { BudgetExhaustionAttribution } from "./run-limits.js";
 import type { SecretRedactor } from "./redaction.js";
 import type { ToolValidator } from "./tools.js";
@@ -53,18 +55,6 @@ export type ProviderEvent =
   | { readonly type: "done"; readonly usage?: Usage; readonly stopReason?: ProviderStopReason }
   | { readonly type: "error"; readonly error: ErrorInfo };
 
-export type RealtimeEvent =
-  | { readonly type: "session_started"; readonly sessionId?: string }
-  | { readonly type: "audio_delta"; readonly audio: Uint8Array }
-  | { readonly type: "transcript_delta"; readonly text: string; readonly role: "user" | "assistant" }
-  | { readonly type: "tool_call"; readonly call: ToolCallContent }
-  | { readonly type: "usage"; readonly usage: Usage }
-  | { readonly type: "interrupted" }
-  | { readonly type: "session_closed"; readonly reason?: string }
-  | { readonly type: "error"; readonly error: ErrorInfo };
-
-/** Neutral bidirectional realtime session seam. The provider owns the transport
- *  (e.g. WebSocket); the host owns audio capture/playback and session lifecycle. */
 export type InputAssemblyLayout = "legacy" | "cache_aware";
 
 /** Opaque provenance ref for the resolved prompt version that produced a run
@@ -93,17 +83,24 @@ export interface RunOptions {
   readonly metadata?: Readonly<Record<string, unknown>>;
   /**
    * Whether this run may ask the host a question (roadmap §2.4). Defaults to `true` when the agent
-   * has a `HostUi`. `false` makes every `host.ui` request answer `unavailable` and an `ask` suspend
-   * the run without a prompt, so an ACP/AG-UI host can hold a queued decision it cannot yet show.
+   * has a `HostUi`. `false` skips only the kernel ask confirm (`resolveAskDecisions`); the ask suspends
+   * without a prompt. Package `host.ui` requests still reach the host. An ACP/AG-UI host uses that to
+   * answer approvals through `session.resume` instead of a boolean confirm.
    */
   readonly interactive?: boolean;
   readonly redactor?: SecretRedactor;
   readonly runLedger?: RunLedger;
   /** Optional durable recovery store. Per-run value overrides this agent default. */
   readonly effectStore?: ToolEffectStore;
+  /**
+   * Narrows the session's effective ownership scope for this run (plan 177 Task 4): it may add fields the
+   * session left undefined or repeat them, but a field that changes the session's value throws
+   * `OwnershipScopeError` (`ERR_PRISM_OWNERSHIP_WIDEN`) before any event. The branch is re-checked against
+   * the effective scope before the run writes anything.
+   */
   readonly ownership?: OwnershipScope;
   /** Opaque host principal; overrides the agent default without kernel verification. */
-  readonly principal?: import("./identity.js").Principal;
+  readonly principal?: import("./contracts-core/principal.js").Principal;
   readonly idempotencyKey?: string;
   readonly validate?: ToolValidator;
   /**
@@ -112,21 +109,9 @@ export interface RunOptions {
    * checkpointed grant; resume intersects this list with current authority.
    */
   readonly tools?: { readonly only?: readonly string[] };
-  /** Tools disclosure: "all" (default) sends every active tool schema; "search" sends top-k + the generated `search_tools` tool. */
-  readonly toolsDisclosure?: import("./tool-search.js").ToolsDisclosure;
   /** Opt-in: tools hidden by `RunOptions.tools` stay callable by name (default off). Overrides agent config. */
   readonly allowHiddenToolCalls?: true;
-  readonly toolsSearch?: import("./tool-search.js").ToolsSearchOptions;
-  /** Opt-in projection-only fold for aged large tool results in provider view; store untouched. */
-  readonly toolResultFold?: import("./tool-result-fold.js").ToolResultFoldOptions;
-  /** Per-run overlay for `AgentConfig.attentionCompiler` (plan 074 C12): `false` disables the
-   *  compiler for this run, `true` is a no-op, an object may only relax the agent setting
-   *  (gate ratios up, `keepLast`/`thinkingKeepTurns` down, `excludeTools` extended). Enabling
-   *  the compiler where the agent config left it off throws before the first provider turn. */
-  readonly attentionCompiler?: import("./contracts-core/attention.js").AttentionCompilerSetting;
   readonly inputLayout?: InputAssemblyLayout;
-  /** Opt-in durable interruption/checkpointing. */
-  readonly runState?: AgentRunStateOptions;
   /** Prompt provenance: copied verbatim onto this run's start and finish ledger records. */
   readonly promptVersion?: PromptVersionRef;
 }
@@ -198,17 +183,26 @@ export interface DelegatedAgentStepData {
 export type AgentFinishReason = "turn_limit" | "token_limit" | "refusal" | "hook_limit" | "hook_stop" | "denied";
 
 /**
- * Origin of an agent event forwarded from a delegated child (supervisor child-event passthrough).
- * Present only on child events routed onto a parent stream; absent on a session's own events.
+ * Where an event came from (K3). Absent means "this agent, executed by Prism". `vendor` is an
+ * opaque string set by the driver; `profile` is a profile name, never a credential.
  */
-export interface ChildEventOrigin {
-  readonly childId: string;
-  readonly delegationId: string;
-  /** Delegation depth: 1 is a direct child of the hosting supervisor. */
+export interface EventOrigin {
+  readonly kind: "prism" | "external";
+  readonly agent: string;
+  readonly vendor?: string;
+  readonly profile?: string;
+  readonly agentId: string;
+  readonly remote?: string;
+  readonly delegationId?: string;
+  readonly parentSessionId?: string;
+  readonly parentToolCallId?: string;
+  readonly subagentId?: string;
+  /** Nesting depth: 0 is the run's own agent, 1 a direct subagent. */
   readonly depth: number;
+  readonly executedBy?: "prism" | "external";
 }
 
-/** Payload union of every agent event; the exported `AgentEvent` adds the optional child origin tag. */
+/** Payload union of every agent event; the exported `AgentEvent` adds the optional `origin` tag. */
 /**
  * The frozen event catalog (roadmap §2.3). Every member is also an observe hook of the same
  * name (`src/hooks/catalog.ts`), and no other name is legal: `OBSERVE_HOOKS` is keyed by this
@@ -437,11 +431,33 @@ export type AgentEventPayload =
     };
 
 /**
- * One agent event. `child` is set only when the event was forwarded from a delegated child
- * (e.g. supervisor `report: "stream"` passthrough), so hosts can route it onto a parent stream
- * without per-event-type special cases. It never replaces the event's own `sessionId`/`runId`.
+ * One agent event. `origin` is set when the event did not come from this agent's own Prism
+ * loop (driver-observed activity, forwarded subagent work). It never replaces the event's own
+ * `sessionId`/`runId`.
  */
-export type AgentEvent = AgentEventPayload & { readonly child?: ChildEventOrigin };
+export type AgentEvent = AgentEventPayload & { readonly origin?: EventOrigin };
+
+export type AgentEventSourceErrorCode =
+  | "ERR_PRISM_AGENT_EVENT_SOURCE_INPUT"
+  | "ERR_PRISM_AGENT_EVENT_SOURCE_CURSOR"
+  | "ERR_PRISM_AGENT_EVENT_SOURCE_RETENTION"
+  | "ERR_PRISM_AGENT_EVENT_SOURCE_OVERFLOW"
+  | "ERR_PRISM_AGENT_EVENT_SOURCE_CLOSED";
+
+export class AgentEventSourceError extends Error {
+  constructor(
+    readonly code: AgentEventSourceErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "AgentEventSourceError";
+  }
+}
+
+/** A run stream ends on its outcome. A run-limit death is already `run.failed`. */
+export function isTerminalAgentEventType(type: AgentEvent["type"]): boolean {
+  return type === "run.completed" || type === "run.failed";
+}
 
 export type ToolEffectKind = "none" | "local_mutation" | "external_mutation";
 
@@ -516,7 +532,7 @@ export interface ToolExecutionContext {
   readonly signal?: AbortSignal;
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Opaque host principal, passed through unchanged. */
-  readonly principal?: import("./identity.js").Principal;
+  readonly principal?: import("./contracts-core/principal.js").Principal;
   /** Core-derived stable effect key. Never accept a model-supplied key as authority. */
   readonly idempotencyKey?: string;
   /** The session as the executing tool's owner sees it (`when` predicates and package tools). */

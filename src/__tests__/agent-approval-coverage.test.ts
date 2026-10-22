@@ -10,7 +10,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
 import {
-  assertValidAgentRunResume,
   decisionPrincipalRef,
   decisionScopesEqual,
   nestedApprovalId,
@@ -24,9 +23,7 @@ import {
   type Agent,
   AgentDecisionError,
   DEFAULT_MAX_STICKY_DECISIONS,
-  HARD_MAX_PENDING_DECISIONS,
   MAX_DECISION_REASON_BYTES,
-  MAX_ELICITATION_BYTES,
   type PendingDecision,
   type StickyDecision,
 } from "../contracts.js";
@@ -115,113 +112,6 @@ test("pendingDecisionsOf falls back to the default reason when the legacy state 
 
 test("pendingDecisionsOf returns undefined when no pending decisions or legacy pending", () => {
   assert.equal(pendingDecisionsOf(baseState()), undefined);
-});
-
-// ── assertValidAgentRunResume: legacy-migration gate + every validation branch ──
-
-test("assertValidAgentRunResume accepts the legacy single decision: approve", () => {
-  assert.doesNotThrow(() => assertValidAgentRunResume({ expectedVersion: 3, decision: "approve" }));
-});
-
-test("assertValidAgentRunResume accepts the legacy single decision: deny", () => {
-  assert.doesNotThrow(() => assertValidAgentRunResume({ expectedVersion: 3, decision: "deny" }));
-});
-
-test("assertValidAgentRunResume accepts a valid decision batch", () => {
-  assert.doesNotThrow(() =>
-    assertValidAgentRunResume({
-      expectedVersion: 2,
-      decisions: [
-        { approvalId: "a1", outcome: "allow_once" },
-        { approvalId: "a2", outcome: "reject_for_run", reason: "no" },
-      ],
-    }),
-  );
-});
-
-for (const [label, resume] of [
-  ["null resume", null],
-  ["array resume", [1, 2]],
-  ["non-positive expectedVersion", { expectedVersion: 0, decision: "approve" }],
-  ["non-integer expectedVersion", { expectedVersion: 1.5, decision: "approve" }],
-  ["both decision and decisions", { expectedVersion: 1, decision: "approve", decisions: [] }],
-  ["neither decision nor decisions", { expectedVersion: 1 }],
-  ["unknown legacy decision", { expectedVersion: 1, decision: "maybe" }],
-  ["decisions not an array", { expectedVersion: 1, decisions: "approve" }],
-  ["empty decisions batch", { expectedVersion: 1, decisions: [] }],
-]) {
-  test(`assertValidAgentRunResume rejects ${label}`, () => {
-    assert.throws(() => assertValidAgentRunResume(resume as never), AgentDecisionError);
-  });
-}
-
-test("assertValidAgentRunResume rejects a batch exceeding HARD_MAX_PENDING_DECISIONS", () => {
-  const decisions = Array.from({ length: HARD_MAX_PENDING_DECISIONS + 1 }, (_, i) => ({
-    approvalId: `a${i}`,
-    outcome: "allow_once" as const,
-  }));
-  assert.throws(
-    () => assertValidAgentRunResume({ expectedVersion: 1, decisions }),
-    (err: AgentDecisionError) => err.code === "ERR_PRISM_DECISION_LIMIT",
-  );
-});
-
-for (const [label, decision] of [
-  ["non-object entry", "nope"],
-  ["empty approvalId", { approvalId: "", outcome: "allow_once" }],
-  ["oversize approvalId", { approvalId: "x".repeat(129), outcome: "allow_once" }],
-  ["duplicate approvalId", { approvalId: "dup", outcome: "allow_once" }],
-  ["unknown outcome", { approvalId: "a", outcome: "maybe" }],
-  ["non-string reason", { approvalId: "a", outcome: "allow_once", reason: 7 }],
-]) {
-  test(`assertValidAgentRunResume rejects a batch entry: ${label}`, () => {
-    const decisions =
-      label === "duplicate approvalId" ? [{ approvalId: "dup", outcome: "allow_once" as const }, decision as never] : [decision as never];
-    assert.throws(() => assertValidAgentRunResume({ expectedVersion: 1, decisions }), AgentDecisionError);
-  });
-}
-
-test("assertValidAgentRunResume rejects an oversize reason", () => {
-  assert.throws(
-    () =>
-      assertValidAgentRunResume({
-        expectedVersion: 1,
-        decisions: [{ approvalId: "a", outcome: "allow_once", reason: "x".repeat(MAX_DECISION_REASON_BYTES + 1) }],
-      }),
-    (err: AgentDecisionError) => err.code === "ERR_PRISM_DECISION_LIMIT",
-  );
-});
-
-test("assertValidAgentRunResume rejects non-object modifiedArguments/elicitation", () => {
-  assert.throws(
-    () =>
-      assertValidAgentRunResume({
-        expectedVersion: 1,
-        decisions: [{ approvalId: "a", outcome: "allow_once", modifiedArguments: null as never }],
-      }),
-    AgentDecisionError,
-  );
-  assert.throws(
-    () =>
-      assertValidAgentRunResume({
-        expectedVersion: 1,
-        decisions: [{ approvalId: "a", outcome: "allow_once", elicitation: "str" as never }],
-      }),
-    AgentDecisionError,
-  );
-});
-
-test("assertValidAgentRunResume rejects oversize modifiedArguments/elicitation payloads", () => {
-  const big = { blob: "x".repeat(MAX_ELICITATION_BYTES + 1) };
-  assert.throws(
-    () =>
-      assertValidAgentRunResume({ expectedVersion: 1, decisions: [{ approvalId: "a", outcome: "allow_once", modifiedArguments: big }] }),
-    (err: AgentDecisionError) => err.code === "ERR_PRISM_DECISION_LIMIT",
-  );
-  assert.throws(
-    () => assertValidAgentRunResume({ expectedVersion: 1, decisions: [{ approvalId: "a", outcome: "allow_once", elicitation: big }] }),
-    (err: AgentDecisionError) => err.code === "ERR_PRISM_DECISION_LIMIT",
-  );
 });
 
 // ── resolveRunDecisions: approve/deny/sticky + unknown/duplicate/limits/scope ──

@@ -5,8 +5,8 @@
  * handling (`--modify-path`), and unsupported platforms.
  *
  * The host `sh` leg runs in the gate chain (no network, no docker) and covers the glibc path. The
- * Alpine musl leg runs when `PRISM_INSTALL_SH_DOCKER=1` and docker is available — the binaries
- * workflow sets it; `apk add curl` is the only network access there.
+ * Alpine musl leg runs when `PRISM_INSTALL_SH_DOCKER=1` and docker is available; `apk add curl` is
+ * the only network access there.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -16,12 +16,40 @@ import { createServer } from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
-import { TARGETS, tarEntries } from "./build-prism-code-binaries.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const INSTALL_SH = join(ROOT, "install.sh");
 const RELEASES_PATH = "/releases/download";
 const DOCKER = process.env.PRISM_TEST_DOCKER_BIN ?? "docker";
+
+// Plan 173 Task 8: the binary build script that used to export these was deleted with
+// `packages/prism-code`; install.sh still downloads the published 0.4.1 release, so the
+// fixture server needs the same release-target list and a deterministic ustar writer.
+const RELEASE_TARGETS = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-arm64-musl", "linux-x64", "linux-x64-musl"];
+
+/** Minimal deterministic ustar writer: regular files only, owner 0/0, fixed mtime. */
+function tarEntries(entries, mtime) {
+  const blocks = [];
+  for (const { name, data, mode } of entries) {
+    const header = Buffer.alloc(512);
+    header.write(name, 0, 100, "utf8");
+    header.write(`${mode.toString(8).padStart(7, "0")}\0`, 100, 8, "ascii");
+    header.write("0000000\0", 108, 8, "ascii");
+    header.write("0000000\0", 116, 8, "ascii");
+    header.write(`${data.length.toString(8).padStart(11, "0")}\0`, 124, 12, "ascii");
+    header.write(`${mtime.toString(8).padStart(11, "0")}\0`, 136, 12, "ascii");
+    header.write("        ", 148, 8, "ascii");
+    header.write("0", 156, 1, "ascii");
+    header.write("ustar\0", 257, 6, "ascii");
+    header.write("00", 263, 2, "ascii");
+    let sum = 0;
+    for (const byte of header) sum += byte;
+    header.write(`${sum.toString(8).padStart(6, "0")}\0 `, 148, 8, "ascii");
+    blocks.push(header, data, Buffer.alloc((512 - (data.length % 512)) % 512));
+  }
+  blocks.push(Buffer.alloc(1024));
+  return Buffer.concat(blocks);
+}
 
 const state = { latest: "0.4.0", corruptChecksums: false, requests: [] };
 const tempDirs = [];
@@ -63,7 +91,8 @@ function handleRequest(request, response) {
   }
   const [, version, name] = match;
   if (name === "SHA256SUMS") {
-    const body = Object.keys(TARGETS)
+    const body = RELEASE_TARGETS
+      .slice()
       .sort()
       .map((target) => `${state.corruptChecksums ? "0".repeat(64) : sha256(archive(version))}  prism-code-${target}.tar.gz\n`)
       .join("");

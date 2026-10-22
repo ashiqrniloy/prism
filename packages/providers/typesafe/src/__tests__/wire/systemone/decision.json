@@ -1,0 +1,50 @@
+{
+  "request": {
+    "model": { "provider": "typesafe", "model": "jev-latest" },
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "rm -rf ./build" }]
+      }
+    ],
+    "options": {
+      "structuredOutput": {
+        "name": "decision",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "type": "string",
+              "enum": ["run", "reject", "ask"],
+              "description": "How should this be handled?"
+            },
+            "irreversible": {
+              "type": "boolean",
+              "description": "Would running this destroy data?"
+            }
+          }
+        }
+      }
+    }
+  },
+  "method": "POST",
+  "path": "/v1/systemone",
+  "requestBody": {
+    "model": "jev-latest",
+    "state": "rm -rf ./build",
+    "questions": {
+      "verdict": {
+        "type": "choice",
+        "instructions": "How should this be handled?",
+        "criteria": { "run": "run", "reject": "reject", "ask": "ask" }
+      },
+      "irreversible": {
+        "type": "noul",
+        "instructions": "Would running this destroy data?"
+      }
+    }
+  },
+  "status": 200,
+  "contentType": "application/json",
+  "responseBody": "{\"model\":\"jev-1.13.0\",\"answers\":{\"verdict\":{\"type\":\"choice\",\"choice\":\"ask\",\"probabilities\":{\"ask\":0.84},\"confidence\":0.68},\"irreversible\":{\"type\":\"noul\",\"noul\":0.91}},\"usage\":{\"input_tokens\":96,\"output_tokens\":0}}"
+}

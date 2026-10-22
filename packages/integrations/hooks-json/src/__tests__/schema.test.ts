@@ -47,7 +47,7 @@ describe("hooks.json schema", () => {
     const agent = await load({
       hooks: {
         SessionStart: [{ type: "command", command: "node start.js" }],
-        PostToolUse: [{ type: "mcp_tool", server: "audit", tool: "record", input: { path: "${tool_input.file_path}" } }],
+        PostToolUse: [{ type: "mcp_tool", server: "audit", tool: "record", input: { path: `\${tool_input.file_path}` } }],
       },
     });
     const names = Object.keys(agent.inspect().hooks);

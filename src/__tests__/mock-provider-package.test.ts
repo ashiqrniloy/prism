@@ -1,10 +1,10 @@
-import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { agentRuntime } from "../agent-session/create-agent.js";
-import { createAgent, providerDone, providerTextDelta } from "../index.js";
 import type { AgentEvent, ModelProvider, ProviderEvent } from "../index.js";
+import { createAgent, providerDone, providerTextDelta } from "../index.js";
 import { providerPackage } from "../provider-kit/index.js";
 import { createMockProvider, mockProvider, packageConformance } from "../testing/index.js";
 
@@ -73,10 +73,10 @@ describe("mockProvider package", () => {
   });
 });
 
-/** The top-level keys of every `createAgent(`/`defineAgent(` object literal in `source`, with the literal's text. */
+/** The top-level keys of every `createAgent(` object literal in `source`, with the literal's text. */
 function agentLiterals(source: string): { keys: string[]; text: string }[] {
   const out: { keys: string[]; text: string }[] = [];
-  for (const match of source.matchAll(/\b(?:createAgent|defineAgent|createSecureAgent)\(\{/g)) {
+  for (const match of source.matchAll(/\bcreateAgent\(\{/g)) {
     const start = match.index! + match[0].length - 1;
     let depth = 0;
     let quote: string | undefined;

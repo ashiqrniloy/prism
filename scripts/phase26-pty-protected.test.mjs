@@ -4,7 +4,7 @@
  * The host supplies a PTY module through PRISM_TEST_PTY_BACKEND (absolute path
  * to an ESM/CJS module). The module exports `createPtyBackend()` (named or
  * default) returning an object structurally conforming to
- * `ProcessPtyBackend` from @arnilo/prism-coding-tools/agent — it may wrap any PTY
+ * `ProcessPtyBackend` from @arnilo/prism-tools-coding — it may wrap any PTY
  * engine (e.g. node-pty); Prism never depends on that engine.
  *
  * This leg proves, against a real pseudoterminal:
@@ -25,7 +25,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll as after, beforeAll as before, test } from "bun:test";
 import { pathToFileURL } from "node:url";
-import { createProcessSessions } from "../packages/prism-coding-tools/dist/agent/index.js";
+import { createProcessSessions } from "@arnilo/prism-tools-coding";
 import { blockedGate } from "./blocked-gate.mjs";
 
 const backendModule = process.env.PRISM_TEST_PTY_BACKEND;

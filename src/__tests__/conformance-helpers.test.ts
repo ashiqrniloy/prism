@@ -4,18 +4,16 @@ import { describe, it } from "bun:test";
 import type { AgentEventRecord, RunRecord, SessionEntry, SessionStore, ToolCallRecord, ToolDefinition, UsageRecord } from "../index.js";
 import {
   createDefaultCompactor,
-  createMemoryAgentEventSource,
   createMemorySessionStore,
   createMemoryToolEffectStore,
   createToolRegistry,
   SESSION_APPEND_CONFLICT_CODE,
   SessionAppendConflictError,
 } from "../index.js";
-import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";
 import { assertCompactorConforms } from "../testing/compaction-conformance.js";
 import { assertRunLedgerConforms, runRunLedgerConformance } from "../testing/run-ledger-conformance.js";
 import { storeConformance } from "../testing/store-conformance.js";
-import { assertToolBlocked, assertToolDisclosureConforms, assertToolDispatchConforms } from "../testing/tool-conformance.js";
+import { assertToolBlocked, assertToolDispatchConforms } from "../testing/tool-conformance.js";
 import { assertToolEffectStoreConforms } from "../testing/tool-effect-store-conformance.js";
 
 void describe("store conformance helper", () => {
@@ -49,6 +47,10 @@ void describe("store conformance helper", () => {
     );
   });
 
+  it("store_conformance_fails_a_store_that_drops_appended_records", async () => {
+    await assert.rejects(() => storeConformance(dropsLogStore), /\[package-state-log\]/);
+  });
+
   it("missing_capability_leg_expects_unsupported_error", async () => {
     // A store without the optional methods passes: each missing-capability leg asserts the error.
     await storeConformance(customStore);
@@ -60,6 +62,7 @@ void describe("store conformance helper", () => {
     const testing = await import("../testing/index.js");
     assert.equal(typeof testing.storeConformance, "function");
     assert.ok(testing.STORE_CONFORMANCE_STEPS.includes("restart"));
+    assert.ok(testing.STORE_CONFORMANCE_STEPS.includes("package-state-log"));
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
     assert.equal(pkg.exports["./testing/session-store-conformance"], undefined);
   });
@@ -75,17 +78,6 @@ void describe("store conformance helper", () => {
       otherSessionId: "reopen-shared-other",
       reopen: () => backing,
     });
-  });
-});
-
-void describe("agent-event-source conformance helper", () => {
-  it("conforms against core memory source", async () => {
-    await assertAgentEventSourceConforms(() => createMemoryAgentEventSource());
-  });
-
-  it("testing/agent-event-source-conformance subpath is exported", () => {
-    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    assert.ok(pkg.exports["./testing/agent-event-source-conformance"]);
   });
 });
 
@@ -118,9 +110,10 @@ void describe("run-ledger conformance helper", () => {
     assert.ok(pkg.exports["./testing/run-ledger-conformance"]);
   });
 
-  it("testing/persistence-schema subpath is exported", () => {
+  it("testing/persistence-schema subpath is not a kernel export", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-    assert.ok(pkg.exports["./testing/persistence-schema"]);
+    assert.equal(pkg.exports["./testing/persistence-schema"], undefined);
+    assert.equal(pkg.exports["./testing/feedback"], undefined);
   });
 });
 
@@ -231,52 +224,6 @@ void describe("tool conformance helper", () => {
   });
 });
 
-void describe("tool disclosure conformance helper (plan 041)", () => {
-  function disclosureTools(count: number): ToolDefinition[] {
-    return Array.from({ length: count }, (_, index) => ({
-      name: `disc_${index}`,
-      description: `Handles fixture domain ${index % 8}. Conformance disclosure tool ${index}.`,
-      parameters: { type: "object", properties: {} },
-      execute: (args, context) => ({ toolCallId: context.toolCallId, name: `cap_${index}`, value: args }),
-    }));
-  }
-
-  it("conforms: subset narrowing, deny intersection, deterministic order, inert search output", () => {
-    assertToolDisclosureConforms({
-      tools: [
-        ...disclosureTools(32),
-        {
-          name: "schema_carrier",
-          description: "Carrier of an untrusted JSON schema.",
-          parameters: { type: "object", properties: { query: { type: "string", description: "find-me-unique-schema-token" } } },
-          execute: (args, context) => ({ toolCallId: context.toolCallId, name: "schema_carrier", value: args }),
-        },
-      ],
-      search: { topK: 16 },
-      secrets: ["sk-conformance-secret-value"],
-    });
-  });
-
-  it("secret values never surface even when a description carries one", () => {
-    assert.throws(
-      () =>
-        assertToolDisclosureConforms({
-          tools: [
-            {
-              name: "leaky",
-              description: "sk-conformance-secret-value inside a description.",
-              parameters: { type: "object", properties: {} },
-              execute: (args, context) => ({ toolCallId: context.toolCallId, name: "leaky", value: args }),
-            },
-          ],
-          search: { topK: 4 },
-          secrets: ["sk-conformance-secret-value"],
-        }),
-      /leaked a configured secret/,
-    );
-  });
-});
-
 // A minimal custom SessionStore implementing readBranchPath for the branch-read
 // conformance probe. Mirrors the external-app reference pattern and satisfies
 // the full adapter contract (duplicate-id, expectedParentId, idempotency).
@@ -328,6 +275,19 @@ function lenientStore(): SessionStore {
     },
     async list(sessionId) {
       return [...(bySession.get(sessionId) ?? [])];
+    },
+  };
+}
+
+// A broken store that drops appended package_state records — conformance must reject it.
+function dropsLogStore(): SessionStore {
+  const inner = createMemorySessionStore();
+  return {
+    ...inner,
+    async list(sessionId) {
+      return (await inner.list(sessionId)).filter(
+        (entry) => (entry as { readonly data?: { readonly op?: unknown } }).data?.op !== "append",
+      );
     },
   };
 }

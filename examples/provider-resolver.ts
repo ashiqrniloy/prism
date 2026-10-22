@@ -1,7 +1,7 @@
 import { type AgentEvent, createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMockProvider } from "@arnilo/prism/testing";
-import { openai } from "@arnilo/prism-provider-openai";
+import { hyper } from "@arnilo/prism-provider-hyper";
 
 // A loaded provider package resolves `model.provider`. A host-owned provider is one more package
 // (`providerPackage`), listed next to the vendor's. No network, no real credentials.
@@ -9,7 +9,7 @@ export async function demo(): Promise<{ streamed: string; providers: string[] }>
   const own = createMockProvider([providerTextDelta("from-own"), providerDone()], { id: "own" });
   const agent = await createAgent({
     model: { provider: "own", model: "demo" },
-    packages: [openai({ apiKey: "env:OPENAI_API_KEY" }), providerPackage("host-providers", [own])],
+    packages: [hyper({ apiKey: "env:HYPER_API_KEY" }), providerPackage("host-providers", [own])],
   });
 
   const session = await agent.session({ id: "s1", create: true });

@@ -1,18 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { loadAgentRunState } from "../agent-run-state.js";
 import {
   AgentLoopStateError,
   agentFingerprint,
-  createAgent,
   askEveryTool,
-  createMemoryCheckpointStore,
+  createAgent,
   createMemorySessionStore,
+  type AgentEvent,
   type JsonValue,
+  loadSuspendedRunEntry,
   type LoopStrategy,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   toolCallContent,
 } from "../index.js";
 import { providerPackage } from "../provider-kit/index.js";
@@ -60,32 +59,25 @@ function twoTurnProvider() {
 }
 
 describe("durable custom loops", () => {
-  it("rejects a hook-less custom strategy on a durable run before any provider call", async () => {
-    const checkpoints = createMemoryCheckpointStore();
-    let providerCalls = 0;
+  it("rejects a hook-less custom strategy when the run suspends", async () => {
     const state = { turns: 0 };
     const agent = await createAgent({
+      hooks: askEveryTool(),
       id: "not-durable-loop",
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          providerCalls += 1;
-          yield providerTextDelta("unreachable");
-          yield providerDone();
-        },
-      }])],
+      packages: [providerPackage("test-provider", [twoTurnProvider()()])],
       slots: { loop: customLoop(false, state) },
+      tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write" }) }] },
     });
-    await assert.rejects(
-      async () => (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } }),
-      (error: unknown) => error instanceof AgentLoopStateError && error.code === "ERR_PRISM_LOOP_NOT_DURABLE",
-    );
-    assert.equal(providerCalls, 0);
+    // A suspension needs the strategy's snapshot/restore pair; without one the run fails closed.
+    const failed = await (await agent.session()).run("go");
+    assert.equal(failed.status, "failed");
+    assert.equal(failed.error?.code, "ERR_PRISM_LOOP_NOT_DURABLE");
+    assert.ok(AgentLoopStateError);
   });
 
   it("captures and restores loop-local state across a tool-approval suspension", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+    const store = createMemorySessionStore();
     const provider = twoTurnProvider();
     const state: { turns: number; restored?: JsonValue } = { turns: 0 };
     let calls = 0;
@@ -94,7 +86,7 @@ describe("durable custom loops", () => {
       id: "durable-custom-loop",
       model: { provider: "mock", model: "demo" },
       packages: [providerPackage("test-provider", [provider()])],
-      slots: { store: createMemorySessionStore(), loop: customLoop(true, state) },
+      slots: { store, loop: customLoop(true, state) },
       tools: {
         add: [
           {
@@ -108,29 +100,27 @@ describe("durable custom loops", () => {
         ],
       },
     });
-    const first = await (await agent.session({ id: "durable-loop-session", create: true })).run("go", {
-      runState: { checkpoints, definitionRevision: "1" },
-    });
+    const session = await agent.session({ id: "durable-loop-session", create: true });
+    const first = await session.run("go");
     assert.equal(first.status, "suspended");
     assert.equal(calls, 0);
 
-    const { state: stored } = await loadAgentRunState(checkpoints, { runId: first.runId });
-    assert.deepEqual(stored.loopState, { name: "custom-loop", revision: "1", snapshot: { turns: 1 } });
+    const stored = await loadSuspendedRunEntry(store, "durable-loop-session");
+    assert.deepEqual(stored?.state.loopState, { name: "custom-loop", revision: "1", snapshot: { turns: 1 } });
 
-    const result = await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      { decision: "approve", expectedVersion: first.runState!.version! },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(result.status, "completed");
+    let last: AgentEvent | undefined;
+    for await (const event of session.resume(
+      first.pending!.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
+    )) {
+      last = event;
+    }
+    assert.equal(last?.type, "run.completed");
     assert.equal(calls, 1);
     assert.deepEqual(state.restored, { turns: 1 });
     assert.equal(state.turns, 2);
   });
 
   it("fails closed when a snapshot is not JSON-compatible", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const loop: LoopStrategy = {
       name: "bad-snapshot-loop",
       revision: "1",
@@ -149,7 +139,7 @@ describe("durable custom loops", () => {
       slots: { loop },
       tools: { add: [{ name: "write", parameters: {}, execute: () => ({ toolCallId: "call-1", name: "write" }) }] },
     });
-    const refused = await (await agent.session()).run("go", { runState: { checkpoints, definitionRevision: "1" } });
+    const refused = await (await agent.session()).run("go");
     assert.equal(refused.status, "failed");
     assert.equal(refused.error?.code, "ERR_PRISM_LOOP_SNAPSHOT");
   });

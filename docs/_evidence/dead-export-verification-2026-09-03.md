@@ -45,7 +45,13 @@ but no `exports` subpath can import them — removal breaks no consumer import p
 - **remove** — unused, not entry-reachable, not compat-tracked, undocumented: no consumer
   import path and no contract obligation; safe to delete (verify with the release gate).
 
-**Totals: 60 keep · 23 deprecate · 4 remove.**
+**Totals: 60 keep · 23 deprecate · 4 remove** (the 2026-09-03 classification).
+
+## Addendum — 2026-10-16 (plan 181 Task 3)
+
+The 0.13 package split left 16 further candidates in `scripts/unused-report.json`: 14 **deprecate** (entry-reachable and/or compat-tracked) and 2 **remove** (`ProviderRequestTransform`, `GovernanceEvaluation` — dist-only, untracked, unreferenced). They carry `@deprecated` JSDoc and a CHANGELOG Deprecated entry, so the deprecation-wave gate covers them.
+
+**Addendum totals: 14 deprecate · 2 remove.**
 
 ## Decision table
 
@@ -156,6 +162,22 @@ Removed-or-kept security-relevant exports, per plan 058 Security criterion:
 | `assertOwnershipForLoad` / `assertOwnershipForSave` | checkpoint ownership guards | **keep** — ownership trust boundary |
 | `assertVersionAdvance` | checkpoint version-monotonicity (anti-rollback) | **keep** — integrity guard |
 | `assertNoSecretLeak` (+ `ProviderSecretLeakConformanceOptions`) | secret-leak conformance assert | assert **keep** (20 suites); unused options type **deprecate** |
+| `AttentionCompilerSetting` | @arnilo/prism-context-engineering | no | no | no | entry | deprecate | entry-reachable public config type with zero refs after the context-engineering split; deprecate at the next cut |
+| `formatFoldedToolResult` | @arnilo/prism-context-engineering | no | yes | no | entry | deprecate | compat-tracked and entry-reachable, zero refs; the fold path calls the kernel projection directly |
+| `isToolDisclosureError` | @arnilo/prism-context-engineering | no | yes | no | entry | deprecate | compat-tracked and entry-reachable, zero refs; tool-search callers narrow on the error code instead |
+| `resolveToolsDisclosure` | @arnilo/prism-context-engineering | no | yes | no | entry | deprecate | compat-tracked and entry-reachable, zero refs; the handler resolves the disclosure itself |
+| `exactOwnershipKey` | @arnilo/prism-workflows | no | yes | yes | dist-only | deprecate | compat-tracked key helper with only an archived-phase docs mention; deprecate at the next cut |
+| `HISTORY_SUMMARIZATION_PROMPT` | @arnilo/prism-memory-compaction | no | yes | no | dist-only | deprecate | compat-tracked canonical prompt constant, zero refs; the compaction strategy owns its prompt text |
+| `UPDATE_SUMMARIZATION_PROMPT` | @arnilo/prism-memory-compaction | no | yes | no | dist-only | deprecate | compat-tracked canonical prompt constant, zero refs; the compaction strategy owns its prompt text |
+| `ProviderRequestTransform` | @arnilo/prism-memory-compaction | no | no | no | dist-only | remove | unused, not entry-reachable, not compat-tracked: no consumer import path and no contract obligation |
+| `invalidateAcrossLayers` | @arnilo/prism-memory-core | no | yes | yes | entry | deprecate | compat-tracked and entry-reachable lineage helper, zero refs; the fabric invalidation path owns the walk |
+| `GovernanceEvaluation` | @arnilo/prism-governance | no | no | no | dist-only | remove | unused, not entry-reachable, not compat-tracked: no consumer import path and no contract obligation |
+| `governancePackage` | @arnilo/prism-governance | no | yes | no | entry | deprecate | compat-tracked and entry-reachable factory, zero refs; the package default export is the entry |
+| `DEFAULT_MAX_HOLD_REASON_BYTES` | @arnilo/prism-store-codecs | no | yes | no | entry | deprecate | compat-tracked limit constant, zero refs, undocumented; deprecate at the next breaking cut |
+| `WebToolSet` | @arnilo/prism-tools-web | no | no | no | entry | deprecate | entry-reachable public type, zero refs; the package entry names the tool definitions directly |
+| `applyNestedRun` | @arnilo/prism | no | yes | no | dist-only | deprecate | compat-tracked internal phase helper, zero refs; the run controller owns nested dispatch |
+| `suspendNested` | @arnilo/prism | no | yes | yes | dist-only | deprecate | compat-tracked internal phase helper with only a CHANGELOG mention; deprecate at the next cut |
+| `MANIFEST_COMMANDS` | @arnilo/prism | no | yes | no | dist-only | deprecate | compat-tracked CLI command table, zero refs; src/cli-manifest.ts is the only reader and reads it locally |
 
 ## Rejected removals (false-positive classes)
 

@@ -6,38 +6,19 @@ import { describe, it } from "bun:test";
 import {
   assertPermission,
   assertTrusted,
-  createChainedSettingsProvider,
   createSecretRedactor,
   createStaticPermissionPolicy,
-  createStaticSettingsProvider,
   createStaticTrustPolicy,
   createToolRegistry,
   dispatchToolCall,
   loadTextResource,
   type CredentialResolver,
 } from "../index.js";
-import { loadSettingsFiles } from "../node/settings.js";
 import { createPathTrustPolicy, isPathInside, isPathInsideReal } from "../node/trust.js";
 
 const tmp = () => mkdtemp(join(tmpdir(), "prism-test-"));
 
 describe("settings auth trust security", () => {
-  it("reads static chained and explicit node settings", async () => {
-    const dir = await tmp();
-    const file = join(dir, "settings.json");
-    await writeFile(file, JSON.stringify({ demo: { enabled: true } }));
-
-    const staticSettings = createStaticSettingsProvider({ demo: { enabled: false } });
-    const nodeSettings = await loadSettingsFiles([{ name: "test", path: file }]);
-    const chained = createChainedSettingsProvider([nodeSettings, staticSettings]);
-
-    assert.equal(await chained.get("demo.enabled"), true);
-    assert.equal(
-      await loadSettingsFiles([{ name: "missing", path: join(dir, "missing.json"), optional: true }]).then((s) => s.get("x")),
-      undefined,
-    );
-  });
-
   it("stores and deletes credentials through a name-keyed resolver", async () => {
     const records = new Map<string, { readonly type: "api_key"; readonly value: string }>();
     const store: CredentialResolver = {

@@ -64,22 +64,15 @@ jobs:
       - name: generate and verify SPDX SBOM
         run: |
           mkdir -p security-artifacts
-          # release-host registry toolchain — runner images ship Node; contributors never invoke npm
-          # Registry-toolchain exception (plan 125 Task 5): pack and sbom run on the runner
-          # image's preinstalled Node — no setup-node step pins it on purpose.
-          # --legacy-peer-deps: the repo builds with TypeScript 7 while @opentui/core's
-          # bun-ffi-structs peer-requires ^5, and npm's tree validation rejects that edge
-          # (ESBOMPROBLEMS) even though bun installed a working tree.
-          npm sbom --sbom-format spdx --legacy-peer-deps > security-artifacts/sbom.spdx.json
+          bun scripts/sbom.mjs > security-artifacts/sbom.spdx.json
           bun scripts/verify-sbom.mjs security-artifacts/sbom.spdx.json security/license-policy.json
       - name: scan tracked source and packed public artifacts
         run: |
           git ls-files -z | xargs -0 bun scripts/scan-secrets.mjs
-          mkdir -p security-artifacts/tarballs security-artifacts/unpacked
           bun run build
-          npm pack --json --pack-destination security-artifacts/tarballs >/dev/null
-          npm pack --workspaces --json --pack-destination security-artifacts/tarballs >/dev/null
+          bun scripts/release.mjs pack --destination security-artifacts/tarballs
           test "$(du -sb security-artifacts/tarballs | cut -f1)" -le 134217728
+          mkdir -p security-artifacts/unpacked
           for archive in security-artifacts/tarballs/*.tgz; do
             dir="security-artifacts/unpacked/$(basename "$archive" .tgz)"
             mkdir -p "$dir"

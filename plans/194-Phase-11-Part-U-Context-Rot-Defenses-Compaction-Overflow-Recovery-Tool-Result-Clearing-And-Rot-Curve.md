@@ -26,10 +26,10 @@
   - OM's absolute `context.compactAfterTokens` gate is replaced by a ratio of the model's input cap, capped by the measured budget
   - a deterministic 60-turn scenario proves request size stays bounded
 
-**0.13.0 release path — plan 194, step 10 of 14.** Owner decision 2026-10-17: every finding of the context-rot and progressive-disclosure review ships in 0.13.0. The memory-side findings went into plans 188, 190, 191, and 192 as amendments; this plan holds the rest.
+**0.13.0 release path — plan 194, step 10 of 21.** Owner decision 2026-10-17: every finding of the context-rot and progressive-disclosure review ships in 0.13.0. The memory-side findings went into plans 188, 190, 191, and 192 as amendments; this plan holds the rest.
 
 Ordering:
-- Start this plan when plan 193 is complete; when it is complete, continue with plan 184.
+- Start this plan when plan 193 is complete; when it is complete, continue with plan 195 (step 11, roadmap Phase 18 Part A), then plan 196, then the eval plans 197–201, then plan 184.
 - It runs after plans 188 (OM's compaction coupling, Task 5), 189 (tool results as text, which fold rewrites), and 190 (skill bodies re-attached after compaction).
 - It runs before plan 184, because it changes request bytes and the reference host's package set, both of which 184 measures.
 - It runs before plan 185, because it adds kernel exports (`ContextOverflowError`, the `overflow` compaction trigger) and changes the `compaction.when` combination rule.

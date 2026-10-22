@@ -11,60 +11,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { createAgent } from "@arnilo/prism";
-import { alibaba } from "@arnilo/prism-provider-alibaba";
-import { clinepass } from "@arnilo/prism-provider-clinepass";
-import { deepseek } from "@arnilo/prism-provider-deepseek";
-import { kimi } from "@arnilo/prism-provider-kimi";
-import { neuralwatt } from "@arnilo/prism-provider-neuralwatt";
-import { ollama } from "@arnilo/prism-provider-ollama";
+import { hyper } from "@arnilo/prism-provider-hyper";
+import { laya } from "@arnilo/prism-provider-laya";
 import { opencodeGo } from "@arnilo/prism-provider-opencode-go";
-import { openrouter } from "@arnilo/prism-provider-openrouter";
-import { xai } from "@arnilo/prism-provider-xai";
-import { zai } from "@arnilo/prism-provider-zai";
+import { typesafe } from "@arnilo/prism-provider-typesafe";
 
 /** `endpoint: undefined` marks a vendor with no live discovery: `models()` must never fetch. */
 const CASES = [
   {
-    id: "deepseek",
+    id: "hyper",
     model: "deepseek-v4-flash",
-    endpoint: "https://api.deepseek.com/models",
-    instance: (fetchImpl) => deepseek({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
-  },
-  {
-    id: "xai",
-    model: "grok-4.6",
-    endpoint: "https://api.x.ai/v1/models",
-    instance: (fetchImpl) => xai({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
-  },
-  {
-    id: "zai",
-    model: "glm-5.2",
-    endpoint: "https://api.z.ai/api/paas/v4/models",
-    instance: (fetchImpl) => zai({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
-  },
-  {
-    id: "alibaba",
-    model: "qwen-plus",
-    endpoint: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models",
-    instance: (fetchImpl) => alibaba({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
-  },
-  {
-    id: "kimi-coding",
-    model: "k3",
-    endpoint: undefined,
-    instance: (fetchImpl) => kimi({ kimiApiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
-  },
-  {
-    id: "openrouter",
-    model: "openrouter/auto",
-    endpoint: "https://openrouter.ai/api/v1/models",
-    instance: (fetchImpl) => openrouter({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
-  },
-  {
-    id: "ollama",
-    model: "gpt-oss:20b",
-    endpoint: "https://ollama.com/v1/models",
-    instance: (fetchImpl) => ollama({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
+    endpoint: "https://hyper.charm.land/v1/models",
+    instance: (fetchImpl) => hyper({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
   },
   {
     id: "opencode-go",
@@ -73,16 +31,16 @@ const CASES = [
     instance: (fetchImpl) => opencodeGo({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
   },
   {
-    id: "neuralwatt",
-    model: "glm-5.2",
-    endpoint: "https://api.neuralwatt.com/v1/models",
-    instance: (fetchImpl) => neuralwatt({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
+    id: "typesafe",
+    model: "jev-latest",
+    endpoint: undefined,
+    instance: (fetchImpl) => typesafe({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
   },
   {
-    id: "clinepass",
-    model: "cline-pass/glm-5.2",
+    id: "laya",
+    model: "laya",
     endpoint: undefined,
-    instance: (fetchImpl) => clinepass({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
+    instance: (fetchImpl) => laya({ apiKey: "env:PRISM_TEST_DISCOVERY_KEY", fetch: fetchImpl }),
   },
 ];
 

@@ -68,7 +68,7 @@
     "active": true,
     "rule": "These files implement the primitives 0.1.7 reuses (cache math, usage event, init machinery, router memory state). They are byte-immutable for the whole phase; a hash mismatch fails loud at any task state. Deviations require a recorded entry.",
     "files": {
-      "src/cache-helpers.ts": "cacheHitRate/cacheSavings/cacheUsageReport math is reused by cache-telemetry, not reimplemented",
+      "src/provider-kit/cache-helpers.ts": "cacheHitRate/cacheSavings/cacheUsageReport math is reused by cache-telemetry, not reimplemented. Plan 174 Task 3 moved the file; the math is unchanged.",
       "src/provider-events.ts": "usage ProviderEvent shape unchanged; telemetry consumes it",
       "src/cli-init.ts": "init template/catalog/force patterns are reused by the provider scaffold, not edited",
       "packages/model-router/src/state.ts": "memory state store contract unchanged; selection policy never bypasses allow-list/residency/budget decisions"
@@ -100,7 +100,13 @@
     "baselineRelease": "0.1.6",
     "promise": "0.1.7 is ADDITIVE-ONLY: the post-0.1.6 surface stays green with zero breaking declaration deltas; release:gate --version 0.1.7 runs WITHOUT --allow-break and must report 0 breaking deltas; only then is the version-literal baseline text regenerated with --update-baseline. No new package is planned, so the release graph stays at 50 publishable manifests; the baseline records the additive exports only, no existing baseline line is removed."
   },
-  "deviations": [],
+  "deviations": [
+    {
+      "task": "plan 174 Task 3",
+      "change": "preserved cache-helpers path moved from src/cache-helpers.ts to src/provider-kit/cache-helpers.ts",
+      "rationale": "Phase 11 puts shared provider wire under the provider-kit subpath. The cache math stays; only the import path of contracts.js changed."
+    }
+  ],
   "supportMatrix": "frozen at scripts/phase12-freeze-manifest.json (0.1.x compatibility and support matrix: Node, PostgreSQL, platform, provider, protocol pins, unsupported combinations); 0.1.7 changes none of it",
   "releasePolicy": {
     "auditLevelTarget": "moderate",

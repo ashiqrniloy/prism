@@ -1,39 +1,24 @@
-import { createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createMockProvider } from "@arnilo/prism/testing";
-import { createLlmCompactor } from "@arnilo/prism-memory/compaction/llm";
+import { createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
+import memoryCompaction from "@arnilo/prism-memory-compaction";
 
-// LLM compaction with a mock summarization provider: the compactor calls the
-// provider to summarize older history, then appends a `compaction` entry. Raw
-// history is never deleted. No network, no real credentials.
+// LLM compaction as a package: it claims the `compaction` slot and summarizes the
+// history a cut drops with one model call per compaction, then appends a
+// `compaction` entry. Raw history is never deleted. No network, no real credentials.
 export async function demo() {
-  const sessionId = "s1";
   const store = createMemorySessionStore();
-  let prev: string | undefined;
-  for (let i = 0; i < 4; i++) {
-    const entry = createSessionEntry({
-      sessionId,
-      kind: "message",
-      parentId: prev,
-      message: {
-        role: i % 2 === 0 ? "user" : "assistant",
-        content: [{ type: "text", text: `message ${i} with enough words to summarize` }],
-      },
-    });
-    await store.append(entry);
-    prev = entry.id;
-  }
-
-  const strategy = createLlmCompactor({
-    provider: createMockProvider([providerTextDelta("compact summary"), providerDone()]),
+  const agent = await createAgent({
     model: { provider: "mock", model: "summary" },
-    keepRecentTokens: 1,
+    packages: [memoryCompaction(), mockProvider([[providerTextDelta("compact summary"), providerDone()]])],
+    slots: { store },
   });
+  const session = await agent.session({ id: "s1", create: true });
+  for (let i = 0; i < 4; i++) await session.run(`message ${i} with enough words to summarize`);
 
-  const entries = await store.list(sessionId);
-  const result = await strategy.compact({ sessionId, entries });
+  const result = await session.compact();
 
   return {
-    strategyName: strategy.name,
+    strategyName: (result.entries?.[0]?.data as { strategy?: string } | undefined)?.strategy,
     summary: result.summary.slice(0, 20),
     appendedKind: result.entries?.[0]?.kind,
   };

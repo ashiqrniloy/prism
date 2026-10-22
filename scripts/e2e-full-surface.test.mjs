@@ -7,53 +7,52 @@
  * the mock provider drives the agent leg, and server-backed factories are
  * exercised at construct/validation level only.
  */
+
+import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
 
 const JOURNEY_CEILING_MS = 180_000;
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
-  { dir: "packages/prism-channels", name: "@arnilo/prism-channels" },
-  { dir: "packages/memory", name: "@arnilo/prism-memory" },
-  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
-  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
-  { dir: "packages/prism-work", name: "@arnilo/prism-work" },
-  { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
-  { dir: "packages/acp-agent", name: "@arnilo/prism-acp-agent" },
+  { dir: "packages/hosts/channels", name: "@arnilo/prism-channels" },
+  { dir: "packages/hosts/evals", name: "@arnilo/prism-evals" },
+  { dir: "packages/hosts/devtools", name: "@arnilo/prism-devtools" },
+  { dir: "packages/memory/core", name: "@arnilo/prism-memory-core" },
+  { dir: "packages/memory/rag", name: "@arnilo/prism-memory-rag" },
+  { dir: "packages/memory/fabric", name: "@arnilo/prism-memory-fabric" },
+  { dir: "packages/memory/wiki", name: "@arnilo/prism-memory-wiki" },
+  { dir: "packages/memory/compaction", name: "@arnilo/prism-memory-compaction" },
+  { dir: "packages/memory/observational", name: "@arnilo/prism-memory-observational" },
+  { dir: "packages/policy/governance", name: "@arnilo/prism-governance" },
+  { dir: "packages/policy/model-router", name: "@arnilo/prism-model-router" },
+  { dir: "packages/integrations/workflows", name: "@arnilo/prism-workflows" },
+  { dir: "packages/integrations/observability", name: "@arnilo/prism-observability" },
+  { dir: "packages/context/files", name: "@arnilo/prism-context-files" },
+  { dir: "packages/context/engineering", name: "@arnilo/prism-context-engineering" },
+  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
+  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
+  { dir: "packages/tools/web", name: "@arnilo/prism-tools-web" },
+  { dir: "packages/tools/openapi", name: "@arnilo/prism-tools-openapi" },
+  { dir: "packages/tools/computer-use", name: "@arnilo/prism-tools-computer-use" },
+  { dir: "packages/tools/work", name: "@arnilo/prism-tools-work" },
+  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
+  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/hosts/mcp-server", name: "@arnilo/prism-mcp-server" },
   { dir: "packages/integrations/hooks-json", name: "@arnilo/prism-hooks-json" },
   { dir: "packages/stores/jsonl", name: "@arnilo/prism-store-jsonl" },
   { dir: "packages/stores/codecs", name: "@arnilo/prism-store-codecs" },
   { dir: "packages/stores/sqlite", name: "@arnilo/prism-store-sqlite" },
   { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres" },
   { dir: "packages/credentials/keyring", name: "@arnilo/prism-credentials-keyring" },
-  { dir: "packages/providers/anthropic", name: "@arnilo/prism-provider-anthropic" },
-  { dir: "packages/providers/openai", name: "@arnilo/prism-provider-openai" },
-  { dir: "packages/providers/deepseek", name: "@arnilo/prism-provider-deepseek" },
-  { dir: "packages/providers/xai", name: "@arnilo/prism-provider-xai" },
-  { dir: "packages/providers/zai", name: "@arnilo/prism-provider-zai" },
-  { dir: "packages/providers/alibaba", name: "@arnilo/prism-provider-alibaba" },
-  { dir: "packages/providers/kimi", name: "@arnilo/prism-provider-kimi" },
-  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter" },
-  { dir: "packages/providers/ollama", name: "@arnilo/prism-provider-ollama" },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
-  { dir: "packages/providers/neuralwatt", name: "@arnilo/prism-provider-neuralwatt" },
-  { dir: "packages/providers/clinepass", name: "@arnilo/prism-provider-clinepass" },
-  { dir: "packages/providers/commandcode", name: "@arnilo/prism-provider-commandcode" },
   { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
-  { dir: "packages/providers/google", name: "@arnilo/prism-provider-google" },
-  { dir: "packages/providers/vertex", name: "@arnilo/prism-provider-vertex" },
-  { dir: "packages/providers/azure", name: "@arnilo/prism-provider-azure" },
-  { dir: "packages/providers/bedrock", name: "@arnilo/prism-provider-bedrock" },
-  { dir: "packages/providers/ai-sdk", name: "@arnilo/prism-provider-ai-sdk" },
 ];
 
 let consumer, run, hostRun;
@@ -76,7 +75,7 @@ before(() => {
 after(() => consumer?.cleanup());
 
 describe("packed-install full-surface journey", () => {
-  it("packs and installs all thirty-seven packages at the workspace version", () => {
+  it("packs and installs every listed package at the workspace version", () => {
     assert.equal(consumer.installStatus, 0, consumer.installOut);
     for (const pkg of packages) {
       assert.equal(
@@ -88,7 +87,7 @@ describe("packed-install full-surface journey", () => {
   });
 
   it("resolves public imports from the packed install, not the workspace", () => {
-    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-core/governance/policy");
+    const resolved = resolveFromConsumer(consumer.consumer, "@arnilo/prism-evals");
     assert.ok(resolved.startsWith(`file://${consumer.consumer}`), `resolved to ${resolved}, expected consumer node_modules`);
     assert.equal(resolved.includes(repoRoot), false, "must not resolve into the workspace tree");
   });

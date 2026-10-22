@@ -1,0 +1,67 @@
+{
+  "name": "@arnilo/prism-tools-web",
+  "version": "0.13.0",
+  "description": "First-party web search and fetch tools for Prism: Brave/Exa search, Firecrawl fetch/extract, and host-installed Obscura, with declared network effects and a web.fetch service.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "test:live": "bun test --timeout=0 src/__tests__/live.test.ts src/obscura/__tests__/live.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism-mcp": "^0.13.0",
+    "playwright-core": "1.63.0"
+  },
+  "peerDependenciesMeta": {
+    "@arnilo/prism-mcp": {
+      "optional": true
+    },
+    "playwright-core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "playwright-core": "1.63.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/tools/web"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/tools/web#readme",
+  "keywords": [
+    "prism",
+    "web",
+    "tools",
+    "brave",
+    "exa",
+    "firecrawl",
+    "obscura",
+    "agent",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

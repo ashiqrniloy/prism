@@ -1,0 +1,187 @@
+ARCHIVE_DIRECTORY	export declare const ARCHIVE_DIRECTORY = "archive"
+DEFAULT_DIRECTORY	export declare const DEFAULT_DIRECTORY = "entries"
+DEFAULT_EMBED_BATCH_SIZE	export declare const DEFAULT_EMBED_BATCH_SIZE = 32
+DEFAULT_MAX_ENTRY_TEXT_CHARS	export declare const DEFAULT_MAX_ENTRY_TEXT_CHARS = 16384
+DEFAULT_MAX_INJECTED_TOKENS	export declare const DEFAULT_MAX_INJECTED_TOKENS = 2000
+DEFAULT_MAX_MEMORY_EXPORT_BYTES	export declare const DEFAULT_MAX_MEMORY_EXPORT_BYTES: number
+DEFAULT_MAX_PAYLOAD_BYTES	export declare const DEFAULT_MAX_PAYLOAD_BYTES: number
+DEFAULT_MAX_VECTOR_DIMENSIONS	export declare const DEFAULT_MAX_VECTOR_DIMENSIONS = 4096
+DEFAULT_MAX_WORKING_MEMORY_BYTES	export declare const DEFAULT_MAX_WORKING_MEMORY_BYTES: number
+DEFAULT_MEMORY_EXPORT_MS	export declare const DEFAULT_MEMORY_EXPORT_MS = 10000
+DEFAULT_MEMORY_EXPORT_PAGE_SIZE	export declare const DEFAULT_MEMORY_EXPORT_PAGE_SIZE = 100
+DEFAULT_MEMORY_REBUILD_BATCH	export declare const DEFAULT_MEMORY_REBUILD_BATCH = 32
+DEFAULT_MEMORY_REBUILD_MS	export declare const DEFAULT_MEMORY_REBUILD_MS = 10000
+DEFAULT_MEMORY_RETENTION_BATCH	export declare const DEFAULT_MEMORY_RETENTION_BATCH = 500
+DEFAULT_MEMORY_SCHEMA	export declare const DEFAULT_MEMORY_SCHEMA = "prism_memory"
+DEFAULT_MESSAGE_RANGE	export declare const DEFAULT_MESSAGE_RANGE = 0
+DEFAULT_TOP_K	export declare const DEFAULT_TOP_K = 5
+DEFAULT_VECTOR_TABLE	export declare const DEFAULT_VECTOR_TABLE = "semantic_memory"
+DELETION_REASON	export declare const DELETION_REASON: MemoryInvalidationReason
+FILE_MAP_FILE	export declare const FILE_MAP_FILE = ".index-files.json"
+HARD_ACL_GRANT_BATCH_CAP	export declare const HARD_ACL_GRANT_BATCH_CAP = 1024
+HARD_ACL_GROUP_CAP	export declare const HARD_ACL_GROUP_CAP = 32
+HARD_DIRECTORY_TAGS	export declare const HARD_DIRECTORY_TAGS = 500
+HARD_EMBED_BATCH_CAP	export declare const HARD_EMBED_BATCH_CAP = 128
+HARD_INVALIDATION_BATCH	export declare const HARD_INVALIDATION_BATCH = 64
+HARD_LINEAGE_DEPTH	export declare const HARD_LINEAGE_DEPTH = 8
+HARD_LINEAGE_EDGES	export declare const HARD_LINEAGE_EDGES = 256
+HARD_LINEAGE_SOURCE_IDS	export declare const HARD_LINEAGE_SOURCE_IDS = 32
+HARD_MAX_ENTRY_TEXT_CHARS_CAP	export declare const HARD_MAX_ENTRY_TEXT_CHARS_CAP = 64384
+HARD_MAX_INJECTED_TOKENS_CAP	export declare const HARD_MAX_INJECTED_TOKENS_CAP = 8000
+HARD_MAX_MEMORY_EXPORT_BYTES_CAP	export declare const HARD_MAX_MEMORY_EXPORT_BYTES_CAP: number
+HARD_MAX_PAYLOAD_BYTES_CAP	export declare const HARD_MAX_PAYLOAD_BYTES_CAP: number
+HARD_MAX_VECTOR_DIMENSIONS_CAP	export declare const HARD_MAX_VECTOR_DIMENSIONS_CAP = 4096
+HARD_MAX_WORKING_MEMORY_BYTES_CAP	export declare const HARD_MAX_WORKING_MEMORY_BYTES_CAP: number
+HARD_MEMORY_EXPORT_MS_CAP	export declare const HARD_MEMORY_EXPORT_MS_CAP = 60000
+HARD_MEMORY_EXPORT_PAGE_SIZE_CAP	export declare const HARD_MEMORY_EXPORT_PAGE_SIZE_CAP = 200
+HARD_MEMORY_REBUILD_BATCH_CAP	export declare const HARD_MEMORY_REBUILD_BATCH_CAP = 128
+HARD_MEMORY_REBUILD_MS_CAP	export declare const HARD_MEMORY_REBUILD_MS_CAP = 60000
+HARD_MEMORY_RETENTION_BATCH_CAP	export declare const HARD_MEMORY_RETENTION_BATCH_CAP = 5000
+HARD_MESSAGE_RANGE_CAP	export declare const HARD_MESSAGE_RANGE_CAP = 4
+HARD_PROPAGATION_EDGES	export declare const HARD_PROPAGATION_EDGES = 4096
+HARD_REPOINT_RECORDS	export declare const HARD_REPOINT_RECORDS = 4096
+HARD_SHARE_SOURCE_IDS	export declare const HARD_SHARE_SOURCE_IDS = 32
+HARD_TOP_K_CAP	export declare const HARD_TOP_K_CAP = 32
+INDEX_DB_FILE	export declare const INDEX_DB_FILE = ".index.sqlite"
+INDEX_FILE	export declare const INDEX_FILE = "index.md"
+KIND_DIRECTORIES	export declare const KIND_DIRECTORIES: Readonly<Record<string, string>>
+LINEAGE_META_KEY	export declare const LINEAGE_META_KEY = "_lineage"
+LINEAGE_SCHEMA_VERSION	export declare const LINEAGE_SCHEMA_VERSION: 1
+LOCK_FILE	export declare const LOCK_FILE = ".lock"
+LOG_FILE	export declare const LOG_FILE = "log.md"
+MemoryAbortError	export declare class MemoryAbortError extends MemoryError
+MemoryConflictError	export declare class MemoryConflictError extends MemoryError
+MemoryError	export declare class MemoryError extends Error
+MemoryLimitError	export declare class MemoryLimitError extends MemoryError
+MemoryScopeError	export declare class MemoryScopeError extends MemoryError
+MemoryValidationError	export declare class MemoryValidationError extends MemoryError
+NEUTRAL_IMPORTANCE	export declare const NEUTRAL_IMPORTANCE = 0.5
+OKF_VERSION	export declare const OKF_VERSION = "0.2"
+RECALL_OVERSAMPLE	export declare const RECALL_OVERSAMPLE = 4
+SQLITE_MEMORY_APPLICATION_ID	export declare const SQLITE_MEMORY_APPLICATION_ID = 1347571021
+SQLITE_MEMORY_SCHEMA_VERSION	export declare const SQLITE_MEMORY_SCHEMA_VERSION = 3
+STATE_FILE	export declare const STATE_FILE = ".state.json"
+WORKING_DIRECTORY	export declare const WORKING_DIRECTORY = "working"
+activeDirectoryNote	export declare function activeDirectoryNote(record: MemoryVectorRecord, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>, asOfMs: number):
+applySourceRenames	export declare function applySourceRenames(options: ApplySourceRenamesOptions): Promise<ApplySourceRenamesResult>
+assertAccessConstraint	export declare function assertAccessConstraint(authorization: RagAccessConstraint): RagAccessConstraint
+assertAccessGrants	export declare function assertAccessGrants(grants: readonly SourceAccessGrant[]): readonly SourceAccessGrant[]
+assertAuthorizationTenant	export declare function assertAuthorizationTenant(authorization: RagAccessConstraint, tenantId: string): void
+assertByteLimit	export declare function assertByteLimit(value: unknown, maxBytes: number, label: string): void
+assertFiniteVector	export declare function assertFiniteVector(value: unknown, label: string, expectedLength?: number): asserts value is readonly number[]
+assertInsideRoot	export declare function assertInsideRoot(root: string, target: string): Promise<void>
+assertInvalidationBatch	export declare function assertInvalidationBatch(entries: readonly MemoryInvalidationRecord[]): readonly MemoryInvalidationRecord[]
+assertInvalidationRecord	export declare function assertInvalidationRecord(value: unknown): MemoryInvalidationRecord
+assertLineage	export declare function assertLineage(value: unknown): MemoryLineage
+assertNotAborted	export declare function assertNotAborted(signal?: AbortSignal): void
+assertRecordEmbedding	export declare function assertRecordEmbedding(record:
+assertSafeJsonKey	export declare function assertSafeJsonKey(key: string): void
+assertSameScope	export declare function assertSameScope(expected: MemoryScope, actual: MemoryScope, label: string): void
+assertShareGrant	export declare function assertShareGrant(grant: MemoryShareGrant): MemoryShareGrant
+assertTextLimit	export declare function assertTextLimit(text: string, maxChars: number, label: string): void
+atomicWriteFile	export declare function atomicWriteFile(path: string, content: string): Promise<void>
+buildMemoryDdl	export declare function buildMemoryDdl(schemaInput?: string, tableInput?: string): string
+buildSqliteMemoryDdl	export declare function buildSqliteMemoryDdl(tableInput?: string): string
+buildSqliteMemoryV3Migration	export declare function buildSqliteMemoryV3Migration(): string
+buildVectorSearchDdl	export declare function buildVectorSearchDdl(schemaInput?: string, tableInput?: string, dimension?: number): string
+byteLengthOfJson	export declare function byteLengthOfJson(value: unknown): number
+chunkArray	export declare function chunkArray<T>(items: readonly T[], size: number): T[][]
+clampImportance	export declare function clampImportance(value: number | undefined): number
+cloneJsonObject	export declare function cloneJsonObject(value: JsonObject): JsonObject
+collectInvalidationIds	export declare function collectInvalidationIds(records: readonly MemoryVectorRecord[], roots: readonly string[], options?:
+compareMemoryRecord	export declare function compareMemoryRecord(record: MemoryVectorRecord, cursor: MemoryCursor | undefined, order: MemoryVectorOrder): number
+compareMemoryRecords	export declare function compareMemoryRecords(a: MemoryVectorRecord, b: MemoryVectorRecord, order: MemoryVectorOrder): number
+contentToText	export declare function contentToText(content: readonly unknown[]): string
+cosineSimilarity	export declare function cosineSimilarity(a: readonly number[], b: readonly number[]): number
+createDeletionPropagator	export declare function createDeletionPropagator(options: DeletionPropagatorOptions): DeletionPropagator
+createHashEmbedder	export declare function createHashEmbedder(options?: HashEmbedderOptions): Embedder
+createMarkdownMemoryStores	export declare function createMarkdownMemoryStores(options: CreateMarkdownMemoryStoresOptions): Promise<MarkdownMemoryStores>
+createMemoryVectorStore	export declare function createMemoryVectorStore(options?: MemoryVectorStoreOptions): SourceStore &
+createPostgresMemoryStores	export declare function createPostgresMemoryStores(options: PostgresMemoryStoresOptions): Promise<PostgresMemoryStores>
+createPostgresVectorStore	export declare function createPostgresVectorStore(options: PostgresVectorStoreOptions): Promise<PostgresVectorStore &
+createSqliteMemoryStores	export declare function createSqliteMemoryStores(options: SqliteMemoryStoresOptions): Promise<SqliteMemoryStores>
+createWriteLock	export declare function createWriteLock(root: string): WriteLock
+decodeMemoryCursor	export declare function decodeMemoryCursor(cursor: string | undefined, order: MemoryVectorOrder): MemoryCursor | undefined
+decodeMetadataCursor	export declare function decodeMetadataCursor(cursor: string | undefined): MetadataScanCursor | undefined
+deriveEntryImportance	export declare function deriveEntryImportance(entry: Pick<MemoryEntryInput, "importance" | "reflection">, hook: ImportanceFromReflection | undefined, redactor?: SecretRedactor): number | undefined
+deserializeGeneration	export declare function deserializeGeneration(value: ThreadState["generation"]): bigint | number | undefined
+directoryForKind	export declare function directoryForKind(kind: string | undefined): string
+embedBatched	export declare function embedBatched(embedder: Embedder, texts: readonly string[], batchSize: number, options:
+encodeMemoryCursor	export declare function encodeMemoryCursor(record: MemoryVectorRecord, order: MemoryVectorOrder): string
+encodeMetadataCursor	export declare function encodeMetadataCursor(cursor: MetadataScanCursor): string
+estimateTokens	export declare function estimateTokens(text: string): number
+explainRecord	export declare function explainRecord(record: Pick<MemoryVectorRecord, "id" | "tenantId" | "resourceId" | "threadId" | "createdAt" | "metadata">, invalidation?: MemoryInvalidationRecord): MemoryRecallExplanation
+fabricFlags	export declare function fabricFlags(record: Pick<MemoryVectorRecord, "metadata">): readonly string[]
+fabricKind	export declare function fabricKind(record: Pick<MemoryVectorRecord, "metadata">): string | undefined
+fuseRankings	export declare function fuseRankings(lists: readonly
+grantAllows	export declare function grantAllows(grant:
+indexInvalidations	export declare function indexInvalidations(entries: readonly MemoryInvalidationRecord[]): ReadonlyMap<string, MemoryInvalidationRecord>
+invalidateAcrossLayers	export declare function invalidateAcrossLayers(input:
+isArchived	export declare function isArchived(record: Pick<MemoryVectorRecord, "metadata">, invalidated: boolean, nowMs: number): boolean
+isIndexOnlyKind	export declare function isIndexOnlyKind(kind: string | undefined): boolean
+isNoteRelPath	export declare function isNoteRelPath(relPath: string): boolean
+isPlainObject	export declare function isPlainObject(value: unknown): value is Record<string, unknown>
+kindForOkfType	export declare function kindForOkfType(type: unknown): string | undefined
+latestUserText	export declare function latestUserText(messages: readonly
+lexicalCoverage	export declare function lexicalCoverage(queryTerms: ReadonlySet<string>, docTerms: ReadonlySet<string>): number
+lexicalDice	export declare function lexicalDice(a: ReadonlySet<string>, b: ReadonlySet<string>): number
+lexicalKeys	export declare function lexicalKeys(record: Pick<MemoryVectorRecord, "metadata">): string
+lexicalMatches	export declare function lexicalMatches(queryTerms: ReadonlySet<string>, docTerms: ReadonlySet<string>): string[]
+lexicalTermString	export declare function lexicalTermString(text: string): string
+lexicalTerms	export declare function lexicalTerms(text: string): Set<string>
+listInvalidatedIds	export declare function listInvalidatedIds(vectorStore: VectorStore, scope: MemoryScope, options?:
+mergeJsonObjects	export declare function mergeJsonObjects(base: JsonObject, patch: JsonObject): JsonObject
+normalizeImportance	export declare function normalizeImportance(value: number | undefined): number | undefined
+noteDescription	export declare function noteDescription(text: string): string
+noteRelPath	export declare function noteRelPath(input: NotePathInput): string
+noteTitle	export declare function noteTitle(text: string): string
+okfTypeForKind	export declare function okfTypeForKind(kind: string | undefined): string
+parseLineage	export declare function parseLineage(metadata: MemoryVectorRecord["metadata"]): ParsedLineage
+parseLogFile	export declare function parseLogFile(content: string): LogEntry[]
+parseNoteFile	export declare function parseNoteFile(content: string, filePath: string): MemoryVectorRecord
+parseWorkingFile	export declare function parseWorkingFile(content: string, filePath: string): WorkingMemoryRecord
+provenanceActor	export declare function provenanceActor(record: Pick<MemoryVectorRecord, "metadata">): string | undefined
+qualifyTable	export declare function qualifyTable(schema: string, table: string): string
+queryPostgres	export declare function queryPostgres(pool: Queryable, sql: string, params?: unknown[]): Promise<import("pg").QueryResult<any>>
+quoteIdentifier	export declare function quoteIdentifier(value: string): string
+rankDirectoryTags	export declare function rankDirectoryTags(tags: ReadonlyMap<string, number>, limit: number): readonly MemoryTagCount[]
+readFileMap	export declare function readFileMap(path: string): Promise<FileMap>
+readResourceState	export declare function readResourceState(path: string): Promise<ResourceState | undefined>
+realPathNearest	export declare function realPathNearest(target: string): Promise<string>
+recencyOf	export declare function recencyOf(createdAt: string, halfLifeMs: number, now: number): number
+recordBlocked	export declare function recordBlocked(record: Pick<MemoryVectorRecord, "id" | "metadata">, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>): boolean
+recordLexicalTerms	export declare function recordLexicalTerms(record: Pick<MemoryVectorRecord, "text" | "metadata">): Set<string>
+redactJson	export declare function redactJson<T>(value: T, redactor?: SecretRedactor): T
+renderIndexFile	export declare function renderIndexFile(entries: readonly IndexEntry[]): string
+renderLogFile	export declare function renderLogFile(entries: readonly LogEntry[]): string
+renderNoteFile	export declare function renderNoteFile(record: MemoryVectorRecord): string
+renderTemplate	export declare function renderTemplate(template: string, value: JsonObject): string
+renderWorkingFile	export declare function renderWorkingFile(record: WorkingMemoryRecord): string
+repointSource	export declare function repointSource(options: RepointSourceOptions): Promise<RepointSourceResult>
+requireNonEmptyString	export declare function requireNonEmptyString(value: unknown, label: string): string
+requireScope	export declare function requireScope(scope: MemoryScope, requireThread?: boolean): Required<MemoryScope> | MemoryScope
+rerankRecallHits	export declare function rerankRecallHits(hits: readonly MemoryVectorHit[], scoring: ResolvedRecallScoring, now?: number): MemoryVectorHit[]
+resolveDirectoryAsOf	export declare function resolveDirectoryAsOf(asOf: string | undefined): string
+resolveDirectoryLimit	export declare function resolveDirectoryLimit(limit: number | undefined): number
+resolveMemoryLimits	export declare function resolveMemoryLimits(input?: MemoryLimitsInput): MemoryLimits
+resolveRecallScoring	export declare function resolveRecallScoring(options: RecallScoringOptions | undefined): ResolvedRecallScoring | undefined
+revokedIdsAbsent	export declare function revokedIdsAbsent(environment:
+scanDirectory	export declare function scanDirectory(records: Iterable<MemoryVectorRecord>, invalidations: ReadonlyMap<string, MemoryInvalidationRecord>, asOf: string):
+scopeDirectory	export declare function scopeDirectory(tenantId: string, resourceId: string): string
+scopeKey	export declare function scopeKey(scope: MemoryScope): string
+selectAdjacentRecords	export declare function selectAdjacentRecords(threadRecords: readonly MemoryVectorRecord[], hits: readonly MemoryVectorHit[], messageRange: number): MemoryVectorRecord[]
+serializeGeneration	export declare function serializeGeneration(value: bigint | number): number |
+shareGrantAllows	export declare function shareGrantAllows(grant: MemoryShareGrant, request:
+slugify	export declare function slugify(text: string): string
+sourceIdFromRecord	export declare function sourceIdFromRecord(record:
+stampLineage	export declare function stampLineage(metadata: MemoryVectorRecord["metadata"] | undefined, lineage: unknown | undefined): MemoryVectorRecord["metadata"] | undefined
+stateRelPath	export declare function stateRelPath(tenantId: string, resourceId: string): string
+stemLexical	export declare function stemLexical(term: string): string
+toInvalidationEvent	export declare function toInvalidationEvent(reason: MemoryInvalidationReason, ids: readonly string[], hold: boolean): MemoryInvalidationEvent
+tokenizeLexical	export declare function tokenizeLexical(text: string): Set<string>
+validateAgainstJsonSchema	export declare function validateAgainstJsonSchema(value: unknown, schema: JsonObject, path?: string): void
+validateIdentifier	export declare function validateIdentifier(value: string, label: string): string
+withTailContext	export declare function withTailContext(draft: ContextDraft, blocks: readonly ContextBlock[]): ContextDraft
+workingRelPath	export declare function workingRelPath(tenantId: string, resourceId: string, threadId: string): string
+writeFileMap	export declare function writeFileMap(path: string, map: FileMap): Promise<void>
+writeResourceState	export declare function writeResourceState(path: string, state: ResourceState): Promise<void>

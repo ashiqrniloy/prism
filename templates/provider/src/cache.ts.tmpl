@@ -1,0 +1,20 @@
+import type { ModelConfig, ProviderRequestOptions } from "@arnilo/prism";
+import { mapCacheRetention, sanitizeCacheKey } from "@arnilo/prism";
+
+/** OpenAI-compatible `prompt_cache_key` accepted length cap. */
+export const __PROVIDER_UPPER___PROMPT_CACHE_KEY_MAX_LENGTH = 64;
+
+export function __PROVIDER_ID__PromptCacheKey(options: ProviderRequestOptions | undefined): string | undefined {
+  // Sanitize + clamp via the shared core helper so cache keys cannot carry
+  // disallowed characters or exceed the provider limit. Cache keys are
+  // session/customer identifiers only, never credentials.
+  return sanitizeCacheKey(options?.cacheKey ?? options?.sessionId, __PROVIDER_UPPER___PROMPT_CACHE_KEY_MAX_LENGTH);
+}
+
+/** Retention mapping via the shared core helper; `"short"`/`"long"` only when the model supports it. */
+export function __PROVIDER_ID__PromptCacheRetention(
+  retention: ProviderRequestOptions["cacheRetention"] | undefined,
+  model: ModelConfig,
+): "short" | "long" | undefined {
+  return mapCacheRetention(retention, model);
+}

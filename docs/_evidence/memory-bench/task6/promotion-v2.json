@@ -1,0 +1,6766 @@
+{
+  "kind": "promotion",
+  "dataset": "c9045ed44ac89b18ce9416285eca4e6c2cd0484c9e18822a85ffb529fd0bf5e6",
+  "provenance": "synthetic-construction",
+  "precisionFloor": 0.8,
+  "search": "two coordinate passes; each default weight multiplied by 0, 0.5, 1 or 2",
+  "split": {
+    "train": [
+      "p0",
+      "p1",
+      "p2"
+    ],
+    "heldout": [
+      "p3"
+    ]
+  },
+  "audit": {
+    "n": 0,
+    "kappa": null,
+    "errorRate": null,
+    "provisional": true
+  },
+  "provisional": true,
+  "selected": {
+    "weights": {
+      "explicit": 1,
+      "correction": 1,
+      "outcome": 0.5,
+      "recurrence": 1,
+      "generality": 1,
+      "ephemerality": -1,
+      "derivability": -1,
+      "duplicate": 0
+    },
+    "minScore": 1,
+    "train": {
+      "n": 432,
+      "tp": 360,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    }
+  },
+  "heldout": {
+    "n": 144,
+    "tp": 120,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1,
+    "recall": 1,
+    "f1": 1
+  },
+  "baseline": {
+    "weights": {
+      "explicit": 1,
+      "correction": 1,
+      "outcome": 0.5,
+      "recurrence": 0.5,
+      "generality": 0.5,
+      "ephemerality": -1,
+      "derivability": -1,
+      "duplicate": -0.5
+    },
+    "minScore": 0.5,
+    "train": {
+      "n": 432,
+      "tp": 279,
+      "fp": 0,
+      "fn": 81,
+      "precision": 1,
+      "recall": 0.775,
+      "f1": 0.8732394366197183
+    },
+    "heldout": {
+      "n": 144,
+      "tp": 93,
+      "fp": 0,
+      "fn": 27,
+      "precision": 1,
+      "recall": 0.775,
+      "f1": 0.8732394366197183
+    }
+  },
+  "limitations": [
+    "Only training personas select weights and minScore. Held-out labels are evaluated once; construction or unaudited gold cannot establish production defaults.",
+    "Mock extraction uses fixture syntax. Reference candidate history is not a production admission replay. Four out-of-gather/extraction tool-injection candidates are excluded, not counted as rejected score decisions. No live calls or human audit."
+  ],
+  "rowsHash": "071d0edc1cef18b089290e102acdf046f46935ec84e7aca18ff460fb6fa4da71",
+  "coverage": {
+    "labelled": 580,
+    "scored": 576,
+    "excluded": 4
+  },
+  "baselineGateCounts": {
+    "accepted": 372,
+    "score": 108,
+    "ephemeral": 96
+  },
+  "selectedGateCounts": {
+    "accepted": 480,
+    "ephemeral": 96
+  },
+  "excluded": [
+    {
+      "id": "73a99733f7406b377d7816d2dcccb3a433f3492336c428a34eb4a0b931da9279",
+      "contentHash": "cd0d6bbdc1664ae3d80a6182f1f5f00cf0f214a7fe2e61c92e55b737d5b92d4a",
+      "reason": "not-gathered"
+    },
+    {
+      "id": "8bd64e0d7ff47aacea070dfd48eafc6b13349fe5285c04b7400dadc6eda59776",
+      "contentHash": "cd0d6bbdc1664ae3d80a6182f1f5f00cf0f214a7fe2e61c92e55b737d5b92d4a",
+      "reason": "not-gathered"
+    },
+    {
+      "id": "fb5fb87a740dd473c515c5bef947e3896603a6242d127caa9ae22d7077a47140",
+      "contentHash": "cd0d6bbdc1664ae3d80a6182f1f5f00cf0f214a7fe2e61c92e55b737d5b92d4a",
+      "reason": "not-gathered"
+    },
+    {
+      "id": "8be2c7a37d98f822ec017cf77afdf9add57aa09a0f25f7afe97dbcaa1977091d",
+      "contentHash": "cd0d6bbdc1664ae3d80a6182f1f5f00cf0f214a7fe2e61c92e55b737d5b92d4a",
+      "reason": "not-gathered"
+    }
+  ],
+  "scored": [
+    {
+      "id": "d51dceb115ea4d253b42f80e13cf588f2bfcf35fb74678919be7055c5609a30b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7181e9974affcfb37afdfb71dea9e02630cacbbfdb89972036c97a557f17d616",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dd2e8d0d8547c9a88e8fc5be00d22f991bb63f42a5209c3f5c2028159991593e",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "037cf1445244f2675afcf0a145ce1f1d14275f82182e2f08db50afb1fa6a1783",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d46e9db0037800670dc5566d8295c0c9125fcf0bb01d7f6cbe61821cc9b16615",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bbe901eb6b0ecebaad9ce3b09db56146b35b68ab76065f377d6f9f704184e010",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ab97bc29e3c40150f65bc7eba785b3dc560753e8df5c898dd8475b2350de68ae",
+      "baseline": {
+        "score": 1.3413030972429927,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8cbd119e0943d818eb72a38f8a8772f4b7061d961c6da7cded7bff57368392dd",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "20b5d3f61e6b40b0ed1d0e6859e392a22cfc8bf09d3ca1a25fbba9b9875af1c8",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "11be1247709a17d4ec99b13020092e60437648a1fa98ea8cbaa89b4bf46aa1c8",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2fddfcc6d5fd756165e64faac9dcab5c4d1f67011e994fbd32fe0493cd455434",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7c2cdee61a4039bca4d9dadccbcac0770b603a5a5eaf3dae2d91df733d476808",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ac24e110c56212e2ac3d0e19706a7ff61aba22ec650c7dcddd385683e92fa760",
+      "baseline": {
+        "score": 1.4306765580733931,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6c75d04e0474b870ad338b6d9fc52177e81523ff9ab0671179e945dd729e7048",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f45e6a0eafb19a080bb0f33e6e38ecac1c0d761118893bc91f0b4c84b72c4efc",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a57b1464fe787fce05643ac2b4756b6da83b884b95b043c4af1cc3afc82cc4c5",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "336441e76b1271422bd92222fe14b3d48fc1c2c42f1bcd155eac895c275185f3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d9518704775f4c3c7e341dbb58a89990b3048869c6ead3bbed9470ea880fb063",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "1ced1556e750a92471d317ba270ac86092710033d2e31921a58fd2fa6c038585",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "305ac0b48699a1dde0887b82443ce38557542a50c39f0a5de553f6631f4088cf",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "04a5e3ee983b52fc1cc39bc69eac88074f41542dd791cac7ed51d6073adc50fd",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3c69974fc46b04ba4d147d02d586b87a36c200499564546344acff444ad5a484",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2727a1263c1979e7c9e2c1157656f518607915c9b5d176f1eb06e8ae4d8fb712",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "27b0174f89cc4ecf45ccbabd98a3b581ba3ca976d80a1c444cf9fb498624450b",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "bf4e6f30070031c8ff6d60c7b26ea5fdb79939c045f01a43a8890c0b8d6acee0",
+      "baseline": {
+        "score": 1.3413030972429927,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0d91d03d8ed78d15cbff960fc20a3d39efce8c2bc57d381a3b5626955c8b7cc8",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e164f088ae989384a0ea8986a22718bfbb055e63042071eeb4126e053e43e034",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "570f2194256123e89d5429e7e0213c956e6d07bc1fd94b3c81ad90c4de565bdc",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7a2b7579fd03f7da8cf6e8eaa3e19bb4b0a844771bdfc4080056ec573a15d5e2",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "05980b74dd007f1810ea0b24e5e215f59f9b3d8b12a1077c69e7e79a4fb753e7",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "18ce50d82bb936f2d90364f43ea578370f5e047565969ca5b32165eeef41549f",
+      "baseline": {
+        "score": 1.4306765580733931,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2d7d74dcceed718315dda06bfe5e8ac12b23ed2aa0daebc3f9d9f3c35fd2c2c4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9665c98de4a4990ffb854f9175d38b44534c86a14aed872a607907cf2a9c38a1",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "197db11e3b014a050782a0feb3fb1fbfeb905c0f46fcd7051c7def19c3c13c11",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2d2985eac940fa5e9b16af56798c5cf030aea8452d3d323a8a9ea3d829064501",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "efe914142af326485ca24d4f7c9d5c5cd9726d7ce67f7f991374600625a5a27c",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "9017bb01783f28f2844d1200166aeeea859c49ffd8a74297c8ec9356bcadbb5e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b23dc20b8cdc7ef882dbcd8a0ef07473bfc9e48cb27f1e2d65b212cdb1028b2f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f8c04ddcc6be2f6b6724f0ff74394b29afae5c13ff2c17f0d712dd418f68b6a6",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e8a841859c53c0c00425f412c245b94f6f4041c41bbaa40e0878ac39e50fbae3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5e7a6a2efdf281ffa7501df612011daf52d4e3cb0ba4151671953c6db4b0e32d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "01eb002fd26e376d2f5c47b7760476137ba7235db12a6734fa77fbf50e4e36f5",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "eb6067b1b58bfd078287c372b0a4e64e7454cce15f48c7f1a7499b71fef5d7d7",
+      "baseline": {
+        "score": 1.3413030972429927,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "74eae7eff7071398228d2f083147264abd2feecfd67acaf01173f01bb67b50cd",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "96085e5979d1a05f7ee43ff1ac985e1ec0b7bc9156a50f10c11cbb420ab2ec64",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7038ddc337902137dd0db0b20b1fa1effd16bbdc229c4d816cf64047d26b8f96",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a0d95ae9ced9f168b0e9221ad5890b712ce487226f136ec36be90c5d30eb6b96",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c42833f67ba7015e87ea9275d7843849f3e167ec6b3e182667f969d4fdeac19d",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "a3de962556275160b1b6e9cddfe1db53471cab4312930392b4491d10fcc4863d",
+      "baseline": {
+        "score": 1.4306765580733931,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6679ce833337775ef942e387dca9b269f47c33f85c92d72738bf3d3f73b8e8b7",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "34b70782e9d077e34591f18a231ecabe41ce29d47593e774f87bfd5a4a1420df",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9a8f5ea7d2f99aac7959726dde3204e2e8e04d2332d5dde6dfb3cb322f26afb9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fd3cf07a24db812cbd184da2e2eaee7d4000b27f005ea4459f87e6594b64a8fe",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "067a98ba85f689d3fbd6e1d7abc04bb6a5d26c087c65af1e298674e42ab92e3c",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "90d7cae28c6da194b14ea8c72241feca64ea76608784b18e6a1c13a70fb452b4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5a8d99dccd99de77504c420d6ba772cc7beb7cffe0201bad395b1286eb173b15",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ee42d0458b6b475babcffa2d6bdeeca29828dd51927d8bad1e75f26642eff7d2",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b6303d51ee365d510c3012ebc8df9037a055ef809e33841cb20147c9ba445400",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "716abb5522ea195865215453bc9f46e76ab2543e2e4b8374add47d3ce286572c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "41a206c157284069dae2be6dae11baabad9144830b1f1266ef60adae9075dd7f",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "81fd98868d828e3a33b8a68cc5669366b03cac4ff26b9a95e9ac140a00851a7b",
+      "baseline": {
+        "score": 1.3413030972429927,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a0802c2c01df72d694e47dbc2f27484ee11713c2e70e7c7da7b89f07520655e0",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a683ea916f223c56a2418ee592e0f5ca4a55082937d4b5b86b68c146f3eb1583",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "697e984c87a7997f433cb3916f87d05a3cf729e1e22cb96d28e7839231e16017",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dec250f1a9cab7b335201d13b04f0b346a0f755a2957ccccba585d3ea8b87bfc",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9608666f23d6cacb563067225443eeeb472a05f1b6c5e1d37eeae313a22149f4",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "aa8b5f5a4c1d016082ce444869c45771dbb651bd5dc6d4d7fefc22f55df99851",
+      "baseline": {
+        "score": 1.4306765580733931,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "959af1a9b4610b3e1228916204b9cc4310fae0d0d0366b079ec44e0efdbf66a9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "509acc3922ff61f79d439d468afbbe3eb1274565e8c57ed9f7a647ee5c05c262",
+      "baseline": {
+        "score": 0.4411764705882353,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4dc271b783ad3a9ef70b23125c346d895f5c92cebfe7e62d88ad12669fd52db6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d73cad4a487e76643a8b06de31f47ab02a522365f39a55b4be37fe534e5ac6f4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 1,
+        "accepted": true
+      }
+    },
+    {
+      "id": "31ac5fd4c3eb791d9186165cf5061967c228085d1d0aad3b5e9027d9008f25aa",
+      "baseline": {
+        "score": -0.5,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "01e841efd5be609bb252a9a4b90a5aab4c07cabbd53c1de90d62a3acf7be18e6",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "87adaa2c1b96993336ca83f9c7a66e57c5cdf1b13728089bb564a40023b160ce",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "db251286c71f35bbc8ca7c6d6d49126a065288ddb68c83ebb3790a317b81c8f2",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a14eb9aca099471e770d95fd48243b577b31eebb791cad016bd98857ba02e313",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1f456bce01799fbc47e71fb89035855bb3cc931ef19985e1b42825184f9b0360",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4700c2e84bac9aca673f6fa7c7ad40b8407f39ac221e2e1a1140af376e7da94e",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "7cde527c5075f6bee814dec38d1e20607e414f391113466ba91e210ddd77cc2d",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bb745a038255469b835027bbfaf229c20d9a67bd2f9f524370f126887297d90a",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f33110486a772e49810759e577f4f5cc9c437eea2e9b4cad8e2a3d34fe225c61",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "80ffc87ada32ee2dcc1774604203e60fd90552c9cfabe3e4e4d7d0c1a863c83e",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c27b709846a6a0e36ac6649338d5c4c2f5bac86bd712a89ea81cacbf44387150",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "185c4669d8eaef6997dff03363e6c0f1677a139fa611e8740406c8f5242144ba",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "9b6b116cd7ec50fd827c9043db00ba18857d3f844765dd1a69f7c2818d95261e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b82e6ca1d96fe4faf82462f0a66e41a2f58d089e9a0e52f93792b6cc05856376",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2d8abb78182e7239693b36a7c751315b1f3320ac17c3568f9f97316a5fa76391",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "06117faf99f8157a31123750bd0576f1311d84800a6f337801e8d646d84f0ddc",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ee8f059a2888787e1c868a72242c7a22bf87c100a5f1c44a4f2056569b2f00de",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a00413c29f1a39d431116c8156aab2925b8e54a53e66375a0d767ab06e4ab60e",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ef3a435723b43d5a267dcf5a139bc4b1224457bda1e146d28e549b58c52de92d",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1934399eec820ae8fb61e0077fdfd1704e905001e16af862397a32a41062170c",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f603f1c6005dac923e216cc30c2fdf40ab144cb4c35613d972f085b143955f36",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "831d9e36e0d62c9ef69610b5ba6f62531c830a6704b451a1225893797244a307",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c9daec4c4e057d4d3f586c9765ff0fcfa37e2e2fd8a5c272263ac32f930c2c62",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e58a3b464cae82ff3e7bac15c01c02efccf9bcc4ceafe31f78b721dc69857185",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "7155d74eb7c2f85cef500867c7bedc92977c9baf4639a8303dc4eaaf586cc560",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "609c72d701d7b8f3950964b96b8684be9f46182a3ba7739ca2c11970474df055",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "26d637686e366fb741633f62b054f9e59e3624152c72d2734411d887dbc927a4",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b0a1730cdbf032121f9dc659f74711b8b90ee19b58d3533c1e538820e8fb8fe1",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b2024c000e60f803580c7b1a0899bc58ac393631e66ad9015422cf3e4b859747",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "522964b715ae7bfbb99b2129266ac3b29b044f7a77e47fec61a0cfd66b37327a",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "11534d796d94f8bc593c893d26f93c22ddf75cf363da6f578c318f774f570dd8",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c6394d6426ffba5d5e0f2d6399a7c5889c79542c2ef7653abc49cd1333595010",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6d33349c030f6aba22c075f92c794a57c2d2799ef6bd65f2a2b8b09253fc2d96",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fe8e720c3bbb4a8d76d29edc9d4226358a2ccd5f23040010d1f42e3c93ad69eb",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0f6ba7c2e6e053a869806590f1c58fb62c0c9f8ad1f4a0f7829e3144712f9ce9",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c1b5caa0248fb0ef2b161dfef9f462a5c7f7b5d41ac2a5cccb171528a7a95dc9",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "69fdde98abc0384299fd399f99ca5d219e7aaf48fb204b545ad70cd375e032be",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7b311865622ea312de502d782f3da30de0cf379b9867caee18d2c5c3ea1fb17b",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2234cdeaad73056b75ef34a2fd6ab4955d0710aee0476ccdc4a7e75f1d69ea93",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1a43c7ecb4fc3a7532afd56d17cc89b25fcb12bae9544bfe8a26b287c9883e63",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0224c17fabb737aaa48056136eb2457e8360918c25bb565de9c20a2c13feeae0",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d28a63dcecda4fe6bf1c225503adb9d2d449f3eb21133c5397e04f9608b9c2d8",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "0f62f4d4f75af7d7412a8eb7efb1fb3767d7fdd69f11dc2e3932b2917c08d3a9",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2a5d9d0d413179fcf64e7be38a366705d1d23a49ffb3e799f59016d376e53d20",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9ee682815988bbddb8f1baa3c291afb23ebf82899106c6b6ecc48f7de5e2051f",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "014f54b2b39041bf5563fc659f8c065dede7a2bc0cade85c7a9fcc2a3529c3a5",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e3a3ca3e4ddc0dc2ce6659e90d739b11f1d6f2d310d0f6ac3f59fc96a4bfa612",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "47f20d1c8923a2bddd5bf4b186d27efeda1a5949477c0b7cd861426af777946e",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "9fa3d07486c7cfc56de98ff5335f60d83792188f9407f0ad567e59ddbcb94151",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4ce13924216af561826f2bc6a5aea1744615607ba11d717bda1f8ed151b0f504",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "188927b462118dbf539e320e6213212a6ae4fdd10e1171b9a0f523cbea0169bf",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d2a34addd411e43d926e5900ae174aecfa30bc478ded720d6f458904cf5c25c3",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bcbfa39ae3163900902e3e84e8d45c65ce6f94dd10ea38253182f80662d2656d",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fce99c2e712ba39002b54dd4efad9435039b34a70292d631deb62dd41ef18f13",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "4d381b524093c337a2ff56b51f60e05c23454ada753a1e376ae4e5cddbb34d71",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f59c3c63d4521df2e82b8787ef6e19ae5fc3623712b53584f922e0a9a981e8b2",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "479c19a4044fae96b9dfaf2a3541d1e2ed5a4e14641907f8d0abc2d71824b3a4",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7ffb1d1516ca1ef65461e219585c7f999526c2f8587a84b6ee2cc310f54a51e1",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6299587990f3759dfc086cbe2735e3c99917b6288158e2eefa1ac85733ada228",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7d4979551d954c2e6f4a371322c0b87ed78117e60c642cc58a13404432da8311",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "651730d139be09a05b06c5ff8efe9e1efee7e41dcc8e8e80f9e009b08196b6aa",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9765229698323c20b2acbf761b2cde0a3529871e6fec2bbf3de3cc4321246578",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6d2a8be4cb8711e65219e9ba5e3d1915aa41e984cb6dfc72ded68af0b41615ca",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bc7940f15d14dfb5e91d27d010ac158e61fa0c515855eb4833a5ec109d37f1fb",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0ceddc96c29fdc7584cc01eb53049f0a7fe0ef23f2fba798e29508723ca9520b",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "734d4f5bc7e423d8788533985ecd8ce1dc46ebcdd1a7aa53a94607370e3c9047",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "06a08ece965372a20e7fa83357a206a89ad5ac55502a14a530dfc4a4e37cf888",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "075410cdd6750d6067c87d912871670e6eecbb1cb699cabbc72f0c20807df0a0",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1a6944cf41eb2767656296cb75aedcc9c62ba25274c3c942f42eb55da6925c7a",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b9f4c78f2321e743874d17b7c070d76eefa1f31839de467faef13e3c5aff0991",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5cb04cf01e87af8feaaf027c24b1bef5d25f2c0ea44a0aefabad9259f3325a5d",
+      "baseline": {
+        "score": 0.3413030972429927,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.6826061944859854,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1717adc2f194929272f7952cdce696d4d7ee011a8f0428480e794e274c07ff74",
+      "baseline": {
+        "score": -0.5872683313284359,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.6826061944859854,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "f60eebd71001ad005c81439d26e5e6727430f85453aa6dea889e0f4c44d45313",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bdd277eba87bb5766af8e05cccc80e9db93cd26d37d3a360b0029acdcbe35b9f",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "81a358bc671f49be569c3a40f4fd5177951a13096bff4c794565bc9f1363fe71",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "23264aefa54681d6ba440c001c433e4a63895a10614c3adb693c4717d3f464d3",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f4cb72d29eb500fdfa7e5bb544b14a4026d1f3db5634883c7c95cc7c9aee9250",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8bb1ebb6e9bb213b7d34bdd0b544fea37a7c3c681fdef3d399d60f933414147d",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ced6a360fd1199f8c5cf413e4e4eb29921ffa851bd21d79014cf464286f64abd",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b6986f8010ae665767b42bb61682fa62896dcd4d686531b2c6aa379ed9762f68",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7f996c53cc97d45ca1c6cf77c051733f7cde99edac1fb71632e792ffd669a6b3",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "53d99acc7233f18846b73f4dfb0556a42c9934550ec329ddaf1b9f82b6ffbb2e",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fe900a1914789cd3e11b54637a254a1228a6d54633d55a9b58ea189a514e404b",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c66b459ef137e4d5a51ce4d1f4bdec64c82d332b7c3b9551a5be78ca2797c162",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "f23e68d89833c75e58dce9d759aa5bb4d7ea728fbaa920ef0a685a325caa46a4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b90b0b903f661efe8b03626efe402b9614ab8753cecd48d45cbccb8e327d16c9",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "18faea66f6b15c0895d79ec12bf899804d46d6def52ef28c24fda153686f0300",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8d9b9af91065b98ea75e4ee2e4426716158afed0e6d18c190ea8a0ea0dcd3454",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "700d69e36159bfc3eefce1bb2174f6bb81f3ce1e81f47c01e47369bb63fee0ff",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4e210c38a0befa33026db4d807e0cd04adfb64e65736681fc7fe2c532c9af133",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "8cc88ca21b5f28b3b23af613ca98c30b94035739b13ef72b717e0795cd550f98",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a7f81bd9a2bca2f9b8d77b72257a41d2721f250af176b479f61b33e0529d1b93",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "58e8cc9f85b53a61d1d813d1bfe6620b212d86d5422c4def367d9ab4e0be5b3a",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d4b478727f80bd0efea55fb48c3b65cb1bcd4c9e2a18f884fc09c79bd9d24e27",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a5c9344b33fa6cf9084590d01e52da520d198816380d3674fd3f1968f8686dc5",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "04427e3077991986c362343c369bea8618c2118583c62cd3175d61e8b50192f5",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "c299bc7208eb3f78f48f9e6b87474bcc9e3e4ed99049a5f1e14ed9c54ca75afe",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d726bba0a110d820eff83356fb6e489f73966df8380fd38a95f7d7c7cca4c558",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a7b7f9d5b0c140b760e4ecc632c1a93cbb40af66237e75455b3585ed725ea113",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b43a5d005c38ed8f580dfdeb1851bf341bd960b6993fa029d9afee91d4cb63e3",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b6c628a4d7dc76f0e8f06d3435770a97bdec4e1f53411dce288649facdd44470",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a2b9325b9efd3dd3fa10710340b9ae0689784753ebe58e43d34243642b5371a0",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "e3e69771259afbd5d60033a1634d135603290314706098285099025a4c783847",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dccf4921653c15125c59fcd7851323241aa55d26afe19277ec5f3f2d29136b76",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6a9614194f6c94068623a4d10b7a2ed870a95db2764dbd73ae34d5a459143d03",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cc2ed55df99987935727ddac7663595786084bbe7c2f1578b8b2101e6103108d",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "11b68509bf024f88d3ba8f22ad8fe1907f3bbae01b82bf61f93fcc27b2911b05",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e31f44411385093d5f36600b8dc44778bf437d3526d476740c2ae81a6e9cabeb",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d9104989ff77871de2e5ba45326a2176fec472e0ada5e0727444c5c1a2473cf7",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b483e9af7276350d79f9ea6652bbd6d7e6f14207df4fe9347e2f5046804e270a",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "17f9a8ebd88dd24379f65d55b6e25d3d551af7621451c0bd11a0d15ca0a67e59",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e1a471fa81d54dc8b9ffbdea0ac628b6708855b6e0a42e0dd83d9253d6a2640b",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1f891f6dd1a219a84bd31bfa56361ee5b82cf42bad4f71dedb66118dbbbc8e6d",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "97a5b807dcbef084fb96316a617cbe7f4cab8177dcd63b99c1ffee509e48ccce",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "6a83e0e5d62a49c35e4074be986f8c81a7bb4cbdebf4a8f0e63298f0121b759c",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ce82818249873f290c6ea7e5d4b6fd33d209f05c0ccd84579aebb1675e9f84e5",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f2e07c248882140b27bb1e17edf3ff58c12d24dfa7540bca4f3b26ac974a3f19",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "49b4b2cbec56730b8a20bbbc3cde14b064c552b7d088f3f2d511e4b67fe1d8e1",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2659ae049ff0a3894d8c4bf2d81f722787567ba71d774824df56c202a5983b64",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2366e93b58f4025e46c54766e1aadc2e5c08cdf8c95ac6d3e383268d077eb3d0",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "77d0c154614f20c59a63e7a46a2d02a9184dd1d16c2b7a880592c511008560e8",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "851a9f9241c30e215cda5acbccbe2572a52752b02faea2dab2457bd65124e287",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9e3a2eda44a481fb1a2865abe431b027cf0a3e9ed0fa3465bcfa759ba1615321",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5a9718b80646fbddad5dcab07807f2ece76e44876bf7f6147eb780a5ca952419",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ae6d2652a3de8967d3ecc63a9f0d705fbd332407637f3c6586c42d97ebd6e7a1",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0b312e550189c57ca547b65279772a3a255cd0335ab47d3c0506191afa91fe8f",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "57e5605963900f952019c0b254296d95dca42e0b8246012df6fbfc64f62ed17d",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f28c4093acc6de60f335c935500ae541b992a5ca2dbbda19aaba50d62d07a1ea",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3e2b43c0746a334a22df26e7d6dc0bdf8aae2a7dd2e678b8b2c40fd2f9401e7d",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e63cf370be42d103f4a17dc220e85a144bd38558a5a0ff91afdf10c75e68191e",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fe3a809ee19c300d46675ea420dff63458472814186ee91362be0b6624c8f1c7",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ef3b0d99e7b311a265dee723ef6e4bbe5a6064d06d01b72242d5c2a7238862f8",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "c3fa6a3dd49f29701b9f0ab5fdaea101379fae73b2682e70d564406042c42f46",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "433e28b470cd5f620e6221922f72e22b9f1988cfe64f8872bbe88787993a757c",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "826df8e31e207d15686e1dcc6278c0ce15a2158ce0578875d05c354c11f3fb28",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "537df465666254941674b653c5db16100164bfacd980a9cf84050bfbd25059ae",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "89ab45abb810deaa62168a8502023162f4a8393f932b757d19d29882abbc25fb",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "746219ea7b8c79eec941bac0a9face2c81b48ae4d768e6625ba3dadb978ddbb2",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "b08b78ac371190f64492ff38a7c4c8be7afb848675e1388949f69e96c6624aa1",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a82bf50c98acace515b88a381788b39daac13c3d39f1f50ddebb90480abe6330",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bbf2fb61dc933392f267208cfae3901047744bb87c65f005f7ba5812d5d9b3e1",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dc9906209ce94796df86b66521f71e7002ddb4b800080ff2e3387a30acacf26a",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "273cf1ca941f33e2acf363e3e55a4b104b9c6703c8ce31e220d27cc044607b36",
+      "baseline": {
+        "score": 0.4306765580733931,
+        "accepted": false,
+        "reason": "score"
+      },
+      "selected": {
+        "score": 1.8613531161467862,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8c51930bf035bf0992ba24234e8ffeb436019a4e5e51f481bb42eee26b7b652f",
+      "baseline": {
+        "score": -0.49789487049803544,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 0.8613531161467862,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "f2974de3fed910868c8f500aa3d87e48bfe835070d589dc61fd9d08da13d2230",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "654f313a08996ff472d51cc14f8bee467061428bdf9b5b748f30e4aeba81c341",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "07400a56d36a3e459f8c7c5e59431a43cfa7bf6e4a00b9be5f58c69861965fef",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "893a1b5e2745febad7c31c9bf348017edf94a4560dc5453b2da6c084f1debe85",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dbd1872f02e7af2b40c185c59902e472fd8903e681f07de4233ad5863cbb242e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "17c19d6b8203593bbbe7cf91d5ff9c3fb788b53f6ab87ea366ec0c33402d279a",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "075d50475cb7f9b8b7bcf60b75018649fd78aecb0b768d09bb8faf9896679efe",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c666be8c17d371a881cdea1c7bf6d85d661f1d234ddb2c93a5d3a48a13d880c5",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "12b8cfc01b40062a5718849aa73367d782f40c4f1a6f65fe39d2e46fc958f96d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5b0edecd22017dc82bb303d28eee107ad1ac0a1df2258c4f9058c90041439c26",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8804cac4e02aecaad86fca86e099ddb65ab3e48f2a1b783b46483a2c63c850d9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a3a34c4800ba74a65664c099177b9f521d05b66d3a1b6f115ed0d47dc0979e48",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "34eb8395061ad9b72d12ae455e40dc373960b2ab81ff6d9a9a1315fdab819f95",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2a371164c3448cf3d301495cc377b4756ee1475992e3aab2d72ffd410cdb02e7",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6ac4259757d491c759ceb3a3fbf21ab590bbc019180d1430865f11841dcb872b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "053daef5f87c3964da24f16fef30739f0055ef08d62a181ef4c5eed53d71181f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e34779d6de2cfcca94d9c340c1f137811b0cc6c6784f49526262852cb8c9b076",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1369c09f9a986a9fdb5f660394d01ade1e3f6bb7be6a2fbf050f9a7e03739cb1",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "786e139b3fec0b856d1864cc86383a0313dcf37e4863a0def592b2aeb23363a3",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0fb2ab4e84ebc0913226e6896fbb21f87db61a46b139901f79470072dfbce921",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8282999b0af9444a90204d63deba8b847c010821a9518be27dbc32dce1088e74",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0c291f03b2872e3f346acaf99596d1b71eedd22316fc1104f0b1ef282aa6a81a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "78bb5dcc02b283ee4b0e0d8e362f906ae1fb45b0da2aa736d46b52b0c699c8e3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c561ea08250c0f81fdec2f45d314e2e40f0239e45434a79e96b8d00eb0d67f43",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "45fbe81824d7496403acbaa405d122d4e8a794780f91e19f75c61e082a0b9eb8",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ff6da17b3ac42f6e69efde1fe074eb542a2e0b7337e01084d190834ce8592964",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "92ede56f137e81e80ecf89fd30883642dada282d82ef227b7c859927868a5e04",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e7f5e972f5f987162e4ce3ff8d13525adece98825f765825e64c52242cfa3ed2",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9d86009c83f8cd058ca6ddd599eca090de33a49c6cda1e6d191dd2f82c8cf645",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6828744113c9e76bba1da64b0d97692915ca2902e25a5b6f72a638b7318a002a",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "8e8b25fc8ce01d46b4218b1edc84a8ddb4331867ae7319903b68ec7af070f430",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "77ab6acec880c9e3c98a7a4e3e27033ae70ed05da27e875c8ed3ec09d04c5d0d",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c8777b0db66fbd76d88cc009d441c5b773fd3010c56785e9ab541378a015deb4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "97e802e9ffd09d8c7ea78c3a8624bf0d051e335fc225dce1b50c5457629b9bc3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a72a616ef3d01d1d394fec098fb43feaf9167f36eeca0f805a22e63ddf4b0155",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0d0f5101558ed0db0e4520f0e2ec8394235ef4ae0b8b55ac4f938d1b2fef102f",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "cf99ec9a6cdbaa50226eff8cc441c4578a6bae28ea3e7ddbe51b09c032735af5",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a9321bf544b3739848107cd8e70f842db819984f740b7818654fa14fb4381345",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0ffaec7d41747b86cb2ec4ed84cb89f5bdc3783623ba1f2719ec67c15c5d92d7",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f8282789b700ee744aabedcdd4ebf0ad0bdf6665767208b75ba693a6b3a7976a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "483f1c7ee463a4743f6fb13d25f727c3b2218701a9bd9db5a311093af332dc1a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2aa9ffff07ee080e00bbde2fd43a624ce9eafaab3498c510bba174125cb96b80",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "207ddda99e9ed19b76efc9821ebf815de2d1c756c64f26f197daf7ccde1c2a3c",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e6bd083c02f134baae87bb29f674b7bf3e226fce54be4b51eda2f85cc89e5836",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3944c03e489f7fca3623bcdbc3866a6ea5a7fcb9e0f6e66617d3e676eccca84b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4611f9e956c33a7be96d827d8c26031c33aa3505f017b2d220cb8547149e60a3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2b2228d4445d8b5bc18dada4916afaacc16acf50541fc4a02c4af396ae9bcfa4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2efc15ac86fe174f4475540ee7b3e6659eb5e35f24d29db3e65048083dd76458",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "402401d29965d3f5db66df5e86f59535a148731a3e089b79e4c6bae574db8a8a",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fa30e703aa6cc3c4a961cf05fc2f6f1cde642e67bc703a1a850a1c2cef4ea5ae",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "99241a750ec56f8586f0304fb8b89557cb3ebd7f337e803c888e9faf9210bef6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1090893e93415d016c0d76fcffc7b10e2cc7c3a33f25246287dd4d42a24edff9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8846581f231aee35784f469ac06a00eb0e6b1e44a89ee5b81ab909866b812bc5",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6d1cecaf41c27e5e50cdd205f6dd2f08b12f8268cc40ec1e739460b0d8cc3256",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "11eaa1c6d771a4898a0ecfa0e0638a0ec4c4077375fd5e95f6ba689dd0ae15b4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5046285e4fec5855a3bfdd953eb2fe419f49f358dd0c4d35b949950ca6a2172a",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7245639a8fe01fe63194a8f6417cb4328116ab5d3778bccb02ca8128062e0c25",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "205b54b35c188dcc793c93dfa76ab6b5b9b8113dd1218e63c3dd04350f1e656e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "093cfcea68abd44b16629098c699d19164b8808cd2b1faaa75b69a38f5dab048",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "66025e4fb45e5d4625e94d2ad2f20b7b3c0cb24421fbc2dc49fdde828ef5aea9",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "65dcfbdde947606c96ba73eb3cdf713d8dedb1b1a0b3fe194f69d090ccbfa2e4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2fb46e883f597ecc8d9459e78fd0f3ec140e4f88978c77f864d062f283d06590",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cefe0b80c4f8982c557371a62c747d7477333b7800bb18394393d7938fa4f48b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c3c23a5c5b6264276cbc150b70e99f835d18a10275264f22de2f80e0a025f66e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ea64cb19ac325eeb012bcd24be1137da449e9840ba7ce9b6315171d0196d9512",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7dad4e0263e3cbb8cf01710bf4841d12025c3ea8178f0fc7510c186e5f99f041",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "e340e2f21a0ac4f6ef8591cd33dfc545d43740c8e151b823ab0b003820c64f9e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "953b6d2a1cdc0138e3787ee078ea3128795a883b30bda539fa1320806b5e5821",
+      "baseline": {
+        "score": 1.6,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "db1e416cc6716e17c4246abd4d0ebbb3c8ad7f57eb0213181e76d3238f409fcf",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e0859c3af44db0a06768818049e40878ac82ac09457fc3ffda0fd8545feedf19",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "df88770863e92d8dc33ab71a991823d3e9255e6fa3aae2cbc2f2d4e68cdcb142",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b4752dfc8ca6d49c5eedd178ccdf089f113a90f47ca9d433e8d9a0f3bc8458cb",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "f361b03e7990cf137928f2824b0d7652af84e2966609e95a4cbe20b4aab1103b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "933792d7d8036ffe05dd30019a6a14b9661f328b9eb95c92049d6ee9b0f598c7",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "22113587d738a5c0a16d513284eb6cceebd233c0472f6f7686f8f978e8c279c4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ef0ee34bf06257972403cb53063820da37d80cfa3f0f2fa1da4d13d0b3d779f5",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8b6c84fc35cfd848db90320cb16efee8a626f5bc5b95b318aeab4d0d707052b2",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a0293c437e2f05dc29d53a14216eef839807a54745158f2cb83537794a31db10",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "84de02dbc8f48c43bf0c84690772522b76c0d841ff387b661e77d1c5003e2fc2",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9fd93528655114e2e94e4e6d787d4e03979ea5f2a2e25f58a440d690661d3865",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f192bba50096e91db61afecd68d9cd9d5f9cc1b310d838736724f02f7bae58ca",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "87904110f1cbe19f07ca2eec66fc0f6c0e886ed540c6ec49ec2698ac5b49dc94",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "470a70b58385452b66ad5493a0fb530514a5f77b1918326ab5120e18d9e54e5d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b58ced1c30b2028b2faab0f9d839580aa46f52f62592898efc9d885967696d03",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d30ef26580d0063dec53945cb32e7cae46991e693767d866e128bff8d297cbc4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "29375562835cd44c50252fccd0e45c55df0aa7a48b714bb8d1d851f79b1bba4a",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "480ed777e30029a94de1e23aa2f29c867320dd9caffa10a9f1d88ec3e2ff2b5b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "78a4d6a7155ede25a3267ba5abd4654f8d28517b8c00e25e312c50aa36f4c116",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a63eef31eff68531da7048eb294d9e9d0ca7117d1b879ff6778105349969625e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "69d7cb32e28e22e17aab38aba62630f86bd2673ec2fe840d65e17de04d541511",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "eb76de9bc875b4db0512e5690dfa5f059d8235da0a56395702b0f9712a5a70f5",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8f0af3273d8f49f3b5abd52003e9f187b6d910ac0f758eec891c6b46bfce7878",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2aca8e718f74a8f2b4d2aa9c0ddaab1fbc49e2824d05795f470d7447684a6bed",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a32b75686f45d55d23120dd57ef4c92431913528f27befd8898274998e9f7bae",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1dee6542716fbc0f8cb739c91353a2fbcca1aa3de8e3c22fe2adb45717c6504b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "398de66eebfc202224468c57a56bbd89cd87ddc0b9b5c96f64cd0ee270e3240c",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ddf8790a6ec259e1af2405b2e25ade30662e40b19f09288d7321e18dfedd0525",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bfeb6dab5488aef428304c12d82154f2898aa8442dfa16142c98f338033de1a1",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f5344de59e9ecf733f94da3e6abb0e29b97de1bdce38e9ade8eb4a47e86cc6d6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ebdbe76b2deb117f293294c2a3630077e33b4c4aaeff7b8ca1bf09f47f7fef30",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fab9632368d6c6627c1cf3ac5e0bbf9feb203ced1db7feb11078d406c56b6aa2",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c87990be1256951a71457bda835dee1e4b94c16ea8f70feba33aa1643b2e819e",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d572b9cc0a600b5a6a7eacd8d028b5c8aa78c53f5d2ab36acdf70a10e41905fe",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b5d4f4b91a7eecd6238ec424c3d9a68f350229c354dcc51f32af6e8e9145c415",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b5d92fa6091d1e57fe733603e12402c68dae63958b3f780b70f4438d9fe3a49b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b0018e81d42da54c37c4fb6e7c046af847b87b83289cc54d295f6c4d30a8d499",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e10e823876b7c00373b716dc0798699e25d5f873292f7879e7709d9f58027183",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3be2acdfaf5e9f24c16657ac5eed8acd4adcaa3e137f7e5fbbe3510684368e26",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "77c00ccd3dcf299e6c802b5ff5382df1d172087143c96e2e0cc8bd7272b32e21",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0ccaa9325b29f17dab9871635d366fd0c9cf1600a44c35ca1fde6b7084aa8b8e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "810041da5ba924aadfb79fade251c9320c85061c072f3fa94c41163fe4373a6f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "19a0a86324120b0797a7f4fc65b1b860579cabf473e40c2b7f686501f0a2c40c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b2cef936afd5598a5249015dff93e5feb505b23c1c338782d3f57696dfe7be3c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4e82ef03304b1a99d786460d7b45c57702d31019a9f979176e29557ae548b08e",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "b7b3b45b05baae4065196d9d08e69124b6643b2156f95a77bebfd7a225688eea",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f69dcab279c54eca5933facd14e17bad442b7442be454919116c2167d90896ef",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e099c069bc1c17663026c0fbcade897e1ca007542a6410655432db250dbddbf5",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e452b94bb08012921fcfe7399fecab525261117b01002172928ef7014247b66c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d82dc31864bd703f9fcf12d1ffa59f0c162addf1a49cf258088e9c7dc91fcf77",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6456313580bbb95b78e73034d7bb121dcf8e072b0d4b611013cd1f37b2a3debd",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ec686fb2c47ce6a337bab71b16f02caee0014792c295c0dbd02f967ff3a46bda",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "49dddd52a2627c352ab25d45178fd9972de1018d4f80e8b7743db181f77f70b3",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "574546a13bb6744a49367228de7163db4e1346d012e50697497307e305a75f57",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "48609b35d2d98178424cbb735831dd521736f9e26cdcbcbd12f2603a45a34e20",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e7304f1a256c046c705e5cc328cbaaf323aa195559e1b96de894056a17adf8e6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a34f43cbb649e79589330e3abd99d8e301bdc9cdad520dc334e4181f755dc2a0",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d53afb29b71807f0babf84b4c94a89e5d4cca5aea39b34ade32492ccf42d9c22",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4cd80c14057a085d0ada48f173151578c83a777753ed5299673d4bf91808180a",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a9522843abf46c866bb35ae193017fca62300c88b3a8d53929a51ef33c7cf147",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "47024a5f2267503ee027e43d3d42f6568f7dc24583943ea9e7f9772b18a8c21d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7a572789b5fd3a8ba57cb4ae3b5c19ff82c9bb473c4509f99a5312c075be7a32",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8a7f1b43ac7aaeba8bf909e9a446f85a4383232fadd4931fb633bc5e3b6c6ca1",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "61d4ee6a01e838fcacac1fc15570a25016cb2c0f9ed627b568fe875fe58ca99b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7e32929e772c1f166fa97ef8536029c5d1f856a23950c6c32d9ac8f4a1a1989e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8ce1464ebf62087d1756b9cf0ba58c30c45c7680fe8d3f35b2ac54bc3c7e6f9e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "aa6c06c94b32a91fe5de4c6b59599d6499788b63cab75c9a30e28168b9e2e512",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2f9e9e761652b186116e2028c2f55f020f8fb038796598aabbb1583747515a87",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5923baf6ef87743139233a8a0789d8cf3fb5d242e56237fdf8b49f711dfc44a9",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "7d3dedeab106ebd4c00d19ee0f6527731a5fef5cd4071e92d7d25945bf936bc7",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b6d3c4c94d256b6c333d518e16778f3856911575dfde39ff2d6b0cb881c234e5",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5908afd0fa3aa50fe1a5686db651d03fb0a5da12d446f3a44c22f8b70a4c7f28",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f2ac8a7acf6b8c2d55d079a192e9a3f5bcca9a304c1d360f2fd1403375659398",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b139ffc41d1aa953a236202e79a60dbd849a4a6da9ba430cf2b91c248f96a362",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b877bd880ff8df3dc9bd0b5eec760be33b4a3d26c97c94fd4dfff47b9f97d015",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "453749c6f751fc506cf820a6a41ce3897b79f52ab680f5ef885dd2e788d8a935",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "40b4fa245167e020348f3e7e7af3d750e7c746f46311861005547f54a49a57ed",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a0615556339c26579121a5571688cf80d8bd23b7f0ce0a33791a17421e706322",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3ef6f15921140e47620475628340c1cf73205d61e0b27c1debcdb638f5f36c8a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "45ff1b876819ebed2f8bdc979bd43fc0d94ec277ae5c4281027fa508ff98e0f4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "df8ab312c72fc1ac984591af91ef6db99141f049446fa2437865e1b48229f179",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "170ac009f24243707fc88b05caaa2b8d58f527ab00a4572093e15f0b3a1b3e59",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "087350f872ebbed8e557af467f8e9d9d71b1ad53dc6dd7bf5e9cc8daa7416799",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "890659388de8d4826a2356f6043f6395c442f508350b78c6fa0b48d3a88462cb",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2382cf2e41fcb3185381be7b4daaa2d03504ada98cbf67e35b4870f0fd4c0ae7",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dc900e85ec249144b07ee66b1db14296b606f2332dc912883e334d314a540fd9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "befaf329bf008ccf8c46ecb75b49dfbe3d54c5e51b7776c5e37964967548428a",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "b66946745528109e4e913c7890efeea956411cdf51372902bac956c5f80a2dd6",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e303aef48391217ee77c3f990f6b15bf124f3d58f9688f107b05b4fdb92a2f91",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2b5049b5abc61cefbe71f691f03f3d1689dc81ad4241e3951e970b53f213c15d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ded38e8aeb4c7cb704e9b48f723c67d98c0901abb252b97b565b13d719f4833f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5f14e50250fae87984a986e406b316689a2daaad2cc44c390b6fc3a4928b6950",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4fe45f39e3b184ff71a749eaa9a84ead885efe6f97f04818d42b02c9ccbe752a",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "4528f952a9f8248b753ff1f78471e52454975278d0ab0d9c8a10f953bfa59efc",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f08ed625949fffa6635ab7cfcdf60f22a1ecf72bcdc74f1906317ae03b1108cf",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dd0995b949c24492d4cfe5e8e2ccf32b8f86e55d59c88b1e658f5182ff14e214",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cc31485e9544af5026339768fb4d8855e46399201b2ce62ce38041e43c253203",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "dd004b8bde9fa190b27d0193221b15ba6abeffdca36b56c4e0f86801005b6573",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "885eb043497657d3e1e7a10103a09a021a57fbf73c8703ac6591bc4d496503f9",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "8bcb71bc84b414f2572f3aa605497e570b8b9e65532d5e19a20ac788f0d073bb",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9cce5715fbbaab9ee6a1d5d2916d7bcd7b111d123cec5c88b96f88f7b342804e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1c6524a300bd23e4ba20674caf139485d06d50edaa13fb55b4dc39b54fce3a2a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9bfaffa15ec91a94367a2c08f051cfff145d07e8e2bcdb22b69230f7b0ba9704",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "faf15082286f0397c38d4c6a4dc59db679b968e22a0e882450abe674ac6e1fc8",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2f5b14893d736ee196abeb209f9f13540dd3f8509ff6c38fafdd6a02becece57",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "668cbf5840baeb52b008e29d2bc3454b1ae5599b2cf06883a1eb15918c4cb949",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8b4b678b6f50bff579863e404cd6337003ef3cc3a815a29f1389514c056e6d1d",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "41cb32dad2bc104cfd71c116f817c49cb0fe34aa3f4e65cc0beb83f8649787cf",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5e8b7c51d9f24c1e2fade092ad657aa3b2ad73f299ed3b64db8a2d9dda7be588",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "62dbf24f4137a39b20fbae40701382c219b0b29736c418950a744f067cdf859e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3f244bac5ae4e3350faff2891efa129bfe79cb74e96b4d1e8961bdb1817dd349",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d0c164ebe1b7f14d2ecb6668b710ad4d44a6c4b2462a17afd5dcd3e622ffd183",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "625c706d72e57c539a4e354a15d28362b10fe7804f2be4e9a718cee2a88fd1f6",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c9b42632ef0da8bcfab3f6ac3f59f440443b7a18e32883edcdc34139cda59a4d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "508b2beff24b89efa0bad38d80d2c430acfabc53f4623e9a22e7c169c0954682",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a69b2d394d1c548250533623a83cfc1325619dc55840b8aa71d331e513b55f0f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8a397703372e34303ed26eb518202450b7c9b0d075b83a598ebc439cccbe1cc6",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "aef2bf838566d194052598c43558b8327feb18a94ebcc5874add8655dbfbcbca",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "37a65fc6adb8cc404b42016393c4d1ad309d1a6fd1133a2b3b9410feef9575c3",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "25789d53d27a7f03d182973a00e3fd40a1209fdb6aceb7c95ee97fc6080be35c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5bbea0e2e0a2c0efd3210f4b355e2c928ab6b629ccc0f3cf680adb2cc4cb2574",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "351e91b4b91daff9515ea28a1b1f6690014e39cdd257282d760bdafec4a58c58",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b3b7ea2404c9e4f1540825f35922a1b2c4925e99657753e5624a60ff6eeffc90",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "c1eb89371d1a66c8462aa67d76351bec56d3b7ac594ebd2e0ef07f06df2951a3",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "72a0b7ca46b0590b2ce7d50e0726e8521a0323204eb883a86a2c9c4786c3489d",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d4a729e0697846898279fd825979336470041d512ba5c40a4e4f45124c06b208",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "849b994ebc8c1e965e87a95f57ddf90e48b44cf382768e05b6874b303bff623d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "899c4b20fc4fab37aec437adc9f1b501b2ac1d708a6ecacc8aaa98a5e4dc538c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "000f04192786cd9392ec1bb34dadbcfb18a1cec238e429df0526cbe55e0ce700",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "11afa0e2f5975430d9e10da9359ed8657d57c41896a79c24b9c8fe8387898253",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0d3d5e4dba09af72c675770112b6ecbc2585ca3a837f7ef96b9d514fc43f8d0b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f27c87c02a7d0920bddeb01d82ef0f78f4d7f1234c4299b88181549db5935e9d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5e352728dce43228f26b47d4dba4adc9d2a4bb9c4992664bb85715bbef5471a7",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ff84200c942e8e476814ebb340c2245564638bafd38f3e89f042d4120cfae117",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6a09b0c555470466f3756ce9cd010615f3a32edbf776eb64c4481f8f85df66c4",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "954821359a23f5cc035f0a99d366c892e596da11e20abb5a75d0110e34081b13",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "008ad475f48039b6065c18576b5911d6c2e66807b4e9a1147c8479093a63d306",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "47f1d8197b084569a4785484bc1d661bb38b1fc96e537ba3053fd6c381e125fc",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "474862058aa0095fa710155566856ca5e71623a5137a24061b99969928b1bba7",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "495cced4b30ef36b274838559ee3e3b8ab7e3562d3d2aef828bedb08a1ffa704",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a7fc15cb0572453b6b32a64074980ab23366ec654e4392797570933fdd6fffd5",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "72c9111ede7d8ff6ce8e7ca665387f329daf1c9b6564ef62432598251367c373",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "14653cf0f0582cdd9b09973dfbe2baa16469de168e81b411237db85613e8fee2",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f4315bce4732c9d99f9c61f77f5d5ca8d90bd64763cece4756e45b84b40448ea",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "eb46526383f8eef40e34b49242c1f0a9e7cfc914b5a69241be5ff156e714b926",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8e32f3a2998376308c33a9c4cd273f54f2e05ac551d1aa807ec07c62aa7d3501",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d27aeebb2dcabded2ae97b7a9d3597c57428d554718f96cdb120b2fac3ddc64d",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "460182e4e94d0856476482927f9355d82969c82506076aa78fd6a6595f441c27",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4813ffdce2175f050fae95e7b197dc4e538d87db0118cf274f3021aeb1f18d6f",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "56101a597ab4318344e9351d09d1fec750ee4438a6c1d615e73e86ba8398dd1c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "95d1b65f2b25c92f5274cf74a8828ba3a281b53dfee38bbd8438140bdf36199a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fc8d70eadf1e71ac72ece6df6d24249b5413612fa4c5a5273203580b263767d6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7b0b730edfe85c62b3a4625909eb12c855250ec50f8f7b302df7ac2d90037941",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "6adcdaf0963a90730c5fffe5f3c12d2d71eae65a0986fc8a23b6312c03daeff3",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3ca84ae03df2f0adec9d6965eeebe0671b889f2e8a18a9058c3090cea8873667",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "acccaa5681a3ec9e9dda22d5645a32fb23bde429ebdd3be41df5714768b0ec91",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "87ee30d9a72f39b392851fd84531fa8e881b3585a1e9c50d2bab97d874655667",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0a5e6c5d999a45e8900c96f91d43db8829e45860310476aa50b01d309954d0dc",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1d33c692ca3d5e232b4f3eedae35ea366700d0b671fbf9c8b82613ea2dc2fa15",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "eb65d4567542834fe8c022098fd89012541579f4728a2fff8c54e90388214132",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "12622dabdb4483b18a40ad62964262038469e7bd5dffad5379dff85ea80b47f4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fe45f72bad13b5b6ff5c13daea3b56210f94d2254e1765095ec1543124ec358b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c973d815dfcef4c01766ab1643c1e427d29a85e96c36a85b12a80deacc390b7a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ba0a9ea9b405e43c6dea821d9e221d87a7fcfc7614b24dd8500bd0f5022de5ed",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "79a3810835da736c06959fd863973168f7a63e1834d9a0176d58e912844f0eb5",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "c66d5ea6e12607ba2dac4fd1fbe880d47769a390b27ca8384784dc4ee4957814",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9f0a1bb6f06b35d8968d35e802c0da9dc212164f2db3904001b77a316847cefa",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b1690390f8c024527886d5060e00cb6e7b3ec2cc756360f28ea6cd1d78762ab0",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "44f9fa097a3772168addecb028d3dce07f77d866fe9fb64cdae6cd8563278459",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "f4651f1677c683dbcb8a41c190b0d9d07f5fd60b6d71941285cf82c44bfc2d7e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0060f423409154678389892f2b133efe88bb3fe479163a2844da7bd83cfe93d0",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d0aa075cf313135c8fceaf47434cfebf91310af6264ec0ad7b4a1311feac5b0d",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "45b4057a4ebb9cc4500efbb697a7a5eb159d57be96602492ef9a5b137ce02376",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d91275239bea0aa448249642ffdb6f0830e0777f8db16530b02641f50287e5ed",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "48554fce168bcea048739c395c6de03eaf1792133eceba1a5d2ce6e3137d3d9d",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e555aad1a202c47424292c37f609678fab563032329903649e93e76804f5c219",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c7c781fa40c04ccbb5e72fad6b9ff505a3349459d4244463b4f3a3edfc5bb7b1",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "e28cdd336b8e810343fb05f05a018519f3ef7331e4b4ee6af95d9b7a96599bfa",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "252356410fd1b2169e9af54398386e0c374669cb6153098c5a6ea2a366e32cd5",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7b59bd96ff9c005036f616fe16e8536fac2852fe3f7fefce335dfb52217e5348",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3ca16272af375c8efc7eddfd942da2e985869ba49de068482e0091af0bff1ba4",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0fac9e9963c3bbdd9885ff3dbcf05662f62811a4ba2197147146c5fce5a217b8",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ba518f84135afb88683c37829d663ba943032a3dc3b56aa1b55a9ba6ed4897e1",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "1f847096f1e525f9f7f393b8036de31fdee075992d7ac838c16148db750defd2",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "df3f0d04722a67109efde2b91adc04fa920e31ab5d1587b156df26e4f7760f82",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2689567f17de07b93788e2501d496cc877b67e378655d3ba93e5f66b11a3b3ba",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1f9ac426473c47f23f81dd40bc7570b5afeda3104ff405ed6b14ba7e73b71552",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b033643351e0979ca3054a4a62ac4f231c7d459d860175f3abec476eb85285ae",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cecd20761bca8dbd8d1a528f3dbeab452fe2ddd01aa08ec94e7b5a7c7c1a3dd6",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "a9fcaa5627b5693b0de3d8c7391b16e42962cb22001cbd73cc8330f5d9bcf621",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bda1f2f8604b886bd57e8ce197f5f1608f39217afaeb49c9d12fe2d1266a0d09",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "b8c24db6715da4c23f35d7c84ad3310941aaa4f6f2209183552771e50652cfe1",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e87efb8137f920fcfc7657c569995d80b7bdb832e7220764b96d1b3e192bb4c5",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d464f67259052658e2a7d5ea859159a566dcc1a53a03d66fe6ca2e9ac056cf33",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0a09eb7978f86434c2f0bbcd29117e8ae7887bbac8cf6b2455da7bd9016226fa",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "7892f9e07cd7c588fa2d0c360590629348f9e66d892297bc160ee96b7b30cdb4",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bba8b2829ed03afa2413fe67d665244575c0b5ac63aa3eea2a8f37566ed15f1c",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1b241ab07b92e7d7508ee4ecfbbc4062e657259c134db5dab643851d122f1109",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "99e5f4b8053435e4af063eefad48f22c16434b92340dfaa06a2d6cd18da51bd1",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "2c4ec4bf24183ab2fbbdeadf8cebabdd7a98d338b5ac8f587294bb3c3e25c92b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ec26fb88fa2a9dd320cfeabf1a22eb997ae05fd52c69781a474f5fcc0372f01f",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "6667ed58a2e42b4e6d6b01defb45315206e0f990fb0f3427f8464f0391f4e13b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fa37265f2341a19fb442735ccb10600e473e26ebf9f6119020e29d733150540e",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7f18de52d2df01c4b0a55436b1e7987daff016ef1b5cc69d0186d081b2188aeb",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c972216435989c4348254f0276a84bf818b349c124e69cf5edb130f70d9f723c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3df9f393eae493c91a8d047ee59260f21d0e9f8eed95adec364c6f0a1a3c0f32",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "10977399558e565f7f12d359f11f734b398eaf8bbe59388c4a45f956ceac46e7",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "722090939f41826de5c7d9e6ac1ba8ed3cf3452303246dae9803b1d6a9feaa3c",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5b1d0c8dc272f110512162e7acf21950f23473ebc0f8a597c55adf07243fb462",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5cbdaab34dcd1be63a97a17c9775aa2b0edb6f7b86c1ce47ef833a6ab8ae5014",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "eb7c5f253866778b1377661a1bf89c61e98c98dc50031390f959468a0f9c138f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c238d638f40fc332e3ef1be8fb37b8d1c590dac15eadd730a84093f58899d274",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "eae11e0fd1a9989b9cb4514e2a506bb3a8d0f440a63fe7f5043235c503d1a455",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "ba94a16899cc9146104716b1651480541e1bbfc5eed34d2354daf28e9fec2175",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "72ed5ca9a8c9b43ef4e4bcf72d9b50a4131e2d4b60f106c81452addcb33ffdbe",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "734b6d674cd7e74f412e6e271fb37f0e545b2e3e1d322ae78aa0c27a6ed53ff0",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "e44f4f99a1fcd06fe8e48158217fb521878c7c17fbb05e1305e7ed17eda568f6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a0280d3b5bdf8a32fee39812227555ffcdb14f575dcd648789d483dc8fbfe628",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "38a74f14de6fc981a3900ea04319f42c9b8ba03a2f204238dbe7bf65c6be5028",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "e5c0ec0240511ad948f847b52702d2c366b9b00ae9fb249dd737f900053a9fc5",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "105597b1392df5184563021a59f9a4937156eb15f4645dba0c0c9ac81fac7a22",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "17451bbc3673c7ffa7dd78d23961a5d94c3916454e2b77471ffad0068bd68799",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a77e773bdd25c22ed3be3acf2a3fb579de63c673988e864dc652c37209626c32",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bd82994dc0397fdb2ef6b12646b729f7fcc027218d2a9d8b1ac1dc0fbaba6a13",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d97a7309cb27e175d2f02ed17a397e1078386884479eba9d9767f48111fc6492",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "52715e83586380b8b2d0f70441c8f0f7c4f09a0718a88be4433c4d9135602951",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6b80b33f9e77d4368cd9d9c2e7e0b52d1e04d60bbd0e485cf3395baccb18a0d0",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bbe4bf5d5b9eb622e0e26c123a5f2e71a7940057cca64f36546753348d7cccca",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0683387e8b0fd92792fdb991f68e9274cdd0527ac2aa9af506d75a2073c69c5f",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "9f2072d10a7ca1cdd9a730226d06de56437196b82fed94e97c6823b463d60ada",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "45559372ca15eb7388eb64872420c594f41020ebd19a03cfb83e24e1e7bb33e7",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "d76ec8e13d87bf830202cbde7ac35f5a4bc1d153fdda73e5c2caacbb225faf68",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fc36e350b680e93b9667df12bab387e42509fcc705e28c768a068d66ac89351b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c22f9312d9078abda5a2e391d011a23fa5f7f49eebc73e0d47b74e2f94a43788",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8f04b82ea0b05f2b223460c2806ae05a82eef07345070357f03f43025bdf97a0",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "843179670afdedf5fb465ce3ef1e40ae5936bf4b04ad637e8d5ea2d9dff3fbe9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6121174726f78cf52b97683bca017789362b690cc4f12dbfebcb0781f4d7648e",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "632d7ad446f544ac3d31e56e879925a455adee06b3b9307a0c13d0a6d335a141",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cc68780c177f8c0d083ab262657e36461dcff2840b55cfc6bc756dbd5f5913df",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7b0fbde180813a04246c712e9e6bde67aeed2c2f7a9df2b5488f13188d3b6f07",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "db0f777e7dd0312f0938e3e6df21e18cdd738cf922f31a69f40443728b39961c",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8de51345d028b541d8c815e58fa185f9f31d82087ef354b6fb2cda040e4ed602",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8f1f27aeb6c069255b8306655e4db195d7ce79008edb03c31a055b9bc01333a8",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "b059f9a277479747cbffb97f458025516b4b2c16565e745720dc6c5abb7666a6",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4728f277ae2882b7789ea9ef3078c406208247f1c9c6b60826944c9b5bc0c15b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fe8b5e149a33982f22a3c1aa420d74d9c12b24e0026bfedf33f53f450ee3247e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "acc0fe485f62ba91f5ee0d4fdc766dc5334d8d76889eaf2170ae90a8e0fb95b3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "4046c3a9d441ce424927c165ef624784bdb04f3607c204fa4fec21fc15bc26d9",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5a0a4213fb4eed32a08460a258891a3b7a155cad1fb61262359f68d7754886d3",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "f9ddb9a4a305973c4083b4807813a60fe1f2b0e23c4cf2d3b92c37ab0e44d328",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "c206df02224aaf82b54f913ac3f7251d892532964dfa4ca560c832b762aaa4a0",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "89507a947453fe2e836b09a95aba5280f292d69f51916cec86b9a7eb55851c89",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "a48203c04876f047819d88ac58c8fe526bdf5391080325d586c7484825353f1a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "23b4df2183c43db43fde62a60c61620776232960dfd7b14960d708446fbf03f6",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "65f1116d21014cc7f19503fadcb8c8ffac6c13f58a682ec9b54d84b5b9be87f2",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "fd01241f3be37c1c7d054810a21f0b746abb1b3217d1012000c3bf2a3730b516",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "94113ce7c3ca25f4a1610173fcc63c380f64e844e40d32efb47af7d707a76661",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "3775d90ac7811ac8f021a12539dc9e7dd0eb3ee21c2e754c09067efe4c3287be",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "1ea708b032a8269b842048308331148b7173b2eafbee00675432ad7f192dd7fd",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8241d8b7291871ad9801f545de553db5827ee6dd7d6eb6d435ab55fc65ecd5ef",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "341ae9757383565dc0098eec670b2d93c0f97f03fc34d93d3d0f03a4c8496485",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "bf216e05fcb6ae0770c414c581e324908fbce51c91fd336e90eb2220284c8605",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ba36be907995a998a6e959293e5576c9b1918dd83ad787685303d23297760e67",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "200d1d9f204089001a8d9b747eb8a42dfadd07246bde3f5a722b489d127cdec0",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0f1f2d16dd3decfe716cc6d158fbe5bf3c8e0c264982f05e6410c5a284230e84",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "63c41dbf97bb14e90909becb9dd821e11f3c055f3957d983540165477fc2eedb",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "37b06be8bfe4366a757970dbdfef62026d53497b92a6215d487fdd103f001817",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "9fb50bd186755504cda3fb74af1bc88d8594167e12ba4b67a083f92949d2a339",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "d812f79edeaa16b31ec06e323084fadedc58502a5f20e5ce2e6dfd8310c2aad8",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7e28984432cf342dd42f6277b3ada579a93c22c98b51cdc4b3be8ba68b2d283b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "311b6599e648fed72116c8710730b9c5a6f3630bde86d43f3baf0844cdeeacc3",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "fc2a5b1c2069ec4b21ce99d2ac4c69129f8700398b06435f6ab33a25e445c847",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "7ba4a62b2346d0693d2b010f76de6d20548e949f79a626546d910cb4f838225a",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "0275fe4c73abd2ffdb02a8e3e6de542d8ccd4cfdb6c5f15573697fa4c19678ad",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "bb858c54076fbd3a220d6542cc6e61a6abd6870dd2b886635c66b9acdcfaee76",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "02ed64f9bf6aa96e1efad974f7451bfb68a68f491edc506b1e9d1be7465d6e6b",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0ca28446c06c4aa3c5749a10b76043aa3b1d2ed41933c93a15907e77baaa6a37",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "57c8a8d3220d74d7ae2c553600dc5ce9ef656ddd273da8633ad2226068ad795e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cd9a182be89fb7629156978bfc92222561d28a2f4141ed580ba178ac0a884064",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "0ae4eb62e7a85b8b1270ae3ca3623ccc765efc8de1e50f3d64291810bda14be7",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "22c169b2325791e025be26a453d6dfce8366ef23f86814046cea42ebdd857e76",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "19156bed9d5830c82d76be2c1d8813daee2b321cd9afbdeccb419b1136fa24c0",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "0e25d8b50952313e8586f20ee39cedf0ebb99bbe7bef8ed05cc92ea474de7c17",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "ee3af694c34d99385a4c5c7c554ad935dd93cb98945aa7cb36359f5a25c1eb06",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "126039c2ecce0ee4afa5154a9595bea8cb2278ee998319e4db1ae8d409fb3c7d",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    },
+    {
+      "id": "2e43111ab47f822207cdf6ce03bdf4964aa54c2ba97cdd8e2d477af8cadd8e4b",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "6e0e4a4f2605cea42d6ea5ae40d27f19b87a0c27240794a64b043405f0e7df71",
+      "baseline": {
+        "score": 1.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 3,
+        "accepted": true
+      }
+    },
+    {
+      "id": "5d5dd10ccfd0114e6afe9112467631a1f5fb48bebc4cbdd496b26a81081fcc4a",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "98d72057f6c86dbf6681335105e949b56b7b7c52037291ce6d0faa3bf266855e",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "8a84c0ba8536928c602971528f4aed3061a66eced7393ea0000bd29c389fa4d7",
+      "baseline": {
+        "score": 0.5,
+        "accepted": true
+      },
+      "selected": {
+        "score": 2,
+        "accepted": true
+      }
+    },
+    {
+      "id": "cc9a3594f3917d2fddfed6307f29df2b5b47968d1190849e24d4f8bb3b603ac2",
+      "baseline": {
+        "score": -0.42857142857142855,
+        "accepted": false,
+        "reason": "ephemeral"
+      },
+      "selected": {
+        "score": 1,
+        "accepted": false,
+        "reason": "ephemeral"
+      }
+    }
+  ],
+  "context": "Regenerated seed7 4-persona/3-project/8-session construction ledgers matched every Task3 candidate id and content hash. Production gatherer, mockExtraction without gold, production scorePromotion; previous candidate notes supply same-scope duplicates and distinct key-session recurrence, independent of fitted acceptance. No derivable sources in construction corpus."
+}

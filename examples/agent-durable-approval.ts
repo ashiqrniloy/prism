@@ -1,18 +1,17 @@
 import {
   askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
-// Network-free durable approval: no tool side effect occurs before resume approval.
+// Network-free durable approval: no tool side effect occurs before resume approval. The suspension
+// lives in the store slot's `suspended_run` entry (plan 168 Task 5), so `session.resume` is the only
+// durable path a host needs.
 export async function demo() {
-  const checkpoints = createMemoryCheckpointStore();
   let turn = 0;
   let writes = 0;
   const agent = await createAgent({
@@ -32,17 +31,16 @@ export async function demo() {
       add: [{ name: "write", parameters: { type: "object" }, execute: () => ({ toolCallId: "write-1", name: "write", value: ++writes }) }],
     },
   });
-  const suspended = await (await agent.session({ id: "approval-session", create: true })).run("write", {
-    runState: { checkpoints, definitionRevision: "1" },
-  });
+  const session = await agent.session({ id: "approval-session", create: true });
+  const suspended = await session.run("write");
   if (suspended.status !== "suspended" || writes !== 0) throw new Error("expected pre-tool suspension");
-  return resumeAgentRun(
-    agent,
-    { runId: suspended.runId, sessionId: suspended.sessionId },
-    {
-      decision: "approve",
-      expectedVersion: suspended.runState!.version!,
-    },
-    { checkpoints, definitionRevision: "1" },
-  );
+  let last: string | undefined;
+  for await (const event of session.resume(
+    suspended.pending!.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
+  )) {
+    last = event.type;
+  }
+  return { status: last === "run.completed" ? "completed" : last, writes };
 }
+
+if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(await demo()));

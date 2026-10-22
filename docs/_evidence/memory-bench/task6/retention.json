@@ -1,0 +1,1795 @@
+{
+  "kind": "retention",
+  "provisional": true,
+  "regretLimit": 0.02,
+  "selected": {
+    "policyHash": "21fcdd60fb687dde52cd1798053162ce7833d40741531a79951eff2a2024d771",
+    "archiveRegret": 0,
+    "graveyardIndex": 0.2857142857142857,
+    "feasible": true
+  },
+  "table": [
+    {
+      "policyHash": "79050fa1edeb5f4574f9b94ca4666c0d1bdc9fbfcc93ae4553cef019fd9f82a4",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "8ea5d2e3a12df19dcf71eb6e812c15de192c29cb24bb9248c3e638bb6c148b19",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "fb5a0dc5efbd24a8650ad2c1e1166d9c17e5efa9e4545436fc5c9d88dc36161d",
+      "archiveRegret": 0.2,
+      "graveyardIndex": 0.09090909090909091,
+      "feasible": false
+    },
+    {
+      "policyHash": "7492780d2fe4715930248ce8d62cf1b1c719e1871b5bbd7e820a4ed0b2bf19bf",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "f4af6de0441a97b404ee1b330e621ea6c8b9e20b4115039b703912c38ce03fd7",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "bcd1ee761f1c0efa687b1519ac2cc1c1ff7b803865757c3819b132652a50dda1",
+      "archiveRegret": 0.2,
+      "graveyardIndex": 0.09090909090909091,
+      "feasible": false
+    },
+    {
+      "policyHash": "3535645665dbd4502df270bacb8977e5e805e3dd4f48b81a987532785d6d969b",
+      "archiveRegret": 0.5,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": false
+    },
+    {
+      "policyHash": "d96d929623e5523d28e9ebef428e92dd5c42a81cfee541d54562c1f244f4889a",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "a0b637681ea5a258c22ab0a778c1584c77b1fe6dcf04de3cbaa2651507afd5ac",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "a5deeda693e716520a372daaa5ea98f1b406a078d0f92ebae2a10d417af6dadf",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "8a7759d7fef5c566146b47615a0c678d9003aeba2043f934ae2ed5f5f66f3ea9",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "a2d9398229914392efe1863c5b713b00e138ab5fb369d702eaabfc817a5f62e4",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": true
+    },
+    {
+      "policyHash": "dd19bdd3f594cfc634d940aef60f8de8949fd4a6af122a58afd421c8d4e8fa15",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "20b7bdc6d053ee2d7db398baf1ffc10526714ea33c6455802796cb0c3b06b4fa",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "2182c5d492fccc9cc5cf88c922b8326395575ca87cf36c57a84f819aef04aa57",
+      "archiveRegret": 0.2,
+      "graveyardIndex": 0.09090909090909091,
+      "feasible": false
+    },
+    {
+      "policyHash": "a7f326c848c3e6fdfd13a3b7aad6c5c252ab117e0e173ea21b4ac3008817ba92",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "72d53dcc47215fc5e9d4acac4eb61becadadeb6436260b334f6ea7b9c2d61cc1",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "465f846b73be290b6c21da28c2e09116ed974149d103177601bd7c2f8f6a2d25",
+      "archiveRegret": 0.2,
+      "graveyardIndex": 0.09090909090909091,
+      "feasible": false
+    },
+    {
+      "policyHash": "dc4b8ecac8da470ebd3b0d89fabf3fc3b1c426cae80e059faf0a581966c3cffc",
+      "archiveRegret": 0.5,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": false
+    },
+    {
+      "policyHash": "e51c566844b5892d55bd26d2eda8b7304f7cab2625823abf57036bb95f602efa",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "8e49f16538b35a95eaa831adea5cc59295a7c1ac8f8d09494389b9789da64bc3",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "afa72da4efc78e283d17665301d30c0dc44c3944ef083dedee0df69264984355",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "580675fd6345386cebd41368b11e9c3adf8ef3869bbe490e79886b655bf125a0",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "21fcdd60fb687dde52cd1798053162ce7833d40741531a79951eff2a2024d771",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": true
+    },
+    {
+      "policyHash": "910ebf720b098c3154ec9ba1d420f5a394f2492dae9f28760d65caafaeaa8f78",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "208f3a5c399d1f55c1da523fa4616db19db68cec2e716916ac062fbf7006d0e7",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "6a6ba357603db3ff0c9498bfa96649f2868c5d0576e419689423cdbbb9ebf5a7",
+      "archiveRegret": 0.2,
+      "graveyardIndex": 0.09090909090909091,
+      "feasible": false
+    },
+    {
+      "policyHash": "5aba08b9a908bfca34c6475781eb30b872778494bf646ddf859d8e01e6d73b9e",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "05026e9c3cb485bce4cfed56b580f2a2c73fe0398a6e5b3cdf2d14776e4d8be1",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "9e094d3616652eaa5414bf6a57632b6d68f1184fcb558c847785aac415cd4e67",
+      "archiveRegret": 0.2,
+      "graveyardIndex": 0.09090909090909091,
+      "feasible": false
+    },
+    {
+      "policyHash": "d26843ee9c8a2962c9fb3c25a285e652241bca62db910f9542276fb2364691dc",
+      "archiveRegret": 0.5,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": false
+    },
+    {
+      "policyHash": "d6e13f29733a5b5891ce57433e55622bcc6e73240f7c33e37f95d1482fe57c6d",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "b37e2f64a2f514dc4dff205b63db139b632792f2d689efa6d1995986b03ecb90",
+      "archiveRegret": 0.2857142857142857,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": false
+    },
+    {
+      "policyHash": "56130c80fd5f6c2556ae82bda03caa906a999999caf515a9448f24d035a13d8f",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "a71af14591bd84f84b718caa60d9066db8e91c1870ac1ddde6eb5665be0e2dee",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "4e2eb0f4787adbf1ede178c3da561ca67d8b1d6f3be51f26031249f3ae018e66",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.2857142857142857,
+      "feasible": true
+    },
+    {
+      "policyHash": "cf4f0560b083fad82ea6f90256ef7881f7574b2500cdc73a3bd1dbc335497f63",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "35667725b7514e3312226d2257e6bd1eb254748af0112d9a2ebaea83284e34f7",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "ebed0457b47bbad6505e0581eb2fc450017878900fadbe8f8196946ac05d1f22",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "f0612556037e3097232289f3589ee28aaef438017d8f387393516901eaa2ec93",
+      "archiveRegret": 0.17647058823529413,
+      "graveyardIndex": 0.36363636363636365,
+      "feasible": false
+    },
+    {
+      "policyHash": "fed73fa5fa1e46cb8131bcec831d439f5bdfb7d5f4f921ccfebea7dfc3478a4b",
+      "archiveRegret": 0.17647058823529413,
+      "graveyardIndex": 0.36363636363636365,
+      "feasible": false
+    },
+    {
+      "policyHash": "7c5d84ff7e167b5e81fe728c0f210b817b8a51c135b10cbe668d57ce995a793c",
+      "archiveRegret": 0.17647058823529413,
+      "graveyardIndex": 0.36363636363636365,
+      "feasible": false
+    },
+    {
+      "policyHash": "89920782e45fcb03af82903d125a06a05a754f864fa39354b900d3ae84d692dd",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "a408584a7954cade9eee2736df855299e618dd2736f8b7a6b1a6a5d2225f0d04",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "10304a7351986e0d09a60ee31fe318957f5781fef7cabfcdf1abaa6f9ae5f564",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "9bd70d4066390201ac891fa72337d3c25e1d4f9fdba654ee9b39efee5ba57812",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "7e983406dd78c3d028deb702a9c4d3aff5d62528441e42df4551bc2844189f2e",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    },
+    {
+      "policyHash": "4a88e1be3e4a350508197511b261ac96a4b9e919e8ab63a263d90d70eb66ea82",
+      "archiveRegret": 0,
+      "graveyardIndex": 0.4117647058823529,
+      "feasible": true
+    }
+  ],
+  "limitations": [
+    "In-sample search on the supplied policies and probes; construction replay cannot establish production retention or capacity defaults."
+  ],
+  "provenance": "synthetic-construction",
+  "policies": [
+    {
+      "policyHash": "79050fa1edeb5f4574f9b94ca4666c0d1bdc9fbfcc93ae4553cef019fd9f82a4",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "8ea5d2e3a12df19dcf71eb6e812c15de192c29cb24bb9248c3e638bb6c148b19",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "fb5a0dc5efbd24a8650ad2c1e1166d9c17e5efa9e4545436fc5c9d88dc36161d",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 40,
+        "active": 44,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "7492780d2fe4715930248ce8d62cf1b1c719e1871b5bbd7e820a4ed0b2bf19bf",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "f4af6de0441a97b404ee1b330e621ea6c8b9e20b4115039b703912c38ce03fd7",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "bcd1ee761f1c0efa687b1519ac2cc1c1ff7b803865757c3819b132652a50dda1",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 40,
+        "active": 44,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "3535645665dbd4502df270bacb8977e5e805e3dd4f48b81a987532785d6d969b",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 16,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "d96d929623e5523d28e9ebef428e92dd5c42a81cfee541d54562c1f244f4889a",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 60,
+        "promoted": 76,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "a0b637681ea5a258c22ab0a778c1584c77b1fe6dcf04de3cbaa2651507afd5ac",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "a5deeda693e716520a372daaa5ea98f1b406a078d0f92ebae2a10d417af6dadf",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "8a7759d7fef5c566146b47615a0c678d9003aeba2043f934ae2ed5f5f66f3ea9",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "a2d9398229914392efe1863c5b713b00e138ab5fb369d702eaabfc817a5f62e4",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 0,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 20,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "dd19bdd3f594cfc634d940aef60f8de8949fd4a6af122a58afd421c8d4e8fa15",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "20b7bdc6d053ee2d7db398baf1ffc10526714ea33c6455802796cb0c3b06b4fa",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "2182c5d492fccc9cc5cf88c922b8326395575ca87cf36c57a84f819aef04aa57",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 40,
+        "active": 44,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "a7f326c848c3e6fdfd13a3b7aad6c5c252ab117e0e173ea21b4ac3008817ba92",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "72d53dcc47215fc5e9d4acac4eb61becadadeb6436260b334f6ea7b9c2d61cc1",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "465f846b73be290b6c21da28c2e09116ed974149d103177601bd7c2f8f6a2d25",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 40,
+        "active": 44,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "dc4b8ecac8da470ebd3b0d89fabf3fc3b1c426cae80e059faf0a581966c3cffc",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 16,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "e51c566844b5892d55bd26d2eda8b7304f7cab2625823abf57036bb95f602efa",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 60,
+        "promoted": 76,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "8e49f16538b35a95eaa831adea5cc59295a7c1ac8f8d09494389b9789da64bc3",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 336,
+        "verified": 68,
+        "promoted": 84,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "afa72da4efc78e283d17665301d30c0dc44c3944ef083dedee0df69264984355",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "580675fd6345386cebd41368b11e9c3adf8ef3869bbe490e79886b655bf125a0",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "21fcdd60fb687dde52cd1798053162ce7833d40741531a79951eff2a2024d771",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 2,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 20,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "910ebf720b098c3154ec9ba1d420f5a394f2492dae9f28760d65caafaeaa8f78",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "208f3a5c399d1f55c1da523fa4616db19db68cec2e716916ac062fbf7006d0e7",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "6a6ba357603db3ff0c9498bfa96649f2868c5d0576e419689423cdbbb9ebf5a7",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 40,
+        "active": 44,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "5aba08b9a908bfca34c6475781eb30b872778494bf646ddf859d8e01e6d73b9e",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "05026e9c3cb485bce4cfed56b580f2a2c73fe0398a6e5b3cdf2d14776e4d8be1",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "9e094d3616652eaa5414bf6a57632b6d68f1184fcb558c847785aac415cd4e67",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 40,
+        "active": 44,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "d26843ee9c8a2962c9fb3c25a285e652241bca62db910f9542276fb2364691dc",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 16,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "d6e13f29733a5b5891ce57433e55622bcc6e73240f7c33e37f95d1482fe57c6d",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "b37e2f64a2f514dc4dff205b63db139b632792f2d689efa6d1995986b03ecb90",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 348,
+        "verified": 56,
+        "promoted": 72,
+        "archived": 28,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "56130c80fd5f6c2556ae82bda03caa906a999999caf515a9448f24d035a13d8f",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "a71af14591bd84f84b718caa60d9066db8e91c1870ac1ddde6eb5665be0e2dee",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "4e2eb0f4787adbf1ede178c3da561ca67d8b1d6f3be51f26031249f3ae018e66",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 4,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 20,
+        "active": 56,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "cf4f0560b083fad82ea6f90256ef7881f7574b2500cdc73a3bd1dbc335497f63",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 356,
+        "verified": 60,
+        "promoted": 72,
+        "archived": 16,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "35667725b7514e3312226d2257e6bd1eb254748af0112d9a2ebaea83284e34f7",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 356,
+        "verified": 60,
+        "promoted": 72,
+        "archived": 16,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "ebed0457b47bbad6505e0581eb2fc450017878900fadbe8f8196946ac05d1f22",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": 0,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 356,
+        "verified": 60,
+        "promoted": 72,
+        "archived": 16,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "f0612556037e3097232289f3589ee28aaef438017d8f387393516901eaa2ec93",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 355,
+        "verified": 59,
+        "promoted": 73,
+        "archived": 17,
+        "active": 66,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "fed73fa5fa1e46cb8131bcec831d439f5bdfb7d5f4f921ccfebea7dfc3478a4b",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 355,
+        "verified": 59,
+        "promoted": 73,
+        "archived": 17,
+        "active": 66,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "7c5d84ff7e167b5e81fe728c0f210b817b8a51c135b10cbe668d57ce995a793c",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -0.2,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 355,
+        "verified": 59,
+        "promoted": 73,
+        "archived": 17,
+        "active": 66,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "89920782e45fcb03af82903d125a06a05a754f864fa39354b900d3ae84d692dd",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "a408584a7954cade9eee2736df855299e618dd2736f8b7a6b1a6a5d2225f0d04",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "10304a7351986e0d09a60ee31fe318957f5781fef7cabfcdf1abaa6f9ae5f564",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -0.5,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "9bd70d4066390201ac891fa72337d3c25e1d4f9fdba654ee9b39efee5ba57812",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.2
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "7e983406dd78c3d028deb702a9c4d3aff5d62528441e42df4551bc2844189f2e",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.4
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    },
+    {
+      "policyHash": "4a88e1be3e4a350508197511b261ac96a4b9e919e8ab63a263d90d70eb66ea82",
+      "policy": {
+        "promote": {
+          "minScore": 0.45
+        },
+        "lifecycle": {
+          "decay": {
+            "fact": 0.8
+          },
+          "archive": {
+            "graceSessions": 10,
+            "retrievalBelow": -1,
+            "storageBelow": 1
+          }
+        }
+      },
+      "calls": {
+        "extractor": 0,
+        "cacheHits": 96
+      },
+      "counts": {
+        "sessions": 96,
+        "uses": 344,
+        "verified": 56,
+        "promoted": 68,
+        "archived": 8,
+        "active": 68,
+        "labelledTargets": 64
+      }
+    }
+  ]
+}

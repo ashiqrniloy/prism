@@ -1,0 +1,3 @@
+# Measure this app, not the repo or sibling packages.
+[test]
+coveragePathIgnorePatterns = ["../../**"]

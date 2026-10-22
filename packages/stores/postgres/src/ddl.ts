@@ -417,6 +417,24 @@ ALTER TABLE ${runs} ADD COLUMN IF NOT EXISTS prompt_version TEXT;
 `;
 }
 
+// Session links (K4): nullable columns mirror the session's links entry; legacy rows stay NULL and list with absent links.
+export function buildMigration010Ddl(schema: string): string {
+  const sessions = qualifyTable(schema, "prism_sessions");
+  return `
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS agent_id TEXT;
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS workflow_run_id TEXT;
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS delegation_id TEXT;
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS actor_kind TEXT;
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS actor_agent TEXT;
+ALTER TABLE ${sessions} ADD COLUMN IF NOT EXISTS actor_vendor TEXT;
+CREATE INDEX IF NOT EXISTS prism_sessions_link_parent_idx ON ${sessions} (parent_session_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_agent_idx ON ${sessions} (agent_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_workflow_idx ON ${sessions} (workflow_run_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_delegation_idx ON ${sessions} (delegation_id, updated_at);
+CREATE INDEX IF NOT EXISTS prism_sessions_link_actor_idx ON ${sessions} (actor_kind, actor_agent, updated_at);
+`;
+}
+
 export const ADAPTER_TABLE_NAMES = [
   "prism_tenants",
   "prism_accounts",
@@ -441,6 +459,11 @@ export const ADAPTER_TABLE_NAMES = [
 export const ADAPTER_INDEX_NAMES = [
   "prism_sessions_tenant_created_idx",
   "prism_sessions_expires_idx",
+  "prism_sessions_link_parent_idx",
+  "prism_sessions_link_agent_idx",
+  "prism_sessions_link_workflow_idx",
+  "prism_sessions_link_delegation_idx",
+  "prism_sessions_link_actor_idx",
   "prism_branches_session_name_idx",
   "prism_branches_leaf_idx",
   "prism_session_entries_session_parent_idx",

@@ -1,3 +1,4 @@
+import { RAW_EMIT } from "../hooks/emit.js";
 import { providerPackage } from "../provider-kit/package.js";
 import type {
   Agent,
@@ -7,7 +8,6 @@ import type {
   Session,
   ModelProvider,
   AroundHookName,
-  CheckpointStore,
   CompactionOptions,
   DecideHookName,
   ErrorInfo,
@@ -53,7 +53,6 @@ export interface LoopConformanceOptions {
   readonly compaction?: CompactionOptions;
   readonly host?: HostPort;
   readonly runOptions?: RunOptions;
-  readonly runState?: { readonly checkpoints: CheckpointStore; readonly definitionRevision: string };
   readonly sessionId?: string;
   /**
    * Extra observe events emitted through a hook during the run, keyed by type. Covers host-only
@@ -190,7 +189,7 @@ export async function loopConformance(input: LoopStrategy | LoopConformanceOptio
         // session's observe dispatch path regardless of which loop drives the run.
         const types = options.emitEvents;
         hooks.on("turn.before", ((_payload: unknown, ctx: HookContext) => {
-          for (const type of types) ctx.emit({ type, sessionId, runId: "" } as unknown as AgentEvent);
+          for (const type of types) (ctx as unknown as Record<symbol, (event: AgentEvent) => void>)[RAW_EMIT]!({ type, sessionId, runId: "" } as unknown as AgentEvent);
           return undefined;
         }) as never);
       }
@@ -204,12 +203,8 @@ export async function loopConformance(input: LoopStrategy | LoopConformanceOptio
     for await (const event of subscription) events.push(event);
   })();
   try {
-    const runOptions: RunOptions = {
-      ...options.runOptions,
-      ...(options.runState ? { runState: options.runState } : {}),
-    };
     try {
-      const result = await session.run(options.input ?? "go", runOptions);
+      const result = await session.run(options.input ?? "go", options.runOptions ?? {});
       return { result, ...(result.error ? { error: result.error } : {}), events, fired, agent, session };
     } catch (error) {
       return { error: errorToErrorInfo(error), events, fired, agent, session };

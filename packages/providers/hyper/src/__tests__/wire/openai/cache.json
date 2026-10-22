@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "path": "/v1/chat/completions",
+  "requestBody": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "This is a warm-prefix prompt that benefits from cache read hits across multiple turns." }]
+      }
+    ],
+    "stream": true,
+    "stream_options": { "include_usage": true }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"chatcmpl-hyp-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775020,\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-hyp-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775020,\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Cache hit acknowledged. Continuing from warm prefix.\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-hyp-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775020,\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-hyp-cache-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775020,\"model\":\"deepseek-v4-pro\",\"choices\":[],\"usage\":{\"prompt_tokens\":150,\"completion_tokens\":10,\"total_tokens\":160,\"prompt_tokens_details\":{\"cached_tokens\":120},\"cost\":{\"usd\":0.00005,\"hypercredits\":0.05},\"remaining\":{\"hypercredits\":125.25}}}\n\ndata: [DONE]\n\n"
+}

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { computePackageTruth, expandWorkspaceDirs, readManifest, workspacePackageCounts } from "./package-truth.mjs";
 
@@ -21,13 +21,16 @@ const hasObscuraPackage = existsSync(join(ROOT, "packages", "obscura", "package.
 const hasDevInspectorPackage = existsSync(join(ROOT, "packages", "prism-dev", "package.json")); // plan 040 dev inspector (omitted from umbrellas)
 const hasPromptPackage = existsSync(join(ROOT, "packages", "prompts", "package.json")); // plan 042 versioned prompt registry (omitted from umbrellas)
 const packages = workspacePackageCounts();
-const hasWorkPackage = packages.has("prism-work"); // plan 083 Task 2 work family
+const hasWorkPackage = packages.has("work"); // plan 083 Task 2 work family; plan 155 Task 5 moved it under packages/tools/
 const hasDocumentsPackage = existsSync(join(ROOT, "packages", "documents", "package.json")); // plan 051 documents engine (omitted from umbrellas)
 const hasSheetsPackage = existsSync(join(ROOT, "packages", "sheets", "package.json")); // plan 052 sheets engine (omitted from umbrellas)
 const hasDiagramsPackage = existsSync(join(ROOT, "packages", "diagrams", "package.json")); // plan 053 diagrams engine (omitted from umbrellas)
 
-const hasCodingToolsPackage = packages.has("prism-coding-tools");
+const hasCodingToolsPackage = packages.has("prism-" + "coding-tools");
 const hasCorePackage = packages.has("prism-core");
+// Plan 174 Tasks 6-7: the 0.13 tree has no core, no 0.12 family workspaces, and no umbrella profiles.
+// Branches written for the pre-0.13 shape key off this instead of the retired coding-tools workspace.
+const isThirteen = !hasCodingToolsPackage && !hasCorePackage && packages.has("coding");
 
 test("generator reproducible: two runs byte-identical modulo generatedAt", () => {
   assert.deepEqual(stripStamp(computePackageTruth()), stripStamp(computePackageTruth()));
@@ -58,16 +61,46 @@ test("counts match manifests at the truth graph", () => {
     // Current package set: delegated CLI adapter removed; every first-party provider adapter is a
     // standalone @arnilo/prism-provider-<vendor> package (plan 152 Tasks 3-6) and the retired
     // @arnilo/prism-providers umbrella workspace is deleted (plan 152 Task 8).
-    assert.equal(t.counts.publishable, 39);
-    assert.equal(t.counts.workspace, 38);
-    assert.equal(t.counts.provider, 21);
-    assert.equal(t.counts.prismFamily, 3);
     // Plan 152 Task 7: the credentials-slot keyring package is a capability package; plan 153
-    // Tasks 3-5 add the JSONL, codecs, SQLite, and Postgres store packages, so capability is 14.
-    assert.equal(t.counts.capability, 14);
-    // Plan 140 Task 1: the @arnilo/prism-code app owns @arnilo/prism as a dependency, not a peer.
-    assert.equal(t.counts.codeWithPeer, 36);
-    assert.equal(t.counts.pureManifest, 2);
+    // Tasks 3-5 add the JSONL, codecs, SQLite, and Postgres store packages; plan 154 Task 3 adds
+    // @arnilo/prism-tools-coding, so capability is 15; plan 154 Task 6 adds
+    // @arnilo/prism-approval and Task 7 adds @arnilo/prism-context-files, so capability is 17.
+    // Plan 155 Task 2 adds @arnilo/prism-tools-web, Task 3 adds @arnilo/prism-tools-browser, and
+    // Task 4 adds @arnilo/prism-tools-openapi and @arnilo/prism-tools-computer-use, so capability is 20.
+    // Plan 157 Tasks 3-4 add the compaction and observational-memory packages, so capability is 22;
+    // plan 158 Task 2 adds the shared memory-core library, Task 3 adds memory-rag, Task 4 adds
+    // memory-fabric, and Task 5 adds memory-wiki, so capability is 26. Plan 158 Task 6 deletes the
+    // `@arnilo/prism-memory` family workspace, so publishable was 50, workspace 49, capability 25,
+    // and codeWithPeer 47. Plan 158 Task 7 adds the @arnilo/prism-context-engineering capability
+    // package, so publishable was 51, workspace 50, capability 26, and codeWithPeer 48.
+    // Plan 159 Task 3 adds the @arnilo/prism-mcp-server host library and Task 5 adds the
+    // @arnilo/prism-guardrail-packs capability package, so publishable is 53, workspace 52,
+    // capability 28, and codeWithPeer 50. Plan 159 Task 6 adds the @arnilo/prism-governance
+    // capability package, so publishable is 54, workspace 53, capability 29, and codeWithPeer 51.
+    // Plan 160 Task 2 adds the @arnilo/prism-model-router capability package, so publishable is 55,
+    // workspace 54, capability 30, and codeWithPeer 52. Plan 160 Task 3 adds the
+    // @arnilo/prism-observability capability package, so publishable is 56, workspace 55,
+    // capability 31, and codeWithPeer 53. Plan 160 Task 4 adds the @arnilo/prism-delegate capability
+    // package, so publishable is 57, workspace 56, capability 32, and codeWithPeer 54.
+    // Plan 161 Task 2 adds the @arnilo/prism-acp host library, so publishable is 58,
+    // workspace 57, capability 33, and codeWithPeer 55.
+    // Plans 162 and 166 add evals, devtools, and the process driver. Plan 168 Task 2 adds the
+    // @arnilo/prism-workflows capability package; plans 170-172 add @arnilo/prism-remote,
+    // @arnilo/prism-headless, and @arnilo/prism-tools-research, so publishable is 65, workspace 64,
+    // capability 40, and codeWithPeer 62. Plan 173 Task 8 deletes the Prism Code app workspace, so
+    // publishable is 64, workspace 63, capability 39, codeWithPeer 62, and pureManifest 1.
+    // Plan 174 Task 6 retires the core family package, so publishable is 63, workspace 62,
+    // prismFamily 2, and codeWithPeer 61. Plan 174 Task 7 retires the three 0.12 workspaces,
+    // so publishable is 60, workspace 59, prismFamily 1, capability 37, codeWithPeer 59,
+    // and pureManifest 0. Plan 182 Task 2 retires the 17 provider packages, so publishable is 43,
+    // workspace 42, provider 4, capability 37, codeWithPeer 42, and pureManifest 0.
+    assert.equal(t.counts.publishable, 43);
+    assert.equal(t.counts.workspace, 42);
+    assert.equal(t.counts.provider, 4);
+    assert.equal(t.counts.prismFamily, 1);
+    assert.equal(t.counts.capability, 37);
+    assert.equal(t.counts.codeWithPeer, 42);
+    assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);
     assert.equal(t.counts.workspace, 16);
@@ -85,8 +118,8 @@ test("counts match manifests at the truth graph", () => {
     assert.equal(t.counts.codeWithPeer, 43);
     assert.equal(t.counts.pureManifest, 6);
   } else {
-    assert.equal(t.counts.publishable, 55 + added);
-    assert.equal(t.counts.workspace, 54 + added);
+    assert.equal(t.counts.publishable, 56 + added);
+    assert.equal(t.counts.workspace, 55 + added);
     assert.equal(t.counts.provider, 17);
     assert.equal(t.counts.prismFamily, 10);
     assert.equal(t.counts.capability, 27 + added);
@@ -103,28 +136,11 @@ test("counts match manifests at the truth graph", () => {
 
 test("umbrella closures match manifests", () => {
   const t = computePackageTruth();
-  if (hasCodingToolsPackage) {
-    // Plan 152 Task 8: the @arnilo/prism-providers workspace is deleted, so the provider family is
-    // no longer an umbrella at all — the truth graph must not resurrect it as a closure.
-    assert.equal(t.umbrella["prism-providers"], undefined, "the retired provider family must not appear as an umbrella");
-    assert.equal(t.umbrella["prism-all"], undefined);
-    assert.equal(Object.keys(t.umbrella).length, 0, "no umbrella profile remains after plan 152");
-    return;
-  }
-  const providers = t.umbrella["prism-providers"];
-  assert.equal(providers.deps.length, 14);
-  assert.deepEqual(providers.omitsProviders, [
-    "@arnilo/prism-provider-azure",
-    "@arnilo/prism-provider-bedrock",
-    "@arnilo/prism-provider-vertex",
-  ]);
-  const all = t.umbrella["prism-all"];
-  if (hasCorePackage) {
-    assert.equal(all.deps.length, 13);
-  } else {
-    assert.equal(all.deps.length, 21);
-    assert.equal(all.closure, 47, "21 direct deps expand through code/sdk/profile deps to 47 workspace packages");
-  }
+  // Plan 152 Task 8: the @arnilo/prism-providers workspace is deleted, so the provider family is
+  // no longer an umbrella at all — the truth graph must not resurrect it as a closure.
+  assert.equal(t.umbrella["prism-providers"], undefined, "the retired provider family must not appear as an umbrella");
+  assert.equal(t.umbrella["prism-all"], undefined);
+  assert.equal(Object.keys(t.umbrella).length, 0, "no umbrella profile remains after plan 152");
 });
 
 test("profile closures match manifests", () => {
@@ -136,19 +152,15 @@ test("profile closures match manifests", () => {
   }
   assert.equal(t.profiles["prism-providers"].length, hasCodingToolsPackage ? 0 : 14);
   if (hasCodingToolsPackage) {
-    assert.ok(t.profiles["prism-base"].includes("@arnilo/prism-core"));
-    assert.ok(t.profiles["prism-code"].includes("@arnilo/prism-coding-tools"));
-    assert.ok(t.profiles["prism-sdk"].includes("@arnilo/prism-core"));
+    assert.equal(t.profiles["prism-base"], undefined);
+    assert.equal(t.profiles["prism-sdk"], undefined);
   } else if (hasCorePackage) {
-    assert.ok(t.profiles["prism-base"].includes("@arnilo/prism-core"));
-    assert.ok(t.profiles["prism-sdk"].includes("@arnilo/prism-core"));
+    assert.equal(t.profiles["prism-base"], undefined);
+    assert.equal(t.profiles["prism-sdk"], undefined);
   } else {
     assert.equal(t.profiles["prism-all"].length, 47);
     for (const name of ["@arnilo/prism-compaction", "@arnilo/prism-tool-validator-json-schema", "@arnilo/prism-compaction-llm"]) {
       assert.ok(t.profiles["prism-base"].includes(name), `prism-base closure includes ${name}`);
-    }
-    for (const name of ["@arnilo/prism-base", "@arnilo/prism-coding-agent", "@arnilo/prism-mcp"]) {
-      assert.ok(t.profiles["prism-code"].includes(name), `prism-code closure includes ${name}`);
     }
     for (const name of ["@arnilo/prism-workflows", "@arnilo/prism-credentials-node", "@arnilo/prism-observability-opentelemetry"]) {
       assert.ok(t.profiles["prism-sdk"].includes(name), `prism-sdk closure includes ${name}`);
@@ -189,67 +201,66 @@ export function assertCorePin(dep, range, rootVersion, owner) {
     );
     return;
   }
+  if (dep === "@arnilo/prism") {
+    // The kernel peer is the API-level window, not a cut pin: every package admits the whole 0.x line.
+    assert.match(range ?? "", /^>=\d+\.\d+\.\d+ <1\.0\.0$/, `${owner} must peer ${dep} with the 0.x API window, got ${range}`);
+    return;
+  }
   assert.equal(range, `^${rootVersion}`, `${owner} must depend on ${dep}@^${rootVersion}`);
 }
 
-test("peer policy Decision B: all code packages peer the caret current line", () => {
+test("peer policy Decision B: all code packages peer the 0.x kernel window", () => {
   const t = computePackageTruth();
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  const pkgs = expandWorkspaceDirs(ROOT, root.workspaces).map((dir) => ({
-    dir,
-    ...readManifest(join(dir, "package.json")),
-  }));
+  const pkgs = expandWorkspaceDirs(ROOT, root.workspaces)
+    .map((dir) => ({
+      dir,
+      ...readManifest(join(dir, "package.json")),
+    }))
+    .filter((pkg) => pkg.private !== true);
   const codeWithPeer = pkgs.filter((p) => p.peerDependencies?.["@arnilo/prism"] !== undefined);
   assert.equal(codeWithPeer.length, t.counts.codeWithPeer, "code packages with a core peer");
-  // Plan 140 Task 1: the terminal app is self-sufficient on a global install.
-  const app = pkgs.find((p) => p.name === "@arnilo/prism-code");
-  if (app) {
-    for (const dep of ["@arnilo/prism", "@arnilo/prism-hooks-json"]) {
-      assertCorePin(dep, app.dependencies?.[dep], t.root.version, "@arnilo/prism-code");
-    }
-    assert.equal(app.peerDependencies, undefined, "@arnilo/prism-code declares no peers");
-  }
   const secondPeers = {};
   for (const p of codeWithPeer) {
     const spec = p.peerDependencies["@arnilo/prism"];
-    // Plan 071 Task 1 (plan 070 FA 10): the caret tracks the computed root version, or the same 0.x
-    // line at a floor for a package that owns its version line (see assertCorePin).
+    // Plan 071 Task 1 (plan 070 FA 10): a compatibility bump moves the whole 0.x API window; a
+    // package that owns its version line pins the same line at a floor (see assertCorePin).
     assertCorePin("@arnilo/prism", spec, t.root.version, p.name);
-    assert.match(spec, /^\^\d+\.\d+\.\d+$/, `${p.name} peer spec must be a 0.x caret range, got ${spec}`);
+    assert.match(spec, /^>=\d+\.\d+\.\d+ <1\.0\.0$/, `${p.name} peer spec must be the 0.x API window, got ${spec}`);
     const extra = Object.keys(p.peerDependencies).filter((n) => n.startsWith("@arnilo/prism-"));
     if (extra.length > 0) secondPeers[p.name] = extra;
-    // devDependency on the root so the workspace resolves the peer locally
-    // (session-store-codecs is the one package with no devDependencies at all)
-    if (p.name !== "@arnilo/prism-session-store-codecs") {
-      const dev = p.devDependencies?.["@arnilo/prism"];
-      assert.equal(dev?.startsWith("file:"), true, `${p.name} must devDepend on the root`);
-      assert.equal(resolve(p.dir, dev.slice("file:".length)), ROOT, `${p.name} file: devDependency must point at the repo root`);
-    }
   }
-  if (hasCodingToolsPackage) {
+  // Plan 181 Task 1: the root links itself (`"@arnilo/prism": "file:."` in its devDependencies),
+  // so a workspace resolves the peer locally through that one self-reference and declares no
+  // `file:` kernel devDependency. Two lockfile entries per package made `bun ci` re-resolve the
+  // workspace root on every install and never freeze.
+  assert.equal(root.devDependencies?.["@arnilo/prism"], "file:.", "the root must link itself for local peer resolution");
+  for (const p of codeWithPeer) {
+    assert.equal(p.devDependencies?.["@arnilo/prism"], undefined, `${p.name} must not carry a file: kernel devDependency`);
+  }
+  if (hasCodingToolsPackage || isThirteen) {
     // Plan 054 Task 6: the provider family is now a code package with a core peer.
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
-      "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
-      "@arnilo/prism-agent-sdk": ["@arnilo/prism-coding-tools", "@arnilo/prism-hooks-json", "@arnilo/prism-mcp"],
-      "@arnilo/prism-core": ["@arnilo/prism-memory"], // type-only optional peer: rag telemetry seam
-      "@arnilo/prism-web-tools": ["@arnilo/prism-mcp"],
+      "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp"],
+      "@arnilo/prism-tools-coding": ["@arnilo/prism-workflows"], // plan 168 Task 7: the goal→verify helper runs the workflow engine
+      "@arnilo/prism-memory-rag": ["@arnilo/prism-tools-web"], // type-only optional peer: the web.fetch service shape
+      "@arnilo/prism-memory-wiki": ["@arnilo/prism-tools-web"], // type-only optional peer: the web.fetch service shape
+      "@arnilo/prism-tools-web": ["@arnilo/prism-mcp"],
+      "@arnilo/prism-tools-computer-use": ["@arnilo/prism-mcp"],
     });
   } else if (hasCorePackage) {
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
-      "@arnilo/prism-ag-ui": ["@arnilo/prism-core", "@arnilo/prism-mcp"],
-      "@arnilo/prism-coding-agent": ["@arnilo/prism-core"],
+      "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp"],
+      "@arnilo/prism-coding-agent": [],
       "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
       ...(hasDesktopPackage ? { "@arnilo/prism-computer-use-linux": ["@arnilo/prism-mcp"] } : {}),
-      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui", "@arnilo/prism-core"] } : {}),
+      ...(hasDevInspectorPackage ? { "@arnilo/prism-dev": ["@arnilo/prism-ag-ui"] } : {}),
       "@arnilo/prism-document-reader": ["@arnilo/prism-coding-agent"],
       ...(hasObscuraPackage ? { "@arnilo/prism-obscura": ["@arnilo/prism-mcp", "@arnilo/prism-browser", "@arnilo/prism-web-tools"] } : {}),
       "@arnilo/prism-rag": ["@arnilo/prism-memory"],
     });
   } else {
     assert.deepEqual(secondPeers, {
-      "@arnilo/prism-acp-agent": ["@arnilo/prism-ag-ui"],
       "@arnilo/prism-ag-ui": ["@arnilo/prism-mcp", "@arnilo/prism-supervisor"],
       "@arnilo/prism-coding-agent": ["@arnilo/prism-workflows"],
       "@arnilo/prism-coding-security": ["@arnilo/prism-coding-agent"],
@@ -262,19 +273,12 @@ test("peer policy Decision B: all code packages peer the caret current line", ()
       ...(hasPromptPackage ? { "@arnilo/prism-prompts": ["@arnilo/prism-evals"] } : {}),
     });
   }
-  if (hasCodingToolsPackage) {
-    // Plan 107 Task 2: the caveman/ponytail persona subpaths and their optional peer are gone.
-    const codingTools = pkgs.find((p) => p.name === "@arnilo/prism-coding-tools");
-    assert.equal(codingTools.peerDependencies["@dietrichgebert/ponytail"], undefined);
-  } else {
-    const ponytail = pkgs.find((p) => p.name === "@arnilo/prism-ponytail");
-    assert.equal(ponytail.peerDependencies["@dietrichgebert/ponytail"], "^4.9.0");
-  }
+  // Plan 107 Task 2 removed the caveman/ponytail persona subpaths and their optional peer; plan 174
+  // Task 7 retired the coding-tools workspace that carried the check, so nothing asserts it here.
   // Plan 054 Task 8: profile manifests are deleted; every workspace package is a
-  // code package with a core peer, so nothing may lack one. Plan 140 Task 1: the
-  // terminal app is the exception; it depends on core (asserted above).
+  // code package with a core peer, so nothing may lack one.
   if (hasWorkPackage) {
-    for (const p of pkgs.filter((p) => p.name !== "@arnilo/prism-code")) {
+    for (const p of pkgs) {
       assert.notEqual(p.peerDependencies?.["@arnilo/prism"], undefined, `${p.name} must peer @arnilo/prism`);
     }
   }
@@ -309,16 +313,17 @@ test("workspace glob matching no directory exits non-zero", () => {
 
 // Plan 024 Task 5: built public-entry and docs-wide truth conformance over the
 // generated artifact. The frozen export surface itself is pinned by
-// src/__tests__/public-export-contract.test.ts; this leg checks the built dist
-// against the root manifest version, the docs current-line, and the umbrella
+// src/__tests__/public-export-contract.test.ts; this leg checks the published
+// entry against the root manifest version, the docs current-line, and the umbrella
 // wording freeze (no "all"/"every" claim without closure proof).
-test("built dist exposes the manifest version and the frozen surface resolves", async () => {
+// Plan 174 Task 8: the entry is TypeScript source, not `dist/index.js`.
+test("published entry exposes the manifest version and the frozen surface resolves", async () => {
   const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  const distIndex = join(ROOT, "dist", "index.js");
-  assert.ok(existsSync(distIndex), "dist/index.js missing — run bun run build before this leg");
-  const mod = await import(pathToFileURL(distIndex).href);
-  assert.equal(mod.version, root.version, "dist version export must equal the root manifest version");
-  assert.equal(typeof mod.resumeAgentRunStream, "function", "frozen public surface must resolve from the built dist");
+  const entry = join(ROOT, "src", "index.ts");
+  assert.ok(existsSync(entry), "src/index.ts missing — the kernel publishes TypeScript source");
+  const mod = await import(pathToFileURL(entry).href);
+  assert.equal(mod.version, root.version, "version export must equal the root manifest version");
+  assert.equal(typeof mod.agentFingerprint, "function", "frozen public surface must resolve from the published entry");
 });
 
 test("docs current-line version equals the root manifest version", () => {
@@ -330,7 +335,7 @@ test("docs current-line version equals the root manifest version", () => {
 test("no page claims all/every for the two umbrellas without closure proof", () => {
   const files = [
     "README.md",
-    "docs/release-and-install.md",
+    "docs/release.md",
     "docs/index.md",
     "docs/history/0.1.0-readiness.md",
     // Plan 152 Task 8: the provider family README is deleted with its workspace; the

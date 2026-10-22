@@ -14,8 +14,6 @@ import type { ContentBlock, JsonObject, Message, ModelCapabilities, ModelConfig 
 
 /** Default upload-cache entry cap per provider media session. */
 export const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32;
-/** Inline OpenAI file_data ceiling before preferring Files API upload. */
-export const DEFAULT_OPENAI_INLINE_FILE_BYTES = 4 * 1024 * 1024;
 
 export interface ProviderMediaScope {
   readonly sessionId?: string;
@@ -85,35 +83,6 @@ export function isPdfMediaType(mediaType: string): boolean {
   return normalized === "application/pdf" || normalized.endsWith("+pdf");
 }
 
-export function openAIAudioFormat(mediaType: string): string {
-  const normalized = mediaType.toLowerCase();
-  if (normalized.includes("wav")) return "wav";
-  if (normalized.includes("mpeg") || normalized.includes("mp3")) return "mp3";
-  if (normalized.includes("ogg")) return "ogg";
-  if (normalized.includes("flac")) return "flac";
-  if (normalized.includes("webm")) return "webm";
-  if (normalized.includes("m4a") || normalized.includes("mp4")) return "m4a";
-  return "wav";
-}
-
-export function serializeOpenAIResponsesInputFile(options: {
-  readonly filename: string;
-  readonly fileData?: string;
-  readonly fileId?: string;
-}): JsonObject {
-  if (options.fileId) {
-    return { type: "input_file", file_id: options.fileId };
-  }
-  if (!options.fileData) {
-    throw new Error("OpenAI Responses file block requires inline file_data or uploaded file_id");
-  }
-  return { type: "input_file", filename: options.filename, file_data: options.fileData };
-}
-
-export function serializeOpenAIResponsesInputAudio(options: { readonly data: string; readonly format: string }): JsonObject {
-  return { type: "input_audio", input_audio: { data: options.data, format: options.format } };
-}
-
 export function serializePdfDocumentWireBlock(options: {
   readonly mediaType: string;
   readonly data: string;
@@ -148,8 +117,19 @@ function isMediaContentBlock(block: ContentBlock): block is MediaContentBlock {
 export function defaultProviderFilename(block: MediaContentBlock, fallback: string): string {
   if ("name" in block && block.name) return block.name;
   if (block.type === "document") return "document.pdf";
-  if (block.type === "audio") return `audio.${openAIAudioFormat(declaredMediaType(block))}`;
+  if (block.type === "audio") return `audio.${audioFormatExtension(declaredMediaType(block))}`;
   return fallback;
+}
+
+function audioFormatExtension(mediaType: string): string {
+  const normalized = mediaType.toLowerCase();
+  if (normalized.includes("wav")) return "wav";
+  if (normalized.includes("mpeg") || normalized.includes("mp3")) return "mp3";
+  if (normalized.includes("ogg")) return "ogg";
+  if (normalized.includes("flac")) return "flac";
+  if (normalized.includes("webm")) return "webm";
+  if (normalized.includes("m4a") || normalized.includes("mp4")) return "m4a";
+  return "wav";
 }
 
 function declaredMediaType(block: MediaContentBlock): string {
@@ -159,3 +139,4 @@ function declaredMediaType(block: MediaContentBlock): string {
 }
 
 export const DEFAULT_PROVIDER_MEDIA_ITEM_BYTES = DEFAULT_MAX_MEDIA_ITEM_BYTES;
+

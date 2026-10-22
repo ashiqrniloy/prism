@@ -2,14 +2,14 @@
 
 ## What it does
 
-`@arnilo/prism-coding-tools/security` is an optional package that supplies structured execution policy for `@arnilo/prism-coding-tools/agent` tools, one disposable Docker/OCI sandbox reference, and an optional E2B hosted sandbox adapter. It complements name-based `PermissionPolicy` at dispatch time with path/command context checked **inside** each tool before side effects, and optionally contains untrusted coding work in a host-invoked container.
+`@arnilo/prism-tools-coding` is an optional package that supplies structured execution policy for `@arnilo/prism-tools-coding` tools, one disposable Docker/OCI sandbox reference, and an optional E2B hosted sandbox adapter. It complements name-based `PermissionPolicy` at dispatch time with path/command context checked **inside** each tool before side effects, and optionally contains untrusted coding work in a host-invoked container.
 
 | Export | Purpose |
 | --- | --- |
 | `createCodingApprovalPolicy(options)` | Returns an `ExecutionPolicy` with trusted roots, read-only mode, command allow/deny rules, approval caching, and timeout/abort-aware approval waits. |
 | `createSandboxBashOperations(adapter)` | Maps a host-owned `SandboxAdapter` to coding-agent `BashOperations` for delegated shell execution. |
 | `createSandboxCodingComposition(cwd, options)` | Authoritative construction: returns `{ tools, composition }` with required `workspaceMode` (`"host"` \| `"sandbox"`), fail-closed mixed wiring, and containment metadata. |
-| `createSandboxReadOnlyComposition(cwd, options)` | Same contract for read-only tools (`read`/`repo_list`/`repo_search`). |
+| `createSandboxReadOnlyComposition(cwd, options)` | Same contract for read-only tools (`read`/`grep`/`glob`). |
 | `createSandboxCodingTools` / `createSandboxReadOnlyTools` | Thin wrappers that return `tools` only (compat); still require `workspaceMode`. |
 | `createSandboxFilesystemOperations` / `createSandboxRepositoryOperations` | Optional execFile-backed FS/list/search backends for a disposable sandbox tree. |
 | `createDockerSandbox(options)` | Creates one disposable non-root Docker container with read-only root/source, bounded tmpfs workspace, typed `execFile`, import/export, and stop/kill/cleanup. |
@@ -23,6 +23,8 @@
 | `assertPathInsideRoots`, `isPathInsideReal` | Symlink-aware path containment helpers. |
 | `evaluateCommandRules`, `hasShellMetacharacters` | Command classification helpers. |
 
+`grep` is the one tool that runs a pattern the model writes. Regex mode runs in a Worker: the main thread reads files through the same bounded repository operations, posts file text, and calls `terminate()` when the search time limit elapses, returning the matches found so far with `truncatedBy: "time"`. Plan 001's objection (an uninterruptible `RegExp` on the main thread) therefore no longer holds — a catastrophic pattern can only hang the worker. The pattern never reaches a shell, and `literal: true` matches characters on the main thread, so a metacharacter-heavy pattern is safe to search literally.
+
 Core contracts live in `@arnilo/prism`:
 
 ```ts
@@ -33,7 +35,7 @@ import type { ExecutionAction, ExecutionPolicy, ExecutionDecision } from "@arnil
 
 Use this package when coding tools need path scoping, human approval, command rules, or a pluggable sandbox backend. Wire the returned policy through `createCodingTools(cwd, { executionPolicy })` or per-tool `executionPolicy` options.
 
-Use `createDockerSandbox()` when the host wants a production-reference containment boundary. Use `createE2BSandbox()` when the host wants a vendor-hosted VM; see [Hosted sandboxes](hosted-sandboxes.md). Prism does **not** claim OS-level isolation unless the host constructs this adapter (or supplies an equivalent custom `DisposableSandbox`). Default policy denies shell/write/edit/delete/move without an `approve` callback and rejects paths outside configured roots. Coding shell definitions are marked `exclusive: true`, matching the approval policy's shell decision, so a single-shot turn containing shell work runs sequentially even when `toolConcurrency > 1`. Non-shell turns retain configured parallelism.
+Use `createDockerSandbox()` when the host wants a production-reference containment boundary. Use `createE2BSandbox()` when the host wants a vendor-hosted VM; see [Hosted sandboxes](../packages/tools/coding/README.md). Prism does **not** claim OS-level isolation unless the host constructs this adapter (or supplies an equivalent custom `DisposableSandbox`). Default policy denies shell/write/edit/delete/move without an `approve` callback and rejects paths outside configured roots. Coding shell definitions are marked `exclusive: true`, matching the approval policy's shell decision, so a single-shot turn containing shell work runs sequentially even when `toolConcurrency > 1`. Non-shell turns retain configured parallelism.
 
 Use `createNativeSandbox()` when the host has no container runtime and needs network-free containment (0.1.6, plan 018 closeout `native-sandbox`). Linux only; creation fails closed with a documented error on other platforms or when the OS cannot create a network namespace (no root/CAP_SYS_ADMIN and no unprivileged user namespaces). Every command runs in a fresh netns — **loopback is down**, so even localhost connections fail; hosts that need loopback keep the Docker backend. Containment is egress denial + `ulimit` hard caps (address space from `memoryBytes`, CPU-time wall backstop, fd count from `maxFds`) + cwd-inside-root (`assertPathInsideRoots`, symlink-aware). The native backend does **not** isolate the filesystem: commands run as the invoking OS user with full host-tree access, so pair it with `createSandboxCodingComposition`/`createSandboxFilesystemOperations` (per-op `assertSandboxPath`) and the approval policy, exactly as with any custom `DisposableSandbox`. Its `capabilities` report `networkIsolated: true` and `egressRestricted: true` but `filesystemIsolated`/`processIsolated`/`privilegeIsolated: false` — the native backend is never a containment boundary for untrusted code (see [Sandbox capabilities](#sandbox-capabilities-020-plan-020-task-4)). Host env is never inherited; `env` is an exact allow-list (PATH only by default). No `startProcess` (ProcessSessions fails closed with `ERR_PRISM_PROCESS_UNSUPPORTED`), no CPU-rate/pids/fs-size caps (cgroup-only). Secrets passed as `secrets` are redacted from surfaced errors. See `docs/_evidence/phase18-primitive-review.md` for the full threat model.
 
@@ -44,7 +46,7 @@ Use `createEgressPolicy()` + `createAllowListEgressProxy()` when a coding agent 
 `createEgressPolicy({ allow, presets })` builds a deny-all policy. Rules are exact `{ host, port, protocol }` triples — no wildcards, no CIDR, no regex. Presets (`npm-registry`, `github`) expand to explicit rule lists at construction. The policy exposes a stable SHA-256 `fingerprint` over the canonical rule set.
 
 ```ts
-import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-coding-tools/security";
+import { createEgressPolicy, createAllowListEgressProxy } from "@arnilo/prism-tools-coding";
 
 const policy = createEgressPolicy({
   allow: [{ host: "api.github.com", port: 443, protocol: "https" }],
@@ -127,7 +129,7 @@ Rules:
 - **`containmentClaim` is deprecated (0.2.0).** Retained for 0.1.7 compatibility as the conservative projection `workspaceCoherent && filesystemIsolated && networkIsolated && processIsolated` (privilege isolation excluded). It can only be `true` when every required capability is true — never authorize a security-sensitive action from this boolean alone; use `composition.capabilities`.
 - **Capability construction is O(1)** — one small frozen object per sandbox/composition; no command, filesystem, Docker, DNS, or network operation.
 
-`createDockerSandbox()` returns a `DisposableSandbox`: typed `execFile(file, args)`, shell-compatible `exec`, `status`, cooperative `stop`, forced `kill`, and idempotent `close`. Import may surface `importIdentity`; successful export updates `lastExportIdentity`. `close({ export })` can stream a bounded workspace tar plus SHA-256/entry/byte metadata through a host callback; checkpoints should retain only host artifact references/hashes, never whole workspaces. `startProcess(SandboxExecFileRequest)` returns a `SandboxProcessHandle` for long-running work consumed by coding-agent `createProcessSessions({ sandbox })`; an opaque `ref` (`prism-docker-proc:<base64url>`) enables attested reconnect via `attachProcess(ref)` — container ID, workspace, and command fingerprint are validated fail-closed (no host fallback, no host PID probing). `sandbox.stop()` and `sandbox.kill()` terminate all active child processes before stopping the container. `createDockerProcessRecoveryBackend(sandbox, options?)` provides a ready-made `ProcessRecoveryBackend` with optional `expectedContainerId`, `expectedWorkspace`, and `expectedLabels` assertions; when a sandbox with `attachProcess` is passed to `createProcessSessions`, the recovery backend is wired automatically. See [Process sessions](process-sessions.md).
+`createDockerSandbox()` returns a `DisposableSandbox`: typed `execFile(file, args)`, shell-compatible `exec`, `status`, cooperative `stop`, forced `kill`, and idempotent `close`. Import may surface `importIdentity`; successful export updates `lastExportIdentity`. `close({ export })` can stream a bounded workspace tar plus SHA-256/entry/byte metadata through a host callback; checkpoints should retain only host artifact references/hashes, never whole workspaces. `startProcess(SandboxExecFileRequest)` returns a `SandboxProcessHandle` for long-running work consumed by coding-agent `createProcessSessions({ sandbox })`; an opaque `ref` (`prism-docker-proc:<base64url>`) enables attested reconnect via `attachProcess(ref)` — container ID, workspace, and command fingerprint are validated fail-closed (no host fallback, no host PID probing). `sandbox.stop()` and `sandbox.kill()` terminate all active child processes before stopping the container. `createDockerProcessRecoveryBackend(sandbox, options?)` provides a ready-made `ProcessRecoveryBackend` with optional `expectedContainerId`, `expectedWorkspace`, and `expectedLabels` assertions; when a sandbox with `attachProcess` is passed to `createProcessSessions`, the recovery backend is wired automatically. See [Process sessions](../packages/tools/coding/README.md).
 
 ## Request/response example
 
@@ -145,8 +147,8 @@ import {
   createCodingApprovalPolicy,
   createDockerSandbox,
   createSandboxCodingComposition,
-} from "@arnilo/prism-coding-tools/security";
-import { createGitTools } from "@arnilo/prism-coding-tools/agent";
+} from "@arnilo/prism-tools-coding";
+import { createGitTools } from "@arnilo/prism-tools-coding";
 
 const policy = createCodingApprovalPolicy({
   roots: [workspaceRoot],
@@ -195,7 +197,7 @@ await sandbox.close({
 
 Policies are ordinary host values: attach one globally through `createCodingTools()`/`createReadOnlyTools()`/`createSandboxCodingComposition()` or per tool. A per-tool policy overrides the shared policy. `SandboxAdapter` / `DisposableSandbox` are replaceable and host-owned; approval policy and sandboxing are separate layers. Custom remote sandboxes can implement `DisposableSandbox` without using Docker.
 
-`createSandboxCodingComposition()` requires `workspaceMode`. Sandbox mode auto-wires FS/list/search through `DisposableSandbox.execFile` (or host-supplied custom operations) so mutations stay on the disposable tree until export. Host mode runs every coding tool against the host cwd and reports no isolation capability (`containmentClaim` deprecated false). Sandbox shell + host FS throws unless `allowMixedWorkspaceWiring: true` (warnings + all capabilities false). Opt-in structured Git tools (`createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`) share the same tree/cwd; Prism still never pushes or opens PRs. Optional `@arnilo/prism-web-tools/browser` can share the same disposable boundary: use `assertBrowserSandboxNetwork()` before browse-ready custom networks, and `createSharedSandboxBrowserOptions({ workspaceRoot, downloadsRoot, containedProxyAttestation })` so uploads/downloads align with `/workspace` and `/downloads`. Close the browser context before disposing the sandbox.
+`createSandboxCodingComposition()` requires `workspaceMode`. Sandbox mode auto-wires FS/list/search through `DisposableSandbox.execFile` (or host-supplied custom operations) so mutations stay on the disposable tree until export. Host mode runs every coding tool against the host cwd and reports no isolation capability (`containmentClaim` deprecated false). Sandbox shell + host FS throws unless `allowMixedWorkspaceWiring: true` (warnings + all capabilities false). Opt-in structured Git tools (`createGitTools(composition.workspaceRoot, { execFile: sandbox.execFile, commitIdentity })`) share the same tree/cwd; Prism still never pushes or opens PRs. Optional `@arnilo/prism-tools-web` can share the same disposable boundary: use `assertBrowserSandboxNetwork()` before browse-ready custom networks, and `createSharedSandboxBrowserOptions({ workspaceRoot, downloadsRoot, containedProxyAttestation })` so uploads/downloads align with `/workspace` and `/downloads`. Close the browser context before disposing the sandbox.
 
 The Docker reference adapter starts by recorded container ID/label, uses argument arrays only, mounts source read-only, populates a size-bounded tmpfs `/workspace`, drops all capabilities, enables `no-new-privileges`, runs with `--init`, and never exposes the Docker socket, privileged mode, or host PID/IPC namespaces. Image pull/build/update stays outside Prism. Protected real-Docker checks are opt-in via `PRISM_TEST_DOCKER_SANDBOX=1` with host-supplied `PRISM_TEST_DOCKER_BIN` and digest-pinned `PRISM_TEST_DOCKER_IMAGE`.
 
@@ -219,13 +221,13 @@ A native Windows backend (Job objects / AppContainer) is tracked, not scheduled.
 
 ## Related APIs
 
-- [Work sandbox](work-sandbox.md): work image + `createWorkComposition`; host injects `createDockerSandbox` (prism-work does not fork it)
-- [Coding agent tools](coding-agent-tools.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime
-- [Hosted sandboxes](hosted-sandboxes.md): E2B pause/resume adapter, filesystem-only snapshots, reconnect by sandbox id
-- [Workflows](workflows.md): `runWorkflow` / `resumeWorkflow` / `startWorkflowBackground` composition for coding tasks
+- [Work sandbox](../packages/tools/work/README.md): work image + `createWorkComposition`; host injects `createDockerSandbox` (prism-work does not fork it)
+- [Coding agent tools](../packages/tools/coding/README.md): durable plan/todo Markdown helpers and `state.coding` checkpoint metadata for restart/resume without a second runtime
+- [Hosted sandboxes](../packages/tools/coding/README.md): E2B pause/resume adapter, filesystem-only snapshots, reconnect by sandbox id
+- [Workflows](../packages/integrations/workflows/README.md): `runWorkflow` / `resumeWorkflow` / `startWorkflowBackground` composition for coding tasks
 - [Host security guide](host-security.md)
 - [Performance limits](performance.md)
-- [Forge integration](forge-integration.md): GitHub adapter whose mutations can be routed through the egress proxy
-- [Tool execution primitives](tool-execution-primitives.md)
+- [Forge integration](../packages/tools/coding/README.md): GitHub adapter whose mutations can be routed through the egress proxy
+- [Tool execution primitives](tools.md)
 - [Security/auth/trust](settings-auth-trust-security.md)
-- [ACP coding-host interop](acp.md): when an ACP client supplies fs/terminal methods and MCP servers, the same containment story applies at the protocol boundary — client paths/dirs pass host seams, MCP servers need host `select` approval (never auto-connect), updates are redacted and capped, and mode switches only narrow or host-authorized widen.
+- [ACP coding-host interop](../packages/hosts/acp/README.md): when an ACP client supplies fs/terminal methods and MCP servers, the same containment story applies at the protocol boundary — client paths/dirs pass host seams, MCP servers need host `select` approval (never auto-connect), updates are redacted and capped, and mode switches only narrow or host-authorized widen.

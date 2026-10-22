@@ -13,7 +13,7 @@ prism add @arnilo/prism-store-sqlite
 // manifest entry, with every config field that has no default
 {
   "name": "@arnilo/prism-store-sqlite",
-  "version": "^0.12.1",
+  "version": "^0.13.0",
   "integrity": "sha512-…",
   "config": { "path": ".prism/sessions.db" }
 }
@@ -33,7 +33,7 @@ The factory options that are not JSON — `wal`, `fileMode`, `skipMigrations`, `
 
 Claims the `store` slot with the `SessionStore` facet of `createSqlitePersistence({ filename: path, busyTimeoutMs })`.
 Migrations run on open (idempotent across reopen, verified against the shared
-`@arnilo/prism/testing/persistence-schema` contract), the database file is created mode `0600` on Unix,
+`@arnilo/prism-store-codecs` persistence-schema contract), the database file is created mode `0600` on Unix,
 and `PRAGMA foreign_keys = ON` is always set.
 
 The store implements the full `SessionStore` contract plus the two optional capabilities:
@@ -59,8 +59,13 @@ Companion stores ship as named exports from the same persistence object, because
 database and one migration history: `createSqliteCheckpointStore`, `createSqliteLeaseStore`,
 `createSqlitePersistenceLifecycle`, the migration/DDL constants (`MIGRATION_001_INIT` …
 `MIGRATION_009_RUN_PROMPT_VERSION`, `ADAPTER_TABLE_NAMES`, `ADAPTER_INDEX_NAMES`), and
-`applySqliteMigrations`/`assertSqliteSchemaReady`/`verifyMigrationIdempotency`. Their *contracts* stay
-in `@arnilo/prism`; their placement is roadmap Phase 11.
+`applySqliteMigrations`/`assertSqliteSchemaReady`/`verifyMigrationIdempotency`. Their *contracts*
+(`CheckpointStore`, `LeaseStore`) are the `checkpoints`/`leases` service contracts in
+`@arnilo/prism-workflows`; this package depends on them with `import type` only.
+
+Setup also registers `prism.services.provide("checkpoints", …)` and `prism.services.provide("leases", …)`
+over the same `SqlitePersistence` it puts in the store slot, so a listed workflows package (or any other
+consumer) gets durable checkpoints and leases with no second database handle.
 
 ## Capabilities
 
@@ -72,6 +77,8 @@ ownership helpers.
 - **Bun only.** Importing the package outside Bun fails closed with
   `@arnilo/prism-store-sqlite requires the Bun runtime (bun:sqlite).` An agent that does not list this
   package never loads `bun:sqlite`.
+- **One database, one handle.** The `checkpoints` and `leases` services are the store slot's own
+  companions, so listing this package opens exactly one `Database` however many services it provides.
 - **Parameterized SQL.** Every statement binds values; no query interpolates a session id, a cursor,
   or a scope value.
 - **One writer, many readers.** SQLite serializes writers; WAL mode (default) keeps readers
@@ -99,3 +106,5 @@ await persistence.append({ id: "e1", sessionId: "s1", timestamp: new Date().toIS
 ## License
 
 MIT
+
+- Session links (`SessionOptions.parent` / `actor`): migration `010_session_links` adds nullable, indexed `agent_id`, `workflow_run_id`, `delegation_id`, `actor_kind`, `actor_agent`, and `actor_vendor` columns to `prism_sessions` (beside `parent_session_id`). The session's first `metadata` entry stays the source of truth and `append` mirrors it into the row, so `fork` and export carry it. `listSessions` and `searchSessions` filter on the columns. A database from before the migration opens, gains the columns, and lists old sessions with absent links.

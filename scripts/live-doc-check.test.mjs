@@ -4,15 +4,15 @@
  * - `docs/live-testing.md` credential matrix ↔ `scripts/live-matrix.json`
  *   (regenerate with `bun scripts/generate-live-docs.mjs --write`)
  * - `docs/peer-dependencies.md` peer matrix ↔ every workspace manifest's
- *   third-party `peerDependencies`, and `docs/options-index.md` ↔ the declared
- *   `*Options`/`*Limits`/`*Config` types in source (plan 070 Task 19).
+ *   third-party `peerDependencies`.
  *
  * Register in the root test chain next to the other static gates.
  */
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { test } from "bun:test";
 import { fileURLToPath } from "node:url";
 import { loadManifest, regeneratedDoc } from "./generate-live-docs.mjs";
 
@@ -158,65 +158,10 @@ test("every peer matrix row names live package subpaths, install specs, and its 
   }
 });
 
-// --- options index ↔ declared types and live pages ---------------------------
+// --- peer page links ---------------------------------------------------------
 
-function sourceText() {
-  const files = [];
-  const walk = (dir) => {
-    for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
-      const path = `${dir}/${entry.name}`;
-      if (entry.isDirectory()) {
-        if (entry.name !== "__tests__" && entry.name !== "node_modules") walk(path);
-      } else if (entry.name.endsWith(".ts")) files.push(path);
-    }
-  };
-  walk("src");
-  for (const { dir } of workspacePackages()) walk(`packages/${dir}/src`);
-  return files.map((file) => read(file)).join("\n");
-}
-
-const OPTION_TYPE = /^[A-Z][A-Za-z0-9]*(?:Options|Limits|Config)$/;
-
-/** `**Label** — [`page.md`](page.md)` immediately followed by the types it owns. */
-function optionsIndexEntries() {
-  const lines = read("docs/options-index.md").split("\n");
-  const entries = [];
-  for (let i = 0; i < lines.length - 1; i += 1) {
-    const link = lines[i].match(/^\*\*.+\*\* — \[`([^`]+)`\]\(([^)]+)\)\s*$/);
-    if (!link) continue;
-    const types = [...lines[i + 1].matchAll(/`([^`]+)`/g)].map((match) => match[1]);
-    assert.ok(types.length > 0, `options index: ${link[1]} is not followed by a list of surfaces`);
-    entries.push({ label: link[1], href: link[2], types });
-  }
-  assert.ok(entries.length > 0, "docs/options-index.md has no grouped entries");
-  return entries;
-}
-
-test("docs/options-index.md only names declared option types and links pages that document them", () => {
-  const source = sourceText();
-  const seen = new Set();
-  for (const entry of optionsIndexEntries()) {
-    const page = `docs/${entry.href}`;
-    const pageText = read(page);
-    for (const type of entry.types) {
-      assert.ok(OPTION_TYPE.test(type), `options index: \`${type}\` is not an *Options/*Limits/*Config surface`);
-      assert.ok(!seen.has(type), `options index: \`${type}\` is listed twice`);
-      seen.add(type);
-      assert.match(
-        source,
-        new RegExp(`\\b(?:interface|type|class|enum)\\s+${type}\\b`),
-        `options index: \`${type}\` is not declared anywhere in src/ or packages/*/src`,
-      );
-      assert.match(pageText, new RegExp(`\\b${type}\\b`), `options index: ${page} does not mention \`${type}\``);
-    }
-  }
-  for (const type of read("docs/options-index.md").matchAll(/`([A-Z][A-Za-z0-9]*(?:Options|Limits|Config))`/g)) {
-    assert.ok(seen.has(type[1]), `options index: \`${type[1]}\` appears outside a surface group (unmapped or stale)`);
-  }
-});
-
-test("every markdown link in the peer and options index pages resolves", () => {
-  for (const page of ["docs/peer-dependencies.md", "docs/options-index.md"]) {
+test("every markdown link in the peer page resolves", () => {
+  for (const page of ["docs/peer-dependencies.md"]) {
     const base = dirname(page);
     for (const match of read(page).matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)) {
       const target = match[1];

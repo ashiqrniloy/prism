@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "bun:test";
 
@@ -124,4 +124,29 @@ test("every example exits 0 or is a manifest skip", () => {
   const ms = Date.now() - started;
   console.log(`examples-execution: ${spawned.length} spawned, ${Object.keys(manifest.skips).length} skipped, ${ms}ms`);
   assert.equal(failures.length, 0, failures.join("\n"));
+});
+
+// The README quickstart is the front door: extract its first ts block, apply the one documented
+// substitution (mock provider, mock model), and run it.
+test("readme_quickstart_runs_on_mock_provider", () => {
+  const readme = readFileSync(join(ROOT, "README.md"), "utf8");
+  const block = readme.match(/```ts\n([\s\S]*?)```/)?.[1];
+  assert.ok(block, "README.md has no ts block");
+  assert.ok(block.includes("createAgent(") && block.includes("session.stream("), "first block must build and run an agent");
+  const source = block
+    .replace(/^import (?:anthropic|hyper) from .*\n/m, 'import { mockProvider } from "@arnilo/prism/testing";\n')
+    .replace(/model: "(?:anthropic|hyper)\/claude-sonnet-4-5"/, 'model: "mock/demo"')
+    .replace(/(?:anthropic\(\)|hyper\([^)]*\))/, 'mockProvider([[{ type: "content_delta", content: { type: "text", text: "Hello" } }, { type: "done" }]])');
+  assert.notEqual(source, block, "substitution did not apply");
+  const dir = mkdtempSync(join(ROOT, "node_modules", ".readme-quickstart-"));
+  try {
+    const file = join(dir, "quickstart.ts");
+    writeFileSync(file, source);
+    const result = spawnSync(process.execPath, [file], { cwd: ROOT, encoding: "utf8", timeout: TIMEOUT_MS, env: childEnv(process.env) });
+    assert.equal(result.status, 0, `${result.stderr}${result.stdout}`);
+    assert.ok(result.stdout.includes("Hello"), `quickstart printed ${JSON.stringify(result.stdout)}`);
+    assert.doesNotMatch(`${result.stdout}${result.stderr}`, /sk-[A-Za-z0-9_-]{8,}|ANTHROPIC_API_KEY=/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

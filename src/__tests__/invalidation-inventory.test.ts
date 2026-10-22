@@ -1,11 +1,15 @@
 // Executable version of plan 088 Task 1's assembly invalidation inventory. One fixture per row
 // that is not a plan-088 tail segment asserts the documented outcome *at the documented boundary*:
-// the message index (and, for schemas, the tool index) where the leading byte-identical prefix
-// ends — so a later change to the cache-aware layout fails here instead of silently relocating an
-// invalidation boundary. The layout claims are owned by docs/input-and-prompt-assembly.md,
-// docs/context-and-skills.md, and docs/provider-caching.md; the pinned table is in
-// docs/prefix-stability-conformance.md. Fixtures call `assembleProviderInput` directly — no
-// session, no provider, one assembly pair each (the injector rows vary the assembly `turn`).
+// the message index where the leading byte-identical prefix ends — so a later change to the
+// cache-aware layout fails here instead of silently relocating an invalidation boundary. The layout
+// claims are owned by docs/input-and-prompt-assembly.md, docs/context-and-skills.md, and
+// docs/provider-caching.md; the pinned table is in docs/prefix-stability-conformance.md. Fixtures
+// call `assembleProviderInput` directly — no session, no provider, one assembly pair each (the
+// injector rows vary the assembly `turn`).
+//
+// The eviction, fold, and tool-schema rows moved out with the stages (plan 158 Task 8): a budget
+// eviction, a tool-result fold, and tool search are package `context.build` handlers now, and the
+// package's own suites pin their boundaries.
 
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
@@ -13,11 +17,9 @@ import {
   type AssembleProviderInputOptions,
   assembleProviderInput,
   type ContextBlock,
-  getContextBudgetReport,
   type Message,
   type ProviderRequest,
   type Skill,
-  type ToolDefinition,
   type ToolResult,
 } from "../index.js";
 
@@ -27,8 +29,8 @@ const model = { provider: "mock", model: "demo", capabilities: { tools: true } }
 const textOf = (message: Message) => message.content.find((part) => part.type === "text")?.text;
 /** Flattened text per message; a tool-result message has no text part and reads as `""`. */
 const textsOf = (request: ProviderRequest) => request.messages.map((message) => textOf(message) ?? "");
-const namesOf = (request: ProviderRequest) => (request.tools ?? []).map((tool) => tool.name);
-const messagesOf = (request: ProviderRequest) => JSON.stringify(request.messages);
+const _namesOf = (request: ProviderRequest) => (request.tools ?? []).map((tool) => tool.name);
+const _messagesOf = (request: ProviderRequest) => JSON.stringify(request.messages);
 
 /** One JSON fragment per message and per tool schema — the shape the conformance runner measures. */
 const fragments = (items: readonly unknown[]) => items.map((item) => JSON.stringify(item));
@@ -99,7 +101,7 @@ const briefSkill: Skill = { name: "brief", description: "Be brief", instructions
 
 type InputLayoutName = "cache_aware" | "legacy";
 
-const contextSlotAssembly = (blocks?: readonly ContextBlock[], layout: InputLayoutName = "cache_aware"): AssembleProviderInputOptions => ({
+const _contextSlotAssembly = (_blocks?: readonly ContextBlock[], layout: InputLayoutName = "cache_aware"): AssembleProviderInputOptions => ({
   model,
   systemInstructions: "Base rules.",
   skills: [briefSkill],
@@ -108,7 +110,7 @@ const contextSlotAssembly = (blocks?: readonly ContextBlock[], layout: InputLayo
   inputLayout: layout,
 });
 
-const nowBlock: ContextBlock = { title: "Now", content: "turn two" };
+const _nowBlock: ContextBlock = { title: "Now", content: "turn two" };
 
 /** Summary fixture with a skill, where the hoist difference between layouts is visible. */
 const summaryWithContextAssembly = (summary: string, layout: InputLayoutName): AssembleProviderInputOptions => ({
@@ -226,168 +228,4 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
     ]);
   });
 
-  it("context-budget eviction: the reset starts at the first evicted group, earlier bytes identical", async () => {
-    const host: AssembleProviderInputOptions = {
-      model,
-      systemInstructions: "Base rules.",
-      summaries: ["Summary"],
-      history: [hUser, hAssistant],
-      toolResults: [pendingResult],
-      input: "Ask",
-    };
-    const calibrated = await assembleProviderInput({ ...host, contextBudget: { maxInputBytes: 1_000_000, reportOmissions: true } });
-    const report = getContextBudgetReport(calibrated);
-    assert.ok(report, "reportOmissions attaches the eviction report");
-    assert.equal(report.omitted.length, 0, "the calibration cap keeps everything");
-    assert.deepEqual(textsOf(calibrated), ["System instruction:\nBase rules.", "Summary:\nSummary", "h1", "h2", "", "Ask"]);
-
-    // One byte below the measured cost is the smallest cap that evicts, so exactly one group drops.
-    const one = await assembleTwice(
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes - 1, reportOmissions: true } },
-    );
-    const oneReport = getContextBudgetReport(one.after);
-    assert.deepEqual(
-      oneReport?.omitted.map((omission) => [omission.kind, omission.id]),
-      [["tool_results", "c1"]],
-      "tool results drop first",
-    );
-    assert.equal(one.boundary.messageIndex, 4, "the evicted tool result was message 4; every earlier byte is identical");
-    assert.deepEqual(textsOf(one.after), ["System instruction:\nBase rules.", "Summary:\nSummary", "h1", "h2", "Ask"]);
-    assert.ok(one.continuity < 1);
-
-    // One byte below what the first eviction itself was worth forces the next group in order.
-    const oneByteLength = oneReport?.omitted[0]?.byteLength ?? 0;
-    const two = await assembleTwice(
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes - oneByteLength - 1, reportOmissions: true } },
-    );
-    const twoReport = getContextBudgetReport(two.after);
-    assert.deepEqual(
-      twoReport?.omitted.map((omission) => [omission.kind, omission.id]),
-      [
-        ["tool_results", "c1"],
-        ["history", undefined],
-      ],
-      "history drops oldest-first after tool results",
-    );
-    assert.equal(two.boundary.messageIndex, 2, "with two groups evicted the boundary is the earlier one: the first history message");
-    assert.deepEqual(textsOf(two.after), ["System instruction:\nBase rules.", "Summary:\nSummary", "h2", "Ask"]);
-  });
-
-  it("skills eviction: the skill body demotes to its catalog form at the catalog message index", async () => {
-    const body = "i".repeat(400);
-    const catalogText = "Skill big: short desc";
-    const host: AssembleProviderInputOptions = {
-      model,
-      systemInstructions: "Base rules.",
-      skills: [{ name: "big", description: "short desc", instructions: body }],
-      skillsDisclosure: "eager",
-      input: "Ask",
-    };
-    const calibrated = await assembleProviderInput({ ...host, contextBudget: { maxInputBytes: 1_000_000, reportOmissions: true } });
-    const report = getContextBudgetReport(calibrated);
-    assert.ok(report, "reportOmissions attaches the eviction report");
-    assert.equal(report.omitted.length, 0, "the calibration cap keeps everything");
-    assert.equal(textsOf(calibrated)[1], `Skill big:\n${body}`, "the eager body renders inline before any budget pressure");
-
-    // One byte below the measured cost demotes the body instead of dropping the catalog row.
-    const evicted = await assembleTwice(
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes - 1, reportOmissions: true } },
-    );
-    const evictedReport = getContextBudgetReport(evicted.after);
-    assert.deepEqual(
-      evictedReport?.omitted.map((row) => [row.kind, row.id]),
-      [["skill_body", "big"]],
-      "the body demotes before a full skill drop",
-    );
-    assert.equal(evicted.boundary.messageIndex, 1, "the catalog message is 1; name and description bytes survive");
-    assert.equal(textsOf(evicted.after)[1], catalogText);
-    assert.ok(evicted.continuity < 1);
-  });
-
-  it("attachments eviction: the newest attachment drops first, older bytes survive", async () => {
-    const host: AssembleProviderInputOptions = {
-      model,
-      systemInstructions: "Base rules.",
-      attachments: [
-        { name: "older.md", text: "older attachment" },
-        { name: "newer.md", text: "newer attachment" },
-      ],
-      input: "Ask",
-    };
-    const calibrated = await assembleProviderInput({ ...host, contextBudget: { maxInputBytes: 1_000_000, reportOmissions: true } });
-    const report = getContextBudgetReport(calibrated);
-    assert.ok(report, "reportOmissions attaches the eviction report");
-    assert.equal(report.omitted.length, 0, "the calibration cap keeps everything");
-    assert.deepEqual(textsOf(calibrated), [
-      "System instruction:\nBase rules.",
-      "Attachment older.md:\nolder attachment",
-      "Attachment newer.md:\nnewer attachment",
-      "Ask",
-    ]);
-
-    // One byte below the measured cost pops the newest attachment (LIFO).
-    const evicted = await assembleTwice(
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes } },
-      { ...host, contextBudget: { maxInputBytes: report.keptBytes - 1, reportOmissions: true } },
-    );
-    const evictedReport = getContextBudgetReport(evicted.after);
-    assert.deepEqual(
-      evictedReport?.omitted.map((row) => [row.kind, row.id]),
-      [["attachments", undefined]],
-      "attachments drop LIFO",
-    );
-    assert.equal(evicted.boundary.messageIndex, 2, "the newer attachment was message 2; the older bytes survive at message 1");
-    assert.deepEqual(textsOf(evicted.after), ["System instruction:\nBase rules.", "Attachment older.md:\nolder attachment", "Ask"]);
-    assert.ok(evicted.continuity < 1);
-  });
-
-  it("tool-schema selection: gaining or losing a schema never touches the message prefix", async () => {
-    const echo: ToolDefinition = { name: "echo", description: "Echo the value", execute: () => ({ toolCallId: "c", name: "echo" }) };
-    const lookup: ToolDefinition = {
-      name: "lookup",
-      description: "Look something up",
-      execute: () => ({ toolCallId: "c", name: "lookup" }),
-    };
-    const zap: ToolDefinition = { name: "zap", description: "Zap a thing", execute: () => ({ toolCallId: "c", name: "zap" }) };
-    const schemaAssembly = (tools: readonly ToolDefinition[], activated: readonly string[]): AssembleProviderInputOptions => ({
-      model,
-      systemInstructions: "Base rules.",
-      tools,
-      toolsDisclosure: "search",
-      toolsSearch: { topK: 1 },
-      activatedTools: new Set(activated),
-      input: "echo the value",
-    });
-    const all = [echo, lookup, zap];
-
-    const gained = await assembleTwice(schemaAssembly(all, ["echo"]), schemaAssembly(all, ["echo", "lookup"]));
-    assert.deepEqual(namesOf(gained.before), ["echo"]);
-    assert.deepEqual(namesOf(gained.after), ["echo", "lookup"]);
-    assert.equal(messagesOf(gained.after), messagesOf(gained.before), "schema selection leaves every message byte-identical");
-    assert.equal(gained.boundary.messageIndex, gained.before.messages.length, "no message was invalidated");
-    assert.equal(
-      gained.boundary.toolIndex,
-      gained.before.tools?.length,
-      "the new schema appends after the selected ones: the cache anchor holds",
-    );
-
-    const lost = await assembleTwice(schemaAssembly(all, ["echo", "lookup"]), schemaAssembly([echo, zap], ["echo"]));
-    assert.deepEqual(namesOf(lost.before), ["echo", "lookup"]);
-    assert.deepEqual(namesOf(lost.after), ["echo"]);
-    assert.equal(messagesOf(lost.after), messagesOf(lost.before));
-    assert.equal(lost.boundary.toolIndex, lost.after.tools?.length, "the surviving schemas keep their positions");
-
-    // Negative control: the boundary covers schema fields, not just names.
-    const reworded = await assembleTwice(
-      schemaAssembly(all, ["echo", "lookup"]),
-      schemaAssembly([echo, { ...lookup, description: "Changed description" }, zap], ["echo", "lookup"]),
-    );
-    assert.deepEqual(namesOf(reworded.after), namesOf(reworded.before), "the schema names are unchanged");
-    assert.notEqual(JSON.stringify(reworded.after.tools), JSON.stringify(reworded.before.tools));
-    assert.equal(reworded.boundary.toolIndex, 1, "the second schema is the boundary — its description changed in place");
-    assert.equal(messagesOf(reworded.after), messagesOf(reworded.before));
-  });
 });

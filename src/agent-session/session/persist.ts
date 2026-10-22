@@ -1,36 +1,30 @@
 /** Finalize/persist phase of runInternal (plan 059). */
 
 import type { PendingToolCall, StoredAgentRunState } from "../../agent-run-state.js";
-import {
-  boundedLoopSnapshot,
-  initialAgentRunState,
-  publicState,
-  resolveCheckpointMetadata,
-  saveAgentRunState,
-} from "../../agent-run-state.js";
+import { boundedLoopSnapshot, initialAgentRunState, publicState, saveAgentRunState } from "../../agent-run-state.js";
+import { createMemoryRunStateCell } from "../../run-state-cell.js";
 import type {
-  AgentRunStatus,
-  RunResult,
   AgentRunState,
+  AgentRunStatus,
   ErrorInfo,
   Message,
   ModelConfig,
   NestedRunRef,
+  RunResult,
   Usage,
   UsageRecord,
 } from "../../contracts.js";
 import { AgentLoopStateError, AgentRunStateError } from "../../contracts.js";
-import { createMemoryCheckpointStore } from "../../checkpoints.js";
-import { createSuspendedRunEntry } from "../../suspended-run.js";
 import { redactRunLedgerRecord } from "../../redaction.js";
 import { isFlushableRunLedger } from "../../run-ledger.js";
 import type { RunLimitTracker } from "../../run-limits.js";
 import { snapshotLoadedSkillBodies } from "../../skill-load.js";
+import { createSuspendedRunEntry } from "../../suspended-run.js";
 import { isDurableLoop, randomId } from "../helpers.js";
 import { isSessionScopedHookId } from "../runtime-registry.js";
 import type { RoundContext, SessionHost } from "./types.js";
 
-/** Definition revision of a suspension that had no host `runState`; the fingerprint binds to it on resume. */
+/** Definition revision of a kernel suspension; the fingerprint binds to it on resume. */
 export const KERNEL_SUSPENSION_REVISION = "kernel-suspension";
 
 export async function persistDurable(session: SessionHost, state: StoredAgentRunState): Promise<AgentRunState> {
@@ -46,20 +40,10 @@ export async function persistDurableRaw(
   if (!durable) throw new AgentRunStateError("Durable run state is not configured");
   const withGrant = session.activeToolNames !== undefined ? { ...state, toolNames: session.activeToolNames } : state;
   const persistSessionState = durable.options.persistSessionState === true;
-  // Plan 086 T3: durable folding owns its two keys. A run that opted into `durable` writes the
-  // fold ledger and its frontier even when the broader session-state bag stays off; a run that
-  // did not keeps exactly today's bytes, where the frontier rides `persistSessionState`.
-  const attentionSticky = persistSessionState || session.attentionDurable ? session.serializedAttentionSticky() : undefined;
-  const attentionFold = session.attentionDurable ? session.serializedAttentionFold() : undefined;
-  // Plan 104 T2: pack refs and pack-owned state; the key only exists under the same opt-in, so a
-  // default checkpoint keeps exactly today's bytes.
-  const guardrailPacks = persistSessionState ? session.serializedGuardrailPackState() : undefined;
   const sessionState = {
     ...(persistSessionState
       ? {
           loadedSkillNames: session.loadedSkills.list(),
-          ...(guardrailPacks ? { guardrailPacks } : {}),
-          ...(session.activatedTools.list().length ? { activatedToolNames: session.activatedTools.list() } : {}),
           ...(durable.options.includeSkillBodies
             ? {
                 loadedSkillBodies: snapshotLoadedSkillBodies(
@@ -73,23 +57,15 @@ export async function persistDurableRaw(
             : {}),
         }
       : {}),
-    ...(attentionSticky ? { attentionSticky } : {}),
-    ...(attentionFold ? { attentionFold } : {}),
   };
   const persisted = Object.keys(sessionState).length > 0 ? { ...withGrant, sessionState } : withGrant;
-  const metadata = resolveCheckpointMetadata(durable.options.checkpointMetadata) ?? durable.checkpointMetadata;
   const saved = await saveAgentRunState({
-    checkpoints: durable.options.checkpoints,
+    cell: durable.options.cell,
     state: persisted,
-    expectedVersion: durable.version,
-    ownership: session.activeOwnership,
-    fencingToken: durable.options.fencingToken,
     redactor: session.activeRedactor,
     maxStateBytes: durable.options.maxStateBytes,
-    ...(metadata ? { metadata } : {}),
   });
   durable.state = saved.state;
-  durable.version = saved.record.version;
   return { state: saved.state, publicValue: publicState(saved.state) };
 }
 
@@ -97,7 +73,7 @@ export async function suspendDurable(
   session: SessionHost,
   input: {
     readonly runId: string;
-    readonly model: ModelConfig;
+    readonly model: ModelConfig | undefined;
     readonly limits: RunLimitTracker;
     readonly interruption: import("../../contracts.js").AgentRunInterruption;
     readonly messages?: readonly Message[];
@@ -108,9 +84,9 @@ export async function suspendDurable(
   },
 ): Promise<AgentRunState> {
   const loop = session.activeLoop;
-  // Suspension needs no host checkpoint store: the `suspended_run` entry below is the durable anchor.
-  // A run with no `runState` gets a private in-memory checkpoint for the bounded, versioned state, and a
-  // custom loop must be snapshot/restore capable to suspend (a durable run already enforces that at start).
+  // Suspension needs no store: the `suspended_run` entry below is the durable anchor and carries the
+  // whole redacted state. The run gets a private in-memory cell for the bounded, versioned value, and a
+  // custom loop must be snapshot/restore capable to suspend.
   if (!session.activeDurable) {
     if (loop && !isDurableLoop(loop)) {
       throw new AgentLoopStateError(
@@ -119,8 +95,7 @@ export async function suspendDurable(
       );
     }
     session.activeDurable = {
-      options: { checkpoints: createMemoryCheckpointStore(), definitionRevision: KERNEL_SUSPENSION_REVISION, persistSessionState: true },
-      version: 0,
+      options: { cell: createMemoryRunStateCell(), definitionRevision: KERNEL_SUSPENSION_REVISION, persistSessionState: true },
     };
   }
   const durable = session.activeDurable;
@@ -156,7 +131,7 @@ export async function suspendDurable(
     counters: input.limits.snapshot(),
   });
   // Store-slot anchor (roadmap §2.4 ask path): one self-contained entry so a new process over the
-  // same session store can find and resume the suspension without reading the checkpoint.
+  // same session store can find and resume the suspension with no other read.
   await session.appendEntry(
     createSuspendedRunEntry({
       id: randomId("entry"),
@@ -173,73 +148,6 @@ export async function suspendDurable(
     }),
   );
   return saved.publicValue;
-}
-
-/**
- * Turn-boundary crash-recovery checkpoint (plan 084 Task 1). Called before each provider
- * request when `checkpointPolicy: "every-turn"`; a no-op otherwise, so default-policy runs keep
- * the 0.8.x checkpoint shape and write count unchanged. Pending-decision markers are dropped:
- * at a turn boundary every gated call has been resolved or the run already suspended, and a
- * stale marker must never replay. The recorded `checkpointPolicy` makes the cadence survive
- * into a resumed run, and loop-local state rides along exactly as it does at suspension.
- */
-export async function checkpointDurableTurn(
-  session: SessionHost,
-  input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
-): Promise<void> {
-  if (session.activeDurable?.options.checkpointPolicy !== "every-turn") return;
-  await writeRunningCheckpoint(session, input);
-}
-
-/**
- * Fold-boundary checkpoint (plan 086 T3). Called once per turn that added folded bodies — never
- * per turn — when the resolved compiler is durable, so a crash after a fold resumes with the
- * ledger and frontier already on disk. Independent of `checkpointPolicy`: the fold is the
- * durability point that matters for a long single run, not the turn boundary.
- */
-export async function checkpointDurableFold(
-  session: SessionHost,
-  input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
-): Promise<void> {
-  if (!session.attentionDurable) return;
-  await writeRunningCheckpoint(session, input);
-}
-
-/** Shared running-checkpoint write for the turn-boundary and fold-boundary triggers. */
-async function writeRunningCheckpoint(
-  session: SessionHost,
-  input: { readonly runId: string; readonly model: ModelConfig; readonly limits: RunLimitTracker },
-): Promise<void> {
-  const durable = session.activeDurable;
-  if (!durable) return;
-  const loop = session.activeLoop;
-  const loopState = loop?.snapshot ? boundedLoopSnapshot(loop.name, loop.revision ?? "1", loop.snapshot()) : undefined;
-  const state =
-    durable.state ??
-    initialAgentRunState({
-      agent: session.agent,
-      options: durable.options,
-      runId: input.runId,
-      sessionId: session.id,
-      leafId: session.currentLeafId,
-      model: input.model,
-      counters: input.limits.snapshot(),
-      deadlineAt: input.limits.deadlineAt,
-      status: "running",
-    });
-  await persistDurable(session, {
-    ...state,
-    leafId: session.currentLeafId,
-    status: "running",
-    interruption: undefined,
-    // The input messages are already in the session store by the time a turn boundary is
-    // reached; keeping them would re-append them on a later resume.
-    input: undefined,
-    pending: undefined,
-    pendingCalls: undefined,
-    ...(loopState ? { loopState } : {}),
-    counters: input.limits.snapshot(),
-  });
 }
 
 export async function persistSucceeded(ctx: RoundContext, loopUsage: Usage | undefined): Promise<RunResult> {
@@ -300,7 +208,7 @@ export async function cleanupRun(input: {
   controller: AbortController;
   cleanupSignal: () => void;
   runId: string;
-  model: ModelConfig;
+  model: ModelConfig | undefined;
   startedAt: string;
   runStatus: AgentRunStatus;
   runError: ErrorInfo | undefined;
@@ -326,7 +234,7 @@ export async function cleanupRun(input: {
         sessionId: session.id,
         branchId: session.currentLeafId,
         model,
-        provider: model.provider,
+        ...(model ? { provider: model.provider } : {}),
         idempotencyKey: session.activeIdempotencyKey,
         status: runStatus,
         startedAt,

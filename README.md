@@ -1,49 +1,6 @@
 # prism
 
-`prism` is a TypeScript agent harness for the Bun runtime. Host apps and extension packages
-bring their tools, providers, credentials, storage, and UI; Prism supplies the
-common contracts, registries, agent/session runtime, replaceable input/prompt
-and compaction strategies, CLI/RPC adapters, and first-party provider/compaction
-packages. The current 0.12.1 line publishes the manifest-derived package inventory (see
-[Packages](#packages)); family subpaths are imports, not packages to install. Prism defines contracts, not apps.
-
-The target is `@arnilo/prism` 0.13.0: an SDK kernel for the agent loop, tools, skills, and hooks, extended by installable packages. [PRODUCT.md](PRODUCT.md) explains it and [roadmap.md](roadmap.md) is the build order. That design is not shipped. Until it is, use the 0.12.1 install lines and [docs/index.md](docs/index.md) below.
-
-## Current scope
-
-- **Agent/session runtime**: `createAgent`/`createAgentSession`, run prompts,
-  dispatch host tools, subscribe to normalized `AgentEvent` streams, abort runs,
-  compact, and navigate branches.
-- **Field-level classification**: `applyFieldPolicy` + the fail-closed protected default walk JSON-like values across prompt/tool/artifact/audit/telemetry/persistence/export boundaries with `allow`/`redact`/`tokenize`/`deny` decisions, explicit per-boundary `labelFor` hints, bounded traversal, and sparse-copy allocation; seams at the egress redaction functions, the audit-export redactor hook, and the OpenTelemetry attribute policy. See [docs/data-classification.md](docs/data-classification.md).
-- **Providers and models**: provider/model registries, provider event helpers,
-  credential redaction helpers, mock provider, and an optional
-  OpenAI-compatible provider subpath. Cache support is provider-specific:
-  OpenAI/OpenRouter use best-effort explicit cache hints, NeuralWatt uses
-  best-effort implicit prefix caching, and other providers have route/model-specific
-  or no cache-control support; see [docs/provider-caching.md](docs/provider-caching.md).
-- **First-party packages**: provider adapters, one standalone `@arnilo/prism-provider-<vendor>` package per
-  vendor (`anthropic`, `openai`, `google`, `bedrock`, `vertex`, and the rest of the catalog), two compaction strategies,
-  coding tools/security, JSON Schema validation, MCP, workflows, OpenTelemetry,
-  encrypted credentials, SQLite/PostgreSQL persistence, and Linux desktop control.
-- **Tools, context, skills**: host-owned tool registry with allow/deny filtering
-  and dispatch, context providers, and a skill registry with progressive
-  disclosure.
-- **Input/prompt/context**: default input and prompt builders, system-prompt
-  layering, and provider-input assembly — every stage replaceable.
-- **Sessions and memory**: in-memory and JSONL session stores, branching/fork/
-  clone, default and LLM compaction strategies, retry policy,
-  observational-memory recall/status/view, and the `@arnilo/prism-memory` family
-  (working/semantic memory plus `/rag`, `/compaction/*`, `/graft`, `/wiki` subpaths).
-- **Extensions and manifests**: extension kernel + event bus, contribution
-  registries, middleware hooks, and data-only package manifests.
-- **Config, settings, security**: layered config merge, settings providers,
-  credential resolvers, trust/permission policies, and secret redaction.
-- **CLI/RPC/server**: `prism --mode print|json|rpc`, `prism init`, optional framework-free authorized Web agent/workflow routes, and explicit MCP server exposure.
-- **Ecosystem parity**: OpenAI hosted-tool attribution, bounded Responses
-  continuation/Realtime, exact AI SDK V4 mapping, bounded RAG lifecycle/reranking/trust,
-  and consent-bound memory export/rebuild; provider, RAG, and memory packages remain optional.
-- **Co-work contracts**: conversation/artifact review types, deny-by-default device
-  contracts, and OAuth refresh/revoke helpers; services stay in optional packages.
+Prism is a TypeScript SDK for running AI agents on Bun. `@arnilo/prism` is a small kernel: the agent loop, tools and skills, hooks, slots, and a package loader. Everything else (model vendors, coding tools, web search, memory, storage, policy) is a package you choose to install. [PRODUCT.md](PRODUCT.md) explains the design.
 
 ## Install
 
@@ -51,139 +8,108 @@ The target is `@arnilo/prism` 0.13.0: an SDK kernel for the agent loop, tools, s
 bun add @arnilo/prism
 ```
 
-First-party code packages require `@arnilo/prism` as a non-optional peer.
-Install the package that owns each capability; importing a subpath activates
-nothing until the host configures it:
+Add the packages your agent needs. Each one is optional and activates only when you list it in `createAgent`:
 
 ```bash
-bun add @arnilo/prism @arnilo/prism-provider-openai          # a provider adapter
-bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-memory # persistence and memory
-bun add @arnilo/prism @arnilo/prism-agent-sdk                 # configurable agent SDK
-bun add @arnilo/prism @arnilo/prism-core @arnilo/prism-coding-tools @arnilo/prism-mcp
-bun add @arnilo/prism @arnilo/prism-web-tools                 # web research and browser subpaths
+bun add @arnilo/prism-provider-hyper @arnilo/prism-tools-coding
 ```
-
-Use subpaths only in imports, after installing their owning package:
-
-```ts
-import { createPostgresPersistence } from "@arnilo/prism-core/sessions/postgres";
-import openai from "@arnilo/prism-provider-openai";
-```
-
-See [docs/release-and-install.md](docs/release-and-install.md) for install
-specifiers, tarball contents, and the offline test budget.
 
 ## Quick start
 
-Scaffold a project (offline mock test included):
-
-```bash
-bunx --package @arnilo/prism prism init my-agent
-# or, scaffold with a real provider package selected:
-bunx --package @arnilo/prism prism init my-agent --provider openai
-# or, scaffold a full deep research agent from the template gallery:
-bunx --package @arnilo/prism prism init my-research --template deep-research
-cd my-agent && bun install && bun test
-```
-
-List available template gallery starters:
-```bash
-prism init --list-templates
-```
-
-
-Or embed Prism directly:
-
-```ts
-import { createAgent, createAgentSession, createMockProvider } from "@arnilo/prism";
-
-// Host owns the provider. createMockProvider is for tests/demos only.
-const agent = createAgent({
-  model: { provider: "mock", model: "demo" },
-  provider: createMockProvider([{ type: "text", text: "Hello" }, { type: "done" }]),
-});
-
-const session = createAgentSession({ agent });
-
-// Direct result: run/prompt return AgentRunResult (text, usage, status, ids).
-const result = await session.run("Hi");
-console.log(result.text, result.usage?.totalTokens);
-
-// Integrated streaming: subscribe-before-run for one owned run.
-for await (const event of session.stream("Hi again")) {
-  // AgentEvent: agent_started, message_delta, turn_finished, ...
-}
-
-// Long-lived subscribe() still works when you need a subscriber across runs.
-// `subscribe()` only emits while a run is in progress, so the loop and `run()`
-// must run together; awaiting the loop before calling `run()` would deadlock.
-(async () => {
-  const consumer = (async () => {
-    for await (const event of session.subscribe()) {
-      // AgentEvent: agent_started, message_delta, turn_finished, ...
-    }
-  })();
-  await Promise.all([consumer, session.run("Hi")]);
-})();
-```
-
-Register a first-party provider package:
+An agent is a model plus the packages you list. This one talks to Hyper and can read and edit files under the current directory. The provider reads `HYPER_API_KEY` from the environment; Prism never stores or logs it.
 
 ```ts
 import { createAgent } from "@arnilo/prism";
-import openai, { openAIModels } from "@arnilo/prism-provider-openai";
+import hyper from "@arnilo/prism-provider-hyper";
+import coding from "@arnilo/prism-tools-coding";
 
 const agent = await createAgent({
-  model: openAIModels[0],
-  packages: [openai({ apiKey: "env:OPENAI_API_KEY" })],
+  model: "hyper/claude-sonnet-4-5",
+  packages: [hyper({ apiKey: "env:HYPER_API_KEY" }), coding({ root: process.cwd() })],
+});
+
+const session = await agent.session();
+for await (const event of session.stream("List the files here")) {
+  if (event.type === "message.delta" && event.content.type === "text") process.stdout.write(event.content.text);
+}
+await agent.dispose();
+```
+
+Run it with `bun run agent.ts`. To try it offline, import `mockProvider` from `@arnilo/prism/testing`, list `mockProvider([[{ type: "content_delta", content: { type: "text", text: "Hello" } }, { type: "done" }]])` in `packages` instead of the provider and tool packages, and set `model: "mock/demo"`.
+
+`session.stream` yields the events of one run; [docs/events.md](docs/events.md) lists them. `agent.inspect()` shows every package, tool, and hook that loaded.
+
+## Write a package
+
+A package is a plain TypeScript module that Bun runs as-is. It receives the SDK's API when it loads and changes the agent through it:
+
+```ts
+import { definePackage } from "@arnilo/prism";
+
+export default definePackage({
+  name: "@acme/prism-audit",
+  version: "1.0.0",
+  requires: { api: 1 },
+  setup(prism) {
+    prism.hooks.on("tool.call", (call) => (call.name === "shell" ? { deny: "blocked by audit policy" } : undefined));
+  },
 });
 ```
 
-Hosts own credentials. Do not put secrets in prompts, messages, events, stores,
-or logs. Prism never reads `process.env` on its own; credential resolvers are
-caller-supplied.
+Pass it to `createAgent({ packages: [...] })` next to the others. [docs/packages.md](docs/packages.md) covers config, services, slots, and the manifest.
 
-## CLI
+## Where next
 
-```bash
-prism --provider mock --model demo -p "Hi"          # print mode (default)
-prism --provider mock --mode json -p "Hi"            # one event envelope per line
-printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
-  | prism --provider mock --mode rpc                 # LF-delimited JSONL RPC
-```
-
-## Docs
-
-- [docs/index.md](docs/index.md) — navigational map of every public surface.
-- The `examples/` directory holds compile-checked typed examples and runnable
-  offline demos covering providers, auth, tools, stores, compaction, structured
-  output, multimodality, workflows, CLI, and RPC.
+- [docs/index.md](docs/index.md) is the map of every kernel page, package README, and guide.
+- [examples/README.md](examples/README.md) is the examples gallery.
+- [apps/prism-agent/README.md](apps/prism-agent/README.md) walks through the reference host, a coding agent built only on `@arnilo/prism` and the manifest.
 
 ## Packages
 
 <!-- generated:package-truth:inventory begin -->
-**39 publishable manifests** — root `@arnilo/prism` plus 38 workspace packages (3 `prism-*` family packages, 14 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
+**43 publishable manifests** — root `@arnilo/prism` plus 42 workspace packages (1 `prism-*` family packages, 37 capability packages). Generated by `bun scripts/package-truth.mjs --emit-docs` — do not hand-edit.
 
 | package | version | notes |
 | --- | --- | --- |
-| `@arnilo/prism` | 0.12.1 | core — runtime, CLI/RPC, templates, docs |
-| `@arnilo/prism-channels` | 0.12.1 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
-| `@arnilo/prism-coding-tools` | 0.12.1 | family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths |
-| `@arnilo/prism-core` | 0.12.1 | family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths |
-| `@arnilo/prism-acp-agent` | 0.12.1 | capability — ACP adapter |
-| `@arnilo/prism-ag-ui` | 0.12.1 | capability — AG-UI/A2A/A2UI adapter |
-| `@arnilo/prism-agent-sdk` | 0.1.0 | capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks |
-| `@arnilo/prism-code` | 0.4.1 | capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes |
-| `@arnilo/prism-credentials-keyring` | 0.12.1 | capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence |
-| `@arnilo/prism-hooks-json` | 0.12.1 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
-| `@arnilo/prism-mcp` | 0.12.1 | capability — MCP client/server/OAuth interop |
-| `@arnilo/prism-memory` | 0.12.1 | capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths |
-| `@arnilo/prism-store-codecs` | 0.12.1 | capability |
-| `@arnilo/prism-store-jsonl` | 0.12.1 | capability |
-| `@arnilo/prism-store-postgres` | 0.12.1 | capability |
-| `@arnilo/prism-store-sqlite` | 0.12.1 | capability |
-| `@arnilo/prism-web-tools` | 0.12.1 | capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths |
-| `@arnilo/prism-work` | 0.12.1 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism` | 0.13.0 | core — runtime, CLI/RPC, templates, docs |
+| `@arnilo/prism-channels` | 0.13.0 | family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal |
+| `@arnilo/prism-acp` | 0.13.0 | capability |
+| `@arnilo/prism-ag-ui` | 0.13.0 | capability — AG-UI/A2A/A2UI adapter |
+| `@arnilo/prism-approval` | 0.13.0 | capability — approval modes deny/ask/edits/auto over tool effects and roots, as one tool.call gate |
+| `@arnilo/prism-context-engineering` | 0.13.0 | capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler |
+| `@arnilo/prism-context-files` | 0.13.0 | capability — AGENTS.md / SYSTEM.md layers as one context.build handler, trust-gated and cached per session |
+| `@arnilo/prism-credentials-keyring` | 0.13.0 | capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence |
+| `@arnilo/prism-delegate` | 0.13.0 | capability — a delegate tool whose child agent inherits a chosen subset of the parent packages, reporting delegate.step package events |
+| `@arnilo/prism-devtools` | 0.13.0 | capability |
+| `@arnilo/prism-driver-process` | 0.13.0 | capability — generic external-agent process driver with a host-written adapter |
+| `@arnilo/prism-evals` | 0.13.0 | capability |
+| `@arnilo/prism-governance` | 0.13.0 | capability — deny-by-default policy engine (inline rules or OPA) plus approvals and an audit ledger, as one tool.call/run.input/model.request gate with a governance.policy/governance.audit service |
+| `@arnilo/prism-guardrail-packs` | 0.13.0 | capability — built-in guardrail packs (coding-standard, destructive-commands, validation-respect, secrets-hygiene) as restrictive-only tool.call/tool.result rules with package session state |
+| `@arnilo/prism-headless` | 0.13.0 | library — host library routing HostUi requests through ordered routes with a value-free answer log |
+| `@arnilo/prism-hooks-json` | 0.13.0 | capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end |
+| `@arnilo/prism-mcp` | 0.13.0 | capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close |
+| `@arnilo/prism-mcp-server` | 0.13.0 | library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports) |
+| `@arnilo/prism-memory-compaction` | 0.13.0 | capability |
+| `@arnilo/prism-memory-core` | 0.13.0 | library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability |
+| `@arnilo/prism-memory-fabric` | 0.13.0 | capability — working, semantic, and scoped memory with the memory.* tools, a context block, and per-session state |
+| `@arnilo/prism-memory-observational` | 0.13.0 | capability |
+| `@arnilo/prism-memory-rag` | 0.13.0 | capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service |
+| `@arnilo/prism-memory-wiki` | 0.13.0 | capability — the LLM Wiki knowledge compiler: four wiki tools, four commands, bundled skills, and the prism-wiki CLI |
+| `@arnilo/prism-model-router` | 0.13.0 | capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls |
+| `@arnilo/prism-observability` | 0.13.0 | capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself |
+| `@arnilo/prism-remote` | 0.13.0 | library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1 |
+| `@arnilo/prism-store-codecs` | 0.13.0 | capability |
+| `@arnilo/prism-store-jsonl` | 0.13.0 | capability |
+| `@arnilo/prism-store-postgres` | 0.13.0 | capability |
+| `@arnilo/prism-store-sqlite` | 0.13.0 | capability |
+| `@arnilo/prism-tools-browser` | 0.13.0 | capability — six exclusive Playwright browser tools with declared effects, fail-closed egress policy, and artifact quarantine |
+| `@arnilo/prism-tools-coding` | 0.13.0 | capability — coding file/search/shell tools as a package: a small tool set with declared effects, in-tool path containment, and an optional shell |
+| `@arnilo/prism-tools-computer-use` | 0.13.0 | capability — the host-owned computer-use-linux MCP binary as tools with declared external effects, in-tool device admission, and a bundled skill |
+| `@arnilo/prism-tools-openapi` | 0.13.0 | capability — compile allow-listed OpenAPI 3.1 operations into bounded tools with pinned origins, per-method effects, and ref-only header credentials |
+| `@arnilo/prism-tools-research` | 0.13.0 | capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check |
+| `@arnilo/prism-tools-web` | 0.13.0 | capability — Brave/Exa search, Firecrawl fetch/extract, and host-installed Obscura with declared network effects and a web.fetch service |
+| `@arnilo/prism-tools-work` | 0.13.0 | capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths |
+| `@arnilo/prism-workflows` | 0.13.0 | library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts |
 <!-- generated:package-truth:inventory end -->
 
 ## Scripts
@@ -191,16 +117,14 @@ printf '{"id":"1","command":"prompt","params":{"input":"Hi"}}\n' \
 | command | action |
 |---------|--------|
 | `bun ci` | Install dependencies from the committed `bun.lock` (frozen) |
-| `bun run build` | Compile TypeScript to `dist/` (core + workspaces) |
-| `bun run typecheck` | Type-check without emitting |
-| `bun run test` | Build + run network-free tests (`npm test` still works) |
-| `bun run test:coverage` | Coverage gate: `bun test --coverage` over the core suite and every gated workspace, with Bun-measured floors (`scripts/coverage-thresholds.json`) |
+| `bun run typecheck` | Build and type-check the kernel, every workspace, and the examples |
+| `bun run test` | Run the network-free tests |
+| `bun run test:coverage` | Coverage gate with Bun-measured floors (`scripts/coverage-thresholds.json`) |
 | `bun run test:live` | Run live suites whose credentials are present (skip the rest) |
-| `prism --help` | CLI help |
+| `bun run release:gate` | The release gate: reference host, driver, kernel constraints, and compat baselines |
 
-## Non-goals (v1)
+## Non-goals
 
-- Privileged tools, MCP servers, telemetry, credentials, or databases activated by install — hosts explicitly configure and register every capability.
-- Browser automation or interactive terminal UI in core — hosts may opt into the `@arnilo/prism-web-tools/browser` subpath with their own Playwright lifecycle; Prism does not auto-start browsers or ship a TUI.
-- Provider, credential, extension, or package auto-discovery.
-- Core-owned database drivers, secret persistence, sandbox, or application policy — optional packages implement adapters over host-owned boundaries.
+- Privileged tools, MCP servers, telemetry, credentials, or databases activated by install. The host lists every package it loads.
+- A bundled TUI, sandbox, or database driver in the kernel. Packages and hosts own them.
+- Package auto-discovery. Nothing loads that the host did not list.

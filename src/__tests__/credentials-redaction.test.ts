@@ -8,7 +8,6 @@ import {
   redactSecrets,
   resolveCredentialValue,
 } from "../index.js";
-import { refreshOAuthCredential } from "../provider-kit/index.js";
 
 describe("credential boundary", () => {
   it("resolves credentials from direct value callback or resolver", async () => {
@@ -94,7 +93,8 @@ describe("credential boundary", () => {
       },
     };
     const credentials = await provider.login(callbacks);
-    const refreshed = await refreshOAuthCredential({ provider, credentials, ref: "keyring:mock-oauth", sink });
+    const refreshed = (await provider.refresh?.(credentials)) ?? credentials;
+    await sink.store?.("keyring:mock-oauth", { type: "bearer", value: refreshed.access ?? "" }, {});
 
     assert.equal(refreshed.access, "new-access");
     assert.deepEqual(stored, [["keyring:mock-oauth", "new-access"]]);

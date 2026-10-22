@@ -4,28 +4,23 @@ import {
   type AgentEventQuery,
   type AgentEventRecord,
   type AgentEventSource,
+  assertSessionLinkFilter,
   assertSessionMetadataKey,
   type BranchQuery,
-  type CheckpointStore,
   DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
   DEFAULT_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_LIST_LIMIT,
-  type LeaseStore,
   type MigrationQuery,
   type OwnershipScope,
   type PersistencePage,
   type ProductionPersistenceStore,
-  prepareRunFeedback,
   type RetentionPolicyQuery,
-  RunFeedbackError,
   type RunFeedbackQuery,
   type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
   type RunRecord,
-  requireRunFeedbackOwnership,
   resolveSessionSearchQuery,
-  runFeedbackPageLimit,
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_METADATA_KEY,
@@ -56,9 +51,18 @@ import {
   rowToRunFeedbackRecord as mapFeedbackRow,
   ownershipColumns,
   parseSessionMetadata,
+  prepareRunFeedback,
+  RunFeedbackError,
+  requireRunFeedbackOwnership,
+  runFeedbackPageLimit,
+  SESSION_LINK_COLUMN_NAMES,
   type SessionEntryRow,
   safeSearchMetadata,
+  sessionLinkColumns,
+  sessionLinkFilterColumns,
+  sessionLinkSummaryFields,
 } from "@arnilo/prism-store-codecs";
+import type { CheckpointStore, LeaseStore } from "@arnilo/prism-workflows";
 import type { Pool, PoolClient, PoolConfig } from "pg";
 import { createPostgresCheckpointStore } from "./checkpoints.js";
 import { createPostgresAgentEventSource } from "./event-source.js";
@@ -112,7 +116,7 @@ export interface PostgresPersistence extends SessionStore, RunLedger, Production
   readonly events: AgentEventSource;
   readonly leases: LeaseStore;
   readonly feedback: RunFeedbackStore;
-  readonly lifecycle: import("@arnilo/prism").PersistenceLifecycleStore;
+  readonly lifecycle: import("@arnilo/prism-store-codecs").PersistenceLifecycleStore;
   readonly metadata: Readonly<{
     readonly kind: "postgres";
     readonly multiProcess: true;
@@ -390,6 +394,14 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
             row.metadata,
           ],
         );
+        // The links entry is the source of truth; the session row's columns only index it.
+        const links = sessionLinkColumns(entry);
+        if (links) {
+          await client.query(
+            `UPDATE ${sessions} SET ${SESSION_LINK_COLUMN_NAMES.map((column, index) => `${column} = $${index + 1}`).join(", ")} WHERE id = $${links.length + 1}`,
+            [...links, entry.sessionId],
+          );
+        }
         const search = entrySearchFields(entry);
         await client.query(
           `INSERT INTO ${searchTable} (entry_id, session_id, label, summary, body)
@@ -1034,6 +1046,11 @@ async function listPostgresSessions(
   const filters = [`EXISTS (SELECT 1 FROM ${tables.entries} present WHERE present.session_id = s.id)`];
   const params: unknown[] = [];
   pushEntryScopeFilters(filters, params, tables.entries, query, "s.id");
+  assertSessionLinkFilter(query);
+  for (const [column, value] of sessionLinkFilterColumns(query)) {
+    params.push(value);
+    filters.push(`s.${column} = $${params.length}`);
+  }
   const direction = order === "asc" ? "ASC" : "DESC";
   if (query.cursor !== undefined) {
     const cursor = decodeEntryCursor(query.cursor);
@@ -1047,7 +1064,7 @@ async function listPostgresSessions(
   }
   params.push(limit + 1);
   const result = await pool.query(
-    `SELECT s.id AS session_id, s.created_at, s.updated_at, s.metadata
+    `SELECT s.id AS session_id, s.created_at, s.updated_at, s.metadata, ${SESSION_LINK_COLUMN_NAMES.map((column) => `s.${column}`).join(", ")}
      FROM ${tables.sessions} s
      WHERE ${filters.join(" AND ")}
      ORDER BY s.updated_at ${direction}, s.id ${direction}
@@ -1056,7 +1073,13 @@ async function listPostgresSessions(
   );
   query.signal?.throwIfAborted();
 
-  const rows = result.rows as Array<{ session_id: string; created_at: string; updated_at: string; metadata: string | null }>;
+  const rows = result.rows as Array<{
+    session_id: string;
+    created_at: string;
+    updated_at: string;
+    metadata: string | null;
+    [column: string]: unknown;
+  }>;
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
 
@@ -1098,6 +1121,7 @@ async function listPostgresSessions(
       messageCount: messageCountBySession.get(row.session_id) ?? 0,
       ...(typeof title === "string" ? { title } : {}),
       ...(typeof workspaceRoot === "string" ? { metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } } : {}),
+      ...sessionLinkSummaryFields(row),
     };
   });
   const last = pageRows.at(-1);
@@ -1139,6 +1163,7 @@ async function searchPostgresSessions(
   if (q.tenantId) add("s.tenant_id = ?", q.tenantId);
   if (q.accountId) add("s.account_id = ?", q.accountId);
   if (q.userId) add("s.user_id = ?", q.userId);
+  for (const [column, value] of sessionLinkFilterColumns(q)) add(`s.${column} = ?`, value);
   if (q.workspaceRoot) {
     add(`s.metadata::jsonb ->> '${SESSION_SEARCH_WORKSPACE_METADATA_KEY}' = ?`, q.workspaceRoot);
   }

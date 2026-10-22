@@ -1,5 +1,5 @@
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { assertEvaluationThreshold, defineDataset, defineScorer, runExperiment } from "@arnilo/prism-core/governance/evals";
+import { assertEvaluationThreshold, defineDataset, defineScorer, runExperiment } from "@arnilo/prism-evals";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const report = await runExperiment({

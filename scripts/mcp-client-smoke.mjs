@@ -1,27 +1,28 @@
 /**
- * Plans/064 Task 8 real-client MCP smoke: drives `createPrismMcpServer` through
- * the REAL `@modelcontextprotocol/client` SDK `Client` over a real
+ * Plans/064 Task 8 real-client MCP smoke: drives a plain SDK `McpServer`
+ * through the REAL `@modelcontextprotocol/client` SDK `Client` over a real
  * `StdioClientTransport` (stdio subprocess) — the same shape a production MCP
  * host uses — against the fixture server (scripts/fixtures/mcp-smoke-server.mjs).
  *
  * Operator-gated: PRISM_TEST_MCP_CLIENT=1 (mirrors acp-client-smoke.mjs); the
  * script FAILS CLOSED (exit 1) without the flag. The scenario stays sandboxed:
- * read-only echo tool calls, and an authorize-gated denial proves the host gate
+ * read-only echo tool calls, and a fixture-owned denial proves the deny gate
  * is enforced over the wire (the denied tool never executes server-side).
  *
  * Scenario (plan test cases):
  *   1. initialize handshake completes (both modern auto and legacy openings)
  *   2. tools/list returns the registered capabilities
  *   3. tools/call round-trips a result
- *   4. authorize-gated tool denial fails closed over the wire
+ *   4. denied tool call fails closed over the wire
  *   5. malformed frame fails closed: the stdio transport tears the connection
  *      down instead of answering garbage (SDK-documented behavior)
  *
- * Server-initiated `elicitation/create` is NOT exercised: Prism records
- * server-initiated sampling/elicitation as a documented boundary
- * (scripts/mcp-conformance-2026-baseline.yaml); the elicitation round-trip
- * Prism does speak (bridge-side MRTR over real HTTP) is covered by
- * packages/mcp/src/__tests__/modern-bridge.test.ts.
+ * Server-initiated `elicitation/create` is NOT exercised against the fixture:
+ * it is a plain SDK `McpServer`, not a Prism agent. Prism's own MCP approvals
+ * (`serveMcp`'s `input_required` round trip) are covered by
+ * packages/hosts/mcp-server/src/__tests__/serve.test.ts, and the bridge-side
+ * MRTR elicitation round-trip Prism speaks over real HTTP by
+ * packages/integrations/mcp/src/__tests__/modern-bridge.test.ts.
  *
  * Usage: PRISM_TEST_MCP_CLIENT=1 bun scripts/mcp-client-smoke.mjs
  */
@@ -82,12 +83,12 @@ async function main() {
     console.log("mcp-client-smoke: legacy handshake + call OK");
   });
 
-  // 4. Authorize-gated denial fails closed over the wire; the tool never runs.
+  // 4. Denied tool call fails closed over the wire; the tool never runs.
   await withClient({ capabilities: {}, versionNegotiation: { mode: "auto" } }, async (client) => {
     const denied = await client.callTool({ name: "secret-tool", arguments: {} });
-    assert.equal(denied.isError, true, "authorize-denied tool call must surface as a tool error, not a bypass");
+    assert.equal(denied.isError, true, "denied tool call must surface as a tool error, not a bypass");
     assert.doesNotMatch(JSON.stringify(denied.content), /must never run/, "denied tool must not have executed");
-    console.log("mcp-client-smoke: authorize gate enforced over the wire OK");
+    console.log("mcp-client-smoke: deny gate enforced over the wire OK");
   });
 
   // 5. Malformed frame fails closed: the transport closes the connection
@@ -112,7 +113,7 @@ async function main() {
     console.log("mcp-client-smoke: malformed frame fails closed OK");
   }
 
-  console.log("mcp-client-smoke: OK (handshake modern+legacy, list, call, authorize gate, malformed-frame fail-closed)");
+  console.log("mcp-client-smoke: OK (handshake modern+legacy, list, call, deny gate, malformed-frame fail-closed)");
 }
 
 main().catch((error) => {

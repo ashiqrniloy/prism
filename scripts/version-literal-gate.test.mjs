@@ -21,8 +21,8 @@ import { test } from "bun:test";
 //
 //   node --test scripts/version-literal-gate.test.mjs
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { parseBunLock } from "./bun-lock.mjs";
 import { currentVersion, expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
@@ -30,13 +30,14 @@ const ROOT = join(import.meta.dirname, "..");
 const INTERNAL_PACKAGE = "@arnilo/";
 const MANIFEST = /^(?:package\.json|packages\/(?:[^/]+\/)*[^/]+\/package\.json)$/;
 /**
- * Packages on their own version line (plan 140 Task 1: the app `@arnilo/prism-code` continues its
- * published 0.3.x line at 0.4.0, and `@arnilo/prism-agent-sdk` starts at 0.1.0; release.mjs
- * independent mode publishes them). They do not claim the lockstep version, so the gate holds them
- * to self-consistency instead: the lockfile, package-truth, and every internal range that targets
- * them must equal their own manifest version. Same set as src/__tests__/packaging.test.ts.
+ * Packages on their own version line. Plan 174 Task 7 retired the last one (the agent SDK), so the
+ * set is empty until plan 175 Task 10 sets the post-publish shape; the machinery stays for the next
+ * independent line. Independent packages do not claim the lockstep version, so the gate holds them to
+ * self-consistency instead: the lockfile, package-truth, and every internal range that targets them
+ * must equal their own manifest version. Same set as src/__tests__/packaging.test.ts.
+ * Plan 173 Task 8: the Prism Code app left this set when its source was deleted from the repo.
  */
-const INDEPENDENT_LINES = new Set(["@arnilo/prism-code", "@arnilo/prism-agent-sdk"]);
+const INDEPENDENT_LINES = new Set([]);
 
 /** Every file this gate reads, keyed by repo-relative path. */
 function claimFiles(rootDir) {
@@ -52,6 +53,118 @@ function claimFiles(rootDir) {
     put(path);
   }
   return files;
+}
+
+/** Non-test TypeScript sources under a workspace's `src/`. */
+function packageSources(dir) {
+  const found = [];
+  const walk = (current) => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== "__tests__" && entry.name !== "node_modules") walk(path);
+      } else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts") && !entry.name.endsWith(".test.ts")) {
+        found.push(path);
+      }
+    }
+  };
+  const src = join(dir, "src");
+  if (existsSync(src)) walk(src);
+  return found;
+}
+
+/** Index just past a quoted string starting at `i` (source[i] is the opening quote). */
+function skipString(source, i) {
+  const quote = source[i];
+  i += 1;
+  while (i < source.length) {
+    if (source[i] === "\\") {
+      i += 2;
+      continue;
+    }
+    if (source[i] === quote) return i + 1;
+    i += 1;
+  }
+  return i;
+}
+
+/** Index just past the `}` matching the `{` at `open`, skipping strings and comments, or -1. */
+function matchBrace(source, open) {
+  let depth = 0;
+  let i = open;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'" || ch === "`") {
+      i = skipString(source, i);
+      continue;
+    }
+    if (ch === "/" && (source[i + 1] === "/" || source[i + 1] === "*")) {
+      const end = source[i + 1] === "/" ? source.indexOf("\n", i) : source.indexOf("*/", i + 2);
+      i = end === -1 ? source.length : end + (source[i + 1] === "/" ? 1 : 2);
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return i + 1;
+    }
+    i += 1;
+  }
+  return -1;
+}
+
+const DEFINITION_CALL = /define(?:Provider)?Package\s*(?:<[^>]*>)?\s*\(/g;
+
+/** `{ name, version }` source text for each `definePackage`/`defineProviderPackage` call in `source`. */
+export function definitionCalls(source) {
+  const calls = [];
+  DEFINITION_CALL.lastIndex = 0;
+  let match;
+  while ((match = DEFINITION_CALL.exec(source))) {
+    const open = source.indexOf("{", match.index + match[0].length);
+    if (open === -1) continue;
+    const end = matchBrace(source, open);
+    if (end === -1) continue;
+    const body = source.slice(open + 1, end);
+    calls.push({
+      name: body.match(/\bname:\s*("(?:[^"\\]|\\.)*"|[A-Za-z_$][\w$.]*)/)?.[1] ?? "",
+      version: body.match(/\bversion:\s*"((?:[^"\\]|\\.)*)"/)?.[1] ?? null,
+    });
+    DEFINITION_CALL.lastIndex = end;
+  }
+  return calls;
+}
+
+/**
+ * Package definitions that hardcode a version. A call whose `name` is a string literal that is not a
+ * workspace package is an in-process test/conformance package (`apps/prism-agent`, driver conformance)
+ * and is allowed to carry its own version; a first-party name, or a name held in a const/expression,
+ * must read the package's own `package.json`.
+ */
+export function definitionVersionProblems(sources, workspaceNames) {
+  const problems = [];
+  for (const [path, source] of sources) {
+    for (const { name, version } of definitionCalls(source)) {
+      if (version === null) continue;
+      const literal = name.startsWith('"') ? name.slice(1, -1) : null;
+      if (literal !== null && !workspaceNames.has(literal)) continue;
+      problems.push(`${path}: package definition for ${name} hardcodes version "${version}"`);
+    }
+  }
+  return problems;
+}
+
+const MCP_SERVER_LITERAL = /serverVersion\s*\?\?\s*"\d+\.\d+\.\d+"|new (?:McpServer|Client)\(\s*\{[^}]*version:\s*"\d+\.\d+\.\d+"/;
+const AGENT_INFO_LITERAL = /(?:agentInfo|hostInfo):\s*\{[^}]*version:\s*"\d+\.\d+\.\d+"/;
+
+/** Server/host identities (`serverVersion`, `new McpServer`/`new Client`, ACP `agentInfo`, MCP Apps `hostInfo`) that hardcode a version. */
+export function identityVersionProblems(sources) {
+  const problems = [];
+  for (const [path, source] of sources) {
+    if (MCP_SERVER_LITERAL.test(source)) problems.push(`${path}: the MCP server identity hardcodes a version`);
+    if (AGENT_INFO_LITERAL.test(source)) problems.push(`${path}: agentInfo hardcodes a version`);
+  }
+  return problems;
 }
 
 function parseJson(files, path, problems) {
@@ -106,8 +219,8 @@ function parseLock(files, path, problems) {
 export function claimViolations(files, current) {
   const problems = [];
   const manifests = [...files.keys()].filter((path) => MANIFEST.test(path)).sort();
-  if (manifests.length !== 39) {
-    problems.push(`expected 39 manifests (root + 38 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
+  if (manifests.length !== 43) {
+    problems.push(`expected 43 manifests (root + 42 workspaces) to check for lockstep ${current}, got ${manifests.length}`);
   }
   const parsed = new Map();
   for (const path of manifests) {
@@ -128,6 +241,9 @@ export function claimViolations(files, current) {
         // rewrite them, or the next release --resume sees a manifest the registry does not have. Its
         // pin on another independent line (the app on the SDK) is still a claim.
         if (INDEPENDENT_LINES.has(pkg.name) && !INDEPENDENT_LINES.has(name)) continue;
+        // The kernel peer is the API-level window (`>=0.13.0 <1.0.0`), not a cut pin; a kernel minor
+        // does not rewrite it (docs/compatibility.md).
+        if (name === "@arnilo/prism" && /^>=\d+\.\d+\.\d+ <1\.0\.0$/.test(String(range))) continue;
         if (range !== `^${expected(name)}`) problems.push(`${path}: ${field}.${name} is ${range}, expected ^${expected(name)}`);
       }
     }
@@ -197,7 +313,7 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   half.set("package.json", bump(files.get("package.json"), `"version": "${current}"`, `"version": "${next}"`));
   const halfProblems = claimViolations(half, next);
   for (const [label, fragment] of [
-    ["workspace manifest", "packages/prism-core/package.json: version"],
+    ["workspace manifest", "packages/hosts/ag-ui/package.json: version"],
     ["internal range", "package.json: peerDependencies"],
     ["lockfile", "bun.lock:"],
     ["index constant", "src/index.ts: version constant"],
@@ -221,27 +337,60 @@ test("positive control: a half-finished cut is reported surface by surface", () 
   );
 });
 
-test("positive control: an independent-line bump must reach the lockfile, package-truth, and dependents", () => {
-  const files = claimFiles(ROOT);
-  const current = currentVersion(ROOT);
-  const path = "packages/agent-sdk/package.json";
-  const sdk = JSON.parse(files.get(path));
-  const next = sdk.version.replace(/\.(\d+)$/, ".99");
-  const half = new Map(files);
-  half.set(path, files.get(path).replace(`"version": "${sdk.version}"`, `"version": "${next}"`));
-  const problems = claimViolations(half, current);
-  for (const fragment of [
-    `bun.lock: packages/agent-sdk version ${sdk.version} != ${next}`,
-    `scripts/package-truth.json: @arnilo/prism-agent-sdk version ${sdk.version} != ${next}`,
-    `packages/prism-code/package.json: dependencies.@arnilo/prism-agent-sdk is ^${sdk.version}, expected ^${next}`,
-  ]) {
-    assert.ok(
-      problems.some((problem) => problem.startsWith(fragment)),
-      `missing ${fragment}, got:\n${problems.join("\n")}`,
-    );
-  }
-  assert.ok(
-    !problems.some((problem) => problem.startsWith(`${path}: version`)),
-    "an independent manifest never claims the lockstep version",
+// Plan 176 Task 2: a package's `definePackage`/`defineProviderPackage` call, and every server/host
+// identity it ships, must read the version from its own `package.json` — never a literal. Bumping a
+// package then needs one edit, and the reported version can never drift from the published manifest.
+test("no package definition or server identity hardcodes a version", () => {
+  const dirs = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "package.json")).workspaces ?? []);
+  const workspaceNames = new Set(dirs.map((dir) => readManifest(join(dir, "package.json")).name));
+  const sources = dirs.flatMap((dir) =>
+    packageSources(dir).map((file) => [relative(ROOT, file).replaceAll("\\", "/"), readFileSync(file, "utf8")]),
   );
+  assert.ok(sources.length > 100, `the scan must cover the package sources, got ${sources.length}`);
+  assert.deepEqual(definitionVersionProblems(sources, workspaceNames), [], "a package definition hardcodes a version");
+  assert.deepEqual(identityVersionProblems(sources), [], "a server or host identity hardcodes a version");
+});
+
+test("positive control: a hardcoded definition version is reported, an in-process package is not", () => {
+  const names = new Set(["@arnilo/prism-tools-web"]);
+  const problemsFor = (source) => definitionVersionProblems([["a.ts", source]], names);
+
+  assert.equal(problemsFor('definePackage({ name: "@arnilo/prism-tools-web", version: "0.13.0", setup() {} })').length, 1);
+  assert.equal(
+    problemsFor('const PACKAGE = "@arnilo/prism-tools-web";\ndefinePackage({ name: PACKAGE, version: "0.13.0", setup() {} })').length,
+    1,
+  );
+  assert.equal(
+    problemsFor('defineProviderPackage({ name: "@arnilo/prism-provider-hyper", version: "0.13.0", setup() {} })').length,
+    0,
+    "providers read the kernel version",
+  );
+  assert.deepEqual(
+    problemsFor('definePackage({ name: "conformance-workspace", version: "1.0.0", setup() {} })'),
+    [],
+    "an in-process test package owns its version",
+  );
+  assert.deepEqual(
+    problemsFor(
+      'import manifest from "../package.json" with { type: "json" };\ndefinePackage({ name: PACKAGE, version: manifest.version, setup() {} })',
+    ),
+    [],
+    "reading the manifest is the fix",
+  );
+
+  assert.equal(identityVersionProblems([["b.ts", 'version: options.serverVersion ?? "0.12.1"']]).length, 1);
+  assert.deepEqual(identityVersionProblems([["c.ts", "version: options.serverVersion ?? manifest.version"]]), []);
+  assert.equal(identityVersionProblems([["d.ts", 'agentInfo: { name: "prism", version: "0.12.1" }']]).length, 1);
+  assert.equal(
+    identityVersionProblems([["e.ts", 'new Client({ name: "prism-mcp-bridge", version: "0.0.12" }, {})']]).length,
+    1,
+    "the MCP client identity hardcodes a version",
+  );
+  assert.equal(
+    identityVersionProblems([["f.ts", 'hostInfo: { name: "prism-ag-ui", version: "0.0.23" }']]).length,
+    1,
+    "the MCP Apps hostInfo hardcodes a version",
+  );
+  assert.deepEqual(identityVersionProblems([["g.ts", 'new Client({ name: "prism-mcp-bridge", version: manifest.version }, {})']]), []);
+  assert.deepEqual(identityVersionProblems([["h.ts", 'hostInfo: { name: "prism-ag-ui", version: manifest.version }']]), []);
 });

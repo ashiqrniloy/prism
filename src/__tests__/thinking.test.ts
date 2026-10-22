@@ -14,7 +14,7 @@ import {
   thinkingCompatFor,
   thinkingFamilyForModel,
   thinkingLevelsForModel,
-} from "../index.js";
+} from "../provider-kit/index.js";
 
 type ModelLike = Pick<ModelConfig, "provider" | "compat" | "capabilities">;
 

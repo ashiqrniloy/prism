@@ -1,5 +1,4 @@
 import type { Database } from "bun:sqlite";
-import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism";
 import {
   assertCheckpointInput,
   decodeCheckpointCursor,
@@ -10,6 +9,7 @@ import {
   staleCheckpointFence,
   throwIfAborted,
 } from "@arnilo/prism-store-codecs";
+import { type CheckpointQuery, type CheckpointRecord, type CheckpointStore } from "@arnilo/prism-workflows";
 
 interface Row {
   namespace: string;

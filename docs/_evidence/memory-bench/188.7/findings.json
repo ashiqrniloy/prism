@@ -1,0 +1,93 @@
+[
+  {
+    "id": "F1",
+    "verdict": "fixed",
+    "tests": "packages/memory/fabric/src/lifecycle/widen.test.mjs; lifecycle adversarial same-key/different-value, unreadable-witness, negation and sibling-conflict cases",
+    "paidEvidence": "accept-lifecycle-fabric-promote-off-p1887 completed 24 sessions with crossProjectLeakage 0; maintenance/widening is not invoked by the consolidate-only lifecycle arm",
+    "limitations": "The paid arm does not execute widening; the fix is proven by deterministic adversarial tests, not a paid widening campaign."
+  },
+  {
+    "id": "F2",
+    "verdict": "fixed",
+    "tests": "packages/memory/fabric/src/lifecycle/widen.test.mjs; sibling replication requires two distinct notes with disjoint glob evidence",
+    "paidEvidence": "accept-lifecycle-fabric-promote-off-p1887 completed 24 sessions with crossProjectLeakage 0",
+    "limitations": "Same limitation as F1: paid lifecycle does not run an unscoped maintenance pass."
+  },
+  {
+    "id": "F3",
+    "verdict": "inconclusive",
+    "tests": "packages/memory/fabric tools write-scope tests (agent_scope_requires_widening); lifecycle tool-lineage and scope assertions",
+    "paidEvidence": "accept-lifecycle-fabric-promote-off-p1887: crossProjectLeakage 0 but foreignContextExposure 0.5417 (13/24 sessions); promote-on arm is partial (9/24); no complete 12-persona safety set",
+    "limitations": "No paid arm explains the 0.5417 foreign-context exposure, and the promote-on and 12-persona safety gates are incomplete. This is a blocker for enabling promotion."
+  },
+  {
+    "id": "F4",
+    "verdict": "inconclusive",
+    "tests": "packages/memory/fabric consolidation extractor schema/repair tests; lifecycle combined extraction tests",
+    "paidEvidence": "accept-lme-om+fabric token-ceiling after 2 questions with MemoryBenchWorkerError; accept-lifecycle-om+fabric-p1887 failed at 0 sessions with LifecycleObserverError",
+    "limitations": "No complete paid combined-extraction arm. The schema/repair fix is offline-proven only."
+  },
+  {
+    "id": "F5",
+    "verdict": "fixed",
+    "tests": "scripts/memory-bench/journal.test.mjs (renames, crashes, parallel admission, usage-missing, idempotent recovery, in-flight headroom); campaign tests",
+    "paidEvidence": "spend-summary.json: 80,067,335 charged of 106,000,000, 17 durable attempts including 6 completed, 2 token-ceiling, 5 failed, 2 setup-failure and 2 abandoned; every abandoned/failed attempt kept its reservation",
+    "limitations": "No arm had a fully reliable usage stream; incomplete-usage attempts are charged at their reservation."
+  },
+  {
+    "id": "F6",
+    "verdict": "fixed",
+    "tests": "scripts/memory-bench/metrics.test.mjs; lifecycle metric-direction tests; report comparison tests",
+    "paidEvidence": "acceptance-comparisons.json uses metricVersion 2 and reports fractional lifecycle metrics and paired estimates instead of all-needed booleans",
+    "limitations": "Lifecycle safety comparisons are underpowered (one persona per completed arm)."
+  },
+  {
+    "id": "F7",
+    "verdict": "unresolved",
+    "tests": "lifecycle cluster identity and power tests",
+    "paidEvidence": "only persona 1887 completed full and fabric-promote-off; promote-on is partial and personas 1888-1898 are missing",
+    "limitations": "The frozen 12-persona powered sample was not completed, so no safety or power claim is possible."
+  },
+  {
+    "id": "F8",
+    "verdict": "fixed",
+    "tests": "retrieval-diagnostics tests; evidence-round coverage tests; report labels hit recall separately from judged accuracy",
+    "paidEvidence": "acceptance-comparisons.json reports judged accuracy and does not claim full evidence coverage; retrieval-diagnostics.json records answer/session/round stages",
+    "limitations": "Evidence round coverage remains a coarse hit metric for multi-hop and temporal questions."
+  },
+  {
+    "id": "F9",
+    "verdict": "inconclusive",
+    "tests": "public om+fabric ingestion tests; dated-history plus causal-round fixture",
+    "paidEvidence": "accept-lme-om+fabric stopped after 2 questions with MemoryBenchWorkerError and 3,001,610 input; no complete arm",
+    "limitations": "The non-coding om+fabric path is tested offline but has no completed paid evidence."
+  },
+  {
+    "id": "F10",
+    "verdict": "fixed",
+    "tests": "replay tests for fork/fresh-session retries, one-time ingestion, non-duplicated workers, fresh judge sessions, no retry on malformed verdict or coding writes",
+    "paidEvidence": "accept-lme-fabric completed 140/140 with no scoring of partial text; accept-mab-cr-full and -fabric completed 40/40",
+    "limitations": "The paid fabric arm needed no answer retry, so the retry path itself was not exercised live."
+  },
+  {
+    "id": "F11",
+    "verdict": "fixed",
+    "tests": "journal usage-failure tests; judge attempt/error-code tests; lifecycle recordUsageFailure regression",
+    "paidEvidence": "spend-summary.json preserves failed and incomplete attempts; acceptance-report.json records 5 failed and 2 setup-failure attempts without overwriting their primary reason",
+    "limitations": "Usage-less responses still prevent monetary and non-inferiority claims."
+  },
+  {
+    "id": "F12",
+    "verdict": "fixed",
+    "tests": "lifecycle poisoned/scoped metric tests; report metric-direction tests; LoCoMo F1-versus-accuracy separation",
+    "paidEvidence": "acceptance-comparisons.json separates crossProjectLeakage, foreignContextExposure, poisonStored/Visible/Reused and LoCoMo accuracy/F1; LoCoMo partial is labelled partial",
+    "limitations": "The paid foreignContextExposure value remains unexplained (see F3)."
+  },
+  {
+    "id": "F13",
+    "verdict": "unresolved",
+    "tests": "retrieval-diagnostics.mjs; lexical selection and best-hit budget tests",
+    "paidEvidence": "confirmatory fabric 62/140 versus full 100/140 (overall diff -0.2714, 95% CI [-0.3643,-0.1786], Holm p 0.0008); update -0.5, multi-session -0.5 and single-session-user -0.45 are significant losses",
+    "limitations": "The failure is localized to passive selection/answer gaps, but no larger budget, hybrid backend or reranker was evidenced as a fix."
+  }
+]

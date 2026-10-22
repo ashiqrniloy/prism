@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
-  createActiveToolSet,
   createLoadSkillTool,
-  createSearchToolsTool,
   createSkillRegistry,
   createToolRegistry,
-  createToolSearchState,
   resolveToolEffects,
   ToolDefinitionError,
   type ToolDefinition,
@@ -47,10 +44,7 @@ describe("ToolDefinition.effects", () => {
     assert.deepEqual(resolveToolEffects(tool(["network"])), ["network"]);
   });
 
-  it("kernel_tools_declare_effects", () => {
+  it("kernel_load_skill_declares_effects", () => {
     assert.deepEqual(createLoadSkillTool({ registry: createSkillRegistry() }).effects, ["read"]);
-    const state = createToolSearchState({ tools: [], activated: createActiveToolSet() });
-    assert.deepEqual(createSearchToolsTool(state).effects, ["read"]);
-    assert.deepEqual(resolveToolEffects(createSearchToolsTool(state)), ["read"]);
   });
 });

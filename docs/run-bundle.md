@@ -90,7 +90,7 @@ throws on every method still snapshots fine.
 
 ## Related APIs
 
-- [`agentFingerprint()`](durable-runs.md): the durable-resume identity this snapshot projects.
-- [`inspectHostComposition()`](host-compositions.md): composition readiness, storage durability, sandbox isolation.
-- [`ExecutionTimeline`](execution-timeline.md): what a run *did*; the snapshot is what it was *configured* with.
-- [`RunRecord`](runs-and-usage.md): the ledger row a snapshotted run leaves behind.
+- [`agentFingerprint()`](loop.md): the durable-resume identity this snapshot projects.
+- [`inspectHostComposition()`](host.md): composition readiness, storage durability, sandbox isolation.
+- [`ExecutionTimeline`](../packages/integrations/workflows/README.md): what a run *did*; the snapshot is what it was *configured* with.
+- [`RunRecord`](events.md): the ledger row a snapshotted run leaves behind.

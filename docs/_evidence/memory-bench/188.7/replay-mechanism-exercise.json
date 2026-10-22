@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "provenance": "read-only classification of existing warm replay evidence; no new calls",
+  "source": {
+    "path": "docs/_evidence/memory-bench/task6/replays-v2.json",
+    "sha256": "5f6abf18e8cbe2cc16e5e62e8c1078b38ad57abdb42f1417886c0c5d5d37cddb"
+  },
+  "counts": {
+    "baseline": 1,
+    "exercised": 8,
+    "insensitive": 6,
+    "unexercised": 10,
+    "policy": 10
+  },
+  "rows": [
+    {
+      "id": "baseline",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "baseline",
+      "changedMetrics": []
+    },
+    {
+      "id": "fabric-stem-off",
+      "sourceVariants": [
+        "fabric.stem=off"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "fabric-multiQuery-off",
+      "sourceVariants": [
+        "fabric.multiQuery=off"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "fabric-snippetBudget-600",
+      "sourceVariants": [
+        "fabric.snippetBudget=600"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "fabric-snippetBudget-1200",
+      "sourceVariants": [
+        "fabric.snippetBudget=1200"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "fabric-snippetBudget-2400",
+      "sourceVariants": [
+        "fabric.snippetBudget=2400"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "fabric-keyWeight-off",
+      "sourceVariants": [
+        "fabric.keyWeight=off"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "om-dates-off",
+      "sourceVariants": [
+        "om.dates=off"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "om-taskState-off",
+      "sourceVariants": [
+        "om.taskState=off"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "om-replaceOnReflect-off",
+      "sourceVariants": [
+        "om.replaceOnReflect=off"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "fabric-crossSourceDedup-off",
+      "sourceVariants": [
+        "fabric.crossSourceDedup=off"
+      ],
+      "replayVariants": [],
+      "status": "unexercised",
+      "exercise": "Source transformation is recorded, but replay uses no OM workers, tool-driven recall, SQLite FTS or draft delivery; unchanged replay metrics cannot establish mechanism value.",
+      "changedMetrics": []
+    },
+    {
+      "id": "lifecycle-verification-retrieval",
+      "sourceVariants": [
+        "lifecycle.verification=retrieval"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "graveyardIndex"
+      ]
+    },
+    {
+      "id": "lifecycle-promotion-every-reflection",
+      "sourceVariants": [
+        "lifecycle.promotion=every-reflection"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "promotionRecall",
+        "graveyardIndex",
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "lifecycle-capacity-off",
+      "sourceVariants": [
+        "lifecycle.capacity=off"
+      ],
+      "replayVariants": [],
+      "status": "insensitive",
+      "changedMetrics": []
+    },
+    {
+      "id": "lifecycle-merge-off",
+      "sourceVariants": [
+        "lifecycle.merge=off"
+      ],
+      "replayVariants": [],
+      "status": "insensitive",
+      "changedMetrics": []
+    },
+    {
+      "id": "lifecycle-clock-calendar",
+      "sourceVariants": [
+        "lifecycle.clock=calendar"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "graveyardIndex"
+      ]
+    },
+    {
+      "id": "lifecycle-decayMode-exponential",
+      "sourceVariants": [
+        "lifecycle.decayMode=exponential"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "promote-signal-explicit-off",
+      "sourceVariants": [
+        "promote.signal.explicit=off"
+      ],
+      "replayVariants": [],
+      "status": "insensitive",
+      "changedMetrics": []
+    },
+    {
+      "id": "promote-signal-correction-off",
+      "sourceVariants": [
+        "promote.signal.correction=off"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "promotionRecall",
+        "graveyardIndex",
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "promote-signal-outcome-off",
+      "sourceVariants": [
+        "promote.signal.outcome=off"
+      ],
+      "replayVariants": [],
+      "status": "insensitive",
+      "changedMetrics": []
+    },
+    {
+      "id": "promote-signal-recurrence-off",
+      "sourceVariants": [
+        "promote.signal.recurrence=off"
+      ],
+      "replayVariants": [],
+      "status": "insensitive",
+      "changedMetrics": []
+    },
+    {
+      "id": "promote-signal-generality-off",
+      "sourceVariants": [
+        "promote.signal.generality=off"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "promotionRecall",
+        "archiveRegret",
+        "graveyardIndex",
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "promote-signal-ephemerality-off",
+      "sourceVariants": [
+        "promote.signal.ephemerality=off"
+      ],
+      "replayVariants": [],
+      "status": "exercised",
+      "changedMetrics": [
+        "promotionPrecision",
+        "graveyardIndex",
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "promote-signal-derivability-off",
+      "sourceVariants": [
+        "promote.signal.derivability=off"
+      ],
+      "replayVariants": [],
+      "status": "insensitive",
+      "changedMetrics": []
+    },
+    {
+      "id": "lifecycle-scope-flat",
+      "sourceVariants": [],
+      "replayVariants": [
+        "lifecycle.scope=flat"
+      ],
+      "status": "unexercised",
+      "exercise": "Replay maps every persona project onto one flat resource; this measures the flat-scope policy, not a live prompt.",
+      "changedMetrics": [
+        "promotionRecall",
+        "archiveRegret",
+        "graveyardIndex",
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "core-off",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "cues-off",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-2",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": [
+        "archiveRegret",
+        "graveyardIndex",
+        "scopeAccuracy"
+      ]
+    },
+    {
+      "id": "capacity-5",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-10",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-20",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-50",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-100",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-200",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    },
+    {
+      "id": "capacity-500",
+      "sourceVariants": [],
+      "replayVariants": [],
+      "status": "policy",
+      "changedMetrics": []
+    }
+  ],
+  "limitations": [
+    "Insensitive source arms do not establish mechanism value; unexercised paths were never invoked by offline replay.",
+    "No live calls or human-audited gold; construction component metrics do not establish task success."
+  ]
+}

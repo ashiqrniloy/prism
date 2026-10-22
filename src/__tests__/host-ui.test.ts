@@ -5,7 +5,6 @@ import {
   type AgentConfig,
   type CredentialResolver,
   createAgent,
-  createMemoryCheckpointStore,
   createSecretRedactor,
   createSlotDefaults,
   createSlotRegistry,
@@ -24,11 +23,11 @@ import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
 const SECRET = "sk-live-0123456789abcdef";
-const KINDS: readonly HostUiRequestKind[] = ["confirm", "select", "input", "secret", "open-url", "notify"];
+const KINDS: readonly HostUiRequestKind[] = ["confirm", "select", "input", "secret", "open-url", "notify", "terminal"];
 
 type Loose = { setup: (api: any) => void } & Record<string, unknown>;
 const pkg = (name: string, setup: Loose["setup"], extra: Record<string, unknown> = {}): PackageInput =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra }) as PackageInput;
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra }) as PackageInput;
 
 /** Direct loader harness with a pluggable credentials slot, so the secret path is observable. */
 function harness(credentials: CredentialResolver = { resolve: () => undefined }) {
@@ -50,13 +49,14 @@ const REQUEST_OF: Record<HostUiRequestKind, HostUiRequest> = {
   secret: { kind: "secret", title: "API key", ref: "keyring:acme" },
   "open-url": { kind: "open-url", title: "Sign in", url: "https://example.com" },
   notify: { kind: "notify", level: "warn", message: "slow" },
+  terminal: { kind: "terminal", title: "Sign in", command: ["vendor-cli", "login"], env: { VENDOR_HOME: "/tmp/p" } },
 };
 
 describe("host ui", () => {
   it("host_ui_request_kinds_match_the_catalog", async () => {
     // §2.3: six kinds; `secret` carries a `ref`, `notify` a `level`+`message`, `open-url` a
     // `title`, and `select` a `multiple`. `multiple` answers with a list.
-    assert.deepEqual(KINDS, ["confirm", "select", "input", "secret", "open-url", "notify"]);
+    assert.deepEqual(KINDS, ["confirm", "select", "input", "secret", "open-url", "notify", "terminal"]);
     assert.equal(REQUEST_OF.secret.kind === "secret" && REQUEST_OF.secret.ref, "keyring:acme");
     assert.equal(REQUEST_OF.notify.kind === "notify" && REQUEST_OF.notify.level, "warn");
     assert.equal(REQUEST_OF["open-url"].kind === "open-url" && REQUEST_OF["open-url"].title, "Sign in");
@@ -115,6 +115,58 @@ describe("host ui", () => {
       answers,
       KINDS.map(() => ({ status: "unavailable" })),
     );
+  });
+
+  const askTerminal = async (script: Parameters<typeof createScriptedHostUi>[0], request: Record<string, unknown>, capabilities: string[] = ["host-ui"]) => {
+    const { load } = harness();
+    const scripted = createScriptedHostUi(script);
+    let result: unknown;
+    await load(
+      [
+        pkg(
+          "login",
+          ({ host }) => {
+            void host.ui.request({ kind: "terminal", title: "Sign in", command: ["vendor-cli", "login"], ...request } as never).then(
+              (r: unknown) => (result = r),
+              (e: unknown) => (result = e),
+            );
+          },
+          { capabilities: capabilities as never },
+        ),
+      ],
+      { host: { ui: scripted.ui } },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return { result, scripted };
+  };
+
+  it("terminal_request_round_trip", async () => {
+    const ok = await askTerminal({ terminal: { exitCode: 0 } }, { env: { VENDOR_HOME: "/tmp/p" } });
+    assert.deepEqual(ok.result, { status: "answered", value: { exitCode: 0 } });
+    assert.equal(ok.scripted.requestsOf("terminal")[0]?.package, "login");
+    assert.deepEqual((await askTerminal({ terminal: { status: "dismissed" } }, {})).result, { status: "dismissed" });
+    assert.deepEqual((await askTerminal({}, {})).result, { status: "unavailable" });
+  });
+
+  it("terminal_requires_host_ui_capability", async () => {
+    const { result, scripted } = await askTerminal({ terminal: { exitCode: 0 } }, {}, []);
+    assert.ok(result instanceof Error, String(result));
+    assert.equal(scripted.requests.length, 0);
+  });
+
+  it("terminal_answer_forwards_only_exit_code", async () => {
+    const { result } = await askTerminal({ terminal: { exitCode: 3, stdout: "device code ABCD", stderr: "x" } as never }, {});
+    assert.deepEqual(result, { status: "answered", value: { exitCode: 3 } });
+    const bad = await askTerminal({ terminal: { stdout: "no code" } as never }, {});
+    assert.deepEqual(bad.result, { status: "unavailable" });
+  });
+
+  it("terminal_env_rejects_credential_ref", async () => {
+    for (const value of ["env:TOKEN", "keyring:acme"]) {
+      const { result, scripted } = await askTerminal({ terminal: { exitCode: 0 } }, { env: { TOKEN: value } });
+      assert.ok(result instanceof PackageLoadError && result.code === "terminal_env_secret", String(result));
+      assert.equal(scripted.requests.length, 0, "the host was never asked");
+    }
   });
 
   it("secret_answer_is_stored_by_ref_and_never_returned", async () => {
@@ -195,10 +247,7 @@ describe("host ui", () => {
     for (const loop of ["default", "custom"] as const) {
       const scripted = createScriptedHostUi({ confirm: true });
       const { agent, calls } = await askAgent({ host: { ui: scripted.ui } }, loop);
-      const result = await (await agent.session()).run("go", {
-        interactive: false,
-        runState: { checkpoints: createMemoryCheckpointStore(), definitionRevision: "1" },
-      });
+      const result = await (await agent.session()).run("go", { interactive: false });
       assert.equal(result.status, "suspended", loop);
       assert.equal(calls(), 0, loop);
       assert.equal(scripted.requests.length, 0, `${loop}: a non-interactive run never prompts`);
@@ -210,6 +259,7 @@ describe("host ui", () => {
     const closed = definePackage<any>({
       name: "@acme/closed",
       version: "1.0.0",
+      requires: { api: 1 },
       capabilities: ["host-ui"],
       setup({ host, commands }) {
         // Correct: branch on `status` and fail closed with a named error.
@@ -231,6 +281,7 @@ describe("host ui", () => {
     const sloppy = definePackage<any>({
       name: "@acme/sloppy",
       version: "1.0.0",
+      requires: { api: 1 },
       capabilities: ["host-ui"],
       setup({ host, commands }) {
         commands.register({

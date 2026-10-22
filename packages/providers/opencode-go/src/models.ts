@@ -5,10 +5,9 @@ import {
   type ModelCost,
   redactSecrets,
   resolveCredentialValue,
-  type ThinkingCompatFamily,
   trimTrailingSlashes,
 } from "@arnilo/prism";
-import { readBoundedResponseJson, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { readBoundedResponseJson, readBoundedResponseText, type ThinkingCompatFamily } from "@arnilo/prism/provider-kit";
 
 /** Official OpenCode Go API base (`/chat/completions`, `/messages`, `/models`). */
 export const OPENCODE_GO_DEFAULT_BASE_URL = "https://opencode.ai/zen/go/v1";

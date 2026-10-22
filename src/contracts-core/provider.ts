@@ -1,9 +1,10 @@
 /** Contracts-core provider family (0.2.5 plan 025 Task 1 split).
  * Moved verbatim from contracts-core.ts; public surface unchanged behind the barrel. */
-import type { ProviderEvent, RealtimeEvent, ToolDefinition } from "../contracts-protocol.js";
+import type { ProviderEvent, ToolDefinition } from "../contracts-protocol.js";
 import type { HostPort } from "../host/types.js";
 import type { ContextBlock } from "./agent.js";
 import type { JsonObject, Message, ModelConfig, ModelSpec } from "./content.js";
+import type { EmbeddingsProvider } from "./embeddings.js";
 import type { Secret } from "./resources.js";
 
 export type CacheRetention = "none" | "short" | "long";
@@ -26,6 +27,7 @@ export type PromptCacheBreakpointLocation =
   | "stable_context"
   | "last_stable_message"
   | "last_user_message"
+  | "last_message"
   | "message_id";
 export type PromptCacheBreakpointTtl = "short" | "long";
 
@@ -97,6 +99,11 @@ export interface ModelProvider {
    * `model`, context window = `limits`). A provider without it contributes no models of its own.
    */
   models?(): Promise<readonly ModelConfig[]>;
+  /**
+   * Optional embeddings adapter behind `prism.models.embeddings(ref)` (plan 158): the provider's own
+   * embeddings client. Absent means the model cannot embed and callers see `EmbeddingsError`.
+   */
+  embeddings?(): EmbeddingsProvider;
 }
 
 /**
@@ -139,37 +146,3 @@ export interface TurnBudgets {
 }
 
 export type ProviderResolver = (model: ModelConfig) => ModelProvider | undefined;
-
-/** Realtime audio/session event. Realtime is a bidirectional session, not a request/response
- *  stream, so it is a separate neutral seam from `ModelProvider.generate()`. Credentials are
- *  bound to the session handshake only and never appear in events. */
-export interface RealtimeSession {
-  readonly id: string;
-  readonly provider: string;
-  /** Send an audio chunk (PCM/Opus; provider-specific format set at creation). */
-  sendAudio(chunk: Uint8Array, options?: { readonly signal?: AbortSignal }): Promise<void>;
-  /** Inbound events (audio out, transcripts, hosted tool calls, interruption, close, error). */
-  events(): AsyncIterable<RealtimeEvent>;
-  /** Request the provider stop the current response mid-stream. */
-  interrupt(options?: { readonly signal?: AbortSignal }): Promise<void>;
-  /** Close the session and release the transport. Idempotent. */
-  close(reason?: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
-  /** Return a host-dispatched tool result. Omitted on transports that cannot complete tools. */
-  completeTool?(callId: string, output: string, options?: { readonly signal?: AbortSignal }): Promise<void>;
-}
-
-/** Factory a provider exposes for realtime sessions; not part of `ModelProvider`. */
-export type RealtimeSessionFactory = (options: RealtimeSessionOptions) => RealtimeSession;
-
-export interface RealtimeSessionOptions {
-  readonly model: ModelConfig;
-  readonly signal?: AbortSignal;
-  /** Provider-specific caps override; providers enforce finite defaults. */
-  readonly caps?: RealtimeCaps;
-}
-
-export interface RealtimeCaps {
-  readonly maxAudioEventsPerSecond?: number;
-  readonly maxBytesPerSecond?: number;
-  readonly maxWallMs?: number;
-}

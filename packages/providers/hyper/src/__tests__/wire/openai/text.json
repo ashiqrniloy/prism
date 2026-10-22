@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "path": "/v1/chat/completions",
+  "requestBody": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "Say hello in one sentence." }]
+      }
+    ],
+    "stream": true,
+    "stream_options": { "include_usage": true }
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"id\":\"chatcmpl-hyp-txt-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775000,\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-hyp-txt-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775000,\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello! How can I assist you today?\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-hyp-txt-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775000,\"model\":\"deepseek-v4-pro\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"id\":\"chatcmpl-hyp-txt-01\",\"object\":\"chat.completion.chunk\",\"created\":1760775000,\"model\":\"deepseek-v4-pro\",\"choices\":[],\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":9,\"total_tokens\":21,\"cost\":{\"usd\":0.000045,\"hypercredits\":0.045},\"remaining\":{\"hypercredits\":125.5}}}\n\ndata: [DONE]\n\n"
+}

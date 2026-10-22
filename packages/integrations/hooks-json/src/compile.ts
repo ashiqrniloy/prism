@@ -13,7 +13,7 @@
  */
 import { createHash } from "node:crypto";
 
-import type { Message, PackageAPI, RunEndPayload, ToolResult } from "@arnilo/prism";
+import type { Message, PackageAPI, RunEndPayload, ToolCallDecision, ToolResult } from "@arnilo/prism";
 import { PackageLoadError } from "@arnilo/prism";
 
 import { type ContextQueue, createContextQueue, defaultHookOutputDir } from "./async-queue.js";
@@ -209,7 +209,7 @@ export async function compileHooks(prism: PackageAPI<HooksJsonConfig>, options: 
     }
     env[key] = credential.value;
   }
-  const name = PACKAGE;
+  const _name = PACKAGE;
   const queue: ContextQueue = createContextQueue(config.additionalContextLimit, options.hookOutputDir ?? defaultHookOutputDir());
   const warned = new Set<string>();
   const callArguments: DecisionMap<Readonly<Record<string, unknown>>> = boundedMap();
@@ -351,8 +351,12 @@ export async function compileHooks(prism: PackageAPI<HooksJsonConfig>, options: 
     }
 
     if (configured("PreToolUse")) {
+      // The kernel re-runs `tool.call` on the rewritten arguments (plan 177 Task 2). Replay the first
+      // round's decision per call so the external handler runs (and its context queues) once.
+      const preToolUse: DecisionMap<ToolCallDecision> = boundedMap();
       prism.hooks.on("tool.call", async (call) => {
         if (configured("PostToolUse")) callArguments.put(call.callId, call.args);
+        if (preToolUse.has(call.callId)) return preToolUse.get(call.callId);
         const result = await runHandlers("PreToolUse", [call.name], {
           event: "PreToolUse",
           sessionId: sessionId ?? call.sessionId,
@@ -360,10 +364,16 @@ export async function compileHooks(prism: PackageAPI<HooksJsonConfig>, options: 
           payload: { tool_name: call.name, tool_input: call.args, tool_use_id: call.callId },
         });
         if (result.blocked) {
-          return { deny: result.reason !== "" ? result.reason : `blocked by PreToolUse hook for ${call.name}` };
+          const decision: ToolCallDecision = { deny: result.reason !== "" ? result.reason : `blocked by PreToolUse hook for ${call.name}` };
+          preToolUse.put(call.callId, decision);
+          return decision;
         }
         queueContext(result);
-        if (result.updatedInput !== undefined) return { rewrite: result.updatedInput as import("@arnilo/prism").JsonObject };
+        if (result.updatedInput !== undefined) {
+          const decision: ToolCallDecision = { rewrite: result.updatedInput as import("@arnilo/prism").JsonObject };
+          preToolUse.put(call.callId, decision);
+          return decision;
+        }
         return undefined;
       });
     }

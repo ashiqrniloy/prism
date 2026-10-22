@@ -82,7 +82,7 @@ function resolveFile(file) {
     "packages/document-reader/": "packages/prism-work/src/document-reader/",
     "packages/prism-openapi-tools/": "packages/prism-coding-tools/src/openapi/",
     "packages/computer-use-linux/": "packages/prism-coding-tools/src/computer-use-linux/",
-    "packages/prism-dev/": "packages/prism-coding-tools/src/dev/",
+    "packages/prism-dev/": "packages/hosts/devtools/src/",
     "packages/prism-caveman/": "packages/prism-coding-tools/src/caveman/",
     "packages/prism-ponytail/": "packages/prism-coding-tools/src/ponytail/",
     "packages/prism-impeccable/": "packages/prism-coding-tools/src/impeccable/",
@@ -684,7 +684,10 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist, markers present, secu
     assert.ok(read("src/content.ts").includes("pinnedFetch"), "content fetch routes through pinnedFetch");
     assert.ok(read("packages/credentials-node/src/oidc.ts").includes("pinnedFetch"), "OIDC JWKS fetch routes through pinnedFetch");
     assert.ok(read("packages/policy/src/opa.ts").includes("pinnedFetch"), "OPA decision fetch routes through pinnedFetch");
-    assert.ok(read("packages/mcp/src/transport.ts").includes("pinnedFetch"), "MCP transport reuses pinnedFetch");
+    const mcpTransportPath = existsSync(url("../packages/integrations/mcp/src/transport.ts"))
+      ? "packages/integrations/mcp/src/transport.ts"
+      : "packages/mcp/src/transport.ts";
+    assert.ok(read(mcpTransportPath).includes("pinnedFetch"), "MCP transport reuses pinnedFetch");
     assert.ok(existsSync(url("../src/__tests__/pinned-fetch.test.ts")), "pinned-fetch tests exist");
     assert.ok(read("src/__tests__/pinned-fetch.test.ts").includes("rebinding"), "pinned-fetch tests cover DNS rebinding");
     assert.ok(read("packages/credentials-node/src/__tests__/oidc.test.ts").includes("pinnedFetch"), "oidc tests cover the pinned fetch");

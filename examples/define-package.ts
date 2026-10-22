@@ -22,8 +22,9 @@ import { providerPackage } from "@arnilo/prism/provider-kit";
  * Run: npm run build:core && node examples/define-package.ts
  */
 
-// The kernel is 0.12.1 until the 0.13.0 release, so an in-tree package declares a range that admits it.
-const requires = { prism: "^0.12.1 || ^0.13.0-0" } as const;
+// A package declares the kernel API level it was written against; the kernel loads it unchanged on
+// any 0.x minor (docs/compatibility.md).
+const requires = { api: 1 } as const;
 const ENV_VALUE = "demo-only-env-value-1234";
 const finished: string[] = [];
 
@@ -97,7 +98,7 @@ const counter = definePackage<CounterConfig>({
 
 export async function demo(): Promise<Record<string, unknown>> {
   process.env.DEMO_COUNTER_KEY = ENV_VALUE;
-  const store = createMemorySessionStore();
+  const _store = createMemorySessionStore();
   const advertised: Record<string, string[]> = {};
   let current = "";
   let turn = 0;

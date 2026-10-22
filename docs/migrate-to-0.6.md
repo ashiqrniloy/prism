@@ -28,7 +28,7 @@ Ranges moved in the cut that never shipped; hosts that pin these themselves must
 
 - `pg` **`^8.22.0` → `^8.23.0`** — driver dependency of `@arnilo/prism-core/sessions/postgres` and `@arnilo/prism-memory`, and core's optional peer. A host on 8.22 sees a peer warning until it upgrades.
 - `playwright-core` optional exact peer **`1.61.0` → `1.63.0`** in `@arnilo/prism-web-tools` (`/browser`, `/obscura`). The exact pin is deliberate — browser control is version-sensitive, and the host still owns the browser binary/image.
-- `@ai-sdk/provider` exact peer **`4.0.10` → `4.0.13`** in `@arnilo/prism-provider-ai-sdk`. The supported-version matrix gained a `4.0.13` row; `4.0.3`, `4.0.4`, and `4.0.10` stay listed. Unlisted versions still fail closed with `AiSdkProviderError { code: "unsupported_version" }`.
+- `@ai-sdk/provider` exact peer **`4.0.10` → `4.0.13`** in `@arnilo/prism-providers/ai-sdk`. The supported-version matrix gained a `4.0.13` row; `4.0.3`, `4.0.4`, and `4.0.10` stay listed. Unlisted versions still fail closed with `AiSdkProviderError { code: "unsupported_version" }`.
 - `@nanonets/graft` optional peer **`^0.16.0` → `^0.16.0 || ^0.18.0`** in `@arnilo/prism-memory/graft` (upstream published no 0.17; both listed floors pass the offline peer-contract smoke).
 - `@agentclientprotocol/sdk` exact pin **`1.3.0` → `1.4.0`** in `@arnilo/prism-ag-ui/acp` and `@arnilo/prism-acp-agent`. The wire protocol stays v1 (`PROTOCOL_VERSION === 1`); 1.4.0 stabilizes elicitation (the SDK's `unstable_*` helpers become `createElicitation`/`completeElicitation`, wire method names unchanged — Prism never called the unstable helpers) and adds `compaction` session-update kinds, which Prism does not advertise or map.
 - `@office-open/*` **`0.13.1` → `0.14.5`** in `@arnilo/prism-office`. Upstream made `parseDocument`/`parsePresentation`/`parseWorkbook` async; Prism's adapters call the new synchronous `parse*Sync` variants, so no Prism signature changed — but the office package requires the 0.14.5 line.
@@ -85,6 +85,6 @@ Pin the previous published line: `@arnilo/prism@0.5.6` (exact pins per package).
 - [Migration guide](migration.md): the era index of migration cuts with replacement tables and rollback notes.
 - [Migrate Prism 0.6 to 0.7](migrate-to-0.7.md): the next line's guide (extended line: plans 072–075, 077–079).
 - [Migrate Prism 0.4 to 0.5](migrate-to-0.5.md): the previous line's guide (plans 055–067).
-- [Release and install](release-and-install.md): packed surfaces, install rules, support matrix, and the offline test budget.
+- [Release and install](release.md): packed surfaces, install rules, support matrix, and the offline test budget.
 - [Peer dependencies](peer-dependencies.md): every third-party peer declaration with range, optionality, subpath, and install line.
 - [CHANGELOG](../CHANGELOG.md): the per-release record, including the folded 0.5.7 content.

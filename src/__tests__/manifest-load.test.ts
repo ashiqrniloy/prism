@@ -46,6 +46,7 @@ m.__prismImported = [...(m.__prismImported ?? []), ${JSON.stringify(name)}];
 export default {
   name: ${JSON.stringify(name)},
   version: "1.0.0",
+  requires: { api: 1 },
   capabilities: ${JSON.stringify(options.capabilities ?? [])},
   config: { type: "object", properties: { greeting: { type: "string", default: "hello" }, apiKey: { type: "string", "x-prism-secret": true } } },
   setup(prism: any) { ${options.setup ?? ""} },
@@ -309,7 +310,7 @@ describe("loadManifest", () => {
           ["@acme/proj", "manifest:project"],
         ],
       );
-      assert.deepEqual(packages[0]!.configSources, { apiKey: "manifest", greeting: "manifest" });
+      assert.deepEqual(packages[0]!.configSources, { apiKey: "user", greeting: "user" });
       assert.equal(packages[1]!.configSources.greeting, "host");
       const text = JSON.stringify(agent.inspect());
       assert.ok(text.includes("env:PRISM_TEST_MANIFEST_KEY"));

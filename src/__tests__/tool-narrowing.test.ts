@@ -227,7 +227,7 @@ describe("per-turn tool scoping through the loop", () => {
     revision: "1",
     async run(run: {
       turn: (options?: { tools?: false | readonly string[] }) => Promise<{ stopped: boolean; toolCalls: readonly unknown[] }>;
-      executeTools: (calls: readonly never[]) => Promise<void>;
+      executeTools: (calls: readonly never[]) => Promise<unknown>;
     }) {
       for (;;) {
         const turn = await run.turn({ tools });

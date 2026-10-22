@@ -2,7 +2,7 @@
  * Packed-install CLI live journey (plans/064 Task 5).
  *
  * Packs the root umbrella + the CLI provider packages into a fresh consumer, then
- * drives the real `prism` bin from that install: `new package` scaffold and print/json/rpc modes over the chosen provider's real wire. The provider is
+ * drives the real `prism` bin from that install: `new package` scaffold and print/json modes over the chosen provider's real wire. The provider is
  * the first catalog entry whose credential env var is present (override
  * with PRISM_LIVE_CLI_PROVIDER); requires PRISM_LIVE_PROVIDER_TESTS=1 and at
  * least one provider key — otherwise the run skips.
@@ -11,7 +11,7 @@
  * appears in any of them.
  */
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll as after, describe, it } from "bun:test";
@@ -21,14 +21,8 @@ const LIVE = process.env.PRISM_LIVE_PROVIDER_TESTS === "1";
 // Providers `--provider` builds (src/cli-runner.ts CLI_PROVIDERS): id, credential env var, factory.
 const catalog = Object.fromEntries(
   [
-    ["openai", "OPENAI_API_KEY", "createOpenAIResponsesProvider"],
-    ["openrouter", "OPENROUTER_API_KEY", "createOpenRouterProvider"],
-    ["kimi", "KIMI_API_KEY", "createKimiCodingProvider"],
-    ["zai", "ZAI_API_KEY", "createZaiProvider"],
+    ["hyper", "HYPER_API_KEY", "createHyperProvider"],
     ["opencode-go", "OPENCODE_API_KEY", "createOpenCodeGoProvider"],
-    ["neuralwatt", "NEURALWATT_API_KEY", "createNeuralWattProvider"],
-    ["alibaba", "DASHSCOPE_API_KEY", "createAlibabaProvider"],
-    ["ollama", "OLLAMA_API_KEY", "createOllamaProvider"],
   ].map(([id, envKey, factoryExport]) => [id, { id, envKey, factoryExport, factoryModule: `@arnilo/prism-provider-${id}` }]),
 );
 const requested = process.env.PRISM_LIVE_CLI_PROVIDER;
@@ -125,84 +119,6 @@ describe(`packed-install CLI live journey (${providerId} over the real wire)`, (
       assert.equal(parsed.type, "event");
       assert.ok(parsed.event, "envelope missing event payload");
     }
-  });
-
-  it("rpc mode drives prompt → state → abort over the real stdio wire", async () => {
-    const child = spawn(process.execPath, [cli, "--provider", providerId, "--mode", "rpc"], {
-      cwd: consumer,
-      env,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    const transcript = { tag: "rpc", out: "", err: "" };
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (d) => (transcript.out += d));
-    child.stderr.on("data", (d) => (transcript.err += d));
-    transcripts.push(transcript);
-
-    const _pending = new Map();
-    const lines = [];
-    let notify;
-    child.stdout.on("data", (chunk) => {
-      for (const line of chunk.split("\n")) {
-        if (!line.trim()) continue;
-        lines.push(line);
-        notify?.();
-      }
-    });
-    const wait = () => new Promise((r) => (notify = r));
-    /** Next response (ok/error envelope) for `id` — event lines are ignored here. */
-    async function waitFor(id, timeoutMs = 60_000) {
-      const deadline = Date.now() + timeoutMs;
-      for (;;) {
-        const hit = lines.find((l) => {
-          try {
-            const parsed = JSON.parse(l);
-            return parsed.id === id && (parsed.ok === true || parsed.ok === false) && parsed.type !== "event";
-          } catch {
-            return false;
-          }
-        });
-        if (hit) return JSON.parse(hit);
-        if (Date.now() > deadline) throw new Error(`timeout waiting for rpc response ${id}`);
-        await wait();
-      }
-    }
-    const send = (msg) => child.stdin.write(`${JSON.stringify(msg)}\n`);
-
-    // 1. prompt over the real wire: events stream, run completes.
-    send({ id: 1, command: "prompt", params: { input: PROMPT } });
-    const done1 = await waitFor(1);
-    if (done1.ok === false && isCredentialRejected(JSON.stringify(done1))) {
-      child.kill();
-      console.log(`provider rejected ${spec.envKey} (401/403) — refresh the credential and rerun`);
-      return;
-    }
-    assert.equal(done1.ok, true, JSON.stringify(done1));
-    const events1 = lines.map((l) => JSON.parse(l)).filter((p) => p.type === "event" && p.id === 1);
-    assert.ok(events1.length > 0, "prompt produced no streamed events");
-    assert.ok(
-      events1.some((p) => p.event.type === "message.delta" && p.event.content?.type === "text"),
-      "no text delta streamed",
-    );
-
-    // 2. state after the run.
-    send({ id: 2, command: "state" });
-    const state2 = await waitFor(2);
-    assert.equal(state2.ok, true, JSON.stringify(state2));
-
-    // 3. abort mid-run: start a longer prompt, abort it, server stays responsive.
-    send({ id: 3, command: "prompt", params: { input: "Count from one to twenty, one number per line." } });
-    await new Promise((r) => setTimeout(r, 500));
-    send({ id: 4, command: "abort", params: { reason: "journey abort leg" } });
-    const aborted = await waitFor(4);
-    assert.equal(aborted.ok, true, JSON.stringify(aborted));
-    await waitFor(3); // the aborted run still settles its response
-    send({ id: 5, command: "state" });
-    assert.equal((await waitFor(5)).ok, true, "server unresponsive after abort");
-
-    child.kill();
-    await new Promise((r) => child.on("exit", r));
   });
 
   it("the provider credential never appears in any spawn transcript", () => {

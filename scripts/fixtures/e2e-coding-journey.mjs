@@ -1,6 +1,6 @@
 /**
  * Phase 12 packed-install coding journey (plan 012 Task 3).
- * Runs INSIDE a fresh consumer that installed @arnilo tarballs (npm pack),
+ * Runs INSIDE a fresh consumer that installed @arnilo tarballs (bun pm pack),
  * so every import below resolves from the consumer's node_modules — this
  * file itself must never import workspace paths.
  *
@@ -20,11 +20,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createMemoryToolEffectStore, createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
-import { createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
 import {
-  createCodingLifecycleEmitter,
+  assertPathInsideRoots,
   createDeleteTool,
   createGitAwareRepositoryOperations,
   createGitHubForge,
@@ -33,8 +31,16 @@ import {
   createProcessSessions,
   createReadPathSet,
   createWriteTool,
-} from "@arnilo/prism-coding-tools/agent";
-import { createCodingApprovalPolicy } from "@arnilo/prism-coding-tools/security";
+} from "@arnilo/prism-tools-coding";
+
+const containmentPolicy = (roots) => ({
+  check: async (action) => {
+    for (const path of action.paths ?? []) {
+      if (!(await assertPathInsideRoots(roots, path))) return { allowed: false, reason: `path outside trusted roots: ${path}` };
+    }
+    return { allowed: true, exclusive: action.kind === "shell" };
+  },
+});
 
 const SECRET = "packed-coding-secret";
 const redactor = createSecretRedactor([SECRET]);
@@ -102,197 +108,6 @@ const identity = {
 };
 
 try {
-  // 1. ACP editor session: init capability negotiation, session new, load/resume.
-  const emitter = createCodingLifecycleEmitter();
-  const sessions = new Map(); // sessionId -> { id, cwd, stream }
-  sessions.set("stored-session", {
-    id: "stored-session",
-    cwd: "/workspace",
-    async *stream(prompt) {
-      const text = typeof prompt === "string" ? prompt : (prompt?.content?.[0]?.text ?? "");
-      if (!text.includes("edit")) {
-        yield {
-          type: "message.delta",
-          sessionId: "stored-session",
-          runId: "stored-run",
-          content: { type: "text", text: "stored turn" },
-        };
-      }
-      yield {
-        type: "agent_done",
-        sessionId: "stored-session",
-        runId: "stored-run",
-        reason: "end_turn",
-      };
-    },
-  });
-  const bindingFor = (entry) => ({
-    session: {
-      id: entry.id,
-      async *stream(prompt) {
-        yield* entry.stream(prompt);
-      },
-    },
-  });
-  const acpAgent = createPrismAcpAgent({
-    authorize: () => ({ ownership }),
-    lifecycle: {
-      async *resumeStream(ref, resume, _opts) {
-        const entry = sessions.get(ref.sessionId);
-        if (!entry) throw new Error(`no session ${ref.sessionId}`);
-        for (const decision of resume.decisions ?? []) {
-          if (decision.outcome === "allow_once" || decision.outcome === "allow_for_run") {
-            yield {
-              type: "tool_call",
-              sessionId: ref.sessionId,
-              runId: ref.runId,
-              call: {
-                id: decision.approvalId,
-                name: "write",
-                arguments: { path: "/workspace/a.txt", content: "ok" },
-              },
-            };
-            yield {
-              type: "tool_result",
-              sessionId: ref.sessionId,
-              runId: ref.runId,
-              result: {
-                toolCallId: decision.approvalId,
-                name: "write",
-                content: "wrote",
-              },
-            };
-          }
-        }
-        yield {
-          type: "agent_done",
-          sessionId: ref.sessionId,
-          runId: ref.runId,
-          reason: "end_turn",
-        };
-      },
-    },
-    sessionFactory: (input) => {
-      const id = input.sessionId ?? `host-${sessions.size + 1}`;
-      sessions.set(id, {
-        id,
-        cwd: input.cwd,
-        async *stream(prompt) {
-          const text = typeof prompt === "string" ? prompt : (prompt?.content?.[0]?.text ?? "");
-          if (text.includes("edit")) {
-            // Host-side approval path: suspend with a four-outcome decision.
-            yield {
-              type: "run.suspended",
-              sessionId: id,
-              runId: `run-${id}`,
-              version: 1,
-              interruption: {
-                kind: "tool_approval",
-                reason: "edit the file",
-                toolCallId: "tool-1",
-                pendingDecisions: [
-                  {
-                    approvalId: "appr-1",
-                    kind: "tool_approval",
-                    toolCallId: "tool-1",
-                    scope: { toolName: "write" },
-                    reason: "edit the file",
-                  },
-                ],
-              },
-            };
-            return;
-          }
-          yield {
-            type: "agent_done",
-            sessionId: id,
-            runId: `run-${id}`,
-            reason: "end_turn",
-          };
-        },
-      });
-      return bindingFor(sessions.get(id));
-    },
-    sessions: {
-      async load({ sessionId }) {
-        const entry = sessions.get(sessionId);
-        if (!entry) throw new Error(`no session ${sessionId}`);
-        return bindingFor(entry);
-      },
-      async list({ cwd }) {
-        return [...sessions.entries()].filter(([, e]) => !cwd || e.cwd === cwd).map(([sessionId, e]) => ({ sessionId, cwd: e.cwd }));
-      },
-      async resume({ sessionId }) {
-        const entry = sessions.get(sessionId);
-        if (!entry) throw new Error(`no session ${sessionId}`);
-        return bindingFor(entry);
-      },
-      async delete({ sessionId }) {
-        sessions.delete(sessionId);
-      },
-    },
-    modes: {
-      modes: [
-        { id: "edit", name: "Edit" },
-        { id: "review", name: "Review" },
-      ],
-      defaultModeId: "edit",
-    },
-    coding: { lifecycle: emitter },
-  });
-  const permissionOptions = [];
-  await client({ name: "journey-client" })
-    .onRequest(methods.client.session.requestPermission, ({ params }) => {
-      permissionOptions.push(params.options.map((option) => option.kind));
-      return { outcome: { outcome: "selected", optionId: "allow-once" } };
-    })
-    .connectWith(acpAgent, async (connection) => {
-      const initialize = await connection.request(methods.agent.initialize, {
-        protocolVersion: PROTOCOL_VERSION,
-        clientCapabilities: { session: { configOptions: { boolean: {} } } },
-      });
-      assert.equal(initialize.protocolVersion, PROTOCOL_VERSION);
-      assert.ok(initialize.agentCapabilities.loadSession, "loadSession advertised");
-      assert.deepEqual(initialize.agentCapabilities.sessionCapabilities, {
-        close: {},
-        list: {},
-        resume: {},
-        delete: {},
-      });
-
-      const created = await connection.request(methods.agent.session.new, {
-        cwd: "/workspace",
-        mcpServers: [],
-      });
-      assert.deepEqual(created.modes, {
-        currentModeId: "edit",
-        availableModes: [
-          { id: "edit", name: "Edit" },
-          { id: "review", name: "Review" },
-        ],
-      });
-
-      const resumed = await connection.request(methods.agent.session.load, {
-        sessionId: "stored-session",
-        cwd: "/workspace",
-        mcpServers: [],
-      });
-      assert.deepEqual(
-        resumed.modes?.availableModes?.map((m) => m.id),
-        ["edit", "review"],
-        "load resumes the stored session state",
-      );
-
-      // Edit via the four-outcome approval path.
-      const edit = await connection.request(methods.agent.session.prompt, {
-        sessionId: created.sessionId,
-        prompt: [{ type: "text", text: "edit the file" }],
-      });
-      assert.equal(edit.stopReason, "end_turn");
-      assert.equal(permissionOptions.length, 1, "edit prompted one permission request");
-      assert.deepEqual(permissionOptions[0], ["allow_once", "allow_always", "reject_once", "reject_always"]);
-    });
-
   // 2. Bounded coding tools: git-aware list/search, glob, read-before-write write, delete, move.
   mkdirSync(join(workspace, "src"), { recursive: true });
   writeFileSync(join(workspace, "src", "a.ts"), "export const foo = 1;\n");
@@ -317,13 +132,7 @@ try {
   );
 
   const readPaths = createReadPathSet();
-  const policy = createCodingApprovalPolicy({
-    roots: [workspace],
-    readOnly: false,
-    readBeforeWrite: true,
-    readPathSet: readPaths,
-    approve: async () => true,
-  });
+  const policy = containmentPolicy([workspace]);
   const registry = createToolRegistry([
     createWriteTool(workspace, {
       executionPolicy: policy,

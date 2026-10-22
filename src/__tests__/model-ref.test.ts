@@ -73,7 +73,7 @@ describe("ModelRef", () => {
     const mock = recorder("mock");
     const other = recorder("other");
     const agent = await createAgent({ model: "mock/demo", packages: [providerPackage("test-provider", [{ id: "mock", generate: (r) => mock.generate(r) }])] });
-    assert.equal(agent.config.model.provider, "mock");
+    assert.equal(agent.config.model?.provider, "mock");
     const session = await agent.session();
     // Fixed provider still wins until Task 5 retires it; the parsed model reaches the request either way.
     await session.run("hi", { model: "mock/other-model" });
@@ -91,8 +91,8 @@ describe("ModelRef", () => {
         return [];
       },
     };
-    const members: Record<keyof ModelProvider, true> = { id: true, auth: true, generate: true, models: true };
-    assert.deepEqual(Object.keys(members).sort(), ["auth", "generate", "id", "models"]);
+    const members: Record<keyof ModelProvider, true> = { id: true, auth: true, generate: true, models: true, embeddings: true };
+    assert.deepEqual(Object.keys(members).sort(), ["auth", "embeddings", "generate", "id", "models"]);
     assert.equal(provider.auth?.length, 2);
   });
 });

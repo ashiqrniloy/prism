@@ -1,28 +1,52 @@
-import { skillCatalogDraft } from "../skills-catalog.js";
 import type {
   AgentEvent,
   AgentFinishReason,
-  Session,
+  ContextBlock,
+  EventOrigin,
+  JsonObject,
   JsonValue,
+  ModelRef,
   Message,
   ProviderRequest,
   ProviderTurnResult,
+  Session,
   ToolCallContent,
   ToolCapabilityKind,
+  ToolDefinition,
   ToolResult,
   Usage,
 } from "../contracts.js";
-import type { ContextBlock, ToolDefinition } from "../contracts.js";
-import { contextMessages } from "../input.js";
+import { ModelError } from "../agent-session/model-errors.js";
+import { packageEventFor } from "../hooks/emit.js";
+import { HOOK_EXECUTE_REWRITE, HookError } from "../hooks/errors.js";
+import { frozenCopy, jsonEqual } from "../hooks/json.js";
 import type { ContextDraft, HookBus, RunEndDecision, ToolCallDecision, TurnBeforeDecision } from "../hooks/index.js";
 import { createId } from "../ids.js";
 import type { AgentInput } from "../input.js";
+import { contextMessages } from "../input.js";
 import type { RunLimitTracker } from "../run-limits.js";
+import type { ExternalStateHandle } from "../session/external-state.js";
+import { skillCatalogDraft } from "../skills-catalog.js";
 import { dispatchableToolCalls, dispatchToolCallsInOrder, throwIfAborted } from "./dispatch.js";
-import type { RunController, RunEndResult, RunTurnOptions, RunTurnResult } from "./types.js";
+import {
+  EXTERNAL_ACTIVITY_EVENTS,
+  type ExternalActivity,
+  type ExternalAskSupport,
+  type ExternalToolDecision,
+  type ExternalToolRequest,
+  type RunController,
+  type RunEndResult,
+  type RunTurnOptions,
+  type RunTurnResult,
+} from "./types.js";
 
 /** How an `ask` decision resolved: execute, refuse, or (no UI) suspend the round. */
 export type AskResolution = { readonly kind: "allow" } | { readonly kind: "deny"; readonly reason: string } | { readonly kind: "suspend" };
+
+/** A `tool.call` decision that carries replacement arguments. */
+function isRewrite(decision: ToolCallDecision | undefined): decision is { readonly rewrite: JsonObject } {
+  return typeof decision === "object" && decision !== null && "rewrite" in decision;
+}
 
 /** One call whose `tool.call` decision combined to `{ ask }`. */
 export interface AskRequest {
@@ -36,9 +60,13 @@ export interface RunControllerInternals {
   readonly input: AgentInput;
   readonly signal: AbortSignal;
   readonly limits: RunLimitTracker;
+  /** The run's model: `RunOptions.model`, else the agent's. Absent on a model-less agent. */
+  readonly model?: ModelRef;
   readonly hooks: HookBus;
   readonly sessionId: string;
   readonly runId: string;
+  /** Owner of the loop slot (`"kernel"` for the default loop); owns the loop's `package.event`s. */
+  readonly loopOwner: string;
   readonly metadata: Readonly<Record<string, unknown>>;
   readonly history: Message[];
   readonly inputMessages: readonly Message[];
@@ -53,7 +81,7 @@ export interface RunControllerInternals {
   assemble(nextInput: AgentInput, turn: number, options: RunTurnOptions): Promise<ProviderRequest>;
   generate(request: ProviderRequest, requestSecrets?: readonly (string | undefined)[]): Promise<ProviderTurnResult>;
   chargeToolRound?(calls: readonly ToolCallContent[]): void | Promise<void>;
-  dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
+  dispatchToolCall(call: ToolCallContent, origin?: EventOrigin): Promise<ToolResult>;
   isToolCallExclusive?(call: ToolCallContent): boolean;
   /** Capabilities reported to `tool.call` for a call's tool. */
   effectsFor(call: ToolCallContent): readonly ToolCapabilityKind[];
@@ -61,8 +89,20 @@ export interface RunControllerInternals {
    * Resolve the `{ ask }` calls of one tool round: inline `host.ui` confirms, or a `suspend`
    * resolution for each call that no UI answered. The kernel owns this so a loop cannot skip it.
    */
-  ask?(requests: readonly AskRequest[]): Promise<ReadonlyMap<string, AskResolution>>;
+  ask?(requests: readonly AskRequest[], options?: { readonly suspend?: boolean }): Promise<ReadonlyMap<string, AskResolution>>;
+  /** Whether the loop can resume a suspended run (`snapshot` and `restore`, or the default loop). */
+  readonly resumable?: boolean;
+  /** Fold externally reported usage into the run's usage and limits. */
+  addUsage?(usage: Usage): void;
+  /** Whether `session.steer()` input is waiting. */
+  hasPendingSteers?(): boolean;
+  /** Drain the steer queue through the `run.input` gate; resolves the messages that survived it. */
+  drainSteers?(): Promise<readonly Message[]>;
+  /** Register a listener for `session.steer()`; returns its unsubscribe. */
+  onSteer?(listener: () => void): () => void;
   appendMessage(message: Message): Promise<void>;
+  /** The `external_state` log for `key`, under the running loop's `name`. */
+  externalState(key: string): ExternalStateHandle;
   applyPendingSteers?(): Promise<boolean>;
   /** Queue a `run.end` continuation through the steer path. */
   queueContinuation(decision: { readonly reason: string; readonly steer?: string | Message }): void;
@@ -141,6 +181,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
     turnCount += 1;
     const currentTurn = turnCount;
     throwIfAborted(internals.signal);
+    if (!internals.model) throw new ModelError("no_model", "run.turn() needs a model, and this agent was created without one");
     internals.onTurnStart?.(currentTurn);
     await internals.applyPendingSteers?.();
     const usage = internals.usage();
@@ -204,30 +245,89 @@ export function createRunController(internals: RunControllerInternals): RunContr
     return { stopped: false, toolCalls: dispatchable, ...(result.usage ? { usage: result.usage } : {}) };
   };
 
-  const executeTools = async (calls: readonly ToolCallContent[], options?: { readonly concurrency?: number }): Promise<void> => {
-    if (calls.length === 0) return;
+  /**
+   * The `tool.call` payload for one round. Args are a deep-frozen copy, so an in-place mutation by a
+   * handler throws in strict mode and never reaches execution.
+   */
+  const gatePayload = (call: ToolCallContent, args: JsonObject, effects: readonly ToolCapabilityKind[], origin: EventOrigin | undefined) => ({
+    name: call.name,
+    args: frozenCopy(args),
+    effects: Object.freeze([...effects]),
+    callId: call.id,
+    sessionId: internals.sessionId,
+    runId: internals.runId,
+    ...(origin ? { origin } : {}),
+  });
+
+  /**
+   * Two-round `tool.call` gate (plan 177 Task 2): a rewrite becomes the call's arguments and the gate
+   * then runs again on the arguments that will execute. A round-2 rewrite that changes them again is
+   * `rewrite_unstable` (fail closed, no third round); a round-2 rewrite equal to its input is dropped
+   * by `combine`, so the round's `ask`/`respond` applies to the rewritten call. A handler may
+   * therefore run twice for a rewritten call.
+   */
+  const gateCall = async (
+    call: ToolCallContent,
+    effects: readonly ToolCapabilityKind[],
+    origin: EventOrigin | undefined,
+  ): Promise<{ readonly decision: ToolCallDecision | undefined; readonly call: ToolCallContent }> => {
+    const first = (await internals.hooks.decide(
+      "tool.call",
+      gatePayload(call, call.arguments, effects, origin),
+    )) as ToolCallDecision | undefined;
+    if (!isRewrite(first)) return { decision: first, call };
+    const rewritten: ToolCallContent = { ...call, arguments: first.rewrite };
+    const second = (await internals.hooks.decide(
+      "tool.call",
+      gatePayload(call, rewritten.arguments, effects, origin),
+    )) as ToolCallDecision | undefined;
+    if (isRewrite(second)) return { decision: { deny: "rewrite_unstable" }, call: rewritten };
+    return { decision: second, call: rewritten };
+  };
+
+  /**
+   * Plan 177 Task 5: whether `dispose()` aborted this run (its abort reason carries `agent_disposed`).
+   * Only that abort denies here: a plain `session.abort()` keeps its existing behaviour, and the
+   * deny exists so a loop that ignores the dispose signal cannot execute a tool after `dispose()`.
+   */
+  const disposedAbort = (): boolean => {
+    const reason: unknown = internals.signal.reason;
+    return internals.signal.aborted && reason instanceof Error && (reason as { code?: unknown }).code === "agent_disposed";
+  };
+  const disposedResult = (call: ToolCallContent): ToolResult => ({
+    toolCallId: call.id,
+    name: call.name,
+    error: { code: "agent_disposed", message: (internals.signal.reason as Error).message },
+  });
+
+  const executeTools = async (
+    calls: readonly ToolCallContent[],
+    options?: { readonly concurrency?: number; readonly origin?: EventOrigin },
+  ): Promise<readonly ToolResult[]> => {
+    if (calls.length === 0) return [];
+    // Plan 177 Task 5: a loop that ignores the dispose signal must not execute tools after `dispose()`.
+    if (disposedAbort()) return calls.map(disposedResult);
+    const origin = options?.origin;
     toolRounds += 1;
     // Evaluate `tool.call` for the whole round before dispatching, so several asks collect into
     // one suspension instead of stopping at the first one.
     const decisions = new Map<string, ToolCallDecision | undefined>();
+    const gatedCalls = new Map<string, ToolCallContent>();
     const asks: AskRequest[] = [];
     for (const call of calls) {
-      const decision = (await internals.hooks.decide("tool.call", {
-        name: call.name,
-        args: call.arguments,
-        effects: internals.effectsFor(call),
-        callId: call.id,
-        sessionId: internals.sessionId,
-        runId: internals.runId,
-      })) as ToolCallDecision | undefined;
-      decisions.set(call.id, decision);
-      if (decision !== undefined && typeof decision === "object" && "ask" in decision) asks.push({ call, reason: decision.ask });
+      const gated = await gateCall(call, internals.effectsFor(call), origin);
+      decisions.set(call.id, gated.decision);
+      gatedCalls.set(call.id, gated.call);
+      // An `ask` carries the call that will execute (the rewritten one), so its pending hash matches.
+      if (gated.decision !== undefined && typeof gated.decision === "object" && "ask" in gated.decision) {
+        asks.push({ call: gated.call, reason: gated.decision.ask });
+      }
     }
     const askResolutions =
       asks.length > 0 && internals.ask
         ? await internals.ask(asks)
         : new Map<string, AskResolution>(asks.map((entry) => [entry.call.id, { kind: "deny" as const, reason: entry.reason }]));
-    await dispatchToolCallsInOrder(calls, {
+    return dispatchToolCallsInOrder(calls, {
       signal: internals.signal,
       toolConcurrency: options?.concurrency ?? 1,
       ...(internals.chargeToolRound ? { chargeToolRound: internals.chargeToolRound } : {}),
@@ -237,7 +337,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
         if (askResolutions.get(call.id)?.kind === "suspend") {
           return Promise.resolve({ toolCallId: call.id, name: call.name, metadata: { approvalPending: true } });
         }
-        return dispatchOne(call, decisions.get(call.id), askResolutions);
+        return dispatchOne(call, gatedCalls.get(call.id) ?? call, decisions.get(call.id), askResolutions, origin);
       },
       ...(internals.isToolCallExclusive ? { isToolCallExclusive: internals.isToolCallExclusive } : {}),
       appendMessage: async (message) => {
@@ -248,10 +348,13 @@ export function createRunController(internals: RunControllerInternals): RunContr
 
   const dispatchOne = async (
     call: ToolCallContent,
+    effective: ToolCallContent,
     decision: ToolCallDecision | undefined,
     askResolutions: ReadonlyMap<string, AskResolution>,
+    origin: EventOrigin | undefined,
   ): Promise<ToolResult> => {
-    let effective = call;
+    // A dispose can land while the round is gated: the check runs again per call, before execution.
+    if (disposedAbort()) return disposedResult(call);
     if (decision !== undefined && decision !== "allow") {
       if (typeof decision === "object" && "deny" in decision) {
         return { toolCallId: call.id, name: call.name, error: { code: "hook_denied", message: decision.deny } };
@@ -263,13 +366,36 @@ export function createRunController(internals: RunControllerInternals): RunContr
         }
       }
       if (typeof decision === "object" && "respond" in decision) return decision.respond;
-      if (typeof decision === "object" && "rewrite" in decision) effective = { ...call, arguments: decision.rewrite };
     }
-    const executed = await internals.hooks.around(
-      "tool.execute",
-      { name: effective.name, args: effective.arguments, callId: effective.id, sessionId: internals.sessionId, runId: internals.runId },
-      async (payload) => internals.dispatchToolCall({ ...effective, name: payload.name, arguments: payload.args }),
-    );
+    let executed: ToolResult;
+    try {
+      executed = await internals.hooks.around(
+        "tool.execute",
+        {
+          name: effective.name,
+          args: frozenCopy(effective.arguments),
+          callId: effective.id,
+          sessionId: internals.sessionId,
+          runId: internals.runId,
+        },
+        async (payload) => {
+          // Wrap-only: a handler may observe or wrap the call, never replace its name or arguments.
+          if (payload.name !== effective.name || !jsonEqual(payload.args, effective.arguments)) {
+            throw new HookError("tool.execute may not replace the call's name or arguments", {
+              owner: internals.loopOwner,
+              hook: "tool.execute",
+              code: HOOK_EXECUTE_REWRITE,
+            });
+          }
+          return internals.dispatchToolCall(effective, origin);
+        },
+      );
+    } catch (error) {
+      if (error instanceof HookError && error.code === HOOK_EXECUTE_REWRITE) {
+        return { toolCallId: call.id, name: call.name, error: { code: "hook_execute_rewrite", message: error.message } };
+      }
+      throw error;
+    }
     const transformed = await internals.hooks.transform("tool.result", {
       ...executed,
       sessionId: internals.sessionId,
@@ -307,21 +433,211 @@ export function createRunController(internals: RunControllerInternals): RunContr
     continuations += 1;
     internals.queueContinuation(asked);
     nextInput = [];
-    return { continue: true };
+    return { continue: true, reason: asked.reason };
   };
+
+  // --- driver primitives (external agents) -------------------------------------------------
+  const baseOrigin: EventOrigin = {
+    kind: "external",
+    agent: internals.loopOwner,
+    agentId: internals.loopOwner,
+    depth: 0,
+    executedBy: "external",
+  };
+  // `subagent` activity opens a nested scope that later activity inherits until it completes.
+  const scopes: EventOrigin[] = [];
+  const currentOrigin = (): EventOrigin => scopes.at(-1) ?? baseOrigin;
+  const startedTools = new Map<string, { readonly name: string; readonly at: number }>();
+
+  const stamped = (event: AgentEvent): AgentEvent => ({ ...event, origin: currentOrigin() });
+
+  const observe = async (activity: ExternalActivity): Promise<void> => {
+    throwIfAborted(internals.signal);
+    const { sessionId, runId } = internals;
+    switch (activity.kind) {
+      case "message.delta":
+        internals.emit(stamped({ type: "message.delta", sessionId, runId, content: activity.content }));
+        return;
+      case "message": {
+        const message: Message = { ...activity.message, metadata: { ...activity.message.metadata, origin: currentOrigin() } };
+        const transformed = await append(message);
+        internals.emit(stamped({ type: "message.completed", sessionId, runId, message: transformed }));
+        return;
+      }
+      case "tool.started": {
+        internals.limits.charge("maxToolCalls");
+        startedTools.set(activity.call.id, { name: activity.call.name, at: Date.now() });
+        const call: ToolCallContent = {
+          type: "tool_call",
+          id: activity.call.id,
+          name: activity.call.name,
+          arguments: (activity.call.args !== null && typeof activity.call.args === "object" && !Array.isArray(activity.call.args)
+            ? activity.call.args
+            : {}) as ToolCallContent["arguments"],
+        };
+        internals.emit(stamped({ type: "tool.started", sessionId, runId, call }));
+        return;
+      }
+      case "tool.progress": {
+        const name = startedTools.get(activity.toolCallId)?.name ?? "";
+        internals.emit(
+          stamped({ type: "tool.progress", sessionId, runId, toolCallId: activity.toolCallId, name, progress: activity.progress }),
+        );
+        return;
+      }
+      case "tool.completed": {
+        const started = startedTools.get(activity.toolCallId);
+        startedTools.delete(activity.toolCallId);
+        const name = started?.name ?? "";
+        const failed = activity.status !== "finished";
+        const result: ToolResult = {
+          toolCallId: activity.toolCallId,
+          name,
+          ...(activity.result !== undefined ? { value: activity.result } : {}),
+          ...(failed ? { error: { message: activity.error ?? activity.status } } : {}),
+        };
+        internals.emit(
+          stamped({
+            type: "tool.completed",
+            sessionId,
+            runId,
+            toolCallId: activity.toolCallId,
+            name,
+            result,
+            metadata: { durationMs: started ? Date.now() - started.at : 0, status: activity.status },
+            status: activity.status,
+            ...(activity.status === "error" ? { error: { message: activity.error ?? "error" } } : {}),
+            ...(activity.status === "blocked" ? { reason: activity.error ?? "blocked" } : {}),
+          }),
+        );
+        return;
+      }
+      case "usage":
+        internals.addUsage?.(activity.usage);
+        return;
+      default: {
+        const { kind, ...data } = activity;
+        if (kind === "subagent") {
+          const parent = currentOrigin();
+          if (activity.phase === "started") {
+            scopes.push({
+              ...parent,
+              depth: parent.depth + 1,
+              subagentId: activity.id,
+              ...(activity.parentToolCallId ? { parentToolCallId: activity.parentToolCallId } : {}),
+            });
+          }
+        }
+        // The event describes the subagent from the scope it was reported in; popping happens after.
+        const event = stamped(
+          packageEventFor(internals.loopOwner, sessionId, runId, EXTERNAL_ACTIVITY_EVENTS[kind], data as unknown as JsonValue),
+        );
+        internals.emit(event);
+        if (kind === "subagent" && activity.kind === "subagent" && activity.phase === "completed") {
+          const at = scopes.map((scope) => scope.subagentId).lastIndexOf(activity.id);
+          if (at !== -1) scopes.length = at;
+        }
+      }
+    }
+  };
+
+  const denied = (reason: string): ExternalToolDecision => ({ allow: false, reason });
+
+  const ask = async (request: ExternalToolRequest, support: ExternalAskSupport = {}): Promise<ExternalToolDecision> => {
+    const args =
+      request.args !== null && typeof request.args === "object" && !Array.isArray(request.args)
+        ? (request.args as ToolCallContent["arguments"])
+        : ({} as ToolCallContent["arguments"]);
+    const call: ToolCallContent = { type: "tool_call", id: request.toolCallId, name: request.name, arguments: args };
+    // The driver-kit gate shares the two-round rule, so an external loop cannot bypass the fix.
+    let gated: { readonly decision: ToolCallDecision | undefined; readonly call: ToolCallContent };
+    try {
+      gated = await gateCall(call, request.effects, currentOrigin());
+    } catch {
+      return denied("tool_call_gate_failed");
+    }
+    const decision = gated.decision;
+    if (decision === undefined || decision === "allow") {
+      // A rewrite is already applied: report the effective args so a driver loop that supports rewrite
+      // dispatches what the gate saw.
+      if (jsonEqual(gated.call.arguments, call.arguments)) return { allow: true };
+      return support.rewrite ? { allow: true, args: gated.call.arguments } : denied("rewrite_unsupported");
+    }
+    if ("deny" in decision) return denied(decision.deny);
+    if ("respond" in decision) {
+      if (!support.respond) return denied("respond_unsupported");
+      return { respond: (decision.respond.value ?? null) as JsonValue };
+    }
+    const reason = (decision as { readonly ask: string }).ask;
+    const resumable = internals.resumable === true;
+    if (!internals.ask) return denied("non_interactive");
+    let resolution: AskResolution | undefined;
+    try {
+      resolution = (await internals.ask([{ call: gated.call, reason }], { suspend: resumable })).get(call.id);
+    } catch {
+      return denied("tool_call_gate_failed");
+    }
+    if (resolution?.kind === "allow") return { allow: true };
+    if (resolution?.kind === "suspend") return denied(resumable ? "approval_pending" : "non_interactive");
+    return denied(resolution?.reason ?? "non_interactive");
+  };
+
+  const steers = (): AsyncIterable<Message> => ({
+    [Symbol.asyncIterator](): AsyncIterator<Message> {
+      const buffer: Message[] = [];
+      let finished = false;
+      let wake: (() => void) | undefined;
+      const unsubscribe = internals.onSteer?.(() => wake?.());
+      const onAbort = (): void => wake?.();
+      internals.signal.addEventListener("abort", onAbort, { once: true });
+      const finish = (): void => {
+        finished = true;
+        unsubscribe?.();
+        internals.signal.removeEventListener("abort", onAbort);
+        wake?.();
+      };
+      return {
+        async next(): Promise<IteratorResult<Message>> {
+          while (!finished) {
+            if (buffer.length > 0) return { done: false, value: buffer.shift()! };
+            if (internals.signal.aborted) break;
+            if (internals.hasPendingSteers?.()) {
+              buffer.push(...((await internals.drainSteers?.()) ?? []));
+              continue;
+            }
+            await new Promise<void>((resolve) => {
+              wake = resolve;
+            });
+            wake = undefined;
+          }
+          finish();
+          return { done: true, value: undefined };
+        },
+        async return(): Promise<IteratorResult<Message>> {
+          finish();
+          return { done: true, value: undefined };
+        },
+      };
+    },
+  });
 
   const controller: RunController = {
     session: internals.session,
     input: internals.input,
     signal: internals.signal,
     limits: internals.limits,
+    model: internals.model,
     turn,
     executeTools,
     append: async (message) => {
       await append(message);
     },
+    state: (key) => internals.externalState(key),
     end,
-    emit: (event) => internals.emit(event),
+    observe,
+    ask,
+    steers,
+    emit: (name, data) => internals.emit(packageEventFor(internals.loopOwner, internals.sessionId, internals.runId, name, data)),
   };
   return controller;
 }

@@ -35,7 +35,6 @@ import { join } from "node:path";
 import {
   type ModelProvider,
   createAgent,
-  createToolRegistry,
   type JsonObject,
   type ProviderEvent,
   providerDone,
@@ -44,7 +43,7 @@ import {
   providerUsage,
   type ToolDefinition,
 } from "@arnilo/prism";
-import { createTimelineFolder } from "@arnilo/prism-core/governance/observability";
+import { createTimelineFolder } from "@arnilo/prism-observability";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 const STEP_COUNT = 8;

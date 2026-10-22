@@ -24,19 +24,38 @@ export interface SessionState<T extends JsonValue> {
   set(session: SessionContext, value: T): Promise<void>;
 }
 
+/**
+ * A session-scoped append-only record log a package owns. Unlike {@link SessionState}, later records
+ * never replace earlier ones: the branch is the order. `entries` is synchronous, because the session
+ * already holds the branch it read.
+ */
+export interface SessionLog<T extends JsonValue> {
+  /**
+   * Every record on this session's branch, in append order. Throws `state_not_ready` before the session
+   * has read its branch (a run, command, or `close()` does). A fork carries the records up to the fork point.
+   */
+  entries(session: SessionContext): readonly T[];
+  /** Appends `value` (JSON, at most 64 KiB, redacted first) as one `package_state` entry. */
+  append(session: SessionContext, value: T): Promise<void>;
+}
+
 /** A value kept in process memory for the agent's lifetime, reset to `initial` on dispose. */
 export interface AgentState<T> {
   get(): T;
   set(value: T): void;
 }
 
-/** The `data` of a `package_state` entry. */
+/** The `data` of a `package_state` entry. `op` is absent only on entries written before 0.13, which read as `"set"`. */
 export interface PackageStateData {
   readonly schemaVersion: 1;
   readonly package: string;
   readonly key: string;
   readonly value: JsonValue;
+  /** `"append"` records join the key's log and never replace its latest value. */
+  readonly op?: "set" | "append";
 }
+
+const NO_RECORDS: readonly JsonValue[] = Object.freeze([]);
 
 const slot = (owner: string, key: string): string => `${owner}\u0000${key}`;
 
@@ -66,6 +85,7 @@ export interface SessionStateStoreOptions {
 /** The state one session holds. The session owns it and binds it to every {@link SessionContext} it hands out. */
 export class SessionStateStore {
   private values = new Map<string, JsonValue>();
+  private records = new Map<string, JsonValue[]>();
   private hydrated = false;
 
   constructor(private readonly options: SessionStateStoreOptions) {}
@@ -74,29 +94,63 @@ export class SessionStateStore {
     return this.hydrated;
   }
 
-  /** Replaces the held values with the latest per `(package, key)` on `branch`. A malformed entry is skipped. */
+  /**
+   * Replaces the held state with the branch: the latest value per `(package, key)` for `set` records,
+   * and every `append` record in branch order. A malformed entry is skipped.
+   */
   hydrate(branch: readonly SessionEntry[]): void {
     const next = new Map<string, JsonValue>();
+    const records = new Map<string, JsonValue[]>();
     for (const entry of branch) {
       if (entry.kind !== "package_state" || !isStateData(entry.data)) continue;
-      next.set(slot(entry.data.package, entry.data.key), deepFreeze(entry.data.value));
+      const key = slot(entry.data.package, entry.data.key);
+      const frozen = deepFreeze(entry.data.value);
+      if (entry.data.op === "append") {
+        const list = records.get(key) ?? [];
+        list.push(frozen);
+        records.set(key, list);
+        continue;
+      }
+      next.set(key, frozen);
     }
     this.values = next;
+    this.records = records;
     this.hydrated = true;
   }
 
   read(owner: string, key: string): JsonValue | undefined {
-    if (!this.hydrated) {
-      throw new PackageLoadError(
-        "state_not_ready",
-        `Package ${owner} read session state ${key} before the session read its branch. Read it from a hook, tool, or command, or await set first.`,
-        { package: owner },
-      );
-    }
+    this.assertReady(owner, key, "state");
     return this.values.get(slot(owner, key));
   }
 
+  readRecords(owner: string, key: string): readonly JsonValue[] {
+    this.assertReady(owner, key, "log");
+    return this.records.get(slot(owner, key)) ?? NO_RECORDS;
+  }
+
   async write(owner: string, key: string, value: unknown): Promise<void> {
+    const stored = await this.persist(owner, key, value, "set");
+    this.values.set(slot(owner, key), stored);
+  }
+
+  async append(owner: string, key: string, value: unknown): Promise<void> {
+    const stored = await this.persist(owner, key, value, "append");
+    const keyed = slot(owner, key);
+    const list = this.records.get(keyed) ?? [];
+    list.push(stored);
+    this.records.set(keyed, list);
+  }
+
+  private assertReady(owner: string, key: string, member: "state" | "log"): void {
+    if (this.hydrated) return;
+    throw new PackageLoadError(
+      "state_not_ready",
+      `Package ${owner} read session ${member} ${key} before the session read its branch. Read it from a hook, tool, or command, or await set first.`,
+      { package: owner },
+    );
+  }
+
+  private async persist(owner: string, key: string, value: unknown, op: "set" | "append"): Promise<JsonValue> {
     const json = toJsonValue(value);
     if ("error" in json) {
       throw new PackageLoadError("state_not_json", `Package ${owner} state ${key} ${json.error.message} at ${json.error.path}.`, {
@@ -105,7 +159,7 @@ export class SessionStateStore {
       });
     }
     // Redact before persisting. `activeRedactor` is unset between runs, so the store applies the agent's own.
-    const stored = this.options.redact(json.value);
+    const stored = deepFreeze(this.options.redact(json.value));
     const bytes = new TextEncoder().encode(JSON.stringify(stored)).length;
     if (bytes > MAX_STATE_VALUE_BYTES) {
       throw new PackageLoadError(
@@ -117,8 +171,8 @@ export class SessionStateStore {
       );
     }
     await this.options.ready();
-    await this.options.append({ schemaVersion: 1, package: owner, key, value: stored });
-    this.values.set(slot(owner, key), deepFreeze(stored));
+    await this.options.append({ schemaVersion: 1, package: owner, key, value: stored, op });
+    return stored;
   }
 }
 
@@ -162,6 +216,15 @@ export function createSessionState<T extends JsonValue>(owner: string, key: stri
       return (value === undefined ? frozen : value) as T;
     },
     set: (session, value) => storeOf(session).write(owner, key, value),
+  };
+}
+
+/** `prism.state.log(key)` for `owner`: an append-only record log kept on each session's branch. */
+export function createSessionLog<T extends JsonValue>(owner: string, key: string): SessionLog<T> {
+  assertKey(key);
+  return {
+    entries: (session) => storeOf(session).readRecords(owner, key) as readonly T[],
+    append: (session, value) => storeOf(session).append(owner, key, value),
   };
 }
 

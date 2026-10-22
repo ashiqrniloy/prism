@@ -1,0 +1,92 @@
+ACTIVATED_TOOLS_KEY	export declare const ACTIVATED_TOOLS_KEY = "contextEngineering.activated"
+ATTENTION_BUDGET_ERROR_CODE	export declare const ATTENTION_BUDGET_ERROR_CODE: "attention_budget_exceeded"
+ATTENTION_STATE_KEY	export declare const ATTENTION_STATE_KEY = "contextEngineering.attention"
+AttentionBudgetError	export declare class AttentionBudgetError extends Error
+CONTEXT_BUDGET_ERROR_CODE	export declare const CONTEXT_BUDGET_ERROR_CODE: "context_budget_exceeded"
+CONTEXT_ENGINEERING_PRIORITY	export declare const CONTEXT_ENGINEERING_PRIORITY = -1000
+ContextBudgetError	export declare class ContextBudgetError extends Error
+ContextEngineeringConfigError	export declare class ContextEngineeringConfigError extends Error
+DEFAULT_ATTENTION_COMPACT_RATIO	export declare const DEFAULT_ATTENTION_COMPACT_RATIO = 0.9
+DEFAULT_ATTENTION_KEEP_LAST	export declare const DEFAULT_ATTENTION_KEEP_LAST = 3
+DEFAULT_ATTENTION_RESERVE_TOKENS	export declare const DEFAULT_ATTENTION_RESERVE_TOKENS = 1024
+DEFAULT_ATTENTION_THINKING_KEEP_TURNS	export declare const DEFAULT_ATTENTION_THINKING_KEEP_TURNS = 1
+DEFAULT_ATTENTION_TRIGGER_RATIO	export declare const DEFAULT_ATTENTION_TRIGGER_RATIO = 0.75
+DEFAULT_ATTENTION_TRUNCATION_THRESHOLD	export declare const DEFAULT_ATTENTION_TRUNCATION_THRESHOLD = 2
+DEFAULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_FOLD_MAX_SUMMARY_BYTES = 512
+DEFAULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_FOLD_MIN_AGE_TURNS = 2
+DEFAULT_FOLD_MIN_BYTES	export declare const DEFAULT_FOLD_MIN_BYTES = 4096
+DEFAULT_FOLD_SUMMARY_INSTRUCTION	export declare const DEFAULT_FOLD_SUMMARY_INSTRUCTION = "Summarize this tool result for a later turn. Keep identifiers, file paths, and outcomes
+DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS	export declare const DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS = 256
+DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4096
+DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
+DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
+DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
+DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
+DEFAULT_TOOL_SEARCH_TOP_K	export declare const DEFAULT_TOOL_SEARCH_TOP_K = 16
+FOLD_LOG_KEY	export declare const FOLD_LOG_KEY = "contextEngineering.folds"
+HARD_MAX_CONTEXT_BUDGET_BYTES	export declare const HARD_MAX_CONTEXT_BUDGET_BYTES: number
+HARD_MAX_CONTEXT_BUDGET_OMISSIONS	export declare const HARD_MAX_CONTEXT_BUDGET_OMISSIONS = 1024
+HARD_MAX_CONTEXT_BUDGET_TOKENS	export declare const HARD_MAX_CONTEXT_BUDGET_TOKENS = 2000000
+HARD_MAX_TOOLS_INDEX	export declare const HARD_MAX_TOOLS_INDEX = 1024
+HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
+HARD_MAX_TOOLS_SEARCH_TOP_K	export declare const HARD_MAX_TOOLS_SEARCH_TOP_K = 64
+HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
+MAX_LEDGER_BODIES	export declare const MAX_LEDGER_BODIES = 64
+SEARCH_TOOLS_TOOL_NAME	export declare const SEARCH_TOOLS_TOOL_NAME = "search_tools"
+TOOL_DISCLOSURE_ERROR_CODE	export declare const TOOL_DISCLOSURE_ERROR_CODE: "tool_disclosure_exceeded"
+TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
+ToolDisclosureError	export declare class ToolDisclosureError extends Error
+applyDraftBudget	export declare function applyDraftBudget(options: ApplyDraftBudgetOptions): ApplyDraftBudgetResult
+assertToolDisclosureConforms	export declare function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void
+attentionTriggerState	export declare function attentionTriggerState(compiler: Pick<AttentionCompiler, "inputCap" | "runInputBudget">, turn:
+capToolResultSummary	export declare function capToolResultSummary(summary: string, maxBytes: number): string
+compileAttention	export declare function compileAttention(options: AttentionCompileOptions): Promise<AttentionCompilation>
+contextEngineering	export declare function contextEngineering(config?: ContextEngineeringConfig): PackageInstance
+contextEngineeringConfigSchema	export declare const contextEngineeringConfigSchema: JsonSchema
+createActiveToolSet	export declare function createActiveToolSet(): ActiveToolSet
+createAttentionCompiler	export declare function createAttentionCompiler(options?: AttentionCompilerOptions, context?: AttentionCompilerContext): AttentionCompiler
+createAttentionFoldLedger	export declare function createAttentionFoldLedger(): AttentionFoldLedger
+createAttentionStickyFrontier	export declare function createAttentionStickyFrontier(): AttentionStickyFrontier
+createAttentionTruncationTrigger	export declare function createAttentionTruncationTrigger(options?: AttentionTruncationTriggerOptions): AttentionTruncationTrigger
+createContextEngineeringHandler	export declare function createContextEngineeringHandler(deps: ContextEngineeringHandlerDeps): ContextEngineeringHandler
+createModelSummarize	export declare function createModelSummarize(options: ModelSummarizeOptions): (input: ToolResultFoldInput) => Promise<string>
+createSearchToolsTool	export declare function createSearchToolsTool(state: ToolSearchState, queryByteCap?: number): ToolDefinition
+createSearchToolsWiring	export declare function createSearchToolsWiring(options:
+createToolSearchIndex	export declare function createToolSearchIndex(tools: readonly ToolDefinition[], skip?: (tool: ToolDefinition) => boolean): ToolSearchIndex
+createToolSearchState	export declare function createToolSearchState(options:
+currentTurnOf	export declare function currentTurnOf(messages: readonly Message[]): number
+default	export default
+evaluateAttentionTrigger	export declare function evaluateAttentionTrigger(axes: readonly AttentionTrigger[], state: AttentionTriggerState): AttentionTriggerDecision
+foldToolResultHistory	export declare function foldToolResultHistory(history: readonly Message[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly Message[]>
+foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
+formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
+inferToolResultTurns	export declare function inferToolResultTurns(history: readonly Message[]): readonly number[]
+initialAttentionState	export declare function initialAttentionState(): JsonObject
+isAttentionBudgetError	export declare function isAttentionBudgetError(error: unknown): error is AttentionBudgetError
+isContextBudgetError	export declare function isContextBudgetError(error: unknown): error is ContextBudgetError
+isEmptyContextEngineeringConfig	export declare function isEmptyContextEngineeringConfig(config: ResolvedContextEngineeringConfig): boolean
+isToolDisclosureError	export declare function isToolDisclosureError(error: unknown): error is ToolDisclosureError
+measureBudgetCost	export declare function measureBudgetCost(options:
+measureDraftCost	export declare function measureDraftCost(options:
+packageName	export declare const packageName = "@arnilo/prism-context-engineering"
+parseAttentionStickyFrontier	export declare function parseAttentionStickyFrontier(value: unknown): PersistedAttentionStickyFrontier | undefined
+readActivatedNames	export declare function readActivatedNames(value: JsonValue): readonly string[]
+readAttentionState	export declare function readAttentionState(frontierValue: JsonValue, logEntries: readonly JsonValue[]): AttentionSessionState
+readFrontier	export declare function readFrontier(value: JsonValue): AttentionStickyFrontier
+readLedger	export declare function readLedger(entries: readonly JsonValue[]): AttentionFoldLedger
+resolveAttentionReserveTokens	export declare function resolveAttentionReserveTokens(value: unknown): number
+resolveContextBudget	export declare function resolveContextBudget(budget: ContextBudget): Required<Pick<ContextBudget, "reportOmissions">> & ContextBudget
+resolveContextEngineeringConfig	export declare function resolveContextEngineeringConfig(config?: ContextEngineeringConfig): ResolvedContextEngineeringConfig
+resolveInputCap	export declare function resolveInputCap(options?: AttentionInputCapOptions, model?: AttentionCompilerContext["model"]): number
+resolveToolResultFold	export declare function resolveToolResultFold(run?: ToolResultFoldOptions, agent?: ToolResultFoldOptions): ResolvedToolResultFoldOptions | undefined
+resolveToolsDisclosure	export declare function resolveToolsDisclosure(run?: ToolsDisclosure, agent?: ToolsDisclosure): ToolsDisclosure
+restoreAttentionFoldLedger	export declare function restoreAttentionFoldLedger(value: unknown): AttentionFoldLedger | undefined
+restoreAttentionStickyFrontier	export declare function restoreAttentionStickyFrontier(persisted: PersistedAttentionStickyFrontier): AttentionStickyFrontier
+scoreTools	export declare function scoreTools(index: ToolSearchIndex, query: string, k: number, queryByteCap?: number): readonly ToolSearchMatch[]
+selectDisclosedTools	export declare function selectDisclosedTools(options:
+serializeAttentionFoldLedger	export declare function serializeAttentionFoldLedger(ledger: AttentionFoldLedger): PersistedAttentionFoldLedger
+serializeAttentionStickyFrontier	export declare function serializeAttentionStickyFrontier(frontier: AttentionStickyFrontier): PersistedAttentionStickyFrontier
+toolResultFoldText	export declare function toolResultFoldText(result: unknown, error: unknown, extra?: readonly
+truncateSummarize	export declare function truncateSummarize(input: ToolResultFoldInput): string
+writeActivatedNames	export declare function writeActivatedNames(names: readonly string[]): JsonObject
+writeFrontier	export declare function writeFrontier(frontier: AttentionStickyFrontier): JsonObject

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { ProviderRequest, ProviderRequestOptions } from "../contracts.js";
-import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel, ProviderRequirementError } from "../index.js";
+import { applyDefaultProviderRequestOptions, applyThinkingLevelForModel, ProviderRequirementError } from "../provider-kit/index.js";
 
 const req = (options?: ProviderRequestOptions): ProviderRequest => ({
   model: { provider: "mock", model: "demo" },
@@ -43,7 +43,16 @@ describe("applyDefaultProviderRequestOptions", () => {
     assert.equal(next.options?.cacheKey, "om:abc-1");
   });
 
-  const defaults = [{ location: "system_prompt" }, { location: "last_stable_message" }];
+  const defaults = [{ location: "system_prompt" }, { location: "last_message" }];
+
+  it("default_breakpoints_mark_newest_message", () => {
+    const next = applyDefaultProviderRequestOptions({
+      ...req(),
+      model: { provider: "mock", model: "demo", cache: { kind: "cache_control" } },
+    });
+    assert.deepEqual(next.options?.cache?.breakpoints, [{ location: "system_prompt" }, { location: "last_message" }]);
+    assert.equal(next.options?.cacheRetention, "short");
+  });
 
   it("cache_control model + empty options sets default breakpoints and short retention", () => {
     const next = applyDefaultProviderRequestOptions({

@@ -15,7 +15,7 @@ import {
   secretRefProperty,
 } from "../provider-kit/index.js";
 import { CredentialUnavailableError } from "../index.js";
-import { KERNEL_VERSION } from "../version.js";
+import { KERNEL_API_LEVEL, KERNEL_VERSION } from "../version.js";
 
 const secret = (value: string) => ({ type: "api_key" as const, value });
 
@@ -81,7 +81,7 @@ describe("provider-package helpers", () => {
     assert.equal(definition.name, "@arnilo/prism-provider-acme");
     assert.equal(definition.description, "Acme provider package for Prism.");
     assert.equal(definition.version, KERNEL_VERSION);
-    assert.deepEqual(definition.requires, { prism: `^${KERNEL_VERSION}` });
+    assert.deepEqual(definition.requires, { api: KERNEL_API_LEVEL });
     assert.deepEqual(definition.capabilities, ["credentials"], "a provider package resolves credentials by default");
     assert.equal(definition.config?.properties?.apiKey?.default, "env:ACME_KEY");
     assert.equal(typeof definition, "function");

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createWorkflowTransitionChannel } from "@arnilo/prism-workflows";
 /**
  * Phase 35 network-free multi-agent runtime benchmark.
  * Concurrent sessions, supervisor fan-out/saturation, workflow agent nodes,
@@ -10,7 +11,6 @@ import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import {
-  applyContextBudget,
   createAgent,
   createMemorySessionStore,
   estimateTextTokens,
@@ -18,11 +18,14 @@ import {
   providerTextDelta,
   providerToolCall,
   toolCallContent,
-} from "../../dist/index.js";
-import { createSupervisor, SupervisorLimitError } from "../../packages/prism-core/dist/runtime/supervisor/index.js";
-import { agentNode, defineWorkflow, fanOutNode, runWorkflow } from "../../packages/prism-core/dist/runtime/workflows/index.js";
+} from "../../src/index.ts";
+import delegatePackage from "../../packages/integrations/delegate/src/index.ts";
+import { agentNode, defineWorkflow, fanOut, functionNode, runWorkflow } from "@arnilo/prism-workflows";
+// Plan 158 Task 8: budget eviction is the package's `budget` stage, so the 10k-row row measures
+// the package's own pass (the same one a session runs through `context.build`).
+import { applyDraftBudget } from "../../packages/context/engineering/src/exports.js";
 import { loadBudgets } from "../budget-gates.mjs";
-import { providerPackage } from "../../dist/provider-kit/index.js";
+import { providerPackage } from "../../src/provider-kit/index.ts";
 
 /** Bounded-concurrency loop (the kernel default loop dispatches tools sequentially). */
 function concurrentLoop(concurrency) {
@@ -56,7 +59,7 @@ export const ABORT_SETTLE_MS = 1000;
 export const LARGE_HISTORY_COUNT = 10_000;
 export const HIGH_FREQUENCY_DELTA_COUNT = 5_000;
 
-const OWNERSHIP = { tenantId: "bench", userId: "bench" };
+const _OWNERSHIP = { tenantId: "bench", userId: "bench" };
 let seq = 0;
 const nextId = (prefix) => `${prefix}-${++seq}`;
 
@@ -146,7 +149,7 @@ function toolRoundProvider(toolCount) {
   };
 }
 
-async function drainAvailable(iterator, counters, idleMs = 15) {
+async function _drainAvailable(iterator, counters, idleMs = 15) {
   for (;;) {
     const next = await Promise.race([iterator.next(), delay(idleMs).then(() => ({ timeout: true }))]);
     if (next.timeout || next.done) return;
@@ -199,86 +202,88 @@ export async function runIndependentSessions(count, options = {}) {
   };
 }
 
-export async function runSupervisorFanOut(options = {}) {
-  const delayMs = options.delayMs ?? DELAY_MS;
-  const cap = options.maxActiveChildren ?? SUPERVISOR_CAP;
+/**
+ * Drives `attempted` parallel `delegate` calls from one parent turn through `@arnilo/prism-delegate`
+ * (`maxConcurrent: cap`). Children reach the tracked provider through the parent's model resolution.
+ */
+async function runDelegations({ delayMs, cap, attempted, prefix }) {
   const tracker = createTracker();
-  const events = { delivered: 0, dropped: 0 };
   const heapBefore = process.memoryUsage().heapUsed;
-  let peakChildren = 0;
-  const supervisor = createSupervisor({
-    id: nextId("sup"),
-    ownership: OWNERSHIP,
-    limits: { maxActiveChildren: cap, timeoutMs: 5_000 },
-    children: {
-      child: {
-        createAgent: async () => {
-          peakChildren = Math.max(peakChildren, supervisor.activeChildren);
-          return await createAgent({
-            model: { provider: "mock", model: "demo" },
-            packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
-          });
-        },
-      },
+  let parentTurns = 0;
+  const provider = {
+    id: "mock",
+    async *generate(request) {
+      if ((request.tools ?? []).some((tool) => tool.name === "delegate")) {
+        parentTurns += 1;
+        if (parentTurns === 1) {
+          for (let index = 0; index < attempted; index += 1) {
+            yield providerToolCall(toolCallContent(`call_${index}`, "delegate", { child: "child", input: "go" }));
+          }
+        } else {
+          yield providerTextDelta("done");
+        }
+        yield providerDone();
+        return;
+      }
+      yield* trackingProvider(tracker, delayMs).generate(request);
     },
+  };
+  const agent = await createAgent({
+    id: nextId(prefix),
+    model: { provider: "mock", model: "demo" },
+    slots: { store: createMemorySessionStore(), loop: concurrentLoop(attempted) },
+    packages: [providerPackage("test-provider", [provider]), delegatePackage({ children: { child: { inherit: [] } }, maxConcurrent: cap })],
   });
-  const iterator = supervisor.subscribe()[Symbol.asyncIterator]();
+  const session = await agent.session();
+  const completed = [];
+  const events = { delivered: 0, dropped: 0 };
+  const iterator = session.subscribe()[Symbol.asyncIterator]();
   const start = performance.now();
-  const results = await Promise.all(
-    Array.from({ length: cap }, (_, i) => supervisor.delegate({ childId: "child", input: "go", threadId: `t${i}` })),
-  );
+  const pump = (async () => {
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) return;
+      events.delivered += 1;
+      if (next.value.type === "tool.completed") completed.push(next.value.result);
+    }
+  })();
+  await session.run("go");
+  await pump;
   const ms = performance.now() - start;
-  await drainAvailable(iterator, events);
+  await session.close();
+  await agent.dispose();
+  const fulfilled = completed.filter((result) => result.error === undefined).length;
+  const limitRejected = completed.filter((result) => /At most \d+ delegations/.test(result.error?.message ?? "")).length;
+  return { ms, fulfilled, rejected: completed.length - fulfilled, limitRejected, tracker, events, heapBefore };
+}
+
+export async function runSupervisorFanOut(options = {}) {
+  const cap = options.maxActiveChildren ?? SUPERVISOR_CAP;
+  const run = await runDelegations({ delayMs: options.delayMs ?? DELAY_MS, cap, attempted: cap, prefix: "sup" });
   return {
-    ms,
-    completions: results.length,
-    peakActiveProviderCalls: tracker.peak,
-    peakActiveChildren: peakChildren,
-    activeAfter: tracker.active + supervisor.activeChildren,
-    heapDeltaBytes: process.memoryUsage().heapUsed - heapBefore,
-    queuedEvents: events.delivered,
+    ms: run.ms,
+    completions: run.fulfilled,
+    peakActiveProviderCalls: run.tracker.peak,
+    peakActiveChildren: run.tracker.peak,
+    activeAfter: run.tracker.active,
+    heapDeltaBytes: process.memoryUsage().heapUsed - run.heapBefore,
+    queuedEvents: run.events.delivered,
     droppedEvents: 0,
   };
 }
 
 export async function runSupervisorSaturation(options = {}) {
-  const delayMs = options.delayMs ?? DELAY_MS;
   const cap = options.maxActiveChildren ?? SUPERVISOR_CAP;
   const attempted = options.attempted ?? 32;
-  const tracker = createTracker();
-  let peakChildren = 0;
-  const supervisor = createSupervisor({
-    id: nextId("sat"),
-    ownership: OWNERSHIP,
-    limits: { maxActiveChildren: cap, timeoutMs: 5_000 },
-    children: {
-      child: {
-        createAgent: async () => {
-          peakChildren = Math.max(peakChildren, supervisor.activeChildren);
-          return await createAgent({
-            model: { provider: "mock", model: "demo" },
-            packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
-          });
-        },
-      },
-    },
-  });
-  const start = performance.now();
-  const settled = await Promise.allSettled(
-    Array.from({ length: attempted }, (_, i) => supervisor.delegate({ childId: "child", input: "go", threadId: `t${i}` })),
-  );
-  const ms = performance.now() - start;
-  const fulfilled = settled.filter((row) => row.status === "fulfilled").length;
-  const rejected = settled.filter((row) => row.status === "rejected");
-  const limitRejected = rejected.filter((row) => row.reason instanceof SupervisorLimitError).length;
+  const run = await runDelegations({ delayMs: options.delayMs ?? DELAY_MS, cap, attempted, prefix: "sat" });
   return {
-    ms,
-    completions: fulfilled,
-    rejected: rejected.length,
-    limitRejected,
-    peakActiveChildren: Math.max(peakChildren, tracker.peak),
-    peakActiveProviderCalls: tracker.peak,
-    activeAfter: tracker.active + supervisor.activeChildren,
+    ms: run.ms,
+    completions: run.fulfilled,
+    rejected: run.rejected,
+    limitRejected: run.limitRejected,
+    peakActiveChildren: run.tracker.peak,
+    peakActiveProviderCalls: run.tracker.peak,
+    activeAfter: run.tracker.active,
     heapDeltaBytes: 0,
     queuedEvents: 0,
     droppedEvents: 0,
@@ -293,18 +298,21 @@ export async function runWorkflowFanOut(options = {}) {
   const itemCount = options.itemCount ?? 8;
   let active = 0;
   let peak = 0;
-  const expand = fanOutNode({
+  const expand = fanOut({
     items: () => Array.from({ length: itemCount }, (_, index) => index),
-    map: async (item) => {
-      active += 1;
-      peak = Math.max(peak, active);
-      try {
-        if (delayMs > 0) await delay(delayMs);
-        return item;
-      } finally {
-        active -= 1;
-      }
-    },
+    route: (item) =>
+      functionNode({
+        execute: async () => {
+          active += 1;
+          peak = Math.max(peak, active);
+          try {
+            if (delayMs > 0) await delay(delayMs);
+            return item;
+          } finally {
+            active -= 1;
+          }
+        },
+      }),
   });
   const workflow = defineWorkflow({
     revision: "1",
@@ -341,10 +349,16 @@ export async function runWorkflowAgentNodes(options = {}) {
   const collected = [];
   const heapBefore = process.memoryUsage().heapUsed;
   const nodes = Object.fromEntries(
-    Array.from({ length: nodeCount }, (_, i) => {
-      const id = `n${i}`;
-      return [id, agentNode({ agent: id, input: () => "go" })];
-    }),
+    await Promise.all(
+      Array.from({ length: nodeCount }, async (_, i) => {
+        const id = `n${i}`;
+        const agent = await createAgent({
+          model: { provider: "mock", model: "demo" },
+          packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
+        });
+        return [id, agentNode({ agent, session: () => agent.session({ id: nextId(id), create: true }), input: () => "go" })];
+      }),
+    ),
   );
   const workflow = defineWorkflow({
     revision: "1",
@@ -354,14 +368,7 @@ export async function runWorkflowAgentNodes(options = {}) {
   });
   const start = performance.now();
   const result = await runWorkflow(workflow, "go", {
-    agentFactory: async (name) =>
-      await (
-        await createAgent({
-          model: { provider: "mock", model: "demo" },
-          packages: [providerPackage("test-provider", [trackingProvider(tracker, delayMs)])],
-        })
-      ).session({ id: nextId(name), create: true }),
-    onEvent: (event) => collected.push(event.type),
+    transitions: workflowEvents((event) => collected.push(event.type)),
   });
   const ms = performance.now() - start;
   return {
@@ -389,20 +396,23 @@ export async function runToolConcurrency(options = {}) {
     model: { provider: "mock", model: "demo" },
     slots: { loop: concurrentLoop(toolConcurrency) },
     packages: [providerPackage("test-provider", [toolRoundProvider(toolCount)])],
-    tools: [
-      {
-        name: "work",
-        execute: async (_args, context) => {
-          tracker.enter();
-          try {
-            if (delayMs > 0) await delay(delayMs, context.signal);
-            return { toolCallId: context.toolCallId, name: "work", value: 1 };
-          } finally {
-            tracker.leave();
-          }
+    // `AgentConfig.tools` is `{ add }` since the 0.12 shape: a bare array silently registers nothing.
+    tools: {
+      add: [
+        {
+          name: "work",
+          execute: async (_args, context) => {
+            tracker.enter();
+            try {
+              if (delayMs > 0) await delay(delayMs, context.signal);
+              return { toolCallId: context.toolCallId, name: "work", value: 1 };
+            } finally {
+              tracker.leave();
+            }
+          },
         },
-      },
-    ],
+      ],
+    },
   });
   const session = await agent.session({ id: nextId("tool"), create: true });
   const start = performance.now();
@@ -462,36 +472,35 @@ export async function runAbortStorm(options = {}) {
 export function runLargeHistoryBudget(options = {}) {
   const count = options.historyCount ?? LARGE_HISTORY_COUNT;
   const heapBefore = process.memoryUsage().heapUsed;
-  const groups = {
-    instructions: [{ id: "system", role: "system", content: [{ type: "text", text: "sys" }] }],
-    summaries: [],
-    history: Array.from({ length: count }, (_, index) => ({
+  const messages = [
+    { role: "system", content: [{ type: "text", text: "sys" }] },
+    ...Array.from({ length: count }, (_, index) => ({
       id: `history-${index}`,
       role: "user",
       content: [{ type: "text", text: "history" }],
     })),
-    input: [{ role: "user", content: [{ type: "text", text: "current" }] }],
-    attachments: [],
-    toolResults: [],
-  };
+    { role: "user", content: [{ type: "text", text: "current" }] },
+  ];
   const start = performance.now();
-  const result = applyContextBudget({
-    groups,
+  const result = applyDraftBudget({
+    messages,
     budget: {
       maxInputTokens: estimateTextTokens("sys") + estimateTextTokens("current"),
       reportOmissions: true,
     },
   });
+  // Everything but the mandatory prefix (leading system run) and the current input was evicted.
+  const historyRemaining = result.messages.filter((message) => message.role !== "system").length - 1;
   return {
     ms: performance.now() - start,
-    completions: result.groups.history.length === 0 ? 1 : 0,
+    completions: historyRemaining === 0 ? 1 : 0,
     peakActiveProviderCalls: 0,
     activeAfter: 0,
     heapDeltaBytes: process.memoryUsage().heapUsed - heapBefore,
     queuedEvents: 0,
     droppedEvents: 0,
     historyCount: count,
-    historyRemaining: result.groups.history.length,
+    historyRemaining,
   };
 }
 
@@ -503,16 +512,20 @@ export async function runProviderDeltas(options = {}) {
   const heapBefore = process.memoryUsage().heapUsed;
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate(request) {
-        for (let index = 0; index < count; index += 1) {
-          if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
-          yield delta;
-        }
-        yield done;
-      },
-    }])],
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate(request) {
+            for (let index = 0; index < count; index += 1) {
+              if (request.signal?.aborted) throw request.signal.reason ?? new Error("aborted");
+              yield delta;
+            }
+            yield done;
+          },
+        },
+      ]),
+    ],
   });
   const start = performance.now();
   const result = await (await agent.session({ id: nextId("delta"), create: true })).run("go");
@@ -641,4 +654,12 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
+}
+
+function workflowEvents(consume) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
 }

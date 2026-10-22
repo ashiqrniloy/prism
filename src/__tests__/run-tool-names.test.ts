@@ -1,19 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { loadAgentRunState } from "../agent-run-state.js";
 import {
   type AgentEvent,
   type ModelProvider,
   askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
+  loadSuspendedRunEntry,
   createSkillRegistry,
   createToolRegistry,
-  type PermissionPolicy,
   providerDone,
-  resumeAgentRun,
-  type ToolCallContent,
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
@@ -239,8 +235,7 @@ describe("RunOptions.toolNames", () => {
     await failedRun(session.run("Hi", { tools: { only: ["echo"] } }), /requires inactive tool: secret/);
   });
 
-  it("durable resume keeps the checkpointed grant", async () => {
-    const checkpoints = createMemoryCheckpointStore();
+  it("durable resume keeps the stored grant", async () => {
     const store = createMemorySessionStore();
     const registry = createToolRegistry([tool("echo"), tool("secret")]);
     const agent = await createAgent({
@@ -251,13 +246,10 @@ describe("RunOptions.toolNames", () => {
       tools: { add: registry.list() },
       slots: { store },
     });
-    const first = await (await agent.session({ id: "s1", create: true })).run("go", {
-      tools: { only: ["echo"] },
-      runState: { checkpoints, definitionRevision: "1" },
-    });
+    const first = await (await agent.session({ id: "s1", create: true })).run("go", { tools: { only: ["echo"] } });
     assert.equal(first.status, "suspended");
-    const loaded = await loadAgentRunState(checkpoints, { runId: first.runId, sessionId: first.sessionId });
-    assert.deepEqual(loaded.state.toolNames, ["echo"]);
+    const stored = await loadSuspendedRunEntry(store, "s1");
+    assert.deepEqual(stored?.state.toolNames, ["echo"]);
     const seen: string[][] = [];
     const resumeProvider: ModelProvider = {
       id: "mock",
@@ -266,16 +258,13 @@ describe("RunOptions.toolNames", () => {
         yield providerDone();
       },
     };
-    const result = await resumeAgentRun(
-      await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] }),
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: first.runState!.version!,
-        decisions: first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
-      },
-      { checkpoints, definitionRevision: "1" },
-    );
-    assert.equal(result.status, "completed");
+    const fresh = await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] });
+    const resumed = await fresh.session({ id: "s1" });
+    for await (const _event of resumed.resume(
+      first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
+    )) {
+      // drain: the resumed leg re-derives its tool menu from the stored grant
+    }
     assert.deepEqual(seen, [["echo"]]);
   });
 

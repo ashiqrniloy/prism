@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sparse-vendor NousResearch/hermes-agent productivity skills into @arnilo/prism-work.
+ * Sparse-vendor NousResearch/hermes-agent productivity skills into @arnilo/prism-tools-work.
  *
  * Copies only skills/productivity/{docx,xlsx,powerpoint,pdf} SKILL.md + LICENSE + scripts/.
  * Provenance: Jaccard token overlap on SKILL.md body vs anthropics/skills counterparts

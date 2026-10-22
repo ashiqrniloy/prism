@@ -33,6 +33,7 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
     packages: [definePackage({
         name: "probe",
         version: "1.0.0",
+        requires: { api: 1 },
         setup(api) {
           api.tools.register({
             name: "probe",
@@ -61,7 +62,7 @@ async function probe(agentPrincipal?: Principal, runPrincipal?: Principal) {
 test("no_kernel_path_synthesizes_an_identity", async () => {
   const { seen, serialized } = await probe();
   assert.deepEqual(seen, [undefined, undefined, undefined]);
-  assert.equal(/local-operator|prism\.identity|\"identity\"|\"principal\"/.test(serialized), false);
+  assert.equal(/local-operator|prism\.identity|"identity"|"principal"/.test(serialized), false);
 });
 
 test("principal_passes_through_unchanged_and_run_overrides_agent", async () => {

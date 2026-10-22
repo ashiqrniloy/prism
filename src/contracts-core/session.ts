@@ -14,7 +14,8 @@ export type SessionEntryKind =
   | "custom"
   | "compaction"
   | "suspended_run"
-  | "package_state";
+  | "package_state"
+  | "external_state";
 
 export const SESSION_ENTRY_KINDS: readonly SessionEntryKind[] = [
   "message",
@@ -27,6 +28,7 @@ export const SESSION_ENTRY_KINDS: readonly SessionEntryKind[] = [
   "compaction",
   "suspended_run",
   "package_state",
+  "external_state",
 ];
 
 const SESSION_ENTRY_KIND_SET: ReadonlySet<SessionEntryKind> = new Set(SESSION_ENTRY_KINDS);
@@ -85,8 +87,45 @@ export interface SessionStore {
   deleteSession?(sessionId: string, scope?: OwnershipScope): Promise<boolean>;
 }
 
+/** Who drives a session: Prism itself, or an external agent a driver runs. Set by the host, never derived. */
+export interface SessionActor {
+  readonly kind: "prism" | "external";
+  readonly agent: string;
+  /** Opaque, set by the driver. */
+  readonly vendor?: string;
+}
+
+/** Link ids are opaque strings; one id may be at most this many characters. */
+export const MAX_SESSION_LINK_ID_LENGTH = 256;
+
+/** The parent link a session is opened with (`SessionOptions.parent`). */
+export interface SessionParentLink {
+  readonly sessionId?: string;
+  readonly agentId?: string;
+  readonly workflowRunId?: string;
+  readonly delegationId?: string;
+}
+
+/** Links persisted for a session in its first `metadata` entry, under `data[SESSION_LINKS_DATA_KEY]`. */
+export interface SessionLinks extends SessionParentLink {
+  readonly actor?: SessionActor;
+}
+
+/** `data` key of the `metadata` entry holding a session's `SessionLinks`. The entry is the source of truth; SQL stores index it. */
+export const SESSION_LINKS_DATA_KEY = "links" as const;
+
+/** Link filters shared by `SessionListQuery` and `SessionSearchQuery`. Each is an exact match; none widens the ownership scope. */
+export interface SessionLinkFilter {
+  readonly agentId?: string;
+  readonly parentSessionId?: string;
+  readonly workflowRunId?: string;
+  readonly delegationId?: string;
+  readonly actorKind?: SessionActor["kind"];
+  readonly actorAgent?: string;
+}
+
 /** Bounded page request for `SessionStore.listSessions`. The scope is the agent's `ownership`. */
-export interface SessionListQuery extends PersistenceQuery, OwnershipScope {
+export interface SessionListQuery extends PersistenceQuery, OwnershipScope, SessionLinkFilter {
   readonly signal?: AbortSignal;
 }
 
@@ -103,6 +142,12 @@ export interface SessionSummary {
   readonly title?: string;
   /** Safe display fields only (e.g. `workspaceRoot`). */
   readonly metadata?: Readonly<Record<string, unknown>>;
+  /** `SessionOptions.parent.agentId`, when the session was opened with a parent link. */
+  readonly agentId?: string;
+  readonly parentSessionId?: string;
+  readonly workflowRunId?: string;
+  readonly delegationId?: string;
+  readonly actor?: SessionActor;
 }
 
 export const DEFAULT_SESSION_LIST_LIMIT = 20;
@@ -155,7 +200,7 @@ export const HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES = 5_000;
 export type SessionSearchKind = SessionEntryKind | "any";
 
 /** Bounded session search filters. Workspace matches host-written `metadata.workspaceRoot`. */
-export interface SessionSearchQuery extends PersistenceQuery, OwnershipScope {
+export interface SessionSearchQuery extends PersistenceQuery, OwnershipScope, SessionLinkFilter {
   readonly workspaceRoot?: string;
   /** Optional full-text / message+summary query (adapter-defined matching). */
   readonly query?: string;
@@ -237,7 +282,41 @@ export function resolveSessionSearchQuery(query: SessionSearchQuery): ResolvedSe
   assertSearchStringBytes(query.userId, "userId", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
   assertSearchStringBytes(query.fromUpdatedAt, "fromUpdatedAt", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
   assertSearchStringBytes(query.toUpdatedAt, "toUpdatedAt", HARD_MAX_SESSION_SEARCH_QUERY_BYTES);
+  assertSessionLinkFilter(query);
   return { ...query, limit, order, kind: resolveSessionSearchKinds(query.kind) };
+}
+
+/** Fail closed on a link filter that is not a bounded string (or a known actor kind). */
+export function assertSessionLinkFilter(filter: SessionLinkFilter): void {
+  for (const key of ["agentId", "parentSessionId", "workflowRunId", "delegationId", "actorAgent"] as const) {
+    const value = filter[key];
+    if (value !== undefined && (typeof value !== "string" || value.length > MAX_SESSION_LINK_ID_LENGTH)) {
+      throw new TypeError(`${key} must be a string of at most ${MAX_SESSION_LINK_ID_LENGTH} characters`);
+    }
+  }
+  if (filter.actorKind !== undefined && filter.actorKind !== "prism" && filter.actorKind !== "external") {
+    throw new TypeError('actorKind must be "prism" or "external"');
+  }
+}
+
+/** Validate the links a session is opened with. Ids are opaque; only length and type are checked. */
+export function assertSessionLinks(links: SessionLinks): void {
+  for (const key of ["sessionId", "agentId", "workflowRunId", "delegationId"] as const) {
+    const value = links[key];
+    if (value !== undefined && (typeof value !== "string" || value.length === 0 || value.length > MAX_SESSION_LINK_ID_LENGTH)) {
+      throw new TypeError(`SessionOptions.parent.${key} must be a non-empty string of at most ${MAX_SESSION_LINK_ID_LENGTH} characters`);
+    }
+  }
+  const actor = links.actor;
+  if (actor !== undefined) {
+    if (actor.kind !== "prism" && actor.kind !== "external") throw new TypeError('SessionOptions.actor.kind must be "prism" or "external"');
+    for (const key of ["agent", "vendor"] as const) {
+      const value = actor[key];
+      if (value !== undefined && (typeof value !== "string" || value.length === 0 || value.length > MAX_SESSION_LINK_ID_LENGTH)) {
+        throw new TypeError(`SessionOptions.actor.${key} must be a non-empty string of at most ${MAX_SESSION_LINK_ID_LENGTH} characters`);
+      }
+    }
+  }
 }
 
 /** Normalize `kind` to concrete entry kinds (`undefined` = any). Unknown or mixed `"any"` fails closed. */
@@ -299,6 +378,20 @@ export class SessionNotFoundError extends Error {
 
 export function isSessionNotFound(error: unknown): error is SessionNotFoundError {
   return error instanceof Error && (error as { code?: unknown }).code === SESSION_NOT_FOUND_CODE;
+}
+
+export const OWNERSHIP_WIDEN_CODE = "ERR_PRISM_OWNERSHIP_WIDEN" as const;
+
+/**
+ * Thrown when a session or run ownership scope sets a field the enclosing scope already fixed to a
+ * different value (plan 177 Task 4): scope narrows, never widens.
+ */
+export class OwnershipScopeError extends Error {
+  readonly code = OWNERSHIP_WIDEN_CODE;
+  constructor(message = "ownership scope widens the declared scope") {
+    super(message);
+    this.name = "OwnershipScopeError";
+  }
 }
 
 /** Query for a single branch's ancestor chain (DB-friendly: one recursive/ancestor query

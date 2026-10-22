@@ -2,38 +2,39 @@ import type {
   AgentConfig,
   AgentEvent,
   CredentialContext,
-  ModelProvider,
   JsonObject,
   JsonValue,
   ModelConfig,
+  ModelProvider,
   ModelRef,
   ModelSpec,
   ProviderEvent,
   ProviderRequest,
-  ProviderResolver,
   Secret,
   Skill,
   ToolDefinition,
 } from "../contracts.js";
+import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embeddings.js";
+import type { HookBus, HookRegistrar } from "../hooks/index.js";
+import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, HostUiTerminalRequest, Logger } from "../host/types.js";
 import { BUILTIN_PROVIDER_ID, createBuiltinProvider } from "../models/builtin.js";
 import { normalizeStopReason } from "../models/events.js";
 import { parseModelRef } from "../models/ref.js";
 import { mergeRetry, retryLoop } from "../models/retry.js";
-import type { HookBus, HookRegistrar } from "../hooks/index.js";
-import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, Logger } from "../host/types.js";
 import { errorToErrorInfo, redactSecrets, type SecretRedactor } from "../redaction.js";
-import { createAgentState, createSessionState } from "../session/state.js";
+import { createAgentState, createSessionLog, createSessionState } from "../session/state.js";
 import type { SessionContext } from "../session-context.js";
 import { createSkillRegistry } from "../skills.js";
 import { SLOT_NAMES, type SlotAssignments, type SlotName, type SlotRegistry } from "../slots/index.js";
 import { createToolRegistry } from "../tools.js";
-import type { ModelClient, PackageAPI, PackageCommand, PackageCommandInfo, SlotRegistrar } from "./api.js";
+import type { ModelClient, PackageAPI, PackageCommand, PackageCommandInfo, PackageInstance, SlotRegistrar } from "./api.js";
 import { type Capability, requireCapability } from "./capabilities.js";
 import { type PackageConfigSource, resolvePackageConfig } from "./config.js";
 import { type NormalizedPackage, normalizePackageInput } from "./define.js";
 import { PackageLoadError } from "./errors.js";
 import { assertJsonSchemaSupported, SECRET_REF, toJsonValue, validateJsonSchema } from "./schema.js";
 import { parseRange, parseVersion, satisfies } from "./semver.js";
+import { SUPPORTED_API_LEVELS } from "../version.js";
 
 export interface LoadPackagesOptions {
   readonly inputs: readonly import("./api.js").PackageInput[];
@@ -60,10 +61,20 @@ export interface LoadPackagesOptions {
   readonly readSkillDir?: (path: string) => Promise<readonly Skill[]>;
   /** Agent-scoped fan-out (`agent.subscribe()`): receives each `package.status` after it is recorded and redacted. */
   readonly emitAgentEvent?: (event: AgentEvent) => void;
+  /**
+   * The agent's effective tool and skill views behind `PackageAPI.tools.list` and `skills.list`/`get`. The agent does
+   * not exist while packages load, so `create-agent.ts` passes closures that read it later. Never called during `setup`.
+   */
+  readonly registry?: {
+    readonly tools: () => readonly ToolDefinition[];
+    readonly skills: () => readonly Skill[];
+  };
 }
 
-/** Names the kernel generates tools under, so a package cannot shadow them. */
-export const RESERVED_TOOL_NAMES: ReadonlySet<string> = new Set(["load_skill", "search_tools"]);
+/** Names the kernel generates tools under, so a package cannot shadow them. `search_tools` left
+ *  this set in plan 158 Task 7 — `@arnilo/prism-context-engineering` owns the activation tool, and
+ *  Task 8 deleted the kernel's own run-assembly path — so `load_skill` is the only name left. */
+export const RESERVED_TOOL_NAMES: ReadonlySet<string> = new Set(["load_skill"]);
 
 export interface PackageToolEntry {
   readonly owner: string;
@@ -121,7 +132,7 @@ export interface LoadedPackages {
   /** Commands packages registered, after `disable`. */
   commands(): readonly PackageCommandEntry[];
   /** Host tool and skill names `disable` removed. They stay in the host's registry and are filtered from every view. */
-  readonly disabled: { readonly tools: ReadonlySet<string>; readonly skills: ReadonlySet<string> };
+  readonly disabled: { readonly tools: ReadonlySet<string>; readonly skills: ReadonlySet<string>; readonly packages: ReadonlySet<string> };
   /** The host port as `owner` sees it: `host-ui` is checked against its capabilities and requests are stamped. */
   hostFor(owner: string, sessionId?: string): HostPort;
   /** Applies the values `credentials.resolve` returned on top of `redactor`. Identity when none was resolved. */
@@ -164,8 +175,8 @@ interface State {
 
 const MAX_COMMAND_NAME = 128;
 
-/** A package declares each state key once per kind: a second `state.session("om", …)` is a bug, not a lookup. */
-function declareStateKey(state: State, kind: "session" | "agent", key: string): void {
+/** A package declares each state key once per scope: a second declaration is a bug, not a lookup. */
+function declareStateKey(state: State, kind: "session" | "log" | "agent", key: string): void {
   const id = `${kind}:${key}`;
   if (state.stateKeys.has(id))
     throw new TypeError(`state.${kind}("${String(key).slice(0, 64)}") was declared twice by ${state.entry.name}`);
@@ -257,7 +268,17 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     const { definition } = item;
     const host = options.packageConfig?.[definition.name];
     // The instance's config is the manifest layer for a `loadManifest` instance and the code layer for the rest.
-    const resolved = resolvePackageConfig(definition, item.source ? { manifest: item.config, host } : { code: item.config, host });
+    const resolved = resolvePackageConfig(
+      definition,
+      item.source
+        ? {
+            manifest: item.config,
+            host,
+            manifestScopes: item.source.scopes,
+            manifestScope: item.source.scope,
+          }
+        : { code: item.config, host },
+    );
     return {
       ...item,
       name: definition.name,
@@ -274,8 +295,19 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   const versions = new Map(ordered.map((entry) => [entry.name, parseVersion(entry.version)]));
   for (const entry of ordered) {
     const requires = entry.definition.requires;
-    if (!requires) continue;
-    if (!kernel || !satisfies(kernel, parseRange(requires.prism))) {
+    if (!requires) {
+      throw new PackageLoadError("definition_invalid", `Package ${entry.name} defines no requires; declare requires.api.`, {
+        package: entry.name,
+      });
+    }
+    if (!SUPPORTED_API_LEVELS.includes(requires.api)) {
+      throw new PackageLoadError(
+        "kernel_api",
+        `Package ${entry.name} targets kernel API ${requires.api}; this kernel supports ${SUPPORTED_API_LEVELS.join(", ")}.`,
+        { package: entry.name },
+      );
+    }
+    if (requires.prism !== undefined && (!kernel || !satisfies(kernel, parseRange(requires.prism)))) {
       throw new PackageLoadError(
         "kernel_range",
         `Package ${entry.name} requires kernel ${requires.prism}, but this is ${options.kernelVersion}.`,
@@ -313,11 +345,18 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
   const skillOwners = new Map<string, string>();
   // The kernel's own provider is entry zero, so a package registering its id fails as `provider_conflict`.
   const providerEntries = new Map<string, { readonly owner: string; readonly provider: ModelProvider }>([
-    [BUILTIN_PROVIDER_ID, { owner: KERNEL_OWNER, provider: createBuiltinProvider({ resolveCredential: (ref) => resolveCredentialRef(ref), fetch: options.fetch }) }],
+    [
+      BUILTIN_PROVIDER_ID,
+      {
+        owner: KERNEL_OWNER,
+        provider: createBuiltinProvider({ resolveCredential: (ref) => resolveCredentialRef(ref), fetch: options.fetch }),
+      },
+    ],
   ]);
   const commandEntries = new Map<string, PackageCommandEntry>();
-  const disabled = { tools: new Set<string>(), skills: new Set<string>() };
+  const disabled = { tools: new Set<string>(), skills: new Set<string>(), packages: new Set<string>() };
   let usesSessionState = false;
+  let setupComplete = false;
 
   const report = (owner: string, hook: string, error: unknown): void => {
     bus.observe("hook.error", {
@@ -422,15 +461,35 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           if ((request as HostUiRequest).kind === "secret") {
             return askSecret(owner, request as HostUiSecretRequest, sessionId) as unknown as HostUiResponse<K>;
           }
+          if ((request as HostUiRequest).kind === "terminal") {
+            const env = (request as HostUiTerminalRequest).env;
+            for (const [name, value] of Object.entries(env ?? {})) {
+              if (typeof value !== "string" || /^(env|keyring):/.test(value)) {
+                throw new PackageLoadError("terminal_env_secret", `host.ui terminal env ${name} must be a plain non-secret string, not a credential ref.`, { package: owner });
+              }
+            }
+          }
           if (!hostUi) return { status: "unavailable" };
           // `package` and `sessionId` are kernel-set: a package cannot name another package or session.
-          return hostUi.request({ ...request, package: owner, sessionId } as Extract<HostUiRequest, { kind: K }>);
+          const response = await hostUi.request({ ...request, package: owner, sessionId } as Extract<HostUiRequest, { kind: K }>);
+          // The terminal's I/O never reaches a package: only the exit code is forwarded, whatever the host returned.
+          if ((request as HostUiRequest).kind === "terminal" && response.status === "answered") {
+            const exitCode = (response.value as { exitCode?: unknown } | undefined)?.exitCode;
+            if (typeof exitCode !== "number" || !Number.isInteger(exitCode)) return { status: "unavailable" };
+            return { status: "answered", value: { exitCode } } as unknown as HostUiResponse<K>;
+          }
+          return response;
         },
       },
     };
   };
 
   const registerTool = (owner: string, tool: ToolDefinition, when: ((session: SessionContext) => boolean) | undefined): void => {
+    if (setupComplete) {
+      throw new PackageLoadError("registration_closed", `Tool ${tool?.name ?? "unknown"} registered after package setup was complete.`, {
+        package: owner,
+      });
+    }
     if (
       typeof tool !== "object" ||
       tool === null ||
@@ -535,7 +594,9 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     const retry = mergeRetry(hostConfig.retry, undefined);
     const known = (): readonly string[] => [...secrets, ...((retry?.secrets ?? []) as string[])];
     const open = async (): Promise<{ first: IteratorResult<ProviderEvent>; iterator: AsyncIterator<ProviderEvent> }> => {
-      const iterator = resolveProvider(model).generate({ ...request, model })[Symbol.asyncIterator]();
+      const iterator = resolveProvider(model)
+        .generate({ ...request, model })
+        [Symbol.asyncIterator]();
       const first = await iterator.next();
       if (!first.done && first.value.type === "error") throw Object.assign(new Error(first.value.error.message), first.value.error);
       return { first, iterator };
@@ -549,7 +610,9 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     });
     const next = (event: ProviderEvent): ProviderEvent => {
       if (event.type === "error") return { ...event, error: redactSecrets(event.error, known()) };
-      return event.type === "done" && event.stopReason !== undefined ? { ...event, stopReason: normalizeStopReason(event.stopReason) } : event;
+      return event.type === "done" && event.stopReason !== undefined
+        ? { ...event, stopReason: normalizeStopReason(event.stopReason) }
+        : event;
     };
     try {
       let step = first;
@@ -559,6 +622,9 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
       }
     } catch (error) {
       yield { type: "error", error: errorToErrorInfo(error, known()) };
+    } finally {
+      // A caller that stops at `done` must still close the provider stream (an early `return()` skips the loop).
+      await iterator.return?.();
     }
   }
 
@@ -572,6 +638,11 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     bus.observe("package.event", { type: "package.event", sessionId: "", runId: "", package: owner, name, data: redactValue(json.value) });
   };
 
+  const assertReadable = (pkg: string, member: string): void => {
+    if (!setupComplete) {
+      throw new PackageLoadError("state_not_ready", `Cannot call ${member} during setup.`, { package: pkg });
+    }
+  };
   const createApi = (state: State): PackageAPI<any> => {
     const { entry } = state;
     const name = entry.name;
@@ -598,11 +669,67 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     return {
       name,
       config: deepFreeze(cloneJson(entry.config)),
+      configSources: state.entry.configSources,
+      packages: {
+        instances(names: readonly string[]): readonly PackageInstance[] {
+          if (!setupComplete) {
+            throw new PackageLoadError("state_not_ready", "Cannot query package instances during setup.", {
+              package: name,
+            });
+          }
+          for (const reqName of names) {
+            if (reqName === name) {
+              throw new PackageLoadError("self_instance", `Package ${name} cannot query its own instance.`, {
+                package: name,
+              });
+            }
+            if (disabled.packages.has(reqName)) {
+              throw new PackageLoadError("package_disabled", `Package ${reqName} is disabled.`, {
+                package: name,
+              });
+            }
+            if (!loaded.some((e) => e.name === reqName)) {
+              throw new PackageLoadError("unknown_package", `Package ${reqName} is not loaded.`, {
+                package: name,
+              });
+            }
+          }
+          const result: PackageInstance[] = [];
+          for (const e of loaded) {
+            if (names.includes(e.name)) {
+              result.push(
+                Object.freeze({
+                  definition: e.definition,
+                  config: e.config,
+                  optional: e.optional,
+                  ...(e.source ? { source: e.source } : {}),
+                }),
+              );
+            }
+          }
+          return Object.freeze(result);
+        },
+      },
       hooks: bus.registrar(name),
       slots: slotRegistrar,
-      tools: { register: (tool, toolOptions) => registerTool(name, tool, toolOptions?.when) },
+      tools: {
+        register: (tool, toolOptions) => registerTool(name, tool, toolOptions?.when),
+        list: () => {
+          assertReadable(name, "tools.list");
+          return Object.freeze((options.registry?.tools() ?? []).map((tool) => Object.freeze({ ...tool })));
+        },
+      },
       skills: {
         register: (skill) => registerSkill(name, skill),
+        list: () => {
+          assertReadable(name, "skills.list");
+          return Object.freeze((options.registry?.skills() ?? []).map((skill) => Object.freeze({ ...skill })));
+        },
+        get: (skillName) => {
+          assertReadable(name, "skills.get");
+          const found = options.registry?.skills().find((skill) => skill.name === skillName);
+          return found === undefined ? undefined : Object.freeze({ ...found });
+        },
         addDir(path) {
           if (typeof path !== "string" || path.length === 0) throw new TypeError("skills.addDir requires a directory path");
           state.skillDirs.push(path);
@@ -618,6 +745,20 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           const model = parseModelRef(configured);
           return { model, generate: (request) => generateWithRetry(model, request) };
         },
+        embeddings(ref?: ModelRef) {
+          requireCapability(name, entry.capabilities, "models", "models.embeddings");
+          const configured = ref ?? hostConfig.model;
+          if (!configured) throw new TypeError("models.embeddings needs a model reference: the agent has none configured");
+          const model = parseModelRef(configured);
+          const provider = resolveProvider(model);
+          if (!modelSupportsEmbeddings(model.capabilities) || !provider.embeddings) {
+            throw new EmbeddingsError(
+              "unsupported_model",
+              `Model ${model.provider}/${model.model} does not declare the embeddings capability`,
+            );
+          }
+          return provider.embeddings();
+        },
       },
       credentials: {
         async resolve(ref: string) {
@@ -631,6 +772,12 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           declareStateKey(state, "session", key);
           usesSessionState = true;
           return createSessionState(name, key, initial);
+        },
+        log(key) {
+          requireCapability(name, entry.capabilities, "session-state", "state.log");
+          declareStateKey(state, "log", key);
+          usesSessionState = true;
+          return createSessionLog(name, key);
         },
         agent(key, initial) {
           declareStateKey(state, "agent", key);
@@ -710,12 +857,36 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     for (const id of disableIds("hooks", disable.hooks)) {
       if (!bus.remove(id)) throw unknown("hooks", id);
     }
+    for (const id of disableIds("packages", disable.packages)) {
+      const isLoaded = loaded.some((e) => e.name === id);
+      const isSkipped = skippedEntries.some((e) => e.name === id);
+      if (!isLoaded && !isSkipped) throw unknown("packages", id);
+      disabled.packages.add(id);
+      for (const [toolName, entry] of [...toolEntries.entries()]) {
+        if (entry.owner === id) {
+          toolEntries.delete(toolName);
+          packageTools.unregister?.(toolName);
+        }
+      }
+      for (const [skillName, owner] of [...skillOwners.entries()]) {
+        if (owner === id) {
+          skillOwners.delete(skillName);
+          packageSkills.unregister?.(skillName);
+        }
+      }
+      for (const [cmdName, entry] of [...commandEntries.entries()]) {
+        if (entry.package === id) {
+          commandEntries.delete(cmdName);
+        }
+      }
+      bus.removeOwner(id);
+    }
   };
 
   const loaded: Entry[] = [];
   try {
     // The host's own `tools.add` / `skills.add` are validated here, so a duplicate name fails the
-    // load closed (the option `createSecureAgent` used to get from `createToolRegistry`).
+    // load closed (the check `createSecureAgent` used to get from `createToolRegistry`).
     createToolRegistry(hostConfig.tools?.add ?? [], { duplicate: "error" });
     createSkillRegistry(hostConfig.skills?.add ?? [], { duplicate: "error" });
     // 6. Run `setup` in order. Packages first, then the inline host package.
@@ -758,6 +929,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
 
     // 8. Apply `disable`.
     applyDisable();
+    setupComplete = true;
   } catch (error) {
     await unwind();
     bus.removeOwner(HOST_OWNER);
@@ -787,9 +959,7 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     skills: () => packageSkills.list(),
     skillEntries: () => packageSkills.list().map((skill) => ({ owner: skillOwners.get(skill.name) ?? "", skill })),
     provider: (id) => providerEntries.get(id)?.provider,
-    providers: () => [
-      ...[...providerEntries.values()].map((entry) => ({ owner: entry.owner, provider: entry.provider })),
-    ],
+    providers: () => [...[...providerEntries.values()].map((entry) => ({ owner: entry.owner, provider: entry.provider }))],
     resolveProvider,
     commands: () => [...commandEntries.values()],
     disabled,

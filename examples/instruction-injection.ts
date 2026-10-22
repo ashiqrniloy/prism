@@ -1,12 +1,18 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContextSource, ProviderRequest } from "@arnilo/prism";
-import { createAgent, createSecretRedactor, providerDone, registerContextSources, withContextBlocks } from "@arnilo/prism";
-import { createMockProvider } from "@arnilo/prism/testing";
+import {
+  createAgent,
+  createPathTrustPolicy,
+  createSecretRedactor,
+  providerDone,
+  registerContextSources,
+  withContextBlocks,
+} from "@arnilo/prism";
 import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
-import { loadInstructionSources } from "@arnilo/prism/node/instruction-sources";
-import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createMockProvider } from "@arnilo/prism/testing";
+import { resolveInstructionSources } from "@arnilo/prism-context-files";
 
 // Instruction injection, end-to-end with the mock provider.
 //
@@ -49,7 +55,7 @@ export async function demo(): Promise<{
 
   // 2. Load: markdown-only (no `module` field) becomes a static source reading the
   //    resource text, trust-gated by the same policy. Core never `import()`s.
-  const discoveredSources = await loadInstructionSources(discovered, { resourceTrust: trust });
+  const discoveredSources = await resolveInstructionSources(discovered, { resourceTrust: trust });
   const selected = discoveredSources.filter((source) => source.name === "json-always");
   const discoveredSource = selected[0];
 

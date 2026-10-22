@@ -87,8 +87,8 @@ console.log(bytes.byteLength, manifest.name, prompt);
 - Helpers do not choose a loader by URI scheme. Hosts can use contribution registries or their own routing when they need that.
 - Helpers do not execute loaded text or imported modules. Package activation remains a host decision.
 - `loadManifestResource()` only validates manifest data; it does not register manifest contributions.
-- `@arnilo/prism-memory/rag` `createResourceDocumentLoader({ loader, context? })` is the RAG bridge for an already-authorized artifact. It calls the supplied `ResourceLoader` once for a caller-selected URI, preserves text/binary media type, and adds no URI routing, local-file discovery, or network fallback. Pair it with a bounded RAG `Parser`; `replaceDocument()` then chunks and atomically replaces one exact RAG source.
-- For public web documents, use `createWebFetchDocumentLoader({ fetcher })` with a host-configured `@arnilo/prism-web-tools` fetch adapter instead of adding web I/O to a `ResourceLoader`. It reuses normalized citation/trust data; the web adapter retains DNS/SSRF policy ownership.
+- `@arnilo/prism-memory-rag` `createResourceDocumentLoader({ loader, context? })` is the RAG bridge for an already-authorized artifact. It calls the supplied `ResourceLoader` once for a caller-selected URI, preserves text/binary media type, and adds no URI routing, local-file discovery, or network fallback. Pair it with a bounded RAG `Parser`; `replaceDocument()` then chunks and atomically replaces one exact RAG source.
+- For public web documents, use `createWebFetchDocumentLoader({ fetcher })` with a host-configured `@arnilo/prism-tools-web` fetch adapter instead of adding web I/O to a `ResourceLoader`. It reuses normalized citation/trust data; the web adapter retains DNS/SSRF policy ownership.
 
 ## Security and performance notes
 
@@ -106,9 +106,9 @@ console.log(bytes.byteLength, manifest.name, prompt);
 
 ## Related APIs
 
-- [Multimodal content](multimodal-content.md): bounded `resolveMediaContentBlock()` and SSRF/MIME policy for URL/resource/binary sources.
-- [Configuration and manifests](configuration-and-manifests.md): data-only manifests and manifest resource declarations.
-- [Contribution registries](contribution-registries.md): host-owned registries can store resource loaders.
-- [Public contracts](public-contracts.md): base `ResourceLoader`, `Resource`, and `ResourceLoadContext` contracts.
+- [Multimodal content](provider-kit.md): bounded `resolveMediaContentBlock()` and SSRF/MIME policy for URL/resource/binary sources.
+- [Configuration and manifests](manifest.md): data-only manifests and manifest resource declarations.
+- [Contribution registries](packages.md): host-owned registries can store resource loaders.
+- [Public contracts](packages.md): base `ResourceLoader`, `Resource`, and `ResourceLoadContext` contracts.
 
 `ResourceLoadContext.permission` checks `resource:<uri>:load` before calling the loader. Prism still does no resource discovery, package discovery, or trust prompts; hosts own those decisions. See [Security/auth/trust](settings-auth-trust-security.md).

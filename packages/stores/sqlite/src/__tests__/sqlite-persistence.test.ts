@@ -7,15 +7,15 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSecretRedactor } from "@arnilo/prism";
-import { runFeedbackConformance } from "@arnilo/prism/testing/feedback";
+import { assertPersistenceSearchQueryParity, storeConformance } from "@arnilo/prism/testing";
+import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
 import {
   assertPersistenceBranchQueryConforms,
   assertPersistenceQueryPaginationConforms,
   assertTenantScopedQueryIsolation,
   createPersistenceMigrationContract,
-} from "@arnilo/prism/testing/persistence-schema";
-import { runRunLedgerConformance } from "@arnilo/prism/testing/run-ledger-conformance";
-import { assertPersistenceSearchQueryParity, storeConformance } from "@arnilo/prism/testing";
+  runFeedbackConformance,
+} from "@arnilo/prism-store-codecs";
 import {
   MIGRATION_001_INIT,
   MIGRATION_002_USAGE_SCOPE,
@@ -25,8 +25,9 @@ import {
   MIGRATION_006_AGENT_EVENT_SOURCE,
   MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
 } from "../ddl.js";
-import { applySqliteMigrations } from "../migrations.js";
+import { applySqliteMigrations, configureSqliteDatabase } from "../migrations.js";
 import { createSqlitePersistence } from "../persistence.js";
+import { DEFAULT_BUSY_TIMEOUT_MS } from "../types.js";
 
 const tempDirs: string[] = [];
 
@@ -259,6 +260,7 @@ describe("createSqlitePersistence", () => {
       "007_agent_event_retention_index",
       "008_session_version",
       "009_run_prompt_version",
+      "010_session_links",
     ]);
     first.close();
 
@@ -319,6 +321,50 @@ describe("createSqlitePersistence", () => {
     db.close();
   });
 
+  it("sqlite_migration_adds_link_columns: a database at schema 9 opens, gains the columns, and old rows list with absent links", async () => {
+    const filename = tempDbPath("links-migration");
+    const db = new Database(filename);
+    applySqliteMigrations(db);
+    // Rewind to the schema before migration 010, with one session written the old way.
+    for (const index of ["parent", "agent", "workflow", "delegation", "actor"]) db.exec(`DROP INDEX prism_sessions_link_${index}_idx`);
+    for (const column of ["agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"]) {
+      db.exec(`ALTER TABLE prism_sessions DROP COLUMN ${column}`);
+    }
+    db.prepare("DELETE FROM prism_migrations WHERE name = '010_session_links'").run();
+    const now = new Date().toISOString();
+    db.prepare("INSERT INTO prism_sessions (id, created_at, updated_at, version) VALUES ('old', ?, ?, 1)").run(now, now);
+    db.prepare("INSERT INTO prism_session_entries (id, session_id, timestamp, kind) VALUES ('old-1', 'old', ?, 'label')").run(now);
+
+    const persistence = createSqlitePersistence({ filename, database: db });
+    const columns = (db.prepare("PRAGMA table_info(prism_sessions)").all() as { name: string }[]).map((column) => column.name);
+    for (const column of ["agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"]) {
+      assert.ok(columns.includes(column), `${column} must be added`);
+    }
+    const old = (await persistence.listSessions({ limit: 10 })).items.find((item) => item.sessionId === "old");
+    assert.ok(old, "the pre-migration session must still list");
+    assert.equal(old.workflowRunId, undefined);
+    assert.equal(old.actor, undefined);
+
+    await persistence.append({
+      id: "new-links",
+      sessionId: "new",
+      timestamp: new Date().toISOString(),
+      kind: "metadata",
+      data: { links: { sessionId: "old", workflowRunId: "wf", actor: { kind: "external", agent: "driver" } } },
+    });
+    const filtered = await persistence.listSessions({ workflowRunId: "wf", limit: 10 });
+    assert.deepEqual(
+      filtered.items.map((item) => item.sessionId),
+      ["new"],
+    );
+    assert.equal(filtered.items[0]?.parentSessionId, "old");
+    assert.deepEqual(
+      (await persistence.listSessions({ parentSessionId: "old", limit: 10 })).items.map((item) => item.sessionId),
+      ["new"],
+    );
+    db.close();
+  });
+
   it("backfills only complete legacy checksum history after shape verification", async () => {
     const filename = tempDbPath("legacy-checksum");
     const db = new Database(filename);
@@ -341,7 +387,10 @@ describe("createSqlitePersistence", () => {
     db.prepare("UPDATE prism_migrations SET checksum = NULL").run();
     db.exec("DROP INDEX prism_usage_session_scope_recorded_idx");
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
-    assert.equal((db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count, 9);
+    assert.equal(
+      (db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count,
+      10,
+    );
     db.close();
   });
 
@@ -1101,7 +1150,7 @@ it("merges session metadata without clobbering other keys and bumps the CAS vers
 });
 
 it("names the Bun runtime when the sqlite modules are imported under node", () => {
-  const targets = [new URL("../persistence.js", import.meta.url), new URL("../../../../prism-core/src/governance/prompts/sqlite.js", import.meta.url)];
+  const targets = [new URL("../bun-runtime.ts", import.meta.url)];
   for (const target of targets) {
     const result = spawnSync(
       "node",
@@ -1141,14 +1190,21 @@ describe("listSessions and deleteSession", () => {
     await persistence.append(stamped("unstamped-1", "unstamped", at(3)));
 
     const scored = await persistence.listSessions({ tenantId: "tenant-a", limit: 100 });
-    assert.deepEqual(scored.items.map((item) => item.sessionId), ["mine"]);
+    assert.deepEqual(
+      scored.items.map((item) => item.sessionId),
+      ["mine"],
+    );
     assert.equal(scored.items[0]?.title, undefined);
     assert.equal(scored.items[0]?.messageCount, 1);
     assert.equal(typeof scored.items[0]?.leafId, "string");
     assert.equal(JSON.stringify(scored.items).includes("body"), false, "a session page must not carry transcript text");
 
     const unscoped = await persistence.listSessions({ limit: 100 });
-    assert.deepEqual(unscoped.items.map((item) => item.sessionId), ["unstamped", "theirs", "mine"], "unscoped listing is newest-first");
+    assert.deepEqual(
+      unscoped.items.map((item) => item.sessionId),
+      ["unstamped", "theirs", "mine"],
+      "unscoped listing is newest-first",
+    );
     assert.deepEqual((await persistence.listSessions({ tenantId: "missing", limit: 100 })).items, []);
 
     // The rule is every entry, not any entry: one unstamped append drops the session out of the scope.
@@ -1244,5 +1300,17 @@ describe("listSessions and deleteSession", () => {
     assert.equal(record.n, 0, "prism_sessions still holds the deleted session record");
     assert.equal((db.prepare("SELECT COUNT(*) AS n FROM prism_sessions WHERE id = ?").get("kept") as { n: number }).n, 1);
     db.close();
+  });
+});
+
+describe("sqlite open pragmas", () => {
+  it("sets the busy timeout before the journal-mode pragma", () => {
+    // Two connections opening the same file at once race on `journal_mode`; with the timeout still
+    // unset the loser fails "database is locked" instead of waiting (scheduler-leases was flaky on it).
+    const executed: string[] = [];
+    configureSqliteDatabase({ exec: (sql: string) => executed.push(sql) } as unknown as Database, {});
+    assert.equal(executed[0], `PRAGMA busy_timeout = ${DEFAULT_BUSY_TIMEOUT_MS}`, "the timeout must be set before any statement that takes a lock");
+    assert.ok(executed.includes("PRAGMA foreign_keys = ON"));
+    assert.equal(executed.at(-1), "PRAGMA journal_mode = WAL");
   });
 });

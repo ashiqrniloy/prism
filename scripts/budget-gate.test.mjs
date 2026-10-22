@@ -1,13 +1,14 @@
 #!/usr/bin/env node
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 import {
   assertAll,
   checkCeiling,
   checkExportBudget,
+  checkKernelBudget,
   checkThroughput,
   checkUpperBound,
   evaluateNonNullBudget,
@@ -17,6 +18,7 @@ import {
   loadNonNullPolicy,
   loadPerCpu,
   measureExportCounts,
+  measureKernelSourceLines,
   measureNonNullAssertions,
   measureProcessStartupMs,
   measureRootPack,
@@ -226,6 +228,41 @@ describe("performance budget gate", () => {
       checkUpperBound("root unpackedBytes", pack.unpackedBytes, budgets.root.unpackedBytes.baseline, budgets.root.unpackedBytes.tolerance),
       checkUpperBound("root fileCount", pack.fileCount, budgets.root.fileCount.baseline, budgets.root.fileCount.tolerance),
     ]);
+    // Plan 174 Task 10: the same pack feeds the kernel's strict ceilings, so the kernel budget
+    // costs no second measurement.
+    assertAll(
+      checkKernelBudget(budgets.kernel, {
+        packedBytes: pack.packedBytes,
+        unpackedBytes: pack.unpackedBytes,
+        fileCount: pack.fileCount,
+        rootExports: measureExportCounts()["@arnilo/prism"],
+        sourceLines: measureKernelSourceLines(),
+      }),
+    );
+  });
+
+  it("kernel budget rejects growth and names the metric (negative fixtures)", () => {
+    for (const metric of ["packedBytes", "unpackedBytes", "fileCount", "rootExports", "sourceLines"]) {
+      assert.ok(Number.isInteger(budgets.kernel?.[metric]?.ceiling), `budgets.json kernel.${metric} must record an integer ceiling`);
+      const atCeiling = Object.fromEntries(
+        ["packedBytes", "unpackedBytes", "fileCount", "rootExports", "sourceLines"].map((name) => [name, budgets.kernel[name].ceiling]),
+      );
+      assert.ok(
+        checkKernelBudget(budgets.kernel, atCeiling).every((check) => check.ok),
+        "a measurement exactly at every ceiling must pass",
+      );
+      const grown = { ...atCeiling, [metric]: budgets.kernel[metric].ceiling + 1 };
+      assert.ok(
+        checkKernelBudget(budgets.kernel, grown).some((check) => !check.ok && check.message.startsWith(`kernel ${metric} grew: measured `)),
+        `growth in ${metric} must fail and name the metric`,
+      );
+    }
+    assert.ok(
+      checkKernelBudget({}, { packedBytes: 0, unpackedBytes: 0, fileCount: 0, rootExports: 0, sourceLines: 0 }).every(
+        (check) => !check.ok && /ceiling is missing/.test(check.message),
+      ),
+      "a metric without a ceiling must fail closed",
+    );
   });
 
   it("per-package export counts stay at the plan 058 post-cut ceiling", () => {
@@ -297,13 +334,14 @@ describe("performance budget gate", () => {
 
   // Negative control: a planted slow import must fail the ratio gate on this very
   // machine under either ceiling, so the gate can never pass by measuring nothing
-  // (the fixture is a throwaway cwd; the real dist/ is untouched).
+  // (the fixture is a throwaway cwd; the real src/ is untouched). Plan 174 Task 8:
+  // the measured entry is `./src/index.ts`.
   it("startup ratio rejects a planted slow import", () => {
     const dir = mkdtempSync(join(tmpdir(), "prism-startup-"));
     try {
-      mkdirSync(join(dir, "dist"));
+      mkdirSync(join(dir, "src"));
       writeFileSync(
-        join(dir, "dist", "index.js"),
+        join(dir, "src", "index.ts"),
         "const until = Date.now() + 800; while (Date.now() < until); module.exports = { planted: true };\n",
       );
       const importMs = measureStartupMs(dir, 1);

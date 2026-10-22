@@ -15,8 +15,8 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "bun:test";
-import { createIndexedRepositoryOperations } from "../packages/prism-coding-tools/dist/agent/repository/indexed-search.js";
-import { createLocalRepositoryOperations } from "../packages/prism-coding-tools/dist/agent/repository.js";
+import { createIndexedRepositoryOperations } from "@arnilo/prism-tools-coding";
+import { createLocalRepositoryOperations } from "@arnilo/prism-tools-coding";
 
 const FIXTURE_FILES = 100_000;
 const UPDATE_BATCH = 1_000;

@@ -1,6 +1,6 @@
 # Performance limits
 
-Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate trace data; one model-judge attempt with 30-second/16-KiB bounds; 8 comparison candidates, 1-MiB candidate results, 10,000 dataset items, and 4-MiB serialized reports. Hard caps are exported by `@arnilo/prism-core/governance/evals`; overflow fails rather than truncating grading evidence.
+Evaluation defaults are finite: 100 trace rows × 20 pages and 4 MiB aggregate trace data; one model-judge attempt with 30-second/16-KiB bounds; 8 comparison candidates, 1-MiB candidate results, 10,000 dataset items, and 4-MiB serialized reports. Hard caps are exported by `@arnilo/prism-evals`; overflow fails rather than truncating grading evidence.
 
 ## What it does
 
@@ -316,7 +316,7 @@ Every row reports throughput, p50/p95 latency, heap, disk, queue/backpressure, a
 | Memory export | 100 / 200 entries · 4 MiB / 32 MiB · 10 s / 60 s |
 | Memory rebuild | 32 / 128 entries · 10 s / 60 s |
 
-This task adds no package or runtime dependency: package/install delta is zero and the frozen graph remains 43 publishable manifests. Credentialed protocol checks are documented in the [0.0.15 protected live-canary matrix](release-and-install.md#015-protected-live-canary-matrix); they never run in this benchmark, `npm test`, or `sdk:ready`.
+This task adds no package or runtime dependency: package/install delta is zero and the frozen graph remains 43 publishable manifests. Credentialed protocol checks are documented in the [0.0.15 protected live-canary matrix](release.md); they never run in this benchmark, `npm test`, or `sdk:ready`.
 
 2026-07-26 baseline: Node v24.18.0, Linux x64, 100 iterations/scenario, network=false, credentials=false.
 
@@ -409,9 +409,9 @@ Security automation is isolated from `npm test`: CodeQL/supply-chain jobs have 1
 
 Web tools default/hard ceilings are query 4/16 KiB, results 10/20, URLs 5/20, request 256 KiB/1 MiB, response/aggregate 2/16 MiB, Markdown 1/8 MiB, extraction 256 KiB/1 MiB, schema 64/256 KiB, concurrency 4/16, retries 2/4, polling 20/100, and wall time 60 seconds/30 minutes. Bounds charge before request, retention, retry, or polling; overflow fails rather than truncating citation/extraction evidence.
 
-Docker sandbox defaults/hard caps from `@arnilo/prism-coding-tools/security`: startup 30 s/120 s; wall 20 min/30 min; idle 5 min/15 min; CPUs 2/8; memory 2 GiB/16 GiB (swap equal to memory); PIDs 256/1,024; FDs 1,024/8,192; workspace/tmp/download tmpfs 1 GiB/8 GiB, 256 MiB/2 GiB, 64 MiB/512 MiB; commands 100/256 with concurrent execs 1/8; env 64/256 names and 64 KiB/256 KiB values; export 50,000/250,000 entries and 256 MiB/2 GiB bytes with 16/64 retained artifacts; stop grace 5 s/30 s and cleanup 30 s/120 s. Caps validate before `docker create`/exec/export; overflow aborts and cleans the recorded container. Output still streams into the coding-agent `OutputAccumulator` ceilings (64 MiB/1 GiB).
+Docker sandbox defaults/hard caps from `@arnilo/prism-tools-coding`: startup 30 s/120 s; wall 20 min/30 min; idle 5 min/15 min; CPUs 2/8; memory 2 GiB/16 GiB (swap equal to memory); PIDs 256/1,024; FDs 1,024/8,192; workspace/tmp/download tmpfs 1 GiB/8 GiB, 256 MiB/2 GiB, 64 MiB/512 MiB; commands 100/256 with concurrent execs 1/8; env 64/256 names and 64 KiB/256 KiB values; export 50,000/250,000 entries and 256 MiB/2 GiB bytes with 16/64 retained artifacts; stop grace 5 s/30 s and cleanup 30 s/120 s. Caps validate before `docker create`/exec/export; overflow aborts and cleans the recorded container. Output still streams into the coding-agent `OutputAccumulator` ceilings (64 MiB/1 GiB).
 
-Repository list/search defaults/hard caps from `@arnilo/prism-coding-tools/agent`: depth 32/128; entries/files 10,000/100,000; page/results 1,000/10,000; search scan 64 MiB/1 GiB aggregate and 8 MiB/64 MiB per file; matches 1,000/10,000; pattern 512 B/4 KiB; line 50 KiB/1 MiB; context 5/20; wall 30 s/300 s; concurrency config 8/32. Walks stream via `opendir`/`lstat`, never follow symlink escapes, and stop immediately on aggregate limits or abort.
+Repository list/search defaults/hard caps from `@arnilo/prism-tools-coding`: depth 32/128; entries/files 10,000/100,000; page/results 1,000/10,000; search scan 64 MiB/1 GiB aggregate and 8 MiB/64 MiB per file; matches 1,000/10,000; pattern 512 B/4 KiB; line 50 KiB/1 MiB; context 5/20; wall 30 s/300 s; concurrency config 8/32. Walks stream via `opendir`/`lstat`, never follow symlink escapes, and stop immediately on aggregate limits or abort.
 
 Structured Git/check/handoff defaults/hard caps: paths 1,000/10,000; refs 1 KiB/4 KiB; commit message 64 KiB/256 KiB; inline Git output 4 MiB/64 MiB; diff lines 10,000/100,000; changed files 1,000/10,000; patch input 16 MiB/64 MiB; worktrees 4/16; named checks 8/32 names, concurrency 1/4, timeout 10 min/60 min, diagnostic lines 2,000/100,000, output 4 MiB/64 MiB; PR handoff JSON 256 KiB/1 MiB with 100/1,000 commits. Git tools use typed argument arrays (never shell), disable hooks/credential prompts/external diff by default, and emit host-owned PR handoff data only — no push/network/PR client.
 
@@ -424,7 +424,7 @@ Browser automation defaults/hard caps from the `browser` subpath: pages 4/16; ac
 Current surfaces:
 
 - `SubscribeOptions` for bounded live `AgentEvent` subscriber queues.
-- Bounded provider transport primitives (`readSseEvents`, `readBoundedResponseText`) used by every first-party provider package — see [Provider primitives](provider-primitives.md).
+- Bounded provider transport primitives (`readSseEvents`, `readBoundedResponseText`) used by every first-party provider package — see [Provider primitives](provider-kit.md).
 - `SessionStore.readBranchPath(query)` for branch reads that avoid full-session scans.
 - `ProductionPersistenceStore` cursor queries for entries, events, runs, tool calls, and usage.
 - JSONL and memory stores documented as development/local adapters, not production multi-writer stores.
@@ -536,7 +536,7 @@ const store = {
 - `SessionStore.list(sessionId)` is a full-session read. It is fine for memory/JSONL development stores, but production adapters should use `readBranchPath` for provider context and branch views.
 - The JSONL store rereads/parses the file for validation/list/get and serializes appends only within one process. It has no cross-process lock, pagination, migrations, tenant isolation, or retention.
 - Recommended database indexes: session id, run id, parent id, branch leaf id, timestamps, tenant/account/user, event type, entry kind, `(run_id, sequence)` for event timelines, and `(run_id, recorded_at, id)` for usage. Allocate event `sequence` per run for stable timeline pagination.
-- Provider SSE parsing defaults: 256 KiB per completed event, 512 KiB incomplete buffer, 64 KiB error response bodies. Override per call via `BoundedStreamLimits` on `@arnilo/prism/provider-kit`.
+- Provider SSE parsing defaults: 256 KiB per completed event, 512 KiB incomplete buffer, 64 KiB error response bodies. Override per call via `BoundedStreamLimits` on `@arnilo/prism/providers/transport`.
 
 ### Provider-phase benchmark snapshot (2026-07-14)
 
@@ -589,7 +589,7 @@ Scope froze at commit `f5128a816ae204c52f3e2f089de71c99bd5de6d4`. Measurement ho
 | Root artifact | `@arnilo/prism@0.0.4` dry-run tarball | 346.0 kB packed; 1.3 MB unpacked; 196 files |
 | Installed workspace | Current root `node_modules` | 72 MiB |
 
-Synthetic stream/tool/workflow values are medians of seven measured runs after one warm-up and contain no network, database, or exporter I/O. The temporary benchmark reused public `AgentSession`, `dispatchToolCallsInOrder`, and `@arnilo/prism-core/runtime/workflows` APIs; it was not added to CI because this phase records a baseline rather than creating hardware-sensitive tests.
+Synthetic stream/tool/workflow values are medians of seven measured runs after one warm-up and contain no network, database, or exporter I/O. The temporary benchmark reused public `AgentSession`, `dispatchToolCallsInOrder`, and `@arnilo/prism-workflows` APIs; it was not added to CI because this phase records a baseline rather than creating hardware-sensitive tests.
 
 Repository size at the same commit, counted from `src/` and `packages/` while excluding `dist/`:
 
@@ -622,7 +622,7 @@ Usage aggregation performs one constant-size accumulator update per terminal pro
 
 ### 0.0.5 Phase 4 verification (2026-07-15)
 
-Optional `@arnilo/prism-core/governance/evals` adds package-local scoring without changing core run latency. Validation stayed within the frozen release gate:
+Optional `@arnilo/prism-evals` adds package-local scoring without changing core run latency. Validation stayed within the frozen release gate:
 
 | Surface | Result |
 | --- | --- |
@@ -647,7 +647,7 @@ Experiment concurrency is capped at 32 workers and defaults to 1. Scorers operat
 
 ### 0.0.5 Phase 6 verification (2026-07-15)
 
-Optional `@arnilo/prism-provider-ai-sdk` adapts AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
+The historical AI SDK provider adapter adapted AI SDK `LanguageModelV4` streams to Prism without adding an AI SDK dependency to core.
 
 | Surface | Result |
 | --- | --- |
@@ -661,7 +661,7 @@ Optional `@arnilo/prism-provider-ai-sdk` adapts AI SDK `LanguageModelV4` streams
 
 ### 0.0.5 Phase 7 verification (2026-07-15)
 
-Optional `@arnilo/prism-memory` adds working memory and semantic recall without changing core session stores.
+Optional `@arnilo/prism-memory-fabric` adds working memory and semantic recall without changing core session stores.
 
 | Surface | Result |
 | --- | --- |
@@ -703,7 +703,7 @@ Optional `@arnilo/prism-rag` reuses Phase 7 vector contracts and adds no core pa
 
 ### 0.0.5 Phase 10 verification (2026-07-16)
 
-Optional `@arnilo/prism-core/runtime/server` and MCP server-direction APIs compose existing agent/workflow/tool/SDK primitives; no core path, framework/listener, auth provider, database, or profile activation was added.
+Optional `@arnilo/prism-remote` and `@arnilo/prism-mcp-server` compose existing agent/workflow/tool/SDK primitives; no core path, framework/listener, auth provider, database, or profile activation was added.
 
 | Surface | Result |
 | --- | --- |
@@ -784,7 +784,7 @@ No performance ceiling was raised. Core grew from Phase 0's 346.0 kB packed base
 
 ### 0.0.13 Phase 8 server deployment seams (2026-07-23)
 
-Optional health/drain/rate-limit/replay/deployment-lease helpers on `@arnilo/prism-core/runtime/server`. No listener, queue adapter, or concurrency hard-cap raise.
+Optional health/drain/rate-limit/replay/deployment-lease helpers on `@arnilo/prism-remote`. No listener, queue adapter, or concurrency hard-cap raise.
 
 | Surface | Result |
 | --- | --- |
@@ -815,9 +815,9 @@ No new release gate: the ceilings are evidence, not gates. Concurrent-resource e
 
 ## Related APIs
 
-- [Agent events](agent-events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.
-- [Agent/session runtime](agent-session-runtime.md): `session.subscribe()` and runtime event flow.
-- [Session stores](session-stores.md): `SessionStore.readBranchPath` and dev-vs-production branch reads.
-- [Database persistence](database-persistence.md): cursor queries, reference schema, indexes, and event sequence guidance.
-- [Runs and usage ledger](runs-and-usage.md): durable event, tool-call, and usage persistence.
-- [Provider primitives](provider-primitives.md): bounded SSE/error-body limits for first-party providers.
+- [Agent events](events.md): `SubscribeOptions` and `event_subscriber_overflow` event details.
+- [Agent/session runtime](agent.md): `session.subscribe()` and runtime event flow.
+- [Session stores](../packages/stores/jsonl/README.md): `SessionStore.readBranchPath` and dev-vs-production branch reads.
+- [Database persistence](../packages/stores/sqlite/README.md): cursor queries, reference schema, indexes, and event sequence guidance.
+- [Runs and usage ledger](events.md): durable event, tool-call, and usage persistence.
+- [Provider primitives](provider-kit.md): bounded SSE/error-body limits for first-party providers.

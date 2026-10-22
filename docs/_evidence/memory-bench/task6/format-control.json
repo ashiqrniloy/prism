@@ -1,0 +1,22 @@
+{
+  "kind": "format-control",
+  "status": "failed",
+  "project": "alpha",
+  "outputs": 0,
+  "expectedPathWritten": false,
+  "moduleMatches": false,
+  "jsonParsed": false,
+  "unquotedKeys": false,
+  "asConst": false,
+  "fields": {},
+  "grade": {
+    "taskSuccess": false,
+    "crossProjectLeakage": false,
+    "staleUseRate": null,
+    "repeatedErrorRate": null,
+    "rightTimeRecall": null,
+    "abstentionCorrectness": null,
+    "poisonPersistence": false
+  },
+  "inputTokens": 1152
+}

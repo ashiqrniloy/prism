@@ -2,16 +2,14 @@ import type { Database } from "bun:sqlite";
 import { randomUUID } from "node:crypto";
 import {
   type ApplyRetentionInput,
-  type LegalHoldExportItem,
-  type LegalHoldRecord,
-  PersistenceLifecycleError,
-  type PersistenceLifecycleStore,
-} from "@arnilo/prism";
-import {
   assertLifecycleOwnership as assertOwnership,
   assertOwnershipScope,
   assertHoldReason as assertReason,
+  type LegalHoldExportItem,
+  type LegalHoldRecord,
   ownershipScope as ownership,
+  PersistenceLifecycleError,
+  type PersistenceLifecycleStore,
   lifecyclePageLimit as pageLimit,
   rowToTenantQuota as rowToQuota,
 } from "@arnilo/prism-store-codecs";

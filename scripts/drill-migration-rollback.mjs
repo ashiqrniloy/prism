@@ -32,7 +32,9 @@ if (invokedDirectly) {
   Database = (await import("bun:sqlite")).Database;
 }
 
-const LAST_STEP = "009_run_prompt_version";
+const LAST_STEP = "010_session_links";
+const LINK_INDEXES = ["parent", "agent", "workflow", "delegation", "actor"].map((name) => `prism_sessions_link_${name}_idx`);
+const LINK_COLUMNS = ["agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"];
 
 function parseArgs(argv) {
   const args = { selfTest: false, url: undefined };
@@ -84,10 +86,11 @@ async function drillPostgres(url) {
     assert.equal((await store.list(sessionId)).length, 2, "seed must land");
     mark("seed");
 
-    // Downgrade one version: inverse of 009's additive DDL + its history row.
-    await pool.query(`ALTER TABLE ${schema}.prism_runs DROP COLUMN IF EXISTS prompt_version`);
+    // Downgrade one version: inverse of 010's additive DDL + its history row.
+    for (const index of LINK_INDEXES) await pool.query(`DROP INDEX IF EXISTS ${schema}.${index}`);
+    for (const column of LINK_COLUMNS) await pool.query(`ALTER TABLE ${schema}.prism_sessions DROP COLUMN IF EXISTS ${column}`);
     await pool.query(`DELETE FROM ${schema}.prism_migrations WHERE name = '${LAST_STEP}'`);
-    mark("downgrade-009");
+    mark("downgrade-010");
 
     // Verify schema compat at the 008 shape: the store works and data survived.
     const downgraded = await createPostgresPersistence({ pool, schema, skipMigrations: true }); // 008 shape by design
@@ -129,14 +132,15 @@ async function drillSqlite() {
     store.close();
     steps.push("apply+seed");
 
-    // Downgrade one version (inverse of 009) on the raw handle.
+    // Downgrade one version (inverse of 010) on the raw handle.
     const raw = new Database(filename);
-    raw.exec("ALTER TABLE prism_runs DROP COLUMN prompt_version");
+    for (const index of LINK_INDEXES) raw.exec(`DROP INDEX ${index}`);
+    for (const column of LINK_COLUMNS) raw.exec(`ALTER TABLE prism_sessions DROP COLUMN ${column}`);
     raw.prepare("DELETE FROM prism_migrations WHERE name = ?").run(LAST_STEP);
     raw.close();
-    steps.push("downgrade-009");
+    steps.push("downgrade-010");
 
-    const reopened = createSqlitePersistence({ filename }); // re-applies 009
+    const reopened = createSqlitePersistence({ filename }); // re-applies 010
     const survived = await reopened.list(sessionId);
     assert.equal(survived.length, 2, "seeded durable data must survive the downgrade/re-apply");
     await reopened.append({ ...seedEntries("x")[0], id: "drill-post", sessionId, timestamp: "2026-01-01T00:00:02.000Z" });

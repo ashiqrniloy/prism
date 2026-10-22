@@ -29,13 +29,12 @@ const ROOT = join(import.meta.dirname, "..");
 // halves of that policy against this list, so it can never pass by being empty.
 export const GATE_FILES = [
   "scripts/release-gate.test.mjs",
+  "scripts/registry-deprecate.test.mjs",
   "scripts/tooling-gate.test.mjs",
   "scripts/postgres-evidence.test.mjs",
   "scripts/run-all-tests.test.mjs",
   "scripts/phase8-conformance.test.mjs",
   "scripts/phase9-conformance.test.mjs",
-  "scripts/phase10-conformance.test.mjs",
-  "scripts/phase11-conformance.test.mjs",
   "scripts/benchmark-0.1.0.test.mjs",
   "scripts/benchmark-multi-agent.test.mjs",
   "scripts/benchmark-tool-search.test.mjs",
@@ -43,11 +42,7 @@ export const GATE_FILES = [
   "scripts/benchmark-redaction.test.mjs",
   "scripts/sweep-unused.test.mjs",
   "scripts/dead-export-verify.test.mjs",
-  "scripts/e2e-enterprise-journey.test.mjs",
   "scripts/e2e-coding-journey.test.mjs",
-  "scripts/e2e-prism-code-long-run.test.mjs",
-  "scripts/e2e-prism-code-tui.test.mjs",
-  "scripts/build-prism-code-binaries.test.mjs",
   "scripts/install-sh.test.mjs",
   "scripts/e2e-full-surface.test.mjs",
   "scripts/host-completeness-evidence.test.mjs",
@@ -56,8 +51,6 @@ export const GATE_FILES = [
   "scripts/phase23-quality-gates.test.mjs",
   "scripts/phase24-truth.test.mjs",
   "scripts/phase25-bounded-accumulation.test.mjs",
-  "scripts/phase27-ha.test.mjs",
-  "scripts/phase27-erp-journey.test.mjs",
   "scripts/phase37-provider-matrix.test.mjs",
   // Plan 152 Task 8: cross-vendor conformance walks moved out of the retired
   // provider-family workspace into the gate stage.
@@ -65,6 +58,7 @@ export const GATE_FILES = [
   "scripts/provider-toolcall-conformance.test.mjs",
   "scripts/provider-tool-result-wire.test.mjs",
   "scripts/provider-discovery-gate.test.mjs",
+  "scripts/retired-providers.test.mjs",
   "scripts/phase26-index-benchmark.test.mjs",
   "scripts/obscura-host-conformance.test.mjs",
   "scripts/phase54-package-map.test.mjs",
@@ -76,6 +70,7 @@ export const GATE_FILES = [
   "scripts/packaging-current.test.mjs",
   "scripts/import-hygiene.test.mjs",
   "scripts/live-matrix.test.mjs",
+  "scripts/memory-bench/run.test.mjs",
   "scripts/e2e-coverage.test.mjs",
   "scripts/live-doc-check.test.mjs",
   "scripts/version-literal-gate.test.mjs",
@@ -86,10 +81,12 @@ export const GATE_FILES = [
   "scripts/phase126-sqlite-mapping.test.mjs",
 ];
 
-// The old chain left `dist/__tests__/*.test.js` to the shell. There is no shell
-// here, and `node --test <dir>`/glob args are only understood from Node 22, so this
+// The old chain left the compiled `dist/__tests__/*.test.js` set to the shell. There is no
+// shell here, and `node --test <dir>`/glob args are only understood from Node 22, so this
 // stays inside the shell-free runner (which also names a missing build clearly)
 // even though the declared floor is now >=22 (plan 071 Task 2).
+// Plan 174 Task 8: the kernel publishes TypeScript source, so the root stage runs the
+// `src/__tests__` set directly (Bun strips types) and there is no build step to wait for.
 function expandGlob(arg) {
   if (arg.startsWith("--")) return [arg]; // flags and --flag=value args (e.g. --path-ignore-patterns=…) are not globs
   const star = arg.indexOf("*");
@@ -128,7 +125,7 @@ const WORKSPACE_LEAVES = expandWorkspaceDirs(ROOT, readManifest(join(ROOT, "pack
   args: ["run", "--cwd", relative(ROOT, dir), "test"],
 }));
 
-// The dist-consuming suites run behind the build lock (they import root dist/ via
+// The source-consuming suites run behind the build lock (they import the root kernel via
 // the @arnilo/prism self-symlink); the build-race gate runs UNWRAPPED on purpose —
 // its children acquire the real lock, which a parent holding it would deadlock.
 export const STAGES = [
@@ -155,11 +152,17 @@ export const STAGES = [
       "test",
       "--parallel=4",
       "--timeout=0",
-      // Task 1 §1.3: Bun matches explicit paths by suffix, so two root names
-      // (`content.test.js`, `schema.test.js`) also pull their `packages/*/dist` twins. The
-      // workspace stage runs those twins; this pattern keeps the partition exactly-once.
+      // Plan 174 Task 8: the kernel's own tests are TypeScript sources now, so the stage
+      // names the `src` directory (Bun discovers the nested `src/**/__tests__` sets too).
+      // Bun matches a positional arg as a path *substring*, not a path prefix, so `src` also
+      // collects `apps/prism-agent/src/__tests__/**` — the private app host, which the
+      // workspace stage already owns. `--path-ignore-patterns=apps/**` keeps that exactly once.
+      // The only other test files are the workspace twins, which the workspace stage owns —
+      // `--path-ignore-patterns=packages/**` keeps the partition exactly-once. Each pattern is
+      // its own flag: a comma-joined value matches nothing (verified against bun 1.4.2).
       "--path-ignore-patterns=packages/**",
-      "dist/__tests__/*.test.js",
+      "--path-ignore-patterns=apps/**",
+      "src",
     ],
   },
   {
@@ -194,7 +197,7 @@ export const STAGES = [
     args: ["scripts/with-build-lock.mjs", "bun", "test", "--timeout=0", "scripts/examples-execution.test.mjs"],
   },
   {
-    // Plan 120 Task 6. Core dist only, after the build. The audit keeps the Node coverage
+    // Plan 120 Task 6. Kernel source only, after the build. The audit keeps the Node coverage
     // instrument until its BRDA probe says Bun emits branch records; the wrapper runs under Bun.
     name: "branch coverage",
     command: "bun",

@@ -25,7 +25,7 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun ci
-      - run: bun run build:core && bun run --filter @arnilo/prism-work build
+      - run: bun run build:core
       # Golden round-trips against the packed tarball (LibreOffice conversion
       # stays in release.yml office-validation on workspace source).
       - name: run office golden packed suites

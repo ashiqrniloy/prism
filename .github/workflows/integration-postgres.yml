@@ -43,13 +43,11 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun ci
-      - run: bun run build:core && bun run --filter @arnilo/prism-core build
-      - name: run prism-core and store postgres suites
+      - run: bun run build:core
+      - name: run store postgres suites
         timeout-minutes: 8
         run: |
-          bun run --filter @arnilo/prism-core test:postgres
           bun run --filter @arnilo/prism-store-postgres test:postgres
-          bun test --timeout=0 scripts/phase27-ha.test.mjs
       - name: migration rollback/restore drill (plan 060)
         timeout-minutes: 5
         run: |

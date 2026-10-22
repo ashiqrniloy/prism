@@ -1,0 +1,58 @@
+[
+  {
+    "method": "POST",
+    "path": "/v1/messages",
+    "requestBody": {
+      "model": "qwen3.6-plus",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A long system context that gets cached for reuse across multiple turns.",
+              "cache_control": { "type": "ephemeral" }
+            }
+          ]
+        }
+      ],
+      "stream": true,
+      "max_tokens": 4096
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_hyp_cch_01\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"qwen3.6-plus\",\"content\":[],\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":120,\"cache_creation_input_tokens\":90,\"cache_read_input_tokens\":0,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Context cached successfully.\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":5}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/messages",
+    "requestBody": {
+      "model": "qwen3.6-plus",
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "A long system context that gets cached for reuse across multiple turns.",
+              "cache_control": { "type": "ephemeral" }
+            }
+          ]
+        },
+        {
+          "role": "assistant",
+          "content": [{ "type": "text", "text": "Context cached successfully." }]
+        },
+        {
+          "role": "user",
+          "content": [{ "type": "text", "text": "What did you cache?" }]
+        }
+      ],
+      "stream": true,
+      "max_tokens": 4096
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_hyp_cch_02\",\"type\":\"message\",\"role\":\"assistant\",\"model\":\"qwen3.6-plus\",\"content\":[],\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":45,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":90,\"output_tokens\":1}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"I cached the long system context.\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":8}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n"
+  }
+]

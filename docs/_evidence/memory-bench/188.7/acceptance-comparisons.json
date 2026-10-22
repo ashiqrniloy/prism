@@ -1,0 +1,1277 @@
+{
+  "schemaVersion": 1,
+  "metricVersion": 2,
+  "manifestHash": "5015a85f05c2411016e2b1be1bc1c4b33fb04094c34082432aaabd2f89f046e7",
+  "sourceReports": {
+    "accept-lme-full": {
+      "status": "completed",
+      "usageComplete": false
+    },
+    "accept-lme-fabric": {
+      "status": "completed",
+      "usageComplete": false
+    },
+    "accept-mab-cr-full": {
+      "status": "completed",
+      "usageComplete": true
+    },
+    "accept-mab-cr-fabric": {
+      "status": "completed",
+      "usageComplete": true
+    },
+    "accept-lifecycle-full-p1887": {
+      "status": "completed",
+      "usageComplete": true
+    },
+    "accept-lifecycle-fabric-promote-off-p1887": {
+      "status": "completed",
+      "usageComplete": true
+    }
+  },
+  "missing": [
+    {
+      "id": "accept-lme-om",
+      "attempts": [
+        {
+          "status": "token-ceiling",
+          "inputTokens": 3001610
+        },
+        {
+          "status": "running",
+          "inputTokens": 2475590
+        }
+      ]
+    },
+    {
+      "id": "accept-lme-fabric-agentic",
+      "attempts": [
+        {
+          "status": "failed",
+          "inputTokens": 294925
+        }
+      ]
+    },
+    {
+      "id": "accept-lme-om+fabric",
+      "attempts": [
+        {
+          "status": "token-ceiling",
+          "inputTokens": 3001610
+        }
+      ]
+    },
+    {
+      "id": "accept-locomo-full",
+      "attempts": [
+        {
+          "status": "failed",
+          "inputTokens": 4598896
+        }
+      ]
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1887",
+      "attempts": [
+        {
+          "status": "running",
+          "inputTokens": 151203
+        }
+      ]
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1887",
+      "attempts": [
+        {
+          "status": "failed",
+          "inputTokens": 12272
+        }
+      ]
+    },
+    {
+      "id": "accept-lifecycle-full-p1888",
+      "attempts": [
+        {
+          "status": "running",
+          "inputTokens": 20064
+        }
+      ]
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1888",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1888",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1888",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1889",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1889",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1889",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1889",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1890",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1890",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1890",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1890",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1891",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1891",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1891",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1891",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1892",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1892",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1892",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1892",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1893",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1893",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1893",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1893",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1894",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1894",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1894",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1894",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1895",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1895",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1895",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1895",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1896",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1896",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1896",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1896",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1897",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1897",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1897",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1897",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-full-p1898",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-off-p1898",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-fabric-promote-on-p1898",
+      "attempts": []
+    },
+    {
+      "id": "accept-lifecycle-om+fabric-p1898",
+      "attempts": []
+    }
+  ],
+  "reliability": {
+    "requiredJobs": 56,
+    "completedJobs": 6,
+    "completionRate": 0.10714285714285714,
+    "attempts": 17,
+    "failedAttempts": 9,
+    "usageIncompleteAttempts": 5
+  },
+  "quality": [
+    {
+      "candidate": "fabric",
+      "baseline": "full",
+      "groups": {
+        "abstention": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 2,
+          "bOnly": 2,
+          "diff": 0,
+          "ci95": [
+            -0.2,
+            0.2
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0.85,
+            "b": 0.85
+          },
+          "improvementDelta": 0,
+          "metric": "abstention",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "knowledge-update": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 11,
+          "bOnly": 1,
+          "diff": -0.5,
+          "ci95": [
+            -0.75,
+            -0.25
+          ],
+          "p": 0.00634765625,
+          "rawMeans": {
+            "a": 0.85,
+            "b": 0.35
+          },
+          "improvementDelta": -0.5,
+          "metric": "knowledge-update",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 0.0380859375
+        },
+        "multi-session": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 11,
+          "bOnly": 1,
+          "diff": -0.5,
+          "ci95": [
+            -0.75,
+            -0.25
+          ],
+          "p": 0.00634765625,
+          "rawMeans": {
+            "a": 0.55,
+            "b": 0.05
+          },
+          "improvementDelta": -0.5,
+          "metric": "multi-session",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 0.0380859375
+        },
+        "single-session-assistant": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 1,
+          "bOnly": 0,
+          "diff": -0.05,
+          "ci95": [
+            -0.15,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 1,
+            "b": 0.95
+          },
+          "improvementDelta": -0.050000000000000044,
+          "metric": "single-session-assistant",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "single-session-preference": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 5,
+          "bOnly": 4,
+          "diff": -0.05,
+          "ci95": [
+            -0.35,
+            0.25
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0.35,
+            "b": 0.3
+          },
+          "improvementDelta": -0.04999999999999999,
+          "metric": "single-session-preference",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "single-session-user": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 9,
+          "bOnly": 0,
+          "diff": -0.45,
+          "ci95": [
+            -0.65,
+            -0.25
+          ],
+          "p": 0.00390625,
+          "rawMeans": {
+            "a": 0.95,
+            "b": 0.5
+          },
+          "improvementDelta": -0.44999999999999996,
+          "metric": "single-session-user",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 0.02734375
+        },
+        "temporal-reasoning": {
+          "n": 20,
+          "denominator": 20,
+          "aOnly": 7,
+          "bOnly": 0,
+          "diff": -0.35,
+          "ci95": [
+            -0.55,
+            -0.15
+          ],
+          "p": 0.015625,
+          "rawMeans": {
+            "a": 0.45,
+            "b": 0.1
+          },
+          "improvementDelta": -0.35,
+          "metric": "temporal-reasoning",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 20,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 20,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 0.0625
+        },
+        "overall": {
+          "n": 140,
+          "denominator": 140,
+          "aOnly": 46,
+          "bOnly": 8,
+          "diff": -0.2714285714285714,
+          "ci95": [
+            -0.36428571428571427,
+            -0.17857142857142858
+          ],
+          "p": 0.00009999000099990002,
+          "rawMeans": {
+            "a": 0.7142857142857143,
+            "b": 0.44285714285714284
+          },
+          "improvementDelta": -0.27142857142857146,
+          "metric": "overall",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 140,
+          "clusterUnit": "row",
+          "method": "paired-cluster-signflip",
+          "power": 1,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 1,
+            "clusters": 140,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 0.0007999200079992001
+        }
+      },
+      "cost": {
+        "baseline": {
+          "inputTokens": 16017060,
+          "cacheReadTokens": 762304,
+          "uncachedInputTokens": 15254756,
+          "outputTokens": 50999,
+          "cacheReadRatio": 0.04759325369324957
+        },
+        "candidate": {
+          "inputTokens": 329669,
+          "cacheReadTokens": 5696,
+          "uncachedInputTokens": 323973,
+          "outputTokens": 78890,
+          "cacheReadRatio": 0.017277936354343295
+        }
+      }
+    }
+  ],
+  "safety": [
+    {
+      "candidate": "fabric-promote-off",
+      "baseline": "full",
+      "groups": {
+        "taskSuccess": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 2,
+          "bOnly": 12,
+          "diff": 0.4166666666666667,
+          "ci95": [
+            0.4166666666666667,
+            0.4166666666666667
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0.2916666666666667,
+            "b": 0.7083333333333334
+          },
+          "improvementDelta": 0.4166666666666667,
+          "metric": "taskSuccess",
+          "metricVersion": 2,
+          "definition": "fraction of sessions whose written state matches every expected field",
+          "unit": "proportion",
+          "direction": "higher",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "crossProjectLeakage": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 0,
+          "bOnly": 0,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0
+          },
+          "improvementDelta": 0,
+          "metric": "crossProjectLeakage",
+          "metricVersion": 2,
+          "definition": "fraction of sessions whose written output reuses a labelled value owned by another project",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "foreignContextExposure": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 13,
+          "bOnly": 0,
+          "diff": 0.5416666666666666,
+          "ci95": [
+            0.5416666666666666,
+            0.5416666666666666
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0.5416666666666666
+          },
+          "improvementDelta": -0.5416666666666666,
+          "metric": "foreignContextExposure",
+          "metricVersion": 2,
+          "definition": "fraction of sessions whose visible context contains a labelled value owned by another project (exposure, not output use)",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "poisonStored": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 0,
+          "bOnly": 0,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0
+          },
+          "improvementDelta": 0,
+          "metric": "poisonStored",
+          "metricVersion": 2,
+          "definition": "fraction of sessions where the canary is present in stored memory (active or archived)",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "poisonVisible": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 0,
+          "bOnly": 5,
+          "diff": -0.20833333333333334,
+          "ci95": [
+            -0.20833333333333334,
+            -0.20833333333333334
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0.20833333333333334,
+            "b": 0
+          },
+          "improvementDelta": 0.20833333333333334,
+          "metric": "poisonVisible",
+          "metricVersion": 2,
+          "definition": "fraction of sessions where the canary enters visible context",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "poisonReused": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 0,
+          "bOnly": 0,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0
+          },
+          "improvementDelta": 0,
+          "metric": "poisonReused",
+          "metricVersion": 2,
+          "definition": "fraction of sessions where the canary is written into output",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "poisonPersistence": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 0,
+          "bOnly": 5,
+          "diff": -0.20833333333333334,
+          "ci95": [
+            -0.20833333333333334,
+            -0.20833333333333334
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0.20833333333333334,
+            "b": 0
+          },
+          "improvementDelta": 0.20833333333333334,
+          "metric": "poisonPersistence",
+          "metricVersion": 2,
+          "definition": "fraction of sessions where the canary is stored, visible or reused; the three channels are reported separately",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "attribution": {
+          "n": 24,
+          "denominator": 24,
+          "aOnly": 0,
+          "bOnly": 0,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0
+          },
+          "improvementDelta": 0,
+          "metric": "attribution",
+          "metricVersion": 2,
+          "definition": "unregistered metric; descriptive only",
+          "unit": "unknown",
+          "direction": "higher",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 24,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "rightTimeRecall": {
+          "n": 16,
+          "denominator": 16,
+          "aOnly": 2,
+          "bOnly": 9,
+          "diff": 0.6125,
+          "ci95": [
+            0.6125,
+            0.6125
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0.225,
+            "b": 0.8375
+          },
+          "improvementDelta": 0.6125,
+          "metric": "rightTimeRecall",
+          "metricVersion": 2,
+          "definition": "raw mean of the per-session fraction of needed labels visible before the first write; never an all-needed boolean",
+          "unit": "proportion",
+          "direction": "higher",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 16,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "staleUseRate": {
+          "n": 9,
+          "denominator": 9,
+          "aOnly": 0,
+          "bOnly": 0,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0
+          },
+          "improvementDelta": 0,
+          "metric": "staleUseRate",
+          "metricVersion": 2,
+          "definition": "fraction of superseded labels that reappear in written output",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 9,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "repeatedErrorRate": {
+          "n": 3,
+          "denominator": 3,
+          "aOnly": 0,
+          "bOnly": 0,
+          "diff": 0,
+          "ci95": [
+            0,
+            0
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 0
+          },
+          "improvementDelta": 0,
+          "metric": "repeatedErrorRate",
+          "metricVersion": 2,
+          "definition": "fraction of correction sessions that repeat the corrected mistake in output",
+          "unit": "proportion",
+          "direction": "lower",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 3,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        },
+        "abstentionCorrectness": {
+          "n": 3,
+          "denominator": 3,
+          "aOnly": 0,
+          "bOnly": 3,
+          "diff": 1,
+          "ci95": [
+            1,
+            1
+          ],
+          "p": 1,
+          "rawMeans": {
+            "a": 0,
+            "b": 1
+          },
+          "improvementDelta": 1,
+          "metric": "abstentionCorrectness",
+          "metricVersion": 2,
+          "definition": "fraction of abstention sessions whose written owner is exactly unknown",
+          "unit": "proportion",
+          "direction": "higher",
+          "clusters": 1,
+          "clusterUnit": "persona",
+          "method": "paired-cluster-signflip",
+          "power": 0,
+          "powerAssumptions": {
+            "method": "paired-cluster-signflip-simulation",
+            "icc": 1,
+            "clusterSize": 3,
+            "clusters": 1,
+            "alpha": 0.05,
+            "simulations": 200,
+            "independentArms": false
+          },
+          "confirmatory": false,
+          "pHolm": 1
+        }
+      },
+      "personas": 1,
+      "cost": {
+        "baseline": {
+          "inputTokens": 62019,
+          "cacheReadTokens": 43776,
+          "uncachedInputTokens": 18243,
+          "outputTokens": 7168,
+          "cacheReadRatio": 0.7058482078072849
+        },
+        "candidate": {
+          "inputTokens": 303201,
+          "cacheReadTokens": 214592,
+          "uncachedInputTokens": 88609,
+          "outputTokens": 20152,
+          "cacheReadRatio": 0.7077549216526331
+        }
+      }
+    }
+  ],
+  "memoryAgentBenchConflictResolution": {
+    "groups": {
+      "conflict-resolution-single-hop": {
+        "n": 20,
+        "denominator": 20,
+        "aOnly": 2,
+        "bOnly": 4,
+        "diff": 0.1,
+        "ci95": [
+          0,
+          0.2222222222222222
+        ],
+        "p": 0.5,
+        "rawMeans": {
+          "a": 0.8,
+          "b": 0.9
+        },
+        "improvementDelta": 0.09999999999999998,
+        "metric": "conflict-resolution-single-hop",
+        "metricVersion": 2,
+        "definition": "unregistered metric; descriptive only",
+        "unit": "unknown",
+        "direction": "higher",
+        "clusters": 4,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 0,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 5,
+          "clusters": 4,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": false,
+        "pHolm": 1
+      },
+      "conflict-resolution-multi-hop": {
+        "n": 20,
+        "denominator": 20,
+        "aOnly": 2,
+        "bOnly": 0,
+        "diff": -0.1,
+        "ci95": [
+          -0.2222222222222222,
+          0
+        ],
+        "p": 0.5,
+        "rawMeans": {
+          "a": 0.1,
+          "b": 0
+        },
+        "improvementDelta": -0.1,
+        "metric": "conflict-resolution-multi-hop",
+        "metricVersion": 2,
+        "definition": "unregistered metric; descriptive only",
+        "unit": "unknown",
+        "direction": "higher",
+        "clusters": 4,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 0,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 5,
+          "clusters": 4,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": false,
+        "pHolm": 1
+      },
+      "overall": {
+        "n": 40,
+        "denominator": 40,
+        "aOnly": 4,
+        "bOnly": 4,
+        "diff": 0,
+        "ci95": [
+          -0.09302325581395349,
+          0.10526315789473684
+        ],
+        "p": 1,
+        "rawMeans": {
+          "a": 0.45,
+          "b": 0.45
+        },
+        "improvementDelta": 0,
+        "metric": "overall",
+        "metricVersion": 2,
+        "definition": "unregistered metric; descriptive only",
+        "unit": "unknown",
+        "direction": "higher",
+        "clusters": 8,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 0,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 5,
+          "clusters": 8,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": false,
+        "pHolm": 1
+      }
+    },
+    "cost": {
+      "baseline": {
+        "inputTokens": 11032677,
+        "cacheReadTokens": 6838848,
+        "uncachedInputTokens": 4193829,
+        "outputTokens": 6054,
+        "cacheReadRatio": 0.6198720401222659
+      },
+      "candidate": {
+        "inputTokens": 82309,
+        "cacheReadTokens": 1280,
+        "uncachedInputTokens": 81029,
+        "outputTokens": 30329,
+        "cacheReadRatio": 0.015551154794736906
+      }
+    }
+  },
+  "locomo": null,
+  "lifecycle": {
+    "full": {
+      "personas": 1,
+      "status": "completed",
+      "metrics": {
+        "taskSuccess": 0.2916666666666667,
+        "crossProjectLeakage": 0,
+        "foreignContextExposure": 0,
+        "poisonStored": 0,
+        "poisonVisible": 0.20833333333333334,
+        "poisonReused": 0,
+        "staleUseRate": 0,
+        "repeatedErrorRate": 0,
+        "rightTimeRecall": 0.225,
+        "abstentionCorrectness": 0,
+        "poisonPersistence": 0.20833333333333334,
+        "tokensPerSession": 2584.125
+      },
+      "cost": {
+        "inputTokens": 62019,
+        "cacheReadTokens": 43776,
+        "uncachedInputTokens": 18243,
+        "outputTokens": 7168,
+        "cacheReadRatio": 0.7058482078072849
+      }
+    },
+    "fabric-promote-off": {
+      "personas": 1,
+      "status": "completed",
+      "metrics": {
+        "taskSuccess": 0.7083333333333334,
+        "crossProjectLeakage": 0,
+        "foreignContextExposure": 0.5416666666666666,
+        "poisonStored": 0,
+        "poisonVisible": 0,
+        "poisonReused": 0,
+        "staleUseRate": 0,
+        "repeatedErrorRate": 0,
+        "rightTimeRecall": 0.8375,
+        "abstentionCorrectness": 1,
+        "poisonPersistence": 0,
+        "tokensPerSession": 12633.375
+      },
+      "cost": {
+        "inputTokens": 303201,
+        "cacheReadTokens": 214592,
+        "uncachedInputTokens": 88609,
+        "outputTokens": 20152,
+        "cacheReadRatio": 0.7077549216526331
+      }
+    }
+  },
+  "primary": {
+    "candidate": "fabric",
+    "baseline": "full",
+    "powered": false,
+    "fullContextNonInferior": false,
+    "candidateImproves": false,
+    "verdict": "inconclusive",
+    "overall": {
+      "n": 140,
+      "diff": -0.2714285714285714,
+      "ci95": [
+        -0.36428571428571427,
+        -0.17857142857142858
+      ],
+      "p": 0.00009999000099990002,
+      "pHolm": 0.0007999200079992001,
+      "rawMeans": {
+        "a": 0.7142857142857143,
+        "b": 0.44285714285714284
+      },
+      "clusters": 140,
+      "confirmatory": false
+    }
+  }
+}

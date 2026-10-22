@@ -20,10 +20,17 @@
 - Companion stores stay named exports from the same package (`createSqliteCheckpointStore`,
   `createSqliteLeaseStore`, `createSqlitePersistenceLifecycle`, the migration and DDL constants, and
   the migration appliers) because they share one database and one migration history; their contracts
-  remain in `@arnilo/prism` (roadmap Phase 11).
+  are the `checkpoints`/`leases` service contracts in `@arnilo/prism-workflows` (plan 168 Task 4).
 - `@arnilo/prism-core/sessions/sqlite` and `/sessions/codecs` are deleted with no alias. The shared
   codecs now live in `@arnilo/prism-store-codecs`; importers migrate to the packages
   (`@arnilo/prism-core` keeps the codecs as a dependency for its Postgres tree until plan 153 Task 5).
+
+### Changed
+
+- `setup` registers `prism.services.provide("checkpoints", …)` and `prism.services.provide("leases", …)`
+  over the same `SqlitePersistence` it puts in the store slot (plan 168 Task 4), so a listed workflows
+  package gets durable checkpoints and leases with no second `Database`. The store contracts
+  (`CheckpointStore`, `LeaseStore`) now come from `@arnilo/prism-workflows` as `import type` only.
 
 ## [0.1.0] - 2026-08-09
 

@@ -6,7 +6,7 @@ import { redactSecrets } from "../redaction.js";
 import { importDefinition } from "./definition.js";
 import { ManifestError } from "./errors.js";
 import type { ManifestEntry, ManifestRecord, ManifestScope, PrismManifestV1 } from "./format.js";
-import { hashPackageTree, installedPackageDir } from "./integrity.js";
+import { hashPackageClosure, installedPackageDir } from "./integrity.js";
 import { EMPTY_MANIFEST, readManifest, type ScopeDirs, scopeDirs, writeManifest } from "./store.js";
 
 /** Where to install, shared by `install` and `remove`. */
@@ -210,7 +210,7 @@ export async function install(spec: string, options: InstallOptions): Promise<Ma
   };
   try {
     const dir = installedPackageDir(dirs.packagesDir, name);
-    const integrity = await hashPackageTree(dir, { scope, name });
+    const integrity = await hashPackageClosure(dirs.packagesDir, name, scope);
     const installed = JSON.parse(await readFile(join(dir, "package.json"), "utf8")) as { version?: unknown };
     if (typeof installed.version !== "string") return fail("install_failed", scope, `Package ${name} has no version.`, name);
     const definition = await importDefinition(dirs.packagesDir, { name, integrity }, scope);

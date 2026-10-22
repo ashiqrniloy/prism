@@ -1,0 +1,13 @@
+import { createAppAgent } from "./agent.js";
+
+async function main() {
+  const agent = createAppAgent();
+  const session = agent.createSession({ id: "personal-session-1" });
+  const result = await session.run("Check workspace status");
+  console.log(result.text);
+}
+
+main().catch((error) => {
+  console.error("Personal assistant failed:", error);
+  process.exit(1);
+});

@@ -1,4 +1,4 @@
-import { type AgentEvent, createAgent, createToolRegistry, providerDone, providerTextDelta, providerToolCall, providerUsage, registerContextSources, type Skill, type ToolDefinition, type ToolResult } from "@arnilo/prism";
+import { type AgentEvent, createAgent, providerDone, providerTextDelta, providerToolCall, providerUsage, registerContextSources, type Skill, type ToolDefinition, type ToolResult } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
 
 // Custom tools + skills + context in one host app: register a host-owned

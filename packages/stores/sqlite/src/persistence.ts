@@ -1,34 +1,28 @@
 import type { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import {
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
+  assertSessionLinkFilter,
   assertSessionMetadataKey,
   type BranchQuery,
-  type CheckpointStore,
   DEFAULT_MAX_SESSION_SEARCH_FTS_CANDIDATES,
   DEFAULT_SESSION_LIST_LIMIT,
-  type LeaseStore,
+  HARD_MAX_SESSION_LIST_LIMIT,
   type MigrationQuery,
   type OwnershipScope,
   type PersistencePage,
   type ProductionPersistenceStore,
-  prepareRunFeedback,
   type ResolvedSessionSearchQuery,
   type RetentionPolicyQuery,
-  HARD_MAX_SESSION_LIST_LIMIT,
-  RunFeedbackError,
   type RunFeedbackQuery,
   type RunFeedbackStore,
   type RunLedger,
   type RunQuery,
   type RunRecord,
-  requireRunFeedbackOwnership,
   resolveSessionSearchQuery,
-  runFeedbackPageLimit,
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_METADATA_KEY,
@@ -57,11 +51,21 @@ import {
   encodeBranchCursor,
   entrySearchFields,
   rowToRunFeedbackRecord as mapFeedbackRow,
+  ownershipColumns,
   parseSessionMetadata,
+  prepareRunFeedback,
+  RunFeedbackError,
+  requireRunFeedbackOwnership,
+  runFeedbackPageLimit,
+  SESSION_LINK_COLUMN_NAMES,
   type SessionEntryRow,
   safeSearchMetadata,
+  sessionLinkColumns,
+  sessionLinkFilterColumns,
+  sessionLinkSummaryFields,
 } from "@arnilo/prism-store-codecs";
-import { ownershipColumns } from "@arnilo/prism-store-codecs";
+import type { CheckpointStore, LeaseStore } from "@arnilo/prism-workflows";
+import { BunSqlite } from "./bun-runtime.js";
 import {
   applySqliteMigrations,
   assertSqliteSchemaReady,
@@ -69,21 +73,6 @@ import {
   maybeRestrictFileMode,
   verifyMigrationIdempotency,
 } from "./migrations.js";
-
-const require = createRequire(import.meta.url);
-
-function loadBunSqlite(): new (filename: string) => Database {
-  try {
-    const ctor = require("bun:sqlite").Database;
-    if (typeof ctor !== "function") throw new Error("bun:sqlite did not export Database");
-    return ctor;
-  } catch (error) {
-    throw new Error("@arnilo/prism-store-sqlite requires the Bun runtime (bun:sqlite).", { cause: error });
-  }
-}
-
-// ponytail: require() not static import — Node turns `import "bun:sqlite"` into ERR_UNSUPPORTED_ESM_URL_SCHEME before this message. Delete the seam when a non-Bun import is no longer a supported failure.
-const BunSqlite = loadBunSqlite();
 
 const {
   agentEventRecordToRow,
@@ -120,7 +109,7 @@ export interface SqlitePersistence extends SessionStore, RunLedger, ProductionPe
   readonly checkpoints: CheckpointStore;
   readonly leases: LeaseStore;
   readonly feedback: RunFeedbackStore;
-  readonly lifecycle: import("@arnilo/prism").PersistenceLifecycleStore;
+  readonly lifecycle: import("@arnilo/prism-store-codecs").PersistenceLifecycleStore;
   readonly metadata: Readonly<{
     readonly kind: "sqlite";
     readonly multiProcess: true;
@@ -176,6 +165,9 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
     WHERE (? IS NULL)
        OR (? > 0 AND prism_sessions.version = ? AND tenant_id IS ? AND account_id IS ? AND user_id IS ?)
     RETURNING version`,
+  );
+  const setSessionLinks = db.prepare(
+    `UPDATE prism_sessions SET ${SESSION_LINK_COLUMN_NAMES.map((column) => `${column} = ?`).join(", ")} WHERE id = ?`,
   );
   const selectSessionVersion = db.prepare(`SELECT version FROM prism_sessions WHERE id = ?`);
   const selectParent = db.prepare(`SELECT 1 FROM prism_session_entries WHERE id = ? AND session_id = ? LIMIT 1`);
@@ -488,6 +480,9 @@ export function createSqlitePersistence(options: SqlitePersistenceOptions): Sqli
         );
         const search = entrySearchFields(entry);
         insertSearchFts.run(row.session_id, row.id, search.label, search.summary, search.body);
+        // The links entry is the source of truth; the session row's columns only index it.
+        const links = sessionLinkColumns(entry);
+        if (links) setSessionLinks.run(...links, entry.sessionId);
 
         if (appendOptions?.idempotencyKey) {
           insertIdempotency.run(entry.sessionId, expectedParent, appendOptions.idempotencyKey, entry.id, now);
@@ -975,7 +970,10 @@ function entryScopeFilters(
 /** Fail-closed, non-enumerating scope check for `deleteSession`: an absent, entry-less, or foreign-scope session is a miss. */
 function sqliteSessionInScope(db: Database, sessionId: string, scope: OwnershipScope | undefined): boolean {
   const filters = scope ? entryScopeFilters(scope, "?", [sessionId]) : [];
-  const clauses = ["EXISTS (SELECT 1 FROM prism_session_entries present WHERE present.session_id = s.id)", ...filters.map((filter) => filter.clause)];
+  const clauses = [
+    "EXISTS (SELECT 1 FROM prism_session_entries present WHERE present.session_id = s.id)",
+    ...filters.map((filter) => filter.clause),
+  ];
   const params = [sessionId, ...filters.flatMap((filter) => filter.params)];
   // bun:sqlite's get() answers null (not undefined) on a miss, so the check is truthiness, not a nullish comparison.
   return Boolean(db.prepare(`SELECT 1 FROM prism_sessions s WHERE s.id = ? AND ${clauses.join(" AND ")}`).get(...params));
@@ -1030,20 +1028,23 @@ function listSqliteSessions(db: Database, query: SessionListQuery): PersistenceP
     filters.push(filter.clause);
     params.push(...filter.params);
   }
+  assertSessionLinkFilter(query);
+  for (const [column, value] of sessionLinkFilterColumns(query)) {
+    filters.push(`s.${column} = ?`);
+    params.push(value);
+  }
   const direction = order === "asc" ? "ASC" : "DESC";
   if (query.cursor !== undefined) {
     const cursor = decodeEntryCursor(query.cursor);
     filters.push(
-      order === "asc"
-        ? "(s.updated_at > ? OR (s.updated_at = ? AND s.id > ?))"
-        : "(s.updated_at < ? OR (s.updated_at = ? AND s.id < ?))",
+      order === "asc" ? "(s.updated_at > ? OR (s.updated_at = ? AND s.id > ?))" : "(s.updated_at < ? OR (s.updated_at = ? AND s.id < ?))",
     );
     params.push(cursor.timestamp, cursor.timestamp, cursor.id);
   }
 
   const rows = db
     .prepare(
-      `SELECT s.id AS session_id, s.created_at, s.updated_at, s.metadata
+      `SELECT s.id AS session_id, s.created_at, s.updated_at, s.metadata, ${SESSION_LINK_COLUMN_NAMES.map((column) => `s.${column}`).join(", ")}
        FROM prism_sessions s
        WHERE ${filters.join(" AND ")}
        ORDER BY s.updated_at ${direction}, s.id ${direction}
@@ -1054,6 +1055,7 @@ function listSqliteSessions(db: Database, query: SessionListQuery): PersistenceP
     created_at: string;
     updated_at: string;
     metadata: string | null;
+    [column: string]: unknown;
   }[];
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
@@ -1097,6 +1099,7 @@ function listSqliteSessions(db: Database, query: SessionListQuery): PersistenceP
       messageCount: messageCountBySession.get(row.session_id) ?? 0,
       ...(typeof title === "string" ? { title } : {}),
       ...(typeof workspaceRoot === "string" ? { metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } } : {}),
+      ...sessionLinkSummaryFields(row),
     };
   });
   const last = pageRows.at(-1);
@@ -1123,6 +1126,10 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
   if (q.userId) {
     filters.push("s.user_id = ?");
     params.push(q.userId);
+  }
+  for (const [column, value] of sessionLinkFilterColumns(q)) {
+    filters.push(`s.${column} = ?`);
+    params.push(value);
   }
   if (q.workspaceRoot) {
     filters.push(`json_extract(s.metadata, '$.${SESSION_SEARCH_WORKSPACE_METADATA_KEY}') = ?`);
@@ -1186,7 +1193,7 @@ function searchSqliteSessions(db: Database, query: SessionSearchQuery): Persiste
        me.timestamp AS match_timestamp,
        me.id AS match_entry_id`
          : ""
-}
+     }
      FROM prism_sessions s${q.query ? "\n     JOIN best m ON m.session_id = s.id\n     JOIN prism_session_entries me ON me.id = m.entry_id" : ""}
      ${where}
      ORDER BY s.updated_at ${order}, s.id ${order}

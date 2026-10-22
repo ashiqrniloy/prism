@@ -3,24 +3,24 @@
  * Network-free: drives a materialized fake obscura CLI through each host's public
  * built API. Proves hosts need no Obscura-specific branch: the same array (one read
  * tool `web_fetch`, one mutating tool `obscura_scrape`) flows through core agent
- * sessions, the Prism MCP server, server-hosted lifecycle, AG-UI, ACP, workflow
- * agent/tool nodes and supervisor children — with host authorization, selection,
+ * sessions, AG-UI, ACP, workflow
+ * agent/function nodes — with host authorization, selection,
  * effects, and abort ownership intact.
+ *
+ * The MCP tool-serving leg was removed with plan 161 Task 5: the retired
+ * direct-tool-dispatch MCP server is gone and `serveMcp` exposes one agent
+ * tool, so serving a generic `ToolDefinition[]` over MCP waits for Phase 14
+ * (`serveTools`).
  */
-import assert from "node:assert/strict";
+
 import { describe, it } from "bun:test";
-import { client as acpClient, methods as acpMethods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+import assert from "node:assert/strict";
 import { createAgent, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
-import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
-import { createPrismAcpAgent } from "../packages/ag-ui/dist/acp/index.js";
-import { createAgUiHandler, createAgUiMcpAdapter } from "../packages/ag-ui/dist/index.js";
-import { createPrismMcpServer } from "../packages/mcp/dist/index.js";
-import { createPrismHandler } from "../packages/prism-core/dist/runtime/server/index.js";
-import { createSupervisor } from "../packages/prism-core/dist/runtime/supervisor/index.js";
-import { agentNode, defineWorkflow, runWorkflow, toolNode } from "../packages/prism-core/dist/runtime/workflows/index.js";
-import { fakeObscuraCliPath } from "../packages/web-tools/dist/obscura/__tests__/fake-cli.js";
-import { createObscuraWebTools } from "../packages/web-tools/dist/obscura/index.js";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createAgUiHandler, createAgUiMcpAdapter } from "../packages/hosts/ag-ui/src/index.ts";
+import { agentNode, defineWorkflow, functionNode, runWorkflow } from "@arnilo/prism-workflows";
+import { fakeObscuraCliPath } from "../packages/tools/web/src/obscura/__tests__/fake-cli.ts";
+import { createObscuraWebTools } from "../packages/tools/web/src/obscura/index.ts";
 
 const AUTHORIZATION = { ownership: { tenantId: "tenant-1", userId: "user-1" } };
 const FAKE = fakeObscuraCliPath();
@@ -61,30 +61,10 @@ const fetchThen = (text) => [
   [providerTextDelta(text), providerDone()],
 ];
 
-async function agentWith(provider, tools, id) {
-  return await (await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools })).session({ id, create: true });
-}
-
-function jsonRequest(path, body) {
-  return new Request(`https://example.test${path}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-async function withMcpClient(server) {
-  const mcpClient = new Client({ name: "conformance", version: "0.0.1" }, { capabilities: {} });
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  await server.connect(serverTransport);
-  await mcpClient.connect(clientTransport);
-  return {
-    client: mcpClient,
-    async close() {
-      await mcpClient.close();
-      await server.close();
-    },
-  };
+async function _agentWith(provider, tools, id) {
+  return await (
+    await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: tools } })
+  ).session({ id, create: true });
 }
 
 describe("Obscura generic host conformance (plan 039 task 6)", () => {
@@ -93,7 +73,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("scraped")))])],
-      tools,
+      tools: { add: tools },
     });
     const session = await agent.session({ id: "core-obscura", create: true });
     const result = await session.run("scrape example.com");
@@ -102,68 +82,28 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     assert.deepEqual(calls, ["obscura_scrape"]);
   });
 
-  it("Prism MCP server lists and executes Obscura tools; denied authorization never executes", async () => {
-    const { tools, calls } = obscuraTools();
-    const allowed = await withMcpClient(createPrismMcpServer({ tools, authorize: () => AUTHORIZATION }));
-    const listed = await allowed.client.listTools();
-    assert.deepEqual(listed.tools.map((tool) => tool.name).sort(), ["obscura_scrape", "obscura_fetch", "web_fetch", "web_search"].sort());
-    const result = await allowed.client.callTool({ name: "web_fetch", arguments: { url: "https://example.com/page" } });
-    assert.ok(!result.isError);
-    // Generic MCP serialization surfaces the tool's untrusted-content label; the value
-    // itself is asserted end to end in the core-session and toolNode paths.
-    assert.match(JSON.stringify(result.content), /UNTRUSTED EXTERNAL CONTENT/);
-    assert.deepEqual(calls, ["web_fetch"]);
-    await allowed.close();
-
-    const denied = await withMcpClient(createPrismMcpServer({ tools, authorize: () => false }));
-    const deniedResult = await denied.client.callTool({ name: "web_fetch", arguments: { url: "https://example.com/page" } });
-    assert.equal(deniedResult.isError, true);
-    assert.deepEqual(calls, ["web_fetch"], "denied authorization must not reach the tool");
-    await denied.close();
-  });
-
-  it("server-hosted lifecycle runs an Obscura-tooled agent over the public handler", async () => {
-    const { tools, calls } = obscuraTools();
-    const handler = createPrismHandler({
-      agents: {
-        support: await createAgent({
-          model: { provider: "mock", model: "demo" },
-          packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("scraped")))])],
-          tools,
-        }),
-      },
-      authorize: () => AUTHORIZATION,
-    });
-    const response = await handler(jsonRequest("/prism/agents/support/runs", { input: "scrape example.com" }));
-    assert.equal(response.status, 200);
-    const body = await response.json();
-    assert.equal(body.status, "succeeded");
-    assert.equal(body.text, "scraped");
-    assert.deepEqual(calls, ["obscura_scrape"]);
-
-    const denied = await handler(
-      new Request("https://example.test/prism/agents/support/runs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ input: "x" }),
-      }),
-    );
-    void denied;
-  });
-
   it("AG-UI injects host-selected Obscura tools through the normal session loop", async () => {
     const { tools, calls } = obscuraTools();
     const bridge = { tools, refresh: async () => undefined, close: async () => undefined };
     const mcp = createAgUiMcpAdapter({ bridge, select: () => ["web_fetch"] });
-    let selected = [];
-    const handler = createAgUiHandler({
-      authorize: () => AUTHORIZATION,
-      mcp,
-      sessionFactory: async ({ input }) => {
-        selected = input.serverTools.map((tool) => tool.name);
-        return await agentWith(scriptedProvider(fetchThen("fetched")), input.serverTools, "ag-ui-obscura");
-      },
+    // Plan 161/162 moved MCP selection to the host: `prepare` returns the reviewed tools, the host
+    // builds the agent with them, and the handler takes that agent.
+    const selected = await mcp.prepare({
+      request: { threadId: "thread-1" },
+      authorization: AUTHORIZATION,
+      maxTools: 8,
+      signal: new AbortController().signal,
     });
+    assert.deepEqual(
+      selected.map((tool) => tool.name),
+      ["web_fetch"],
+    );
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [scriptedProvider(fetchThen("fetched"))])],
+      tools: { add: selected },
+    });
+    const handler = createAgUiHandler(agent, { authorize: () => AUTHORIZATION });
     const request = new Request("https://host.example/ag-ui", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -178,7 +118,6 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
       }),
     });
     const output = (await (await handler(request)).text()).trim().split("\n\n").filter(Boolean);
-    assert.deepEqual(selected, ["web_fetch"]);
     assert.deepEqual(calls, ["web_fetch"]);
     assert.ok(
       output.some((frame) => frame.includes("TOOL_CALL_RESULT")),
@@ -186,91 +125,45 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     );
   });
 
-  it("ACP fronting runs an Obscura-tooled agent through session/prompt", async () => {
-    const { tools, calls } = obscuraTools();
-    const acpAgent = createPrismAcpAgent({
-      authorize: () => AUTHORIZATION,
-      sessionFactory: async () => ({
-        session: await agentWith(scriptedProvider(fetchThen("fetched")), tools, "acp-obscura"),
-        agentId: "obscura-agent",
-      }),
-      lifecycle: {},
-    });
-    // ACP hosts approve every tool through the client permission seam; the read-only
-    // Obscura tool still flows through it — generic behavior, no Obscura branch.
-    const test = acpClient({ name: "conformance" }).onRequest(acpMethods.client.session.requestPermission, () => ({
-      outcome: { outcome: "allow_once" },
-    }));
-    await test.connectWith(acpAgent, async (connection) => {
-      await connection.request(acpMethods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
-      const created = await connection.request(acpMethods.agent.session.new, { cwd: "/ignored", mcpServers: [] });
-      await connection.request(acpMethods.agent.session.prompt, {
-        sessionId: created.sessionId,
-        prompt: [{ type: "text", text: "fetch example.com" }],
-      });
-      await connection.request(acpMethods.agent.session.close, { sessionId: created.sessionId });
-    });
-    assert.deepEqual(calls, ["web_fetch"]);
-  });
-
-  it("workflow toolNode and agentNode consume the same Obscura ToolDefinition[]", async () => {
+  it("workflow functionNode and agentNode consume the same Obscura ToolDefinition[]", async () => {
     const { tools, calls } = obscuraTools();
     const fetchTool = tools.find((tool) => tool.name === "web_fetch");
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [scriptedProvider([[providerTextDelta("summary")], [providerTextDelta("summary")]])])],
+      tools: { add: tools },
+    });
     const workflow = defineWorkflow({
       revision: "1",
       id: "obscura-conformance",
       nodes: {
-        fetch: toolNode({ tool: fetchTool, args: async () => ({ url: "https://example.com/page" }) }),
-        research: agentNode({ agent: "researcher", input: (ctx) => `summarize ${ctx.upstream.fetch}` }),
+        // Plan 168 Task 7 deleted the workflow tool node: a function node dispatches the same
+        // ToolDefinition directly, with the workflow-derived tool context.
+        fetch: functionNode({
+          execute: async (ctx) =>
+            await fetchTool.execute(
+              { url: "https://example.com/page" },
+              {
+                sessionId: `workflow:${ctx.workflowId}`,
+                runId: ctx.runId,
+                toolCallId: `wf_${ctx.nodeId}`,
+                signal: ctx.signal,
+                metadata: { workflowId: ctx.workflowId, nodeId: ctx.nodeId },
+              },
+            ),
+        }),
+        research: agentNode({ agent, session: () => agent.session({ id: "wf-obscura", create: true }), input: (ctx) => `summarize ${ctx.upstream.fetch}` }),
       },
       edges: [["fetch", "research"]],
     });
-    const agent = await createAgent({
-      model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [scriptedProvider([[providerTextDelta("summary")], [providerTextDelta("summary")]])])],
-      tools,
-    });
     const result = await runWorkflow(workflow, "topic", {
       concurrency: 1,
-      agentFactory: async () => await agent.session({ id: "wf-obscura", create: true }),
     });
-    assert.equal(result.status, "completed");
+    assert.equal(result.status, "succeeded");
     assert.match(JSON.stringify(result.outputs.fetch), /Fetched https:\/\/example\.com\/page/);
     assert.equal(result.outputs.research, "summary");
     assert.ok(calls.includes("web_fetch"));
     void tools;
-  });
-
-  it("supervisor children run Obscura tools; denied permission prevents execution", async () => {
-    const { tools, calls } = obscuraTools();
-    const supervisor = createSupervisor({
-      id: "lead",
-      ownership: AUTHORIZATION.ownership,
-      children: {
-        research: {
-          createAgent: async () =>
-            await createAgent({
-              model: { provider: "mock", model: "test" },
-              packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("scraped")))])],
-              tools,
-            }),
-        },
-      },
-    });
-    const result = await supervisor.delegate({ childId: "research", input: "scrape", threadId: "thread" });
-    assert.equal(result.text, "scraped");
-    assert.deepEqual(calls, ["obscura_scrape"]);
-    assert.equal(supervisor.activeChildren, 0, "no child remains active after delegation");
-
-    const denied = createSupervisor({
-      id: "lead",
-      ownership: AUTHORIZATION.ownership,
-      hooks: { before: () => ({ allowed: false, reason: "parent denied" }) },
-      children: { research: { createAgent: async () => await agentWith(scriptedProvider(scrapeThen()), tools, "denied") } },
-    });
-    await assert.rejects(denied.delegate({ childId: "research", input: "x" }), /parent denied/);
-    assert.deepEqual(calls, ["obscura_scrape"], "denied delegation must not reach Obscura tools");
-    assert.equal(denied.activeChildren, 0);
   });
 
   it("abort during an in-flight Obscura call settles the run and kills the child (no leaked processes)", async () => {
@@ -279,7 +172,7 @@ describe("Obscura generic host conformance (plan 039 task 6)", () => {
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
       packages: [providerPackage("test-provider", [scriptedProvider(scrapeThen(providerTextDelta("never")))])],
-      tools,
+      tools: { add: tools },
     });
     const session = await agent.session({ id: "abort-obscura", create: true });
     const run = session.run("scrape", { signal: controller.signal });

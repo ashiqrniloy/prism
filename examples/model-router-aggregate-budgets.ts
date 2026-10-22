@@ -23,10 +23,11 @@
  * Run: npm run build:core && node examples/model-router-aggregate-budgets.ts
  */
 import {
-  type AgentIdentity,
   type ModelProvider,
   createAgent,
   createMemorySessionStore,
+  definePackage,
+  HookError,
   type ModelConfig,
   type ProviderEvent,
   type ProviderRequest,
@@ -35,12 +36,20 @@ import {
   type Usage,
 } from "@arnilo/prism";
 import {
-  createGovernedProvider,
   createModelRouter,
-  type GovernedInvocationSettlement,
+  type ModelRouter,
   ModelRouterError,
-} from "@arnilo/prism-core/governance/model-router";
+} from "@arnilo/prism-model-router";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { type AgentIdentity } from "@arnilo/prism-governance";
+
+interface GovernedInvocationSettlement {
+  readonly model: ModelConfig;
+  readonly outcome: string;
+  readonly usage?: Usage;
+  readonly budgetCommitted?: boolean;
+  readonly unknownUsage?: boolean;
+}
 
 const identity: AgentIdentity = {
   tenantId: "tenant-aggregate-demo",
@@ -80,6 +89,127 @@ function failedCode(result: { readonly error?: { readonly code?: string | number
   return result.error?.code;
 }
 
+function createGovernedHookPackage(
+  router: ModelRouter,
+  options: {
+    identity: AgentIdentity;
+    taskId: string;
+    maxTokens: number;
+    kind?: string;
+    onSettlement?: (settlement: GovernedInvocationSettlement) => void;
+  },
+) {
+  return definePackage({
+    name: "governed-agent-hook",
+    version: "0.1.0",
+    requires: { api: 1 },
+    capabilities: ["models"],
+    setup(prism) {
+      prism.hooks.on("model.call", async (request, next) => {
+        let resolved: any;
+        try {
+          resolved = await router.resolve({
+            model: request.model,
+            identity: options.identity,
+            taskId: options.taskId,
+            kind: (options.kind ?? "generation") as any,
+            maxTokens: options.maxTokens,
+          });
+        } catch (error) {
+          if (error instanceof ModelRouterError) {
+            throw new HookError(error.message, {
+              owner: "governed-agent-hook",
+              hook: "model.call",
+              code: error.code,
+            });
+          }
+          throw error;
+        }
+        const candidate = resolved.model;
+        let stream: AsyncIterable<ProviderEvent>;
+        try {
+          stream = await next({ ...request, model: candidate });
+        } catch (error) {
+          if (resolved.budgetReservation) {
+            await router.releaseBudget({
+              identity: options.identity,
+              provider: candidate.provider,
+              model: candidate.model,
+              taskId: options.taskId,
+              budgetReservation: resolved.budgetReservation,
+            });
+          }
+          throw error;
+        }
+
+        async function* iterate(): AsyncIterable<ProviderEvent> {
+          let outcome = "early_close";
+          let finalUsage: Usage | undefined;
+          let sawDone = false;
+          let sawError = false;
+          try {
+            for await (const event of stream) {
+              if (event.type === "done") {
+                sawDone = true;
+                finalUsage = event.usage;
+              } else if (event.type === "error") {
+                sawError = true;
+                outcome = "error";
+              }
+              yield event;
+            }
+          } catch (err) {
+            outcome = "error";
+            throw err;
+          } finally {
+            if (sawDone && !sawError) {
+              outcome = "early_close";
+            }
+            if (resolved.budgetReservation) {
+              if (finalUsage) {
+                await router.recordUsage({
+                  identity: options.identity,
+                  provider: candidate.provider,
+                  model: candidate.model,
+                  taskId: options.taskId,
+                  kind: (options.kind ?? "generation") as any,
+                  tokens: finalUsage.totalTokens,
+                  costUsd: finalUsage.cost,
+                  budgetReservation: resolved.budgetReservation,
+                });
+                options.onSettlement?.({
+                  model: candidate,
+                  outcome,
+                  usage: finalUsage,
+                  budgetCommitted: true,
+                  unknownUsage: false,
+                });
+              } else {
+                await router.recordUsage({
+                  identity: options.identity,
+                  provider: candidate.provider,
+                  model: candidate.model,
+                  taskId: options.taskId,
+                  kind: (options.kind ?? "generation") as any,
+                  tokens: options.maxTokens,
+                  budgetReservation: resolved.budgetReservation,
+                });
+                options.onSettlement?.({
+                  model: candidate,
+                  outcome,
+                  budgetCommitted: true,
+                  unknownUsage: true,
+                });
+              }
+            }
+          }
+        }
+        return iterate();
+      });
+    },
+  });
+}
+
 export async function demo(): Promise<Record<string, unknown>> {
   const settlements: GovernedInvocationSettlement[] = [];
 
@@ -89,13 +219,10 @@ export async function demo(): Promise<Record<string, unknown>> {
     budgets: { maxTokens: ceilingTokens, windowMs: 86_400_000 },
   });
   const taskId = "task-aggregate";
-  const governed = createGovernedProvider({
-    router,
+  const governedHook = createGovernedHookPackage(router, {
     identity,
-    id: pinned.provider,
-    model: pinned,
-    maxTokens: perRunReservationTokens,
     taskId,
+    maxTokens: perRunReservationTokens,
     kind: "generation",
     onSettlement: (settlement) => {
       settlements.push(settlement);
@@ -105,7 +232,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "aggregate-budget-agent",
     model: pinned,
     slots: { store: createMemorySessionStore() },
-    packages: [providerPackage("test-provider", [governed])],
+    packages: [providerPackage("test-provider", [mockProvider({ inputTokens: 7, outputTokens: 5, totalTokens: perRunUsageTokens })]), governedHook],
   });
   const session = await agent.session({ id: "aggregate-budget-session", create: true });
 
@@ -171,13 +298,10 @@ export async function demo(): Promise<Record<string, unknown>> {
     budgets: { maxTokens: 20, windowMs: 86_400_000 },
   });
   const unknownTaskId = "task-unknown-usage";
-  const unknownGoverned = createGovernedProvider({
-    router: unknownRouter,
+  const unknownGovernedHook = createGovernedHookPackage(unknownRouter, {
     identity,
-    id: pinned.provider,
-    model: pinned,
-    maxTokens: unknownReservationTokens,
     taskId: unknownTaskId,
+    maxTokens: unknownReservationTokens,
     kind: "generation",
     onSettlement: (settlement) => {
       unknownSettlements.push(settlement);
@@ -187,7 +311,7 @@ export async function demo(): Promise<Record<string, unknown>> {
     id: "aggregate-budget-unknown-agent",
     model: pinned,
     slots: { store: createMemorySessionStore() },
-    packages: [providerPackage("test-provider", [unknownGoverned])],
+    packages: [providerPackage("test-provider", [mockProvider()]), unknownGovernedHook],
   });
   const unknownRun = await (await unknownAgent.session({ id: "aggregate-budget-unknown-session", create: true })).run("step");
   const unknownBudget = await unknownRouter.readBudget({ identity, taskId: unknownTaskId });

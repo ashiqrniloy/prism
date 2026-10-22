@@ -46,7 +46,53 @@ export function stripTrailingCommas(text) {
   return out;
 }
 
+/**
+ * Keys that appear more than once in the same JSON object. Bun refuses a lockfile
+ * with a duplicate package path (`Duplicate package path`, `InvalidLockfile`), so
+ * the gate must fail closed before it packs anything. One scanner, string-aware,
+ * shared by every reader: JSON.parse silently keeps the last duplicate.
+ */
+export function duplicateLockKeys(text) {
+  const duplicates = [];
+  const stack = [];
+  let i = 0;
+  while (i < text.length) {
+    const char = text[i];
+    if (char === "{") stack.push(new Set());
+    else if (char === "}") stack.pop();
+    else if (char === "[") stack.push(null);
+    else if (char === "]") stack.pop();
+    else if (char === '"') {
+      let value = "";
+      let escaped = false;
+      let j = i + 1;
+      for (; j < text.length; j += 1) {
+        const c = text[j];
+        if (escaped) {
+          value += c;
+          escaped = false;
+        } else if (c === "\\") escaped = true;
+        else if (c === '"') break;
+        else value += c;
+      }
+      i = j + 1;
+      let k = i;
+      while (k < text.length && /\s/.test(text[k])) k += 1;
+      const keys = stack[stack.length - 1];
+      if (text[k] === ":" && keys) {
+        if (keys.has(value)) duplicates.push(value);
+        else keys.add(value);
+      }
+      continue;
+    }
+    i += 1;
+  }
+  return duplicates;
+}
+
 export function parseBunLock(text) {
+  const duplicates = duplicateLockKeys(text);
+  if (duplicates.length) throw new Error(`bun.lock has duplicate keys: ${[...new Set(duplicates)].sort().join(", ")}`);
   return JSON.parse(stripTrailingCommas(text));
 }
 

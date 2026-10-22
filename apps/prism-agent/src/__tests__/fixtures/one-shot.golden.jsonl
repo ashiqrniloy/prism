@@ -1,0 +1,7 @@
+{"type":"run.started","sessionId":"session_golden","runId":"run_e252e085-dea3-40b3-8b14-4874f24255cc"}
+{"type":"turn.started","sessionId":"session_golden","runId":"run_e252e085-dea3-40b3-8b14-4874f24255cc","turn":1,"metadata":{"providerId":"mock","model":{"provider":"mock","model":"m"},"requestId":"session_golden","attempt":1,"tools":{"count":3,"idsHash":"sha256:96962dbba5e9e9f1c5e48dc5005155b5d0b4290cc06426046c8262c2a92e243c"}}}
+{"type":"message.delta","sessionId":"session_golden","runId":"run_e252e085-dea3-40b3-8b14-4874f24255cc","content":{"type":"text","text":"ok"}}
+{"type":"turn.completed","sessionId":"session_golden","runId":"run_e252e085-dea3-40b3-8b14-4874f24255cc","turn":1,"metadata":{"providerId":"mock","model":{"provider":"mock","model":"m"},"requestId":"session_golden","attempt":1,"latencyMs":2,"stopReason":"end_turn","budgets":{"inputTokens":202,"inputTokensSource":"estimated","runInputBudget":40000,"runInputUsed":202,"turns":1,"maxTurns":16},"tools":{"count":3,"idsHash":"sha256:96962dbba5e9e9f1c5e48dc5005155b5d0b4290cc06426046c8262c2a92e243c"}},"usage":{"inputTokens":202,"estimated":true,"confidence":"low"}}
+{"type":"message.completed","sessionId":"session_golden","runId":"run_e252e085-dea3-40b3-8b14-4874f24255cc","message":{"role":"assistant","content":[{"type":"text","text":"ok"}]}}
+{"type":"run.completed","sessionId":"session_golden","runId":"run_e252e085-dea3-40b3-8b14-4874f24255cc","status":"completed","usage":{"inputTokens":202,"totalTokens":202,"estimated":true,"confidence":"low"}}
+{"type":"prism-agent.exit","code":0}

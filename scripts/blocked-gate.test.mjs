@@ -137,7 +137,7 @@ test("audit: lists every leg this environment cannot run, and nothing when they 
     PROTECTED_GATES.map((row) => row.id),
     "with every requirement unset the audit lists every registry gate",
   );
-  for (const id of ["phase12-restart-recovery", "phase22-conformance", "phase26-recovery-conformance", "phase27-dr"]) {
+  for (const id of ["phase22-conformance", "phase26-recovery-conformance"]) {
     assert.ok(
       blocked.some((row) => row.id === id),
       `audit must list ${id}`,

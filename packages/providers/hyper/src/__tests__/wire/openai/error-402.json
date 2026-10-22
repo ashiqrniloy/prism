@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "path": "/v1/chat/completions",
+  "requestBody": {
+    "model": "deepseek-v4-pro",
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "Hello" }]
+      }
+    ],
+    "stream": true
+  },
+  "status": 402,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"message\":\"Insufficient Hypercredits to fulfill request\",\"type\":\"billing_error\",\"code\":\"billing_error\"}}"
+}

@@ -9,19 +9,9 @@
  */
 import { cpus, totalmem } from "node:os";
 import { performance } from "node:perf_hooks";
-import {
-  askEveryTool,
-  createAgent,
-  createMemoryCheckpointStore,
-  createMemorySessionStore,
-  HARD_MAX_AGENT_RUN_STATE_BYTES,
-  providerDone,
-  providerTextDelta,
-  resumeAgentRun,
-  toolCallContent,
-} from "../../dist/index.js";
-import { createAgUiEventMapper } from "../../packages/ag-ui/dist/index.js";
-import { providerPackage } from "../../dist/provider-kit/index.js";
+import { askEveryTool, createAgent, createMemorySessionStore, providerDone, providerTextDelta, toolCallContent } from "../../src/index.ts";
+import { providerPackage } from "../../src/provider-kit/index.ts";
+import { createAgUiEventMapper } from "../../packages/hosts/ag-ui/src/index.ts";
 
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
@@ -75,35 +65,32 @@ function parallelProvider(count) {
 async function measureDecisionApply() {
   const samples = [];
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
-    const checkpoints = createMemoryCheckpointStore();
     const agent = await createAgent({
       hooks: askEveryTool(),
       id: "bench-decision",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
       packages: [providerPackage("test-provider", [parallelProvider(PENDING)])],
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: 1 }),
-        },
-      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: 1 }),
+          },
+        ],
+      },
     });
-    const first = await (await agent.session({ id: `d-${n}`, create: true })).run("go", {
-      runState: { checkpoints, definitionRevision: "1" },
-    });
+    const session = await agent.session({ id: `d-${n}`, create: true });
+    const first = await session.run("go");
     const decisions = first.pending.map((d) => ({
       approvalId: d.approvalId,
       outcome: "allow_once",
     }));
     const start = performance.now();
-    await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      { expectedVersion: first.runState.version, decisions },
-      { checkpoints, definitionRevision: "1" },
-    );
+    for await (const _event of session.resume(decisions)) {
+      // drain
+    }
     const ms = performance.now() - start;
     if (n >= WARMUPS) samples.push(ms);
   }
@@ -114,52 +101,50 @@ async function measureStickyMatch() {
   // Time allow_for_run resume that seeds sticky then dispatches a matching same-scope call.
   const samples = [];
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
-    const checkpoints = createMemoryCheckpointStore();
     let turn = 0;
     const agent = await createAgent({
       hooks: askEveryTool(),
       id: "bench-sticky",
       model: { provider: "mock", model: "demo" },
       slots: { store: createMemorySessionStore() },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call", call: toolCallContent("c1", "write", { same: true }) };
-            yield providerDone();
-            return;
-          }
-          if (turn === 2) {
-            yield { type: "tool_call", call: toolCallContent("c2", "write", { same: true }) };
-            yield providerDone();
-            return;
-          }
-          yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: 1 }),
-        },
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call", call: toolCallContent("c1", "write", { same: true }) };
+                yield providerDone();
+                return;
+              }
+              if (turn === 2) {
+                yield { type: "tool_call", call: toolCallContent("c2", "write", { same: true }) };
+                yield providerDone();
+                return;
+              }
+              yield providerTextDelta("done");
+              yield providerDone();
+            },
+          },
+        ]),
       ],
-    });
-    const first = await (await agent.session({ id: `s-${n}`, create: true })).run("go", {
-      runState: { checkpoints, definitionRevision: "1" },
-    });
-    const start = performance.now();
-    await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: first.runState.version,
-        decisions: [{ approvalId: first.pending[0].approvalId, outcome: "allow_for_run" }],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: 1 }),
+          },
+        ],
       },
-      { checkpoints, definitionRevision: "1" },
-    );
+    });
+    const session = await agent.session({ id: `s-${n}`, create: true });
+    const first = await session.run("go");
+    const start = performance.now();
+    for await (const _event of session.resume([{ approvalId: first.pending[0].approvalId, outcome: "allow_for_run" }])) {
+      // drain
+    }
     const ms = performance.now() - start;
     if (n >= WARMUPS) samples.push(ms);
   }
@@ -170,15 +155,14 @@ async function measureSnapshot() {
   const samples = [];
   const blob = "x".repeat(SNAPSHOT_BYTES);
   for (let n = 0; n < WARMUPS + ITERATIONS; n += 1) {
-    const checkpoints = createMemoryCheckpointStore();
     let turns = 0;
     const agent = await createAgent({
       hooks: askEveryTool(),
       id: "bench-snap",
       model: { provider: "mock", model: "demo" },
-      slots: { store: createMemorySessionStore() },
       packages: [providerPackage("test-provider", [parallelProvider(1)])],
       slots: {
+        store: createMemorySessionStore(),
         loop: {
           name: "fat",
           revision: "1",
@@ -193,31 +177,24 @@ async function measureSnapshot() {
           },
         },
       },
-      tools: [
-        {
-          name: "write",
-          parameters: {},
-          execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: 1 }),
-        },
-      ],
+      tools: {
+        add: [
+          {
+            name: "write",
+            parameters: {},
+            execute: (_a, c) => ({ toolCallId: c.toolCallId, name: "write", value: 1 }),
+          },
+        ],
+      },
     });
     const start = performance.now();
-    const first = await (await agent.session({ id: `snap-${n}`, create: true })).run("go", {
-      runState: {
-        checkpoints,
-        definitionRevision: "1",
-        maxStateBytes: HARD_MAX_AGENT_RUN_STATE_BYTES,
-      },
-    });
-    await resumeAgentRun(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      {
-        expectedVersion: first.runState.version,
-        decisions: first.pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })),
-      },
-      { checkpoints, definitionRevision: "1" },
-    );
+    const session = await agent.session({ id: `snap-${n}`, create: true });
+    const first = await session.run("go");
+    for await (const _event of session.resume(
+      first.pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" })),
+    )) {
+      // drain
+    }
     const ms = performance.now() - start;
     if (n >= WARMUPS) samples.push(ms);
   }

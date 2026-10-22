@@ -1,5 +1,19 @@
-import { LeaseConflictError } from "@arnilo/prism";
 import { throwIfAborted } from "./util.js";
+
+/**
+ * Store-side lease conflict error (plan 168 Task 4). The `code` is the cross-package contract, so a
+ * consumer matches on `error.code` rather than `instanceof` (see `checkpoint.ts`).
+ */
+export const LEASE_CONFLICT_CODE = "ERR_PRISM_LEASE_CONFLICT";
+
+export class LeaseConflictError extends Error {
+  readonly code = LEASE_CONFLICT_CODE;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "LeaseConflictError";
+  }
+}
 
 export function assertLeaseInput(
   namespace: string,

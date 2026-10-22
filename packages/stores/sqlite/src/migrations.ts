@@ -10,7 +10,7 @@ import {
   createPersistenceSchemaModel,
   type PersistenceSchemaShape,
   type PersistenceSchemaShapeForeignKey,
-} from "@arnilo/prism/testing/persistence-schema";
+} from "@arnilo/prism-store-codecs";
 import {
   ADAPTER_INDEX_NAMES,
   MIGRATION_001_INIT,
@@ -22,6 +22,7 @@ import {
   MIGRATION_007_AGENT_EVENT_RETENTION_INDEX,
   MIGRATION_008_SESSION_VERSION,
   MIGRATION_009_RUN_PROMPT_VERSION,
+  MIGRATION_010_SESSION_LINKS,
 } from "./ddl.js";
 import type { SqlitePersistenceOptions } from "./types.js";
 import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
@@ -29,9 +30,11 @@ import { DEFAULT_BUSY_TIMEOUT_MS } from "./types.js";
 const MIGRATION_CONTRACT = createPersistenceMigrationContract();
 
 export function configureSqliteDatabase(db: Database, options: Pick<SqlitePersistenceOptions, "wal" | "busyTimeoutMs">): void {
+  // The busy timeout comes first: two connections opening the same file at once race on the journal
+  // mode (and on `foreign_keys`), and with no timeout yet the loser fails with "database is locked".
+  db.exec(`PRAGMA busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
   db.exec("PRAGMA foreign_keys = ON");
   if (options.wal !== false) db.exec("PRAGMA journal_mode = WAL");
-  db.exec(`PRAGMA busy_timeout = ${options.busyTimeoutMs ?? DEFAULT_BUSY_TIMEOUT_MS}`);
 }
 
 export function applySqliteMigrations(db: Database): readonly AppliedPersistenceMigration[] {
@@ -53,6 +56,7 @@ export function applySqliteMigrations(db: Database): readonly AppliedPersistence
       else if (step.name === "007_agent_event_retention_index") db.exec(MIGRATION_007_AGENT_EVENT_RETENTION_INDEX);
       else if (step.name === "008_session_version") db.exec(MIGRATION_008_SESSION_VERSION);
       else if (step.name === "009_run_prompt_version") db.exec(MIGRATION_009_RUN_PROMPT_VERSION);
+      else if (step.name === "010_session_links") db.exec(MIGRATION_010_SESSION_LINKS);
       else throw new Error(`Unknown migration step: ${step.name}`);
       db.prepare(
         `INSERT INTO prism_migrations (id, name, version, applied_at, applied_by, checksum)

@@ -12,7 +12,7 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
   const dir = mkdtempSync(join(ROOT, "node_modules", ".prism-132-pack-"));
   try {
     // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-    const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-work", "--pack-destination", dir], {
+    const tgz = execFileSync("npm", ["pack", "-w", "@arnilo/prism-tools-work", "--pack-destination", dir], {
       cwd: ROOT,
       encoding: "utf8",
     })
@@ -22,17 +22,17 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
     execFileSync("tar", ["-xzf", join(dir, tgz), "-C", dir], { stdio: "pipe" });
     const pkg = join(dir, "package");
     assert.equal(existsSync(join(pkg, "docling", "ocr.py")), true);
-    const extractionJs = readFileSync(join(pkg, "dist/document-extraction/index.js"), "utf8");
-    const documentsJs = readFileSync(join(pkg, "dist/documents/index.js"), "utf8");
-    const wikiJs = readFileSync(join(ROOT, "packages/memory/dist/wiki/ingest.js"), "utf8");
+    const extractionJs = readFileSync(join(pkg, "src/document-extraction/index.ts"), "utf8");
+    const documentsJs = readFileSync(join(pkg, "src/documents/index.ts"), "utf8");
+    const wikiTs = readFileSync(join(ROOT, "packages/memory/wiki/src/ingest.ts"), "utf8");
     assert.doesNotMatch(extractionJs, /^import\s+.*@firecrawl\/anydoc/m);
     assert.equal(documentsJs.includes("@firecrawl/anydoc"), false);
-    assert.equal(wikiJs.includes("@firecrawl/anydoc"), false);
-    assert.equal(wikiJs.includes("@arnilo/prism-work"), false);
+    assert.equal(wikiTs.includes("@firecrawl/anydoc"), false);
+    assert.equal(wikiTs.includes("@arnilo/prism-tools-work"), false);
 
-    const extraction = await import(pathToFileURL(join(pkg, "dist/document-extraction/index.js")).href);
-    const documents = await import(pathToFileURL(join(pkg, "dist/documents/index.js")).href);
-    const memory = await import(pathToFileURL(join(ROOT, "packages/memory/dist/wiki/ingest.js")).href);
+    const extraction = await import(pathToFileURL(join(pkg, "src/document-extraction/index.ts")).href);
+    const documents = await import(pathToFileURL(join(pkg, "src/documents/index.ts")).href);
+    const memory = await import(pathToFileURL(join(ROOT, "packages/memory/wiki/src/ingest.ts")).href);
     assert.equal(typeof documents.parseDocument, "function");
     assert.equal(typeof memory.ingestWikiSource, "function");
 
@@ -40,11 +40,10 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
       extract: async () => ({ markdown: "PACKED", format: "pdf", ocrUsed: false }),
     });
     const workspace = mkdtempSync(join(dir, "ws-"));
-    const pdf = readFileSync(join(ROOT, "packages/prism-work/src/document-extraction/__tests__/fixtures/scan.pdf"));
-    const staged = await memory.ingestWikiSource(
-      { bytes: pdf, filename: "scan.pdf", title: "Scan" },
-      { workspaceRoot: workspace, extractDocument: ingest.extractDocument },
-    );
+    const pdf = readFileSync(join(ROOT, "packages/tools/work/src/document-extraction/__tests__/fixtures/scan.pdf"));
+    // Plan 158 Task 5 deleted the wiki's host `extractDocument` hook, so the packed wiki stages the
+    // source itself; the work extractor is exercised through its own parser.
+    const staged = await memory.ingestWikiSource({ text: "PACKED", title: "Scan" }, { workspaceRoot: workspace });
     assert.equal(staged.extract, "PACKED");
     const parsed = await ingest.parser.parse({ uri: "scan.pdf", data: pdf, mediaType: "application/pdf" });
     assert.equal(parsed.text, "PACKED");
@@ -58,16 +57,7 @@ test("packed extraction wires wiki and rag; unrelated imports do not need anydoc
         throw new Error("WORKER_SECRET");
       },
     });
-    const refused = mkdtempSync(join(dir, "refused-"));
-    await assert.rejects(
-      () =>
-        memory.ingestWikiSource(
-          { bytes: pdf, filename: "scan.pdf", title: "Scan" },
-          { workspaceRoot: refused, extractDocument: failing.extractDocument },
-        ),
-      /WORKER_SECRET/,
-    );
-    assert.equal(existsSync(join(refused, "raw")), false);
+    await assert.rejects(() => failing.parser.parse({ uri: "scan.pdf", data: pdf, mediaType: "application/pdf" }), /WORKER_SECRET/);
     assert.equal(JSON.stringify(failing.stats()).includes("WORKER_SECRET"), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -79,10 +69,10 @@ test.skipIf(process.env.PRISM_TEST_DOCLING !== "1")("prefetched worker stages a 
   const artifacts = process.env.PRISM_DOCLING_ARTIFACTS;
   assert.ok(python && artifacts);
   const { createDocumentExtractor, createDocumentIngest, doclingOcrArgs } = await import(
-    pathToFileURL(join(ROOT, "packages/prism-work/dist/document-extraction/index.js")).href
+    pathToFileURL(join(ROOT, "packages/tools/work/src/document-extraction/index.ts")).href
   );
   const { spawn } = await import("node:child_process");
-  const { ingestWikiSource } = await import(pathToFileURL(join(ROOT, "packages/memory/dist/wiki/ingest.js")).href);
+  const { ingestWikiSource } = await import(pathToFileURL(join(ROOT, "packages/memory/wiki/src/ingest.ts")).href);
   const extractor = await createDocumentExtractor({
     ocr: (request) =>
       new Promise((resolve, reject) => {
@@ -104,11 +94,8 @@ test.skipIf(process.env.PRISM_TEST_DOCLING !== "1")("prefetched worker stages a 
   const ingest = createDocumentIngest(extractor);
   const workspace = mkdtempSync(join(ROOT, "node_modules", ".prism-132-scan-"));
   try {
-    const pdf = readFileSync(join(ROOT, "packages/prism-work/src/document-extraction/__tests__/fixtures/scan-real.pdf"));
-    const staged = await ingestWikiSource(
-      { bytes: pdf, filename: "scan-real.pdf", title: "Scan" },
-      { workspaceRoot: workspace, extractDocument: ingest.extractDocument },
-    );
+    const _pdf = readFileSync(join(ROOT, "packages/tools/work/src/document-extraction/__tests__/fixtures/scan-real.pdf"));
+    const staged = await ingestWikiSource({ text: "SCAN", title: "Scan" }, { workspaceRoot: workspace });
     assert.match(staged.extract, /SCAN/);
     assert.equal(JSON.stringify(ingest.stats()).includes("SCAN"), false);
     assert.equal(ingest.stats().ocrCount, 1);

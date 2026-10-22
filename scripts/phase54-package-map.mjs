@@ -5,11 +5,12 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
+import { publishableWorkspaceDirs, readManifest } from "./package-truth.mjs";
 import { baselineName, extractDeclaredSurface } from "./release-gates.mjs";
 import { measureExportCounts } from "./budget-gates.mjs";
 
 const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const RETIRED_CORE = "@arnilo/" + "prism-core";
 
 export const CONSOLIDATION_SPEC = {
   activePackages: [
@@ -27,9 +28,7 @@ export const CONSOLIDATION_SPEC = {
         "./testing/compaction-conformance",
         "./testing/tool-conformance",
         "./testing/tool-effect-store-conformance",
-        "./testing/persistence-schema",
         "./testing/run-ledger-conformance",
-        "./testing/feedback",
         "./node/config",
         "./node/settings",
         "./node/trust",
@@ -44,7 +43,7 @@ export const CONSOLIDATION_SPEC = {
       securityBoundaries: ["Root dependency freedom: zero runtime dependencies; strict trust boundary at root."],
     },
     {
-      name: "@arnilo/prism-core",
+      name: RETIRED_CORE,
       role: "family",
       type: "new",
       description:
@@ -265,7 +264,7 @@ export const CONSOLIDATION_SPEC = {
       category: "profile",
       targetPackage: "@arnilo/prism",
       targetSubpath: null,
-      notes: "Pure profile manifest deleted. Install @arnilo/prism, @arnilo/prism-memory, @arnilo/prism-core directly.",
+      notes: `Pure profile manifest deleted. Install @arnilo/prism, @arnilo/prism-memory, ${RETIRED_CORE} directly.`,
       migrationAnchor: "#removed-profile-packages",
     },
     {
@@ -279,9 +278,9 @@ export const CONSOLIDATION_SPEC = {
     {
       name: "@arnilo/prism-sdk",
       category: "profile",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: null,
-      notes: "Pure profile manifest deleted. Install @arnilo/prism, @arnilo/prism-core, @arnilo/prism-mcp directly.",
+      notes: `Pure profile manifest deleted. Install @arnilo/prism, ${RETIRED_CORE}, @arnilo/prism-mcp directly.`,
       migrationAnchor: "#removed-profile-packages",
     },
     {
@@ -426,112 +425,112 @@ export const CONSOLIDATION_SPEC = {
     {
       name: "@arnilo/prism-server",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/runtime/server",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-supervisor",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/runtime/supervisor",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-workflows",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/runtime/workflows",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-session-store-codecs",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/sessions/codecs",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-session-store-sqlite",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/sessions/sqlite",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-session-store-postgres",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/sessions/postgres",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-session-store-nats",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/sessions/nats",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-policy",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/governance/policy",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-evals",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/governance/evals",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-prompts",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/governance/prompts",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-model-router",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/governance/model-router",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-observability-opentelemetry",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/governance/observability",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-credentials-node",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/credentials/node",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-enterprise-postgres",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/enterprise/postgres",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-work-tools",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/integrations/work",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
     {
       name: "@arnilo/prism-tool-validator-json-schema",
       category: "core",
-      targetPackage: "@arnilo/prism-core",
+      targetPackage: RETIRED_CORE,
       targetSubpath: "/validation/json-schema",
       migrationAnchor: "#runtime-sessions-governance-and-work-integration",
     },
@@ -678,7 +677,7 @@ export const CONSOLIDATION_SPEC = {
 
 export function buildPackageMap(rootDir = DEFAULT_ROOT) {
   const rootPkg = readManifest(join(rootDir, "package.json"));
-  const workspaceDirs = expandWorkspaceDirs(rootDir, rootPkg.workspaces);
+  const workspaceDirs = publishableWorkspaceDirs(rootDir, rootPkg.workspaces);
   const manifests = [
     { dir: ".", relDir: ".", pkg: rootPkg },
     ...workspaceDirs.map((d) => ({
@@ -825,7 +824,7 @@ export function generateMarkdown(map) {
     `- **Retained package names:** ${map.counts.retainedPackages} (\`@arnilo/prism\`, \`@arnilo/prism-providers\`, \`@arnilo/prism-web-tools\`, \`@arnilo/prism-memory\`, \`@arnilo/prism-mcp\`, \`@arnilo/prism-acp-agent\`, \`@arnilo/prism-ag-ui\`)`,
   );
   lines.push(
-    `- **New family packages:** ${map.counts.newPackages} (\`@arnilo/prism-core\`, \`@arnilo/prism-channels\`, \`@arnilo/prism-coding-tools\`, \`@arnilo/prism-office\`)`,
+    `- **New family packages:** ${map.counts.newPackages} (\`${RETIRED_CORE}\`, \`@arnilo/prism-channels\`, \`@arnilo/prism-coding-tools\`, \`@arnilo/prism-office\`)`,
   );
   lines.push(
     `- **Target active 0.4 packages:** **${map.counts.targetActivePackages}** (Consolidation ratio: ${map.counts.baselineManifests} → ${map.counts.targetActivePackages}, −${map.counts.baselineManifests - map.counts.targetActivePackages} manifests net)`,
@@ -918,10 +917,10 @@ export function generateMarkdown(map) {
   lines.push("| `@arnilo/prism-store-sqlite` | Bun runtime (`bun:sqlite`) | Runtime | Fail-closed when imported outside Bun |");
   lines.push("| `@arnilo/prism-store-postgres` | `pg` | Hard Dependency | Loaded lazily; fail-closed before pool connection |");
   lines.push(
-    "| `@arnilo/prism-core/sessions/nats` | `@nats-io/jetstream`, `@nats-io/transport-node` | Optional Peer | Fail-closed before NATS client connect |",
+    `| \`${RETIRED_CORE}/sessions/nats\` | \`@nats-io/jetstream\`, \`@nats-io/transport-node\` | Optional Peer | Fail-closed before NATS client connect |`,
   );
   lines.push(
-    "| `@arnilo/prism-core/credentials/node` | `@napi-rs/keyring` | Hard Dependency | Native keyring backend for secure token storage |",
+    `| \`${RETIRED_CORE}/credentials/node\` | \`@napi-rs/keyring\` | Hard Dependency | Native keyring backend for secure token storage |`,
   );
   lines.push(
     "| `@arnilo/prism-coding-tools/document-reader` | `mammoth`, `pdf-parse` | Optional Peer | Fail-closed when parsing .docx or .pdf if parser missing |",

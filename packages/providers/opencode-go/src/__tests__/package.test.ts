@@ -71,6 +71,16 @@ describe("@arnilo/prism-provider-opencode-go package", () => {
     });
   });
 
+  it("opencode_go_passes_recorded_conformance", async () => {
+    const key = "sk-opencode-conformance-key-should-not-surface";
+    const result = await providerConformance((fetchImpl) => createOpenCodeGoProvider({ apiKey: key, fetch: fetchImpl }), {
+      recordings: new URL("./wire/", import.meta.url),
+      models: openCodeGoModels,
+      secrets: [key],
+    });
+    assert.equal(result.ok, true);
+  });
+
   it("opencode-go_default_api_key_ref_is_the_vendor_env_var", () => {
     assert.equal(OPENCODE_GO_DEFAULT_API_KEY_REF, "env:OPENCODE_GO_API_KEY");
     assert.equal(opencodeGoDefinition.config?.properties?.apiKey?.default, OPENCODE_GO_DEFAULT_API_KEY_REF);

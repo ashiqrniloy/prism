@@ -1,0 +1,714 @@
+import type { AgentEvent, EventOrigin, Session } from "@arnilo/prism";
+import { originAttributes } from "./origin.js";
+
+export type PrismSpanStatus = "ok" | "error";
+export type PrismSpanKind = "internal" | "client";
+export type PrismContext = unknown;
+
+export interface PrismSpan {
+  setAttribute(key: string, value: string | number | boolean): void;
+  setStatus(code: PrismSpanStatus, message?: string): void;
+  addEvent?(name: string, attributes?: Readonly<Record<string, string | number | boolean>>): void;
+  spanContext?(): { readonly traceId: string; readonly spanId: string };
+  end(): void;
+}
+
+export interface PrismTracer {
+  startSpan(
+    name: string,
+    options?: {
+      readonly attributes?: Readonly<Record<string, string | number | boolean>>;
+      readonly kind?: PrismSpanKind;
+      readonly parent?: PrismSpan;
+      readonly parentContext?: PrismContext;
+    },
+  ): PrismSpan;
+}
+
+export interface PrismCounter {
+  add(value: number, attributes?: Readonly<Record<string, string>>): void;
+}
+export interface PrismHistogram {
+  record(value: number, attributes?: Readonly<Record<string, string>>): void;
+}
+export interface PrismMeter {
+  createCounter(name: string, options?: { readonly description?: string; readonly unit?: string }): PrismCounter;
+  createHistogram(name: string, options?: { readonly description?: string; readonly unit?: string }): PrismHistogram;
+}
+
+export interface TraceReference {
+  readonly runId: string;
+  readonly traceId: string;
+}
+export interface TelemetryFieldPolicyInput {
+  readonly path: string;
+  readonly label?: string;
+  readonly kind: "string" | "number" | "boolean" | "null" | "array" | "object";
+  readonly destination: string;
+  readonly direction: "inbound" | "outbound";
+  readonly tenantId?: string;
+  readonly purpose?: string;
+}
+
+export interface TelemetryFieldPolicyDecision {
+  readonly action: "allow" | "redact" | "tokenize" | "deny";
+  readonly reason?: string;
+}
+
+/** Structural match for the root package's `FieldPolicy` (no package dependency). */
+export type TelemetryFieldPolicy = (input: TelemetryFieldPolicyInput) => TelemetryFieldPolicyDecision;
+
+export interface OpenTelemetryInstrumentationOptions {
+  readonly enabled?: boolean;
+  readonly tracer?: PrismTracer;
+  readonly meter?: PrismMeter;
+  readonly parentContext?: PrismContext | ((event: Extract<AgentEvent, { type: "run.started" }>) => PrismContext | undefined);
+  readonly onTraceReference?: (reference: TraceReference) => void;
+  readonly maxTraceReferences?: number;
+  readonly onExporterError?: (error: unknown) => void;
+  /** Field policy applied to exported span attributes/events; deny drops, redact masks, tokenize hashes. */
+  readonly fieldPolicy?: TelemetryFieldPolicy;
+  /** Adds token counts and the stop reason to chat spans. Never message text. */
+  readonly includeUsage?: boolean;
+}
+
+export interface RunFeedbackTelemetry {
+  readonly runId: string;
+  readonly rating?: number;
+  readonly hasComment: boolean;
+  readonly tagCount: number;
+  readonly scorerCount: number;
+  readonly evaluationCount: number;
+}
+export interface EvaluationTelemetry {
+  readonly runId: string;
+  readonly name?: string;
+  readonly status: "scored" | "skipped" | "failed";
+  readonly score?: number;
+  readonly hasReason: boolean;
+}
+// Plan 174 Task 9: the 0.12 supervisor that produced `child` is gone, so the delegation seam carries the
+// child's `origin` (K3) instead — the same record every catalog event uses, not a bespoke child id.
+export type DelegationTelemetry =
+  | { readonly type: "started"; readonly runId: string; readonly delegationId: string; readonly origin: EventOrigin }
+  | {
+      readonly type: "finished" | "error" | "rejected";
+      readonly runId: string;
+      readonly delegationId: string;
+      readonly origin: EventOrigin;
+      readonly message?: string;
+    };
+
+export interface OpenTelemetryInstrumentation {
+  readonly enabled: boolean;
+  handleAgentEvent(event: AgentEvent): void;
+  handleDelegation(event: DelegationTelemetry): void;
+  handleRunFeedback(feedback: RunFeedbackTelemetry): void;
+  handleEvaluation(evaluation: EvaluationTelemetry): void;
+  traceId(runId: string): string | undefined;
+  attachSession(session: Pick<Session, "id" | "subscribe">): () => void;
+}
+
+export interface RecordedSpan {
+  readonly name: string;
+  readonly kind?: PrismSpanKind;
+  readonly traceId: string;
+  readonly spanId: string;
+  readonly parentSpanId?: string;
+  readonly attributes: Record<string, string | number | boolean>;
+  readonly status?: { readonly code: PrismSpanStatus; readonly message?: string };
+  readonly ended: boolean;
+  readonly events: readonly { readonly name: string; readonly attributes: Record<string, string | number | boolean> }[];
+}
+interface MutableRecordedSpan extends Omit<RecordedSpan, "events"> {
+  attributes: Record<string, string | number | boolean>;
+  status?: { code: PrismSpanStatus; message?: string };
+  ended: boolean;
+  events: { name: string; attributes: Record<string, string | number | boolean> }[];
+}
+export interface RecordedMetric {
+  readonly name: string;
+  readonly kind: "counter" | "histogram";
+  readonly value: number;
+  readonly attributes: Record<string, string>;
+}
+export interface InMemoryTelemetry {
+  readonly tracer: PrismTracer;
+  readonly meter: PrismMeter;
+  readonly spans: readonly RecordedSpan[];
+  readonly metrics: readonly RecordedMetric[];
+  clear(): void;
+}
+
+let memoryId = 0;
+const hex = (length: number) => (++memoryId).toString(16).padStart(length, "0").slice(-length);
+export function createInMemoryTelemetry(): InMemoryTelemetry {
+  const spans: MutableRecordedSpan[] = [];
+  const metrics: RecordedMetric[] = [];
+  const tracer: PrismTracer = {
+    startSpan(name, options) {
+      const parent = options?.parent?.spanContext?.();
+      const record: MutableRecordedSpan = {
+        name,
+        kind: options?.kind,
+        traceId: parent?.traceId ?? hex(32),
+        spanId: hex(16),
+        parentSpanId: parent?.spanId,
+        attributes: { ...(options?.attributes ?? {}) },
+        ended: false,
+        events: [],
+      };
+      spans.push(record);
+      return {
+        setAttribute: (key, value) => {
+          record.attributes[key] = value;
+        },
+        setStatus: (code, message) => {
+          record.status = { code, message };
+        },
+        addEvent: (eventName, attributes) => {
+          record.events.push({ name: eventName, attributes: { ...(attributes ?? {}) } });
+        },
+        spanContext: () => ({ traceId: record.traceId, spanId: record.spanId }),
+        end: () => {
+          record.ended = true;
+        },
+      };
+    },
+  };
+  const meter: PrismMeter = {
+    createCounter: (name) => ({
+      add: (value, attributes) => metrics.push({ name, kind: "counter", value, attributes: { ...(attributes ?? {}) } }),
+    }),
+    createHistogram: (name) => ({
+      record: (value, attributes) => metrics.push({ name, kind: "histogram", value, attributes: { ...(attributes ?? {}) } }),
+    }),
+  };
+  return {
+    tracer,
+    meter,
+    get spans() {
+      return spans;
+    },
+    get metrics() {
+      return metrics;
+    },
+    clear() {
+      spans.length = metrics.length = 0;
+    },
+  };
+}
+
+export type ActiveSpan = { span: PrismSpan; sessionId: string; runId: string };
+export const spanKey = (...parts: (string | number)[]) => parts.join(":");
+const key = spanKey;
+const attrs = (value: Record<string, string>) => value;
+
+/** Applies the telemetry field policy to one attribute record; unchanged when absent. */
+function policyAttrs(
+  input: Record<string, string | number | boolean>,
+  policy: TelemetryFieldPolicy | undefined,
+  destination: string,
+): Record<string, string | number | boolean> {
+  if (!policy) return input;
+  const out: Record<string, string | number | boolean> = {};
+  for (const [path, value] of Object.entries(input)) {
+    const kind = typeof value as TelemetryFieldPolicyInput["kind"];
+    let decision: TelemetryFieldPolicyDecision;
+    try {
+      decision = policy({ path, kind, destination, direction: "outbound" });
+    } catch {
+      continue; // policy error on telemetry: drop the attribute, never echo the value
+    }
+    if (decision.action === "allow") out[path] = value;
+    else if (decision.action === "redact") out[path] = "[REDACTED]";
+    else if (decision.action === "tokenize" && typeof value === "string") out[path] = `tok_${hashToken(path, value)}`;
+    // deny (and unparseable) attributes are dropped
+  }
+  return out;
+}
+
+let tokenSeq = 0;
+function hashToken(path: string, value: string): string {
+  let hash = 0x811c9dc5;
+  const text = `${path}\u0000${value}`;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  tokenSeq += 1;
+  return `${(hash >>> 0).toString(16).padStart(8, "0")}${tokenSeq.toString(36)}`;
+}
+
+/**
+ * The span bookkeeping behind an instrumentation: active spans, run start times, and trace references.
+ * `prism-core`'s workflow instrumentation builds on the same state so agent spans nest under workflow spans.
+ */
+export interface SpanTracker {
+  readonly enabled: boolean;
+  readonly tracer: PrismTracer | undefined;
+  readonly meter: PrismMeter | undefined;
+  readonly options: OpenTelemetryInstrumentationOptions;
+  readonly active: Map<string, ActiveSpan>;
+  readonly startedAt: Map<string, number>;
+  safe(fn: () => void): void;
+  finish(spanKey: string, status: PrismSpanStatus, message?: string): void;
+  finishWhere(predicate: (item: ActiveSpan) => boolean, message: string): void;
+  rememberTrace(runId: string, span: PrismSpan): void;
+  /** Parents the next `run.started` of `sessionId` on `span` (a workflow node span). Bounded; dropped when that run ends. */
+  linkSession(sessionId: string, span: PrismSpan): void;
+  startChild(
+    spanKey: string,
+    runId: string,
+    sessionId: string,
+    name: string,
+    kind: PrismSpanKind,
+    attributes: Record<string, string | number | boolean>,
+  ): void;
+}
+
+export interface InstrumentationParts {
+  readonly instrumentation: OpenTelemetryInstrumentation;
+  readonly tracker: SpanTracker;
+}
+
+/** Agent-event OpenTelemetry instrumentation (spans and metrics over `AgentEvent`s). */
+export function createOpenTelemetryInstrumentation(options: OpenTelemetryInstrumentationOptions = {}): OpenTelemetryInstrumentation {
+  return createInstrumentationParts(options).instrumentation;
+}
+
+export function createInstrumentationParts(options: OpenTelemetryInstrumentationOptions = {}): InstrumentationParts {
+  const enabled = options.enabled !== false && Boolean(options.tracer ?? options.meter);
+  const tracer = options.tracer;
+  const onExporterError = options.onExporterError ?? (() => {});
+  const active = new Map<string, ActiveSpan>();
+  const traceReferences = new Map<string, string>();
+  const maxTraceReferences = finiteLimit(options.maxTraceReferences, 1024, 10_000, "maxTraceReferences");
+  const meter = options.meter;
+  const inferenceDuration = meter?.createHistogram("gen_ai.client.operation.duration", {
+    description: "GenAI client operation duration",
+    unit: "s",
+  });
+  const toolDuration = meter?.createHistogram("gen_ai.execute_tool.duration", { description: "Tool execution duration", unit: "s" });
+  const tokenUsage = meter?.createHistogram("gen_ai.client.token.usage", { description: "GenAI token usage", unit: "token" });
+  const agentDuration = meter?.createHistogram("gen_ai.invoke_agent.duration", { description: "Agent invocation duration", unit: "s" });
+  const feedbackCounter = meter?.createCounter("prism.run.feedback", { description: "Run feedback count" });
+  const evaluationCounter = meter?.createCounter("prism.run.evaluation", { description: "Run evaluation count" });
+  const startedAt = new Map<string, number>();
+
+  const safe = (fn: () => void) => {
+    if (enabled)
+      try {
+        fn();
+      } catch (error) {
+        try {
+          onExporterError(error);
+        } catch {}
+      }
+  };
+  const finish = (spanKey: string, status: PrismSpanStatus, message?: string) => {
+    const item = active.get(spanKey);
+    if (!item) return;
+    active.delete(spanKey);
+    try {
+      item.span.setStatus(status, message);
+    } finally {
+      item.span.end();
+    }
+  };
+  const finishWhere = (predicate: (item: ActiveSpan) => boolean, message: string) => {
+    for (const [spanKey, item] of active) if (predicate(item)) finish(spanKey, "error", message);
+  };
+  // A workflow span (opened by prism-core's workflow instrumentation) is the parent when no agent span is open.
+  const parent = (runId: string) => active.get(key("agent", runId))?.span ?? active.get(key("workflow", runId))?.span;
+  const rememberTrace = (runId: string, span: PrismSpan) => {
+    const traceId = span.spanContext?.().traceId;
+    if (!traceId) return;
+    traceReferences.delete(runId);
+    traceReferences.set(runId, traceId);
+    while (traceReferences.size > maxTraceReferences) traceReferences.delete(traceReferences.keys().next().value!);
+    options.onTraceReference?.({ runId, traceId });
+  };
+  const maxSessionLinks = 1024;
+  const sessionLinks = new Map<string, PrismSpan>();
+  const linkSession = (sessionId: string, span: PrismSpan) => {
+    sessionLinks.delete(sessionId);
+    sessionLinks.set(sessionId, span);
+    while (sessionLinks.size > maxSessionLinks) sessionLinks.delete(sessionLinks.keys().next().value!);
+  };
+  // Origin attributes of the event being handled; events are handled synchronously, so one slot is safe.
+  let currentOrigin: Record<string, string> = {};
+  const startChild = (
+    spanKey: string,
+    runId: string,
+    sessionId: string,
+    name: string,
+    kind: PrismSpanKind,
+    attributes: Record<string, string | number | boolean>,
+  ) => {
+    if (!tracer) return;
+    finish(spanKey, "error", "Duplicate span start");
+    active.set(spanKey, {
+      runId,
+      sessionId,
+      span: tracer.startSpan(name, {
+        kind,
+        parent: parent(runId),
+        attributes: policyAttrs({ ...attributes, ...currentOrigin }, options.fieldPolicy, "telemetry"),
+      }),
+    });
+  };
+
+  const handleAgentEvent = (event: AgentEvent) => {
+    if (!enabled) return;
+    currentOrigin = originAttributes(event.origin);
+    switch (event.type) {
+      case "run.started":
+        safe(() => {
+          if (!tracer) return;
+          const spanKey = key("agent", event.runId);
+          finish(spanKey, "error", "Duplicate agent start");
+          const parentContext = typeof options.parentContext === "function" ? options.parentContext(event) : options.parentContext;
+          const linked = sessionLinks.get(event.sessionId);
+          const span = tracer.startSpan("invoke_agent prism", {
+            kind: "internal",
+            parentContext,
+            ...(linked && parentContext === undefined ? { parent: linked } : {}),
+            attributes: policyAttrs(
+              {
+                "gen_ai.operation.name": "invoke_agent",
+                "gen_ai.agent.name": "prism",
+                "prism.session_id": event.sessionId,
+                "prism.run_id": event.runId,
+                ...currentOrigin,
+              },
+              options.fieldPolicy,
+              "telemetry",
+            ),
+          });
+          active.set(spanKey, { span, sessionId: event.sessionId, runId: event.runId });
+          startedAt.set(event.runId, Date.now());
+          rememberTrace(event.runId, span);
+        });
+        break;
+      case "run.completed":
+        safe(() => {
+          finishWhere(
+            (item) => item.runId === event.runId && item !== active.get(key("agent", event.runId)),
+            "Agent finished with child span open",
+          );
+          finish(key("agent", event.runId), "ok");
+          sessionLinks.delete(event.sessionId);
+          const start = startedAt.get(event.runId);
+          startedAt.delete(event.runId);
+          if (start !== undefined) agentDuration?.record((Date.now() - start) / 1000, attrs({ "gen_ai.operation.name": "invoke_agent" }));
+        });
+        break;
+      case "run.suspended":
+      case "decision.resolved":
+        safe(() => {
+          finishWhere((item) => item.runId === event.runId, event.type === "run.suspended" ? "Agent suspended" : "Decisions resolved");
+          startedAt.delete(event.runId);
+        });
+        break;
+      case "turn.started":
+        // The loop's own turn start carries no provider metadata; only an attempt opens a chat span.
+        if (!event.metadata) break;
+        safe(() => {
+          const attempt = event.metadata!.attempt ?? 1;
+          startChild(
+            key("provider", event.runId, event.turn, attempt),
+            event.runId,
+            event.sessionId,
+            `chat ${event.metadata!.model.model}`,
+            "client",
+            {
+              "gen_ai.operation.name": "chat",
+              "gen_ai.provider.name": event.metadata!.providerId,
+              "gen_ai.request.model": event.metadata!.model.model,
+              "prism.turn": event.turn,
+              ...(event.metadata!.attempt ? { "prism.attempt": event.metadata!.attempt } : {}),
+            },
+          );
+        });
+        break;
+      case "turn.completed":
+        if (!event.metadata) break;
+        safe(() => {
+          const spanKey = key("provider", event.runId, event.turn, event.metadata!.attempt ?? 1);
+          const item = active.get(spanKey);
+          if (item && event.metadata!.httpStatus !== undefined)
+            item.span.setAttribute("http.response.status_code", event.metadata!.httpStatus);
+          if (item && options.includeUsage) {
+            const usage = event.usage;
+            const known: Record<string, string | number | boolean> = {};
+            if (usage?.inputTokens !== undefined) known["gen_ai.usage.input_tokens"] = usage.inputTokens;
+            if (usage?.outputTokens !== undefined) known["gen_ai.usage.output_tokens"] = usage.outputTokens;
+            if (event.metadata!.stopReason) known["gen_ai.response.finish_reasons"] = String(event.metadata!.stopReason);
+            for (const [name, value] of Object.entries(policyAttrs(known, options.fieldPolicy, "telemetry")))
+              item.span.setAttribute(name, value);
+          }
+          finish(spanKey, event.error ? "error" : "ok", event.error?.message);
+          inferenceDuration?.record(
+            (event.metadata!.latencyMs ?? 0) / 1000,
+            attrs({
+              "gen_ai.operation.name": "chat",
+              "gen_ai.provider.name": event.metadata!.providerId,
+              outcome: event.error ? "error" : "success",
+            }),
+          );
+          const usage = event.usage;
+          if (usage?.inputTokens !== undefined)
+            tokenUsage?.record(
+              usage.inputTokens,
+              attrs({ "gen_ai.operation.name": "chat", "gen_ai.provider.name": event.metadata!.providerId, "gen_ai.token.type": "input" }),
+            );
+          if (usage?.outputTokens !== undefined)
+            tokenUsage?.record(
+              usage.outputTokens,
+              attrs({ "gen_ai.operation.name": "chat", "gen_ai.provider.name": event.metadata!.providerId, "gen_ai.token.type": "output" }),
+            );
+        });
+        break;
+      case "tool.started":
+        safe(() =>
+          startChild(key("tool", event.runId, event.call.id), event.runId, event.sessionId, `execute_tool ${event.call.name}`, "internal", {
+            "gen_ai.operation.name": "execute_tool",
+            "gen_ai.tool.name": event.call.name,
+            "gen_ai.tool.call.id": event.call.id,
+          }),
+        );
+        break;
+      case "tool.completed":
+        safe(() => {
+          finish(
+            key("tool", event.runId, event.toolCallId || event.result?.toolCallId),
+            event.status === "finished" ? "ok" : "error",
+            event.status === "finished" ? undefined : event.error?.message,
+          );
+          toolDuration?.record(
+            event.metadata.durationMs / 1000,
+            attrs({ "gen_ai.operation.name": "execute_tool", outcome: event.metadata.status }),
+          );
+        });
+        break;
+      case "package.event":
+        safe(() => {
+          if (!tracer) return;
+          if (event.name === "delegate.step" || event.name === "router.decision" || event.name === "mcp.status") {
+            // Bounded scalar fields only; never the event's free-form data.
+            const data = event.data && typeof event.data === "object" && !Array.isArray(event.data) ? event.data : {};
+            const picked: Record<string, string | number | boolean> = { "prism.package": event.package };
+            for (const field of ["outcome", "attempt", "status", "phase", "server"] as const) {
+              const value = (data as Record<string, unknown>)[field];
+              if (typeof value === "number" || typeof value === "boolean") picked[`prism.event.${field}`] = value;
+              else if (typeof value === "string") picked[`prism.event.${field}`] = value.slice(0, 128);
+            }
+            // A delegate step attributes its child through `origin` (K3), never a bare `child` field.
+            const origin = (data as { origin?: unknown }).origin;
+            if (origin && typeof origin === "object" && typeof (origin as { agent?: unknown }).agent === "string") {
+              picked["prism.event.origin_agent"] = (origin as { agent: string }).agent.slice(0, 128);
+            }
+            const target = parent(event.runId);
+            const filtered = policyAttrs(picked, options.fieldPolicy, "telemetry");
+            if (target?.addEvent) target.addEvent(`prism.${event.name}`, filtered);
+            return;
+          }
+          if (event.name !== "guardrail.decision") return;
+          const record = (event.data as { record?: { stage?: string; action?: string } } | undefined)?.record;
+          if (!record) return;
+          const span = tracer.startSpan("prism.guardrail.evaluate", {
+            kind: "internal",
+            parent: parent(event.runId),
+            attributes: policyAttrs(
+              {
+                "prism.guardrail.stage": record.stage ?? "unknown",
+                "prism.guardrail.action": record.action ?? "unknown",
+                ...currentOrigin,
+              },
+              options.fieldPolicy,
+              "telemetry",
+            ),
+          });
+          span.setStatus(record.action === "allow" ? "ok" : "error");
+          span.end();
+        });
+        break;
+      case "run.failed":
+        safe(() => {
+          if (event.runId) {
+            finishWhere((item) => item.runId === event.runId, event.error.message);
+            startedAt.delete(event.runId);
+          } else if (event.sessionId) finishWhere((item) => item.sessionId === event.sessionId, event.error.message);
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const recordRunEvent = (runId: string, eventName: string, attributes: Record<string, string | number | boolean>) =>
+    safe(() => {
+      const filtered = policyAttrs(attributes, options.fieldPolicy, "telemetry");
+      const span = parent(runId);
+      if (span?.addEvent) span.addEvent(eventName, filtered);
+      else if (tracer) {
+        const ended = tracer.startSpan(eventName, { kind: "internal", attributes: { "prism.run_id": runId, ...filtered } });
+        ended.setStatus("ok");
+        ended.end();
+      }
+    });
+
+  const instrumentation: OpenTelemetryInstrumentation = {
+    enabled,
+    handleAgentEvent,
+    handleDelegation(event) {
+      safe(() => {
+        const spanKey = key("delegation", event.runId, event.delegationId);
+        if (event.type === "started")
+          startChild(spanKey, event.runId, "delegation", "prism.agent.delegate", "internal", originAttributes(event.origin));
+        else finish(spanKey, event.type === "finished" ? "ok" : "error", event.message);
+      });
+    },
+    handleRunFeedback(feedback) {
+      const rating =
+        feedback.rating !== undefined && Number.isFinite(feedback.rating) && feedback.rating >= -1 && feedback.rating <= 1
+          ? feedback.rating
+          : undefined;
+      const evaluationCount = boundedCount(feedback.evaluationCount);
+      recordRunEvent(feedback.runId, "prism.run.feedback", {
+        "prism.feedback.rating": rating ?? 0,
+        "prism.feedback.has_rating": rating !== undefined,
+        "prism.feedback.has_comment": Boolean(feedback.hasComment),
+        "prism.feedback.tag_count": boundedCount(feedback.tagCount),
+        "prism.feedback.scorer_count": boundedCount(feedback.scorerCount),
+        "prism.feedback.evaluation_count": evaluationCount,
+      });
+      safe(() =>
+        feedbackCounter?.add(
+          1,
+          attrs({
+            rating: rating === undefined ? "none" : rating > 0 ? "positive" : rating < 0 ? "negative" : "neutral",
+            linked_evaluation: evaluationCount ? "true" : "false",
+          }),
+        ),
+      );
+    },
+    handleEvaluation(evaluation) {
+      const score = evaluation.score !== undefined && Number.isFinite(evaluation.score) ? evaluation.score : undefined;
+      recordRunEvent(evaluation.runId, "gen_ai.evaluation.result", {
+        "gen_ai.evaluation.name": evaluation.name?.slice(0, 128) || "prism.run",
+        "prism.evaluation.status": evaluation.status,
+        "prism.evaluation.has_reason": Boolean(evaluation.hasReason),
+        ...(score !== undefined ? { "gen_ai.evaluation.score.value": score } : {}),
+      });
+      safe(() => evaluationCounter?.add(1, attrs({ status: evaluation.status })));
+    },
+    traceId: (runId) => traceReferences.get(runId),
+    attachSession(session) {
+      if (!enabled) return () => {};
+      const iterator = session.subscribe()[Symbol.asyncIterator]();
+      let attached = true;
+      void (async () => {
+        try {
+          while (attached) {
+            const next = await iterator.next();
+            if (!attached || next.done) break;
+            handleAgentEvent(next.value);
+          }
+        } catch {}
+      })();
+      return () => {
+        attached = false;
+        void iterator.return?.();
+        safe(() => finishWhere((item) => item.sessionId === session.id, "Instrumentation detached"));
+      };
+    },
+  };
+  return {
+    instrumentation,
+    tracker: { enabled, tracer, meter, options, active, startedAt, safe, finish, finishWhere, rememberTrace, linkSession, startChild },
+  };
+}
+
+const boundedCount = (value: number) => (Number.isSafeInteger(value) && value > 0 ? Math.min(value, 64) : 0);
+function finiteLimit(value: number | undefined, fallback: number, hard: number, name: string): number {
+  const resolved = value ?? fallback;
+  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > hard)
+    throw new RangeError(`${name} must be an integer from 1 to ${hard}`);
+  return resolved;
+}
+
+interface OpenTelemetrySpan {
+  setAttribute(key: string, value: string | number | boolean): void;
+  setStatus(status: { code: number; message?: string }): void;
+  addEvent?(name: string, attributes?: Record<string, string | number | boolean>): void;
+  spanContext?(): { traceId: string; spanId: string };
+  end(): void;
+}
+interface OpenTelemetryTracer {
+  startSpan(
+    name: string,
+    options?: { attributes?: Record<string, string | number | boolean>; kind?: number },
+    context?: unknown,
+  ): OpenTelemetrySpan;
+}
+interface OpenTelemetryMeter {
+  createCounter(
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): { add(value: number, attributes?: Record<string, string>): void };
+  createHistogram(
+    name: string,
+    options?: { description?: string; unit?: string },
+  ): { record(value: number, attributes?: Record<string, string>): void };
+}
+export interface OpenTelemetryContextApi {
+  active(): unknown;
+}
+export interface OpenTelemetryTraceApi {
+  setSpan(context: unknown, span: OpenTelemetrySpan): unknown;
+}
+const rawSpan = Symbol("prism.otel.span");
+type WrappedSpan = PrismSpan & { [rawSpan]?: OpenTelemetrySpan };
+
+export function wrapOpenTelemetryApi(
+  tracer: OpenTelemetryTracer,
+  meter?: OpenTelemetryMeter,
+  api?: { readonly context: OpenTelemetryContextApi; readonly trace: OpenTelemetryTraceApi },
+): { tracer: PrismTracer; meter?: PrismMeter } {
+  return {
+    tracer: {
+      startSpan(name, options) {
+        const parent = (options?.parent as WrappedSpan | undefined)?.[rawSpan];
+        const parentContext = options?.parentContext ?? (parent && api ? api.trace.setSpan(api.context.active(), parent) : undefined);
+        const span = tracer.startSpan(
+          name,
+          { attributes: options?.attributes ? { ...options.attributes } : undefined, kind: options?.kind === "client" ? 2 : 0 },
+          parentContext,
+        );
+        const wrapped: WrappedSpan = {
+          [rawSpan]: span,
+          setAttribute: (key, value) => span.setAttribute(key, value),
+          setStatus: (code, message) => span.setStatus({ code: code === "ok" ? 1 : 2, message }),
+          addEvent: (eventName, attributes) => span.addEvent?.(eventName, attributes ? { ...attributes } : undefined),
+          spanContext: () => span.spanContext?.() ?? { traceId: "", spanId: "" },
+          end: () => span.end(),
+        };
+        return wrapped;
+      },
+    },
+    meter: meter
+      ? {
+          createCounter: (name, opts) => {
+            const instrument = meter.createCounter(name, opts);
+            return { add: (value, attributes) => instrument.add(value, attributes) };
+          },
+          createHistogram: (name, opts) => {
+            const instrument = meter.createHistogram(name, opts);
+            return { record: (value, attributes) => instrument.record(value, attributes) };
+          },
+        }
+      : undefined,
+  };
+}

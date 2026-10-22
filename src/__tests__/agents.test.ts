@@ -1,7 +1,34 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { RuntimeAgentSession } from "../agent-session/session.js";
-import { type AgentDefinition, type AgentEvent, type ModelProvider, applyThinkingLevelForModel, type CompactionContext, type ContentBlock, createAgent, createDefaultCompactor, createMemorySessionStore, registerContextSources, createSecretRedactor, createSkillRegistry, DEFAULT_SNAPSHOT_CACHE_TTL_MS, getSessionBranchEntries, HARD_MAX_SNAPSHOT_CACHE_TTL_MS, type Message, type ProviderRequest, type Session, providerDone, providerTextDelta, providerToolCallDelta, providerUsage, type SessionEntry, type SessionStore, type ToolDefinition, toolCallContent, SubscriberOverflowError } from "../index.js";
+import {
+  type AgentDefinition,
+  type AgentEvent,
+  type ModelProvider,
+  type CompactionContext,
+  type ContentBlock,
+  createAgent,
+  createDefaultCompactor,
+  createMemorySessionStore,
+  registerContextSources,
+  createSecretRedactor,
+  DEFAULT_SNAPSHOT_CACHE_TTL_MS,
+  getSessionBranchEntries,
+  HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
+  type Message,
+  type ProviderRequest,
+  type Session,
+  providerDone,
+  providerTextDelta,
+  providerToolCallDelta,
+  providerUsage,
+  type SessionEntry,
+  type SessionStore,
+  type ToolDefinition,
+  toolCallContent,
+  SubscriberOverflowError,
+} from "../index.js";
+import { applyThinkingLevelForModel } from "../provider-kit/index.js";
 import { failedRun } from "./run-result-helpers.js";
 import { mockProvider, createMockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
@@ -595,12 +622,24 @@ describe("agent session runtime", () => {
       model: { provider: "mock", model: "demo" },
       packages: [providerPackage("test-provider", [provider])],
       tools: { add: [echo] },
-      skills: { add: [{ name: "wants-missing", toolNames: ["missing"], instructions: "Use missing." }] },
     });
 
     await (await agent.session()).run("Hi");
 
     assert.deepEqual(seen, [["echo"]]);
+
+    // A skill that needs a tool the host never added fails the run closed before any provider call.
+    const strict = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider-strict", [provider])],
+      tools: { add: [echo] },
+      skills: { add: [{ name: "wants-missing", toolNames: ["missing"], instructions: "Use missing." }] },
+    });
+    seen.length = 0;
+    const failed = await (await strict.session()).run("Hi");
+    assert.equal(failed.status, "failed");
+    assert.match(failed.error?.message ?? "", /requires inactive tool: missing/);
+    assert.deepEqual(seen, []);
   });
 
   it("abort stops before next provider turn", async () => {
@@ -1318,7 +1357,6 @@ describe("agent session runtime", () => {
     type Documented =
       | "id"
       | "leafId"
-      | "guardrailPackRefs"
       | "run"
       | "stream"
       | "steer"
@@ -1932,7 +1970,7 @@ describe("agent session runtime", () => {
 
     assert.equal(request.options?.sessionId, "s1");
     assert.equal(request.options?.cacheRetention, "short");
-    assert.deepEqual(request.options?.cache?.breakpoints, [{ location: "system_prompt" }, { location: "last_stable_message" }]);
+    assert.deepEqual(request.options?.cache?.breakpoints, [{ location: "system_prompt" }, { location: "last_message" }]);
   });
 
   it("host providerOptions.sessionId wins over kernel session id", async () => {

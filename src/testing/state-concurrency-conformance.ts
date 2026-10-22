@@ -3,14 +3,7 @@
 // awaits the conflicting op and then asserts state — never setTimeout/sleeps.
 
 import assert from "node:assert/strict";
-import type {
-  AgentEventRecord,
-  AgentEventSource,
-  AgentIdentity,
-  CheckpointStore,
-  ProductionPersistenceStore,
-  SessionRecord,
-} from "../contracts.js";
+import type { AgentEventRecord, AgentEventSource, Principal, ProductionPersistenceStore, SessionRecord } from "../contracts.js";
 import { isSessionMetadataConflict } from "../contracts-core.js";
 
 /**
@@ -95,8 +88,22 @@ export interface StateConcurrencyIdempotencyStore {
   ): Promise<StateConcurrencyIdempotencyRecord>;
 }
 
+/**
+ * Structural stand-in for a host-verified identity. The conformance probes only
+ * pass it through to a store's idempotency key. The verified-identity type lives
+ * in `@arnilo/prism-governance`; the kernel names only `Principal`.
+ */
+interface ConformanceIdentity {
+  readonly tenantId: string;
+  readonly userId?: string;
+  readonly principal: Principal;
+  readonly scopes: readonly string[];
+  readonly issuedAt: string;
+  readonly verified: true;
+}
+
 export interface StateConcurrencyIdempotencyKey {
-  readonly identity: AgentIdentity;
+  readonly identity: ConformanceIdentity;
   readonly key: string;
   readonly op: string;
   readonly signal?: AbortSignal;
@@ -133,8 +140,6 @@ export interface StateConcurrencyEventSourceFactory {
 }
 
 export interface StateConcurrencyFactories {
-  /** Checkpoint seam: approval-determinism and checkpoint-CAS probes. */
-  readonly checkpoints?: () => CheckpointStore | Promise<CheckpointStore>;
   /** Durable event seam: replay-cursor resume probe (memory and NATS/Postgres). */
   readonly events?: StateConcurrencyEventSourceFactory;
   /** Session-record seam: conversation metadata CAS probe (appendSession). */
@@ -153,13 +158,6 @@ export interface StateConcurrencyFactories {
  */
 export async function assertStateConcurrencyConforms(factories: StateConcurrencyFactories): Promise<readonly string[]> {
   const executed: string[] = [];
-  if (factories.checkpoints) {
-    const checkpoints = await factories.checkpoints();
-    await checkpointCasProbe(checkpoints);
-    executed.push("checkpoint-cas");
-    await approvalDeterminismProbe(checkpoints);
-    executed.push("approval-determinism");
-  }
   if (factories.events) {
     await cursorResumeProbe(factories.events);
     executed.push("cursor-resume");
@@ -185,7 +183,7 @@ export async function assertStateConcurrencyConforms(factories: StateConcurrency
 
 const ownership = { tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
 
-function identity(tenantId: string): AgentIdentity {
+function identity(tenantId: string): ConformanceIdentity {
   return {
     tenantId,
     userId: "user-a",
@@ -194,87 +192,6 @@ function identity(tenantId: string): AgentIdentity {
     issuedAt: "2026-08-03T00:00:00.000Z",
     verified: true,
   };
-}
-
-/**
- * Checkpoint CAS: exact-version and fencing-token guards. A stale
- * `expectedVersion` is rejected; a lower `fencingToken` cannot replace a
- * fenced record; a higher fence wins.
- */
-async function checkpointCasProbe(checkpoints: CheckpointStore): Promise<void> {
-  const key = { namespace: "state-concurrency", key: "checkpoint-cas", ...ownership };
-  await checkpoints.saveCheckpoint({ ...key, version: 1, value: { step: 1 } });
-  await checkpoints.saveCheckpoint({ ...key, version: 2, expectedVersion: 1, value: { step: 2 } });
-  await assertRejectsCode(
-    () => checkpoints.saveCheckpoint({ ...key, version: 3, expectedVersion: 1, value: { step: 3 } }),
-    "ERR_PRISM_CHECKPOINT_CONFLICT",
-    "stale expectedVersion must be rejected",
-  );
-  await checkpoints.saveCheckpoint({ ...key, version: 3, expectedVersion: 2, fencingToken: 5, value: { step: 3 } });
-  await assertRejectsCode(
-    () => checkpoints.saveCheckpoint({ ...key, version: 4, expectedVersion: 3, fencingToken: 4, value: { step: 4 } }),
-    "ERR_PRISM_CHECKPOINT_CONFLICT",
-    "lower fence must be rejected",
-  );
-  const fenced = await checkpoints.saveCheckpoint({ ...key, version: 4, expectedVersion: 3, fencingToken: 6, value: { step: 4 } });
-  assert.equal(fenced.fencingToken, 6, "higher fence must win");
-  const loaded = await checkpoints.loadCheckpoint(key);
-  assert.equal(loaded?.version, 4, "winning version must persist");
-  assert.equal(loaded?.fencingToken, 6, "winning fence must persist");
-  const foreign = await checkpoints.loadCheckpoint({ ...key, tenantId: "tenant-b" });
-  assert.equal(foreign, null, "a foreign checkpoint lands as a miss, not an ownership-shaped existence oracle");
-  await assertRejectsCode(
-    () => checkpoints.saveCheckpoint({ ...key, tenantId: "tenant-b", version: 99, expectedVersion: 0, value: { evil: true } }),
-    "ERR_PRISM_CHECKPOINT_CONFLICT",
-    "a foreign checkpoint save must fail closed as a CAS conflict",
-  );
-  const intact = await checkpoints.loadCheckpoint(key);
-  assert.equal(intact?.version, 4, "a foreign writer must not disturb the owner's record");
-}
-
-/**
- * Approval determinism: concurrent approve/deny of the same pending decision
- * resolves to exactly one terminal state; a stale decision discriminant
- * (the `expectedVersion` a resumer read) is rejected — the 0.2.0 resume fix
- * contract: resume requires `record.version === expectedVersion`.
- */
-async function approvalDeterminismProbe(checkpoints: CheckpointStore): Promise<void> {
-  const key = { namespace: "state-concurrency", key: "approval", ...ownership };
-  const suspended = {
-    status: "suspended",
-    interruption: {
-      kind: "tool_approval",
-      reason: "review",
-      pendingDecisions: [{ approvalId: "a1", kind: "tool_approval", scope: { toolName: "fs.write", argumentsHash: "h1" } }],
-    },
-  };
-  await checkpoints.saveCheckpoint({ ...key, version: 1, value: suspended });
-  const approve = { status: "running", decision: { approvalId: "a1", outcome: "allow_once" } };
-  const deny = { status: "denied", decision: { approvalId: "a1", outcome: "reject_once" } };
-  const results = await Promise.allSettled([
-    checkpoints.saveCheckpoint({ ...key, version: 2, expectedVersion: 1, fencingToken: 1, value: approve }),
-    checkpoints.saveCheckpoint({ ...key, version: 2, expectedVersion: 1, fencingToken: 1, value: deny }),
-  ]);
-  const fulfilled = results.filter((result) => result.status === "fulfilled");
-  const rejected = results.filter((result) => result.status === "rejected");
-  assert.equal(fulfilled.length, 1, "concurrent approve/deny must admit exactly one terminal write");
-  assert.equal(rejected.length, 1, "concurrent approve/deny must reject exactly one writer");
-  assert.equal(
-    ((rejected[0] as PromiseRejectedResult).reason as { code?: unknown })?.code,
-    "ERR_PRISM_CHECKPOINT_CONFLICT",
-    "loser must fail with checkpoint conflict",
-  );
-  const final = await checkpoints.loadCheckpoint(key);
-  assert.equal(final?.version, 2, "terminal state must be written exactly once");
-  assert.ok(
-    deepEqual(final?.value, approve) || deepEqual(final?.value, deny),
-    "final state must be exactly one winner's payload, never a mix",
-  );
-  await assertRejectsCode(
-    () => checkpoints.saveCheckpoint({ ...key, version: 3, expectedVersion: 1, value: { status: "running" } }),
-    "ERR_PRISM_CHECKPOINT_CONFLICT",
-    "a stale decision discriminant (version read before the race) must be rejected",
-  );
 }
 
 /**
@@ -538,14 +455,14 @@ function event(
   return { id, ...input.ownership, sessionId: input.sessionId, runId: input.runId, type, timestamp, event: payload, redacted: true };
 }
 
-function deepEqual(actual: unknown, expected: unknown): boolean {
+function _deepEqual(actual: unknown, expected: unknown): boolean {
   if (Object.is(actual, expected)) return true;
   if (typeof actual !== "object" || typeof expected !== "object" || actual === null || expected === null) return false;
   const actualEntries = Object.entries(actual as Record<string, unknown>);
   const expectedEntries = Object.entries(expected as Record<string, unknown>);
   if (actualEntries.length !== expectedEntries.length) return false;
   for (const [key, value] of expectedEntries) {
-    if (!deepEqual((actual as Record<string, unknown>)[key], value)) return false;
+    if (!_deepEqual((actual as Record<string, unknown>)[key], value)) return false;
   }
   return true;
 }

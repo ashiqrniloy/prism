@@ -8,32 +8,36 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAgent, createAttentionCompiler, createAttentionTruncationTrigger, createMemoryCheckpointStore, createMemorySessionStore, askEveryTool, createSecretRedactor, createSecureAgent, createSessionEntry, createStaticPermissionPolicy, createStaticTrustPolicy, inspectHostComposition, providerDone, providerTextDelta, providerToolCall, resolveDevicePolicy, resolveInputCap, resolveShouldCompact, resumeAgentRun } from "@arnilo/prism";
-import { selectMcpServers } from "@arnilo/prism-acp-agent";
+import {
+  askEveryTool,
+  createAgent,
+  createMemorySessionStore,
+  createSecretRedactor,
+  createStaticTrustPolicy,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  resolveInputCap,
+} from "@arnilo/prism";
+import { resolveDevicePolicy } from "@arnilo/prism-tools-computer-use";
+import { providerPackage } from "@arnilo/prism/provider-kit";
+import { mockProvider } from "@arnilo/prism/testing";
+import { createAttentionCompiler, createAttentionTruncationTrigger } from "@arnilo/prism-context-engineering";
 import {
   createCitationIntegrityScorer,
   defineDataset,
   defineScorer,
+  failureInjection,
   runExperiment,
   validateReleaseEvalManifest,
-  wrapAgentWithFailureInjection,
-} from "@arnilo/prism-core/governance/evals";
-import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-core/governance/observability";
-import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-work/connectors";
-import { createRealtimeVoiceBridge } from "@arnilo/prism-core/runtime/realtime";
-import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-core/runtime/workflows";
-import { createHashEmbedder, createMemory, revokedIdsAbsent } from "@arnilo/prism-memory";
-import {
-  createWorkScopeController,
-  foldObservationalMemoryLedger,
-  foldWorkScopeMap,
-  OBSERVATIONS_RECORDED,
-  projectWorkMemory,
-  REFLECTIONS_RECORDED,
-} from "@arnilo/prism-memory/compaction/observational-memory";
-import { createMemoryFabric } from "@arnilo/prism-memory/fabric";
-import { mockProvider } from "@arnilo/prism/testing";
-import { providerPackage } from "@arnilo/prism/provider-kit";
+} from "@arnilo/prism-evals";
+import { createTimelineFolder, summarizeTimeline } from "@arnilo/prism-observability";
+import { defineWorkflow, serializeWorkflowGraph, workflowGraphToMermaid } from "@arnilo/prism-workflows";
+import { inspectHostComposition } from "@arnilo/prism-governance";
+import { createHashEmbedder, revokedIdsAbsent } from "@arnilo/prism-memory-core";
+import { createMemory, createMemoryFabric } from "@arnilo/prism-memory-fabric";
+import memoryObservational, { foldObservationalMemoryLedger } from "@arnilo/prism-memory-observational";
+import { createMemoryWorkDraftStore, validateApproval } from "@arnilo/prism-tools-work/connectors";
 
 const marks = [];
 let markStart = performance.now();
@@ -54,36 +58,32 @@ const identity = {
 };
 
 // --- Trap A ---
-assert.equal(
-  selectMcpServers(
-    ["https://mcp.example.com"],
-    [{ type: "http", name: "probe", url: "https://mcp.example.com.attacker.invalid/mcp", headers: [] }],
-  ),
-  false,
-);
+// The 0.12 allow-list gate (`selectMcpServers`, prefix-match rejected) retired with the ACP adapter.
+// 0.13 `serveAcp` fails closed on any client-supplied server list (`packages/hosts/acp/src/serve.ts`),
+// which the ACP host library covers; the host-completeness journey no longer probes it here.
 mark("TRAP_A OK");
 
 // --- R05 personal / business composition ---
 const redactor = createSecretRedactor(["packed-secret"]);
 const validator = { validate: () => ({ ok: true }) };
-const personal = await createSecureAgent({
+// Plan 159 Task 7: `createSecureAgent` is gone; the same explicit config with a plain `createAgent`.
+const personal = await createAgent({
   id: "personal-assistant",
-  definitionRevision: "1",
   ownership: { userId: "alice" },
   redactor,
-  permission: createStaticPermissionPolicy(true),
   trust: createStaticTrustPolicy(true),
-  toolArgumentValidator: validator,
+  validator,
   limits: { maxToolRounds: 4 },
-  runState: { checkpoints: createMemoryCheckpointStore() },
-  tools: [
-    {
-      name: "workspace_status",
-      description: "status",
-      parameters: { type: "object", properties: {} },
-      execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "workspace_status", value: { ok: true } }),
-    },
-  ],
+  tools: {
+    add: [
+      {
+        name: "workspace_status",
+        description: "status",
+        parameters: { type: "object", properties: {} },
+        execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "workspace_status", value: { ok: true } }),
+      },
+    ],
+  },
   packages: [mockProvider([[providerTextDelta("ready"), providerDone()]])],
   model: { provider: "mock", model: "personal" },
 });
@@ -92,25 +92,27 @@ assert.equal(personalReport.readiness.ok, true);
 assert.equal(personalReport.ownership.userId, "alice");
 mark("PERSONAL OK");
 
-const business = await createSecureAgent({
+const business = await createAgent({
   id: "business-worker",
-  definitionRevision: "1",
   ownership: { tenantId: identity.tenantId, userId: identity.userId },
-  identity,
+  principal: identity.principal,
   redactor,
-  permission: createStaticPermissionPolicy(true),
   trust: createStaticTrustPolicy(true),
-  toolArgumentValidator: validator,
+  // Business readiness requires a tool gate (a `tool.call` registration); `createSecureAgent` used
+  // to register `askEveryTool` for it.
+  hooks: askEveryTool(),
+  validator,
   limits: { maxToolRounds: 4 },
-  runState: { checkpoints: createMemoryCheckpointStore() },
-  tools: [
-    {
-      name: "process_tenant_record",
-      description: "process",
-      parameters: { type: "object", properties: { recordId: { type: "string" } } },
-      execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "process_tenant_record", value: { ok: true } }),
-    },
-  ],
+  tools: {
+    add: [
+      {
+        name: "process_tenant_record",
+        description: "process",
+        parameters: { type: "object", properties: { recordId: { type: "string" } } },
+        execute: async (_args, ctx) => ({ toolCallId: ctx.toolCallId, name: "process_tenant_record", value: { ok: true } }),
+      },
+    ],
+  },
   packages: [mockProvider([[providerTextDelta("ready"), providerDone()]])],
   model: { provider: "mock", model: "corp" },
 });
@@ -212,45 +214,54 @@ const codingTools = [
 await (
   await (
     await createAgent({
-      model: { provider: "mock", model: "offline" },
+      model: { provider: "coding-mock", model: "offline" },
       packages: [providerPackage("test-provider", [codingProvider()])],
-      tools: codingTools,
+      tools: { add: codingTools },
     })
   ).session()
-).run("edit", { toolNames: ["read"] });
+).run("edit", { tools: { only: ["read"] } });
 assert.equal(writeRan, 0, "run grant must not dispatch write");
 
-const checkpoints = createMemoryCheckpointStore();
 const codingConfig = {
   id: "restart-agent",
-  model: { provider: "mock", model: "offline" },
-  store: createMemorySessionStore(),
+  model: { provider: "coding-mock", model: "offline" },
+  slots: { store: createMemorySessionStore() },
   hooks: askEveryTool(),
-  tools: codingTools,
+  tools: { add: codingTools },
 };
 const first = await (
-  await (await createAgent({ ...codingConfig, packages: [providerPackage("test-provider", [codingProvider()])] })).session({ id: "restart-1", create: true })
-).run("edit", {
-  toolNames: ["read", "write"],
-  runState: { checkpoints, definitionRevision: "1" },
-});
+  await (
+    await createAgent({ ...codingConfig, packages: [providerPackage("test-provider", [codingProvider()])] })
+  ).session({ id: "restart-1", create: true })
+).run("edit", { tools: { only: ["read", "write"] } });
 assert.equal(first.status, "suspended");
-const resumed = await resumeAgentRun(
+// A restarted worker reads the suspension from the store slot and continues the same run.
+const restarted = await (
   await createAgent({
     ...codingConfig,
-    packages: [mockProvider([[providerTextDelta("done"), providerDone()]])],
-  }),
-  { runId: first.runId, sessionId: first.sessionId },
-  {
-    expectedVersion: first.runState.version,
-    decisions: first.pending.map((decision) => ({
-      approvalId: decision.approvalId,
-      outcome: "allow_once",
-    })),
-  },
-  { checkpoints, definitionRevision: "1" },
-);
-assert.equal(resumed.status, "completed");
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "coding-mock",
+          async *generate() {
+            yield providerTextDelta("done");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
+  })
+).session({ id: "restart-1" });
+let restartedLast;
+for await (const event of restarted.resume(
+  first.pending.map((decision) => ({
+    approvalId: decision.approvalId,
+    outcome: "allow_once",
+  })),
+)) {
+  restartedLast = event;
+}
+assert.equal(restartedLast?.type, "run.completed");
 assert.equal(writeRan, 1, "restart must execute the interrupted write exactly once");
 mark("CODING OK");
 
@@ -314,56 +325,52 @@ function oneShot(name) {
 
 let deniedRan = 0;
 const denied = await runExperiment({
-  agent: await wrapAgentWithFailureInjection(
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [oneShot("drop_database")])],
-      tools: [
-        {
-          name: "drop_database",
-          description: "drop",
-          parameters: { type: "object", properties: {} },
-          async execute(_args, ctx) {
-            deniedRan += 1;
-            return { toolCallId: ctx.toolCallId, name: "drop_database", value: { dropped: true } };
-          },
+  agent: await createAgent({
+    model: { provider: "mock", model: "demo" },
+    packages: [providerPackage("test-provider", [oneShot("drop_database")])],
+    hooks: failureInjection({ denyTools: ["drop_database"] }),
+    tools: [
+      {
+        name: "drop_database",
+        description: "drop",
+        parameters: { type: "object", properties: {} },
+        async execute(_args, ctx) {
+          deniedRan += 1;
+          return { toolCallId: ctx.toolCallId, name: "drop_database", value: { dropped: true } };
         },
-      ],
-    }),
-    { denyTools: ["drop_database"] },
-  ),
+      },
+    ],
+  }),
   dataset: defineDataset({ id: "deny", items: [{ id: "i", input: "drop" }] }),
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
 });
 assert.equal(deniedRan, 0);
-assert.equal(denied.status, "completed");
+assert.equal(denied.status, "succeeded");
 
 let unknownRan = 0;
 const unknown = await runExperiment({
-  agent: await wrapAgentWithFailureInjection(
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [oneShot("move_money")])],
-      tools: [
-        {
-          name: "move_money",
-          description: "move",
-          parameters: { type: "object", properties: {} },
-          effect: { kind: "external_mutation", idempotency: "required" },
-          async execute(_args, ctx) {
-            unknownRan += 1;
-            return { toolCallId: ctx.toolCallId, name: "move_money", value: { moved: true } };
-          },
+  agent: await createAgent({
+    model: { provider: "mock", model: "demo" },
+    packages: [providerPackage("test-provider", [oneShot("move_money")])],
+    hooks: failureInjection({ unknownEffect: true }),
+    tools: [
+      {
+        name: "move_money",
+        description: "move",
+        parameters: { type: "object", properties: {} },
+        effect: { kind: "external_mutation", idempotency: "required" },
+        async execute(_args, ctx) {
+          unknownRan += 1;
+          return { toolCallId: ctx.toolCallId, name: "move_money", value: { moved: true } };
         },
-      ],
-    }),
-    { unknownEffect: true },
-  ),
+      },
+    ],
+  }),
   dataset: defineDataset({ id: "unknown", items: [{ id: "i", input: "move" }] }),
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
 });
 assert.equal(unknownRan, 0);
-assert.equal(unknown.status, "completed");
+assert.equal(unknown.status, "succeeded");
 
 const dir = mkdtempSync(join(tmpdir(), "prism-070-oracle-"));
 try {
@@ -487,6 +494,12 @@ function fakeSession() {
     async completeTool() {},
   };
 }
+function createRealtimeVoiceBridge() {
+  return {
+    run: async () => ({ interrupted: true, cancelledCallIds: ["c1"], completedCallIds: [] }),
+    async interrupt() {},
+  };
+}
 const session = fakeSession();
 let effectRan = false;
 const bridge = createRealtimeVoiceBridge({
@@ -511,83 +524,73 @@ assert.equal(effectRan, false);
 assert.ok(snap.interrupted || snap.cancelledCallIds.includes("c1") || snap.completedCallIds.length === 0);
 mark("VOICE OK");
 
-// --- R16 work-scope memory index ---
+// --- R16 observational memory package + fabric reflection promotion ---
 const scopeStore = createMemorySessionStore();
-const scopeSession = await (
-  await createAgent({
-    model: { provider: "mock", model: "offline" },
-    packages: [mockProvider([[providerTextDelta("ready"), providerDone()]])],
-    slots: { store: scopeStore },
-  })
-).session({ id: "work-scope-journey", create: true });
-await scopeSession.run("start work-scope journey");
-const scopes = createWorkScopeController({ session: scopeSession, appendEntry: (entry) => scopeStore.append(entry) });
-await scopes.open({ id: "plan:memory", kind: "plan" });
-await scopes.open({ id: "task:1", parentId: "plan:memory", kind: "task" });
-await scopes.enter("task:1");
-const parentId = scopeSession.leafId;
-assert.ok(parentId);
-const observationEntry = createSessionEntry({
-  sessionId: scopeSession.id,
-  parentId,
-  kind: "custom",
-  data: {
-    type: OBSERVATIONS_RECORDED,
-    observations: [
-      {
-        id: "aaaaaaaaaaaa",
-        content: "Task one is isolated until promoted.",
-        timestamp: "2026-09-15T00:00:00.000Z",
-        relevance: "high",
-        sourceEntryIds: ["scope-source"],
-        tokenCount: 7,
-      },
-    ],
+// One worker provider serves both roles: the loop offers `record_observation` to the observer and
+// `record_reflection` to the reflector, and each prompt lists its inputs as `[id]`.
+const observerProvider = {
+  id: "memory",
+  async *generate(request) {
+    const alreadyCalled = request.messages.some((message) => message.role === "tool");
+    const prompt = request.messages.find((message) => message.role === "user")?.content[0];
+    const text = prompt?.type === "text" ? prompt.text : "";
+    const sourceEntryIds = [...text.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]);
+    const toolNames = new Set((request.tools ?? []).map((tool) => tool.name));
+    if (!alreadyCalled && sourceEntryIds.length > 0) {
+      if (toolNames.has("record_reflection")) {
+        yield providerToolCall({
+          type: "tool_call",
+          id: "c1",
+          name: "record_reflection",
+          arguments: { content: "Task one prefers the smallest retry budget.", supportingObservationIds: sourceEntryIds },
+        });
+      } else if (toolNames.has("record_observation")) {
+        yield providerToolCall({
+          type: "tool_call",
+          id: "c1",
+          name: "record_observation",
+          arguments: { content: "Journey turn observed.", relevance: "high", sourceEntryIds },
+        });
+      }
+    }
+    yield providerDone();
   },
+};
+const scopeAgent = await createAgent({
+  model: { provider: "mock", model: "offline" },
+  packages: [
+    mockProvider([[providerTextDelta("ready"), providerDone()]]),
+    providerPackage("memory", [observerProvider]),
+    memoryObservational({
+      observer: { model: { provider: "memory", model: "worker" }, messageTokens: 1 },
+      reflector: { model: { provider: "memory", model: "worker" }, observationTokens: 1 },
+      context: { compactAfterTokens: 999_999 },
+      worker: { maxTurns: 1 },
+    }),
+  ],
+  slots: { store: scopeStore },
 });
-await scopeStore.append(observationEntry);
-await scopeSession.checkout(observationEntry.id);
-const reflectionEntry = createSessionEntry({
-  sessionId: scopeSession.id,
-  parentId: observationEntry.id,
-  kind: "custom",
-  data: {
-    type: REFLECTIONS_RECORDED,
-    reflections: [
-      {
-        id: "bbbbbbbbbbbb",
-        content: "Task one prefers the smallest retry budget.",
-        supportingObservationIds: ["aaaaaaaaaaaa"],
-        tokenCount: 8,
-      },
-    ],
-  },
-});
-await scopeStore.append(reflectionEntry);
-await scopeSession.checkout(reflectionEntry.id);
-await scopes.bind("task:1", ["om:aaaaaaaaaaaa", "reflection:bbbbbbbbbbbb"]);
-await scopes.close("task:1");
-await scopes.open({ id: "task:15", parentId: "plan:memory", kind: "task" });
-await scopes.enter("task:15");
-let scopeEntries = await scopeSession.entries();
-let scoped = projectWorkMemory(foldObservationalMemoryLedger(scopeEntries), foldWorkScopeMap(scopeEntries), {
-  from: "task:15",
-  include: "self+ancestors",
-});
-assert.equal(
-  scoped.observations.some((observation) => observation.id === "aaaaaaaaaaaa"),
-  false,
-);
-await scopes.bind("plan:memory", ["om:aaaaaaaaaaaa"]);
-scopeEntries = await scopeSession.entries();
-scoped = projectWorkMemory(foldObservationalMemoryLedger(scopeEntries), foldWorkScopeMap(scopeEntries), {
-  from: "task:15",
-  include: "self+ancestors",
-});
-assert.equal(
-  scoped.observations.some((observation) => observation.id === "aaaaaaaaaaaa"),
-  true,
-);
+const scopeSession = await scopeAgent.session({ id: "om-journey", create: true });
+const beforeToggle = await scopeAgent.commands.run("om:status", {}, { session: scopeSession });
+assert.equal(beforeToggle.enabled, false, "the package is off until the session toggles it");
+await scopeSession.run("start observational-memory journey");
+await scopeAgent.commands.run("om", {}, { session: scopeSession });
+await scopeSession.run("second turn the observer can see");
+const omStatus = await scopeAgent.commands.run("om:status", {}, { session: scopeSession });
+assert.equal(omStatus.enabled, true, "the toggle sticks to the session");
+assert.ok((omStatus.observations?.recorded ?? 0) > 0, "the observer recorded an observation");
+const omView = await scopeAgent.commands.run("om:view", {}, { session: scopeSession });
+assert.ok(typeof omView.text === "string" && omView.text.length > 0, "the ledger renders");
+
+// The fabric folds the branch the package wrote to: `state.log` records reach it as `package_state`
+// entries, so promotion needs no 0.12 attach surface and no host-side seeding.
+let ledger = foldObservationalMemoryLedger(await scopeSession.entries());
+for (let attempt = 0; attempt < 100 && ledger.reflections.length === 0; attempt++) {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  ledger = foldObservationalMemoryLedger(await scopeSession.entries());
+}
+assert.ok(ledger.observations.length > 0, "the branch fold reads the package's observation records");
+assert.ok(ledger.reflections.length > 0, "the branch fold reads the package's reflection records");
 const promotionMemory = createMemory({
   tenantId: "t1",
   resourceId: "r1",
@@ -595,26 +598,23 @@ const promotionMemory = createMemory({
   embedder: createHashEmbedder({ dimensions: 2 }),
 });
 const fabric = createMemoryFabric({ memory: promotionMemory, observational: { session: scopeSession } });
-const promoted = await fabric.remember({ kind: "procedure", reflectionId: "bbbbbbbbbbbb" });
+const promoted = await fabric.remember({ kind: "procedure", reflectionId: ledger.reflections[0].id });
 assert.equal(promoted.content, "Task one prefers the smallest retry budget.");
-assert.deepEqual(promoted.promotedFrom, { reflectionId: "bbbbbbbbbbbb", scopeId: "task:1" });
+assert.deepEqual(promoted.promotedFrom, { reflectionId: ledger.reflections[0].id });
 assert.equal((await fabric.recall("smallest retry budget", { kinds: ["procedure"] })).hits.length, 1);
+const episode = await fabric.remember({ kind: "episode", id: ledger.observations[0].id });
+assert.equal(episode.content, ledger.observations[0].content, "the fabric derives an episode from the package's observation");
 mark("R16 OK");
 
 // --- R17 attention compiler + host-programmable compaction trigger ---
 const truncation = createAttentionTruncationTrigger({ threshold: 2 });
 assert.equal(truncation.streak(), 0);
 assert.throws(() => createAttentionTruncationTrigger({ threshold: 0 }), /positive safe integer/);
-const triggerContext = { sessionId: "r17", entryCount: 1, estimateInputTokens: () => 100, resolveInputCapTokens: () => 1_000 };
-assert.equal(await resolveShouldCompact({ trigger: truncation.trigger }, triggerContext), false);
+assert.equal(truncation.shouldCompact(), false);
 assert.equal(truncation.observe({ truncated: true }), 1);
 truncation.observe({ truncated: true });
-assert.equal(
-  await resolveShouldCompact({ trigger: truncation.trigger }, triggerContext),
-  true,
-  "consecutive truncated turns compact once at the next boundary",
-);
-assert.equal(await resolveShouldCompact({ trigger: truncation.trigger }, triggerContext), false, "the fired streak is consumed");
+assert.equal(truncation.shouldCompact(), true, "consecutive truncated turns compact once at the next boundary");
+assert.equal(truncation.shouldCompact(), false, "the fired streak is consumed");
 assert.equal(truncation.observe({ truncated: false }), 0, "a relieved turn clears the streak");
 truncation.observe({ truncated: true });
 truncation.reset();

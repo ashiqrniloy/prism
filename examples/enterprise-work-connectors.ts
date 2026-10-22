@@ -1,4 +1,4 @@
-import { type AgentIdentity, createMemoryCheckpointStore } from "@arnilo/prism";
+import { createMemoryCheckpointStore } from "@arnilo/prism-workflows";
 import {
   createGoogleWorkspaceHttpAdapter,
   createMemoryIdempotencyStore,
@@ -6,8 +6,8 @@ import {
   createWorkTools,
   normalizeMailPage,
   type WorkDraftApproval,
-} from "@arnilo/prism-work/connectors";
-
+} from "@arnilo/prism-tools-work/connectors";
+import { type AgentIdentity } from "@arnilo/prism-governance";
 const identity: AgentIdentity = {
   tenantId: "tenant-a",
   userId: "user-1",

@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 /**
- * Plan 120 Task 6. Node branch-coverage audit for the core dist suite.
+ * Plan 120 Task 6. Node branch-coverage audit for the core suite.
+ * Plan 174 Task 8: the kernel publishes TypeScript source; the instrumented set below is the
+ * source suite, and `auditBranchCoverage` reports that the Node instrument cannot run it instead
+ * of spawning a doomed run.
+ * Plan 181 Task 3: the floor is retired, not re-measured. `scripts/branch-coverage-summary.json`
+ * stays as the frozen measurement, `scripts/branch-coverage.test.mjs` still asserts it against
+ * BRANCH_FLOOR, and `probeBunBranchRecords()` below re-arms this stage the moment Bun emits BRDA —
+ * at which point the Node instrument and its `tooling-gate`/`phase23-coverage` exceptions go.
+ * Backlog: "Move the core branch-coverage floor to a Bun instrument or retire the stage".
  * Bun's gate stays `branches: null` (plan 114). This script does not replace it.
  *
  * # ponytail: Node's instrument measures branches Bun cannot (plan 114 row 11).
@@ -8,7 +16,7 @@
  * fails this stage when Bun ships BRDA; then delete this Node spawn.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -57,12 +65,17 @@ export function assertBranchFloor(artifact) {
   }
 }
 
+// Plan 174 Task 8: the kernel publishes TypeScript source, so the instrumented set is the
+// source suite. The Node instrument cannot execute it (Node's type stripping does not rewrite
+// the kernel's `.js`-suffixed relative specifiers), so `auditBranchCoverage` fails closed with
+// that reason instead of spawning a 180 s run that times out. A Bun-based branch instrument or
+// retirement of this stage is a separate decision (backlog).
 function coreTests() {
-  const dir = join(root, "dist", "__tests__");
+  const dir = join(root, "src", "__tests__");
   return readdirSync(dir)
-    .filter((name) => name.endsWith(".test.js"))
+    .filter((name) => name.endsWith(".test.ts"))
     .sort()
-    .map((name) => join("dist", "__tests__", name));
+    .map((name) => join("src", "__tests__", name));
 }
 
 function tail(output) {
@@ -149,8 +162,20 @@ export function auditBranchCoverage() {
   }
   const files = coreTests();
   if (files.length === 0) {
-    console.error("branch-coverage: no dist/__tests__ — run bun run build first");
+    console.error("branch-coverage: no src/__tests__ — the kernel publishes TypeScript source");
     return 1;
+  }
+  if (!existsSync(join(root, "dist"))) {
+    // Retired by plan 181 Task 3: the kernel publishes TypeScript source (plan 174 Task 8) and Node
+    // cannot execute it (type stripping does not rewrite the kernel's `.js`-suffixed relative
+    // specifiers), so no instrument can produce a fresh artifact. The recorded floor and its test
+    // stay; the BRDA probe above is what revives this stage.
+    console.log(
+      "branch-coverage: retired — the kernel publishes TypeScript source and the Node instrument cannot " +
+        "run it; the recorded floor in scripts/branch-coverage-summary.json stays asserted by " +
+        "scripts/branch-coverage.test.mjs, and the Bun BRDA probe re-arms this stage when Bun emits branches.",
+    );
+    return 0;
   }
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("NODE_TEST_")));
   const started = Date.now();
@@ -205,8 +230,8 @@ export function auditBranchCoverage() {
           loaderPath,
           "--test",
           "--experimental-test-coverage",
-          "--test-coverage-include=dist/**",
-          "--test-coverage-exclude=dist/__tests__/**",
+          "--test-coverage-include=src/**",
+          "--test-coverage-exclude=src/__tests__/**",
           ...files,
         ],
         { cwd: root, encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, timeout: 180_000 },

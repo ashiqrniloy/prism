@@ -10,6 +10,8 @@ export interface ResolvedManifestEntry extends ManifestEntry {
   readonly scope: ManifestScope;
   readonly enabled: boolean;
   readonly optional: boolean;
+  /** Winning manifest scope per top-level config key. */
+  readonly scopes?: Readonly<Record<string, "user" | "project">>;
 }
 
 export interface MergedManifest {
@@ -38,11 +40,18 @@ export function mergeManifestScopes(sources: MergeSources): MergedManifest {
 
   for (const record of sources.user?.packages ?? []) {
     if (!isInstalledEntry(record)) continue; // parseManifest rejects these in user scope
+    const scopes: Record<string, "user" | "project"> = {};
+    if (record.config) {
+      for (const key of Object.keys(record.config)) {
+        scopes[key] = "user";
+      }
+    }
     byName.set(record.name, {
       ...record,
       scope: "user",
       enabled: record.enabled !== false,
       optional: record.optional === true,
+      ...(record.config !== undefined ? { scopes } : {}),
     });
   }
 
@@ -58,12 +67,18 @@ export function mergeManifestScopes(sources: MergeSources): MergedManifest {
     const install = isInstalledEntry(record) ? record : (base as ManifestEntry);
     const config: JsonObject | undefined =
       base?.config !== undefined && record.config !== undefined ? mergeConfig(base.config, record.config) : (record.config ?? base?.config);
+    const scopes: Record<string, "user" | "project"> = { ...(base?.scopes ?? {}) };
+    if (record.config) {
+      for (const key of Object.keys(record.config)) {
+        scopes[key] = "project";
+      }
+    }
     byName.set(record.name, {
       name: record.name,
       version: install.version,
       integrity: install.integrity,
       capabilities: install.capabilities,
-      ...(config !== undefined ? { config } : {}),
+      ...(config !== undefined ? { config, scopes } : {}),
       scope: isInstalledEntry(record) ? "project" : (base as ResolvedManifestEntry).scope,
       enabled: record.enabled ?? base?.enabled ?? true,
       optional: record.optional ?? base?.optional ?? false,

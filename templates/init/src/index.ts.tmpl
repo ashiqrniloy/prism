@@ -1,0 +1,12 @@
+import { createAppAgent } from "./agent.js";
+
+export async function main(prompt = "Say hello in one short sentence."): Promise<string> {
+  const agent = createAppAgent();
+  const session = agent.createSession({ id: "init-demo" });
+  const result = await session.run(prompt);
+  return result.text;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  console.log(await main(process.argv.slice(2).join(" ") || undefined));
+}

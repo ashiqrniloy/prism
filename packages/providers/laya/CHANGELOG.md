@@ -12,6 +12,13 @@
   a run with `credential_unavailable`. The raw factory, the wire helpers, the cache/thinking helpers, and the
   catalog stay named exports.
 
+### Changed
+
+- Rebuilt on `systemOneProviderPackage` from `@arnilo/prism/provider-kit` sharing single-shape decision-provider implementation with TypeSafe Jev.
+- Renamed `DEFAULT_LAYA_BASE_URL` to `LAYA_DEFAULT_BASE_URL` and added `LAYA_DEFAULT_API_KEY_REF`. Removed obsolete `layaBaseUrl`.
+- Plaintext remote endpoint warning now warns through System One in `provider-kit`, printing only the origin without userinfo.
+- Implemented `systemOneConformance` coverage and added skip probe for local `laya-serve` instance in `live.test.ts`.
+
 ## [0.1.0] - 2026-08-09
 
 - Release-graph anchor: every first-party manifest carries `0.1.0` and `0.0.28` changelog sections.

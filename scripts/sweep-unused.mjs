@@ -7,17 +7,21 @@
  * Zero dependencies; spawns the local tsc binary.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { expandWorkspaceDirs } from "./package-truth.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const tsc = join(root, "node_modules", ".bin", "tsc");
 
+// Plan 181 Task 3: workspaces live at `packages/<group>/<pkg>` (and `apps/<name>`), so the tsconfig
+// list follows the root `workspaces` globs instead of one directory level under `packages/`.
+const rootManifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const tsconfigs = ["tsconfig.json"];
-for (const pkg of readdirSync(join(root, "packages"))) {
-  const cfg = join(root, "packages", pkg, "tsconfig.json");
-  if (existsSync(cfg)) tsconfigs.push(join("packages", pkg, "tsconfig.json"));
+for (const dir of expandWorkspaceDirs(root, rootManifest.workspaces)) {
+  const cfg = join(dir, "tsconfig.json");
+  if (existsSync(cfg)) tsconfigs.push(relative(root, cfg));
 }
 
 const sections = [];

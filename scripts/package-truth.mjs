@@ -17,7 +17,7 @@ const DEFAULT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // name-pattern separation from capability packages (e.g. prism-mcp), so the set
 // is explicit here; the docs tests assert it against the generated artifact.
 // Plan 054 Task 8: npm profile manifests are deleted; families only.
-export const PRISM_FAMILY = ["@arnilo/prism-channels", "@arnilo/prism-coding-tools", "@arnilo/prism-core"];
+export const PRISM_FAMILY = ["@arnilo/prism-channels"];
 
 export function expandWorkspaceDirs(root, globs) {
   const dirs = [];
@@ -50,9 +50,15 @@ export function expandWorkspaceDirs(root, globs) {
     if (current.length === 0) {
       throw new Error(`workspace glob matches no directory: ${glob}`);
     }
-    dirs.push(...current);
+    // Bun ignores a glob hit with no manifest (packages/memory/src is residue). Match that.
+    dirs.push(...current.filter((dir) => existsSync(join(dir, "package.json"))));
   }
   return [...new Set(dirs)];
+}
+
+/** Published workspace dirs. Private apps stay in the glob so typecheck and run-all-tests see them. */
+export function publishableWorkspaceDirs(root, globs) {
+  return expandWorkspaceDirs(root, globs).filter((dir) => readManifest(join(dir, "package.json")).private !== true);
 }
 
 export function readManifest(file) {
@@ -100,16 +106,18 @@ export function workspaceShape(rootDir = DEFAULT_ROOT) {
       if (child.isDirectory() && existsSync(join(group, child.name, "package.json"))) dirs.push(join(group, child.name));
     }
   }
-  dirs.sort();
-  const names = dirs.map((dir) => basename(dir));
+  // Private manifests are not package truth (plan 172 Task 3). The app lives under apps/, not here.
+  const published = dirs.filter((dir) => readManifest(join(dir, "package.json")).private !== true);
+  published.sort();
+  const names = published.map((dir) => basename(dir));
   const providerDirs = names.filter((name) => name.startsWith("provider-"));
   const prismDirs = names.filter((name) => name.startsWith("prism-"));
   const capabilityDirs = names.filter((name) => !name.startsWith("provider-") && !name.startsWith("prism-"));
-  return { dirs, names, providerDirs, prismDirs, capabilityDirs };
+  return { dirs: published, names, providerDirs, prismDirs, capabilityDirs };
 }
 
-// Plan 120 Task 8. Presence of a workspace package (directory + package.json).
-// Counts a future package; never excludes one. Cached per root for the process.
+// Plan 120 Task 8. Presence of a public workspace package (directory + package.json).
+// Counts a future public package. Private manifests are excluded. Cached per root for the process.
 const packageCountCache = new Map();
 export function workspacePackageCounts(rootDir = DEFAULT_ROOT) {
   const cached = packageCountCache.get(rootDir);
@@ -134,7 +142,7 @@ export function computePackageTruth(rootDir = DEFAULT_ROOT) {
   if (!Array.isArray(root.workspaces)) {
     throw new Error(`root manifest missing workspaces array: ${join(rootDir, "package.json")}`);
   }
-  const pkgs = expandWorkspaceDirs(rootDir, root.workspaces).map((dir) => ({
+  const pkgs = publishableWorkspaceDirs(rootDir, root.workspaces).map((dir) => ({
     dir,
     ...readManifest(join(dir, "package.json")),
   }));
@@ -196,24 +204,58 @@ const flag = (name) => {
 // package without a note renders with its kind label.
 export const PACKAGE_NOTES = {
   "@arnilo/prism": "core — runtime, CLI/RPC, templates, docs",
-  "@arnilo/prism-coding-tools": "family — /agent, /security, /openapi, /computer-use-linux, /dev, /impeccable subpaths",
   "@arnilo/prism-channels":
     "family — transport-neutral messaging runtime, durable journal, pairing and one-use approvals; official /telegram (private DMs, opt-in granted groups/topics) and experimental pinned signal-cli /signal",
-  "@arnilo/prism-core": "family — /runtime, /sessions, /governance, /credentials, /enterprise, /validation subpaths",
-  "@arnilo/prism-acp-agent": "capability — ACP adapter",
   "@arnilo/prism-ag-ui": "capability — AG-UI/A2A/A2UI adapter",
   "@arnilo/prism-credentials-keyring":
     "capability — credentials slot: OS keyring and encrypted-file backends, `keyring:` ref resolution, and secret/OAuth persistence",
   "@arnilo/prism-hooks-json":
     "capability — Claude/Codex hooks.json compiled onto session.opened, context.build, run.input, tool.call, tool.result, and run.end",
-  "@arnilo/prism-mcp": "capability — MCP client/server/OAuth interop",
-  "@arnilo/prism-memory": "capability — memory plus /rag, /compaction/*, /fabric, /wiki subpaths",
-  "@arnilo/prism-work":
+  "@arnilo/prism-mcp":
+    "capability — MCP client package: connects allowed servers, bridges their tools, and exposes mcp:status/reconnect/close",
+  "@arnilo/prism-mcp-server":
+    "library — host library serving Prism tools, resources, and prompts over MCP (stdio and Streamable HTTP transports)",
+  "@arnilo/prism-headless": "library — host library routing HostUi requests through ordered routes with a value-free answer log",
+  "@arnilo/prism-remote":
+    "library — host library serving a Prism agent to remote clients and connecting to remote agents over prism.remote/1",
+  "@arnilo/prism-tools-coding":
+    "capability — coding file/search/shell tools as a package: a small tool set with declared effects, in-tool path containment, and an optional shell",
+  "@arnilo/prism-approval": "capability — approval modes deny/ask/edits/auto over tool effects and roots, as one tool.call gate",
+  "@arnilo/prism-guardrail-packs":
+    "capability — built-in guardrail packs (coding-standard, destructive-commands, validation-respect, secrets-hygiene) as restrictive-only tool.call/tool.result rules with package session state",
+  "@arnilo/prism-governance":
+    "capability — deny-by-default policy engine (inline rules or OPA) plus approvals and an audit ledger, as one tool.call/run.input/model.request gate with a governance.policy/governance.audit service",
+  "@arnilo/prism-model-router":
+    "capability — policy around hook routing turns across candidates with budget, circuit, and rate-limit controls",
+  "@arnilo/prism-observability":
+    "capability — OpenTelemetry spans and metrics over the agent event catalog as observe handlers; exports nothing itself",
+  "@arnilo/prism-workflows":
+    "library — typed graph workflows (DAG and cyclic) that orchestrate any set of agents from outside their sessions: checkpoints, suspend/resume, replay, graph export, and the `checkpoints`/`leases` service contracts",
+  "@arnilo/prism-driver-process": "capability — generic external-agent process driver with a host-written adapter",
+  "@arnilo/prism-delegate":
+    "capability — a delegate tool whose child agent inherits a chosen subset of the parent packages, reporting delegate.step package events",
+  "@arnilo/prism-context-files":
+    "capability — AGENTS.md / SYSTEM.md layers as one context.build handler, trust-gated and cached per session",
+  "@arnilo/prism-context-engineering":
+    "capability — the input budget, tool-result folding, tool search, and the attention compiler as one fixed-order context.build handler",
+  "@arnilo/prism-memory-core":
+    "library — shared memory contracts, vector stores, lineage, propagation, and scoring; no slot and no capability",
+  "@arnilo/prism-memory-rag": "capability — indexed retrieval with a rag_search tool, an opt-in context block, and the embeddings service",
+  "@arnilo/prism-memory-fabric":
+    "capability — working, semantic, and scoped memory with the memory.* tools, a context block, and per-session state",
+  "@arnilo/prism-memory-wiki":
+    "capability — the LLM Wiki knowledge compiler: four wiki tools, four commands, bundled skills, and the prism-wiki CLI",
+  "@arnilo/prism-tools-work":
     "capability — /connectors, /documents, /sheets, /diagrams, /document-extraction, /document-reader, /sandbox, /skills, /tools subpaths",
-  "@arnilo/prism-web-tools": "capability — Brave/Exa/Firecrawl plus peer-gated /browser and /obscura subpaths",
-  "@arnilo/prism-agent-sdk": "capability — configurable agent runtime assembly over tool planes, skills, instructions, MCP, and hooks",
-  "@arnilo/prism-code":
-    "capability — terminal coding agent app: TUI, headless print/json, and ACP surfaces with bundled coding tools, repo sessions, observational memory, and optional web/wiki planes",
+  "@arnilo/prism-tools-browser":
+    "capability — six exclusive Playwright browser tools with declared effects, fail-closed egress policy, and artifact quarantine",
+  "@arnilo/prism-tools-web":
+    "capability — Brave/Exa search, Firecrawl fetch/extract, and host-installed Obscura with declared network effects and a web.fetch service",
+  "@arnilo/prism-tools-research": "capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check",
+  "@arnilo/prism-tools-openapi":
+    "capability — compile allow-listed OpenAPI 3.1 operations into bounded tools with pinned origins, per-method effects, and ref-only header credentials",
+  "@arnilo/prism-tools-computer-use":
+    "capability — the host-owned computer-use-linux MCP binary as tools with declared external effects, in-tool device admission, and a bundled skill",
 };
 
 const blockBegin = (type) => `<!-- generated:package-truth:${type} begin -->`;
@@ -221,7 +263,7 @@ const blockEnd = (type) => `<!-- generated:package-truth:${type} end -->`;
 
 // The canonical inventory table: root + every workspace manifest, with version
 // and editorial notes. Reused byte-identical across README, docs/index.md, and
-// docs/release-and-install.md (regenerate all with --emit-docs).
+// docs/release.md (regenerate all with --emit-docs).
 export function renderInventoryBlock(truth) {
   const rows = [
     ["@arnilo/prism", truth.root.version, "core"],
@@ -240,8 +282,7 @@ export function renderInventoryBlock(truth) {
 }
 
 // The provider-adapter table: every first-party adapter as its own package.
-// Reused byte-identical on docs/release-and-install.md and
-// docs/provider-packages.md.
+// Rendered on docs/release.md.
 export function renderProvidersBlock(truth) {
   return [
     blockBegin("providers"),
@@ -274,8 +315,7 @@ export function applyGeneratedBlock(text, type, content) {
 export const DOC_BLOCK_TARGETS = {
   "README.md": ["inventory"],
   "docs/index.md": ["inventory"],
-  "docs/release-and-install.md": ["inventory", "providers"],
-  "docs/provider-packages.md": ["providers"],
+  "docs/release.md": ["inventory", "providers"],
 };
 
 export function renderGeneratedDocs(root, truth) {

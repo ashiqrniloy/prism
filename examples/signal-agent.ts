@@ -1,20 +1,16 @@
-// Plan 079 Task 7: explicit, externally supervised signal-cli composition.
-import { createMessagingRuntime, type MessagingRuntimeOptions } from "@arnilo/prism-channels";
-import { createSignalAdapter, type SignalAdapterOptions } from "@arnilo/prism-channels/signal";
+// Explicit, externally supervised signal-cli composition.
+import type { Agent } from "@arnilo/prism";
+import {
+  connectSignal,
+  type ChannelConnectionHandle,
+  type SignalConnectOptions,
+} from "@arnilo/prism-channels/signal";
 
-export async function startSignalChannel(options: {
-  readonly signal: SignalAdapterOptions;
-  readonly runtime: Omit<MessagingRuntimeOptions, "deliver">;
-}) {
-  const adapter = createSignalAdapter(options.signal);
-  const runtime = createMessagingRuntime({ ...options.runtime, deliver: (reply) => adapter.send(reply) });
-  await adapter.start((event) => runtime.admit(event));
-  return {
-    adapter,
-    runtime,
-    async stop() {
-      await adapter.stop();
-      await runtime.stop();
-    },
-  };
+export async function startSignalChannel(
+  agent: Agent,
+  options: SignalConnectOptions,
+): Promise<ChannelConnectionHandle> {
+  const handle = await connectSignal(agent, options);
+  await handle.start();
+  return handle;
 }

@@ -8,7 +8,7 @@ A provider package is a `definePackage` definition plus a named factory, both bu
 surface in `@arnilo/prism/provider-kit` (`defineProviderPackage`, `providerPackageInstance`,
 `secretRefProperty`/`baseUrlProperty`/`modelsProperty`, `refSource`/`optionalRefSource`). The
 vendor-specific parts stay in the package: its config schema, its `setup` body, its wire helpers,
-and its model catalog. `docs/next/provider-kit.md` documents the surface and shows a minimal
+and its model catalog. `docs/provider-kit.md` documents the surface and shows a minimal
 package.
 
 Tooling: `workspacePackageCounts()` (`scripts/package-truth.mjs`) counts a package one level under a

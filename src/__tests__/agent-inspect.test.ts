@@ -1,10 +1,13 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
-  type ModelProvider,
   createAgent,
   createSecretRedactor,
   definePackage,
+  type ModelProvider,
   type PackageDefinitionInput,
   providerDone,
   providerTextDelta,
@@ -18,7 +21,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
 
 const provider: ModelProvider = {
   id: "mock",
@@ -66,7 +69,9 @@ describe("agent.inspect()", () => {
     const view = agent.inspect();
 
     assert.deepEqual(
-      view.packages.filter((p) => p.name !== "test-provider").map(({ name, version, status, optional }) => [name, version, status, optional]),
+      view.packages
+        .filter((p) => p.name !== "test-provider")
+        .map(({ name, version, status, optional }) => [name, version, status, optional]),
       [
         ["@acme/audit", "2.1.0", "loaded", false],
         ["@acme/loop", "1.0.0", "loaded", false],
@@ -108,7 +113,11 @@ describe("agent.inspect()", () => {
     });
     assert.equal(direct.inspect().slots.loop, "host");
     // `disable.hooks` removes a hook, and the listing agrees with dispatch.
-    const trimmed = await createAgent({ model: MODEL, packages: [audit, providerPackage("test-provider", [provider])], disable: { hooks: ["@acme/audit:tool.call"] } });
+    const trimmed = await createAgent({
+      model: MODEL,
+      packages: [audit, providerPackage("test-provider", [provider])],
+      disable: { hooks: ["@acme/audit:tool.call"] },
+    });
     assert.equal(trimmed.inspect().hooks["tool.call"], undefined);
     assert.deepEqual(trimmed.inspect().disabled.hooks, ["@acme/audit:tool.call"]);
   });
@@ -145,7 +154,8 @@ describe("agent.inspect()", () => {
       });
       const text = JSON.stringify(agent.inspect());
       assert.ok(text.includes("env:TEST_KEY"), "the ref is shown");
-      for (const field of ["spec-host.example", "SPEC_KEY", "spec-option"]) assert.equal(text.includes(field), false, `ModelSpec ${field} is never listed`);
+      for (const field of ["spec-host.example", "SPEC_KEY", "spec-option"])
+        assert.equal(text.includes(field), false, `ModelSpec ${field} is never listed`);
       assert.equal(text.includes(SECRET), false, "the env value and a secret in a non-secret field are not");
       assert.equal(agent.inspect().packages[0]!.configSources.apiKey, "code");
       assert.equal(agent.inspect().packages[0]!.source, "code");
@@ -157,7 +167,10 @@ describe("agent.inspect()", () => {
         },
         { capabilities: ["credentials"] },
       );
-      const resolved = await createAgent({ model: MODEL, packages: [resolver, keyed({ label: `x ${SECRET}` }), providerPackage("test-provider", [provider])] });
+      const resolved = await createAgent({
+        model: MODEL,
+        packages: [resolver, keyed({ label: `x ${SECRET}` }), providerPackage("test-provider", [provider])],
+      });
       await new Promise((resolve) => setTimeout(resolve, 10));
       assert.equal(JSON.stringify(resolved.inspect()).includes(SECRET), false, "resolved credentials never surface");
     } finally {
@@ -166,7 +179,10 @@ describe("agent.inspect()", () => {
   });
 
   it("inspect_is_json_and_frozen", async () => {
-    const agent = await createAgent({ model: MODEL, packages: [pkg("@acme/a", ({ status }) => status.note("info", "hi")), providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [pkg("@acme/a", ({ status }) => status.note("info", "hi")), providerPackage("test-provider", [provider])],
+    });
     const view = agent.inspect();
     assert.deepEqual(JSON.parse(JSON.stringify(view)), view);
     for (const part of [
@@ -188,5 +204,28 @@ describe("agent.inspect()", () => {
     assert.equal(JSON.stringify(view), before);
     assert.deepEqual(agent.inspect().hooks, {});
     assert.notEqual(agent.inspect(), agent.inspect());
+  });
+
+  it("inspect_reports_package_json_versions", async () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    // A sample across families: every package definition reads its own manifest, so a version bump is
+    // one edit and inspect() can never report the retired lockstep literal again.
+    const sample = [
+      ["@arnilo/prism-store-jsonl", "packages/stores/jsonl"],
+      ["@arnilo/prism-memory-compaction", "packages/memory/compaction"],
+      ["@arnilo/prism-context-files", "packages/context/files"],
+      ["@arnilo/prism-memory-rag", "packages/memory/rag"],
+      ["@arnilo/prism-hooks-json", "packages/integrations/hooks-json"],
+    ] as const;
+    const definitions = [];
+    for (const [name] of sample) definitions.push((await import(name)).default({}, { optional: true }));
+    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider]), ...definitions] });
+    const reported = new Map(agent.inspect().packages.map((entry) => [entry.name, entry.version]));
+    for (const [name, dir] of sample) {
+      const manifest = JSON.parse(readFileSync(join(root, dir, "package.json"), "utf8"));
+      assert.equal(manifest.name, name);
+      assert.equal(reported.get(name), manifest.version, `${name} must report its package.json version`);
+      assert.notEqual(manifest.version, "0.12.1", `${name} must not be pinned to the retired lockstep`);
+    }
   });
 });

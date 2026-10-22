@@ -1,0 +1,64 @@
+{
+  "name": "@arnilo/prism-channels",
+  "version": "0.13.0",
+  "description": "Host library serving one Prism agent over Telegram and Signal messaging channels.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./telegram": "./src/telegram.ts",
+    "./signal": "./src/signal.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src/__tests__/runtime.test.ts src/__tests__/state.test.ts src/__tests__/recovery.test.ts src/__tests__/postgres.integration.test.ts src/__tests__/telegram.test.ts src/__tests__/signal.test.ts src/__tests__/end-to-end.test.ts src/__tests__/connect.test.ts src/__tests__/host-ui.test.ts",
+    "test:live": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src/__tests__/telegram-live.test.ts src/__tests__/signal-live.test.ts",
+    "test:postgres": "bun ../../../scripts/require-postgres-url.mjs && bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src/__tests__/postgres.integration.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism-store-sqlite": "file:../../stores/sqlite",
+    "@types/node": "^22.20.0",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/hosts/channels"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/hosts/channels#readme",
+  "keywords": [
+    "prism",
+    "channels",
+    "messaging",
+    "telegram",
+    "signal",
+    "agent",
+    "host",
+    "journal",
+    "checkpoint",
+    "session"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

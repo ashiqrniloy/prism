@@ -1,11 +1,12 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { PassThrough, Writable } from "node:stream";
-import { runCli } from "../cli-runner.js";
+import { Writable } from "node:stream";
+import { runManifestCommand } from "../cli-manifest.js";
 import { scopeDirs } from "../manifest/index.js";
 
 const FIXTURE = resolve("src/__tests__/fixtures/manifest/hello-package");
@@ -28,7 +29,7 @@ async function run(argv: string[], cwd: string, home: string): Promise<{ code: n
   const previous = process.env.PRISM_HOME;
   process.env.PRISM_HOME = home;
   try {
-    const code = await runCli(argv, { stdin: new PassThrough(), stdout: out.stream, stderr: err.stream, cwd });
+    const code = await runManifestCommand(argv, { stdout: out.stream, stderr: err.stream, cwd });
     return { code, out: out.text(), err: err.text() };
   } finally {
     if (previous === undefined) delete process.env.PRISM_HOME;
@@ -141,7 +142,7 @@ describe("prism new package", () => {
     assert.deepEqual(pkg.exports, { ".": "./src/index.ts" });
     const source = await readFile(join(dir, "src", "index.ts"), "utf8");
     assert.match(source, /definePackage/);
-    assert.match(source, /requires: \{ prism: /);
+    assert.match(source, /requires: \{ api: 1 \}/);
     assert.equal(source.includes("{{"), false);
     assert.match(await readFile(join(dir, "src", "__tests__", "package.test.ts"), "utf8"), /packageConformance/);
 
@@ -156,5 +157,29 @@ describe("prism new package", () => {
     assert.equal((await run(["new", "package", "Bad Name"], root, home)).code, 2);
     assert.equal((await run(["new", "package", "x", "--dir", join(root, "elsewhere")], root, home)).code, 0);
     await writeFile(join(root, "elsewhere", "marker"), "");
+  });
+
+  it("new_provider_package_scaffolds_provider_skeleton", async () => {
+    const { root, home } = await project();
+    const created = await run(["new", "package", "--provider", "@acme/prism-provider-vertex"], root, home);
+    assert.equal(created.code, 0, created.err);
+    const dir = join(root, "prism-provider-vertex");
+    const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
+    assert.equal(pkg.name, "@acme/prism-provider-vertex");
+    assert.deepEqual(pkg.exports, { ".": "./src/index.ts" });
+    const source = await readFile(join(dir, "src", "index.ts"), "utf8");
+    assert.match(source, /defineProviderPackage/);
+    assert.match(source, /secretRefProperty/);
+    assert.match(source, /VERTEX_DEFAULT_API_KEY_REF/);
+    assert.equal(source.includes("{{"), false);
+
+    const providerSource = await readFile(join(dir, "src", "provider.ts"), "utf8");
+    assert.match(providerSource, /createRoutedProvider/);
+
+    const modelsSource = await readFile(join(dir, "src", "models.ts"), "utf8");
+    assert.match(modelsSource, /vertexModels/);
+
+    assert.ok(existsSync(join(dir, "src", "__tests__", "wire", "README.md")));
+    assert.ok(existsSync(join(dir, "src", "__tests__", "live.test.ts")));
   });
 });

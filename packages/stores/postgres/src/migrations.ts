@@ -7,7 +7,7 @@ import {
   createPersistenceMigrationContract,
   createPersistenceSchemaModel,
   type PersistenceSchemaShape,
-} from "@arnilo/prism/testing/persistence-schema";
+} from "@arnilo/prism-store-codecs";
 import type { Pool, PoolClient } from "pg";
 import {
   ADAPTER_INDEX_NAMES,
@@ -20,6 +20,7 @@ import {
   buildMigration007Ddl,
   buildMigration008Ddl,
   buildMigration009Ddl,
+  buildMigration010Ddl,
 } from "./ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, qualifyTable, schemaAdvisoryLockKey } from "./identifiers.js";
 
@@ -48,6 +49,7 @@ export async function applyPostgresMigrations(pool: Pool, schema: string): Promi
       else if (step.name === "007_agent_event_retention_index") await client.query(buildMigration007Ddl(schema));
       else if (step.name === "008_session_version") await client.query(buildMigration008Ddl(schema));
       else if (step.name === "009_run_prompt_version") await client.query(buildMigration009Ddl(schema));
+      else if (step.name === "010_session_links") await client.query(buildMigration010Ddl(schema));
       else throw new Error(`Unknown migration step: ${step.name}`);
       await client.query(
         `INSERT INTO ${qualifyTable(schema, "prism_migrations")} (id, name, version, applied_at, applied_by, checksum)

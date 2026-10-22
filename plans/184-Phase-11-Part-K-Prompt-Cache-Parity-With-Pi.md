@@ -12,7 +12,7 @@
 - `bun scripts/cache-parity/run.mjs --provider hyper --model <id>` runs one scripted coding task in a fixture repository through Prism (`apps/prism-agent`), then through `pi -p` (headless) on the same model. It writes `docs/_evidence/cache-parity/<provider>-<model>-<date>.{json,md}`.
 - A `release/cache-parity` live-matrix row runs the comparison for one model per route on Hyper and OpenCode Go. `docs/_evidence/cache-parity-0.13.0.md` records Prism ≥ reference for every cell.
 
-**0.13.0 release path — plan 184 of 181–187.** Start it when plan 194 is complete (step 10; see `plans/README.md`); this plan is step 11 of 14. When it is complete, continue with plan 185. Plans 181–194 run strictly in step order, and nothing runs in parallel. Plan 194 (added 2026-10-17) changes what this plan measures:
+**0.13.0 release path — plan 184 of 181–187.** Start it when plan 201 is complete (step 17; see `plans/README.md`); this plan is step 18 of 21. When it is complete, continue with plan 185. Plans 181–201 run strictly in step order, and nothing runs in parallel. Plan 194 (added 2026-10-17) changes what this plan measures:
 - the reference host now compacts on a measured trigger
 - it clears stale tool results in batches (`fold.clearAtLeastTokens`)
 - it recovers from context overflow

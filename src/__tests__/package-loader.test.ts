@@ -28,6 +28,7 @@ import { agentRuntime } from "../agent-session/create-agent.js";
 import { loadPackages } from "../packages/loader.js";
 import { isValidVersion, parseRange, parseVersion, satisfies } from "../packages/semver.js";
 import { KERNEL_VERSION } from "../version.js";
+import { bindManifestInstance } from "../packages/define.js";
 import { providerPackage } from "../provider-kit/index.js";
 
 const MODEL = { provider: "mock", model: "demo" } as const;
@@ -35,7 +36,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
 
 /** Direct loader harness: its own bus and slot registry, so tests can see what survives a failure. */
 function harness(options: { readonly redactor?: ReturnType<typeof createSecretRedactor>; readonly kernelVersion?: string } = {}) {
@@ -89,13 +90,13 @@ describe("definePackage", () => {
       ["reserved kernel", () => pkg("kernel")],
       ["version", () => definePackage({ name: "a", version: "1.0", setup() {} })],
       ["setup", () => definePackage({ name: "a", version: "1.0.0" } as never)],
-      ["requires.prism missing", () => pkg("a", () => {}, { requires: {} as never })],
-      ["requires.prism hyphen", () => pkg("a", () => {}, { requires: { prism: "1.0.0 - 2.0.0" } })],
-      ["requires.prism x-range", () => pkg("a", () => {}, { requires: { prism: "1.x" } })],
-      ["requires.prism partial", () => pkg("a", () => {}, { requires: { prism: "1.2" } })],
-      ["requires.prism tag", () => pkg("a", () => {}, { requires: { prism: "latest" } })],
-      ["requires.packages range", () => pkg("a", () => {}, { requires: { prism: "*", packages: { b: "next" } } })],
-      ["requires.services", () => pkg("a", () => {}, { requires: { prism: "*", services: [""] } })],
+      ["requires.api missing", () => pkg("a", () => {}, { requires: {} as never })],
+      ["requires.prism hyphen", () => pkg("a", () => {}, { requires: { api: 1, prism: "1.0.0 - 2.0.0" } })],
+      ["requires.prism x-range", () => pkg("a", () => {}, { requires: { api: 1, prism: "1.x" } })],
+      ["requires.prism partial", () => pkg("a", () => {}, { requires: { api: 1, prism: "1.2" } })],
+      ["requires.prism tag", () => pkg("a", () => {}, { requires: { api: 1, prism: "latest" } })],
+      ["requires.packages range", () => pkg("a", () => {}, { requires: { api: 1, packages: { b: "next" } } })],
+      ["requires.services", () => pkg("a", () => {}, { requires: { api: 1, services: [""] } })],
       ["capability", () => pkg("a", () => {}, { capabilities: ["root" as never] })],
     ];
     for (const [label, make] of bad) {
@@ -195,21 +196,29 @@ describe("package loader", () => {
     let turn = 0;
     const agent = await createAgent({
       model: MODEL,
-      packages: [gate, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c1", "danger", {}) };
-          else yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        gate,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c1", "danger", {}) };
+              else yield providerTextDelta("done");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: {
         add: [
           {
             name: "danger",
             parameters: {},
-            execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "danger", value: "ran" }),
+            execute: (_a, c) => {
+              executed += 1;
+              return { toolCallId: c.toolCallId, name: "danger", value: "ran" };
+            },
           },
         ],
       },
@@ -224,9 +233,34 @@ describe("package loader", () => {
     );
   });
 
+  it("api_level_admits_next_minor", async () => {
+    // The API level is what admits a package on a newer 0.x kernel; `prism` is optional.
+    await harness({ kernelVersion: "0.14.0" }).load([pkg("a", () => {}, { requires: { api: 1 } })]);
+  });
+
+  it("api_level_mismatch_fails_closed", async () => {
+    const mismatched = await loadError(harness().load([pkg("a", () => {}, { requires: { api: 2 } })]), "kernel_api");
+    assert.match(mismatched.message, /targets kernel API 2; this kernel supports 1/);
+  });
+
+  it("api_missing_fails_closed", async () => {
+    // A `requires` object without `api` fails at definePackage, naming the field.
+    assert.throws(
+      () => pkg("a", () => {}, { requires: { prism: ">=0.13.0" } as never }),
+      (error: unknown) => error instanceof PackageLoadError && error.code === "definition_invalid" && /requires\.api/.test(error.message),
+    );
+    // A definition with no `requires` at all is rejected by the loader.
+    await loadError(harness().load([definePackage({ name: "a", version: "1.0.0", setup() {} })]), "definition_invalid");
+  });
+
+  it("prism_minimum_still_checked", async () => {
+    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1, prism: ">=9.0.0" } })]), "kernel_range");
+    await harness({ kernelVersion: "9.0.0" }).load([pkg("a", () => {}, { requires: { api: 1, prism: ">=9.0.0" } })]);
+  });
+
   it("requires_checks_fail_closed", async () => {
     let ran = false;
-    const probe = () => pkg("@acme/probe", () => void (ran = true), { requires: { prism: "^9.0.0" } });
+    const probe = () => pkg("@acme/probe", () => void (ran = true), { requires: { api: 1, prism: "^9.0.0" } });
     const error = await loadError(harness().load([probe()]), "kernel_range");
     assert.equal(error.package, "@acme/probe");
     assert.equal(ran, false, "setup never runs after a failed requires check");
@@ -234,19 +268,19 @@ describe("package loader", () => {
     await harness({ kernelVersion: "9.1.0" }).load([probe()]);
     assert.equal(ran, true);
 
-    await loadError(harness().load([pkg("a", () => {}, { requires: { prism: "*", packages: { b: "^1.0.0" } } })]), "missing_package");
-    const old = definePackage({ name: "b", version: "0.9.0", setup() {} });
+    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1, packages: { b: "^1.0.0" } } })]), "missing_package");
+    const old = definePackage({ name: "b", version: "0.9.0", requires: { api: 1 }, setup() {} });
     const wrongVersion = await loadError(
-      harness().load([pkg("a", () => {}, { requires: { prism: "*", packages: { b: "^1.0.0" } } }), old]),
+      harness().load([pkg("a", () => {}, { requires: { api: 1, packages: { b: "^1.0.0" } } }), old]),
       "missing_package",
     );
     assert.match(wrongVersion.message, /0\.9\.0/);
-    await loadError(harness().load([pkg("a", () => {}, { requires: { prism: "*", services: ["svc"] } })]), "missing_service");
+    await loadError(harness().load([pkg("a", () => {}, { requires: { api: 1, services: ["svc"] } })]), "missing_service");
     const cycle = await loadError(
       harness().load([
-        pkg("a", () => {}, { requires: { prism: "*", packages: { b: "*" } } }),
-        pkg("b", () => {}, { requires: { prism: "*", packages: { c: "*" } } }),
-        pkg("c", () => {}, { requires: { prism: "*", packages: { a: "*" } } }),
+        pkg("a", () => {}, { requires: { api: 1, packages: { b: "*" } } }),
+        pkg("b", () => {}, { requires: { api: 1, packages: { c: "*" } } }),
+        pkg("c", () => {}, { requires: { api: 1, packages: { a: "*" } } }),
       ]),
       "dependency_cycle",
     );
@@ -258,7 +292,8 @@ describe("package loader", () => {
 
   it("topological_order_is_stable", async () => {
     const order: string[] = [];
-    const track = (name: string, requires?: Loose["requires"]) => pkg(name, () => void order.push(name), requires ? { requires } : {});
+    const track = (name: string, extra?: Partial<Loose["requires"]>) =>
+      pkg(name, () => void order.push(name), { requires: { api: 1, ...extra } });
     const { load } = harness();
     const loaded = await load([track("b", { prism: "*", packages: { a: "*" } }), track("c"), track("a")]);
     assert.deepEqual(order, ["a", "b", "c"]);
@@ -325,7 +360,7 @@ describe("package loader", () => {
     assert.equal(note?.level, "warn");
     assert.match(note?.message ?? "", /^skipped: .*no api key/);
     // `optional` covers a setup throw only: a failed requires check is still fatal.
-    await loadError(load([pkg("needs", () => {}, { requires: { prism: "^9.0.0" } })({}, { optional: true })]), "kernel_range");
+    await loadError(load([pkg("needs", () => {}, { requires: { api: 1, prism: "^9.0.0" } })({}, { optional: true })]), "kernel_range");
   });
 
   it("capability_missing_fails_on_call", async () => {
@@ -368,7 +403,14 @@ describe("package loader", () => {
         }),
       ],
       {
-        host: { ui: { request: async (request) => (asks.push(request), { status: "answered", value: true } as never) } },
+        host: {
+          ui: {
+            request: async (request) => {
+              asks.push(request);
+              return { status: "answered", value: true } as never;
+            },
+          },
+        },
       },
     );
     assert.equal(asks[0]?.package, "asker", "a package cannot spoof the `package` stamp");
@@ -428,27 +470,50 @@ describe("package loader", () => {
     const owner = pkg("@acme/two-phase", ({ slots }) => slots.loop.provide(twoPhase), { capabilities: ["slot:loop"] });
     const seen: string[] = [];
     const audit = pkg("@acme/audit", ({ hooks }) => {
-      hooks.on("tool.call", (call) => (seen.push(call.name), call.name === "net" ? { deny: "no network" } : undefined));
+      hooks.on("tool.call", (call) => {
+        seen.push(call.name);
+        return call.name === "net" ? { deny: "no network" } : undefined;
+      });
     });
     let executed = 0;
     let turn = 0;
     const agent = await createAgent({
       model: MODEL,
-      packages: [owner, audit, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) {
-            yield { type: "tool_call" as const, call: toolCallContent("n", "net", {}) };
-            yield { type: "tool_call" as const, call: toolCallContent("l", "local", {}) };
-          } else yield providerTextDelta("verified");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        owner,
+        audit,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) {
+                yield { type: "tool_call" as const, call: toolCallContent("n", "net", {}) };
+                yield { type: "tool_call" as const, call: toolCallContent("l", "local", {}) };
+              } else yield providerTextDelta("verified");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       tools: {
         add: [
-          { name: "net", parameters: {}, execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "net", value: 1 }) },
-          { name: "local", parameters: {}, execute: (_a, c) => ((executed += 1), { toolCallId: c.toolCallId, name: "local", value: 1 }) },
+          {
+            name: "net",
+            parameters: {},
+            execute: (_a, c) => {
+              executed += 1;
+              return { toolCallId: c.toolCallId, name: "net", value: 1 };
+            },
+          },
+          {
+            name: "local",
+            parameters: {},
+            execute: (_a, c) => {
+              executed += 1;
+              return { toolCallId: c.toolCallId, name: "local", value: 1 };
+            },
+          },
         ],
       },
     });
@@ -463,8 +528,26 @@ describe("package loader", () => {
     const order: string[] = [];
     const agent = await createAgent({
       model: MODEL,
-      hooks: (hooks) => hooks.on("run.input", (m) => (order.push("host"), m)),
-      packages: [pkg("a", ({ hooks }) => hooks.on("run.input", (m) => (order.push("a"), m))), pkg("b", ({ hooks }) => hooks.on("run.input", (m) => (order.push("b"), m))), providerPackage("test-provider", [textProvider()])],
+      hooks: (hooks) =>
+        hooks.on("run.input", (m) => {
+          order.push("host");
+          return m;
+        }),
+      packages: [
+        pkg("a", ({ hooks }) =>
+          hooks.on("run.input", (m) => {
+            order.push("a");
+            return m;
+          }),
+        ),
+        pkg("b", ({ hooks }) =>
+          hooks.on("run.input", (m) => {
+            order.push("b");
+            return m;
+          }),
+        ),
+        providerPackage("test-provider", [textProvider()]),
+      ],
     });
     await (await agent.session()).run("hi");
     assert.deepEqual(order, ["a", "b", "host"], "equal priority: packages in load order, then the host");
@@ -531,6 +614,7 @@ describe("package loader", () => {
       definePackage<any>({
         name,
         version: "1.0.0",
+        requires: { api: 1 },
         config: {
           type: "object",
           properties: { level: { type: "string", default: "info" }, nested: { type: "object", additionalProperties: true } },
@@ -557,7 +641,10 @@ describe("package loader", () => {
       setups += 1;
       const state = {};
       live.push(state);
-      hooks.on("run.input", (m) => (void state, m));
+      hooks.on("run.input", (m) => {
+        void state;
+        return m;
+      });
     });
     const instance = shared({});
     const one = await createAgent({ model: MODEL, packages: [instance, providerPackage("test-provider", [textProvider()])] });
@@ -597,7 +684,7 @@ describe("package loader", () => {
         hooks.on("run.input", (m) => m);
         onDispose(() => void order.push("p2"));
       },
-      { requires: { prism: "*", services: ["svc.one", "svc.missing"] } },
+      { requires: { api: 1, services: ["svc.one", "svc.missing"] } },
     );
     const error = await loadError(load([provider, second]), "missing_service");
     assert.match(error.message, /svc\.missing/);
@@ -715,5 +802,338 @@ describe("session context", () => {
     assert.equal(outcomes["without-bg:id"], "bound");
     assert.equal(outcomes.host, "bound");
     assert.notEqual(outcomes["with-bg:view"], outcomes["without-bg:view"], "each owner gets its own view");
+  });
+
+  it("config_sources_split_manifest_scope", async () => {
+    let seenSources: any;
+    const definition = definePackage<any>({
+      name: "scoped-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: {
+          fromUser: { type: "string" },
+          overriddenByProject: { type: "string" },
+          fromProject: { type: "string" },
+        },
+      },
+      setup(prism) {
+        seenSources = prism.configSources;
+      },
+    });
+    const instance = bindManifestInstance(
+      definition,
+      {
+        fromUser: "val1",
+        overriddenByProject: "val2_proj",
+        fromProject: "val3",
+      },
+      {
+        optional: false,
+        source: {
+          kind: "manifest",
+          scope: "project",
+          scopes: {
+            fromUser: "user",
+            overriddenByProject: "project",
+            fromProject: "project",
+          },
+        },
+      },
+    );
+    const { load } = harness();
+    await load([instance]);
+    assert.deepEqual(seenSources, {
+      fromUser: "user",
+      overriddenByProject: "project",
+      fromProject: "project",
+    });
+  });
+
+  it("config_sources_are_value_free_and_frozen", async () => {
+    let apiSources: any;
+    const pkgDef = definePackage<any>({
+      name: "freeze-test",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: {
+          secretVal: { type: "string" },
+          defaultVal: { type: "string", default: "def" },
+        },
+      },
+      setup(prism) {
+        apiSources = prism.configSources;
+      },
+    });
+    const { load } = harness();
+    await load([pkgDef({ secretVal: "sensitive-data" })]);
+    assert.ok(Object.isFrozen(apiSources));
+    assert.deepEqual(apiSources, {
+      secretVal: "code",
+      defaultVal: "default",
+    });
+    assert.ok(!Object.values(apiSources).includes("sensitive-data" as never));
+    assert.ok(!Object.keys(apiSources).includes("sensitive-data"));
+  });
+
+  it("inspect_reports_scope_sources", async () => {
+    const defManifest = definePackage<any>({
+      name: "manifest-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: {
+          cDef: { type: "string", default: "d" },
+          cUser: { type: "string" },
+          cProj: { type: "string" },
+          cHost: { type: "string" },
+        },
+      },
+      setup() {},
+    });
+    const instManifest = bindManifestInstance(
+      defManifest,
+      { cUser: "u", cProj: "p" },
+      {
+        optional: false,
+        source: {
+          kind: "manifest",
+          scope: "project",
+          scopes: {
+            cUser: "user",
+            cProj: "project",
+          },
+        },
+      },
+    );
+    const defCode = definePackage<any>({
+      name: "code-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: {
+          cCode: { type: "string" },
+        },
+      },
+      setup() {},
+    });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [instManifest, defCode({ cCode: "c" }), providerPackage("test-provider", [textProvider()])],
+      packageConfig: {
+        "manifest-pkg": { cHost: "h" },
+      },
+    });
+    const inspected = agent.inspect().packages;
+    const pkgM = inspected.find((p) => p.name === "manifest-pkg");
+    assert.ok(pkgM);
+    assert.equal(pkgM.configSources.cDef, "default");
+    assert.equal(pkgM.configSources.cUser, "user");
+    assert.equal(pkgM.configSources.cProj, "project");
+    assert.equal(pkgM.configSources.cHost, "host");
+
+    const pkgC = inspected.find((p) => p.name === "code-pkg");
+    assert.ok(pkgC);
+    assert.equal(pkgC.configSources.cCode, "code");
+    await agent.dispose();
+  });
+
+  it("package_instances_returns_named_in_load_order", async () => {
+    let bApi: any;
+    let cApi: any;
+    const defA = definePackage<any>({
+      name: "pkg-a",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: { foo: { type: "string" } },
+      },
+      setup() {},
+    });
+    const defB = definePackage<any>({
+      name: "pkg-b",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: { bar: { type: "string" } },
+      },
+      setup(prism) {
+        bApi = prism;
+      },
+    });
+    const defC = definePackage<any>({
+      name: "pkg-c",
+      version: "1.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        cApi = prism;
+      },
+    });
+    const { load } = harness();
+    await load([defA({ foo: "bar" }), defB({ bar: "baz" }), defC]);
+
+    const instancesFromB = bApi.packages.instances(["pkg-a"]);
+    assert.equal(instancesFromB.length, 1);
+    assert.equal(instancesFromB[0].definition.name, "pkg-a");
+    assert.deepEqual(instancesFromB[0].config, { foo: "bar" });
+
+    // C queries in reverse order ["pkg-b", "pkg-a"], should receive them in load order [pkg-a, pkg-b]
+    const instancesFromC = cApi.packages.instances(["pkg-b", "pkg-a"]);
+    assert.equal(instancesFromC.length, 2);
+    assert.equal(instancesFromC[0].definition.name, "pkg-a");
+    assert.equal(instancesFromC[1].definition.name, "pkg-b");
+    assert.deepEqual(instancesFromC[0].config, { foo: "bar" });
+    assert.deepEqual(instancesFromC[1].config, { bar: "baz" });
+  });
+
+  it("package_instances_rejects_unknown_disabled_self", async () => {
+    let bApi: any;
+    const defA = definePackage({ name: "pkg-a", version: "1.0.0", requires: { api: 1 }, setup() {} });
+    const defB = definePackage({
+      name: "pkg-b",
+      version: "1.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        bApi = prism;
+      },
+    });
+    const defC = definePackage({ name: "pkg-c", version: "1.0.0", requires: { api: 1 }, setup() {} });
+    const { load } = harness();
+    await load([defA, defB, defC], { hostConfig: { disable: { packages: ["pkg-c"] } } });
+
+    // self
+    assert.throws(
+      () => bApi.packages.instances(["pkg-b"]),
+      (err: any) => err instanceof PackageLoadError && err.code === "self_instance",
+    );
+    // unknown
+    assert.throws(
+      () => bApi.packages.instances(["not-installed"]),
+      (err: any) => err instanceof PackageLoadError && err.code === "unknown_package",
+    );
+    // disabled
+    assert.throws(
+      () => bApi.packages.instances(["pkg-c"]),
+      (err: any) => err instanceof PackageLoadError && err.code === "package_disabled",
+    );
+  });
+
+  it("package_instances_not_ready_during_setup", async () => {
+    let setupError: any;
+    const defA = definePackage({ name: "pkg-a", version: "1.0.0", requires: { api: 1 }, setup() {} });
+    const defB = definePackage({
+      name: "pkg-b",
+      version: "1.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        try {
+          prism.packages.instances(["pkg-a"]);
+        } catch (err) {
+          setupError = err;
+        }
+      },
+    });
+    const { load } = harness();
+    await load([defA, defB]);
+    assert.ok(setupError instanceof PackageLoadError);
+    assert.equal(setupError.code, "state_not_ready");
+  });
+
+  it("package_instances_from_custom_loop", async () => {
+    let loopInstances: any;
+    const targetDef = definePackage<any>({
+      name: "target-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: { type: "object", properties: { key: { type: "string" } } },
+      setup() {},
+    });
+    const loopDef = definePackage({
+      name: "custom-loop-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      capabilities: ["slot:loop"],
+      setup(prism) {
+        prism.slots.loop.provide({
+          name: "custom-loop",
+          revision: "1",
+          async run(run) {
+            loopInstances = prism.packages.instances(["target-pkg"]);
+            await run.turn();
+            await run.end();
+          },
+        });
+      },
+    });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [targetDef({ key: "val" }), loopDef, providerPackage("test-provider", [textProvider()])],
+    });
+    const session = await agent.session({ id: "loop-test", create: true });
+    await session.run("hello");
+    assert.ok(loopInstances);
+    assert.equal(loopInstances.length, 1);
+    assert.equal(loopInstances[0].definition.name, "target-pkg");
+    assert.deepEqual(loopInstances[0].config, { key: "val" });
+    await agent.dispose();
+  });
+
+  it("package_instances_expose_no_secret", async () => {
+    const secretPkg = definePackage<any>({
+      name: "secret-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      config: {
+        type: "object",
+        properties: {
+          apiKey: { type: "string", "x-prism-secret": true },
+        },
+      },
+      setup() {},
+    });
+    let consumerApi: any;
+    const consumerPkg = definePackage({
+      name: "consumer-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        consumerApi = prism;
+      },
+    });
+    const { load } = harness();
+    await load([secretPkg({ apiKey: "env:MY_API_KEY" }), consumerPkg]);
+    const instances = consumerApi.packages.instances(["secret-pkg"]);
+    assert.equal(instances[0].config.apiKey, "env:MY_API_KEY");
+  });
+
+  it("register_after_load_fails_closed", async () => {
+    let packageApi: any;
+    const def = definePackage({
+      name: "late-reg-pkg",
+      version: "1.0.0",
+      requires: { api: 1 },
+      setup(prism) {
+        packageApi = prism;
+      },
+    });
+    const { load } = harness();
+    await load([def]);
+    assert.throws(
+      () => {
+        packageApi.tools.register({
+          name: "late_tool",
+          description: "late",
+          execute: async () => "ok",
+        });
+      },
+      (err: any) => err instanceof PackageLoadError && err.code === "registration_closed",
+    );
   });
 });

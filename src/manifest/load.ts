@@ -1,6 +1,7 @@
 import type { PackageInput } from "../packages/api.js";
 import type { Capability } from "../packages/capabilities.js";
 import { bindManifestInstance, definePackage } from "../packages/define.js";
+import { KERNEL_API_LEVEL } from "../version.js";
 import { importDefinition } from "./definition.js";
 import { ManifestError } from "./errors.js";
 import type { ManifestScope, PrismManifestV1 } from "./format.js";
@@ -59,6 +60,7 @@ function missingStub(entry: ResolvedManifestEntry, message: string) {
     name: entry.name,
     version: "0.0.0",
     description: "Not installed.",
+    requires: { api: KERNEL_API_LEVEL },
     setup() {
       throw new Error(message);
     },
@@ -126,6 +128,7 @@ export async function loadManifest(options: LoadManifestOptions = {}): Promise<P
       assigns: Object.entries(merged.slots)
         .filter(([, owner]) => owner === entry.name)
         .map(([slot]) => slot as never),
+      ...(entry.scopes !== undefined ? { scopes: entry.scopes } : {}),
     };
     try {
       await verifyInstalled(entry, scopeDir.packagesDir, entry.scope);

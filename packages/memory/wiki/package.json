@@ -1,0 +1,65 @@
+{
+  "name": "@arnilo/prism-memory-wiki",
+  "version": "0.13.0",
+  "description": "The LLM Wiki knowledge compiler for Prism agents: wiki tools, four package commands, bundled skills, and the prism-wiki CLI.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "prism-wiki": "./src/cli.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "skills",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0",
+    "@arnilo/prism-tools-web": "^0.13.0"
+  },
+  "peerDependenciesMeta": {
+    "@arnilo/prism-tools-web": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@arnilo/prism-memory-core": "^0.13.0",
+    "@arnilo/prism-memory-rag": "^0.13.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism-tools-web": "file:../../tools/web",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/memory/wiki"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/memory/wiki#readme",
+  "keywords": [
+    "prism",
+    "wiki",
+    "knowledge",
+    "package"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

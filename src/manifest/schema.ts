@@ -29,7 +29,12 @@ export const MANIFEST_V1_SCHEMA: JsonSchema = {
         properties: {
           name: NAME,
           version: { type: "string", minLength: 1, maxLength: 128 },
-          integrity: { type: "string", pattern: INTEGRITY_PATTERN },
+          integrity: {
+            type: "string",
+            pattern: INTEGRITY_PATTERN,
+            description:
+              "SRI sha512 hash over the installed package and its full runtime dependency closure (dependencies and non-optional peerDependencies), combined in sorted name order.",
+          },
           capabilities: { type: "array", maxItems: 16, items: { enum: [...CAPABILITIES] } },
           config: { type: "object", additionalProperties: true },
           enabled: { type: "boolean" },

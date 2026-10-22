@@ -1,0 +1,88 @@
+Authenticate	export type { Authenticate, NetworkTransport } from "./transports/network.js"
+CLIENT_METHODS	export declare const CLIENT_METHODS: readonly ["initialize", "sessions.open", "sessions.list", "sessions.resume", "sessions.messages", "run", "steer", "abort", "commands.list", "commands.run", "inspect", "models.list"]
+KNOWN_CAPABILITIES	export declare const KNOWN_CAPABILITIES: readonly ["hostUi", "hostUi.secret", "agentEvents"]
+MAX_APPROVAL_ID_LENGTH	export declare const MAX_APPROVAL_ID_LENGTH = 256
+MAX_SESSION_LIST_CURSOR_LENGTH	export declare const MAX_SESSION_LIST_CURSOR_LENGTH = 512
+NetworkEndpoint	export type { NetworkEndpoint } from "./transports/client.js"
+NetworkTransport	export type { Authenticate, NetworkTransport } from "./transports/network.js"
+OVERSIZE	export declare const OVERSIZE: OversizeFrame
+REMOTE_LIMITS	export declare const REMOTE_LIMITS:
+REMOTE_PROTOCOL	export declare const REMOTE_PROTOCOL = "prism.remote/1"
+RemoteError	export declare class RemoteError extends Error
+SERVER_NOTIFICATIONS	export declare const SERVER_NOTIFICATIONS: readonly ["run.event", "run.settled", "agent.event"]
+SERVER_REQUESTS	export declare const SERVER_REQUESTS: readonly ["hostUi.request"]
+StdioEndpoint	export type { StdioEndpoint } from "./stdio-client.js"
+attribute	export declare function attribute(event: AgentEvent, source: AttributionSource): AgentEvent
+bearerMatches	export declare function bearerMatches(request: Request, token: string): boolean
+bindRemoteHostUi	export declare function bindRemoteHostUi(ui: HostUi, connection: RemoteUiConnection): () => void
+bindRemoteHostUiOwner	export declare function bindRemoteHostUiOwner(ui: HostUi, ownerOf: (sessionId: string) => string | undefined): void
+connectAgent	export declare function connectAgent(endpoint: ConnectEndpoint, options?: ConnectAgentOptions): Promise<Agent>
+connectNetwork	export declare function connectNetwork(endpoint: NetworkEndpoint, options?: RemoteLimitOptions): Promise<RemoteTransport>
+createChannel	export declare function createChannel<T>(maxQueued: number, overflow?: Overflow, onReturn?: () => void): Channel<T>
+createDispatcher	export declare function createDispatcher(options: DispatcherOptions): Dispatcher
+createMemoryTransportPair	export declare function createMemoryTransportPair(): [RemoteTransport, RemoteTransport]
+createServerState	export declare function createServerState(agent: Agent, options: Pick<ServeAgentOptions, "hostUi" | "limits" | "endpointId" | "resumeAuthority">): ServerState
+createSessionMirror	export declare function createSessionMirror(options: MirrorOptions): SessionMirror
+createSessionProxy	export declare function createSessionProxy(context: ProxyContext, sessionId: string, initialLeafId: string | undefined, mirror: SessionMirror | undefined): SessionProxy
+decisionFromAnswer	export declare function decisionFromAnswer(pending: PendingDecision, answer: HostUiResponse): Decision | undefined
+hostOriginRejection	export declare function hostOriginRejection(request: Request, options:
+invalid	export declare function invalid(message: string): RemoteError
+isObject	export declare const isObject: (value: unknown) => value is JsonObject
+isRemoteErrorCode	export declare function isRemoteErrorCode(value: unknown): value is RemoteErrorCode
+isSupportedProtocol	export declare function isSupportedProtocol(value: unknown): boolean
+jsonRpcCodeOf	export declare function jsonRpcCodeOf(code: RemoteErrorCode): number
+knownCapabilities	export declare function knownCapabilities(value: unknown): RemoteCapabilities
+parseDecisions	export declare function parseDecisions(value: unknown, options?: ParseDecisionsOptions): readonly Decision[]
+parseInput	export declare function parseInput(value: unknown): string | Message | readonly Message[]
+parseRunOptions	export declare function parseRunOptions(value: unknown, principal: Principal | undefined, ownership: OwnershipScope | undefined): RunOptions
+parseSessionListQuery	export declare function parseSessionListQuery(value: unknown, ownership?: OwnershipScope): SessionListQuery | undefined
+parseSessionParentLink	export declare function parseSessionParentLink(value: unknown): SessionParentLink | undefined
+parseSteerOptions	export declare function parseSteerOptions(value: unknown): SteerOptions | undefined
+pendingDecisionsOf	export declare function pendingDecisionsOf(branch: readonly SessionEntry[]): readonly PendingDecision[]
+principalKeyOf	export declare function principalKeyOf(principal: Principal | undefined): string
+readBody	export declare function readBody(request: Request, cap: number): Promise<string>
+readJsonlFrames	export declare function readJsonlFrames(source: AsyncIterable<Uint8Array | string>, maxBytes: number): AsyncGenerator<string | OversizeFrame>
+readSseFrames	export declare function readSseFrames(body: ReadableStream<Uint8Array>, cap: number): AsyncGenerator<string>
+rejection	export declare const rejection: (status: number, code: string) => Response
+remoteConformance	export declare function remoteConformance(factory: RemoteConformanceFactory, options?: RemoteConformanceOptions): Promise<RemoteConformanceResult>
+remoteHostUi	export declare function remoteHostUi(): HostUi
+requestForPending	export declare function requestForPending(sessionId: string, pending: PendingDecision): HostUiRequest
+resolveRemoteLimits	export declare function resolveRemoteLimits(options?: RemoteLimitOptions): ResolvedRemoteLimits
+resolveToken	export declare function resolveToken(ref?: string): string | Promise<string>
+serveAgent	export declare function serveAgent(agent: Agent, options: ServeAgentOptions): ServedAgent
+serveConnection	export declare function serveConnection(state: ServerState, transport: RemoteTransport, options: ConnectionOptions): Dispatcher
+serveNetwork	export declare function serveNetwork(state: ServerState, options: NetworkTransport, authenticate?: Authenticate): ServedAgent
+spawnStdioTransport	export declare function spawnStdioTransport(endpoint: StdioEndpoint, limits?: RemoteLimitOptions): SpawnedTransport
+stdioTransport	export declare function stdioTransport(options?: StdioTransportOptions): RemoteTransport
+str	export declare function str(params: JsonObject, key: string): string
+type AttributionSource	export { type AttributionSource, attribute } from "./attribution.js"
+type ConnectAgentOptions	export { type ConnectAgentOptions, type ConnectEndpoint, connectAgent } from "./connect.js"
+type ConnectEndpoint	export { type ConnectAgentOptions, type ConnectEndpoint, connectAgent } from "./connect.js"
+type Dispatcher	export { createDispatcher, type Dispatcher, type DispatcherContext, type DispatcherOptions, type RemoteHandler, type RemoteNotificationHandler, } from "./dispatcher.js"
+type DispatcherContext	export { createDispatcher, type Dispatcher, type DispatcherContext, type DispatcherOptions, type RemoteHandler, type RemoteNotificationHandler, } from "./dispatcher.js"
+type DispatcherOptions	export { createDispatcher, type Dispatcher, type DispatcherContext, type DispatcherOptions, type RemoteHandler, type RemoteNotificationHandler, } from "./dispatcher.js"
+type HostUiRequestParams	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type HostUiRequestResult	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type InitializeParams	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type InitializeResult	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type OversizeFrame	export { type OversizeFrame, readJsonlFrames } from "./jsonl.js"
+type RemoteCapabilities	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type RemoteCapabilityName	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type RemoteClientMethod	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type RemoteErrorCode	export { isRemoteErrorCode, RemoteError, type RemoteErrorCode } from "./errors.js"
+type RemoteHandler	export { createDispatcher, type Dispatcher, type DispatcherContext, type DispatcherOptions, type RemoteHandler, type RemoteNotificationHandler, } from "./dispatcher.js"
+type RemoteLimitName	export { REMOTE_LIMITS, type RemoteLimitName, type RemoteLimitOptions, type ResolvedRemoteLimits, resolveRemoteLimits, } from "./limits.js"
+type RemoteLimitOptions	export { REMOTE_LIMITS, type RemoteLimitName, type RemoteLimitOptions, type ResolvedRemoteLimits, resolveRemoteLimits, } from "./limits.js"
+type RemoteMethods	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type RemoteNotificationHandler	export { createDispatcher, type Dispatcher, type DispatcherContext, type DispatcherOptions, type RemoteHandler, type RemoteNotificationHandler, } from "./dispatcher.js"
+type RemoteNotifications	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type RemoteResumeAuthority	export { type RemoteResumeAuthority, type ServeAgentOptions, type ServedAgent, type ServeTransport, serveAgent } from "./serve.js"
+type RemoteRunOptions	export { CLIENT_METHODS, type HostUiRequestParams, type HostUiRequestResult, type InitializeParams, type InitializeResult, isSupportedProtocol, KNOWN_CAPABILITIES, knownCapabilities, REMOTE_PROTOCOL, type RemoteCapabilities, type RemoteCapabilityName, type RemoteClientMethod, type RemoteMethods, type RemoteNotifications, type RemoteRunOptions, SERVER_NOTIFICATIONS, SERVER_REQUESTS, } from "./protocol.js"
+type RemoteTransport	export { createMemoryTransportPair, type RemoteTransport, type StdioTransportOptions, stdioTransport, type WritableLike, } from "./transport.js"
+type ResolvedRemoteLimits	export { REMOTE_LIMITS, type RemoteLimitName, type RemoteLimitOptions, type ResolvedRemoteLimits, resolveRemoteLimits, } from "./limits.js"
+type ServeAgentOptions	export { type RemoteResumeAuthority, type ServeAgentOptions, type ServedAgent, type ServeTransport, serveAgent } from "./serve.js"
+type ServeTransport	export { type RemoteResumeAuthority, type ServeAgentOptions, type ServedAgent, type ServeTransport, serveAgent } from "./serve.js"
+type ServedAgent	export { type RemoteResumeAuthority, type ServeAgentOptions, type ServedAgent, type ServeTransport, serveAgent } from "./serve.js"
+type SessionMirror	export { createSessionMirror, type SessionMirror } from "./mirror.js"
+type StdioTransportOptions	export { createMemoryTransportPair, type RemoteTransport, type StdioTransportOptions, stdioTransport, type WritableLike, } from "./transport.js"
+type WritableLike	export { createMemoryTransportPair, type RemoteTransport, type StdioTransportOptions, stdioTransport, type WritableLike, } from "./transport.js"

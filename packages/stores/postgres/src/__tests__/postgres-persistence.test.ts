@@ -1,7 +1,7 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { assertAdapterSchemaMatchesModel, createPersistenceSchemaModel } from "@arnilo/prism/testing/persistence-schema";
+import { assertAdapterSchemaMatchesModel, createPersistenceSchemaModel } from "@arnilo/prism-store-codecs";
 import {
   ADAPTER_INDEX_NAMES,
   ADAPTER_TABLE_NAMES,
@@ -12,6 +12,9 @@ import {
   buildMigration005Ddl,
   buildMigration006Ddl,
   buildMigration007Ddl,
+  buildMigration008Ddl,
+  buildMigration009Ddl,
+  buildMigration010Ddl,
 } from "../ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, quoteIdentifier, schemaAdvisoryLockKey, validateIdentifier } from "../identifiers.js";
 
@@ -49,7 +52,10 @@ describe("postgres ddl", () => {
       buildMigration004Ddl("prism") +
       buildMigration005Ddl("prism") +
       buildMigration006Ddl("prism") +
-      buildMigration007Ddl("prism");
+      buildMigration007Ddl("prism") +
+      buildMigration008Ddl("prism") +
+      buildMigration009Ddl("prism") +
+      buildMigration010Ddl("prism");
     for (const table of ADAPTER_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"."${table}"`, "m"));
     }

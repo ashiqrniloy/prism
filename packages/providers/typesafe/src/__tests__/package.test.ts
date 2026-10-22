@@ -103,6 +103,21 @@ describe("@arnilo/prism-provider-typesafe package", () => {
     }
   });
 
+  it("jev_without_key_notes_warn", async () => {
+    const agent = await createAgent({
+      model: { provider: "typesafe", model: model.model },
+      packages: [typesafe({ apiKey: "env:PRISM_UNSET_JEV_KEY" })],
+    });
+    try {
+      const notes = agent.inspect().statusNotes.filter((note) => note.message === "typesafe: no API key at env:PRISM_UNSET_JEV_KEY");
+      assert.equal(notes.length, 1);
+      assert.equal(notes[0]?.level, "warn");
+    } finally {
+      await agent.dispose();
+    }
+  });
+
+
   it("typesafe_literal_api_key_fails_config_validation", async () => {
     await assert.rejects(
       () => createAgent({ model: { provider: "typesafe", model: model.model }, packages: [typesafe({ apiKey: "sk-literal-value" })] }),

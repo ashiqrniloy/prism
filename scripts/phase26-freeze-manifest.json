@@ -84,7 +84,7 @@
         "packages/coding-agent/src/repository/operations.ts",
         "packages/coding-agent/src/repository/search.ts",
         "packages/coding-agent/src/repository.ts",
-        "packages/coding-agent/src/search.ts",
+        "packages/coding-agent/src/grep.ts",
         "packages/coding-agent/src/__tests__/indexed-search.test.ts",
         "scripts/phase26-index-benchmark.test.mjs",
         "docs/indexed-code-search.md"
@@ -94,7 +94,7 @@
           "untrusted_index",
           "indexed_literal"
         ],
-        "packages/coding-agent/src/search.ts": [
+        "packages/coding-agent/src/grep.ts": [
           "indexed_literal"
         ],
         "packages/coding-agent/src/__tests__/indexed-search.test.ts": [
@@ -115,7 +115,7 @@
         "T2 stale semantics -> indexed-search.test.ts",
         "T2 scale -> phase26-index-benchmark.test.mjs"
       ],
-      "rationale": "Task 2 of plan 026 (roadmap bullet 2): host index contract (update/remove/search/status/dispose) with states empty|building|ready|stale|failed; repo_search stays bounded literal by default; indexed_literal/semantic modes explicit; no silent downgrade; results validated, containment-checked, labeled untrusted_index."
+      "rationale": "Task 2 of plan 026 (roadmap bullet 2): host index contract (update/remove/search/status/dispose) with states empty|building|ready|stale|failed; the search tool stays bounded literal by default; indexed_literal/semantic modes explicit; no silent downgrade; results validated, containment-checked, labeled untrusted_index."
     },
     {
       "id": "workspace-lifecycle",

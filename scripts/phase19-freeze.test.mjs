@@ -57,7 +57,7 @@ function resolveFile(file) {
     "packages/policy/": "packages/prism-core/src/governance/policy/",
     "packages/evals/": "packages/prism-core/src/governance/evals/",
     "packages/prompts/": "packages/prism-core/src/governance/prompts/",
-    "packages/model-router/": "packages/prism-core/src/governance/model-router/",
+    "packages/model-router/": "packages/policy/model-router/src/router/",
     "packages/observability-opentelemetry/": "packages/prism-core/src/governance/observability/",
     "packages/credentials-node/": "packages/prism-core/src/credentials/node/",
     "packages/enterprise-postgres/": "packages/prism-core/src/enterprise/postgres/",
@@ -115,7 +115,7 @@ test("preserved surface is active and names exactly the reused primitives", () =
   const ps = manifest.preservedSurface;
   assert.equal(ps.active, true);
   assert.ok(ps.rule.includes("byte-immutable"), "preserved files are immutable for the whole phase");
-  const expected = ["src/cache-helpers.ts", "src/provider-events.ts", "src/cli-init.ts", "packages/model-router/src/state.ts"];
+  const expected = ["src/provider-kit/cache-helpers.ts", "src/provider-events.ts", "src/cli-init.ts", "packages/model-router/src/state.ts"];
   assert.deepEqual(Object.keys(ps.files).sort(), [...expected].sort(), "preserved surface names the four reused primitives");
   for (const f of expected) {
     assert.ok(existsSync(resolveFile(f)), `preserved file exists: ${f}`);
@@ -328,11 +328,8 @@ test("STATE MACHINE: pending items keep their seam files byte-identical; absent 
 test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist and are wired per item", () => {
   const tasks = manifest.tasks;
   if (tasks.task2.startsWith("done")) {
-    const src = readFileSync(url("../src/cache-telemetry.ts"), "utf8");
-    const idx = readFileSync(url("../src/index.ts"), "utf8");
-    assert.ok(src.includes("createCacheTelemetry"), "cache-telemetry.ts exports createCacheTelemetry");
-    assert.ok(idx.includes("cache-telemetry"), "src/index.ts re-exports the telemetry module");
-    assert.ok(existsSync(url("../src/__tests__/cache-telemetry.test.ts")), "telemetry tests exist");
+    assert.equal(existsSync(url("../src/cache-telemetry.ts")), false, "plan 174 Task 2 deleted cache-telemetry");
+    assert.ok(!readFileSync(url("../src/index.ts"), "utf8").includes("cache-telemetry"), "root no longer re-exports telemetry");
     assert.ok(
       readFileSync(url("../docs/provider-caching.md"), "utf8").includes("telemetry"),
       "provider-caching.md documents the telemetry surface",
@@ -342,8 +339,8 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist and are wired per item
     const sel = readFileSync(resolveFile("packages/model-router/src/selection.ts"), "utf8");
     assert.ok(sel.includes("ModelRouterSelectionPolicy"), "selection.ts defines the policy seam");
     assert.ok(sel.includes("createCostLatencySelection"), "selection.ts ships the reference policy");
-    if (existsSync(url("../packages/model-router/src/index.ts"))) {
-      const idx = readFileSync(url("../packages/model-router/src/index.ts"), "utf8");
+    if (existsSync(url("../packages/policy/model-router/src/index.ts"))) {
+      const idx = readFileSync(url("../packages/policy/model-router/src/index.ts"), "utf8");
       assert.ok(idx.includes("selection"), "model-router index re-exports the selection module");
     }
     assert.ok(existsSync(resolveFile("packages/model-router/src/__tests__/selection.test.ts")), "selection tests exist");
@@ -360,9 +357,8 @@ test("DONE-PHASE ITEM ASSERTIONS: shipped artifacts exist and are wired per item
     }
   }
   if (tasks.task5.startsWith("done")) {
-    const cli = readFileSync(url("../src/cli-runner.ts"), "utf8");
-    assert.ok(existsSync(url("../src/cli-provider-add.ts")), "cli-provider-add.ts exists");
-    assert.ok(cli.includes("providers") && cli.includes("add"), "cli-runner.ts dispatches the providers add subcommand");
+    assert.equal(existsSync(url("../src/cli-runner.ts")), false, "plan 174 Task 2 deleted the prompt runner");
+    assert.ok(existsSync(url("../src/cli-manifest.ts")), "manifest CLI replaced the runner");
     assert.ok(existsSync(url("../templates/provider/package.json.tmpl")), "provider template tree exists");
     assert.ok(existsSync(url("../src/__tests__/cli-provider-add.test.ts")), "scaffold tests exist");
     assert.ok(readFileSync(url("../docs/cli-rpc.md"), "utf8").includes("providers add"), "cli-rpc.md documents providers add");

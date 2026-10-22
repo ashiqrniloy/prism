@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type {
   AgentConfig,
   AgentEvent,
@@ -11,10 +11,18 @@ import type {
   ToolDefinition,
   UsageRecord,
 } from "../index.js";
-import { createAgent, createSecretRedactor, createToolRegistry, providerDone, providerError, providerTextDelta, providerToolCall, redactRunLedgerRecord } from "../index.js";
-import { failedRun } from "./run-result-helpers.js";
-import { mockProvider } from "../testing/index.js";
+import {
+  createAgent,
+  createSecretRedactor,
+  providerDone,
+  providerError,
+  providerTextDelta,
+  providerToolCall,
+  redactRunLedgerRecord,
+} from "../index.js";
 import { providerPackage } from "../provider-kit/index.js";
+import { mockProvider } from "../testing/index.js";
+import { failedRun } from "./run-result-helpers.js";
 
 type InMemoryLedger = {
   runs: Extract<RunLedgerRecord, { status?: string }>[];
@@ -195,10 +203,9 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([[
-        providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }),
-        providerDone(),
-      ]])],
+      packages: [
+        mockProvider([[providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }), providerDone()]]),
+      ],
       tools: { add: [echoTool] },
       runLedger: ledger,
     });
@@ -227,10 +234,9 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([[
-        providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }),
-        providerDone(),
-      ]])],
+      packages: [
+        mockProvider([[providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: "hi" } }), providerDone()]]),
+      ],
       tools: { add: [echoTool] },
       runLedger: ledger,
       validator: (_tool, args) => (args.text === "hi" ? "blocked by test validator" : undefined),
@@ -251,19 +257,23 @@ describe("RunLedger runtime wiring", () => {
     let calls = 0;
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          calls += 1;
-          if (calls === 1) yield providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: {} });
-          else yield providerTextDelta("done");
-          yield providerDone(
-            calls === 1
-              ? { inputTokens: 10, outputTokens: 1, totalTokens: 11, cacheReadTokens: 8, cacheWriteTokens: 2 }
-              : { inputTokens: 20, outputTokens: 2, totalTokens: 22 },
-          );
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              calls += 1;
+              if (calls === 1) yield providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: {} });
+              else yield providerTextDelta("done");
+              yield providerDone(
+                calls === 1
+                  ? { inputTokens: 10, outputTokens: 1, totalTokens: 11, cacheReadTokens: 8, cacheWriteTokens: 2 }
+                  : { inputTokens: 20, outputTokens: 2, totalTokens: 22 },
+              );
+            },
+          },
+        ]),
+      ],
       tools: { add: [{ name: "echo", execute: () => ({ toolCallId: "call_1", name: "echo" }) }] },
       runLedger: ledger,
     });
@@ -300,10 +310,9 @@ describe("RunLedger runtime wiring", () => {
     };
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [mockProvider([[
-        providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: secret } }),
-        providerDone(),
-      ]])],
+      packages: [
+        mockProvider([[providerToolCall({ type: "tool_call", id: "call_1", name: "echo", arguments: { text: secret } }), providerDone()]]),
+      ],
       tools: { add: [echoTool] },
       runLedger: ledger,
       redactor: createSecretRedactor([secret]),
@@ -356,14 +365,18 @@ describe("RunLedger runtime wiring", () => {
     const controller = new AbortController();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          controller.abort("user-cancelled");
-          yield providerTextDelta("never");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              controller.abort("user-cancelled");
+              yield providerTextDelta("never");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
       runLedger: ledger,
     });
     const session = await agent.session({ id: "s6", create: true });
@@ -381,12 +394,16 @@ describe("RunLedger runtime wiring", () => {
     const { ledger, runs } = createMemoryLedger();
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          yield providerError(Object.assign(new Error(`GoUsageLimitError ${secret}`), { code: 429 }), [secret]);
-        },
-      }])],
+      packages: [
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              yield providerError(Object.assign(new Error(`GoUsageLimitError ${secret}`), { code: 429 }), [secret]);
+            },
+          },
+        ]),
+      ],
       runLedger: ledger,
       redactor: createSecretRedactor([secret]),
     });
@@ -527,14 +544,9 @@ describe("RunLedger prompt provenance (plan 042 Task 3)", () => {
     assert.equal(runs.length, 0, "invalid refs must never reach the ledger");
   });
 
-  it("ledger export drops refs denied by field policy and redacts secret material inside refs", () => {
-    const denied = redactRunLedgerRecord(
-      { id: "run_1", sessionId: "s1", status: "succeeded", startedAt: "2024-01-01T00:00:00Z", promptVersion: validRef },
-      undefined,
-      (input) => (input.path === "promptVersion" ? { action: "deny" } : { action: "allow" }),
-    ) as { promptVersion?: unknown };
-    assert.equal(denied.promptVersion, "[DENIED]");
-
+  it("ledger export redacts secret material inside refs", () => {
+    // Plan 159 Task 7: the field-policy parameter left `redactRunLedgerRecord` with the module move
+    // to `@arnilo/prism-governance`; secret redaction stays here.
     const redacted = redactRunLedgerRecord(
       {
         id: "run_2",

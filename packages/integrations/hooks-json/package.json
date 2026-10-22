@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-hooks-json",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Claude/Codex hooks.json compiled onto Prism hooks. SessionStart is session.opened; the other events stay on context.build, run.input, tool.call, tool.result, and run.end.",
   "type": "module",
   "exports": {
@@ -14,14 +14,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
-    "postinstall": "mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.12.1"
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
   },
   "devDependencies": {
-    "@arnilo/prism": "file:../../..",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"
   },

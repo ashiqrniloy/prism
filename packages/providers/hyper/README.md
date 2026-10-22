@@ -1,6 +1,6 @@
 # `@arnilo/prism-provider-hyper`
 
-Charm Hyper provider package for [Prism](https://github.com/ashiqrniloy/prism). Registers the `hyper` provider, resolves its key through the credentials slot on every request, and ships the triple-route wire (OpenAI Responses, Anthropic Messages, and OpenAI Chat), the quota and telemetry helpers, the cache/thinking helpers, and the model catalog.
+Charm Hyper provider package for [Prism](https://github.com/ashiqrniloy/prism). Registers the `hyper` provider, resolves its key through the credentials slot on every request, and ships the dual-route wire (Anthropic Messages and OpenAI Chat), the quota and telemetry helpers, and the model catalog.
 
 ## Install
 
@@ -37,8 +37,10 @@ cannot come from a manifest.
 
 ## Behaviour
 
-- **Three routes, one provider.** `compat.route` picks the wire: `responses` reuses the provider-kit OpenAI Responses machinery, `anthropic` posts to `/messages` with `x-api-key` + `anthropic-version`, and everything else posts to `/chat/completions` with a bearer token.
-- **Quota and usage cost stay host-callable.** `getHyperCredits` and `parseHyperUsageCost` are named exports; the provider never calls them itself.
+- **Two routes, one provider.** Built on the routed provider builder (`createRoutedProvider`). `compat.route` or `routeForHyperModel` picks the wire: `anthropic` posts to `/messages` with `x-api-key` + `anthropic-version`, and default `openai` posts to `/chat/completions` with a bearer token. Replays thinking (`reasoning_content` on chat route; thinking blocks on Anthropic route).
+- **Monetization and usage telemetry.** Automatically surfaces Hyper's `usage.cost` (USD) into `Usage.cost`/`currency` and `Usage.metadata.hyper` (`usd`, `hypercredits`, `remainingHypercredits`).
+- **Error classification.** Maps HTTP errors into redacted errors; 402 `billing_error` is classified as non-retryable permanent failure.
+- **Quota stays host-callable.** `getHyperCredits` and `parseHyperUsageCost` are named exports; the provider never calls them itself.
 - **Missing key.** `createAgent` still succeeds. Setup records
   `status.note("warn", "hyper: no API key at <ref>")` and registers the provider anyway, so
   `agent.models` still lists the catalog and the failure is not `Unknown provider`. A request then
@@ -50,7 +52,7 @@ cannot come from a manifest.
 
 ## Named exports
 
-`createHyperProvider`, `hyperChatBody`, `hyperChatEvents`, `serializeHyperChatMessage`, `classifyHyperError`, `hyperHttpError`, `applyHyperAnthropicCacheControl`, `getHyperCredits`, `parseHyperUsageCost`, the thinking helpers, and the catalog (`hyperModels`, `defineHyperModel`, `listHyperModels`, `mapHyperModel`, `routeForHyperModel`, `costFromHyperPricing`).
+`createHyperProvider`, `HYPER_CHAT_ROUTE`, `HYPER_MESSAGES_ROUTE`, `withHyperCost`, `getHyperCredits`, `parseHyperUsageCost`, and the catalog (`hyperModels`, `defineHyperModel`, `listHyperModels`, `mapHyperModel`, `routeForHyperModel`, `costFromHyperPricing`).
 
 ## License
 

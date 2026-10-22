@@ -1,9 +1,15 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import type { AgentEventRecord, RunRecord, SessionEntry, ToolCallRecord, UsageRecord } from "@arnilo/prism";
-import { CheckpointConflictError, LeaseConflictError } from "@arnilo/prism";
+import {
+  assertCheckpointInput,
+  assertLeaseInput,
+  CheckpointConflictError,
+  createSessionRowMappers,
+  encodeCheckpointJson,
+  LeaseConflictError,
+} from "../index.js";
 import { ownershipColumns } from "../query-semantics.js";
-import { assertCheckpointInput, assertLeaseInput, createSessionRowMappers, encodeCheckpointJson } from "../index.js";
 
 const sqlite = createSessionRowMappers<number>({
   encode: (redacted) => (redacted ? 1 : 0),

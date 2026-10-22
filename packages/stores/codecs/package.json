@@ -1,6 +1,6 @@
 {
   "name": "@arnilo/prism-store-codecs",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Row codecs, cursors, ownership-scope helpers, and SQL query semantics shared by the Prism SQL session-store adapters.",
   "type": "module",
   "exports": {
@@ -16,14 +16,12 @@
   ],
   "scripts": {
     "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "postinstall": "mkdir -p node_modules/@arnilo && ln -sfn ../../../../.. node_modules/@arnilo/prism"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
-    "@arnilo/prism": "^0.12.1"
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
   },
   "devDependencies": {
-    "@arnilo/prism": "file:../../..",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"
   },

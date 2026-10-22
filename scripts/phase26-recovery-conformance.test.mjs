@@ -40,8 +40,8 @@ try {
   blockedGate("phase26-recovery-conformance", { missing: [`@arnilo/prism-store-postgres did not load: ${String(error)}`] });
 }
 
-const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism");
-const { createProcessSessions } = await import("@arnilo/prism-coding-tools/agent");
+const { createMemoryCheckpointStore, createMemoryLeaseStore } = await import("@arnilo/prism-workflows");
+const { createProcessSessions } = await import("@arnilo/prism-tools-coding");
 
 function makePtyBackend(refPrefix) {
   return {

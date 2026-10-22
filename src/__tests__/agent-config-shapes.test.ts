@@ -1,17 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { loadAgentRunState } from "../agent-run-state.js";
 import {
   type ModelProvider,
   askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
+  loadSuspendedRunEntry,
   definePackage,
   providerDone,
   providerTextDelta,
   type ProviderRequest,
-  resumeAgentRun,
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
@@ -50,6 +48,7 @@ test("tools_add_registers_host_tools_and_collides_fail_closed_with_package_tools
   const pkg = definePackage({
     name: "vendor",
     version: "1.0.0",
+    requires: { api: 1 },
     setup(api) {
       api.tools.register(tool);
     },
@@ -120,7 +119,7 @@ test("host_load_skill_collision_fails_closed_under_progressive_disclosure", asyn
 });
 
 test("resume_intersects_tools_only_with_stored_grant", async () => {
-  const checkpoints = createMemoryCheckpointStore();
+  const store = createMemorySessionStore();
   const seen: string[][] = [];
   let turn = 0;
   const gated: ModelProvider = {
@@ -136,16 +135,13 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
     id: "narrow-resume",
     model,
     packages: [providerPackage("test-provider", [gated])],
-    slots: { store: createMemorySessionStore() },
+    slots: { store },
     tools: { add: [tool, { ...tool, name: "other" }] },
   });
-  const first = await (await agent.session({ id: "s1", create: true })).run("go", {
-    tools: { only: ["probe"] },
-    runState: { checkpoints, definitionRevision: "1" },
-  });
+  const first = await (await agent.session({ id: "s1", create: true })).run("go", { tools: { only: ["probe"] } });
   assert.equal(first.status, "suspended");
-  const loaded = await loadAgentRunState(checkpoints, { runId: first.runId, sessionId: first.sessionId });
-  assert.deepEqual(loaded.state.toolNames, ["probe"]);
+  const stored = await loadSuspendedRunEntry(store, "s1");
+  assert.deepEqual(stored?.state.toolNames, ["probe"]);
   const resumeProvider: ModelProvider = {
     id: "mock",
     async *generate(request) {
@@ -153,16 +149,13 @@ test("resume_intersects_tools_only_with_stored_grant", async () => {
       yield providerDone();
     },
   };
-  const result = await resumeAgentRun(
-    await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] }),
-    { runId: first.runId, sessionId: first.sessionId },
-    {
-      expectedVersion: first.runState!.version!,
-      decisions: first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
-    },
-    { checkpoints, definitionRevision: "1" },
-  );
-  assert.equal(result.status, "completed");
+  const fresh = await createAgent({ ...agent.config, packages: [providerPackage("test-provider", [resumeProvider])] });
+  const resumed = await fresh.session({ id: "s1" });
+  for await (const _event of resumed.resume(
+    first.pending!.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
+  )) {
+    // drain: the resumed leg keeps the stored per-run allow-list
+  }
   assert.deepEqual(seen, [["probe"]]);
 });
 

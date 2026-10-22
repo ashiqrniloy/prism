@@ -92,7 +92,15 @@ function recordingInstance(instance: PackageInstance, used: Set<string>): Packag
   const recording = (prism: PackageAPI<any>): PackageAPI<any> =>
     new Proxy(prism, {
       get(target, prop) {
-        if (prop === "models") return gated(target.models, "client", "models");
+        if (prop === "models") {
+          const models = target.models;
+          return new Proxy(models, {
+            get(target, member) {
+              if (member === "client" || member === "embeddings") used.add("models");
+              return Reflect.get(target, member);
+            },
+          });
+        }
         if (prop === "credentials") return gated(target.credentials, "resolve", "credentials");
         if (prop === "state") return gated(target.state, "session", "session-state");
         if (prop === "host") return gated(target.host, "ui", "host-ui");
@@ -153,7 +161,13 @@ function setSentinels(refs: readonly { path: string; ref: unknown }[]): { names:
       process.env[name] = `prism-conformance-secret-${Math.random().toString(36).slice(2)}`;
     }
   }
-  return { names, restore: () => restore.forEach((entry) => delete process.env[entry.name]) };
+  return {
+    names,
+    restore: () =>
+      restore.forEach((entry) => {
+        delete process.env[entry.name];
+      }),
+  };
 }
 
 /** Compareable form of an inspection: status-note timestamps are the only unstable field. */

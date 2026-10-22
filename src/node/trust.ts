@@ -1,7 +1,10 @@
 import { realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { TrustPolicy } from "../security.js";
-import { isNodeErrorCode } from "./config.js";
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && (error as { code?: unknown }).code === code;
+}
 
 export interface PathTrustPolicyOptions {
   readonly trustedRoots: readonly string[];

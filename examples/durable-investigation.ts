@@ -1,119 +1,88 @@
 import {
-  type CheckpointStore,
+  askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
-  loadAgentRunState,
   type ProviderRequest,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 /**
- * Long single-run investigation under an external orchestrator (plan 084 Task 1).
+ * A long investigation survives a dead worker (plan 168 Task 5).
  *
- * A host process is not trusted to survive a multi-turn investigation: run with
- * `checkpointPolicy: "every-turn"`, and the durable store holds a running-state checkpoint at
- * each provider-turn boundary. If the worker dies, a new process resumes the *same* run with
- * `decision: "continue"` — no tool re-dispatch, no re-run from turn zero, and the ambiguity
- * window is at most the one provider turn that was in flight.
+ * The suspension is the durable unit: a run that needs a decision writes one self-contained
+ * `suspended_run` entry through the store slot, and a later process reads it from the store and
+ * continues the same run with `session.resume(decisions)` — no tool re-dispatch, no re-run from
+ * turn zero. The retired `checkpointPolicy: "every-turn"` crash-recovery checkpoint was replaced by
+ * this store-slot anchor, so a worker that dies *mid-turn* simply restarts it; a worker that dies
+ * *after* a suspension loses nothing.
  *
- * Network-free: mock provider, memory session store, and a checkpoint store whose writes are
- * gated off at the simulated crash instant (a real crash simply writes nothing afterwards).
+ * Network-free: mock provider and a memory session store standing in for the host's database.
  */
 export async function demo() {
-  const memory = createMemoryCheckpointStore();
-  const gate = { open: true };
+  const store = createMemorySessionStore();
   const requests: ProviderRequest[] = [];
-  const checkpoints: CheckpointStore = {
-    ...memory,
-    async saveCheckpoint(input) {
-      if (!gate.open) throw new Error("checkpoint store unavailable (simulated process death)");
-      return memory.saveCheckpoint(input);
-    },
-  };
+  const executed: string[] = [];
 
-  let turn = 0;
-  let executed = 0;
-  const agent = await createAgent({
-    id: "durable-investigation",
-    slots: { store: createMemorySessionStore() },
-    model: { provider: "mock", model: "demo" },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate(request) {
-        requests.push(request);
-        turn += 1;
-        if (turn === 1) {
-          // Turn 1: the agent opens the investigation by running one research tool.
-          yield { type: "tool_call" as const, call: toolCallContent("gather-1", "gather", { query: "revenue by region" }) };
+  const buildWorker = async () =>
+    await createAgent({
+      id: "durable-investigation",
+      slots: { store },
+      model: { provider: "mock", model: "demo" },
+      // The `ask` gate makes the first tool call a suspension instead of a side effect.
+      hooks: askEveryTool(),
+      packages: [providerPackage("test-provider", [{
+        id: "mock",
+        async *generate(request) {
+          requests.push(request);
+          if (executed.length === 0) {
+            // Turn 1: the agent opens the investigation by running one research tool.
+            yield { type: "tool_call" as const, call: toolCallContent("gather-1", "gather", { query: "revenue by region" }) };
+            yield providerDone();
+            return;
+          }
+          yield providerTextDelta("North America leads revenue at 4,320.50 (gather-1).");
           yield providerDone();
-          return;
-        }
-        if (turn === 2) {
-          // The worker dies right after the turn-boundary checkpoint and before the provider
-          // call lands. Everything the host would have written from here on is lost.
-          gate.open = false;
-          throw new Error("worker killed mid-investigation");
-        }
-        yield providerTextDelta("North America leads revenue at 4,320.50 (gather-1).");
-        yield providerDone();
-      },
-    }])],
-    tools: {
-      add: [
-        {
-          name: "gather",
-          parameters: { type: "object" },
-          execute: () => {
-            executed += 1;
-            return { toolCallId: "gather-1", name: "gather", value: { total: 4320.5, region: "North America" } };
-          },
         },
-      ],
-    },
-  });
+      }])],
+      tools: {
+        add: [
+          {
+            name: "gather",
+            parameters: { type: "object" },
+            execute: () => {
+              executed.push("gather-1");
+              return { toolCallId: "gather-1", name: "gather", value: { total: 4320.5, region: "North America" } };
+            },
+          },
+        ],
+      },
+    });
 
-  // Worker 1: crashes; the durable store keeps the last turn-boundary checkpoint (status running).
-  const session = await agent.session({ id: "investigation-session", create: true });
-  let runId: string | undefined;
-  const subscription = session.subscribe();
-  const pump = (async () => {
-    for await (const event of subscription) {
-      if (event.type === "run.started") runId = event.runId;
-    }
-  })();
-  const crashed = await session
-    .run("Investigate revenue by region", {
-      runState: { checkpoints, definitionRevision: "2026-09-20.1", checkpointPolicy: "every-turn" },
-    })
-    .then(
-      () => undefined,
-      (error: unknown) => error as Error,
-    );
-  await pump;
-  if (!crashed || !runId) throw new Error("expected the first worker to die after a turn-boundary checkpoint");
+  // Worker 1: suspends before the tool runs, then the process dies.
+  const first = await buildWorker();
+  const session = await first.session({ id: "investigation-session", create: true });
+  const suspended = await session.run("Investigate revenue by region");
+  if (suspended.status !== "suspended") throw new Error(`expected a suspension, got ${suspended.status}`);
+  const pending = suspended.pending ?? [];
+  if (pending.length !== 1 || executed.length !== 0) throw new Error("expected one gated research call before any side effect");
 
-  // The orchestrator reads the last running checkpoint; the host stores `runId` itself in real use.
-  const checkpoint = await loadAgentRunState(checkpoints, { runId, sessionId: session.id });
-  if (checkpoint.state.status !== "running") throw new Error("expected a running checkpoint to resume from");
+  // Worker 2: a new process over the same store resumes the same run.
+  const second = await buildWorker();
+  const resumedSession = await second.session({ id: "investigation-session" });
+  let last: string | undefined;
+  for await (const event of resumedSession.resume(
+    pending.map((decision) => ({ approvalId: decision.approvalId, outcome: "allow_once" as const })),
+  )) {
+    last = event.type;
+  }
 
-  // Worker 2: a new process attaches to the same stores and continues the same run.
-  gate.open = true;
-  const resumed = await resumeAgentRun(
-    agent,
-    { runId, sessionId: session.id },
-    { decision: "continue", expectedVersion: checkpoint.record.version },
-    { checkpoints, definitionRevision: "2026-09-20.1" },
-  );
   return {
-    status: resumed.status,
-    text: resumed.text,
+    status: last === "run.completed" ? "completed" : last,
     toolExecutions: executed,
-    resumedFromVersion: checkpoint.record.version,
+    providerTurns: requests.length,
   };
 }
 

@@ -1,0 +1,61 @@
+{
+  "name": "@arnilo/prism-devtools",
+  "version": "0.13.0",
+  "description": "Host library serving a loopback developer inspector over a Prism agent: inspect, sessions, live events, replay, and compare.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "prism-devtools": "./bin/prism-devtools.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/__tests__",
+    "bin",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun ../../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pack:dry-run": "bun pm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@arnilo/prism": ">=0.13.0 <1.0.0"
+  },
+  "devDependencies": {
+    "@arnilo/prism-evals": "file:../evals",
+    "@arnilo/prism-governance": "file:../../policy/governance",
+    "@arnilo/prism-observability": "file:../../integrations/observability",
+    "@arnilo/prism-tools-work": "file:../../tools/work",
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ashiqrniloy/prism.git",
+    "directory": "packages/hosts/devtools"
+  },
+  "bugs": {
+    "url": "https://github.com/ashiqrniloy/prism/issues"
+  },
+  "homepage": "https://github.com/ashiqrniloy/prism/tree/main/packages/hosts/devtools#readme",
+  "keywords": [
+    "prism",
+    "devtools",
+    "inspector",
+    "debugging",
+    "replay",
+    "host"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

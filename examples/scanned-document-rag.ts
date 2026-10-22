@@ -1,6 +1,6 @@
-import { createMistralOcrParser } from "@arnilo/prism-work/document-reader";
-import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory";
-import { replaceDocument, retrieveContext } from "@arnilo/prism-memory/rag";
+import { createMistralOcrParser } from "@arnilo/prism-tools-work/document-reader";
+import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
+import { replaceDocument, retrieveContext } from "@arnilo/prism-memory-rag";
 
 const pdf = Buffer.from("%PDF-1.7\n%", "latin1");
 let pagesProcessed = 0;

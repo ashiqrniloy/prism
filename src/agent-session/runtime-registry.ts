@@ -17,6 +17,11 @@ export interface AgentRuntime {
   /** Loaded packages, their declared capabilities, and status notes. */
   readonly packages: LoadedPackages;
   /**
+   * Plan 177 Task 5: sessions open on this agent, added when a session opens and dropped by its
+   * `close()`. `dispose()` aborts and closes each one. Structural type keeps this leaf session-free.
+   */
+  readonly openSessions: Set<{ close(): Promise<void> }>;
+  /**
    * Route `hook.error`/`emit` events to the emitting session. The bus is per-agent but events are
    * per-run; the session sets the sink for the duration of its run.
    * ponytail: one sink per agent — concurrent runs on one agent share it; per-run sinks if that matters.

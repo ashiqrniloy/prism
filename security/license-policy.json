@@ -19,7 +19,7 @@
     "@ag-ui/encoder@0.0.57": "MIT",
     "@ag-ui/proto@0.0.57": "MIT",
     "duck@0.1.12": "BSD-3-Clause",
-    "jszip@3.10.1": "MIT",
+    "jszip@3.10.2": "MIT",
     "pako@1.0.11": "MIT"
   },
   "deniedFragments": [

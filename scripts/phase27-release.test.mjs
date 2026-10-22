@@ -75,11 +75,13 @@ describe("Plan 027 Task 10 release closeout", () => {
       Number(hasDiagramsPackage);
     const packages = workspacePackageCounts();
     const hasWork = packages.has("prism-work");
-    const hasCodingTools = packages.has("prism-coding-tools");
     const hasCore = packages.has("prism-core");
-    const delta = hasWork ? -45 : hasCodingTools ? -42 : hasCore ? -14 : 0;
-    assert.equal(truth.counts.publishable, hasCodingTools && !hasWork ? 17 : 55 + added + delta, "current publishable package count");
-    assert.equal(truth.counts.workspace, hasCodingTools && !hasWork ? 16 : 54 + added + delta, "current workspace package count");
+    const delta = hasWork ? -45 : hasCore ? -14 : 0;
+    // Plan 174 Tasks 6-7 retired the core family and the three 0.12 workspaces: the 0.13 tree is
+    // 60 publishable / 59 workspace manifests, and the pre-0.13 deltas no longer apply.
+    const isThirteen = !hasWork && !hasCore && packages.has("coding");
+    assert.equal(truth.counts.publishable, isThirteen ? 60 : 55 + added + delta, "current publishable package count");
+    assert.equal(truth.counts.workspace, isThirteen ? 59 : 54 + added + delta, "current workspace package count");
     // Decision B: the root may patch independently after the 0.3.0 cut (plan 039 moved the root
     // to 0.3.1), so the claim is the floor, derived from the manifest. The frozen list of released
     // versions this used to pin was a sweep on every cut and said nothing the comparison does not

@@ -1,5 +1,6 @@
 import {
   type BranchReader,
+  assertSessionLinkFilter,
   type CompactionEntryData,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_BYTES,
   DEFAULT_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
@@ -15,12 +16,15 @@ import {
   type PersistencePage,
   resolveSessionSearchQuery,
   SESSION_APPEND_CONFLICT_CODE,
+  SESSION_LINKS_DATA_KEY,
   SESSION_SEARCH_WORKSPACE_METADATA_KEY,
   SESSION_TITLE_METADATA_KEY,
   SessionAppendConflictError,
   type SessionAppendOptions,
   type SessionBranchRead,
   type SessionEntry,
+  type SessionLinkFilter,
+  type SessionLinks,
   type SessionListQuery,
   type SessionSearchHit,
   type SessionSearchQuery,
@@ -422,6 +426,7 @@ export function searchLinearSessions(
     }
 
     if (q.workspaceRoot && workspaceRoot !== q.workspaceRoot) continue;
+    if (!sessionLinksMatch(sessionLinksOf(entries), q)) continue;
     if (q.tenantId && tenantId !== q.tenantId) continue;
     if (q.accountId && accountId !== q.accountId) continue;
     if (q.userId && userId !== q.userId) continue;
@@ -567,7 +572,8 @@ function indexEntries(entries: readonly SessionEntry[]): { byId: Map<string, Ses
 
 const randomId = createId;
 
-const OWNERSHIP_SCOPE_KEYS = ["tenantId", "accountId", "userId"] as const;
+/** The `OwnershipScope` fields, in stamp order. Shared with `narrowScope` so the two never drift. */
+export const OWNERSHIP_SCOPE_KEYS = ["tenantId", "accountId", "userId"] as const;
 
 /**
  * Whether every entry carries each field of `scope` with the same value. An undefined scope (or an undefined
@@ -576,6 +582,45 @@ const OWNERSHIP_SCOPE_KEYS = ["tenantId", "accountId", "userId"] as const;
 export function entriesInScope(entries: readonly SessionEntry[], scope: OwnershipScope | undefined): boolean {
   if (!scope) return true;
   return entries.every((entry) => OWNERSHIP_SCOPE_KEYS.every((key) => scope[key] === undefined || entry.metadata?.[key] === scope[key]));
+}
+
+/** The links a `metadata` entry carries in `data[SESSION_LINKS_DATA_KEY]`, or `undefined`. */
+export function sessionLinksOfEntry(entry: SessionEntry): SessionLinks | undefined {
+  if (entry.kind !== "metadata" || !entry.data || typeof entry.data !== "object") return undefined;
+  const raw = (entry.data as Record<string, unknown>)[SESSION_LINKS_DATA_KEY];
+  return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as SessionLinks) : undefined;
+}
+
+/** The links a session was opened with: the first links entry among `entries`, or `undefined`. */
+export function sessionLinksOf(entries: readonly SessionEntry[]): SessionLinks | undefined {
+  for (const entry of entries) {
+    const links = sessionLinksOfEntry(entry);
+    if (links) return links;
+  }
+  return undefined;
+}
+
+/** Whether `links` satisfy every link filter field set on `filter`. A session without links matches no set field. */
+export function sessionLinksMatch(links: SessionLinks | undefined, filter: SessionLinkFilter): boolean {
+  if (filter.agentId !== undefined && links?.agentId !== filter.agentId) return false;
+  if (filter.parentSessionId !== undefined && links?.sessionId !== filter.parentSessionId) return false;
+  if (filter.workflowRunId !== undefined && links?.workflowRunId !== filter.workflowRunId) return false;
+  if (filter.delegationId !== undefined && links?.delegationId !== filter.delegationId) return false;
+  if (filter.actorKind !== undefined && links?.actor?.kind !== filter.actorKind) return false;
+  if (filter.actorAgent !== undefined && links?.actor?.agent !== filter.actorAgent) return false;
+  return true;
+}
+
+/** The summary fields a session's links contribute. */
+export function summaryLinkFields(links: SessionLinks | undefined): Partial<SessionSummary> {
+  if (!links) return {};
+  return {
+    ...(links.agentId !== undefined ? { agentId: links.agentId } : {}),
+    ...(links.sessionId !== undefined ? { parentSessionId: links.sessionId } : {}),
+    ...(links.workflowRunId !== undefined ? { workflowRunId: links.workflowRunId } : {}),
+    ...(links.delegationId !== undefined ? { delegationId: links.delegationId } : {}),
+    ...(links.actor !== undefined ? { actor: links.actor } : {}),
+  };
 }
 
 /** Summary of one session from its entries: no transcript, only counts, times, and display metadata. */
@@ -602,6 +647,7 @@ export function summarizeSession(sessionId: string, entries: readonly SessionEnt
     messageCount,
     ...(title !== undefined ? { title } : {}),
     ...(workspaceRoot !== undefined ? { metadata: { [SESSION_SEARCH_WORKSPACE_METADATA_KEY]: workspaceRoot } } : {}),
+    ...summaryLinkFields(sessionLinksOf(entries)),
   };
 }
 
@@ -616,9 +662,11 @@ function listMemorySessions(
   }
   const order = query.order ?? "desc";
   if (order !== "asc" && order !== "desc") throw new TypeError('SessionListQuery.order must be "asc" or "desc"');
+  assertSessionLinkFilter(query);
   const summaries: SessionSummary[] = [];
   for (const [sessionId, entries] of bySession) {
     if (entries.length === 0 || !entriesInScope(entries, query)) continue;
+    if (!sessionLinksMatch(sessionLinksOf(entries), query)) continue;
     summaries.push(summarizeSession(sessionId, entries, leafBySession.get(sessionId)));
   }
   const key = (summary: SessionSummary) => `${summary.updatedAt ?? ""}\t${summary.sessionId}`;

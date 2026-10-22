@@ -1,5 +1,6 @@
 import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createHashEmbedder, createMemory } from "@arnilo/prism-memory";
+import { createHashEmbedder } from "@arnilo/prism-memory-core";
+import { createMemory } from "@arnilo/prism-memory-fabric";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const memory = createMemory({

@@ -1,28 +1,27 @@
-import { createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta } from "@arnilo/prism";
-import { createMockProvider } from "@arnilo/prism/testing";
-import { createCodingCompactor } from "@arnilo/prism-memory/compaction/llm";
+import { createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "@arnilo/prism";
+import { mockProvider } from "@arnilo/prism/testing";
+import memoryCompaction from "@arnilo/prism-memory-compaction";
 
-// Coding-focused LLM compaction remains normal bounded compaction: raw history
-// stays in the store; a mock summarizer keeps this demo network-free.
+// Coding-focused LLM compaction stays normal bounded compaction: raw history
+// stays in the store, and the coding profile adds read/modified file reporting.
+// A mock summarizer keeps this demo network-free.
 export async function demo() {
-  const sessionId = "coding-demo";
   const store = createMemorySessionStore();
-  await store.append(
-    createSessionEntry({
-      sessionId,
-      kind: "message",
-      message: { role: "user", content: [{ type: "text", text: "Fix src/app.ts and run npm test" }] },
-    }),
-  );
-  const compactor = createCodingCompactor({
-    provider: createMockProvider([providerTextDelta("Changed src/app.ts; npm test passed."), providerDone()]),
+  const agent = await createAgent({
     model: { provider: "mock", model: "summary" },
-    keepRecentTokens: 1,
+    packages: [memoryCompaction({ profile: "coding" }), mockProvider([[providerTextDelta("Changed src/app.ts; npm test passed."), providerDone()]])],
+    slots: { store },
   });
-  // Roadmap §2.5: a `Compactor` slot implementation; an agent would assign it via
-  // `createAgent({ slots: { compaction: compactor } })`.
-  const result = await compactor.compact({ sessionId, entries: await store.list(sessionId) });
-  return { strategyName: compactor.name, summary: result.summary, appendedKind: result.entries?.[0]?.kind };
+  const session = await agent.session({ id: "coding-demo", create: true });
+  await session.run("Fix src/app.ts and run npm test");
+
+  const result = await session.compact();
+
+  return {
+    strategyName: (result.entries?.[0]?.data as { strategy?: string } | undefined)?.strategy,
+    summary: result.summary.slice(0, 20),
+    appendedKind: result.entries?.[0]?.kind,
+  };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(await demo()));

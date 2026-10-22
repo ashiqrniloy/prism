@@ -1,0 +1,33 @@
+DEVTOOLS_DEFAULT_HOSTNAME	export declare const DEVTOOLS_DEFAULT_HOSTNAME = "127.0.0.1"
+DEVTOOLS_DEFAULT_PORT	export declare const DEVTOOLS_DEFAULT_PORT = 4311
+DEVTOOLS_JSON_HEADERS	export declare const DEVTOOLS_JSON_HEADERS:
+DevtoolsArgsError	export declare class DevtoolsArgsError extends Error
+DevtoolsError	export declare class DevtoolsError extends Error
+LIVE_FEED_LIMIT	export declare const LIVE_FEED_LIMIT = 500
+REPLAY_DEFAULT_LIMIT	export declare const REPLAY_DEFAULT_LIMIT = 100
+REPLAY_MAX_LIMIT	export declare const REPLAY_MAX_LIMIT = 500
+REPLAY_PAGE_SIZE	export declare const REPLAY_PAGE_SIZE = 100
+UI_CSP	export declare const UI_CSP: string
+bearerMatches	export declare function bearerMatches(request: Request, token: string): boolean
+compareInspectorRuns	export declare function compareInspectorRuns(left: InspectorCompareSide, right: InspectorCompareSide): InspectorComparison
+describeRecord	export declare function describeRecord(value: unknown): string
+formatJson	export declare function formatJson(value: unknown): string
+getInspectorScript	export declare function getInspectorScript(): string
+hostOriginRejection	export declare function hostOriginRejection(request: Request, options: DevtoolsHostOriginOptions): Response | undefined
+inspectorPageResponse	export declare function inspectorPageResponse(): Response
+inspectorScriptResponse	export declare function inspectorScriptResponse(): Response
+mount	export declare function mount(doc: Document): void
+parseDevtoolsArgs	export declare function parseDevtoolsArgs(argv: readonly string[]): DevtoolsArgs
+parseInspectorCompareBody	export declare function parseInspectorCompareBody(text: string): InspectorComparison
+replayPage	export declare function replayPage(entries: readonly SessionEntry[], options?:
+resolveDevtoolsToken	export declare function resolveDevtoolsToken(ref: string | undefined, env?: Readonly<Record<string, string | undefined>>): string | undefined
+serveDevtools	export declare function serveDevtools(agent: Agent, options?: DevtoolsOptions): DevtoolsServer
+type DevtoolsArgs	export { type DevtoolsArgs, DevtoolsArgsError, type DevtoolsModel, parseDevtoolsArgs } from "./args.js"
+type DevtoolsModel	export { type DevtoolsArgs, DevtoolsArgsError, type DevtoolsModel, parseDevtoolsArgs } from "./args.js"
+type DevtoolsOptions	export { DEVTOOLS_DEFAULT_HOSTNAME, DEVTOOLS_DEFAULT_PORT, type DevtoolsOptions, type DevtoolsServer, type ServeDevtoolsOptions, serveDevtools, } from "./serve.js"
+type DevtoolsServer	export { DEVTOOLS_DEFAULT_HOSTNAME, DEVTOOLS_DEFAULT_PORT, type DevtoolsOptions, type DevtoolsServer, type ServeDevtoolsOptions, serveDevtools, } from "./serve.js"
+type InspectorCompareSide	export { compareInspectorRuns, type InspectorCompareSide, type InspectorCompareWinner, type InspectorComparison, parseInspectorCompareBody, } from "./compare.js"
+type InspectorCompareWinner	export { compareInspectorRuns, type InspectorCompareSide, type InspectorCompareWinner, type InspectorComparison, parseInspectorCompareBody, } from "./compare.js"
+type InspectorComparison	export { compareInspectorRuns, type InspectorCompareSide, type InspectorCompareWinner, type InspectorComparison, parseInspectorCompareBody, } from "./compare.js"
+type ReplayPage	export { REPLAY_DEFAULT_LIMIT, REPLAY_MAX_LIMIT, type ReplayPage, replayPage } from "./replay.js"
+type ServeDevtoolsOptions	export { DEVTOOLS_DEFAULT_HOSTNAME, DEVTOOLS_DEFAULT_PORT, type DevtoolsOptions, type DevtoolsServer, type ServeDevtoolsOptions, serveDevtools, } from "./serve.js"

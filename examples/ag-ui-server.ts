@@ -1,43 +1,42 @@
 import {
-  type AgentRunRef,
   askEveryTool,
   createAgent,
-  createAgentRunLifecycle,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
   type JsonObject,
   providerDone,
   providerTextDelta,
   toolCallContent,
 } from "@arnilo/prism";
-import { createAgUiHandler } from "@arnilo/prism-ag-ui";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createAgUiHandler } from "@arnilo/prism-ag-ui";
 
 export async function demo() {
-  const checkpoints = createMemoryCheckpointStore();
-  const sessionStore = createMemorySessionStore();
   const executed: string[] = [];
   let turn = 0;
 
   const agent = await createAgent({
     id: "approvals-agent",
     model: { provider: "mock", model: "mock" },
-    packages: [providerPackage("test-provider", [{
-      id: "mock",
-      async *generate() {
-        if (++turn === 1) {
-          yield {
-            type: "tool_call" as const,
-            call: toolCallContent("call-1", "publish_draft", { title: "Draft Post", content: "Unchecked draft" }),
-          };
-          yield providerDone();
-          return;
-        }
-        yield providerTextDelta("Publication complete.");
-        yield providerDone();
-      },
-    }])],
-    slots: { store: sessionStore },
+    slots: { store: createMemorySessionStore() },
+    packages: [
+      providerPackage("test-provider", [
+        {
+          id: "mock",
+          async *generate() {
+            if (++turn === 1) {
+              yield {
+                type: "tool_call" as const,
+                call: toolCallContent("call-1", "publish_draft", { title: "Draft Post", content: "Unchecked draft" }),
+              };
+              yield providerDone();
+              return;
+            }
+            yield providerTextDelta("Publication complete.");
+            yield providerDone();
+          },
+        },
+      ]),
+    ],
     hooks: askEveryTool(),
     tools: {
       add: [
@@ -51,28 +50,20 @@ export async function demo() {
         },
       ],
     },
-    runState: { checkpoints, definitionRevision: "1" },
   });
 
-  const lifecycle = createAgentRunLifecycle({
-    checkpoints,
-    resolveAgent: () => ({ agent, definitionRevision: "1" }),
-  });
-
-  let suspended: AgentRunRef | undefined;
-
-  const handle = createAgUiHandler({
+  const handle = createAgUiHandler(agent, {
     authorize: () => ({ ownership: { userId: "demo", tenantId: "demo-tenant" } }),
-    capabilities: { humanInTheLoop: { approveWithEdits: true } },
-    lifecycle,
-    resolveRun: () => (suspended ? { ref: suspended, agentId: "approvals-agent" } : undefined),
-    onSuspended: ({ run }) => {
-      suspended = run.ref;
-    },
-    sessionFactory: () => agent.session({ id: "approval-session", create: true }),
   });
 
-  // 1. Initial run: agent requests tool call and suspends at durable checkpoint
+  const parse = async (response: Response) =>
+    (await response.text())
+      .trim()
+      .split("\n\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line.replace(/^data:\s*/, "")));
+
+  // 1. Initial run: the agent asks to call a tool and the run suspends as an AG-UI interrupt.
   const startResponse = await handle(
     new Request("https://example.test/ag-ui", {
       method: "POST",
@@ -89,12 +80,11 @@ export async function demo() {
     }),
   );
 
-  const startLines = (await startResponse.text()).trim().split("\n\n").filter(Boolean);
-  const startEvents = startLines.map((line) => JSON.parse(line.replace(/^data:\s*/, "")));
+  const startEvents = await parse(startResponse);
   const finish = startEvents.at(-1);
   const interrupt = finish?.outcome?.interrupts?.[0];
 
-  // 2. Resume with edited arguments: reviewer edits draft content before approving
+  // 2. Resume with one decision: the reviewer approves the pending tool call.
   const resumeResponse = await handle(
     new Request("https://example.test/ag-ui", {
       method: "POST",
@@ -102,31 +92,20 @@ export async function demo() {
       body: JSON.stringify({
         threadId: "ag-ui-thread",
         runId: "ag-ui-run-2",
-        parentRunId: "ag-ui-run-1",
         state: {},
         messages: [],
         tools: [],
         context: [],
         forwardedProps: {},
-        resume: [
-          {
-            interruptId: interrupt?.id,
-            status: "resolved",
-            payload: {
-              decision: "approve",
-              editedArgs: { title: "Draft Post", content: "Reviewed & Approved safe content" },
-            },
-          },
-        ],
+        resume: [{ interruptId: interrupt?.id, status: "resolved", payload: { outcome: "allow_once" } }],
       }),
     }),
   );
 
-  const resumeLines = (await resumeResponse.text()).trim().split("\n\n").filter(Boolean);
-  const resumeEvents = resumeLines.map((line) => JSON.parse(line.replace(/^data:\s*/, "")));
+  const resumeEvents = await parse(resumeResponse);
 
   return {
-    approveWithEditsAdvertised: handle.capabilities.humanInTheLoop?.approveWithEdits ?? false,
+    interruptAdvertised: handle.capabilities.humanInTheLoop?.interrupts ?? false,
     startStatus: startResponse.status,
     startEventsCount: startEvents.length,
     interruptType: finish?.outcome?.type,

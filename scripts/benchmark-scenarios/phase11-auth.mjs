@@ -13,13 +13,16 @@
 import { createHash, subtle } from "node:crypto";
 import { createServer } from "node:http";
 import { performance } from "node:perf_hooks";
-import { createOpenApiTools } from "@arnilo/prism-coding-tools/openapi";
-import { createOidcIdentityVerifier } from "@arnilo/prism-core/credentials/node/oidc";
-import { createOpaPolicyEvaluator } from "@arnilo/prism-core/governance/policy";
-import { createS3ArtifactBodyStore } from "@arnilo/prism-core/runtime/server/artifact-bodies";
-import { createMcpOAuthTransport, createPrismMcpServer, createPrismMcpWebHandler } from "@arnilo/prism-mcp";
+import { createOpaPolicyEvaluator } from "@arnilo/prism-governance";
+import { createMcpOAuthTransport } from "@arnilo/prism-mcp";
+import { createPrismMcpWebHandler } from "@arnilo/prism-mcp-server";
+import { createOpenApiTools } from "@arnilo/prism-tools-openapi";
 import { Client } from "@modelcontextprotocol/client";
+import { McpServer } from "@modelcontextprotocol/server";
+import * as z from "zod/v4";
 
+function createOidcIdentityVerifier() { throw new Error("retired"); }
+function createS3ArtifactBodyStore() { throw new Error("retired"); }
 const WARMUPS = Number(process.env.PRISM_BENCH_WARMUPS ?? 20);
 const ITERATIONS = Number(process.env.PRISM_BENCH_ITERATIONS ?? 100);
 
@@ -183,20 +186,16 @@ async function startAuthServer() {
   return { origin: handle.origin, currentAccessToken: () => current, close: handle.close };
 }
 
-const echoTool = {
-  name: "echo",
-  description: "Echoes text back",
-  parameters: { type: "object", properties: { text: { type: "string" } }, required: ["text"] },
-  effect: { kind: "none", idempotency: "none" },
-  async execute(args, context) {
-    return {
-      toolCallId: context.toolCallId,
-      name: "echo",
-      content: [{ type: "text", text: `echo:${String(args.text)}` }],
-      metadata: { trust: "untrusted_external" },
-    };
-  },
-};
+// Plain SDK MCP server: this scenario measures MCP OAuth + the HTTP transport,
+// not Prism tool serving (retired with plan 161 Task 5; `serveTools` is Phase 14).
+function echoServer() {
+  const server = new McpServer({ name: "prism-benchmark", version: "1.0.0" }, { capabilities: { tools: {} } });
+  server.registerTool("echo", { description: "Echoes text back", inputSchema: z.object({ text: z.string() }) }, (args) => ({
+    isError: false,
+    content: [{ type: "text", text: `echo:${args.text}` }],
+  }));
+  return server;
+}
 
 async function startPrismMcp(as) {
   let handler;
@@ -223,27 +222,18 @@ async function startPrismMcp(as) {
     response.writeHead(result.status, Object.fromEntries(result.headers.entries()));
     response.end(await result.text());
   });
-  handler = await createPrismMcpWebHandler(
-    () =>
-      createPrismMcpServer({
-        name: "prism-benchmark",
-        version: "1.0.0",
-        tools: [echoTool],
-        authorize: () => ({ allowed: true }),
-      }),
-    {
-      protectedResource: {
-        authorizationServers: [as.origin],
-        resource: `${handle.origin}/mcp`,
-        scopesSupported: ["mcp"],
-      },
-      resolveIdentity: (request) => {
-        const authorization = request.headers.get("authorization") ?? "";
-        if (authorization.slice("Bearer ".length) !== as.currentAccessToken()) return false;
-        return { id: "bench-user", ownership: { tenantId: "tenant-1" } };
-      },
+  handler = await createPrismMcpWebHandler(echoServer, {
+    protectedResource: {
+      authorizationServers: [as.origin],
+      resource: `${handle.origin}/mcp`,
+      scopesSupported: ["mcp"],
     },
-  );
+    resolveIdentity: (request) => {
+      const authorization = request.headers.get("authorization") ?? "";
+      if (authorization.slice("Bearer ".length) !== as.currentAccessToken()) return false;
+      return { id: "bench-user", ownership: { tenantId: "tenant-1" } };
+    },
+  });
   return { origin: handle.origin, close: handle.close };
 }
 

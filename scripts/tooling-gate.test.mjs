@@ -1,10 +1,10 @@
 #!/usr/bin/env node
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { describe, it } from "bun:test";
 
 // Negative fixtures proving the formatting/linting/coverage gates actually fail
 // on a violation (plan 079, Task 6). Mirrors scripts/release-gate.test.mjs.
@@ -68,33 +68,6 @@ describe("tooling gates fail on violations", () => {
     assert.doesNotMatch(scripts["sdk:ready"], /test:postgres/);
   });
 
-  it("keeps DDL out of the least-privilege enterprise request path", () => {
-    const inventory = JSON.parse(readFileSync("scripts/enterprise-postgres-sql-inventory.json", "utf8"));
-    assert.deepEqual(inventory.requestPath.verbs, ["SELECT", "INSERT", "UPDATE", "DELETE"]);
-    assert.ok(inventory.requestPath.forbidden.includes("DROP"));
-    const basePath = existsSync("packages/prism-core/src/enterprise/postgres")
-      ? "packages/prism-core/src/enterprise/postgres"
-      : "packages/enterprise-postgres/src";
-    // The router is a module directory (plan 070 Task 14); scan every file in it so the
-    // DDL check cannot go vacuous when sources move between modules.
-    const routerSources = (() => {
-      const dir = `${basePath}/model-router`;
-      if (!existsSync(dir)) return [readFileSync(`${basePath}/model-router.ts`, "utf8")];
-      const walk = (d) =>
-        readdirSync(d, { withFileTypes: true }).flatMap((e) =>
-          e.isDirectory() ? walk(`${d}/${e.name}`) : e.name.endsWith(".ts") ? [readFileSync(`${d}/${e.name}`, "utf8")] : [],
-        );
-      return walk(dir);
-    })();
-    assert.match(routerSources.join("\n"), /prism_model_router_/, "router source scan must cover the router modules");
-    const requestSources = ["policy", "evaluations", "work-idempotency", "tool-effects", "cleanup"]
-      .map((name) => readFileSync(`${basePath}/${name}.ts`, "utf8"))
-      .concat(routerSources)
-      .join("\n");
-    assert.doesNotMatch(requestSources, /\b(?:CREATE|ALTER|DROP|TRUNCATE|GRANT)\s+(?:SCHEMA|TABLE|INDEX)\b/);
-    assert.match(readFileSync(`${basePath}/ddl.ts`, "utf8"), /CREATE SCHEMA/);
-  });
-
   // Plan 124 Task 2: the contributor toolchain is Bun-only, so the scan flipped. No repository
   // spawn may name `node` — on a Bun-only host the binary may not exist — and no spawn may pass a
   // Node-only test flag through `process.execPath`, which is Bun under the only parent this repo
@@ -103,7 +76,7 @@ describe("tooling gates fail on violations", () => {
   // Documented exceptions:
   //   - scripts/branch-coverage-audit.mjs keeps the Node branch instrument: Bun 1.4.2 emits no
   //     branch data (plan 120 Task 6), asserted in scripts/phase23-coverage.test.mjs.
-  //   - packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts passes the
+  //   - packages/tools/coding/src/security/__tests__/docker-sandbox.test.ts passes the
   //     string "node" to computeCommandFingerprint as a command NAME to hash — data, not a spawn.
   //   - the release-host registry toolchain (plan 125 Task 5) spawns `npm`, not `node`.
   //   - the sqlite wrong-runtime probe spawns `node` on purpose (plan 126 Task 2).
@@ -111,9 +84,11 @@ describe("tooling gates fail on violations", () => {
     const NODE_ONLY = /--test\b|--test-isolation|--experimental-test-coverage/;
     const NODE_SPAWN_EXCEPTIONS = new Set([
       "scripts/branch-coverage-audit.mjs",
-      "packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts",
+      "packages/tools/coding/src/security/__tests__/docker-sandbox.test.ts",
       // Plan 126 Task 2: the wrong-runtime probe must actually run on node.
       "packages/stores/sqlite/src/__tests__/sqlite-persistence.test.ts",
+      // Plan 164 Task 8.3: the release gate must be observed refusing a non-Bun runtime.
+      "scripts/release-gate.test.mjs",
     ]);
     // Skip matches inside a template literal (this file's own fixture strings).
     const inTemplateLiteral = (source, index) => {
@@ -136,7 +111,6 @@ describe("tooling gates fail on violations", () => {
       `spawnSync("bun", ["test", "--timeout=0", file]);`,
       `spawn("bun", [LOCK, "bun", "test", file]);`,
       `spawnSync(process.execPath, ["-e", "1"]);`,
-      `spawnSync(process.execPath, [cli, "--provider", id, "--mode", "rpc"]);`,
       `run(process.execPath, [join("scripts", "with-build-lock.mjs"), ...args]);`,
     ]) {
       assert.deepEqual(nodeByName(ok), [], `Bun spawns must pass the scan: ${ok}`);
@@ -183,20 +157,9 @@ describe("tooling gates fail on violations", () => {
       "src/agent-approval.ts",
       "src/agent-run-state.ts",
       "src/artifacts.ts",
-      "src/attention-compiler.ts",
-      "src/run-bundle.ts",
-      "packages/prism-channels/src/approvals.ts",
-      "packages/prism-channels/src/pairing.ts",
-      "packages/prism-channels/src/telegram.ts",
-      "packages/prism-coding-tools/src/security/approval.ts",
-      "packages/prism-coding-tools/src/security/docker-cli.ts",
-      "packages/prism-coding-tools/src/security/egress/policy.ts",
-      "packages/prism-coding-tools/src/security/sandbox-tar.ts",
-      "packages/prism-core/src/credentials/node/oauth2.ts",
-      "packages/prism-core/src/governance/policy/audit-export.ts",
-      "packages/prism-core/src/governance/prompts/util.ts",
-      "packages/providers/bedrock/src/sigv4.ts",
-      "packages/providers/openai/src/oauth.ts",
+      "packages/hosts/channels/src/approvals.ts",
+      "packages/hosts/channels/src/pairing.ts",
+      "packages/hosts/channels/src/telegram.ts",
     ];
     const BUN_NATIVE_HASH = /\bBun\s*\.\s*(?:hash|CryptoHasher)\s*\(/g;
     const count = (source) => [...source.matchAll(BUN_NATIVE_HASH)].length;
@@ -289,13 +252,11 @@ describe("tooling gates fail on violations", () => {
     assert.deepEqual(offenders, [], `scaffold and hint surfaces must not emit npm commands (plan 125 Task 3): ${offenders.join(" | ")}`);
   });
 
-  // Plan 125 Task 5: npm survives only as the release-host registry toolchain. Probed 2026-09-25 on
-  // Bun 1.4.2: `bun pack`, `bun dist-tag` and `bun deprecate` do not exist ("error: Script not
-  // found") and `bun publish --help` has no --provenance, so the registry *interface* stays npm's
-  // on the release host (`dist-tag`/`deprecate` come from the plan 054 legacy retirement path) while
-  // any other npm use is a bug. Every npm call site carries the boundary comment, and a computed
-  // argument list is only allowed where the file declares it (`publishArgs`).
-  it("npm survives only as the release-host registry toolchain", () => {
+  // Plan 164 Task 8.4: the release path is Bun-only — `bun pm pack` and `bun publish` ship the
+  // attested tarballs, and `scripts/sbom.mjs` replaces `npm sbom`. npm survives only in the plan 054
+  // legacy retirement path (`dist-tag`/`deprecate`, which Bun 1.4.2 lacks). Every remaining npm call
+  // site carries the boundary comment.
+  it("release tooling is Bun-only and npm survives only for legacy retirement", () => {
     const REGISTRY_OPS = new Set(["pack", "publish", "sbom", "view", "dist-tag", "deprecate"]);
     const BOUNDARY_COMMENT = "release-host registry toolchain";
     const RETIRED_NPM = /\bnpm\s+(?:install|i|add|test|start|run|ci|exec|x|init|update|audit)\b/;
@@ -390,31 +351,33 @@ describe("tooling gates fail on violations", () => {
         if (!within) offenders.push(`${rel}:Line ${index + 1}: npm ${op} without the release-host comment above it`);
       }
     }
-    assert.deepEqual(offenders, [], `npm is the release-host registry toolchain only (plan 125 Task 5): ${offenders.join(" | ")}`);
-    // Non-vacuity: the scan must actually see the registry surface, not an emptied matcher.
-    assert.ok(sites.length >= 15, `expected the registry call-site census, found ${sites.length}: ${sites.join(", ")}`);
+    assert.deepEqual(offenders, [], `npm call sites must be the legacy retirement path only: ${offenders.join(" | ")}`);
+    // Non-vacuity: the scan must actually see the legacy registry surface, not an emptied matcher.
+    assert.ok(sites.length >= 5, `expected the registry call-site census, found ${sites.length}: ${sites.join(", ")}`);
     const opsSeen = new Set(sites.map((site) => site.split(" npm ").at(-1)));
-    for (const op of ["pack", "publish", "view"]) assert.ok(opsSeen.has(op), `registry op ${op} must appear in the census`);
+    for (const op of ["view", "dist-tag", "deprecate"]) assert.ok(opsSeen.has(op), `registry op ${op} must appear in the census`);
 
-    // The decision record (probed gaps) and the unchanged supply-chain surface.
+    // Plan 164 Task 8.4: the release path packs and publishes with Bun, and provenance is the
+    // GitHub build attestation, not an npm sigstore statement.
     const release = readFileSync("scripts/release.mjs", "utf8");
-    for (const token of ["bun pack", "bun dist-tag", "--provenance", "OIDC"]) {
-      assert.ok(release.includes(token), `release.mjs must record the probed gap: ${token}`);
-    }
+    assert.ok(!/spawnSync\(\s*["']npm["']/.test(release), "release.mjs must spawn no npm");
+    assert.match(release, /spawnSync\(\s*["']bun["'],\s*publishArgs/, "release.mjs must publish with bun");
+    assert.match(release, /function publishArgs\([\s\S]{0,300}?"publish",/, "publishArgs must name a tarball argument");
+    assert.ok(!release.includes("--provenance"), "npm provenance is retired");
     const releaseYml = readFileSync(".github/workflows/release.yml", "utf8");
-    const publishSite = release.indexOf('spawnSync("npm", publishArgs');
-    const publishComment = release.slice(0, publishSite).split("\n").slice(-8).join("\n");
-    assert.ok(publishComment.includes(BOUNDARY_COMMENT), "the publish call site must carry the release-host comment");
     assert.match(releaseYml, /NODE_AUTH_TOKEN:\s*\$\{\{ secrets\.NPM_TOKEN \}\}/, "release.yml must keep the publish token");
     for (const token of [
+      "bun scripts/release.mjs pack --destination release-artifacts",
+      "bun scripts/sbom.mjs",
       "id-token: write",
       "actions/attest-build-provenance@",
       "bun scripts/verify-sbom.mjs",
       "bun audit --audit-level=moderate",
       "bun run release:publish",
     ]) {
-      assert.ok(releaseYml.includes(token), `release.yml must keep the unchanged supply-chain surface: ${token}`);
+      assert.ok(releaseYml.includes(token), `release.yml must keep the release surface: ${token}`);
     }
+    assert.ok(!/\bnpm\s+(pack|publish|sbom|view)\b/.test(releaseYml), "release.yml must invoke no npm");
   });
 });
 
@@ -433,6 +396,7 @@ describe("retired sqlite driver", () => {
     const hits = [];
     for (const rel of execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0")) {
       if (!rel || skip(rel)) continue;
+      if (!existsSync(rel)) continue; // deleted-but-tracked files leave the live surface
       if (readFileSync(rel).includes(Buffer.from(RETIRED_SQLITE))) hits.push(rel);
     }
     assert.deepEqual(hits, [], `retired driver still named in ${hits.join(", ")}`);
@@ -454,6 +418,7 @@ describe("retired node:test runner imports", () => {
     const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" }).split("\0");
     for (const rel of files) {
       if (!rel || skip(rel)) continue;
+      if (!existsSync(rel)) continue; // deleted-but-tracked files leave the live surface
       if (
         rel.startsWith("src/") ||
         rel.startsWith("packages/") ||

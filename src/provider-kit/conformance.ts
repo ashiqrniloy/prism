@@ -1,41 +1,28 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type {
   ModelProvider,
-  BatchJobsProvider,
-  BatchRequestItem,
   ContentBlock,
   EmbeddingsProvider,
   EmbeddingsResult,
-  ImageGenerationProvider,
-  ImageGenerationResult,
   JsonObject,
-  ModerationProvider,
-  ModerationResult,
+  Message,
+  ModelConfig,
   ProviderEvent,
   ProviderRequest,
-  SpeechProvider,
-  SpeechRequest,
-  SpeechResult,
+  ProviderRequestOptions,
   ToolCallContent,
-  TranscriptionProvider,
-  TranscriptionRequest,
-  TranscriptionResult,
+  ToolDefinition,
   Usage,
-  VideoGenerationJob,
-  VideoGenerationProvider,
 } from "../contracts.js";
 import {
-  BatchJobsError,
   EmbeddingsError,
-  ImageGenerationError,
-  ModerationError,
-  pollBatch,
-  SpeechError,
-  TranscriptionError,
-  VideoGenerationError,
 } from "../contracts.js";
 import { reconstructToolCallDeltas } from "../models/events.js";
 import { SECRET_REF } from "../packages/schema.js";
 import { canonicalizeJsonSchema } from "./schema.js";
+import { type RecordedExchange, replayFetch } from "./wire-replay.js";
 
 export interface ProviderStreamConformanceOptions {
   readonly provider: ModelProvider;
@@ -234,46 +221,441 @@ export function assertAuthDescriptorsWellFormed(provider: ModelProvider): void {
   }
 }
 
+export interface ProviderConformanceScenarioResult {
+  readonly name: string;
+  readonly ok: boolean;
+  readonly events: readonly ProviderEvent[];
+}
+
+export interface ProviderConformanceResult {
+  readonly ok: boolean;
+  readonly scenarios: readonly ProviderConformanceScenarioResult[];
+}
+
 export interface ProviderConformanceOptions {
   /** A request the provider can serve against its (fake) transport. */
-  readonly request: ProviderRequest;
-  /** Secret values the provider was given. At least one is required: the leak check cannot be skipped. */
-  readonly secrets: readonly string[];
+  readonly request?: ProviderRequest;
+  /** Secret values the provider was given. At least one is required when recordings is omitted. */
+  readonly secrets?: readonly string[];
   /**
    * Header ownership is always checked. `owned` maps provider-owned headers to the values they must carry;
    * `caller` is merged into `request.options.headers` (include an attempt to override an owned name);
    * `captured` returns the headers the fake transport saw for the last request.
    */
-  readonly headers: {
-    readonly owned: Readonly<Record<string, string>>;
-    readonly caller: Readonly<Record<string, string>>;
-    readonly captured: () => Headers | undefined;
+  readonly headers?: {
+    readonly owned?: Readonly<Record<string, string>>;
+    readonly caller?: Readonly<Record<string, string>>;
+    readonly captured?: () => Headers | undefined;
   };
   readonly expect?: ProviderStreamConformanceOptions["expect"];
   readonly toolCalls?: readonly ToolCallDeltaExpectation[];
+  /** Directory path or URL containing recorded wire scenarios. */
+  readonly recordings?: string | URL;
+  /** Catalog of models to match against recorded wire requests. */
+  readonly models?: readonly ModelConfig[] | (() => Promise<readonly ModelConfig[]> | readonly ModelConfig[]);
+}
+
+function findJsonFiles(dir: string): string[] {
+  const results: string[] = [];
+  const entries = readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...findJsonFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith(".json")) {
+      results.push(fullPath);
+    }
+  }
+  return results.sort();
+}
+
+function requestFromWire(
+  body: unknown,
+  modelsList: readonly ModelConfig[],
+  providerId: string,
+  requestPath?: string,
+): ProviderRequest {
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const modelId = typeof obj.model === "string" ? obj.model : (modelsList[0]?.model ?? "default");
+  const foundModel = modelsList.find((m) => m.model === modelId);
+
+  const route = requestPath?.includes("messages")
+    ? "anthropic"
+    : requestPath?.includes("chat")
+      ? "openai"
+      : undefined;
+
+  const modelConfig: ModelConfig = foundModel
+    ? {
+        ...foundModel,
+        ...(route ? { compat: { ...(foundModel.compat ?? {}), route } } : {}),
+      }
+    : {
+        provider: providerId,
+        model: modelId,
+        ...(route ? { compat: { route } } : {}),
+      };
+
+  const messages: Message[] = [];
+  const rawMessages = Array.isArray(obj.messages) ? obj.messages : [];
+
+  for (const raw of rawMessages) {
+    if (!raw || typeof raw !== "object") continue;
+    const role = (raw as Record<string, unknown>).role;
+    const rawContent = (raw as Record<string, unknown>).content;
+    const content: ContentBlock[] = [];
+
+    if (typeof rawContent === "string") {
+      content.push({ type: "text", text: rawContent });
+    } else if (Array.isArray(rawContent)) {
+      for (const part of rawContent) {
+        if (!part || typeof part !== "object") continue;
+        const p = part as Record<string, unknown>;
+        const cacheControl = p.cache_control ? { cache_control: p.cache_control as JsonObject } : {};
+
+        if (p.type === "text") {
+          content.push({ type: "text", text: typeof p.text === "string" ? p.text : "", ...cacheControl });
+        } else if (p.type === "thinking") {
+          content.push({
+            type: "thinking",
+            text: typeof p.thinking === "string" ? p.thinking : typeof p.text === "string" ? p.text : "",
+            signature: typeof p.signature === "string" ? p.signature : undefined,
+            ...cacheControl,
+          });
+        } else if (p.type === "redacted_thinking") {
+          content.push({
+            type: "thinking",
+            text: "",
+            redacted: true,
+            data: typeof p.data === "string" ? p.data : "",
+            ...cacheControl,
+          });
+        } else if (p.type === "tool_use") {
+          content.push({
+            type: "tool_call",
+            id: typeof p.id === "string" ? p.id : "call_1",
+            name: typeof p.name === "string" ? p.name : "tool",
+            arguments: p.input && typeof p.input === "object" ? (p.input as JsonObject) : {},
+          });
+        } else if (p.type === "tool_result") {
+          let parsedResult: unknown;
+          try {
+            parsedResult = typeof p.content === "string" ? JSON.parse(p.content) : p.content;
+          } catch {
+            parsedResult = p.content;
+          }
+          content.push({
+            type: "tool_result",
+            name: typeof p.name === "string" ? p.name : "tool",
+            toolCallId: typeof p.tool_use_id === "string" ? p.tool_use_id : typeof p.toolCallId === "string" ? p.toolCallId : "",
+            result: parsedResult,
+            ...cacheControl,
+          });
+        } else if (p.type === "image") {
+          content.push(part as ContentBlock);
+        }
+      }
+    }
+
+    if (Array.isArray((raw as Record<string, unknown>).tool_calls)) {
+      for (const tc of (raw as Record<string, unknown>).tool_calls as unknown[]) {
+        if (!tc || typeof tc !== "object") continue;
+        const callObj = tc as Record<string, unknown>;
+        const fnObj = callObj.function as Record<string, unknown> | undefined;
+        let argsObj: JsonObject = {};
+        try {
+          argsObj = typeof fnObj?.arguments === "string" ? JSON.parse(fnObj.arguments) : (fnObj?.arguments as JsonObject) ?? {};
+        } catch {}
+        content.push({
+          type: "tool_call",
+          id: typeof callObj.id === "string" ? callObj.id : "call_1",
+          name: typeof fnObj?.name === "string" ? fnObj.name : "tool",
+          arguments: argsObj,
+        });
+      }
+    }
+
+    if (role === "tool" || (role === "user" && content.some((c) => c.type === "tool_result"))) {
+      const toolResults = content.filter((c) => c.type === "tool_result");
+      const otherContent = content.filter((c) => c.type !== "tool_result");
+      if (otherContent.length > 0) {
+        messages.push({ role: "user", content: otherContent });
+      }
+      if (toolResults.length > 0) {
+        messages.push({ role: "tool", content: toolResults });
+      }
+    } else {
+      messages.push({
+        role: role === "assistant" ? "assistant" : role === "system" ? "system" : "user",
+        content: content.length > 0 ? content : [{ type: "text", text: "" }],
+      });
+    }
+  }
+
+  let tools: ToolDefinition[] | undefined;
+  if (Array.isArray(obj.tools)) {
+    tools = (obj.tools as unknown[]).map((t) => {
+      const toolObj = t as Record<string, unknown>;
+      const fnObj = toolObj.function as Record<string, unknown> | undefined;
+      const name = typeof toolObj.name === "string" ? toolObj.name : typeof fnObj?.name === "string" ? fnObj.name : "tool";
+      const description =
+        typeof toolObj.description === "string" ? toolObj.description : typeof fnObj?.description === "string" ? fnObj.description : undefined;
+      const parameters = (toolObj.input_schema ?? fnObj?.parameters ?? toolObj.parameters ?? { type: "object" }) as JsonObject;
+      return {
+        name,
+        description,
+        parameters,
+        execute: () => ({ toolCallId: "call_mock", name, content: [] }),
+      };
+    });
+  }
+
+  const options: ProviderRequestOptions = obj.thinking ? { compat: { thinking: true } } : {};
+
+  return {
+    model: modelConfig,
+    messages: messages.length > 0 ? messages : [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+    ...(tools && tools.length > 0 ? { tools } : {}),
+    ...(Object.keys(options).length > 0 ? { options } : {}),
+  };
 }
 
 /**
  * One conformance run for a provider: stream shape, abort, tool-call deltas, header ownership, secret leak,
- * usage accounting, `models()` and `auth` descriptors. The factory is called once per check, so each gets a
- * fresh provider. Secret-leak and header-ownership checks are unconditional.
+ * usage accounting, `models()` and `auth` descriptors. When `recordings` is provided, replays every recorded
+ * scenario through the provider and verifies event order, usage rule, tool calls, and thinking signature round-trip.
  */
-export async function providerConformance(factory: () => ModelProvider, options: ProviderConformanceOptions): Promise<void> {
-  if (options.secrets.filter(Boolean).length === 0) throw new Error("providerConformance requires at least one secret to check for leaks");
-  const request: ProviderRequest = {
-    ...options.request,
-    options: { ...options.request.options, headers: { ...options.request.options?.headers, ...options.headers.caller } },
-  };
-  const events = await assertProviderStreamConforms({ provider: factory(), request, expect: options.expect });
-  const captured = options.headers.captured();
-  if (!captured) throw new Error("providerConformance: the provider sent no request through the captured transport");
-  assertProviderOwnedHeadersWin(captured, options.headers);
-  assertNoSecretLeak(events, options.secrets);
-  if (options.toolCalls) assertToolCallDeltasReconstruct(events, options.toolCalls);
-  await assertAbortIsObserved({ provider: factory(), request: options.request });
+export async function providerConformance(
+  factory: (fetchImpl?: typeof fetch, options?: { fetch?: typeof fetch }) => ModelProvider,
+  options: ProviderConformanceOptions,
+): Promise<ProviderConformanceResult> {
+  if (!options.recordings) {
+    if (!options.request) throw new Error("providerConformance requires request when recordings is not specified");
+    if (!options.headers?.captured)
+      throw new Error("providerConformance requires headers when recordings is not specified");
+    if (!options.secrets || options.secrets.filter(Boolean).length === 0)
+      throw new Error("providerConformance requires at least one secret to check for leaks");
+    const callerHeaders = options.headers.caller ?? {};
+    const ownedHeaders = options.headers.owned ?? {};
+    const request: ProviderRequest = {
+      ...options.request,
+      options: { ...options.request.options, headers: { ...options.request.options?.headers, ...callerHeaders } },
+    };
+    const events = await assertProviderStreamConforms({ provider: factory(), request, expect: options.expect });
+    const captured = options.headers.captured();
+    if (!captured) throw new Error("providerConformance: the provider sent no request through the captured transport");
+    assertProviderOwnedHeadersWin(captured, { owned: ownedHeaders, caller: callerHeaders });
+    assertNoSecretLeak(events, options.secrets);
+    if (options.toolCalls) assertToolCallDeltasReconstruct(events, options.toolCalls);
+    await assertAbortIsObserved({ provider: factory(), request: options.request });
+    const probe = factory();
+    await assertModelsListValid(probe);
+    assertAuthDescriptorsWellFormed(probe);
+    return {
+      ok: true,
+      scenarios: [{ name: "default", ok: true, events }],
+    };
+  }
+
+  const recordingsDir =
+    options.recordings instanceof URL
+      ? fileURLToPath(options.recordings)
+      : resolve(String(options.recordings));
+
+  if (!existsSync(recordingsDir)) {
+    throw new Error(`providerConformance: recordings directory does not exist: ${recordingsDir}`);
+  }
+
+  let modelsList: readonly ModelConfig[] = [];
+  if (options.models) {
+    modelsList = typeof options.models === "function" ? await options.models() : options.models;
+  } else {
+    try {
+      const probe = factory();
+      if (probe.models) modelsList = await probe.models();
+    } catch {
+      // models() is optional
+    }
+  }
+
   const probe = factory();
   await assertModelsListValid(probe);
   assertAuthDescriptorsWellFormed(probe);
+
+  const jsonFiles = findJsonFiles(recordingsDir);
+  if (jsonFiles.length === 0) {
+    if (options.request && options.headers && options.secrets) {
+      return await providerConformance(factory, { ...options, recordings: undefined });
+    }
+    return { ok: true, scenarios: [] };
+  }
+
+  const secrets =
+    options.secrets && options.secrets.filter(Boolean).length > 0
+      ? options.secrets
+      : ["canary-secret-should-not-leak", "sk-secret-token", "fake-key"];
+
+  const scenarioResults: ProviderConformanceScenarioResult[] = [];
+
+  for (const file of jsonFiles) {
+    const scenarioName = basename(file, ".json");
+    const rawContent = readFileSync(file, "utf8");
+    const parsed = JSON.parse(rawContent);
+
+    const exchanges: RecordedExchange[] = Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === "object" && "responseBody" in parsed
+        ? [parsed as RecordedExchange]
+        : parsed && typeof parsed === "object" && "recording" in parsed
+          ? (Array.isArray(parsed.recording) ? parsed.recording : [parsed.recording])
+          : [];
+
+    if (exchanges.length === 0) continue;
+
+    let capturedHeaders: Headers | undefined;
+    const baseReplay = replayFetch(exchanges);
+
+    const trackingFetch = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): Promise<Response> => {
+      capturedHeaders = new Headers(init?.headers);
+      if (init?.body) {
+        try {
+          const bodyStr = typeof init.body === "string" ? init.body : new TextDecoder().decode(init.body as ArrayBufferView);
+          const parsedBody = JSON.parse(bodyStr);
+          if (parsedBody && Array.isArray(parsedBody.messages)) {
+            for (const msg of parsedBody.messages) {
+              if (msg.role === "assistant" && Array.isArray(msg.content)) {
+                for (const part of msg.content) {
+                  if (part && part.type === "thinking") {
+                    if (!part.signature || typeof part.signature !== "string" || part.signature.trim() === "") {
+                      throw new Error(
+                        `conformance_fails_on_unsigned_thinking_replay: assistant thinking block replayed on wire without signature in scenario "${scenarioName}"`,
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          if (err instanceof Error && err.message.includes("conformance_fails_on_unsigned_thinking_replay")) {
+            throw err;
+          }
+        }
+      }
+      return await baseReplay(input, init);
+    }) as unknown as typeof fetch;
+
+    const makeProvider = () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = trackingFetch;
+      try {
+        return factory(trackingFetch, { fetch: trackingFetch });
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    };
+
+    const provider = makeProvider();
+    const allScenarioEvents: ProviderEvent[] = [];
+
+    for (let turnIdx = 0; turnIdx < exchanges.length; turnIdx++) {
+      const exchange = exchanges[turnIdx]!;
+      let turnRequest: ProviderRequest;
+
+      if (parsed && typeof parsed === "object" && parsed.request && exchanges.length === 1) {
+        turnRequest = parsed.request;
+      } else {
+        turnRequest = requestFromWire(exchange.requestBody, modelsList, provider.id, exchange.path);
+      }
+
+      turnRequest = {
+        ...turnRequest,
+        options: {
+          sessionId: turnRequest.options?.sessionId ?? "conformance-session",
+          ...turnRequest.options,
+          headers: { ...turnRequest.options?.headers, "x-conformance-caller": "caller-value", authorization: "Bearer attacker-header-override" },
+        },
+      };
+
+      const turnEvents: ProviderEvent[] = [];
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = trackingFetch;
+      try {
+        for await (const event of provider.generate(turnRequest)) {
+          turnEvents.push(event);
+        }
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+
+      allScenarioEvents.push(...turnEvents);
+
+      const terminal = turnEvents.at(-1);
+      if (!terminal || (terminal.type !== "done" && terminal.type !== "error")) {
+        throw new Error(`Provider stream in scenario "${scenarioName}" turn ${turnIdx + 1} must end with done or error`);
+      }
+      if (turnEvents.slice(0, -1).some((event) => event.type === "done" || event.type === "error")) {
+        throw new Error(`Provider stream terminal event must be last in scenario "${scenarioName}" turn ${turnIdx + 1}`);
+      }
+
+      if (exchange.status !== undefined && exchange.status >= 400) {
+        if (terminal.type !== "error") {
+          throw new Error(`Expected error event for HTTP status ${exchange.status} in scenario "${scenarioName}"`);
+        }
+      } else {
+        if (terminal.type !== "done") {
+          throw new Error(`Expected done event for successful exchange in scenario "${scenarioName}"`);
+        }
+        if (terminal.stopReason === undefined) {
+          throw new Error(`Terminal done event missing stopReason in scenario "${scenarioName}"`);
+        }
+      }
+
+      for (const event of turnEvents) {
+        if (event.type === "usage") {
+          assertUsageAccounting([event, terminal], event.usage);
+        } else if (event.type === "done" && event.usage) {
+          assertUsageAccounting([event], event.usage);
+        }
+      }
+
+      if (turnEvents.some((e) => e.type === "tool_call")) {
+        const calls = reconstructToolCallDeltas(turnEvents);
+        for (const call of calls) {
+          if (!call.id || !call.name) {
+            throw new Error(`Incomplete tool call reconstructed in scenario "${scenarioName}"`);
+          }
+        }
+      }
+
+      if (capturedHeaders) {
+        const auth = capturedHeaders.get("authorization");
+        if (auth === "Bearer attacker-header-override") {
+          throw new Error(`Caller header overrode provider-owned authorization header in scenario "${scenarioName}"`);
+        }
+        const callerHeader = capturedHeaders.get("x-conformance-caller");
+        if (callerHeader !== "caller-value") {
+          throw new Error(`Non-owned caller header was dropped in scenario "${scenarioName}"`);
+        }
+      }
+    }
+
+    assertNoSecretLeak(allScenarioEvents, secrets);
+
+    const sampleReq = requestFromWire(exchanges[0]?.requestBody, modelsList, provider.id, exchanges[0]?.path);
+    await assertAbortIsObserved({ provider: makeProvider(), request: sampleReq });
+
+    scenarioResults.push({
+      name: scenarioName,
+      ok: true,
+      events: allScenarioEvents,
+    });
+  }
+
+  return {
+    ok: true,
+    scenarios: scenarioResults,
+  };
 }
 
 export function assertUsageAccounting(events: readonly ProviderEvent[], expected: Usage): Usage {
@@ -282,6 +664,15 @@ export function assertUsageAccounting(events: readonly ProviderEvent[], expected
     | undefined;
   const actual = usage?.type === "usage" ? usage.usage : usage?.usage;
   if (!actual) throw new Error("Provider stream did not include usage");
+  if (
+    (actual.cacheReadTokens !== undefined || actual.cacheWriteTokens !== undefined) &&
+    (actual.cacheReadTokens ?? 0) + (actual.cacheWriteTokens ?? 0) > (actual.inputTokens ?? 0)
+  ) {
+    throw new Error(
+      `Usage accounting invariant violated: cacheReadTokens (${actual.cacheReadTokens ?? 0}) + ` +
+        `cacheWriteTokens (${actual.cacheWriteTokens ?? 0}) > inputTokens (${actual.inputTokens ?? 0})`,
+    );
+  }
   for (const key of ["inputTokens", "outputTokens", "totalTokens", "cacheReadTokens", "cacheWriteTokens"] as const) {
     if (expected[key] !== undefined && actual[key] !== expected[key])
       throw new Error(`Usage ${key} mismatch: expected ${expected[key]}, got ${actual[key]}`);
@@ -403,381 +794,383 @@ async function assertEmbeddingsErrorCode(run: () => Promise<unknown>, code: Embe
   if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
 }
 
-export interface SpeechConformanceOptions {
-  readonly provider: SpeechProvider;
-  readonly model: string;
-  /** When set, an oversized input must fail with `SpeechError("input_too_large")`. */
-  readonly maxInputChars?: number;
-  /** Happy-path probe: text to synthesize, optional voice/format. */
-  readonly sample?: { readonly input?: string; readonly voice?: string; readonly format?: string };
+export interface SystemOneConformanceOptions {
+  readonly factory: (
+    fetchImpl?: typeof fetch,
+    options?: { readonly apiKey?: unknown; readonly fetch?: typeof fetch },
+  ) => ModelProvider;
+  readonly recordings?: string | URL;
+  readonly keyRequired?: boolean;
 }
 
-/** Offline conformance for any `SpeechProvider` (plan 061): typed empty-input and
- *  oversized-input errors, byte results, and stream ordering — the stream must emit
- *  at least one chunk before closing. Asserts event order, never wall clock. */
-export async function runSpeechConformance(options: SpeechConformanceOptions): Promise<SpeechResult | undefined> {
-  const input = options.sample?.input ?? "conformance";
-  await assertSpeechErrorCode(
-    () => options.provider.synthesize({ model: options.model, input: "" }),
-    "empty_input",
-    "empty input must reject with SpeechError(empty_input)",
-  );
-  if (options.maxInputChars !== undefined) {
-    await assertSpeechErrorCode(
-      () => options.provider.synthesize({ model: options.model, input: "x".repeat(options.maxInputChars! + 1) }),
-      "input_too_large",
-      `inputs over ${options.maxInputChars} chars must reject with SpeechError(input_too_large)`,
-    );
+export interface SystemOneConformanceScenarioResult {
+  readonly name: string;
+  readonly ok: boolean;
+  readonly events?: readonly ProviderEvent[];
+}
+
+export interface SystemOneConformanceResult {
+  readonly ok: boolean;
+  readonly scenarios: readonly SystemOneConformanceScenarioResult[];
+}
+
+/**
+ * Conformance test harness for System One decision providers (TypeSafe Jev, Laya).
+ * Verifies gates before fetch, schema-valid rendering, boolean_threshold validation,
+ * 401/422 status mapping, malformed success rejection, single credential resolution per request,
+ * secret redaction, key policy, and optional wire recordings replay.
+ */
+export async function systemOneConformance(options: SystemOneConformanceOptions): Promise<SystemOneConformanceResult> {
+  const probe = options.factory();
+  let modelConfig: ModelConfig;
+  if (probe.models) {
+    const list = await probe.models();
+    modelConfig = list[0] ?? {
+      provider: probe.id,
+      model: `${probe.id}-default`,
+      capabilities: { structuredOutput: "json_schema" },
+    };
+  } else {
+    modelConfig = {
+      provider: probe.id,
+      model: `${probe.id}-default`,
+      capabilities: { structuredOutput: "json_schema" },
+    };
   }
-  if (!options.sample) return undefined;
-  const request: SpeechRequest = {
-    model: options.model,
-    input,
-    ...(options.sample.voice ? { voice: options.sample.voice } : {}),
-    ...(options.sample.format ? { format: options.sample.format } : {}),
+
+  const testSchema: JsonObject = {
+    type: "object",
+    properties: {
+      verdict: { type: "string", enum: ["run", "reject", "ask"], description: "How should this be handled?" },
+      irreversible: { type: "boolean", description: "Would running this destroy data?" },
+    },
   };
-  const result = await options.provider.synthesize(request);
-  if (!(result.audio instanceof Uint8Array) || result.audio.byteLength === 0)
-    throw new Error("synthesize must return non-empty audio bytes");
-  if (typeof result.format !== "string" || result.format.length === 0) throw new Error("result.format must be a non-empty string");
 
-  const streamed = await options.provider.synthesizeStream(request);
-  const reader = streamed.audio.getReader();
-  let chunks = 0;
-  let firstChunkBeforeClose = false;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (chunks === 0 && value.byteLength > 0) firstChunkBeforeClose = true;
-    chunks += 1;
-  }
-  if (chunks === 0 || !firstChunkBeforeClose) throw new Error("synthesizeStream must emit at least one non-empty chunk before closing");
-  return result;
-}
-
-async function assertSpeechErrorCode(run: () => Promise<unknown>, code: SpeechError["code"], label: string): Promise<void> {
-  let error: unknown;
-  try {
-    await run();
-  } catch (caught) {
-    error = caught;
-  }
-  if (!(error instanceof SpeechError)) throw new Error(`${label}; got ${error === undefined ? "a successful result" : String(error)}`);
-  if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
-}
-
-export interface TranscriptionConformanceOptions {
-  readonly provider: TranscriptionProvider;
-  readonly model: string;
-  /** When set, oversized audio must fail with `TranscriptionError("audio_too_large")`. */
-  readonly maxAudioBytes?: number;
-  /** Happy-path probe: audio bytes and the expected transcript prefix. */
-  readonly sample?: { readonly audio?: Uint8Array; readonly format?: string; readonly textIncludes?: string };
-}
-
-/** Offline conformance for any `TranscriptionProvider` (plan 061): typed empty-audio
- *  and oversized-audio errors, one-shot text, and stream ordering — at least one
- *  `transcript_delta` partial, then exactly one `done` terminal event. */
-export async function runTranscriptionConformance(options: TranscriptionConformanceOptions): Promise<TranscriptionResult | undefined> {
-  const audio = options.sample?.audio ?? new Uint8Array([1, 2, 3]);
-  await assertTranscriptionErrorCode(
-    () => options.provider.transcribe({ model: options.model, audio: new Uint8Array(0) }),
-    "empty_input",
-    "empty audio must reject with TranscriptionError(empty_input)",
-  );
-  if (options.maxAudioBytes !== undefined) {
-    await assertTranscriptionErrorCode(
-      () => options.provider.transcribe({ model: options.model, audio: new Uint8Array(options.maxAudioBytes! + 1) }),
-      "audio_too_large",
-      `audio over ${options.maxAudioBytes} bytes must reject with TranscriptionError(audio_too_large)`,
-    );
-  }
-  if (!options.sample) return undefined;
-  const request: TranscriptionRequest = {
-    model: options.model,
-    audio,
-    ...(options.sample.format ? { format: options.sample.format } : {}),
+  const baseRequest: ProviderRequest = {
+    model: modelConfig,
+    messages: [{ role: "user", content: [{ type: "text", text: "rm -rf ./build" }] }],
+    options: { structuredOutput: { name: "decision", schema: testSchema } },
   };
-  const result = await options.provider.transcribe(request);
-  if (typeof result.text !== "string") throw new Error("transcribe must return string text");
-  if (options.sample.textIncludes !== undefined && !result.text.includes(options.sample.textIncludes))
-    throw new Error(`transcript ${JSON.stringify(result.text)} must include ${JSON.stringify(options.sample.textIncludes)}`);
 
-  let deltas = 0;
-  let doneEvents = 0;
-  for await (const event of options.provider.transcribeStream(request)) {
-    if (event.type === "transcript_delta") {
-      if (typeof event.text !== "string") throw new Error("transcript_delta must carry string text");
-      deltas += 1;
-    } else if (event.type === "done") {
-      doneEvents += 1;
-      if (typeof event.text !== "string") throw new Error("done must carry string text");
-    } else {
-      throw new Error(`unexpected transcript event ${(event as { type?: string }).type}`);
+  const OK_RESPONSE = {
+    model: `${probe.id}-checkpoint`,
+    answers: {
+      verdict: { type: "choice", choice: "ask", probabilities: { ask: 0.84 }, confidence: 0.68 },
+      irreversible: { type: "noul", noul: 0.91 },
+    },
+    usage: { input_tokens: 96, output_tokens: 0 },
+  };
+
+  const scenarios: SystemOneConformanceScenarioResult[] = [];
+
+  // 1. Gates before fetch: tools rejected
+  {
+    let fetched = false;
+    const trackingFetch = (async () => {
+      fetched = true;
+      return new Response(JSON.stringify(OK_RESPONSE), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+
+    const toolReq: ProviderRequest = {
+      ...baseRequest,
+      tools: [
+        {
+          name: "test_tool",
+          description: "desc",
+          parameters: { type: "object", properties: {} },
+          execute: () => ({ toolCallId: "1", name: "test_tool", value: null }),
+        },
+      ],
+    };
+    const events = await collectProviderEvents(options.factory(trackingFetch), toolReq);
+    if (fetched) throw new Error("systemOneConformance: tools must be rejected before fetch");
+    const terminal = events.at(-1);
+    if (!terminal || terminal.type !== "error" || !terminal.error.message.includes("tools")) {
+      throw new Error("systemOneConformance: expected tools rejection error event before fetch");
     }
   }
-  if (deltas === 0) throw new Error("transcribeStream must yield at least one transcript_delta before done");
-  if (doneEvents !== 1) throw new Error(`transcribeStream must yield exactly one done event; got ${doneEvents}`);
-  return result;
-}
 
-async function assertTranscriptionErrorCode(run: () => Promise<unknown>, code: TranscriptionError["code"], label: string): Promise<void> {
-  let error: unknown;
-  try {
-    await run();
-  } catch (caught) {
-    error = caught;
-  }
-  if (!(error instanceof TranscriptionError))
-    throw new Error(`${label}; got ${error === undefined ? "a successful result" : String(error)}`);
-  if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
-}
+  // 2. Gates before fetch: schema required
+  {
+    let fetched = false;
+    const trackingFetch = (async () => {
+      fetched = true;
+      return new Response(JSON.stringify(OK_RESPONSE), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
 
-export interface ImageGenerationConformanceOptions {
-  readonly provider: ImageGenerationProvider;
-  readonly model: string;
-  /** When set, an oversized prompt must fail with `ImageGenerationError("input_too_large")`. */
-  readonly maxPromptChars?: number;
-  /** Happy-path probe: prompt, requested image count, expected provenance. */
-  readonly sample?: { readonly prompt?: string; readonly size?: string; readonly count?: number };
-}
-
-/** Offline conformance for any `ImageGenerationProvider` (plan 061): typed empty-input
- *  and oversized-prompt errors, plus image shape — non-empty bytes, an `image/*` mime
- *  type, and preserved provenance (`provider`/`model`) on every image. */
-export async function runImageGenerationConformance(
-  options: ImageGenerationConformanceOptions,
-): Promise<ImageGenerationResult | undefined> {
-  await assertImageGenerationErrorCode(
-    () => options.provider.generate({ model: options.model, prompt: "" }),
-    "empty_input",
-    "empty prompts must reject with ImageGenerationError(empty_input)",
-  );
-  if (options.maxPromptChars !== undefined) {
-    await assertImageGenerationErrorCode(
-      () => options.provider.generate({ model: options.model, prompt: "x".repeat(options.maxPromptChars! + 1) }),
-      "input_too_large",
-      `prompts over ${options.maxPromptChars} chars must reject with ImageGenerationError(input_too_large)`,
-    );
-  }
-  if (!options.sample) return undefined;
-  const result = await options.provider.generate({
-    model: options.model,
-    prompt: options.sample.prompt ?? "conformance cube",
-    ...(options.sample.size ? { size: options.sample.size } : {}),
-    ...(options.sample.count ? { count: options.sample.count } : {}),
-  });
-  if (result.images.length === 0) throw new Error("generate must return at least one image");
-  if (options.sample.count !== undefined && result.images.length !== options.sample.count)
-    throw new Error(`image count ${result.images.length} must match requested ${options.sample.count}`);
-  for (const image of result.images) {
-    if (!(image.bytes instanceof Uint8Array) || image.bytes.byteLength === 0)
-      throw new Error("generated images must carry non-empty bytes");
-    if (typeof image.mimeType !== "string" || !image.mimeType.startsWith("image/"))
-      throw new Error(`image mime type ${image.mimeType} must be image/*`);
-    if (image.provider !== options.provider.id)
-      throw new Error(`image provenance provider ${image.provider} must be preserved (${options.provider.id})`);
-    if (image.model !== options.model) throw new Error(`image provenance model ${image.model} must be preserved (${options.model})`);
-  }
-  return result;
-}
-
-async function assertImageGenerationErrorCode(
-  run: () => Promise<unknown>,
-  code: ImageGenerationError["code"],
-  label: string,
-): Promise<void> {
-  let error: unknown;
-  try {
-    await run();
-  } catch (caught) {
-    error = caught;
-  }
-  if (!(error instanceof ImageGenerationError))
-    throw new Error(`${label}; got ${error === undefined ? "a successful result" : String(error)}`);
-  if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
-}
-
-export interface VideoGenerationConformanceOptions {
-  readonly provider: VideoGenerationProvider;
-  readonly model: string;
-  /** When set, an oversized prompt must fail with `VideoGenerationError("input_too_large")`. */
-  readonly maxPromptChars?: number;
-  /** Happy-path lifecycle probe: submit, poll to terminal state, assert result shape. */
-  readonly sample?: { readonly prompt?: string; readonly maxPolls?: number };
-}
-
-/** Offline conformance for any `VideoGenerationProvider` (plan 061): typed
- *  empty-input and oversized-prompt errors, plus the submit→status lifecycle —
- *  a job id is returned, polling reaches a terminal state, and succeeded jobs
- *  carry a video with provenance (`provider`/`model`) and at least one source
- *  (`bytes` or `url`). */
-export async function runVideoGenerationConformance(options: VideoGenerationConformanceOptions): Promise<VideoGenerationJob | undefined> {
-  await assertVideoGenerationErrorCode(
-    () => options.provider.submit({ model: options.model, prompt: "" }),
-    "empty_input",
-    "empty prompts must reject with VideoGenerationError(empty_input)",
-  );
-  if (options.maxPromptChars !== undefined) {
-    await assertVideoGenerationErrorCode(
-      () => options.provider.submit({ model: options.model, prompt: "x".repeat(options.maxPromptChars! + 1) }),
-      "input_too_large",
-      `prompts over ${options.maxPromptChars} chars must reject with VideoGenerationError(input_too_large)`,
-    );
-  }
-  if (!options.sample) return undefined;
-  const { jobId } = await options.provider.submit({ model: options.model, prompt: options.sample.prompt ?? "conformance clip" });
-  if (typeof jobId !== "string" || jobId.length === 0) throw new Error("submit must return a non-empty job id");
-  const maxPolls = options.sample.maxPolls ?? 10;
-  let job: VideoGenerationJob | undefined;
-  for (let poll = 0; poll < maxPolls; poll += 1) {
-    job = await options.provider.status(jobId);
-    if (!job) throw new Error("status must return a job");
-    if (job.state === "succeeded" || job.state === "failed") break;
-  }
-  if (!job || (job.state !== "succeeded" && job.state !== "failed"))
-    throw new Error(`status did not reach a terminal state within ${maxPolls} polls`);
-  if (job.state === "failed") return job;
-  const video = job.video;
-  if (!video) throw new Error("succeeded jobs must carry a video");
-  if (!video.bytes && !video.url) throw new Error("generated videos must carry bytes or a url");
-  if (video.provider !== options.provider.id)
-    throw new Error(`video provenance provider ${video.provider} must be preserved (${options.provider.id})`);
-  if (video.model !== options.model) throw new Error(`video provenance model ${video.model} must be preserved (${options.model})`);
-  return job;
-}
-
-async function assertVideoGenerationErrorCode(
-  run: () => Promise<unknown>,
-  code: VideoGenerationError["code"],
-  label: string,
-): Promise<void> {
-  let error: unknown;
-  try {
-    await run();
-  } catch (caught) {
-    error = caught;
-  }
-  if (!(error instanceof VideoGenerationError))
-    throw new Error(`${label}; got ${error === undefined ? "a successful result" : String(error)}`);
-  if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
-}
-
-export interface ModerationConformanceOptions {
-  readonly provider: ModerationProvider;
-  readonly model: string;
-  /** When set, an oversized input must fail with `ModerationError("input_too_large")`. */
-  readonly maxInputChars?: number;
-  /** Happy-path probe: a benign string classification. */
-  readonly sample?: { readonly input?: string };
-}
-
-/** Offline conformance for any `ModerationProvider` (plan 061): typed empty-input
- *  and oversized-input errors, plus a classification probe — every category
- *  verdict carries a numeric score in [0,1], a boolean `flagged`, and the
- *  top-level `flagged` boolean is present. Scores are provider output; conformance
- *  asserts no local policy decisions are baked in. */
-export async function runModerationConformance(options: ModerationConformanceOptions): Promise<ModerationResult | undefined> {
-  await assertModerationErrorCode(
-    () => options.provider.moderate({ input: "", model: options.model }),
-    "empty_input",
-    "empty inputs must reject with ModerationError(empty_input)",
-  );
-  if (options.maxInputChars !== undefined) {
-    await assertModerationErrorCode(
-      () => options.provider.moderate({ input: "x".repeat(options.maxInputChars! + 1), model: options.model }),
-      "input_too_large",
-      `inputs over ${options.maxInputChars} chars must reject with ModerationError(input_too_large)`,
-    );
-  }
-  if (!options.sample) return undefined;
-  const classified = await options.provider.moderate({ input: options.sample.input ?? "conformance probe", model: options.model });
-  if (Array.isArray(classified)) throw new Error("single-string input must classify to one ModerationResult, not a batch");
-  const result = classified as ModerationResult;
-  if (typeof result.flagged !== "boolean") throw new Error("moderation results must carry a top-level flagged boolean");
-  const entries = Object.entries(result.categories);
-  if (entries.length === 0) throw new Error("moderation results must expose at least one category verdict");
-  for (const [name, verdict] of entries) {
-    if (typeof verdict.score !== "number" || !(verdict.score >= 0 && verdict.score <= 1))
-      throw new Error(`category ${name} score ${verdict.score} must be a number in [0,1]`);
-    if (typeof verdict.flagged !== "boolean") throw new Error(`category ${name} verdict must carry a flagged boolean`);
-  }
-  return result;
-}
-
-async function assertModerationErrorCode(run: () => Promise<unknown>, code: ModerationError["code"], label: string): Promise<void> {
-  let error: unknown;
-  try {
-    await run();
-  } catch (caught) {
-    error = caught;
-  }
-  if (!(error instanceof ModerationError)) throw new Error(`${label}; got ${error === undefined ? "a successful result" : String(error)}`);
-  if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
-}
-
-export interface BatchJobsConformanceOptions {
-  readonly provider: BatchJobsProvider;
-  /** Sample lifecycle driver: submitted via `submit` and expected to reach `completed`. */
-  readonly sample?: {
-    readonly model: string;
-    readonly requests: readonly BatchRequestItem[];
-  };
-  /** When set, a submit over this count must fail with `BatchJobsError("too_many_requests")`. */
-  readonly maxRequests?: number;
-}
-
-/** Offline conformance for any `BatchJobsProvider` (plan 061): typed empty/oversized
- *  submit errors, opaque job ids, status returning members of the neutral state
- *  union, terminal resolution via `pollBatch` (plain utility), and paged results
- *  that walk to exhaustion with cursor continuity. Failure/cancel terminal
- *  transitions are covered by provider fakes in adapter test suites. */
-export async function runBatchJobsConformance(options: BatchJobsConformanceOptions): Promise<void> {
-  await assertBatchJobsErrorCode(
-    () => options.provider.submit({ model: "batch-model", requests: [] }),
-    "empty_requests",
-    "empty submits must reject with BatchJobsError(empty_requests)",
-  );
-  if (options.maxRequests !== undefined) {
-    await assertBatchJobsErrorCode(
-      () =>
-        options.provider.submit({ model: "batch-model", requests: Array.from({ length: options.maxRequests! + 1 }, () => ({ body: {} })) }),
-      "too_many_requests",
-      `submits over ${options.maxRequests} requests must reject with BatchJobsError(too_many_requests)`,
-    );
-  }
-  if (!options.sample) return;
-  const submitted = await options.provider.submit({ model: options.sample.model, requests: options.sample.requests });
-  if (typeof submitted.id !== "string" || submitted.id.length === 0) throw new Error("submit must return an opaque non-empty job id");
-  const status = await options.provider.status(submitted.id);
-  if (typeof status.state !== "string") throw new Error("status must return a typed job state");
-  const terminal = await pollBatch(options.provider, submitted.id, { intervalMs: 1, maxAttempts: 10 });
-  if (terminal.state !== "completed") throw new Error(`sample job must reach completed; got ${terminal.state}`);
-  const seen: string[] = [];
-  let cursor: string | null | undefined = null;
-  let pages = 0;
-  while (pages < 10) {
-    const page = await options.provider.results(submitted.id, { cursor: cursor ?? null });
-    for (const item of page.items) {
-      if (typeof item.customId !== "string" || item.customId.length === 0) throw new Error("result items must carry non-empty custom ids");
-      seen.push(item.customId);
+    const noSchemaReq: ProviderRequest = {
+      model: modelConfig,
+      messages: baseRequest.messages,
+    };
+    const events = await collectProviderEvents(options.factory(trackingFetch), noSchemaReq);
+    if (fetched) throw new Error("systemOneConformance: request without structuredOutput must fail before fetch");
+    const terminal = events.at(-1);
+    if (!terminal || terminal.type !== "error" || !terminal.error.message.includes("structuredOutput")) {
+      throw new Error("systemOneConformance: expected structuredOutput rejection error event before fetch");
     }
-    if (!page.nextCursor) break;
-    if (page.nextCursor === cursor) throw new Error("results cursor must advance between pages");
-    cursor = page.nextCursor;
-    pages += 1;
   }
-  if (seen.length === 0) throw new Error("completed job must expose at least one result item");
-  if (new Set(seen).size !== seen.length) throw new Error("result paging must not duplicate items across pages");
+
+  // 3. Schema-valid rendering & event sequence
+  {
+    const canaryKey = "sk-systemone-conformance-key";
+    let sentAuth: string | null = null;
+    const happyFetch = (async (_input: unknown, init?: RequestInit) => {
+      sentAuth = new Headers(init?.headers).get("authorization");
+      return new Response(JSON.stringify(OK_RESPONSE), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+
+    const provider = options.factory(happyFetch, { apiKey: canaryKey });
+    const events = await collectProviderEvents(provider, baseRequest);
+    const types = events.map((e) => e.type);
+    if (types[0] !== "message_start") throw new Error("systemOneConformance: expected message_start as first event");
+    const textDelta = events.find((e) => e.type === "content_delta" && e.content.type === "text");
+    if (!textDelta || textDelta.type !== "content_delta" || textDelta.content.type !== "text") {
+      throw new Error("systemOneConformance: expected text content_delta");
+    }
+    const rendered = JSON.parse(textDelta.content.text);
+    if (rendered.verdict !== "ask" || rendered.irreversible !== true) {
+      throw new Error(`systemOneConformance: rendered output mismatch: ${JSON.stringify(rendered)}`);
+    }
+    const done = events.at(-1);
+    if (!done || done.type !== "done" || done.stopReason !== "end_turn") {
+      throw new Error("systemOneConformance: expected terminal done event with stopReason: end_turn");
+    }
+    if (!done.usage || done.usage.inputTokens !== 96 || done.usage.outputTokens !== 0) {
+      throw new Error("systemOneConformance: expected usage accounting on done event");
+    }
+    assertNoSecretLeak(events, [canaryKey]);
+    if (options.keyRequired !== false && sentAuth !== `Bearer ${canaryKey}`) {
+      throw new Error(`systemOneConformance: expected Bearer authorization header with key, got ${sentAuth}`);
+    }
+    scenarios.push({ name: "schema-valid-rendering", ok: true, events });
+  }
+
+  // 4. boolean_threshold validation
+  {
+    // Out of range fails before fetch
+    for (const badThreshold of [1.5, -0.1]) {
+      let fetched = false;
+      const trackingFetch = (async () => {
+        fetched = true;
+        return new Response(JSON.stringify(OK_RESPONSE), { status: 200, headers: { "content-type": "application/json" } });
+      }) as unknown as typeof fetch;
+      const req: ProviderRequest = {
+        ...baseRequest,
+        options: { ...baseRequest.options, compat: { boolean_threshold: badThreshold } },
+      };
+      const events = await collectProviderEvents(options.factory(trackingFetch), req);
+      if (fetched) throw new Error("systemOneConformance: out-of-range boolean_threshold must fail before fetch");
+      const terminal = events.at(-1);
+      if (!terminal || terminal.type !== "error" || !terminal.error.message.includes("boolean_threshold")) {
+        throw new Error("systemOneConformance: expected boolean_threshold error event");
+      }
+    }
+
+    // In-range threshold behavior (0.6 probability vs 0.9 threshold and 0.5 threshold)
+    const thresholdResponse = {
+      model: `${probe.id}-model`,
+      answers: { verdict: { type: "choice", choice: "ask" }, irreversible: { type: "noul", noul: 0.6 } },
+      usage: { input_tokens: 10, output_tokens: 0 },
+    };
+    const makeThresholdFetch = () =>
+      (async () =>
+        new Response(JSON.stringify(thresholdResponse), { status: 200, headers: { "content-type": "application/json" } })) as unknown as typeof fetch;
+
+    const highReq: ProviderRequest = {
+      ...baseRequest,
+      options: { ...baseRequest.options, compat: { boolean_threshold: 0.9 } },
+    };
+    const lowReq: ProviderRequest = {
+      ...baseRequest,
+      options: { ...baseRequest.options, compat: { boolean_threshold: 0.5 } },
+    };
+    const highEvents = await collectProviderEvents(options.factory(makeThresholdFetch()), highReq);
+    const lowEvents = await collectProviderEvents(options.factory(makeThresholdFetch()), lowReq);
+    const highText = highEvents.find((e) => e.type === "content_delta" && e.content.type === "text");
+    const lowText = lowEvents.find((e) => e.type === "content_delta" && e.content.type === "text");
+    const highParsed = JSON.parse(highText && highText.type === "content_delta" && highText.content.type === "text" ? highText.content.text : "{}");
+    const lowParsed = JSON.parse(lowText && lowText.type === "content_delta" && lowText.content.type === "text" ? lowText.content.text : "{}");
+    if (highParsed.irreversible !== false) {
+      throw new Error(`systemOneConformance: 0.6 noul under 0.9 threshold should be false, got ${highParsed.irreversible}`);
+    }
+    if (lowParsed.irreversible !== true) {
+      throw new Error(`systemOneConformance: 0.6 noul under 0.5 threshold should be true, got ${lowParsed.irreversible}`);
+    }
+    scenarios.push({ name: "boolean-threshold-validation", ok: true });
+  }
+
+  // 5. 401 and 422 mapping
+  {
+    const canary401 = "sk-bad-secret-401";
+    let attempts401 = 0;
+    const fetch401 = (async () => {
+      attempts401++;
+      return new Response(JSON.stringify({ error: { code: "invalid_api_key", message: `bad key ${canary401}` } }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    const events401 = await collectProviderEvents(options.factory(fetch401, { apiKey: canary401 }), baseRequest);
+    if (attempts401 !== 1) throw new Error(`systemOneConformance: 401 must not be retried, attempts: ${attempts401}`);
+    const term401 = events401.at(-1);
+    if (!term401 || term401.type !== "error" || !term401.error.message.includes("401")) {
+      throw new Error("systemOneConformance: 401 response must yield error event mentioning 401");
+    }
+    if (term401.error.message.includes(canary401)) {
+      throw new Error("systemOneConformance: 401 error message must redact API key");
+    }
+    assertNoSecretLeak(events401, [canary401]);
+
+    let attempts422 = 0;
+    const detail422 = "questions.verdict.criteria: expected at least 2 options";
+    const fetch422 = (async () => {
+      attempts422++;
+      return new Response(JSON.stringify({ error: { code: "invalid_request", message: detail422 } }), {
+        status: 422,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    const events422 = await collectProviderEvents(options.factory(fetch422), baseRequest);
+    if (attempts422 !== 1) throw new Error(`systemOneConformance: 422 must not be retried, attempts: ${attempts422}`);
+    const term422 = events422.at(-1);
+    if (!term422 || term422.type !== "error" || !term422.error.message.includes("expected at least 2 options")) {
+      throw new Error("systemOneConformance: 422 response must surface field detail in error event");
+    }
+    scenarios.push({ name: "error-mapping-401-422", ok: true });
+  }
+
+  // 6. Malformed success
+  {
+    for (const badAnswer of [
+      { type: "choice", choice: "ask", confidence: 2 },
+      { type: "choice", choice: "ask", probabilities: { ask: -1 } },
+      { type: "choice", choice: 123 },
+    ]) {
+      const malformedFetch = (async () =>
+        new Response(JSON.stringify({ ...OK_RESPONSE, answers: { verdict: badAnswer } }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })) as unknown as typeof fetch;
+      const events = await collectProviderEvents(options.factory(malformedFetch), baseRequest);
+      const term = events.at(-1);
+      if (!term || term.type !== "error" || events.some((e) => e.type === "done" || e.type === "content_delta")) {
+        throw new Error("systemOneConformance: malformed success must yield error event and no decision");
+      }
+    }
+    scenarios.push({ name: "malformed-success-rejected", ok: true });
+  }
+
+  // 7. Credential resolution once per request and no secret leak
+  {
+    let resolutions = 0;
+    const secret = "rotating-systemone-conformance-credential";
+    const keySource = {
+      resolve: ({ provider }: { provider: string }) => {
+        resolutions++;
+        if (provider !== probe.id && !provider.toLowerCase().includes(probe.id.toLowerCase())) {
+          throw new Error(`systemOneConformance: provider mismatch in credential resolution: expected ${probe.id}, got ${provider}`);
+        }
+        return { type: "api_key", value: secret };
+      },
+    };
+    const failingFetch = (async (_input: unknown, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get("authorization");
+      if (auth !== `Bearer ${secret}`) {
+        throw new Error(`systemOneConformance: expected Bearer ${secret}, got ${auth}`);
+      }
+      throw new Error(`transport failed with ${secret}`);
+    }) as unknown as typeof fetch;
+    const events = await collectProviderEvents(options.factory(failingFetch, { apiKey: keySource }), baseRequest);
+    if (resolutions !== 1) {
+      throw new Error(`systemOneConformance: credential must resolve once per request, resolved ${resolutions} times`);
+    }
+    const term = events.at(-1);
+    if (!term || term.type !== "error") {
+      throw new Error("systemOneConformance: expected error event on transport failure");
+    }
+    assertNoSecretLeak(events, [secret]);
+    scenarios.push({ name: "credential-resolution-once-and-redacted", ok: true });
+  }
+
+  // 8. Key policy: anonymous keyless when keyRequired === false
+  if (options.keyRequired === false) {
+    let capturedAuth: string | null = null;
+    const fake = (async (_input: unknown, init?: RequestInit) => {
+      capturedAuth = new Headers(init?.headers).get("authorization");
+      return new Response(JSON.stringify(OK_RESPONSE), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+    await collectProviderEvents(options.factory(fake), baseRequest);
+    if (capturedAuth !== null) {
+      throw new Error(`systemOneConformance: keyRequired: false must send no authorization header without a key, got ${capturedAuth}`);
+    }
+    scenarios.push({ name: "keyless-sends-no-auth", ok: true });
+  }
+
+  // 9. Abort before fetch
+  {
+    await assertAbortIsObserved({ provider: options.factory(), request: baseRequest });
+    scenarios.push({ name: "abort-observed", ok: true });
+  }
+
+  // 10. Wire recordings replay
+  if (options.recordings) {
+    const recordingsDir =
+      options.recordings instanceof URL ? fileURLToPath(options.recordings) : resolve(String(options.recordings));
+    if (existsSync(recordingsDir)) {
+      const files = findJsonFiles(recordingsDir);
+      for (const file of files) {
+        const scenarioName = basename(file, ".json");
+        const raw = readFileSync(file, "utf8");
+        const parsed = JSON.parse(raw);
+        const exchanges: RecordedExchange[] = Array.isArray(parsed)
+          ? parsed
+          : parsed && typeof parsed === "object" && "responseBody" in parsed
+            ? [parsed as RecordedExchange]
+            : [];
+        if (exchanges.length === 0) continue;
+
+        let requestForScenario: ProviderRequest;
+        if (parsed.request) {
+          requestForScenario = {
+            ...parsed.request,
+            model: {
+              ...modelConfig,
+              ...parsed.request.model,
+              capabilities: parsed.request.model?.capabilities ?? modelConfig.capabilities,
+            },
+          };
+        } else {
+          requestForScenario = baseRequest;
+        }
+
+        const replay = replayFetch(exchanges);
+        const provider = options.factory(replay as unknown as typeof fetch, { apiKey: "conformance-wire-key" });
+
+        const events = await collectProviderEvents(provider, requestForScenario);
+        const terminal = events.at(-1);
+        if (!terminal || (terminal.type !== "done" && terminal.type !== "error")) {
+          throw new Error(`systemOneConformance: recorded scenario "${scenarioName}" must end with done or error`);
+        }
+        if (exchanges[0]?.status && exchanges[0].status >= 400) {
+          if (terminal.type !== "error") {
+            throw new Error(`systemOneConformance: recorded scenario "${scenarioName}" expected error event for status ${exchanges[0].status}`);
+          }
+        } else {
+          if (terminal.type !== "done") {
+            throw new Error(
+              `systemOneConformance: recorded scenario "${scenarioName}" expected done event, got ${terminal.type}${
+                terminal.type === "error" ? `: ${terminal.error.message}` : ""
+              }`,
+            );
+          }
+        }
+        assertNoSecretLeak(events, ["conformance-wire-key"]);
+        scenarios.push({ name: `wire:${scenarioName}`, ok: true, events });
+      }
+    }
+  }
+
+  return { ok: true, scenarios };
 }
 
-async function assertBatchJobsErrorCode(run: () => Promise<unknown>, code: BatchJobsError["code"], label: string): Promise<void> {
-  let error: unknown;
-  try {
-    await run();
-  } catch (caught) {
-    error = caught;
-  }
-  if (!(error instanceof BatchJobsError)) throw new Error(`${label}; got ${error === undefined ? "a successful result" : String(error)}`);
-  if (error.code !== code) throw new Error(`${label}; got code ${error.code} (${error.message})`);
-}
+

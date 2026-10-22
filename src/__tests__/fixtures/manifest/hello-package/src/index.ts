@@ -7,6 +7,7 @@ export default {
   name: "@acme/hello",
   version: "1.2.3",
   description: "Manifest fixture package.",
+  requires: { api: 1 },
   capabilities: ["host-ui"],
   config: {
     type: "object",

@@ -22,34 +22,26 @@ The kernel tools, skills, and commands registries, plus the tool packages: `tool
 - **`tools-web` with no key or binary:** registers nothing, emits a status note, and provides `web.fetch` when it is configured.
 - **Heavy dependencies stay isolated:** installing `tools-coding` never loads Playwright or the Office parsers.
 
-## Today (0.12 code being replaced)
+## Today
 
-- Kernel parts:
-  - `src/tools.ts` (registry and validation)
-  - `src/agent-tool-dispatch.ts`, `src/agent-session/session/tool-round.ts`
-  - `src/tool-effects.ts`, `src/execution-policy.ts`, `src/security.ts` (`PermissionPolicy`)
-  - `src/skills.ts`, `src/skill-load.ts`, `src/skill-disclosure.ts`
-  - `src/registry-options.ts` (duplicate default is `"replace"`)
-- Packages:
-  - `packages/prism-coding-tools/src/{agent,security,openapi,computer-use-linux,dev,impeccable}`
-  - `packages/web-tools/src/{brave.ts,exa.ts,firecrawl.ts,obscura,browser}`
-  - `packages/prism-work/src/{connectors,documents,sheets,diagrams,document-reader,document-extraction,tools,skills}`
-- Instruction files: `src/node/instruction-injectors.ts`, `src/node/system-project-prompts.ts`, `packages/agent-sdk/src/planes/instructions.ts`.
-- Lab code being deleted: `packages/prism-code/src/{approval.ts,tools.ts,tool-modules.ts,web.ts,prompt.ts,skills.ts}`.
-- Current docs (released contract): [tools.md](../../../../docs/tools.md), [coding-agent-tools.md](../../../../docs/coding-agent-tools.md), [coding-security.md](../../../../docs/coding-security.md), [tool-effects.md](../../../../docs/tool-effects.md), [tool-execution-primitives.md](../../../../docs/tool-execution-primitives.md), [context-and-skills.md](../../../../docs/context-and-skills.md), [web-tools.md](../../../../docs/web-tools.md), [browser-automation.md](../../../../docs/browser-automation.md), [work-tools.md](../../../../docs/work-tools.md), [documents.md](../../../../docs/documents.md), [sheets.md](../../../../docs/sheets.md), [computer-use-linux.md](../../../../docs/computer-use-linux.md), [openapi-tools.md](../../../../docs/openapi-tools.md), [system-prompts.md](../../../../docs/system-prompts.md).
+- Kernel: `src/tools.ts` (`createToolRegistry`, schema validation), `src/agent-tool-dispatch.ts` and `src/loop/dispatch.ts` (dispatch through `RunController.executeTools`), `src/tool-effects.ts` (declared `effects`), `src/registry-options.ts`; skills in `src/skills.ts`, `src/skill-load.ts` (`load_skill`), `src/skill-disclosure.ts`, `src/skills-catalog.ts`.
+- Tool packages (`packages/tools/*`): `coding` (file, search, shell, git, checks, todo, `ask_user_decision`, sandboxes, the `workspace` service, the `coding.targets` service, `tool.call` hard denies), `web` (Brave, Exa, Firecrawl, Obscura; provides `web.fetch`), `browser`, `work` (documents, sheets, diagrams, document reader, connectors, bundled skills), `computer-use`, `openapi`, `research` (citation ledger, `cite`, `run.end` check).
+- Policy and instructions: `@arnilo/prism-approval` (`packages/policy/approval`) owns prompting over `effects`; `@arnilo/prism-context-files` (`packages/context/files`) owns `AGENTS.md`/`SYSTEM.md` layers.
+- In flight: plans 189 (coding tools) and 190 (skills) on the release path change tool names, schemas, and the skill load path; read them before touching these areas.
+- Current docs: [tools.md](../../../../docs/tools.md), [agent.md](../../../../docs/agent.md) (skills), [coding-security.md](../../../../docs/coding-security.md), [resource-loading.md](../../../../docs/resource-loading.md); [`coding`](../../../../packages/tools/coding/README.md), [`web`](../../../../packages/tools/web/README.md), [`browser`](../../../../packages/tools/browser/README.md), [`work`](../../../../packages/tools/work/README.md), [`computer-use`](../../../../packages/tools/computer-use/README.md), [`openapi`](../../../../packages/tools/openapi/README.md), [`research`](../../../../packages/tools/research/README.md), [`approval`](../../../../packages/policy/approval/README.md), [`files`](../../../../packages/context/files/README.md).
 
 ## Graft queries
 
-- `graft ask "tool dispatch blocked reason permission" --source`
-- `graft ask "ExecutionPolicy spawn gate sandbox root" --source`
+- `graft ask "tool.call hard deny coding targets roots" --source`
+- `graft ask "sandbox backend shell spawn native docker e2b" --source --in packages/tools/coding/`
 - `graft ask "load_skill progressive disclosure catalog" --source`
 - `graft callers createToolRegistry --depth 2`
 
 ## Tests
 
-- `src/__tests__/tools.test.ts`, `tool-effects.test.ts`, `execution-policy.test.ts`, `skills*.test.ts`, `tool-search.test.ts`
-- `packages/prism-coding-tools/src/**/__tests__/`, `packages/web-tools/src/**/__tests__/`, `packages/prism-work` suites (run from each workspace directory)
-- Target suite: tool conformance (`@arnilo/prism/testing/tool-conformance`)
+- Kernel: `src/__tests__/tools.test.ts`, `tool-effects.test.ts`, `tool-effects-annotation.test.ts`, `tool-narrowing.test.ts`, `tool-result-content.test.ts`, `skills.test.ts`, `skill-load.test.ts`, `skill-disclosure.test.ts`
+- Packages: `packages/tools/<name>/src/__tests__/`, `packages/policy/approval/src/__tests__/`, `packages/context/files/src/__tests__/` (run from each package directory)
+- Published conformance: `@arnilo/prism/testing/tool-conformance` (including `assertGateIntegrity`) and `tool-effect-store-conformance`
 
 ## Rules
 

@@ -3,7 +3,9 @@ import type {
   AgentEvent,
   AgentEventPayload,
   ContextBlock,
+  EventOrigin,
   JsonObject,
+  JsonValue,
   Message,
   ProviderEvent,
   ProviderRequest,
@@ -26,8 +28,8 @@ export interface HookContext {
   readonly sessionId: string;
   readonly runId: string;
   readonly signal?: AbortSignal;
-  /** Emit an agent event (used by `RunController.emit`). */
-  readonly emit: (event: AgentEvent) => void;
+  /** Emit a `package.event` owned by the registering package. Catalog event names are rejected. */
+  readonly emit: (name: string, data: JsonValue) => void;
   /** Stop a transform chain with a reason; the bus throws `HookRejectedError`. */
   readonly reject: (reason: string) => HookRejection;
   /** The session, bound to the registering owner. Absent when the bus is not bound to a session. */
@@ -95,6 +97,8 @@ export interface ToolCallHookPayload {
   readonly callId: string;
   readonly sessionId: string;
   readonly runId: string;
+  /** Absent for the kernel's own model-loop calls. */
+  readonly origin?: EventOrigin;
 }
 
 export type ToolCallDecision =

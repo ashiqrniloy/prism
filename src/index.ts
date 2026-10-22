@@ -1,30 +1,9 @@
-export { resolveAgentDefinition } from "./agent-definitions.js";
-export type { AgentEventSourceErrorCode } from "./agent-event-source.js";
-export { AgentEventSourceError, createMemoryAgentEventSource, isTerminalAgentEventType } from "./agent-event-source.js";
-export type {
-  AgentRunLifecycle,
-  AgentRunLifecycleAgent,
-  AgentRunLifecycleOptions,
-  AgentRunLifecycleRequest,
-  AgentRunLifecycleStreamRequest,
-} from "./agent-run-lifecycle.js";
-export { createAgentRunLifecycle } from "./agent-run-lifecycle.js";
+export type { AgentEventSourceErrorCode, CheckpointRestoreAudit, CheckpointRestoreAuditEntry } from "./contracts-protocol.js";
+export { AgentEventSourceError, isTerminalAgentEventType } from "./contracts-protocol.js";
 export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
-export {
-  AGENT_RUN_STATE_NAMESPACE,
-  AGENT_RUN_STATE_SCHEMA_VERSION,
-  agentFingerprint,
-  boundCheckpointMetadata,
-  DEFAULT_MAX_AGENT_RUN_STATE_BYTES,
-  HARD_MAX_AGENT_RUN_STATE_BYTES,
-  loadAgentRunState,
-  MAX_AGENT_RUN_METADATA_BYTES,
-  readCheckpointMetadata,
-  resolveCheckpointMetadata,
-} from "./agent-run-state.js";
-export { createAgent, resumeAgentRun, resumeAgentRunStream } from "./agents.js";
-export type { SuspendedRunEntryData, SuspendedRunLoopRef } from "./suspended-run.js";
-export { loadSuspendedRunEntry, parseSuspendedRunEntry, SUSPENDED_RUN_ENTRY_SCHEMA_VERSION } from "./suspended-run.js";
+export { AGENT_RUN_STATE_SCHEMA_VERSION, agentFingerprint, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES } from "./agent-run-state.js";
+export { EventSubscriber, SubscriberOverflowError } from "./agent-session/event-subscriber.js";
+export { createAgent } from "./agents.js";
 export type {
   ArtifactApproval,
   ArtifactApprovalState,
@@ -38,9 +17,6 @@ export type {
   ArtifactDeliveryToken,
   ArtifactRecord,
   ArtifactRevision,
-  CitationIntegrityReason,
-  CitationIntegrityResult,
-  CitationLiveSource,
   CitationSupport,
 } from "./artifacts.js";
 export {
@@ -48,76 +24,11 @@ export {
   ARTIFACT_CHECKPOINT_NAMESPACE,
   ArtifactBodyStoreError,
   ArtifactError,
-  approvalEvidenceIntact,
   artifactApprovalState,
   artifactCheckpointKey,
-  checkCitationIntegrity,
   citationBindingDigest,
   HARD_CITATION_EXCERPT_BYTES,
 } from "./artifacts.js";
-export type {
-  AttentionTruncationTrigger,
-  AttentionTruncationTriggerOptions,
-  PersistedAttentionStickyFrontier,
-} from "./attention-compiler.js";
-export {
-  ATTENTION_BUDGET_ERROR_CODE,
-  AttentionBudgetError,
-  createAttentionCompiler,
-  createAttentionTruncationTrigger,
-  DEFAULT_ATTENTION_COMPACT_RATIO,
-  DEFAULT_ATTENTION_KEEP_LAST,
-  DEFAULT_ATTENTION_RESERVE_TOKENS,
-  DEFAULT_ATTENTION_THINKING_KEEP_TURNS,
-  DEFAULT_ATTENTION_TRIGGER_RATIO,
-  DEFAULT_ATTENTION_TRUNCATION_THRESHOLD,
-  isAttentionBudgetError,
-  resolveAttentionReserveTokens,
-  resolveInputCap,
-  resolveRunAttentionCompiler,
-} from "./attention-compiler.js";
-export type {
-  ApplyCacheControlOptions,
-  CacheControlledContentBlock,
-  CacheControlledMessage,
-  CacheControlValue,
-  CacheUsageReport,
-} from "./cache-helpers.js";
-export {
-  applyCacheControl,
-  cacheHitRate,
-  cacheSavings,
-  cacheUsageReport,
-  mapCacheRetention,
-  resolveBreakpoint,
-  sanitizeCacheKey,
-  systemCacheControlField,
-} from "./cache-helpers.js";
-export type {
-  CacheTelemetry,
-  CacheTelemetryOptions,
-  CacheTelemetryReport,
-  CacheTelemetrySample,
-} from "./cache-telemetry.js";
-export {
-  CACHE_TELEMETRY_OVERFLOW_KEY,
-  CacheTelemetryError,
-  createCacheTelemetry,
-  DEFAULT_CACHE_TELEMETRY_CAP,
-} from "./cache-telemetry.js";
-export type { ProviderCapture, ProviderCaptureEntry, ProviderCaptureOptions, ProviderCapturePolicy } from "./capture.js";
-export { createProviderCapture } from "./capture.js";
-export type {
-  CheckpointRestoreAudit,
-  CheckpointRestoreAuditEntry,
-  CheckpointRestoreCompensation,
-  CheckpointRestoreHandler,
-  CheckpointRestoreHook,
-  RunCheckpointRestoreHooksOptions,
-} from "./checkpoint-restore.js";
-export { CheckpointRestoreError, DEFAULT_CHECKPOINT_RESTORE_TIMEOUT_MS, runCheckpointRestoreHooks } from "./checkpoint-restore.js";
-export type { MemoryCheckpointStoreOptions } from "./checkpoints.js";
-export { CHECKPOINT_CONFLICT_CODE, CheckpointConflictError, createMemoryCheckpointStore } from "./checkpoints.js";
 export type { DefaultCompactorOptions } from "./compaction.js";
 export { createDefaultCompactor, isCompactionEntryData } from "./compaction.js";
 export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js";
@@ -159,44 +70,15 @@ export {
   sniffMediaMimeType,
   UnsupportedModalityError,
 } from "./content.js";
-export type {
-  ContextBudget,
-  ContextBudgetMessageGroups,
-  ContextBudgetOmission,
-  ContextBudgetOmissionKind,
-  ContextBudgetReport,
-  TokenEstimator,
-} from "./context-budget.js";
-export {
-  applyContextBudget,
-  CONTEXT_BUDGET_ERROR_CODE,
-  CONTEXT_BUDGET_REPORT_METADATA_KEY,
-  ContextBudgetError,
-  DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS,
-  estimateAssemblyTokens,
-  estimateMessageBytes,
-  estimateMessageTokens,
-  estimateTextBytes,
-  estimateTextTokens,
-  getContextBudgetReport,
-  HARD_MAX_CONTEXT_BUDGET_BYTES,
-  HARD_MAX_CONTEXT_BUDGET_OMISSIONS,
-  HARD_MAX_CONTEXT_BUDGET_TOKENS,
-  isContextBudgetError,
-  resolveContextBudget,
-} from "./context-budget.js";
+export type { ContextSource } from "./context-build.js";
+export { registerContextSources, withContextBlocks } from "./context-build.js";
 export type * from "./contracts.js";
 export type {
   ApprovalOutcome,
-  AttentionCompiler,
-  AttentionCompilerContext,
-  AttentionCompilerOptions,
-  AttentionCompilerSetting,
-  AttentionInputCapOptions,
-  AttentionReport,
   CompactionTrigger,
   CompactionTriggerContext,
   ContextMeter,
+  Decision,
   DecisionScope,
   ModelFamily,
   NestedRunApproval,
@@ -205,22 +87,16 @@ export type {
   PendingDecision,
   PendingDecisionKind,
   ProviderResolver,
-  RealtimeCaps,
-  RealtimeEvent,
-  RealtimeSession,
-  RealtimeSessionFactory,
-  RealtimeSessionOptions,
   ResolveShouldCompactInput,
   ResolveShouldCompactOptions,
   ResumeNestedRun,
-  Decision,
   RunLimitCounters,
   RunLimitName,
-  SecureAgentOptions,
   StickyDecision,
   TokenEstimate,
   TokenEstimateConfidence,
   ToolCallAuthority,
+  ToolCapabilityKind,
   ToolEffectClassifier,
   ToolEffectDeclaration,
   ToolEffectIdempotency,
@@ -232,22 +108,16 @@ export type {
   ToolEffectTransition,
   ToolElicitationRequest,
 } from "./contracts.js";
-export type { ToolCapabilityKind } from "./contracts.js";
 export {
+  AGENT_DISPOSED_CODE,
+  AgentDisposedError,
   AgentDecisionError,
   AgentDelegationSuspendedError,
   AgentLoopStateError,
   AgentRunStateError,
-  assertBatchJobsSupported,
   assertCompactionTrigger,
   assertEmbeddingsSupported,
-  assertImageGenerationSupported,
-  assertModerationSupported,
   assertSessionMetadataKey,
-  assertSpeechSupported,
-  assertTranscriptionSupported,
-  assertVideoGenerationSupported,
-  BatchJobsError,
   DEFAULT_MAX_PENDING_DECISIONS,
   DEFAULT_MAX_PENDING_STEER_BYTES,
   DEFAULT_MAX_PENDING_STEERS,
@@ -270,9 +140,9 @@ export {
   HARD_MAX_PENDING_DECISIONS,
   HARD_MAX_PENDING_STEER_BYTES,
   HARD_MAX_PENDING_STEERS,
+  HARD_MAX_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_SEARCH_CURSOR_BYTES,
   HARD_MAX_SESSION_SEARCH_FTS_CANDIDATES,
-  HARD_MAX_SESSION_LIST_LIMIT,
   HARD_MAX_SESSION_SEARCH_LIMIT,
   HARD_MAX_SESSION_SEARCH_LINEAR_BYTES,
   HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES,
@@ -281,8 +151,8 @@ export {
   HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES,
   HARD_MAX_SNAPSHOT_CACHE_TTL_MS,
   HARD_MAX_STICKY_DECISIONS,
-  ImageGenerationError,
-  isBatchJobTerminal,
+  assertSessionLinkFilter,
+  assertSessionLinks,
   isSessionAppendConflict,
   isSessionEntryKind,
   isSessionMetadataConflict,
@@ -294,20 +164,16 @@ export {
   MAX_ATTRIBUTION_DEPTH,
   MAX_DECISION_REASON_BYTES,
   MAX_ELICITATION_BYTES,
-  ModerationError,
-  modelSupportsBatchJobs,
+  MAX_SESSION_LINK_ID_LENGTH,
   modelSupportsEmbeddings,
-  modelSupportsImageGeneration,
-  modelSupportsModeration,
-  modelSupportsSpeech,
-  modelSupportsTranscription,
-  modelSupportsVideoGeneration,
-  pollBatch,
+  OWNERSHIP_WIDEN_CODE,
+  OwnershipScopeError,
   resolveSessionSearchQuery,
   resolveShouldCompact,
   SESSION_APPEND_CONFLICT_CODE,
   SESSION_ENTRY_KINDS,
   SESSION_ENTRY_SCHEMA_VERSION,
+  SESSION_LINKS_DATA_KEY,
   SESSION_METADATA_CONFLICT_CODE,
   SESSION_NOT_FOUND_CODE,
   SESSION_SEARCH_UNSUPPORTED_CODE,
@@ -318,138 +184,23 @@ export {
   SessionMetadataConflictError,
   SessionNotFoundError,
   SessionSearchUnsupportedError,
-  SpeechError,
+  toRunResultStatus,
   UNSUPPORTED_STORE_CAPABILITY_CODE,
   UnsupportedStoreCapabilityError,
-  toRunResultStatus,
-  TranscriptionError,
-  VideoGenerationError,
 } from "./contracts.js";
+// Plan 159 Task 8: `Principal` is the only identity type the kernel names; the rest of the identity
+// module moved to `@arnilo/prism-governance`.
+export type { Principal } from "./contracts-core/principal.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
-export type {
-  ConversationBranchRef,
-  ConversationReplayCursor,
-  ConversationThread,
-  ConversationThreadState,
-} from "./conversations.js";
-export {
-  CONVERSATION_METADATA_KEY,
-  ConversationError,
-  conversationMarkerMetadata,
-  conversationThreadFromRecord,
-  DEFAULT_MAX_CONVERSATION_CURSOR_BYTES,
-  decodeConversationReplayCursor,
-  encodeConversationReplayCursor,
-  HARD_MAX_CONVERSATION_CURSOR_BYTES,
-} from "./conversations.js";
 export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js";
 export { resolveCredentialValue } from "./credentials/index.js";
-export type { DelegatedAgentStepInput } from "./delegated-agent-step.js";
-export {
-  createDelegatedAgentStep,
-  DelegatedAgentStepError,
-  MAX_DELEGATED_AGENT_DURATION_MS,
-  MAX_DELEGATED_AGENT_EVENT_BYTES,
-  MAX_DELEGATED_AGENT_ID_BYTES,
-  MAX_DELEGATED_AGENT_NAME_BYTES,
-  MAX_DELEGATED_AGENT_STEP_INDEX,
-  MAX_DELEGATED_AGENT_TOKEN_COUNT,
-} from "./delegated-agent-step.js";
-export type {
-  DeviceAdapter,
-  DeviceAdmitRequest,
-  DeviceChunkResult,
-  DeviceConformanceResult,
-  DeviceKind,
-  DevicePolicyErrorCode,
-  DevicePolicyOptions,
-  DeviceStreamLimits,
-  ResolvedDevicePolicy,
-} from "./devices.js";
-export {
-  acceptDeviceChunk,
-  assertDeviceAdmit,
-  DEFAULT_DEVICE_MAX_CHUNK_BYTES,
-  DEFAULT_DEVICE_MAX_CONCURRENT_SESSIONS,
-  DevicePolicyError,
-  HARD_DEVICE_MAX_CHUNK_BYTES,
-  HARD_DEVICE_MAX_CONCURRENT_SESSIONS,
-  redactDeviceTelemetry,
-  resolveDevicePolicy,
-  runDevicePolicyConformance,
-} from "./devices.js";
-export type { EventMultiplexer, EventMultiplexerOptions, EventOverflowInfo, EventOverflowPolicy } from "./event-multiplexer.js";
-export { createEventMultiplexer, EVENT_MULTIPLEXER_SINGLE_CONSUMER_CODE, EventMultiplexerError } from "./event-multiplexer.js";
-export type {
-  ClaimGroundingEvidence,
-  ClaimGroundingEvidenceExtractor,
-  ClaimGroundingEvidenceExtractorContext,
-  ClaimGroundingGuardrailOptions,
-} from "./evidence-grounding.js";
-export { createClaimGroundingGuardrail } from "./evidence-grounding.js";
-export type { ExecutionAction, ExecutionDecision, ExecutionPolicy, ExecutionRisk } from "./execution-policy.js";
-export { applyExecutionDecision, assertExecutionAllowed, checkExecution, ExecutionDeniedError } from "./execution-policy.js";
-export type {
-  MemoryRunFeedbackStoreOptions,
-  PrepareRunFeedbackOptions,
-  RunFeedbackLimits,
-  RunFeedbackRun,
-  RunFeedbackRunResolver,
-} from "./feedback.js";
-export {
-  createMemoryRunFeedbackStore,
-  prepareRunFeedback,
-  RunFeedbackError,
-  requireRunFeedbackOwnership,
-  runFeedbackPageLimit,
-} from "./feedback.js";
-export type {
-  FieldEvidenceContext,
-  FieldEvidenceGuardrailOptions,
-  FieldEvidenceNormalizer,
-  FieldEvidenceRecord,
-  FieldEvidenceSource,
-  FieldEvidenceViolation,
-  FieldProvenanceClaim,
-} from "./field-evidence.js";
-export { createFieldEvidenceGuardrail } from "./field-evidence.js";
-export type {
-  ApplyFieldPolicyOptions,
-  AuditFieldRedaction,
-  AuditFieldRedactorLike,
-  AuditFieldRedactorOptions,
-  FieldPolicy,
-  FieldPolicyAction,
-  FieldPolicyDecision,
-  FieldPolicyInput,
-  ProtectedFieldPolicyOptions,
-} from "./field-policy.js";
-export {
-  ALLOW_FIELD_POLICY,
-  applyFieldPolicy,
-  createAuditFieldRedactor,
-  createProtectedFieldPolicy,
-  FIELD_POLICY_LIMITS,
-  FieldPolicyError,
-} from "./field-policy.js";
-export { BUILT_IN_GUARDRAIL_PACK_IDS } from "./guardrail-packs/index.js";
-export type {
-  CompiledGuardrailPacks,
-  CompiledGuardrailRules,
-  GuardrailPackRow,
-  GuardrailRunResult,
-  RunGuardrailListOptions,
-} from "./guardrails.js";
+
+export type { GuardrailRunResult, RunGuardrailListOptions } from "./guardrails.js";
 export {
   assertGuardrailsAllowed,
-  compileGuardrailPacks,
-  describeGuardrailPacks,
   GuardrailError,
-  GuardrailPackError,
   guardrailRefusalText,
   MAX_GUARDRAIL_CONCURRENCY,
-  MAX_GUARDRAIL_PACK_RULES,
-  MAX_GUARDRAIL_PACKS,
   runGuardrailList,
 } from "./guardrails.js";
 export type {
@@ -487,8 +238,7 @@ export type {
   TurnBeforeDecision,
   TurnBeforePayload,
 } from "./hooks/index.js";
-export { HOOK_CATALOG, HookError, HookRejectedError, UnknownHookError } from "./hooks/index.js";
-export { askEveryTool } from "./hooks/index.js";
+export { askEveryTool, HOOK_CATALOG, HookError, HookRejectedError, UnknownHookError } from "./hooks/index.js";
 export type {
   HostPort,
   HostUi,
@@ -496,6 +246,7 @@ export type {
   HostUiConfirmRequest,
   HostUiInputRequest,
   HostUiNotifyRequest,
+  HostUiTerminalRequest,
   HostUiOpenUrlRequest,
   HostUiRequest,
   HostUiRequestBase,
@@ -505,38 +256,6 @@ export type {
   HostUiSelectOption,
   HostUiSelectRequest,
 } from "./host/index.js";
-export { defaultLoop } from "./loop/index.js";
-export type { LoopStrategy, RunController, RunEndResult, RunTurnOptions, RunTurnResult } from "./loop/index.js";
-export {
-  createEnvRefCredentialResolver,
-  createSlotDefaults,
-  createSlotRegistry,
-  SlotConflictError,
-  UnknownSlotError,
-  UnknownSlotOwnerError,
-} from "./slots/index.js";
-export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js";
-export type {
-  AgentIdentity,
-  AssertIdentityActiveOptions,
-  IdentityLimits,
-  IdentityVerifier,
-  NarrowIdentityOptions,
-  Principal,
-  ResolvedIdentityLimits,
-} from "./identity.js";
-export {
-  assertIdentityActive,
-  assertIdentityMatchesOwnership,
-  assertIdentityPropagation,
-  DEFAULT_IDENTITY_LIMITS,
-  HARD_IDENTITY_LIMITS,
-  IdentityError,
-  identityTelemetryAttributes,
-  narrowIdentity,
-  ownershipFromIdentity,
-  resolveIdentityLimits,
-} from "./identity.js";
 export type {
   AgentInput,
   AssembleProviderInputOptions,
@@ -547,50 +266,29 @@ export type {
   PromptTemplateOptions,
 } from "./input.js";
 export { assembleProviderInput, createDefaultInputBuilder, EMPTY_TOOL_RESULT_TEXT, renderPromptTemplate } from "./input.js";
-export type { ContextSource } from "./context-build.js";
-export { registerContextSources, withContextBlocks } from "./context-build.js";
-export { createMemoryLeaseStore, LEASE_CONFLICT_CODE, LeaseConflictError } from "./leases.js";
-export { ModelRefError, parseModelRef } from "./models/ref.js";
-export { CredentialUnavailableError } from "./models/builtin.js";
-export type { ModelRegistry, ModelRegistryOptions } from "./models/registry.js";
-export { createModelRegistry } from "./models/registry.js";
-export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
 export type {
-  ApplyRetentionInput,
-  ApplyRetentionResult,
-  ConsumeTenantQuotaInput,
-  ExportUnderHoldInput,
-  LegalHoldExportItem,
-  LegalHoldQuery,
-  LegalHoldRecord,
-  PersistenceLifecycleStore,
-  PersistenceResourceKind,
-  PutLegalHoldInput,
-  ReleaseLegalHoldInput,
-  SetTenantQuotaInput,
-  TenantQuota,
-} from "./persistence-lifecycle.js";
+  ExternalActivity,
+  ExternalAskSupport,
+  ExternalToolDecision,
+  ExternalToolRequest,
+  LoopStrategy,
+  RunController,
+  RunEndResult,
+  RunTurnOptions,
+  RunTurnResult,
+} from "./loop/index.js";
+export { defaultLoop } from "./loop/index.js";
+export { CredentialUnavailableError } from "./models/builtin.js";
+export type { InputCapOptions, TokenEstimator } from "./models/estimate.js";
 export {
-  createMemoryPersistenceLifecycle,
-  DEFAULT_LIFECYCLE_PAGE_SIZE,
-  DEFAULT_MAX_HOLD_REASON_BYTES,
-  HARD_LIFECYCLE_PAGE_SIZE,
-  HARD_MAX_HOLD_REASON_BYTES,
-  isResourceHeld,
-  PersistenceLifecycleError,
-} from "./persistence-lifecycle.js";
-export {
-  boundResponse,
-  defaultResolver,
-  isLoopbackAddress,
-  isLoopbackHostname,
-  normalizeHostname,
-  type PinnedFetchOptions,
-  pinnedFetch,
-  raceAbort,
-  requestPinned,
-  resolvePinnedAddress,
-} from "./pinned-fetch.js";
+  DEFAULT_INPUT_RESERVE_TOKENS,
+  estimateAssemblyTokens,
+  estimateMessageBytes,
+  estimateMessageTokens,
+  estimateTextBytes,
+  estimateTextTokens,
+  resolveInputCap,
+} from "./models/estimate.js";
 export {
   mapProviderStopReason,
   providerContentDelta,
@@ -605,14 +303,30 @@ export {
   toolCallContent,
   toolCallFromArgumentsText,
 } from "./models/events.js";
-export type { ApplyDefaultProviderRequestOptionsContext } from "./provider-request-policy.js";
-export {
-  applyDefaultProviderRequestOptions,
-  mergeProviderRequestOptions,
-  ProviderRequirementError,
-} from "./provider-request-policy.js";
 export type { ProviderRegistry, ProviderRegistryOptions } from "./models/providers.js";
 export { createProviderRegistry, createProviderResolver } from "./models/providers.js";
+export { ModelRefError, parseModelRef } from "./models/ref.js";
+export type { ModelRegistry, ModelRegistryOptions } from "./models/registry.js";
+export { createModelRegistry } from "./models/registry.js";
+export type { DefaultRetryPolicyOptions } from "./models/retry.js";
+export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./models/retry.js";
+// Node-only path helpers, exported from the root so an external context/files package can reuse
+// them instead of copying security-critical containment code. Importing them pulls node:fs/promises
+// into the root entry graph.
+export { createPathTrustPolicy, isPathInside, isPathInsideReal } from "./node/trust.js";
+export { createProviderTurnMetadata, readProviderHttpStatus } from "./observability.js";
+export {
+  boundResponse,
+  defaultResolver,
+  isLoopbackAddress,
+  isLoopbackHostname,
+  normalizeHostname,
+  type PinnedFetchOptions,
+  pinnedFetch,
+  raceAbort,
+  requestPinned,
+  resolvePinnedAddress,
+} from "./pinned-fetch.js";
 export type { SecretRedactor } from "./redaction.js";
 export {
   createSecretRedactor,
@@ -628,21 +342,7 @@ export {
 export type { DuplicateRegistrationOptions, DuplicateRegistrationPolicy } from "./registry-options.js";
 export type { LoadBinaryResourceOptions } from "./resources.js";
 export { loadBinaryResource, loadJsonResource, loadTextResource } from "./resources.js";
-export type { DefaultRetryPolicyOptions } from "./models/retry.js";
-export { createDefaultRetryPolicy, isTransientErrorInfo, waitForRetry } from "./models/retry.js";
-export type { RunBundleSnapshot, RunBundleSnapshotInput } from "./run-bundle.js";
-export { RUN_BUNDLE_SCHEMA_VERSION, snapshotRunBundle } from "./run-bundle.js";
-export type { BatchedRunLedgerOptions } from "./run-ledger.js";
-export {
-  createBatchedRunLedger,
-  DEFAULT_LEDGER_BATCH_BYTES,
-  DEFAULT_LEDGER_BATCH_DELAY_MS,
-  DEFAULT_LEDGER_BATCH_ENTRIES,
-  HARD_LEDGER_BATCH_BYTES,
-  HARD_LEDGER_BATCH_DELAY_MS,
-  HARD_LEDGER_BATCH_ENTRIES,
-  isFlushableRunLedger,
-} from "./run-ledger.js";
+export { isFlushableRunLedger } from "./run-ledger.js";
 export type { BudgetExhaustionAttribution, RunLimitTrackerOptions } from "./run-limits.js";
 export {
   createRunLimitTracker,
@@ -652,19 +352,6 @@ export {
   RunLimitTracker,
   resolveRunLimits,
 } from "./run-limits.js";
-export type {
-  HostCompositionGovernance,
-  HostCompositionOptions,
-  HostCompositionProfile,
-  HostCompositionReport,
-  HostCompositionToolReport,
-} from "./secure-agent.js";
-export {
-  assertHostCompositionReadiness,
-  createSecureAgent,
-  HostCompositionError,
-  inspectHostComposition,
-} from "./secure-agent.js";
 export type { PermissionDecision, PermissionPolicy, PermissionRequest, TrustDecision, TrustPolicy, TrustRequest } from "./security.js";
 export {
   assertPermission,
@@ -691,9 +378,13 @@ export {
   getSessionBranchEntries,
   listSessionBranches,
   rebuildSessionContext,
+  sessionLinksMatch,
+  sessionLinksOf,
+  sessionLinksOfEntry,
   sessionStoreCapabilities,
+  summaryLinkFields,
 } from "./session-stores.js";
-export { createChainedSettingsProvider, createStaticSettingsProvider } from "./settings.js";
+export { createSessionIndex } from "./agent/sessions.js";
 export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js";
 export {
   createLoadedSkillSet,
@@ -731,82 +422,21 @@ export {
 } from "./skill-load.js";
 export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js";
 export { createSkillRegistry, resolveActiveSkills } from "./skills.js";
+export type { Compactor, SlotAssignments, SlotContracts, SlotName, SlotProvider, SlotRegistry } from "./slots/index.js";
 export {
-  artifactStructuredOutputRequest,
-  assertStructuredOutputRequestSupported,
-  DEFAULT_MAX_STRUCTURED_OUTPUT_NAME_LENGTH,
-  DEFAULT_MAX_STRUCTURED_OUTPUT_SCHEMA_BYTES,
-  modelSupportsStructuredOutput,
-  resolveRunProviderOptions,
-  StructuredOutputError,
-  validateStructuredOutputOptions,
-  withoutStructuredOutput,
-} from "./structured-output.js";
+  createEnvRefCredentialResolver,
+  createSlotDefaults,
+  createSlotRegistry,
+  SlotConflictError,
+  UnknownSlotError,
+  UnknownSlotOwnerError,
+} from "./slots/index.js";
+export type { SuspendedRunEntryData, SuspendedRunLoopRef } from "./suspended-run.js";
+export { loadSuspendedRunEntry, parseSuspendedRunEntry, SUSPENDED_RUN_ENTRY_SCHEMA_VERSION } from "./suspended-run.js";
 export type { ComposeSystemPromptOptions } from "./system-prompts.js";
 export { composeSystemPrompt, mergeSystemPromptConfig } from "./system-prompts.js";
-export { assertAgentEventSourceConforms } from "./testing/agent-event-source-conformance.js";
-export type { ThinkingCompatFamily, ThinkingLevel } from "./thinking.js";
-export {
-  applyThinkingLevel,
-  applyThinkingLevelForModel,
-  isSupportedThinkingLevel,
-  isThinkingLevel,
-  normalizeThinkingLevel,
-  parseThinkingLevel,
-  snapThinkingLevel,
-  THINKING_LEVELS,
-  thinkingCompatFor,
-  thinkingFamilyForModel,
-  thinkingLevelsForModel,
-} from "./thinking.js";
 export type { ToolEffectErrorCode } from "./tool-effects.js";
-export { EventSubscriber, SubscriberOverflowError } from "./agent-session/event-subscriber.js";
 export { createMemoryToolEffectStore, ToolEffectError } from "./tool-effects.js";
-export type {
-  FoldToolResultsContext,
-  ResolvedToolResultFoldOptions,
-  ToolResultFoldInput,
-  ToolResultFoldOptions,
-} from "./tool-result-fold.js";
-export {
-  capToolResultSummary,
-  DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES,
-  DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS,
-  DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES,
-  foldedToolResultHeader,
-  foldToolResultHistory,
-  foldToolResults,
-  formatFoldedToolResult,
-  HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES,
-  resolveToolResultFold,
-  TOOL_RESULT_FOLD_TURN_METADATA_KEY,
-} from "./tool-result-fold.js";
-export type {
-  ActiveToolSet,
-  ToolSearchIndex,
-  ToolSearchMatch,
-  ToolSearchState,
-  ToolsDisclosure,
-  ToolsSearchOptions,
-} from "./tool-search.js";
-export {
-  createActiveToolSet,
-  createSearchToolsTool,
-  createToolSearchIndex,
-  createToolSearchState,
-  DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES,
-  DEFAULT_TOOLS_SEARCH_TOP_K,
-  HARD_MAX_TOOLS_INDEX,
-  HARD_MAX_TOOLS_SEARCH_QUERY_BYTES,
-  HARD_MAX_TOOLS_SEARCH_TOP_K,
-  isToolDisclosureError,
-  resolveToolsDisclosure,
-  SEARCH_TOOLS_TOOL_NAME,
-  scoreTools,
-  selectDisclosedTools,
-  TOOL_DISCLOSURE_ERROR_CODE,
-  ToolDisclosureError,
-} from "./tool-search.js";
 export type {
   DispatchToolCallOptions,
   ToolArgumentValidationError,
@@ -818,26 +448,23 @@ export type {
   ToolRegistryOptions,
   ToolValidator,
 } from "./tools.js";
-export { createToolParameterValidator, createToolRegistry, dispatchToolCall, filterTools } from "./tools.js";
-export { resolveToolEffects, ToolDefinitionError } from "./tools.js";
+export {
+  createToolParameterValidator,
+  createToolRegistry,
+  dispatchToolCall,
+  filterTools,
+  resolveToolEffects,
+  ToolDefinitionError,
+} from "./tools.js";
 export { trimTrailingSlashes } from "./trim-trailing-slashes.js";
 export type { ModelFamilyTokens } from "./usage-estimation.js";
 export { MODEL_FAMILY_TOKENS, resolveModelFamily } from "./usage-estimation.js";
-export type {
-  ResolvedUseCaseModel,
-  ResolveUseCaseModelInput,
-  UseCaseModelBinding,
-} from "./use-case-model.js";
-export {
-  resolveUseCaseModel,
-  resolveUseCaseModelBinding,
-  useCaseCredentialProviderId,
-} from "./use-case-model.js";
 
 export const name = "prism";
-export const version = "0.12.1";
+export const version = "0.13.0";
 export const description = "Agent harness for AI providers, agents, sessions, and tools.";
-export { definePackage, PackageLoadError } from "./packages/index.js";
+export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js";
+export type { Logger } from "./host/types.js";
 export type {
   Capability,
   JsonSchema,
@@ -846,19 +473,21 @@ export type {
   PackageCommand,
   PackageCommandContext,
   PackageCommandInfo,
-  PackageToolOptions,
+  PackageConfigSource,
   PackageDefinition,
   PackageDefinitionInput,
   PackageInput,
   PackageInstance,
-  PackageSource,
   PackageInstanceOptions,
   PackageLoadErrorCode,
   PackageRequires,
+  PackageSource,
+  PackageToolOptions,
   SlotRegistrar,
   SlotRegistrarEntry,
 } from "./packages/index.js";
+export { definePackage, PackageLoadError, validateJsonSchema } from "./packages/index.js";
+export { KERNEL_API_LEVEL } from "./version.js";
+export type { ExternalStateData, ExternalStateHandle } from "./session/external-state.js";
+export type { AgentState, SessionLog, SessionState } from "./session/state.js";
 export type { SessionContext } from "./session-context.js";
-export type { AgentState, SessionState } from "./session/state.js";
-export type { AgentInspection, InspectedContribution, InspectedHook, InspectedPackage } from "./agent/inspect.js";
-export type { Logger } from "./host/types.js";

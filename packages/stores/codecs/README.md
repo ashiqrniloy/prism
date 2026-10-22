@@ -27,6 +27,10 @@ const row = mappers.sessionEntryToRow(entry);
 const roundTripped = mappers.rowToSessionEntry(row);
 ```
 
+## What it changes
+
+Nothing on an agent. It now also owns `prepareRunFeedback`, the in-memory feedback store, and the shared persistence-schema contract the SQL stores migrate against.
+
 ## What it provides
 
 | Export group | Symbols | Purpose |

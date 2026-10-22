@@ -1,4 +1,21 @@
-import { CheckpointConflictError } from "@arnilo/prism";
+/**
+ * Store-side checkpoint conflict error (plan 168 Task 4).
+ *
+ * The `checkpoints` service contract lives in `@arnilo/prism-workflows`, but a store package must not
+ * load that engine at runtime. The **code** is the cross-package contract: every implementation throws
+ * an error carrying `CHECKPOINT_CONFLICT_CODE`, so consumers match on `error.code` rather than
+ * `instanceof`.
+ */
+export const CHECKPOINT_CONFLICT_CODE = "ERR_PRISM_CHECKPOINT_CONFLICT";
+
+export class CheckpointConflictError extends Error {
+  readonly code = CHECKPOINT_CONFLICT_CODE;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "CheckpointConflictError";
+  }
+}
 
 export function assertCheckpointInput(input: { namespace: string; key: string; version: number }): void {
   if (!input.namespace || !input.key || !Number.isSafeInteger(input.version) || input.version < 1)

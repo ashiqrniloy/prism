@@ -1,5 +1,12 @@
-import { createJsonSchemaArgumentValidator } from "@arnilo/prism-core/validation/json-schema";
-import { createBraveSearch, createFirecrawlExtractor, createFirecrawlFetch, createWebTools } from "@arnilo/prism-web-tools";
+import { type JsonSchema, validateJsonSchema } from "@arnilo/prism";
+
+const jsonSchemaValidator = {
+  validate(schema: JsonSchema, value: unknown) {
+    const result = validateJsonSchema(schema, value);
+    return result.ok ? { ok: true as const, value: result.value } : { ok: false as const, errors: result.errors };
+  },
+};
+import { createBraveSearch, createFirecrawlExtractor, createFirecrawlFetch, createWebTools } from "@arnilo/prism-tools-web";
 
 const reply = (value: unknown) => new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } });
 const fakeFetch: typeof fetch = async (input) => {
@@ -16,7 +23,7 @@ const fetchDocument = createFirecrawlFetch(common);
 const extract = createFirecrawlExtractor({
   ...common,
   schema: { type: "object", properties: { title: { type: "string" } }, required: ["title"] },
-  validator: createJsonSchemaArgumentValidator(),
+  validator: jsonSchemaValidator,
 });
 const tools = createWebTools({ search, fetch: fetchDocument, extract });
 

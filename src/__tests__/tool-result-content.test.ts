@@ -11,6 +11,10 @@ import {
 } from "../index.js";
 import { EMPTY_TOOL_RESULT_TEXT, toToolResultMessage } from "../input.js";
 import { serializeOpenAIChatMessage } from "../provider-kit/openai-primitives.js";
+import { openAIChatBody } from "../provider-kit/codecs/openai-chat.js";
+import type { Message as ProviderMessage } from "../contracts.js";
+import { redactMessage } from "../redaction.js";
+import { assertMessagesSupportModelCapabilities } from "../content.js";
 import { providerPackage } from "../provider-kit/index.js";
 
 async function collect(iterable: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
@@ -70,7 +74,7 @@ describe("tool result content on provider wire", () => {
       tool.content.some((part) => part.type === "text"),
       false,
     );
-    assert.equal(serializeOpenAIChatMessage(tool).content, JSON.stringify(listing));
+    assert.equal(serializeOpenAIChatMessage(tool).content, listing);
     assert.notEqual(serializeOpenAIChatMessage(tool).content, "null");
   });
 
@@ -93,7 +97,7 @@ describe("tool result content on provider wire", () => {
     const message = toToolResultMessage({ toolCallId: "c1", name: "shell" });
     const block = message.content.find((part) => part.type === "tool_result");
     assert.equal(block?.type === "tool_result" ? block.result : undefined, EMPTY_TOOL_RESULT_TEXT);
-    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify(EMPTY_TOOL_RESULT_TEXT));
+    assert.equal(serializeOpenAIChatMessage(message).content, EMPTY_TOOL_RESULT_TEXT);
     assert.notEqual(serializeOpenAIChatMessage(message).content, "null");
     assert.notEqual(serializeOpenAIChatMessage(message).content, '""');
   });
@@ -110,6 +114,78 @@ describe("tool result content on provider wire", () => {
     const block = message.content.find((part) => part.type === "tool_result");
     assert.equal(block?.type === "tool_result" ? block.result : undefined, undefined);
     assert.deepEqual(block?.type === "tool_result" ? block.error : undefined, error);
-    assert.equal(serializeOpenAIChatMessage(message).content, JSON.stringify(error));
+    // An error reaches the model as its message, not as an escaped JSON object.
+    assert.equal(serializeOpenAIChatMessage(message).content, error.message);
+  });
+
+  it("openai_chat_tool_image_follows_as_user_message", () => {
+    const messages: ProviderMessage[] = [
+      { role: "assistant", content: [{ type: "tool_call", id: "c1", name: "read", arguments: {} }] },
+      { role: "tool", content: [{ type: "tool_result", toolCallId: "c1", name: "read", result: "grab" }, { type: "image", mimeType: "image/png", data: PNG_1X1 }] },
+      { role: "tool", content: [{ type: "tool_result", toolCallId: "c2", name: "read", result: "plain" }] },
+    ];
+    const body = openAIChatBody({
+      model: { provider: "mock", model: "demo", capabilities: { input: ["text", "image"] } },
+      messages,
+    });
+    const wire = body.messages as any[];
+    // Tool replies stay contiguous; the images ride in one user message after the round.
+    assert.deepEqual(wire.map((message) => message.role), ["assistant", "tool", "tool", "user"]);
+    assert.equal(wire[3].content[0].text, "Images returned by read (c1):");
+    assert.equal(wire[3].content[1].type, "image_url");
+    assert.match(wire[3].content[1].image_url.url, /^data:image\/png;base64,/);
+  });
+
+  it("openai_chat_tool_image_without_capability_is_noted", () => {
+    const body = openAIChatBody({
+      model: { provider: "mock", model: "demo", capabilities: { input: ["text"] } },
+      messages: [
+        { role: "tool", content: [{ type: "tool_result", toolCallId: "c1", name: "read", result: "grab" }, { type: "image", mimeType: "image/png", data: PNG_1X1 }] },
+      ],
+    });
+    const wire = body.messages as any[];
+    assert.equal(wire.length, 1);
+    assert.equal(wire[0].role, "tool");
+    assert.match(wire[0].content, /grab/);
+    assert.match(wire[0].content, /\[image omitted: the model does not accept images\]/);
+  });
+
+  it("tool_result_redaction_survives_encoding", () => {
+    const secret = "sk-live-9f8e";
+    const redacted = redactMessage(
+      { role: "tool", content: [{ type: "tool_result", toolCallId: "c1", name: "shell", result: `token=${secret}` }] },
+      { redact: (value) => JSON.parse(JSON.stringify(value).split(secret).join("[REDACTED]")) },
+    );
+    const content = serializeOpenAIChatMessage(redacted).content as string;
+    assert.equal(content, "token=[REDACTED]");
+    assert.ok(!content.includes(secret), "the raw secret must not reach the wire");
+  });
+});
+
+const PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
+
+describe("tool-result images and the request capability gate", () => {
+  const textOnly = { provider: "mock", model: "demo", capabilities: { input: ["text" as const] } };
+  const toolImage: ProviderMessage = {
+    role: "tool",
+    content: [
+      { type: "tool_result", toolCallId: "c1", name: "read", result: "grab" },
+      { type: "image", mimeType: "image/png", data: "AAAA" },
+    ],
+  };
+
+  it("does not fail the gate for a tool-result image", () => {
+    // The codecs render it as a note, so the request is representable on a text-only model.
+    assert.doesNotThrow(() => assertMessagesSupportModelCapabilities(textOnly, [toolImage]));
+  });
+
+  it("still fails the gate for a user-message image", () => {
+    assert.throws(
+      () =>
+        assertMessagesSupportModelCapabilities(textOnly, [
+          { role: "user", content: [{ type: "image", mimeType: "image/png", data: "AAAA" }] },
+        ]),
+      /image/,
+    );
   });
 });

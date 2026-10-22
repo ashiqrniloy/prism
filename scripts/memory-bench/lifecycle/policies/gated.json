@@ -1,0 +1,4 @@
+{
+  "promote": { "minScore": 0.45 },
+  "lifecycle": { "verifyAfterSessions": 2 }
+}

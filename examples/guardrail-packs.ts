@@ -1,5 +1,6 @@
 /**
- * Guardrail packs end to end (plan 104 Task 7) — network-free: mock provider, in-memory stores.
+ * Guardrail packs end to end (plan 104 Task 7; moved onto `@arnilo/prism-guardrail-packs` in plan 159 Task 5) —
+ * network-free: mock provider, in-memory stores.
  *
  * One file, four demonstrations, one printed line each:
  *   1. two built-in packs refuse a `shell` and a `write` call, and the refusal names the rule;
@@ -12,30 +13,29 @@
  * approves its own `ask` gate — an approval applies to the suspension, not to the ruleset, so a
  * sibling `deny` rule matching the same call still blocks it at dispatch.
  *
- * Inline packs are the host-reachable form; their pattern rules ride the checkpoint, which is what
- * keeps an `ask` rule enforced after the suspend/resume in step 3 (`persistSessionState`).
+ * The packs are package config (`guardrailPacks({ packs })`), not a session option. Their state
+ * rides package session state, which is what keeps an `ask` rule enforced after the suspend/resume
+ * in step 3.
  *
  * Run: npm run build:core && node examples/guardrail-packs.ts
  */
 import assert from "node:assert/strict";
 import {
-  type ModelProvider,
-  type AgentSessionConfig,
   type ContentBlock,
-  type JsonObject,
-  type ProviderEvent,
-  type ToolDefinition,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
+  type JsonObject,
+  type ModelProvider,
+  type ProviderEvent,
   providerDone,
   providerTextDelta,
   providerToolCall,
-  resumeAgentRun,
+  type ToolDefinition,
   toolCallContent,
 } from "@arnilo/prism";
-import { createGuardrailPackScorer, runScenario } from "@arnilo/prism-core/governance/evals";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createGuardrailPackScorer, runScenario } from "@arnilo/prism-evals";
+import guardrailPacks from "@arnilo/prism-guardrail-packs";
 
 const MODEL = { provider: "mock", model: "guardrail-packs-demo" } as const;
 const FINISH: readonly ProviderEvent[] = [providerTextDelta("done"), providerDone()];
@@ -84,27 +84,29 @@ async function refusalsOf(store: MemorySessionStore, sessionId: string): Promise
   return refusals;
 }
 
-/** Step 1: two built-in packs on one session; the blocked calls name the rule that refused them. */
+/** Step 1: two built-in packs on one agent; the blocked calls name the rule that refused them. */
 async function blockedCalls(executed: string[]): Promise<readonly { tool: string; message: string }[]> {
   const store = createMemorySessionStore();
   const agent = await createAgent({
     id: "pack-demo-block",
     model: { ...MODEL },
     slots: { store },
-    packages: [providerPackage("test-provider", [scriptedProvider([
-      [
-        call("c1", "shell", { command: "git push origin main --force" }),
-        call("c2", "write", { path: "/repo/src/app.test.ts", content: "// tidy" }),
-        providerDone(),
-      ],
-      FINISH,
-    ])])],
+    packages: [
+      providerPackage("test-provider", [
+        scriptedProvider([
+          [
+            call("c1", "shell", { command: "git push origin main --force" }),
+            call("c2", "write", { path: "/repo/src/app.test.ts", content: "// tidy" }),
+            providerDone(),
+          ],
+          FINISH,
+        ]),
+      ]),
+      guardrailPacks({ packs: ["destructive-commands", { id: "coding-standard", options: { cwd: "/repo", roots: ["/repo"] } }] }),
+    ],
     tools: { add: [recordingTool("shell", executed), recordingTool("write", executed)] },
   });
-  const sessionConfig: AgentSessionConfig = {
-    guardrailPacks: ["destructive-commands", { id: "coding-standard", options: { cwd: "/repo", roots: ["/repo"] } }],
-  };
-  const result = await (await agent.session({ ...sessionConfig })).run("redeploy and tidy the tests");
+  const result = await (await agent.session()).run("redeploy and tidy the tests");
   const refusals = await refusalsOf(store, result.sessionId);
   for (const refusal of refusals) console.log(`step 1 built-in packs: ${refusal.tool} refused — ${refusal.message}`);
   assert.equal(result.status, "completed", "a blocked tool call does not fail the run");
@@ -121,13 +123,15 @@ async function scoredScenario(executed: string[]): Promise<string> {
     id: "pack-demo-eval",
     model: { ...MODEL },
     slots: { store: createMemorySessionStore() },
-    packages: [providerPackage("test-provider", [scriptedProvider([[call("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH])])],
+    packages: [
+      providerPackage("test-provider", [scriptedProvider([[call("c1", "shell", { command: "rm -rf ./build" }), providerDone()], FINISH])]),
+      guardrailPacks({ packs: ["destructive-commands"] }),
+    ],
     tools: { add: [recordingTool("shell", executed)] },
   });
   const scenario = await runScenario({
     agent,
     turns: ["clean the build directory"],
-    sessionConfig: { guardrailPacks: ["destructive-commands"] },
     timeline: "metadata",
     scorers: [createGuardrailPackScorer({ forbidTools: ["shell"] })],
   });
@@ -143,12 +147,11 @@ async function scoredScenario(executed: string[]): Promise<string> {
 
 /** Step 3: an `ask` rule suspends selectively (no all-tools gate) and the approval dispatches once. */
 async function durableAsk(executed: string[]): Promise<{ rule?: string; dispatched: readonly string[] }> {
-  const checkpoints = createMemoryCheckpointStore();
   const askPack = {
     id: "deploy-guard",
     rules: [
       {
-        id: "ask-prod-version",
+        id: "prod-version-approval",
         tool: "deploy",
         argPath: "version",
         pattern: "^prod-",
@@ -161,34 +164,34 @@ async function durableAsk(executed: string[]): Promise<{ rule?: string; dispatch
     id: "pack-demo-ask",
     model: { ...MODEL },
     slots: { store: createMemorySessionStore() },
-    packages: [providerPackage("test-provider", [scriptedProvider([
-      [call("d1", "deploy", { version: "prod-7" }), providerDone()],
-      [providerTextDelta("shipped"), providerDone()],
-    ])])],
+    packages: [
+      providerPackage("test-provider", [
+        scriptedProvider([
+          [call("d1", "deploy", { version: "prod-7" }), providerDone()],
+          [providerTextDelta("shipped"), providerDone()],
+        ]),
+      ]),
+      guardrailPacks({ packs: [askPack] }),
+    ],
     tools: { add: [recordingTool("deploy", executed)] },
   });
-  const session = await agent.session({ guardrailPacks: [askPack] });
-  // `persistSessionState` is what carries the inline pack's pattern rules to the resumed session.
-  let result = await session.run("ship prod-7", {
-    runState: { checkpoints, definitionRevision: "1", persistSessionState: true },
-  });
+  const session = await agent.session();
+  // The pack's own state rides the store slot's `suspended_run` entry into the resumed session.
+  const result = await session.run("ship prod-7");
   const pending = result.pending?.[0];
   if (pending === undefined) throw new Error(`expected a durable ask suspension, got ${result.status}`);
-  console.log(`step 3 ask gate: suspended on ${pending.guardrail} — ${pending.reason}`);
+  const rule = ruleIdOf(pending.reason);
+  console.log(`step 3 ask gate: suspended on ${rule} — ${pending.reason}`);
   assert.deepEqual(executed, [], "the gated call did not dispatch before the decision");
 
-  const expectedVersion = result.runState?.version;
-  if (expectedVersion === undefined) throw new Error("suspension carries no checkpoint version");
-  result = await resumeAgentRun(
-    agent,
-    { runId: result.runId, sessionId: result.sessionId },
-    { decisions: [{ approvalId: pending.approvalId, outcome: "allow_once" }], expectedVersion },
-    { checkpoints, definitionRevision: "1" },
-  );
-  console.log(`step 3 ask gate: approved → run ${result.status}, dispatched ${executed.join(", ")}`);
-  assert.equal(result.status, "completed");
+  let lastEvent: string | undefined;
+  for await (const event of session.resume([{ approvalId: pending.approvalId, outcome: "allow_once" as const }])) {
+    lastEvent = event.type; // the resumed leg restores the pack state and dispatches the approved call once
+  }
+  console.log(`step 3 ask gate: approved → run resumed, dispatched ${executed.join(", ")}`);
+  assert.equal(lastEvent, "run.completed");
   assert.deepEqual(executed, ["deploy"], "the approved call dispatched exactly once");
-  return { rule: pending.guardrail, dispatched: executed };
+  return { rule, dispatched: executed };
 }
 
 /** Step 4: a secret-shaped argument is refused, and the refusal never echoes the token. */
@@ -200,13 +203,15 @@ async function secretRefusal(executed: string[]): Promise<string> {
     id: "pack-demo-secret",
     model: { ...MODEL },
     slots: { store },
-    packages: [providerPackage("test-provider", [scriptedProvider([
-      [call("s1", "write", { path: "/repo/.env.example", content: `TOKEN=${fakeToken}` }), providerDone()],
-      FINISH,
-    ])])],
+    packages: [
+      providerPackage("test-provider", [
+        scriptedProvider([[call("s1", "write", { path: "/repo/.env.example", content: `TOKEN=${fakeToken}` }), providerDone()], FINISH]),
+      ]),
+      guardrailPacks({ packs: ["secrets-hygiene"] }),
+    ],
     tools: { add: [recordingTool("write", executed)] },
   });
-  const result = await (await agent.session({ guardrailPacks: ["secrets-hygiene"] })).run("write the example env file");
+  const result = await (await agent.session()).run("write the example env file");
   const refusal = (await refusalsOf(store, result.sessionId))[0];
   console.log(`step 4 secrets hygiene: ${refusal?.tool} refused — ${refusal?.message}`);
   assert.match(refusal?.message ?? "", /pack:secrets-hygiene\/no-secret-material-in-arguments/);

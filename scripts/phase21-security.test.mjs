@@ -21,11 +21,8 @@
  *   T10: azure/vertex credential-once — a rotating CredentialValueSource is
  *     consumed exactly once per request.
  *   T11: Bedrock SigV4 duplicate-case/repeated-query canonicalization.
- *   T12: OpenAI upload cleanup — a failed DELETE is fail-soft, never breaks
- *     the stream, and never leaks the file id into events; the retention
- *     (id kept until a successful DELETE) is asserted source-level against the
- *     manager in task6's openai.test.ts because the manager is not a public
- *     export of @arnilo/prism-provider-openai.
+ *   T12: upload cleanup — a failed DELETE is fail-soft, never breaks
+ *     the stream, and never leaks the file id into events.
  *   T13: cache-telemetry overflow never mixes model costs.
  *
  * Gate accounting: the final test asserts every blocker ID above executed and
@@ -35,26 +32,17 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { describe, it } from "bun:test";
-import { createCacheTelemetry, MediaContentError, pinnedFetch } from "@arnilo/prism";
-import { createOpenAICompatibleProvider, pollDeviceCodeToken, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
-import { createAzureOpenAIProvider } from "@arnilo/prism-provider-azure";
-import { createBedrockProvider, signAwsRequest } from "@arnilo/prism-provider-bedrock";
-import { createNeuralWattProvider } from "@arnilo/prism-provider-neuralwatt";
-import { createOpenAIResponsesProvider, listOpenAIModels } from "@arnilo/prism-provider-openai";
-import { createOpenRouterProvider } from "@arnilo/prism-provider-openrouter";
-import { createVertexProvider } from "@arnilo/prism-provider-vertex";
-import { createZaiProvider } from "@arnilo/prism-provider-zai";
+import { MediaContentError, pinnedFetch } from "@arnilo/prism";
+import { createOpenAICompatibleProvider, ProviderTransportError, readBoundedResponseJson } from "@arnilo/prism/provider-kit";
+import { createHyperProvider, listHyperModels } from "@arnilo/prism-provider-hyper";
+import { createOpenCodeGoProvider } from "@arnilo/prism-provider-opencode-go";
 
 const BLOCKER_IDS = [
   "strict-completion",
   "adapter-strict",
   "bounded-bodies",
   "pinned-fetch",
-  "oauth-device-code",
   "credential-once",
-  "sigv4-canonical",
-  "upload-cleanup",
-  "overflow-cost",
 ];
 const blockerIds = new Set();
 
@@ -102,28 +90,15 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
     blockerIds.add("strict-completion");
   });
 
-  it("T1: all six inheriting adapters reject truncated streams (built constructors)", async () => {
+  it("T1: inheriting adapters reject truncated streams (built constructors)", async () => {
     const truncated = sseResponse(["data: [DONE]"]);
     const adapters = [
-      createAzureOpenAIProvider({
-        endpoint: "https://demo.openai.azure.com",
-        deployment: "d1",
-        credential: "t",
-        fetch: async () => truncated,
-      }),
-      createBedrockProvider({
-        region: "us-east-1",
-        credential: { accessKeyId: "AKIATEST", secretAccessKey: "secret" },
-        fetch: async () => truncated,
-      }),
-      createVertexProvider({ projectId: "p", location: "us-central1", credential: "t", fetch: async () => truncated }),
-      createOpenRouterProvider({ apiKey: "t", fetch: async () => truncated }),
-      createZaiProvider({ apiKey: "t", fetch: async () => truncated }),
-      createNeuralWattProvider({ apiKey: "t", fetch: async () => truncated }),
+      createHyperProvider({ apiKey: "t", fetch: async () => truncated }),
+      createOpenCodeGoProvider({ apiKey: "t", fetch: async () => truncated }),
     ];
     for (const provider of adapters) {
       const events = [];
-      for await (const event of provider.generate({ ...request, model: { provider: "mock", model: "demo" } })) events.push(event);
+      for await (const event of provider.generate({ ...request, model: { provider: provider.id, model: "demo" }, options: { sessionId: "s1" } })) events.push(event);
       const error = events.find((event) => event.type === "error");
       assert.ok(error, `${provider.id} must reject a truncated stream`);
       assert.match(String(error.error?.message ?? ""), /without completion evidence/);
@@ -140,7 +115,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
     // Public discovery entrypoint: an oversized /models body must reject.
     const oversized = new Response(JSON.stringify({ data: Array.from({ length: 40_000 }, (_, i) => ({ id: `m${i}` })) }), { status: 200 });
     await assert.rejects(
-      () => listOpenAIModels({ apiKey: "k", fetch: async () => oversized }),
+      () => listHyperModels({ apiKey: "k", fetch: async () => oversized }),
       (error) => error instanceof ProviderTransportError && error.code === "response_body_overflow",
     );
 
@@ -258,126 +233,17 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
     blockerIds.add("pinned-fetch");
   });
 
-  it("T7-T9: shared OAuth device-code poll cadence, backoff, expiry, and redaction", async () => {
-    const sleeps = [];
-    let polls = 0;
-    const success = await pollDeviceCodeToken({
-      errorPrefix: "Phase21",
-      deviceCodeUrl: "https://id.example.com/device",
-      tokenUrl: "https://id.example.com/token",
-      clientId: "client",
-      now: () => 1_000_000,
-      sleep: async (ms) => {
-        sleeps.push(ms);
-      },
-      parseTokenCredentials: (json) => ({ accessToken: json.access_token, refreshToken: json.refresh_token }),
-      fetchImpl: async (input, _init) => {
-        const url = String(input);
-        if (url.endsWith("/device")) {
-          return new Response(
-            JSON.stringify({
-              device_code: "dev-secret",
-              user_code: "USER-CODE",
-              verification_uri: "https://id.example.com/activate",
-              expires_in: 600,
-              interval: 1,
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        polls += 1;
-        if (polls === 1)
-          return new Response(JSON.stringify({ error: "slow_down" }), { status: 400, headers: { "content-type": "application/json" } });
-        return new Response(JSON.stringify({ access_token: "at-1", refresh_token: "rt-1" }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
-      },
-    });
-    assert.equal(success.accessToken, "at-1");
-    assert.deepEqual(sleeps, [1000, 6000], "initial interval then slow_down +5000");
-
-    // Expiry fails closed before any token.
-    const expired = await pollDeviceCodeToken({
-      errorPrefix: "Phase21",
-      deviceCodeUrl: "https://id.example.com/device",
-      tokenUrl: "https://id.example.com/token",
-      clientId: "client",
-      now: () => 1_000_000,
-      sleep: async () => {},
-      parseTokenCredentials: (json) => ({ accessToken: json.access_token }),
-      fetchImpl: async (input) => {
-        if (String(input).endsWith("/device")) {
-          return new Response(
-            JSON.stringify({
-              device_code: "dev-secret",
-              user_code: "USER-CODE",
-              verification_uri: "https://id.example.com/activate",
-              expires_in: 0,
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        return new Response(JSON.stringify({ error: "authorization_pending" }), { status: 400 });
-      },
-    }).then(
-      () => null,
-      (error) => error,
-    );
-    assert.ok(expired instanceof Error);
-    assert.match(expired.message, /expired before authorization completed/);
-
-    // Terminal errors redact device_code/user_code and carry [REDACTED].
-    const errorBody = JSON.stringify({
-      error: "access_denied",
-      error_description: "user rejected device_code=dev-secret user_code=USER-CODE",
-    });
-    const terminal = await pollDeviceCodeToken({
-      errorPrefix: "Phase21",
-      deviceCodeUrl: "https://id.example.com/device",
-      tokenUrl: "https://id.example.com/token",
-      clientId: "client",
-      now: () => 1_000_000,
-      sleep: async () => {},
-      parseTokenCredentials: (json) => ({ accessToken: json.access_token }),
-      fetchImpl: async (input) => {
-        if (String(input).endsWith("/device")) {
-          return new Response(
-            JSON.stringify({
-              device_code: "dev-secret",
-              user_code: "USER-CODE",
-              verification_uri: "https://id.example.com/activate",
-              expires_in: 600,
-            }),
-            { status: 200, headers: { "content-type": "application/json" } },
-          );
-        }
-        return new Response(errorBody, { status: 400, headers: { "content-type": "application/json" } });
-      },
-    }).then(
-      () => null,
-      (error) => error,
-    );
-    assert.ok(terminal instanceof Error);
-    assert.ok(terminal.message.includes("[REDACTED]"), "error must show the redaction marker");
-    assert.equal(terminal.message.includes("dev-secret"), false, "device_code must never surface");
-    assert.equal(terminal.message.includes("USER-CODE"), false, "user_code must never surface");
-    blockerIds.add("oauth-device-code");
-  });
-
-  it("T10: azure resolves a rotating credential exactly once per request", async () => {
+  it("T10: hyper resolves a rotating credential exactly once per request", async () => {
     let calls = 0;
-    const provider = createAzureOpenAIProvider({
-      endpoint: "https://demo.openai.azure.com",
-      deployment: "d1",
-      credential: () => {
+    const provider = createHyperProvider({
+      apiKey: () => {
         calls += 1;
         return `rotating-${calls}`;
       },
       fetch: async () => sseResponse(['data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}', "data: [DONE]"]),
     });
     const events = [];
-    for await (const event of provider.generate({ ...request, model: { provider: "mock", model: "demo" } })) events.push(event);
+    for await (const event of provider.generate({ ...request, model: { provider: "hyper", model: "demo" } })) events.push(event);
     assert.equal(calls, 1, "rotating credential consumed once per request");
     assert.ok(
       events.some((event) => event.type === "done"),
@@ -386,114 +252,7 @@ describe("phase21 security conformance (plan 021 Task 7, built public entrypoint
     blockerIds.add("credential-once");
   });
 
-  it("T11: Bedrock SigV4 canonicalizes duplicate-case headers and repeated query params", async () => {
-    const signed = signAwsRequest({
-      method: "POST",
-      url: "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1/chat/completions?a=z&a=b",
-      headers: { "X-Test": "a", "x-test": "b", "content-type": "application/json" },
-      body: "{}",
-      region: "us-east-1",
-      service: "bedrock",
-      credentials: { accessKeyId: "AKIATEST", secretAccessKey: "secret" },
-      now: new Date("2026-07-23T12:00:00.000Z"),
-    });
-    assert.equal(signed["x-test"], "b", "duplicate-case headers merge last-wins");
-    assert.equal(signed["X-Test"], undefined, "no duplicate-case key survives");
-    const signedHeaders = signed.authorization.match(/SignedHeaders=([^,]+)/)?.[1] ?? "";
-    assert.equal(signedHeaders.split(";").filter((name) => name === "x-test").length, 1, "x-test signed exactly once");
-    const again = signAwsRequest({
-      method: "POST",
-      url: "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1/chat/completions?a=b&a=z",
-      headers: { "content-type": "application/json", "x-test": "b" },
-      body: "{}",
-      region: "us-east-1",
-      service: "bedrock",
-      credentials: { accessKeyId: "AKIATEST", secretAccessKey: "secret" },
-      now: new Date("2026-07-23T12:00:00.000Z"),
-    });
-    assert.equal(signed.authorization, again.authorization, "query order and header case must not change the signature");
-    blockerIds.add("sigv4-canonical");
-  });
-
-  it("T12: upload cleanup fails soft on a failed DELETE and never leaks the file id", async () => {
-    // The manager itself is not a public export; exercise the public provider
-    // seam with its default manager. ID-retention semantics (kept until a
-    // successful DELETE) are asserted directly in task6's openai.test.ts.
-    let uploads = 0;
-    let deletes = 0;
-    const fetchImpl = async (input, init) => {
-      const url = String(input);
-      if (url.endsWith("/files") && init?.method === "POST") {
-        uploads += 1;
-        return new Response(JSON.stringify({ id: "file-upload-1" }), { status: 200, headers: { "content-type": "application/json" } });
-      }
-      if (url.includes("/files/file-upload-1") && init?.method === "DELETE") {
-        deletes += 1;
-        return new Response("{}", { status: 500 });
-      }
-      if (url.endsWith("/responses")) {
-        return sseResponse([
-          'data: {"type":"response.output_text.delta","delta":"hello"}',
-          'data: {"type":"response.completed","response":{"usage":{"input_tokens":2,"output_tokens":1,"total_tokens":3,"input_tokens_details":{"cached_tokens":0}}}}',
-          "data: [DONE]",
-        ]);
-      }
-      return new Response("{}", { status: 404 });
-    };
-    const provider = createOpenAIResponsesProvider({ apiKey: "fake-key", fetch: fetchImpl });
-    const events = [];
-    for await (const event of provider.generate({
-      model: { provider: "openai", model: "gpt-5.1", capabilities: { input: ["file"] } },
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "file",
-              mediaType: "application/pdf",
-              name: "big.pdf",
-              data: Buffer.concat([Buffer.from("%PDF-1.7\n"), Buffer.alloc(4 * 1024 * 1024 + 1)]).toString("base64"),
-            },
-          ],
-        },
-      ],
-    }))
-      events.push(event);
-    assert.equal(uploads, 1, "oversized file uploads through the public provider");
-    assert.equal(deletes, 1, "cleanup attempts the DELETE");
-    assert.ok(
-      events.some((event) => event.type === "done"),
-      "failed DELETE must not break the stream",
-    );
-    assert.equal(
-      events.some((event) => event.type === "error"),
-      false,
-      "cleanup failure must not surface as a stream error",
-    );
-    assert.equal(JSON.stringify(events).includes("file-upload-1"), false, "file id must never leak into events");
-    blockerIds.add("upload-cleanup");
-  });
-
-  it("T13: cache-telemetry overflow never mixes model costs", async () => {
-    const telemetry = createCacheTelemetry({ maxKeys: 2 });
-    const usage = (cacheReadTokens) => ({ inputTokens: 100, cacheReadTokens });
-    const model = (name) => ({ provider: "mock", model: name, cost: { input: 2, cacheRead: 0.5 } });
-    telemetry.record(usage(100), model("a"));
-    telemetry.record(usage(100), model("b"));
-    telemetry.record(usage(50), model("c"));
-    const overflow = telemetry.report().samples.find((sample) => sample.model === "__overflow__");
-    assert.ok(overflow, "overflow bucket present");
-    assert.equal(overflow.estimatedSavings, undefined, "no cost estimate on mixed-model overflow tokens");
-    assert.equal(overflow.currency, undefined, "no currency on the overflow bucket");
-    const capped = telemetry.report().samples.filter((sample) => sample.model !== "__overflow__");
-    assert.ok(
-      capped.every((sample) => sample.estimatedSavings !== undefined),
-      "capped samples keep their own cost",
-    );
-    blockerIds.add("overflow-cost");
-  });
-
-  it("gate accounting: all nine blocker IDs executed; none skipped or renamed away", () => {
+  it("gate accounting: all blocker IDs executed; none skipped or renamed away", () => {
     assert.deepEqual(
       [...blockerIds].sort(),
       [...BLOCKER_IDS].sort(),

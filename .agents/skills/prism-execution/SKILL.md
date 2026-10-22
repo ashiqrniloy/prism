@@ -1,6 +1,6 @@
 ---
 name: prism-execution
-description: Execute work in the Prism repo, which is moving from the 0.12 runtime and family packages to the `@arnilo/prism` 0.13.0 SDK kernel extended by native packages. Use it to implement, fix, or refactor code, execute a plan task ("do task N", "next unchecked task", "complete Task 4"), move 0.12 code into a kernel module or native package, or change Prism packages, providers, tools, memory, stores, host libraries, Prism Code, docs, or release plumbing. Do NOT use it to write a new plan document (create-plan) or to look up third-party library docs (find-docs).
+description: Execute work in the Prism repo: the `@arnilo/prism` 0.13.0 SDK kernel, its native packages, host libraries, and the Prism Agent reference host, on the way to the 0.13.0 publish. Use it to implement, fix, or refactor code, execute a plan task ("do task N", "next unchecked task", "complete Task 4"), or change the kernel, packages, providers, tools, memory, stores, host libraries, the reference host, docs, or release plumbing. Do NOT use it to write a new plan document (create-plan) or to look up third-party library docs (find-docs).
 ---
 
 # Prism Execution
@@ -11,13 +11,20 @@ Execute Prism tasks with progressive disclosure:
 3. one area reference
 4. full docs pages only when a code span is not enough
 
-## The repo is mid-migration
+## Where the repo is
 
-`roadmap.md` defines the target: an SDK kernel (`@arnilo/prism` 1.0) with hooks, slots, and a package system, plus native packages for every capability. The code is still largely 0.12: the runtime in `src/`, family packages in `packages/*`, and the `@arnilo/prism-agent-sdk` facade.
+`roadmap.md` defines the design: the `@arnilo/prism` 0.13.0 SDK kernel (agents, sessions, the loop, hooks, slots, and a package system) plus native packages for every capability. Roadmap Phases 0–10 and 12–17 have landed:
 
-Each reference has a **Target** section and a **Today** section. Build toward the target; read the current code to know what you are moving or replacing.
+- the kernel is `src/`, published as TypeScript source with zero runtime dependencies
+- native packages and host libraries are `packages/<group>/<name>` (`providers`, `tools`, `memory`, `context`, `stores`, `policy`, `integrations`, `hosts`, `drivers`, `credentials`)
+- the reference host is `apps/prism-agent` (private, never published)
+- the 0.12 family packages, `@arnilo/prism-agent-sdk`, and Prism Code are gone from the tree; their last docs are archived in `docs/history/`
 
-When they disagree, the roadmap wins for new work. For a bug fix on the released 0.12.1 line, the current code and `/docs` win. If a task does not say which line it serves, ask.
+What remains is roadmap Phase 11: the **0.13.0 release path** table in `plans/README.md`, run strictly in its step order.
+
+Each reference has a **Target** section (the roadmap sections and invariants that govern the area) and a **Today** section (where the code lives now). Today sections can lag the tree; graft is the source of truth for file locations.
+
+When sources disagree: a release-path plan that records an owner decision wins over the roadmap (for example plan 182 deleting 17 provider packages); otherwise the roadmap wins for new work. For a bug fix on the released 0.12.1 line, the 0.12 archives in `docs/history/` describe the contract; `/docs` describes 0.13.0. If a task does not say which line it serves, ask.
 
 ## Graft first (before grep, before reading source)
 
@@ -44,7 +51,7 @@ Read [references/architecture.md](references/architecture.md) first whenever the
 | Store slot, JSONL/SQLite/Postgres stores, package-state entries, suspended runs, checkpoints | [references/stores.md](references/stores.md) |
 | Governance, identity/principal, guardrail packs, model router, redaction, trust, secret refs | [references/governance.md](references/governance.md) |
 | MCP, hooks.json, workflows, delegate, observability; host libraries (ACP, AG-UI, MCP server, channels, evals, devtools) | [references/interop.md](references/interop.md) |
-| Prism Code (the lab): TUI, `HostUi`, commands, its 0.12 assembly being deleted | [references/lab.md](references/lab.md) |
+| The Prism Agent reference host (`apps/prism-agent`): agents, workflow, `HostUi` routing, CLI, ACP, scenarios | [references/reference-host.md](references/reference-host.md) |
 | Exports, compat baselines, package truth, packaging gates, changelog, version, publish | [references/release.md](references/release.md) |
 
 Mixed tasks: pick the area that owns the entry point. Read at most the architecture reference plus two area references.
@@ -64,7 +71,7 @@ Mixed tasks: pick the area that owns the entry point. Read at most the architect
 
 **Change discipline:**
 - **Leave the tree green after every task.** A rename updates every caller in the same task (`graft callers --depth all`).
-- **Moved export → regenerate the baseline in the same task.** Run `node scripts/release.mjs gate --update-baseline`, and paste the diff into the task note with removals attributed.
+- **Moved export → regenerate the baseline in the same task.** Run `bun scripts/release.mjs gate --update-baseline`, and paste the diff into the task note with removals attributed.
 - **Retired name, error, or config → repo-wide grep** over `src/ packages/ apps/ scripts/ examples/ docs/` (excluding `dist/`, `plans/`, `docs/history/`, `docs/_evidence/`).
 - **No new dependency** without an explicit plan task. The kernel has zero runtime dependencies; heavy dependencies load only inside their owning package.
 - **Shortest working diff after reading the whole flow.** Fix at the root cause where all callers route through.
@@ -75,7 +82,7 @@ Mixed tasks: pick the area that owns the entry point. Read at most the architect
 1. Read the full plan file in `plans/` and the roadmap phase it implements.
 2. Select the first unchecked task, unless the user names one.
 3. Implement only that task. A small, explicitly noted prerequisite is allowed.
-4. Run the task's listed tests and checks plus directly affected suites, `bun run typecheck`, and `node scripts/release.mjs gate` if exports moved.
+4. Run the task's listed tests and checks plus directly affected suites, `bun run typecheck`, and `bun scripts/release.mjs gate` if exports moved.
 5. Mark `- [x]` only after the implementation and checks pass. Write `Notes (executed <date>)`:
    - what changed
    - findings that affect later tasks

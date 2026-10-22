@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 // Architectural boundary invariants for the core package. These are deliberate
@@ -21,16 +21,17 @@ function sourceFiles(dir: string, predicate: (path: string) => boolean): string[
 // (plan 151/152), which carries the protocol wire mappings (OpenAI-compatible,
 // Anthropic Messages, System One) by design — and the plan 091 model-family ratio table. That table is the one sanctioned home for
 // provider-family names in core: they are chars/token keys and model-id patterns, never
-// behavior branches, and every other core file stays literal-free. `src/cli-providers.ts` is the CLI's `--provider`
 // table (package names and env keys), a second sanctioned home until the runner modes go in Phase 11.
-const PROVIDER_LITERAL_SEAMS = new Set(["src/contracts-core/usage.ts", "src/usage-estimation.ts", "src/cli-providers.ts"]);
+const PROVIDER_LITERAL_SEAMS = new Set([
+  "src/contracts-core/usage.ts",
+  "src/usage-estimation.ts",
+  // Plan 183's live-provider scenario table: the shipped `@arnilo/prism/testing` suite names each
+  // vendor it drives over a real endpoint (a data table, not core behavior). Test-support only.
+  "src/testing/provider-live-scenarios.ts",
+]);
 const runtimeFiles = sourceFiles(
   "src",
-  (path) =>
-    path.endsWith(".ts") &&
-    !path.includes("__tests__") &&
-    !path.includes("src/provider-kit/") &&
-    !PROVIDER_LITERAL_SEAMS.has(path),
+  (path) => path.endsWith(".ts") && !path.includes("__tests__") && !path.includes("src/provider-kit/") && !PROVIDER_LITERAL_SEAMS.has(path),
 );
 const runtimeText = runtimeFiles.map((path) => readFileSync(path, "utf8")).join("\n");
 const runtimeTextLower = runtimeText.toLowerCase();
@@ -172,12 +173,7 @@ describe("core contract seams stay domain-agnostic", () => {
 
 describe("core prompt-file boundaries", () => {
   it("AGENTS.md / SYSTEM.md literals are isolated to the loader and CLI", () => {
-    const allowed = new Set([
-      "src/node/system-project-prompts.ts",
-      "src/node/contribution-discovery.ts",
-      "src/node/agent-definitions.ts",
-      "src/cli-runner.ts",
-    ]);
+    const allowed = new Set(["src/node/contribution-discovery.ts"]);
     const offenders = allSrcFiles.filter((path) => /AGENTS\.md|SYSTEM\.md/.test(readFileSync(path, "utf8")) && !allowed.has(path));
     assert.deepEqual(offenders, [], `AGENTS.md/SYSTEM.md literals leaked outside loader+cli: ${offenders.join(", ")}`);
     for (const core of [
@@ -207,4 +203,10 @@ describe("core prompt-file boundaries", () => {
       assert.equal(/from ["']node:/.test(readFileSync(core, "utf8")), false, `${core} imports a node:* builtin`);
     }
   });
+});
+
+it("kernel_has_no_rpc_module", async () => {
+  assert.equal(existsSync(new URL("../rpc.ts", import.meta.url)), false);
+  const kernel = await import("../index.js");
+  for (const name of ["runRpcServer", "parseRpcRequest"]) assert.equal(name in kernel, false);
 });

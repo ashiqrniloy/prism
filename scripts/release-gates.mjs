@@ -1,8 +1,11 @@
 // Offline pre-publish gates: API surface diff, tarball allow/deny, version ranges.
 // Stdlib-only. Used by `release.mjs gate` and wired into `bun run sdk:ready`.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
+
+import { checkKernelBudget, loadBudgets, measureExportCounts, measureKernelSourceLines } from "./budget-gates.mjs";
 
 export const BASELINE_DIR = "scripts/compat-baseline";
 
@@ -133,37 +136,55 @@ function sourceEntry(manifest) {
   return typeof target === "string" && target.endsWith(".ts") ? target : undefined;
 }
 
-/** `dist/` when the package builds, otherwise a declaration emit for a TypeScript-source export. */
+/**
+ * `dist/` when the package builds, otherwise a declaration emit for a TypeScript-source export.
+ * Plan 174 Task 8: the kernel is a TypeScript-source package too, so `@arnilo/prism` takes the
+ * emit path — there is no `dist/` for it any more.
+ * Returns `{ distDir }`, `{}` (manifest-only) or `{ error }`; never throws, so one gate run reports
+ * every package that fails to emit instead of stopping at the first. The caller owns `cleanup` and
+ * must run it in a `finally`, so `<pkg>/.types/` and the temp tsconfig never survive a run.
+ */
 function declarationDir(root, pkg) {
   const distDir = join(root, pkg.path, "dist");
-  if (existsSync(distDir)) return distDir;
+  if (existsSync(distDir)) return { distDir };
   const entry = sourceEntry(pkg.manifest);
-  if (!entry) return undefined;
+  if (!entry) return {};
   const pkgDir = join(root, pkg.path);
   const out = join(pkgDir, ".types");
   const configPath = join(pkgDir, ".types-tsconfig.json");
-  rmSync(out, { recursive: true, force: true });
+  const cleanup = () => {
+    rmSync(out, { recursive: true, force: true });
+    rmSync(configPath, { force: true });
+  };
+  cleanup();
+  // Extend the package's own tsconfig so the emit sees the same paths, types and
+  // module settings as `typecheck`; fall back to the shared packages config.
+  const ownConfig = join(pkgDir, "tsconfig.json");
+  const base = existsSync(ownConfig) ? "./tsconfig.json" : relative(pkgDir, join(root, "tsconfig.packages.json"));
   writeFileSync(
     configPath,
     JSON.stringify({
+      extends: base,
       compilerOptions: {
+        noEmit: false,
         declaration: true,
         emitDeclarationOnly: true,
-        outDir: out,
-        rootDir: "src",
-        module: "nodenext",
-        moduleResolution: "nodenext",
-        skipLibCheck: true,
-        types: ["node"],
+        outDir: ".types",
+        // The kernel publishes TypeScript source (plan 174 Task 8), so a package's program includes
+        // the kernel's `.ts` files and the common source directory is the repo root. Pin `rootDir`
+        // there — leaving it out fails TS5011 — and read the package's own declarations back out of
+        // the nested path in `.types`. The kernel's declarations land in the same throwaway tree.
+        rootDir: relative(pkgDir, root),
       },
       include: ["src"],
       exclude: ["src/**/__tests__"],
     }),
   );
   const result = spawnSync("bun", ["x", "tsc", "-p", configPath], { cwd: pkgDir, encoding: "utf8" });
-  rmSync(configPath, { force: true });
-  if (result.status !== 0) throw new Error(`compat: ${pkg.manifest.name} declaration emit failed:\n${result.stdout}\n${result.stderr}`);
-  return out;
+  if (result.status !== 0) {
+    return { error: `compat: ${pkg.manifest.name} declaration emit failed:\n${result.stdout}\n${result.stderr}`, cleanup };
+  }
+  return { distDir: join(out, pkg.path), cleanup };
 }
 
 export function serializeSurface(surface) {
@@ -218,20 +239,55 @@ export function assertTarballAllowDeny(pkgName, filePaths) {
   return true;
 }
 
-export function packedFilePaths(root, pkgPath) {
-  // release-host registry toolchain — runner images ship Node; contributors never invoke npm
-  const result = spawnSync("npm", ["pack", "--dry-run", "--json"], {
-    cwd: pkgPath === "." ? root : join(root, pkgPath),
-    encoding: "utf8",
-  });
-  if (result.status !== 0) throw new Error(`npm pack --dry-run failed for ${pkgPath}: ${result.stderr}`);
-  // npm 12 emits an object keyed by package name; npm 11 and earlier emitted an array of entries.
-  const parsed = JSON.parse(result.stdout);
-  const entries = Array.isArray(parsed) ? parsed : Object.values(parsed);
-  return (entries[0]?.files ?? []).map((f) => f.path.replace(/\\/g, "/"));
+/**
+ * Packs one package for real and returns its file list, packed bytes, and unpacked bytes.
+ * The kernel budget (plan 174 Task 10) reads the root pack from here, so the tarball the
+ * deny list inspects is also the tarball the size budget measures — one pack, not two.
+ */
+export function packStats(root, pkgPath) {
+  // Bun-only: pack the real tarball, then list its bytes. `bun pm pack --dry-run`
+  // prints no machine-readable list on Bun 1.4.2, and the destination tarball is
+  // the same artifact Task 8.4 attests and publishes, so the deny check inspects
+  // exactly what the registry would receive.
+  const cwd = pkgPath === "." ? root : join(root, pkgPath);
+  const destination = mkdtempSync(join(tmpdir(), "prism-pack-"));
+  try {
+    const result = spawnSync("bun", ["pm", "pack", "--destination", destination], { cwd, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(`bun pm pack failed for ${pkgPath}: ${result.stderr || result.stdout}`);
+    const tarballs = readdirSync(destination).filter((name) => name.endsWith(".tgz"));
+    if (tarballs.length !== 1) throw new Error(`bun pm pack produced ${tarballs.length} tarballs for ${pkgPath}`);
+    const tarball = join(destination, tarballs[0]);
+    const listing = spawnSync("tar", ["-tvzf", tarball], { encoding: "utf8" });
+    if (listing.status !== 0) throw new Error(`tar listing failed for ${pkgPath}: ${listing.stderr}`);
+    const files = [];
+    let unpackedBytes = 0;
+    for (const line of listing.stdout.split("\n")) {
+      // `-rw-r--r-- 0/0 1234 2026-10-15 15:00 package/src/index.ts`
+      const match = line.match(/^\S+\s+\S+\s+(\d+)\s+\S+\s+\S+\s+(.+)$/);
+      if (!match) continue;
+      files.push(match[2].replace(/^package\//, ""));
+      unpackedBytes += Number(match[1]);
+    }
+    return { files, packedBytes: statSync(tarball).size, unpackedBytes };
+  } finally {
+    rmSync(destination, { recursive: true, force: true });
+  }
 }
 
-export function runGates({ release, version, independent = false, allowBreak = false, updateBaseline = false, skipTarball = false }) {
+export function packedFilePaths(root, pkgPath) {
+  return packStats(root, pkgPath).files;
+}
+
+export function runGates({
+  release,
+  version,
+  independent = false,
+  allowBreak = false,
+  updateBaseline = false,
+  skipTarball = false,
+  packageName,
+  kernelBudget,
+}) {
   // 1. Version-range drift (lockstep exact-graph, or independent range satisfaction).
   const errors = [];
   try {
@@ -242,55 +298,82 @@ export function runGates({ release, version, independent = false, allowBreak = f
     errors.push(`ranges: ${error.message}`);
   }
 
-  // 2. API surface diff against checked-in baselines.
+  // 2. API surface diff against checked-in baselines. A declaration emit that fails
+  // is collected, not thrown, so one run names every failing package.
   const breaks = [];
   for (const pkg of release.packages) {
-    const distDir = declarationDir(release.root, pkg);
-    if (!distDir) {
-      // Manifest-only profiles ship no code; nothing to diff.
-      if (!pkg.manifest.types && !pkg.manifest.main && !pkg.manifest.exports) continue;
-      errors.push(`compat: ${pkg.manifest.name} has no dist/ — run bun run build first`);
-      continue;
-    }
-    const surface = extractDeclaredSurface(distDir);
-    const baselinePath = join(release.root, BASELINE_DIR, baselineName(pkg.manifest.name));
-    if (updateBaseline) {
-      mkdirSync(dirname(baselinePath), { recursive: true });
-      writeFileSync(baselinePath, serializeSurface(surface));
-      continue;
-    }
-    if (!existsSync(baselinePath)) {
-      errors.push(`compat: missing baseline ${relative(release.root, baselinePath)} — run with --update-baseline after review`);
-      continue;
-    }
-    const diff = diffSurface(surface, parseSurface(readFileSync(baselinePath, "utf8")));
-    if (diff.removed.length || diff.changed.length) {
-      const noted = version ? migrationMentionsVersion(release.root, version) : true;
-      const detail = [
-        diff.removed.length ? `removed: ${diff.removed.join(", ")}` : "",
-        diff.changed.length ? `changed: ${diff.changed.join(", ")}` : "",
-      ]
-        .filter(Boolean)
-        .join("; ");
-      if (allowBreak && noted) {
-        console.log(`compat: ${pkg.manifest.name} documented break (${detail})`);
-      } else {
-        breaks.push(
-          `compat: ${pkg.manifest.name} ${detail}${noted ? "" : ` (no ${version} note in docs/migration.md)`} — fix or pass --allow-break with migration note`,
-        );
+    if (packageName && pkg.manifest.name !== packageName) continue;
+    const emitted = declarationDir(release.root, pkg);
+    try {
+      if (emitted.error) {
+        errors.push(emitted.error);
+        continue;
       }
+      const distDir = emitted.distDir;
+      if (!distDir) {
+        // Manifest-only profiles ship no code; nothing to diff.
+        if (!pkg.manifest.types && !pkg.manifest.main && !pkg.manifest.exports) continue;
+        errors.push(`compat: ${pkg.manifest.name} has no dist/ and no TypeScript-source export — run bun run build first`);
+        continue;
+      }
+      const surface = extractDeclaredSurface(distDir);
+      const baselinePath = join(release.root, BASELINE_DIR, baselineName(pkg.manifest.name));
+      if (updateBaseline) {
+        mkdirSync(dirname(baselinePath), { recursive: true });
+        writeFileSync(baselinePath, serializeSurface(surface));
+        continue;
+      }
+      if (!existsSync(baselinePath)) {
+        errors.push(`compat: missing baseline ${relative(release.root, baselinePath)} — run with --update-baseline after review`);
+        continue;
+      }
+      const diff = diffSurface(surface, parseSurface(readFileSync(baselinePath, "utf8")));
+      if (diff.removed.length || diff.changed.length) {
+        const noted = version ? migrationMentionsVersion(release.root, version) : true;
+        const detail = [
+          diff.removed.length ? `removed: ${diff.removed.join(", ")}` : "",
+          diff.changed.length ? `changed: ${diff.changed.join(", ")}` : "",
+        ]
+          .filter(Boolean)
+          .join("; ");
+        if (allowBreak && noted) {
+          console.log(`compat: ${pkg.manifest.name} documented break (${detail})`);
+        } else {
+          breaks.push(
+            `compat: ${pkg.manifest.name} ${detail}${noted ? "" : ` (no ${version} note in docs/migration.md)`} — fix or pass --allow-break with migration note`,
+          );
+        }
+      }
+    } finally {
+      emitted.cleanup?.();
     }
   }
   errors.push(...breaks);
 
-  // 3. Tarball deny list.
+  // 3. Tarball deny list, and the kernel size budget from the root pack it makes.
   if (!skipTarball) {
+    let rootPack;
     for (const pkg of release.packages) {
       try {
-        assertTarballAllowDeny(pkg.manifest.name, packedFilePaths(release.root, pkg.path));
+        const packed = packStats(release.root, pkg.path);
+        if (pkg.path === ".") rootPack = packed;
+        assertTarballAllowDeny(pkg.manifest.name, packed.files);
       } catch (error) {
         errors.push(`tarball: ${error.message}`);
       }
+    }
+    // 4. Kernel size budget (plan 174 Task 10): packed/unpacked bytes, file count,
+    // root exports, and non-test src lines, each a strict ceiling.
+    if (rootPack) {
+      const budget = kernelBudget ?? loadBudgets().kernel;
+      const measured = {
+        packedBytes: rootPack.packedBytes,
+        unpackedBytes: rootPack.unpackedBytes,
+        fileCount: rootPack.files.length,
+        rootExports: measureExportCounts(release.root)["@arnilo/prism"] ?? 0,
+        sourceLines: measureKernelSourceLines(release.root),
+      };
+      for (const check of checkKernelBudget(budget, measured)) if (!check.ok) errors.push(check.message);
     }
   }
 

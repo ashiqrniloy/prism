@@ -4,23 +4,24 @@
 // assertions (retired from bun run test by plan 057 Task 1): every expected value
 // here derives from computePackageTruth() or the filesystem — zero
 // hard-coded package counts.
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
+import { readBunLock } from "./bun-lock.mjs";
 import {
   applyGeneratedBlock,
   computePackageTruth,
   DOC_BLOCK_TARGETS,
-  expandWorkspaceDirs,
+  publishableWorkspaceDirs,
   readManifest,
   renderGeneratedDocs,
   renderInventoryBlock,
   renderProvidersBlock,
 } from "./package-truth.mjs";
 import { effectiveTestChain } from "./run-all-tests.mjs";
-import { readBunLock } from "./bun-lock.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const stripStamp = ({ generatedAt, ...rest }) => rest;
@@ -34,12 +35,12 @@ test("committed package-truth.json equals the live generator output (regen: bun 
 test("workspace manifests, truth counts, and taxonomy partition agree", () => {
   const truth = computePackageTruth(ROOT);
   const root = readManifest(join(ROOT, "package.json"));
-  const dirs = expandWorkspaceDirs(ROOT, root.workspaces);
+  const dirs = publishableWorkspaceDirs(ROOT, root.workspaces);
 
   assert.equal(truth.root.name, root.name);
   assert.equal(truth.root.version, root.version);
-  assert.equal(truth.counts.workspace, dirs.length, "truth workspace count matches workspace globs");
-  assert.equal(truth.counts.publishable, dirs.length + 1, "publishable = root + workspaces");
+  assert.equal(truth.counts.workspace, dirs.length, "truth workspace count matches publishable workspace globs");
+  assert.equal(truth.counts.publishable, dirs.length + 1, "publishable = root + publishable workspaces");
 
   // every workspace package has a manifest, and the taxonomy covers each exactly once
   const names = dirs.map((d) => readManifest(join(d, "package.json")).name).sort();
@@ -70,7 +71,7 @@ test("lockfile agrees with manifests: workspace name-set, versions, root identit
       .map(([key, entry]) => [key, { name: entry.name, version: entry.version }]),
   );
   const manifests = Object.fromEntries(
-    expandWorkspaceDirs(ROOT, root.workspaces).map((dir) => [
+    publishableWorkspaceDirs(ROOT, root.workspaces).map((dir) => [
       dir.slice(ROOT.length + 1).replaceAll("\\", "/"),
       readManifest(join(dir, "package.json")),
     ]),

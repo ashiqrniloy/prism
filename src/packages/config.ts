@@ -16,9 +16,13 @@ export interface PackageConfigLayers {
   readonly code?: unknown;
   /** `AgentConfig.packageConfig[name]`. */
   readonly host?: unknown;
+  /** Per-key scope provenance for manifest keys ("user" | "project"). */
+  readonly manifestScopes?: Readonly<Record<string, "user" | "project">>;
+  /** Default scope for manifest keys if not in manifestScopes (defaults to "project"). */
+  readonly manifestScope?: "user" | "project";
 }
 
-export type PackageConfigSource = "default" | "manifest" | "code" | "host";
+export type PackageConfigSource = "default" | "user" | "project" | "code" | "host";
 
 export interface ResolvedPackageConfig {
   /** The merged, validated config with defaults applied. */
@@ -133,8 +137,8 @@ export function resolvePackageConfig(definition: PackageConfigDefinition, layers
       : Object.hasOwn(code, key)
         ? "code"
         : Object.hasOwn(manifest, key)
-          ? "manifest"
+          ? (layers.manifestScopes?.[key] ?? layers.manifestScope ?? "project")
           : "default";
   }
-  return { config: result.value, sources };
+  return { config: result.value, sources: Object.freeze(sources) };
 }

@@ -1,4 +1,4 @@
-import { estimateTextBytes } from "./context-budget.js";
+import { estimateTextBytes } from "./models/estimate.js";
 import type { Message, Skill } from "./contracts.js";
 
 export type SkillsDisclosure = "progressive" | "eager";

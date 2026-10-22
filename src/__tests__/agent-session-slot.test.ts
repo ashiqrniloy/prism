@@ -69,6 +69,7 @@ describe("agent.session() over the store slot (plan 149 Task 2)", () => {
     const owner = definePackage<any>({
       name: "@acme/store",
       version: "1.0.0",
+      requires: { api: 1 },
       capabilities: ["slot:store"],
       setup: ({ slots }: any) => slots.store.provide(provided),
     });

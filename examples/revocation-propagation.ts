@@ -7,18 +7,20 @@
  *  1. access loss  — a principal loses a grant; the source stays for others.
  *  2. deletion     — `createDeletionPropagator` tombstones the source (and its
  *                    lineage-closed derived ids) and the registered handlers
- *                    delete chunk rows and retire observational-memory entries.
+ *                    delete chunk rows.
  *  3. mid-flight   — a grant revoked *while a reranker runs* still cannot leak:
  *                    the post-rerank gate re-reads and withholds the source.
  *
- * Revocation has two read paths into derived context and this example exercises
- * both: the physical drop entry (`om.observations.dropped`) and the build-time
- * `invalidatedIds` filter fed by `listInvalidatedIds`. Nothing here grants or
- * commits: retrieval, grants, and commit authority stay with the host.
+ * Revocation reaches derived context through the build-time `invalidatedIds`
+ * filter fed by `listInvalidatedIds`: the observational-memory projection is
+ * built with the same tombstone set, so a revoked source stops rendering
+ * without an observational-memory write path. (0.12's `om.observations.dropped`
+ * drop leg lived in the attach surface, deleted by plan 157 Task 5.) Nothing
+ * here grants or commits: retrieval, grants, and commit authority stay with the host.
  *
  * Offline: hash embedder, in-memory vector/session stores, no network.
  */
-import { type Session, type ContextBlock, createAgent, createMemorySessionStore, createSessionEntry, type SessionEntry } from "@arnilo/prism";
+import { type Session, type ContextBlock, createAgent, createMemorySessionStore, createSessionEntry, } from "@arnilo/prism";
 import {
   createDeletionPropagator,
   createHashEmbedder,
@@ -26,16 +28,15 @@ import {
   listInvalidatedIds,
   type MemoryScope,
   type VectorStore,
-} from "@arnilo/prism-memory";
+} from "@arnilo/prism-memory-core";
 import {
   activeObservations,
   buildObservationalMemoryContextBlocks,
   createMemoryId,
-  createObservationalMemoryDropHandler,
   foldObservationalMemoryLedger,
   OBSERVATIONS_RECORDED,
-} from "@arnilo/prism-memory/compaction/observational-memory";
-import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-memory/rag";
+} from "@arnilo/prism-memory-observational";
+import { chunkMarkdown, createRagDeletionHandler, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const TENANT = "t1";
@@ -194,25 +195,11 @@ const auditorAfterDeletion = await retrieveContext("payroll export approval poli
   topK: 5,
 });
 
-/** Write path: register the observational-memory leg and propagate again so the drop entry lands. */
-const appends: SessionEntry[] = [];
-propagator.register(
-  createObservationalMemoryDropHandler({
-    session,
-    appendEntry: async (entry) => {
-      appends.push(entry);
-      await sessionStore.append(entry);
-    },
-  }),
+/** The same projection, with the tombstones applied: the revoked source stops rendering. */
+const entriesAfterDeletion = await session.entries();
+const activeObservationIdsAfterDeletion = activeObservations(foldObservationalMemoryLedger(entriesAfterDeletion)).map(
+  (active) => active.id,
 );
-const dropPass = await propagator.propagate(PAYROLL);
-const entriesAfterDrop = await session.entries();
-const contextAfterDrop = memoryContent(buildObservationalMemoryContextBlocks(entriesAfterDrop));
-const dropObservationIds = appends.flatMap((entry) => {
-  const data = entry.data as { readonly observationIds?: readonly string[] } | undefined;
-  return data?.observationIds ?? [];
-});
-const activeObservationIdsAfterDrop = activeObservations(foldObservationalMemoryLedger(entriesAfterDrop)).map((active) => active.id);
 
 /** Scenario 4: revoke landing while the reranker runs — the post-rerank gate re-reads and withholds. */
 const midFlightDenials: unknown[] = [];
@@ -270,7 +257,6 @@ const payload = {
   deletion: {
     tombstonedIds: deletion.ids,
     layers: deletion.layers,
-    dropLayers: dropPass.layers,
     analystSources: sourcesOf(analystAfterDeletion),
     auditorSources: sourcesOf(auditorAfterDeletion),
     invalidatedIds,
@@ -278,10 +264,7 @@ const payload = {
   context: {
     beforeHasRevoked: contextBeforeRevocation.includes(OBSERVATION_TEXT),
     readPathHasRevoked: contextReadPath.includes(OBSERVATION_TEXT),
-    afterDropHasRevoked: contextAfterDrop.includes(OBSERVATION_TEXT),
-    parity: contextReadPath === contextAfterDrop,
-    dropObservationIds,
-    activeObservationIds: activeObservationIdsAfterDrop,
+    activeObservationIds: activeObservationIdsAfterDeletion,
   },
   exposure: {
     reportHadRevokedText: report.includes("Payroll figures"),

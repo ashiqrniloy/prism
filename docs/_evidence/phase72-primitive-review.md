@@ -31,8 +31,8 @@ Date: 2026-09-13.
 
 ### 1.2 `EvaluationTrace` and `createPersistenceTraceResolver`
 
-**Types:** [`packages/prism-core/src/governance/evals/types.ts:L166–187`](../../packages/prism-core/src/governance/evals/types.ts#L166-L187)
-**Resolver:** [`packages/prism-core/src/governance/evals/trace.ts`](../../packages/prism-core/src/governance/evals/trace.ts)
+**Types:** [`packages/hosts/evals/src/types.ts:L234–256`](../../packages/hosts/evals/src/types.ts#L234-L256)
+**Resolver:** [`packages/hosts/evals/src/trace.ts`](../../packages/hosts/evals/src/trace.ts)
 
 ```ts
 interface EvaluationTrace {
@@ -53,7 +53,7 @@ Resolver enforces:
 
 ### 1.3 `ScorerInput`, `scoreRun`, `runExperiment`, `defineDataset`, `createModelJudge`
 
-**ScorerInput:** [`types.ts:L22–28`](../../packages/prism-core/src/governance/evals/types.ts#L22-L28)
+**ScorerInput:** [`types.ts:L62–68`](../../packages/hosts/evals/src/types.ts#L62-L68)
 
 ```ts
 interface ScorerInput<TInput, TExpected> {
@@ -97,7 +97,7 @@ HMAC cursor signing; foreign-cursor rejection; unredacted-append rejection.
 
 ### 1.5 OTel adapter and `createProviderCapture`
 
-**OTel:** [`packages/prism-core/src/governance/observability/instrumentation.ts`](../../packages/prism-core/src/governance/observability/instrumentation.ts)
+**OTel:** [`packages/integrations/observability/src/workflow-instrumentation.ts`](../../packages/integrations/observability/src/workflow-instrumentation.ts)
 
 Existing spans:
 | Span | Kind | Agent Event trigger |
@@ -159,7 +159,7 @@ Not JSON-serializable. No node kinds, no edge kinds, no labels, no nested workfl
 
 ### 1.7 AG-UI step mapping
 
-**Mapper:** [`packages/ag-ui/src/ag-ui-mapper.ts:L48–453`](../../packages/ag-ui/src/ag-ui-mapper.ts#L48-L453)
+**Mapper:** [`packages/ag-ui/src/ag-ui-mapper.ts:L48–453`](../../packages/hosts/ag-ui/src/ag-ui-mapper.ts#L48-L453)
 
 - `turn_started` → `STEP_STARTED` with `stepName: "turn:" + turn`
 - `turn_finished` → `STEP_FINISHED` with matching step
@@ -171,7 +171,7 @@ Not JSON-serializable. No node kinds, no edge kinds, no labels, no nested workfl
 
 ### 1.8 Dev inspector timeline folding
 
-**File:** [`packages/prism-coding-tools/src/dev/ui/inspector.ts`](../../packages/prism-coding-tools/src/dev/ui/inspector.ts)
+**File:** [`packages/prism-coding-tools/src/dev/ui/inspector.ts`](../../packages/hosts/devtools/src/ui/inspector.ts)
 
 `applyAgentEvent(view, event)` folds `AgentEvent` into a `RunView { items: TimelineItem[], usage, status }`. Window cap: `MAX_RENDERED_WINDOW = 400`.
 

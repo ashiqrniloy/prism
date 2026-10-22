@@ -1,0 +1,8 @@
+{
+  "extends": "../../../tsconfig.packages.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "bun-types/test.d.ts", "bun-types/sqlite.d.ts"]
+  },
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-1e62d4f4fa19",
+  "manifestHash": "1e62d4f4fa1964852d91de7f84cc1d246afd46b735dcbb5fadaba87accadd538",
+  "ceiling": 106000000,
+  "priorReservation": 14733610,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-21T19:05:12.066Z",
+  "updatedAt": "2026-10-21T20:21:33.459Z",
+  "status": "active",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept-lme-full@1",
+      "jobId": "accept-lme-full",
+      "manifestHash": "1e62d4f4fa1964852d91de7f84cc1d246afd46b735dcbb5fadaba87accadd538",
+      "status": "completed",
+      "output": "docs/_evidence/memory-bench/188.7/final-accept-lme-full.json",
+      "maxInputTokens": 22000000,
+      "reservedInputTokens": 22500000,
+      "startedAt": "2026-10-21T19:05:16.333Z",
+      "confirmedInputTokens": 16017060,
+      "usageComplete": false,
+      "cacheReadTokens": 762304,
+      "outputTokens": 50999,
+      "endedAt": "2026-10-21T20:02:14.541Z"
+    },
+    {
+      "attemptId": "accept-lme-om@1",
+      "jobId": "accept-lme-om",
+      "manifestHash": "1e62d4f4fa1964852d91de7f84cc1d246afd46b735dcbb5fadaba87accadd538",
+      "status": "token-ceiling",
+      "output": "docs/_evidence/memory-bench/188.7/final-accept-lme-om.json",
+      "maxInputTokens": 14000000,
+      "reservedInputTokens": 14500000,
+      "startedAt": "2026-10-21T20:02:14.543Z",
+      "confirmedInputTokens": 2475590,
+      "usageComplete": true,
+      "endedAt": "2026-10-21T20:21:33.459Z"
+    }
+  ]
+}

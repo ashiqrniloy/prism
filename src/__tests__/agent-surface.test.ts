@@ -9,7 +9,7 @@ const SECRET = "sk-agent-surface-0123456789";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
 
 const provider = (): ModelProvider => createMockProvider([providerTextDelta("ok"), providerDone()]);
 const tool = (name: string, extra: Partial<ToolDefinition> = {}): ToolDefinition => ({
@@ -166,7 +166,7 @@ describe("agent.models", () => {
         parameters: { baseUrl: "https://internal.example/v1", headers: { authorization: `Bearer ${SECRET}` } },
         compat: { endpoint: SECRET },
         metadata: { token: SECRET },
-        baseUrl: "https://tenant:" + SECRET + "@internal.example/v1",
+        baseUrl: `https://tenant:${SECRET}@internal.example/v1`,
         credential: "env:ALPHA_KEY",
         options: { token: SECRET },
       } as ModelConfig,

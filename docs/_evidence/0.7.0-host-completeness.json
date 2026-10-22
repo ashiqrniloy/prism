@@ -25,7 +25,7 @@
     "core/postgres",
     "memory/postgres",
     "coding-tools/docker-sandbox",
-    "web-tools/browser-live",
+    "tools-browser/browser-live",
     "memory/drive-sync-live",
     "coding-tools/e2b-sandbox-live",
     "work/mistral-ocr-live"
@@ -40,10 +40,10 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/acp-agent/src/__tests__/agent.test.ts"
+        "packages/hosts/acp/src/__tests__/serve.test.ts"
       ],
       "docs": [
-        "docs/acp-agent.md"
+        "packages/hosts/acp/README.md"
       ]
     },
     {
@@ -51,10 +51,10 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/governance/model-router/__tests__/model-router.test.ts"
+        "packages/policy/model-router/src/router/__tests__/model-router.test.ts"
       ],
       "docs": [
-        "docs/model-routing.md"
+        "packages/policy/model-router/README.md"
       ]
     },
     {
@@ -62,10 +62,10 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/acp-agent/src/__tests__/agent.test.ts"
+        "packages/hosts/acp/src/__tests__/serve.test.ts"
       ],
       "docs": [
-        "docs/acp-agent.md"
+        "packages/hosts/acp/README.md"
       ]
     },
     {
@@ -73,11 +73,11 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/governance/model-router/__tests__/model-router.test.ts"
+        "packages/policy/model-router/src/router/__tests__/model-router.test.ts"
       ],
       "docs": [
-        "docs/model-routing.md",
-        "docs/runs-and-usage.md"
+        "packages/policy/model-router/README.md",
+        "packages/hosts/evals/README.md"
       ]
     },
     {
@@ -85,11 +85,11 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-work/src/connectors/__tests__/work-tools.test.ts",
+        "packages/tools/work/src/connectors/__tests__/work-tools.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
-        "docs/work-tools.md"
+        "packages/tools/work/README.md"
       ]
     },
     {
@@ -97,15 +97,15 @@
       "status": "environment-blocked",
       "tier": "live",
       "tests": [
-        "packages/prism-coding-tools/src/security/__tests__/docker-sandbox.test.ts"
+        "packages/tools/coding/src/security/__tests__/docker-sandbox.test.ts"
       ],
       "live": [
         "coding-tools/docker-sandbox",
         "coding-tools/e2b-sandbox-live"
       ],
       "docs": [
-        "docs/process-sessions.md",
-        "docs/hosted-sandboxes.md"
+        "packages/drivers/process/README.md",
+        "packages/tools/coding/README.md"
       ]
     },
     {
@@ -113,14 +113,14 @@
       "status": "environment-blocked",
       "tier": "live",
       "tests": [
-        "packages/memory/src/rag/__tests__/rag.test.ts"
+        "packages/memory/rag/src/__tests__/rag.test.ts"
       ],
       "live": [
         "memory/drive-sync-live",
         "memory/postgres"
       ],
       "docs": [
-        "docs/rag.md"
+        "packages/memory/rag/README.md"
       ]
     },
     {
@@ -128,8 +128,8 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "src/__tests__/host-composition.test.ts",
-        "src/__tests__/cli-init.test.ts",
+        "packages/policy/governance/src/__tests__/readiness.test.ts",
+        "src/__tests__/cli-manifest.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
@@ -141,10 +141,10 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/runtime/workflows/__tests__/coordinator.test.ts"
+        "packages/integrations/workflows/src/__tests__/agent-node.test.ts"
       ],
       "docs": [
-        "docs/server.md"
+        "packages/integrations/workflows/README.md"
       ]
     },
     {
@@ -152,14 +152,14 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/governance/evals/__tests__/scenarios.test.ts",
-        "packages/prism-coding-tools/src/dev/__tests__/eval-compare.test.ts",
+        "packages/hosts/evals/src/__tests__/scenarios.test.ts",
+        "packages/hosts/devtools/src/__tests__/eval-compare.test.ts",
         "examples/behavior-evaluation.ts",
         "examples/coding-browser-evaluation.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
-        "docs/evaluations.md"
+        "packages/hosts/evals/README.md"
       ]
     },
     {
@@ -167,14 +167,14 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/memory/src/__tests__/memory.test.ts",
-        "packages/memory/src/__tests__/lineage.test.ts",
-        "packages/memory/src/__tests__/eval-revocation.test.ts",
-        "packages/memory/src/compaction/observational-memory/__tests__/recall.test.ts",
+        "packages/memory/fabric/src/__tests__/memory.test.ts",
+        "packages/memory/fabric/src/__tests__/lineage.test.ts",
+        "packages/memory/fabric/src/__tests__/eval-revocation.test.ts",
+        "packages/memory/observational/src/__tests__/recall.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
-        "docs/working-and-semantic-memory.md"
+        "packages/memory/fabric/README.md"
       ]
     },
     {
@@ -187,15 +187,15 @@
       "status": "environment-blocked",
       "tier": "live",
       "tests": [
-        "packages/prism-work/src/documents/__tests__/fidelity.test.ts",
-        "packages/prism-core/src/governance/evals/__tests__/citations.test.ts"
+        "packages/tools/work/src/documents/__tests__/fidelity.test.ts",
+        "packages/hosts/evals/src/__tests__/citations.test.ts"
       ],
       "live": [
         "work/mistral-ocr-live"
       ],
       "docs": [
-        "docs/documents.md",
-        "docs/document-reader.md"
+        "packages/tools/work/README.md",
+        "packages/tools/work/README.md"
       ]
     },
     {
@@ -215,14 +215,14 @@
       "status": "environment-blocked",
       "tier": "live",
       "tests": [
-        "packages/prism-providers/src/bedrock/__tests__/converse.test.ts",
-        "packages/prism-providers/src/bedrock/__tests__/bedrock.test.ts"
+        "packages/providers/bedrock/src/__tests__/converse.test.ts",
+        "packages/providers/bedrock/src/__tests__/bedrock.test.ts"
       ],
       "live": [
         "providers/bedrock"
       ],
       "docs": [
-        "docs/providers/bedrock.md"
+        "packages/providers/bedrock/README.md"
       ],
       "note": "Bedrock half (Task 22) shipped: native Converse/ConverseStream route with hermetic frame/body fixtures. Vertex half (Task 23) removed from the ledger 2026-09-14; live IAM/IRSA probe for both routes not run in this environment."
     },
@@ -236,11 +236,11 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/runtime/__tests__/realtime.test.ts",
+        "packages/providers/openai/src/__tests__/hosted-continuation-realtime.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
-        "docs/realtime-voice.md"
+        "packages/providers/openai/README.md"
       ]
     },
     {
@@ -248,12 +248,12 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/prism-core/src/governance/observability/__tests__/timeline.test.ts",
-        "packages/prism-core/src/runtime/workflows/__tests__/graph.test.ts",
+        "packages/integrations/observability/src/__tests__/timeline.test.ts",
+        "packages/integrations/workflows/src/__tests__/graph.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
-        "docs/evaluations.md"
+        "packages/hosts/evals/README.md"
       ]
     },
     {
@@ -261,18 +261,18 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "packages/memory/src/compaction/observational-memory/__tests__/scopes.test.ts",
-        "packages/memory/src/compaction/observational-memory/__tests__/scopes-project.test.ts",
-        "packages/memory/src/compaction/observational-memory/__tests__/runtime-scopes.test.ts",
-        "packages/memory/src/compaction/observational-memory/__tests__/scopes-helper.test.ts",
-        "packages/memory/src/compaction/observational-memory/__tests__/strategy.test.ts",
-        "packages/memory/src/fabric/__tests__/notes.test.ts",
+        "packages/memory/fabric/src/__tests__/memory.test.ts",
+        "packages/memory/fabric/src/__tests__/consolidate.test.ts",
+        "packages/memory/fabric/src/__tests__/host-wiring.test.ts",
+        "packages/memory/fabric/src/__tests__/tools.test.ts",
+        "packages/memory/observational/src/__tests__/strategy.test.ts",
+        "packages/memory/fabric/src/__tests__/notes.test.ts",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs",
         "scripts/e2e-full-surface.test.mjs"
       ],
       "docs": [
-        "docs/compaction-observational-memory.md",
-        "docs/memory-fabric.md",
+        "packages/memory/observational/README.md",
+        "packages/memory/fabric/README.md",
         "docs/_evidence/phase77-primitive-review.md"
       ],
       "plan": "plans/077-Work-Scope-Memory-Index.md"
@@ -282,16 +282,16 @@
       "status": "passed",
       "tier": "hermetic",
       "tests": [
-        "src/__tests__/attention-compiler-contracts.test.ts",
-        "src/__tests__/attention-compiler-stages.test.ts",
-        "src/__tests__/attention-compiler-wiring.test.ts",
-        "src/__tests__/attention-compiler-events.test.ts",
-        "src/__tests__/attention-compiler-followups.test.ts",
+        "packages/context/engineering/src/__tests__/attention-contracts.test.ts",
+        "packages/context/engineering/src/__tests__/attention-stages.test.ts",
+        "packages/context/engineering/src/__tests__/attention-triggers.test.ts",
+        "packages/context/engineering/src/__tests__/attention-durable.test.ts",
+        "packages/context/engineering/src/__tests__/attention-followups.test.ts",
         "scripts/attention-measurements.test.mjs",
         "scripts/fixtures/e2e-070-host-completeness-journey.mjs"
       ],
       "docs": [
-        "docs/attention-compiler.md",
+        "packages/context/engineering/README.md",
         "docs/_evidence/phase74-attention-measurements.md"
       ],
       "plan": "plans/074-Attention-Compiler.md"
@@ -299,5 +299,9 @@
   ],
   "deviations": [
     "Plan 079 (Prism messaging channels: Telegram/Signal) was reassigned from 0.7.0 to 0.8.0 on 2026-09-15 by user request: the 0.7.0 cut no longer waits on it and no channel adapter ships in this release. Recorded in plans/079 (header), roadmap.md, plans/README.md, and plans/073 'Compromises Made'."
+  ],
+  "repointed": [
+    "2026-10-16 (plan 181 Task 3): every test and docs pointer follows its surface to the 0.13 owner \u2014 the packages/<group>/<pkg> move, the memory-family split, the attention compiler's move into @arnilo/prism-context-engineering, and the docs promotion that replaced docs/*.md pages with package READMEs.",
+    "2026-10-16 (plan 181 Task 3): live suite ids follow their packages too (core/postgres -> memory/postgres and tools-browser/browser-live were already recorded; the 0.7.0 ids core/postgres and web-tools/browser-live map to packages/stores/postgres and packages/tools/browser)."
   ]
 }

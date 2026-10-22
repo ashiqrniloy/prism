@@ -11,26 +11,28 @@
  * });
  * ```
  */
+
 import { definePackage, type JsonSchema, type PackageInstance } from "@arnilo/prism";
+import manifest from "../package.json" with { type: "json" };
 
 import {
   createJsonlSessionStore,
-  JsonlSessionStoreError,
   JSONL_BYTES_READ,
   JSONL_FILE_READS,
-  readJsonlSessionEntries,
+  JsonlSessionStoreError,
   type JsonlSessionStoreOptions,
+  readJsonlSessionEntries,
   type SessionEntryParseError,
   type SessionEntryReadResult,
 } from "./jsonl-store.js";
 
 export {
   createJsonlSessionStore,
-  JsonlSessionStoreError,
   JSONL_BYTES_READ,
   JSONL_FILE_READS,
-  readJsonlSessionEntries,
+  JsonlSessionStoreError,
   type JsonlSessionStoreOptions,
+  readJsonlSessionEntries,
   type SessionEntryParseError,
   type SessionEntryReadResult,
 };
@@ -52,9 +54,9 @@ const configSchema: JsonSchema = {
 
 const definition = definePackage<JsonlStoreConfig>({
   name: "@arnilo/prism-store-jsonl",
-  version: "0.12.1",
+  version: manifest.version,
   description: "One JSONL file per session under a directory, as a durable single-process session store.",
-  requires: { prism: "^0.12.1 || ^0.13.0-0" },
+  requires: { api: 1 },
   capabilities: ["slot:store"],
   config: configSchema,
   setup: (prism) => {

@@ -1,0 +1,45 @@
+/**
+ * Deep Research domain types and contracts.
+ */
+
+export interface ResearchQuery {
+  readonly query: string;
+  readonly rationale: string;
+  readonly aspect: string;
+}
+
+export interface ResearchPlan {
+  readonly topic: string;
+  readonly queries: readonly ResearchQuery[];
+  readonly clarifyQuestion?: string;
+  readonly clarifyOptions?: readonly string[];
+}
+
+export interface ResearchFinding {
+  readonly query: string;
+  readonly title: string;
+  readonly snippet: string;
+  readonly url: string;
+  readonly citationId: string;
+  readonly retrievedAt: string;
+}
+
+export interface ResearchCitation {
+  readonly citationId: string;
+  readonly url: string;
+  readonly title: string;
+}
+
+export interface ResearchReport {
+  readonly topic: string;
+  readonly summary: string;
+  readonly findings: readonly ResearchFinding[];
+  readonly citations: readonly ResearchCitation[];
+  readonly iterations: number;
+  readonly completedAt: string;
+}
+
+export interface ClarifyDecision {
+  readonly question: string;
+  readonly selectedOption: string;
+}

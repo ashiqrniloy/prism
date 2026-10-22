@@ -35,7 +35,7 @@ export interface TokenEstimate {
 export interface ContextMeter {
   readonly inputTokens: number;
   readonly source: "reported" | "estimated";
-  /** Per-request input cap from the model window and `attentionCompiler` reserve. */
+  /** Per-request input cap from the model window and the input reserve. */
   readonly inputCap?: number;
   /** Cumulative run input budget (`RunLimits.maxInputTokens`); absent without run limits. */
   readonly runInputBudget?: number;

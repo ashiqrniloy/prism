@@ -1,8 +1,8 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "bun:test";
 import { discoverContributions, loadSkillDirectory } from "../node/contribution-discovery.js";
 
 async function makeRoot(prefix: string): Promise<string> {
@@ -243,10 +243,7 @@ describe("discoverContributions", () => {
 
   it("contribution-discovery subpath is declared in package exports", async () => {
     const packageJson = JSON.parse(await readFile("package.json", "utf8")) as { exports: Record<string, unknown> };
-    assert.deepEqual(packageJson.exports["./node/contribution-discovery"], {
-      types: "./dist/node/contribution-discovery.d.ts",
-      default: "./dist/node/contribution-discovery.js",
-    });
+    assert.deepEqual(packageJson.exports["./node/contribution-discovery"], "./src/node/contribution-discovery.ts");
   });
 });
 

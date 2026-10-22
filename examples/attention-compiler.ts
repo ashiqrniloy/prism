@@ -1,11 +1,17 @@
 /**
- * Attention compiler, no credentials and no network: one assembly stays byte-identical
- * because the request is under the ratio, the next one is over it, so the oldest tool
- * bodies become deterministic stubs and the host gets one `attention_compiled` report.
+ * Attention compiler, no credentials and no network: one pass stays byte-identical because the
+ * request is under the ratio, the next one is over it, so the oldest tool bodies become
+ * deterministic stubs and the caller gets one report.
+ *
+ * The compiler lives in `@arnilo/prism-context-engineering` (plan 158): a session gets it by
+ * installing the package — `contextEngineering({ attention: { maxInputTokens: 2_000 } })` runs
+ * this same pass inside a `context.build` handler and emits `attention.compiled` as a package
+ * event. This file calls the library directly so the pass is visible on its own.
  *
  * Run: npm run build:core && node examples/attention-compiler.ts
  */
-import { assembleProviderInput, type Message, type ModelConfig, type ProviderRequest } from "@arnilo/prism";
+import type { Message, ModelConfig } from "@arnilo/prism";
+import { type AttentionReport, compileAttention, createAttentionCompiler } from "@arnilo/prism-context-engineering";
 
 /** Cap 2,000 tokens, default reserve 1,024: the ratio is compared against 976 input tokens. */
 const model: ModelConfig = { provider: "mock", model: "demo" };
@@ -29,29 +35,14 @@ const bigHistory: Message[] = [
   { role: "tool", content: [{ type: "tool_result", toolCallId: "call_old", name: "lookup", result: big("row") }] },
 ];
 
-const compiler = { maxInputTokens: 2_000, triggerRatio: 0.75, compactRatio: 0.9, keepLast: 0 } as const;
+const turnInput = (text: string): Message => ({ role: "user", content: [{ type: "text", text }] });
 
-/** The session emits `attention_compiled` from here; a direct caller can log it the same way. */
-const reports: unknown[] = [];
-
-async function assemble(history: readonly Message[], input: string, turn: number, withCompiler: boolean): Promise<ProviderRequest> {
-  return assembleProviderInput({
-    model,
-    input,
-    history,
-    turn,
-    ...(withCompiler ? { attentionCompiler: compiler, onAttentionReport: (report) => reports.push(report) } : {}),
-  });
-}
-
-const smallOff = await assemble(smallHistory, "continue", 1, false);
-const smallOn = await assemble(smallHistory, "continue", 2, true);
-const reportsAfterUnderRatio = reports.length;
-const over = await assemble(bigHistory, "continue", 3, true);
+/** One validated handle: the package builds it from the same options a session would pass. */
+const compiler = createAttentionCompiler({ maxInputTokens: 2_000, triggerRatio: 0.75, compactRatio: 0.9, keepLast: 0 }, { model });
 
 /** Stub shape: `Tool result lookup [call_old]: omitted 4006 bytes (sha256 …)`. */
-const stubOf = (request: ProviderRequest, toolCallId: string) => {
-  for (const message of request.messages) {
+const stubOf = (messages: readonly Message[], toolCallId: string) => {
+  for (const message of messages) {
     for (const block of message.content) {
       if (block.type === "tool_result" && block.toolCallId === toolCallId) return String(block.result);
     }
@@ -59,20 +50,27 @@ const stubOf = (request: ProviderRequest, toolCallId: string) => {
   return undefined;
 };
 
+// Turn 2: same model, same history — the pass mutates nothing, so the bytes a host sends are those
+// of a compiler-off run and no report is raised.
+const underRatio = await compileAttention({ compiler, messages: [...smallHistory, turnInput("continue")], turn: 2 });
+
+// Turn 3: over the ratio, so the aged row is stubbed for this pass only.
+const overRatio = await compileAttention({ compiler, messages: [...bigHistory, turnInput("continue")], turn: 3 });
+
+const report: AttentionReport = overRatio.report;
+
 console.log(
   JSON.stringify(
     {
-      // Turn 2: same model, same history — the request bytes are those of a compiler-off run,
-      // and no report is raised, so a session emits nothing for the turn.
       underRatio: {
-        identicalToCompilerOff: JSON.stringify(smallOn.messages) === JSON.stringify(smallOff.messages),
-        stub: stubOf(smallOn, "call_old"),
-        reports: reportsAfterUnderRatio,
+        identicalToCompilerOff: JSON.stringify(underRatio.messages) === JSON.stringify([...smallHistory, turnInput("continue")]),
+        mutated: underRatio.mutated,
+        stub: stubOf(underRatio.messages, "call_old"),
       },
-      // Turn 3: over the ratio, so the aged row is stubbed for this request only.
       overRatio: {
-        stub: stubOf(over, "call_old"),
-        report: reports[0],
+        mutated: overRatio.mutated,
+        stub: stubOf(overRatio.messages, "call_old"),
+        report,
         // Projection only: the row the caller handed in still holds every byte.
         sourceHistoryUnchanged: JSON.stringify(bigHistory[1]).includes("x".repeat(100)),
       },

@@ -21,7 +21,6 @@ interface RevocationPayload {
   readonly deletion: {
     readonly tombstonedIds: readonly string[];
     readonly layers: Readonly<Record<string, number>>;
-    readonly dropLayers: Readonly<Record<string, number>>;
     readonly analystSources: readonly string[];
     readonly auditorSources: readonly string[];
     readonly invalidatedIds: readonly string[];
@@ -29,9 +28,6 @@ interface RevocationPayload {
   readonly context: {
     readonly beforeHasRevoked: boolean;
     readonly readPathHasRevoked: boolean;
-    readonly afterDropHasRevoked: boolean;
-    readonly parity: boolean;
-    readonly dropObservationIds: readonly string[];
     readonly activeObservationIds: readonly string[];
   };
   readonly exposure: { readonly reportHadRevokedText: boolean; readonly postDeletionRetrievedRevoked: boolean };
@@ -70,13 +66,16 @@ describe("cross-layer revocation composition example", () => {
     const payload = runExample();
     assert.equal(payload.baseline.hasRevokedText, true, "the baseline run saw the authorized source");
     assert.equal(payload.context.beforeHasRevoked, true, "the pre-revocation context carried the observation");
-    assert.equal(payload.context.readPathHasRevoked, false, "listInvalidatedIds + invalidatedIds withhold before the drop entry lands");
-    assert.equal(payload.context.afterDropHasRevoked, false, "the drop entry keeps the revoked observation out");
-    assert.equal(payload.context.parity, true, "read path and write path render the same memory");
+    // The build-time filter is the read path: the same tombstones retire the projection, with no
+    // observational-memory write leg (0.12's drop entry lived in the deleted attach surface).
+    assert.equal(payload.context.readPathHasRevoked, false, "listInvalidatedIds + invalidatedIds withhold the revoked observation");
     assert.deepEqual(payload.deletion.invalidatedIds, ["payroll-export"]);
-    assert.deepEqual(payload.context.dropObservationIds.length, 1);
-    assert.deepEqual(payload.context.activeObservationIds, []);
-    assert.equal(payload.deletion.dropLayers.observational, 1);
+    assert.equal(
+      payload.context.activeObservationIds.length,
+      1,
+      "the raw ledger fold keeps the observation; the build-time tombstone filter is what withholds it",
+    );
+    assert.deepEqual(payload.deletion.layers.rag, 1);
   });
 
   it("post-report-generation revoke blocks subsequent exposure", () => {

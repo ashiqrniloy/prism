@@ -93,7 +93,7 @@ const OWNER_FILE = {
     ? "packages/coding-agent/src/index.ts"
     : "packages/prism-coding-tools/src/agent/index.ts",
   "src/cli-init.ts": "src/cli-init.ts",
-  "src/cli-runner.ts": "src/cli-runner.ts",
+  "src/cli-runner.ts": "src/cli-manifest.ts",
   ObservationalMemorySettingsInput: "packages/memory/src/compaction/observational-memory/settings.ts",
   ObservationalMemoryRuntimeOptions: "packages/memory/src/compaction/observational-memory/runtime.ts",
   CreateObservationalMemoryOptions: "packages/memory/src/compaction/observational-memory/compose.ts",

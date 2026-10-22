@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "ceiling": 106000000,
+  "priorReservation": 14733610,
+  "journalSpend": 80067335,
+  "available": 25932665,
+  "attemptCount": 17,
+  "byStatus": {
+    "completed": 6,
+    "token-ceiling": 2,
+    "failed": 5,
+    "setup-failure": 2,
+    "abandoned": 2
+  },
+  "rows": [
+    {
+      "attemptId": "accept-lme-full@1",
+      "status": "completed",
+      "charge": 22500000,
+      "confirmedInputTokens": 16017060,
+      "reservedInputTokens": 22500000,
+      "usageComplete": false
+    },
+    {
+      "attemptId": "accept-lme-om@1",
+      "status": "token-ceiling",
+      "charge": 2475590,
+      "confirmedInputTokens": 2475590,
+      "reservedInputTokens": 3500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lme-fabric@1",
+      "status": "completed",
+      "charge": 3500000,
+      "confirmedInputTokens": 329669,
+      "reservedInputTokens": 3500000,
+      "usageComplete": false
+    },
+    {
+      "attemptId": "accept-lme-fabric-agentic@1",
+      "status": "failed",
+      "charge": 294925,
+      "confirmedInputTokens": 294925,
+      "reservedInputTokens": 8500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lme-om+fabric@1",
+      "status": "token-ceiling",
+      "charge": 3001610,
+      "confirmedInputTokens": 3001610,
+      "reservedInputTokens": 3500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-mab-cr-full@1",
+      "status": "setup-failure",
+      "charge": 12500000,
+      "confirmedInputTokens": 12500000,
+      "reservedInputTokens": 12500000,
+      "usageComplete": false
+    },
+    {
+      "attemptId": "accept-mab-cr-fabric@1",
+      "status": "setup-failure",
+      "charge": 3500000,
+      "confirmedInputTokens": 3500000,
+      "reservedInputTokens": 3500000,
+      "usageComplete": false
+    },
+    {
+      "attemptId": "accept-locomo-full@1",
+      "status": "failed",
+      "charge": 173465,
+      "confirmedInputTokens": 173465,
+      "reservedInputTokens": 5500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lifecycle-full-p1887@1",
+      "status": "completed",
+      "charge": 62019,
+      "confirmedInputTokens": 62019,
+      "reservedInputTokens": 1000000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lifecycle-fabric-promote-off-p1887@1",
+      "status": "completed",
+      "charge": 303201,
+      "confirmedInputTokens": 303201,
+      "reservedInputTokens": 1000000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lifecycle-fabric-promote-on-p1887@1",
+      "status": "failed",
+      "charge": 137766,
+      "confirmedInputTokens": 137766,
+      "reservedInputTokens": 1000000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lifecycle-om+fabric-p1887@1",
+      "status": "failed",
+      "charge": 1000000,
+      "confirmedInputTokens": 12272,
+      "reservedInputTokens": 1000000,
+      "usageComplete": false
+    },
+    {
+      "attemptId": "accept-lifecycle-full-p1888@1",
+      "status": "abandoned",
+      "charge": 20064,
+      "confirmedInputTokens": 20064,
+      "reservedInputTokens": 1000000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-mab-cr-full@2",
+      "status": "completed",
+      "charge": 11032677,
+      "confirmedInputTokens": 11032677,
+      "reservedInputTokens": 12500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-mab-cr-fabric@2",
+      "status": "completed",
+      "charge": 82309,
+      "confirmedInputTokens": 82309,
+      "reservedInputTokens": 3500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-locomo-full@2",
+      "status": "failed",
+      "charge": 4598896,
+      "confirmedInputTokens": 4598896,
+      "reservedInputTokens": 5500000,
+      "usageComplete": true
+    },
+    {
+      "attemptId": "accept-lifecycle-fabric-promote-on-p1887@2",
+      "status": "abandoned",
+      "charge": 151203,
+      "confirmedInputTokens": 151203,
+      "reservedInputTokens": 1000000,
+      "usageComplete": true
+    }
+  ]
+}

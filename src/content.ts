@@ -167,7 +167,12 @@ export function assertModelSupportsContentBlocks(model: ModelConfig, blocks: rea
 }
 
 export function assertMessagesSupportModelCapabilities(model: ModelConfig, messages: readonly Message[]): void {
-  assertModelSupportsContentBlocks(model, collectMessageContentBlocks(messages));
+  // Tool-message media never reaches the wire as host media: each codec renders it as a text note
+  // when the model declares no support (plan 189 Task 2), so it must not fail the request gate.
+  assertModelSupportsContentBlocks(
+    model,
+    collectMessageContentBlocks(messages.filter((message) => message.role !== "tool")),
+  );
 }
 
 export function assertMediaBlocksWithinBounds(blocks: readonly MediaContentBlock[], bounds: MediaContentBounds = {}): void {

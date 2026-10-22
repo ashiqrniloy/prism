@@ -1,0 +1,42 @@
+{
+  "name": "@arnilo/prism-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Private reference host for testing and proof. Not an API.",
+  "type": "module",
+  "bin": {
+    "prism-agent": "./bin/prism-agent.ts"
+  },
+  "scripts": {
+    "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@arnilo/prism-acp": "workspace:*",
+    "@arnilo/prism-approval": "workspace:*",
+    "@arnilo/prism-channels": "workspace:*",
+    "@arnilo/prism-context-files": "workspace:*",
+    "@arnilo/prism-delegate": "workspace:*",
+    "@arnilo/prism-driver-process": "workspace:*",
+    "@arnilo/prism-headless": "workspace:*",
+    "@arnilo/prism-hooks-json": "workspace:*",
+    "@arnilo/prism-memory-compaction": "workspace:*",
+    "@arnilo/prism-memory-observational": "workspace:*",
+    "@arnilo/prism-memory-rag": "workspace:*",
+    "@arnilo/prism-remote": "workspace:*",
+    "@arnilo/prism-store-sqlite": "workspace:*",
+    "@arnilo/prism-tools-browser": "workspace:*",
+    "@arnilo/prism-tools-coding": "workspace:*",
+    "@arnilo/prism-tools-research": "workspace:*",
+    "@arnilo/prism-tools-web": "workspace:*",
+    "@arnilo/prism-workflows": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "license": "MIT"
+}

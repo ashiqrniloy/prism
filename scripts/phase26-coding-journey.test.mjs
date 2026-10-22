@@ -36,7 +36,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
 import { blockedGate } from "./blocked-gate.mjs";
-import { createPackedConsumer, installedVersion, repoRoot, resolveFromConsumer } from "./fixtures/packed-consumer.mjs";
+import { createPackedConsumer, installedVersion, repoRoot, } from "./fixtures/packed-consumer.mjs";
 
 const freeze = JSON.parse(readFileSync(join(repoRoot, "scripts/phase26-freeze-manifest.json"), "utf8"));
 const WALL_DEFAULT_MS = Number(/^(\d+)/.exec(freeze.frozenCaps.journey.wallMs)?.[1] ?? 1_200_000);
@@ -55,11 +55,10 @@ const REQUIRED_ENVS = [
 
 const packages = [
   { dir: ".", name: "@arnilo/prism" },
-  { dir: "packages/prism-coding-tools", name: "@arnilo/prism-coding-tools" },
-  { dir: "packages/ag-ui", name: "@arnilo/prism-ag-ui" },
-  { dir: "packages/web-tools", name: "@arnilo/prism-web-tools" },
-  { dir: "packages/prism-core", name: "@arnilo/prism-core" },
-  { dir: "packages/mcp", name: "@arnilo/prism-mcp" },
+  { dir: "packages/tools/coding", name: "@arnilo/prism-tools-coding" },
+  { dir: "packages/hosts/ag-ui", name: "@arnilo/prism-ag-ui" },
+  { dir: "packages/tools/browser", name: "@arnilo/prism-tools-browser" },
+  { dir: "packages/integrations/mcp", name: "@arnilo/prism-mcp" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -147,7 +146,6 @@ describe("protected real coding-agent journey", () => {
         `${pkg.name} installed version must match the packed manifest`,
       );
     }
-    assert.ok(resolveFromConsumer(consumer.consumer, "@arnilo/prism-coding-tools").startsWith(`file://${consumer.consumer}`));
   });
 
   it("installs the pinned host browser into the consumer for the browser leg", () => {
@@ -182,7 +180,6 @@ describe("protected real coding-agent journey", () => {
       "workspace",
       "agent-edit",
       "check-diagnostics",
-      "patch-review",
       "process-recovery",
       "durable-cancel",
       "forge",

@@ -1,15 +1,16 @@
-import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { AgentEvent, ProviderRequest, ToolCallContent, ToolDefinition, ToolRegistry } from "../contracts.js";
 import type { ContextDraft } from "../hooks/index.js";
-import { assembleProviderInput, createAgent, withContextBlocks, createSecretRedactor, createToolRegistry, dispatchToolCall, redactAgentEvent, redactProviderRequest } from "../index.js";
-import { loadSystemPromptFiles } from "../node/system-project-prompts.js";
-import { createPathTrustPolicy } from "../node/trust.js";
-import { createStaticTrustPolicy } from "../security.js";
+import {
+  createAgent,
+  createSecretRedactor,
+  createToolRegistry,
+  dispatchToolCall,
+  redactAgentEvent,
+  redactProviderRequest,
+  withContextBlocks,
+} from "../index.js";
 import { mockProvider } from "../testing/index.js";
 
 // Security behavior invariants for the contribution and prompt-file seams:
@@ -127,62 +128,3 @@ describe("instruction injector security boundaries", () => {
     assert.ok(!/permissions/.test(serialized), "a smuggled permissions field reached the provider request");
   });
 });
-
-describe("prompt-file loader security boundaries", () => {
-  it("loader never executes discovered modules and trust gating is reachable", async () => {
-    // Strip comments so the doc text "no import()" cannot trip the code scan.
-    const loaderText = readLoaderText();
-    assert.equal(/\bimport\s*\(/.test(loaderText), false, "loader uses dynamic import() — code execution risk");
-    assert.equal(/\beval\s*\(/.test(loaderText), false, "loader uses eval() — code execution risk");
-
-    const workspace = await mkdtemp(join(tmpdir(), "prism-prompt-bnd-ws-"));
-    const global = await mkdtemp(join(tmpdir(), "prism-prompt-bnd-glob-"));
-    await mkdir(join(global, ".prism", "agent"), { recursive: true });
-    await writeFile(join(global, ".prism", "agent", "SYSTEM.md"), "GLOBAL");
-    await writeFile(join(workspace, "AGENTS.md"), "SHOULD NOT LOAD");
-
-    const layers = await loadSystemPromptFiles({
-      workspaceRoot: workspace,
-      globalRoot: global,
-      trust: createStaticTrustPolicy(false),
-    });
-    assert.equal(layers.length, 1, "untrusted AGENTS.md was not skipped");
-    assert.equal(layers[0].source, "user", "SYSTEM.md should still load (user-owned, no trust gate)");
-
-    const trustedLayers = await loadSystemPromptFiles({
-      workspaceRoot: workspace,
-      trust: createPathTrustPolicy({ trustedRoots: [workspace] }),
-    });
-    assert.ok(
-      trustedLayers.some((l) => l.source === "app"),
-      "trusted workspace did not load AGENTS.md via createPathTrustPolicy",
-    );
-  });
-
-  it("loader output is redactable like any system instruction", async () => {
-    const secret = "phase31-leak-token-xyz";
-    const workspace = await mkdtemp(join(tmpdir(), "prism-prompt-bnd-secret-"));
-    await writeFile(join(workspace, "AGENTS.md"), `Project rule. token=${secret}`);
-    const layers = await loadSystemPromptFiles({
-      workspaceRoot: workspace,
-      trust: createPathTrustPolicy({ trustedRoots: [workspace] }),
-    });
-    assert.ok(
-      layers.some((l) => l.text.includes(secret)),
-      "loader did not emit AGENTS.md text containing the secret",
-    );
-
-    const request: ProviderRequest = {
-      model: { provider: "mock", model: "m" },
-      messages: [{ role: "system", content: [{ type: "text", text: layers.map((l) => l.text).join("\n") }] }],
-    };
-    const redacted = redactProviderRequest(request, createSecretRedactor([secret]));
-    assert.equal(JSON.stringify(redacted).includes(secret), false, "AGENTS.md secret leaked past redactProviderRequest");
-  });
-});
-
-function readLoaderText(): string {
-  return readFileSync("src/node/system-project-prompts.ts", "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/[^\n]*/g, "");
-}

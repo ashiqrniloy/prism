@@ -1,12 +1,9 @@
 /**
- * Laya provider: self-hosted `laya-serve` behind the same decision-model seam as Jev.
- *
- * Default base URL is plaintext loopback. Any host-supplied endpoint overrides it, including
- * a `laya-serve` on another machine. `model` is advisory — the server Router picks the checkpoint.
+ * Laya provider: a decision model behind the standard ModelProvider seam.
  */
-import type { ModelProvider, CredentialValueSource } from "@arnilo/prism";
+import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
 import { createSystemOneDecisionProvider } from "@arnilo/prism/provider-kit";
-import { layaBaseUrl } from "./models.js";
+import { LAYA_DEFAULT_BASE_URL } from "./models.js";
 
 export interface LayaProviderOptions {
   readonly id?: string;
@@ -15,15 +12,17 @@ export interface LayaProviderOptions {
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt; forwarded to the shared System One client (default 2). */
   readonly maxRetries?: number;
+  readonly warn?: (message: string) => void;
 }
 
 export function createLayaProvider(options: LayaProviderOptions = {}): ModelProvider {
   return createSystemOneDecisionProvider({
     id: options.id ?? "laya",
     label: "Laya",
-    baseUrl: layaBaseUrl(options),
+    baseUrl: options.baseUrl ?? LAYA_DEFAULT_BASE_URL,
     apiKey: options.apiKey,
     fetch: options.fetch,
     maxRetries: options.maxRetries,
+    warn: options.warn,
   });
 }

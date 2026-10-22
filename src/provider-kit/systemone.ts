@@ -15,6 +15,7 @@ import { resolveCredentialValue } from "../credentials/index.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import { readBoundedResponseJson, readBoundedResponseText } from "./transport.js";
 import { parseErrorBody, providerHttpError, readRetryAfterMs } from "./retry-http.js";
+import { normalizeUsage } from "./usage.js";
 
 /** Text, structured criteria, or message-part arrays accepted as question instructions. */
 export type SystemOneInstructions = string | JsonObject | readonly unknown[];
@@ -216,8 +217,10 @@ export function isSystemOneResponse(value: unknown): value is SystemOneResponse 
  */
 export function mapSystemOneUsage(usage: SystemOneUsage | undefined): Usage | undefined {
   if (!usage) return undefined;
-  const inputTokens = usage.input_tokens ?? 0;
-  return { inputTokens, outputTokens: 0, totalTokens: inputTokens };
+  return normalizeUsage({
+    inputTokens: usage.input_tokens ?? 0,
+    outputTokens: 0,
+  });
 }
 
 /**
@@ -325,3 +328,62 @@ function readErrorCode(bodyText: string): string | undefined {
   const error = parseErrorBody(parsed)?.error;
   return typeof error?.code === "string" ? error.code : undefined;
 }
+
+/**
+ * Canonical loopback hosts: localhost, *.localhost, ::1, and 127.0.0.0/8 IPv4 addresses.
+ */
+export function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host === "::1") return true;
+  if (!host.startsWith("127.")) return false;
+  const parts = host.split(".");
+  return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+}
+
+/**
+ * Returns true if baseUrl is an http: URL pointing to a non-loopback host.
+ */
+export function isPlaintextRemote(baseUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:") return false;
+  return !isLoopbackHost(url.hostname);
+}
+
+/**
+ * Returns the origin (without userinfo) if baseUrl is an http: non-loopback endpoint.
+ */
+export function plaintextRemoteOrigin(baseUrl: string): string | undefined {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return undefined;
+  }
+  if (url.protocol === "http:" && !isLoopbackHost(url.hostname)) {
+    return url.origin;
+  }
+  return undefined;
+}
+
+/**
+ * Warns if baseUrl is plaintext and not loopback.
+ * Prints origin only (never credentials/userinfo).
+ */
+export function warnIfPlaintextRemote(
+  label: string,
+  baseUrl: string,
+  warn: (message: string) => void = console.warn,
+): boolean {
+  const origin = plaintextRemoteOrigin(baseUrl);
+  if (!origin) return false;
+  warn(
+    `${label} baseUrl ${origin} is plaintext and not loopback. Use https:// for a remote endpoint; state and questions leave this process.`,
+  );
+  return true;
+}
+

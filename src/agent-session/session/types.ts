@@ -1,13 +1,8 @@
 /** Shared host/round types for runInternal phase split (plan 059). Internal only. */
 
 import type { ActiveDurableRun } from "../../agent-approval.js";
-import type { PendingToolCall, PersistedGuardrailPacks } from "../../agent-run-state.js";
-import type {
-  AttentionFoldLedger,
-  AttentionStickyFrontier,
-  PersistedAttentionFoldLedger,
-  PersistedAttentionStickyFrontier,
-} from "../../attention-compiler.js";
+import type { PendingToolCall } from "../../agent-run-state.js";
+
 import type {
   Agent,
   AgentEvent,
@@ -16,8 +11,6 @@ import type {
   RunResult,
   ModelProvider,
   ErrorInfo,
-  Guardrail,
-  GuardrailRecord,
   Message,
   ModelConfig,
   OwnershipScope,
@@ -30,6 +23,7 @@ import type {
   SessionEntry,
   SessionStore,
   Skill,
+  EventOrigin,
   ToolCallContent,
   ToolCallSummary,
   ToolDefinition,
@@ -38,9 +32,8 @@ import type {
   ToolResult,
   Usage,
 } from "../../contracts.js";
-import type { Principal } from "../../identity.js";
+import type { Principal } from "../../contracts-core/principal.js";
 import type { AgentInput } from "../../input.js";
-import type { CompiledGuardrailRules } from "../../guardrails.js";
 import type { HookBus } from "../../hooks/index.js";
 import type { LoopStrategy, RunController } from "../../loop/index.js";
 import type { SecretRedactor } from "../../redaction.js";
@@ -49,7 +42,6 @@ import type { SessionContextSnapshot } from "../../session-stores.js";
 import type { LoadedSkillSet } from "../../skill-disclosure.js";
 import type { LoadedSkillBodiesEntry } from "../../skill-load.js";
 import type { SlotRegistry } from "../../slots/index.js";
-import type { ActiveToolSet } from "../../tool-search.js";
 
 /** Live session bag phases mutate. Cast from RuntimeAgentSession (private fields). */
 export type SessionHost = {
@@ -73,16 +65,6 @@ export type SessionHost = {
   activePrincipal?: Principal;
   activeIdempotencyKey?: string;
   activeRunMessages: Message[];
-  /** Plan 092 Task 2: packs compiled once at session construction; the tool seams run as hooks. */
-  readonly packGuardrails?: CompiledGuardrailRules;
-  /** Plan 104 T3: `ask` rules as the durable gate (`interrupt` records) and as plain blocks for a
-   *  run that cannot suspend. */
-  readonly packAskGate?: readonly Guardrail<"tool_input">[];
-  readonly packAskBlocks?: readonly Guardrail<"tool_input">[];
-  /** Plan 104 T3: the pack `ask` record for a staged suspension, keyed by tool-call id. */
-  packAskRecords?: Map<string, GuardrailRecord>;
-  /** Plan 104 T2: pack refs + live pack-owned state for a durable checkpoint. */
-  serializedGuardrailPackState(): PersistedGuardrailPacks | undefined;
   activeMetadata?: Readonly<Record<string, unknown>>;
   activePromptVersion?: PromptVersionRef;
   activeLimits?: RunLimitTracker;
@@ -99,33 +81,17 @@ export type SessionHost = {
   readonly loadedSkills: LoadedSkillSet;
   /** Run-owned monotonic prompt tail; cleared before each new run. */
   readonly tailSegments: Map<string, Message>;
-  readonly activatedTools: ActiveToolSet;
+
   restoredSkillBodies: readonly LoadedSkillBodiesEntry[];
   activeRunSkills: readonly Skill[];
   /** Names-only grant for this run; undefined means the full registered set. */
   activeToolNames?: readonly string[];
-  /** Sticky mutation frontier for this session (plan 074 C10); session-owned so it survives
-   *  across turns, runs, and provider rounds. Lazily created on first use. */
-  attentionStickyFor(): AttentionStickyFrontier;
-  /** Plan 074 P3: bounded frontier snapshot for durable checkpoints (undefined before any mutation). */
-  serializedAttentionSticky(): PersistedAttentionStickyFrontier | undefined;
-  /** Plan 074 P3: restore a frontier that was validated when the checkpoint was loaded. */
-  restoreAttentionSticky(persisted: PersistedAttentionStickyFrontier): void;
-  /** Folded bodies for this session (plan 086 T3); session-owned so a resumed fold re-applies
-   *  the same stub bytes instead of calling the host `summarize` again. Lazily created. */
-  attentionFoldFor(): AttentionFoldLedger;
-  /** Plan 086 T3: bounded ledger snapshot for a durable checkpoint (undefined before any fold). */
-  serializedAttentionFold(): PersistedAttentionFoldLedger | undefined;
-  /** Plan 086 T3: adopt a ledger validated when the checkpoint was loaded. */
-  restoreAttentionFold(ledger: AttentionFoldLedger): void;
-  /** Plan 086 T3: `attention.compiler.durable` for the current run; set by the run assembler. */
-  attentionDurable: boolean;
   invalidateSnapshot(): void;
   /** Host hook bus for this agent (roadmap §2.4). */
   hooks(): HookBus;
   /** Slot registry for this agent (roadmap §2.5). */
   slots(): SlotRegistry;
-  resolveRunProvider(options: ResolvedRunOptions): void;
+  resolveRunProvider(options: ResolvedRunOptions, skip?: boolean): void;
   emit(event: AgentEvent): void;
   rebuildHistory(): Promise<void>;
   resolveRunSkills(tools: readonly ToolDefinition[]): readonly Skill[];
@@ -134,12 +100,15 @@ export type SessionHost = {
   /** Redacted, cap-checked steer queue push (plan 106 R1 uses it for stop-hook continuations). */
   steer(input: AgentInput): void;
   appendEntry(entry: SessionEntry): Promise<void>;
+  externalState(vendor: string, key: string): import("../../session/external-state.js").ExternalStateHandle;
   redact<T>(value: T): T;
   appendMessage(message: Message, runId: string): Promise<void>;
   autoCompact(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void>;
   autoCompactTurn(runId: string, options: ResolvedRunOptions, signal: AbortSignal, turn: number): Promise<void>;
   activeLoopHistory?: Message[];
   applyPendingSteers(runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean>;
+  drainSteers(runId: string, signal: AbortSignal): Promise<readonly Message[]>;
+  onSteer(listener: () => void): () => void;
   redactProviderRequest(request: ProviderRequest): ProviderRequest;
   drainLedger(): Promise<void>;
   buildRunResult(input: {
@@ -190,12 +159,12 @@ export type RoundContext = {
   /** The loop's only handle; the default loop reaches the kernel through it. */
   runController: RunController;
   /** Bound tool dispatch (approval/sticky-aware); the run loop reaches tools only through it. */
-  dispatchToolCall(call: ToolCallContent): Promise<ToolResult>;
+  dispatchToolCall(call: ToolCallContent, origin?: EventOrigin): Promise<ToolResult>;
   /** Why the loop stopped, when a ceiling or a hook ended it cleanly (F4). */
   loopFinishReason?: AgentFinishReason;
   /** Redacted, byte-capped reason a `turn.before` handler returned with its `{ stop }`. */
   loopStopDetail?: string;
-  toolsDisclosure: import("../../tool-search.js").ToolsDisclosure;
+
   /** Per-turn dispatch overlay; set when `RunOptions.tools` scopes the turn. */
   turnAllow?: readonly string[];
   assembledTurn: boolean;

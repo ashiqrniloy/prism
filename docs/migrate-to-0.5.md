@@ -56,7 +56,7 @@ Per-symbol local replacements for the two cases where 0.4 docs showed a usage pa
   [`docs/settings-auth-trust-security.md`](settings-auth-trust-security.md)).
 - `parseContextFile` / `parseToolFile` → colocated `CONTEXT.md` / tool-descriptor parsing is
   host-owned; parse frontmatter with `parseAgentFile` (kept) plus your own file reading
-  (see [`docs/agent-definitions.md`](agent-definitions.md)).
+  (see [`docs/agent-definitions.md`](agent.md)).
 
 ## 4. Dependency majors (plan 062)
 
@@ -66,7 +66,7 @@ Per-symbol local replacements for the two cases where 0.4 docs showed a usage pa
 
 ## 5. MCP: TypeScript SDK v2 modular adoption (plan 063, breaking for MCP hosts)
 
-`@arnilo/prism-mcp` replaces the monolithic `@modelcontextprotocol/sdk` 1.30.0 with the modular v2 packages (`@modelcontextprotocol/client` + `@modelcontextprotocol/server` 2.0.0 exact pins). Prism's public surface (`createPrismMcpServer`, `createPrismMcpWebHandler`) keeps its shape; hosts that imported SDK types directly must move to the v2 module imports. Highlights: modern client negotiation, SDK-managed routing headers (SEP-2243), MRTR-compatible elicitation, dual-era HTTP/stdio serving, 2026-07-28-conformant OAuth (issuer-keyed storage, RFC 9207 `iss` validation). Draft-era task vocabulary fails closed. Full migration table + legacy-session timeline: [`docs/migration.md`](migration.md), canonical API in [`docs/mcp-tools.md`](mcp-tools.md).
+`@arnilo/prism-mcp` replaces the monolithic `@modelcontextprotocol/sdk` 1.30.0 with the modular v2 packages (`@modelcontextprotocol/client` + `@modelcontextprotocol/server` 2.0.0 exact pins). Prism's public surface (`createPrismMcpServer`, `createPrismMcpWebHandler`) keeps its shape; hosts that imported SDK types directly must move to the v2 module imports. Highlights: modern client negotiation, SDK-managed routing headers (SEP-2243), MRTR-compatible elicitation, dual-era HTTP/stdio serving, 2026-07-28-conformant OAuth (issuer-keyed storage, RFC 9207 `iss` validation). Draft-era task vocabulary fails closed. Full migration table + legacy-session timeline: [`docs/migration.md`](migration.md), canonical API in [`docs/mcp-tools.md`](../packages/integrations/mcp/README.md).
 
 ## 6. CLI real-provider contract (plan 064)
 
@@ -103,7 +103,7 @@ What to do:
 4. Remove xAI "never send reasoning_effort" workarounds.
 5. Nothing else: `mergeProviderRequestOptions`, `RunOptions`, and persisted shapes are unchanged.
 
-Contract reference: [`docs/thinking-and-reasoning.md`](thinking-and-reasoning.md); per-provider declared levels + wire fields on each `docs/providers/*.md` page.
+Contract reference: [`docs/thinking-and-reasoning.md`](provider-kit.md); per-provider declared levels + wire fields on each `docs/providers/*.md` page.
 
 ## 8. Provider request construction — additive (plan 066 / 0.5.1)
 

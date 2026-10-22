@@ -1,0 +1,272 @@
+{
+  "$comment": "Plan 175 Task 8 registry deprecation list, from plan 174 Task 1 (i). Whole-package entries (range *) are names no 0.13.0 package reuses; range-scoped entries (<0.13.0) are names a 0.13.0 package or host library reuses, so only the retired line is deprecated. Each message names the successor and the docs/migrate-to-0.13.md anchor. Consumed by scripts/registry-deprecate.mjs; the runner never calls npm.",
+  "guide": "docs/migrate-to-0.13.md",
+  "guideUrl": "https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md",
+  "registry": "https://registry.npmjs.org",
+  "names": [
+    {
+      "name": "@arnilo/prism-agent-sdk",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism and the native packages",
+      "anchor": "#defineagent-arniloprism-agent-sdk-createagent",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism and the native packages. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#defineagent-arniloprism-agent-sdk-createagent"
+    },
+    {
+      "name": "@arnilo/prism-code",
+      "range": "*",
+      "reused": false,
+      "successor": "the unpublished reference host @arnilo/prism-agent",
+      "anchor": "#arniloprism-code-the-reference-host",
+      "message": "Legacy 0.12 package. Prism 0.13+: the unpublished reference host @arnilo/prism-agent. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#arniloprism-code-the-reference-host"
+    },
+    {
+      "name": "@arnilo/prism-acp-agent",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-acp",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-acp. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-providers",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-provider-{hyper,opencode-go,typesafe,laya} and @arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-provider-{hyper,opencode-go,typesafe,laya} and @arnilo/prism/provider-kit. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-coding-tools",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-tools-coding",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-tools-coding. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-web-tools",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-tools-web",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-tools-web. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-memory",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-memory-*",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-memory-*. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-core",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism and the native packages",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism and the native packages. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-work",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-tools-work",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-tools-work. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-hooks",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism-hooks-json",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-hooks-json. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-all",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism and the native packages",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.3 meta package. Prism 0.13+: @arnilo/prism and the native packages. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-mcp",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-mcp@0.13.0",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-mcp@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-ag-ui",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-ag-ui@0.13.0",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-ag-ui@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-channels",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-channels@0.13.0",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-channels@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-evals",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-evals@0.13.0",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-evals@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-workflows",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-workflows@0.13.0",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-workflows@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-model-router",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-model-router@0.13.0",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-model-router@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-ai-sdk",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-alibaba",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-anthropic",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-azure",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-bedrock",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-clinepass",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-deepseek",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-google",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-kimi",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-neuralwatt",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-ollama",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-openai",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-openrouter",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-vertex",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-xai",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    },
+    {
+      "name": "@arnilo/prism-provider-zai",
+      "range": "*",
+      "reused": false,
+      "successor": "@arnilo/prism/provider-kit",
+      "anchor": "#012-family-package-native-package-map",
+      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { connectE2BSandbox, createE2BSandbox, type E2BClient, type E2BSandboxInstance } from "@arnilo/prism-coding-tools/security";
+import { connectE2BSandbox, createE2BSandbox, type E2BClient, type E2BSandboxInstance } from "@arnilo/prism-tools-coding";
 
 const instance = (): E2BSandboxInstance => ({
   sandboxId: "sbx_demo",

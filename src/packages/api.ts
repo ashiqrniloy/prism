@@ -1,9 +1,10 @@
 import type {
   Agent,
-  ModelProvider,
+  EmbeddingsProvider,
   JsonObject,
   JsonValue,
   ModelConfig,
+  ModelProvider,
   ModelRef,
   ProviderEvent,
   ProviderRequest,
@@ -13,10 +14,11 @@ import type {
 } from "../contracts.js";
 import type { HookRegistrar } from "../hooks/index.js";
 import type { HostPort, Logger } from "../host/types.js";
+import type { AgentState, SessionLog, SessionState } from "../session/state.js";
 import type { SessionContext } from "../session-context.js";
-import type { AgentState, SessionState } from "../session/state.js";
 import type { SlotContracts, SlotName } from "../slots/index.js";
 import type { Capability } from "./capabilities.js";
+import type { PackageConfigSource } from "./config.js";
 import type { JsonSchema } from "./schema.js";
 
 /** A slot a package can claim: `prism.slots.loop.provide(impl)`. Needs `"slot:<name>"`. */
@@ -46,7 +48,7 @@ export interface PackageCommandContext {
   readonly agent: Agent;
 }
 
-/** A command a package contributes (roadmap §2.6). Distinct from the 0.12 `CommandDefinition`. */
+/** A command a package contributes (roadmap §2.6). Replaces the retired 0.12 command shape. */
 export interface PackageCommand {
   readonly name: string;
   readonly description: string;
@@ -74,16 +76,33 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
   readonly name: string;
   /** Defaults ← manifest layer ← `AgentConfig.packageConfig`, validated, deeply frozen, and private to this package. */
   readonly config: C;
+  /** Where each top-level config key came from. Frozen, key names only. */
+  readonly configSources: Readonly<Record<string, PackageConfigSource>>;
+  /** Loaded package inspection and dependency instances. */
+  readonly packages: {
+    /** Returns named loaded packages as PackageInstances in load order. Throws state_not_ready during setup. */
+    instances(names: readonly string[]): readonly PackageInstance[];
+  };
   /** Registers hooks under this package's name. The owner is bound by the loader, never chosen here. */
   readonly hooks: HookRegistrar;
   readonly slots: SlotRegistrar;
   readonly tools: {
     /** A name taken by another package, the host, or the kernel gives `tool_conflict`. */
     register(tool: ToolDefinition, options?: PackageToolOptions): void;
+    /**
+     * The agent's effective tools: the host's, the kernel's, and every package's, minus `AgentConfig.disable`.
+     * Read-only frozen copies, in registration order. It lists every registered tool, not the session-conditional
+     * subset (`PackageToolOptions.when`). Throws `state_not_ready` during `setup`.
+     */
+    list(): readonly ToolDefinition[];
   };
   readonly skills: {
     /** A name taken by another package or the host gives `skill_conflict`. */
     register(skill: Skill): void;
+    /** The agent's effective skills (host and packages, minus `disable`) as frozen copies. Throws `state_not_ready` during `setup`. */
+    list(): readonly Skill[];
+    /** One effective skill by name, or `undefined` when absent or disabled. Throws `state_not_ready` during `setup`. */
+    get(name: string): Skill | undefined;
     /** Reads `<dir>/<name>/SKILL.md` after `setup` returns, so a read failure fails this package's setup. */
     addDir(path: string): void;
   };
@@ -99,6 +118,12 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
   readonly models: {
     /** A client over the agent's provider resolution. `ref` defaults to `AgentConfig.model`. */
     client(ref?: ModelRef): ModelClient;
+    /**
+     * The configured model's embeddings adapter, over the same provider resolution as `client`.
+     * Needs `"models"`; `ref` defaults to `AgentConfig.model`. Throws `EmbeddingsError` when the
+     * model declares no `capabilities.embeddings` or the provider registers no adapter.
+     */
+    embeddings(ref?: ModelRef): EmbeddingsProvider;
   };
   /** Needs `"credentials"`. */
   readonly credentials: {
@@ -115,6 +140,13 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
      * is one store entry (and counts toward compaction thresholds), so write on change, not per event.
      */
     session<T extends JsonValue>(key: string, initial: T): SessionState<T>;
+    /**
+     * An append-only record log per session, kept in `package_state` entries on the session's branch:
+     * restored when the session reads its branch, and carried by `fork()` and `clone()`. Needs
+     * `"session-state"`. Each `append` is one store entry (and counts toward compaction thresholds), so
+     * write on change, not per event. `entries(session)` is synchronous and returns the branch's order.
+     */
+    log<T extends JsonValue>(key: string): SessionLog<T>;
     /** Process memory for the agent's lifetime, reset to `initial` when this package is disposed. */
     agent<T>(key: string, initial: T): AgentState<T>;
   };
@@ -139,8 +171,10 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
 }
 
 export interface PackageRequires {
-  /** Semver range against the kernel version. */
-  readonly prism: string;
+  /** Kernel API level this package targets. Required; must be in the kernel's `SUPPORTED_API_LEVELS`. */
+  readonly api: number;
+  /** Optional minimum kernel version, for a package that needs a fix from a specific release. */
+  readonly prism?: string;
   /** Packages that must be loaded, with a version range. They load first. */
   readonly packages?: Readonly<Record<string, string>>;
   /** Services some loaded package must provide. Checked after every `setup` has run. */
@@ -169,6 +203,8 @@ export interface PackageSource {
   readonly scope: "user" | "project";
   /** Slots the manifest assigns to this package. `AgentConfig.slots` overrides them per slot. */
   readonly assigns?: readonly SlotName[];
+  /** Per-key scope provenance for manifest keys. */
+  readonly scopes?: Readonly<Record<string, "user" | "project">>;
 }
 
 /** A definition bound to its config. Pass it in `AgentConfig.packages`. */

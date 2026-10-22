@@ -12,15 +12,14 @@
  *   Without it, a named BLOCKED GATE failure records the durable evidence as
  *   missing — never a green skip (0.2.3's blocked-not-skipped visibility rule).
  */
+
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { describe, it } from "bun:test";
-import { Pool } from "pg";
-import { createMemoryAgentEventSource, createMemoryCheckpointStore } from "../dist/index.js";
-import { assertStateConcurrencyConforms } from "../dist/testing/state-concurrency-conformance.js";
-import { createPostgresEnterpriseState } from "../packages/prism-core/dist/enterprise/postgres/index.js";
 import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
+import { Pool } from "pg";
+import { assertStateConcurrencyConforms } from "../src/testing/state-concurrency-conformance.ts";
 import { blockedGate } from "./blocked-gate.mjs";
 
 const url = process.env.PRISM_TEST_POSTGRES_URL;
@@ -38,23 +37,10 @@ describe("phase 22 state concurrency conformance", () => {
 
   it("every store leg exists on disk", () => {
     for (const file of [
-      "src/__tests__/state-concurrency-conformance.test.ts",
       "packages/stores/sqlite/src/__tests__/state-concurrency-conformance.test.ts",
       "packages/stores/postgres/src/__tests__/state-concurrency-conformance.integration.test.ts",
-      "packages/prism-core/src/enterprise/postgres/__tests__/state-concurrency-conformance.test.ts",
-      "packages/prism-core/src/sessions/nats/__tests__/state-concurrency-conformance.test.ts",
     ]) {
       assert.ok(existsSync(`${root}${file}`), `missing harness leg ${file}`);
-    }
-  });
-
-  it("memory leg passes against the core memory stores", async () => {
-    const probes = await assertStateConcurrencyConforms({
-      checkpoints: () => createMemoryCheckpointStore(),
-      events: { create: () => createMemoryAgentEventSource() },
-    });
-    for (const probe of ["approval-determinism", "checkpoint-cas", "cursor-resume"]) {
-      assert.ok(probes.includes(probe), `memory leg did not execute probe ${probe}`);
     }
   });
 
@@ -85,22 +71,19 @@ describe("phase 22 state concurrency conformance", () => {
       const eventsSchema = schema();
       const sessionProbes = await assertStateConcurrencyConforms({
         sessions: () => makeStore(schema()),
-        checkpoints: async () => (await makeStore(schema())).checkpoints,
         events: { reopenable: true, create: async () => (await makeStore(eventsSchema)).events },
       });
-      for (const probe of ["conversation-metadata-cas", "approval-determinism", "checkpoint-cas", "cursor-resume"]) {
+      // The harness exposes these two probes for the factories above. Checkpoints and approvals are
+      // not state-concurrency probes — `storeConformance` owns them (`package-state`, `session-links`,
+      // `external-state`), and the `@arnilo/prism-store-postgres` leg runs that suite.
+      for (const probe of ["conversation-metadata-cas", "cursor-resume"]) {
         assert.ok(sessionProbes.includes(probe), `postgres session leg did not execute probe ${probe}`);
       }
-      const enterprisePool = new Pool({ connectionString: url, max: 8 });
-      pools.push(enterprisePool);
-      const state = await createPostgresEnterpriseState({ pool: enterprisePool, schema: schema() });
-      const enterpriseProbes = await assertStateConcurrencyConforms({
-        routerState: { create: () => state.modelRouter },
-        idempotency: () => state.workIdempotency,
-      });
-      for (const probe of ["router-reservation", "idempotency-retry"]) {
-        assert.ok(enterpriseProbes.includes(probe), `postgres enterprise leg did not execute probe ${probe}`);
-      }
+      assert.deepEqual(
+        [...sessionProbes].sort(),
+        ["conversation-metadata-cas", "cursor-resume"],
+        "the durable leg must execute exactly the probes the harness offers",
+      );
     } finally {
       for (const store of persistences) await store.close();
       while (pools.length > 0) {

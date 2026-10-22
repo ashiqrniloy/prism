@@ -4,14 +4,17 @@
  * evidence-based per-package gates (plan 023 Task 2; instrument moved to Bun by
  * plan 114 Task 2). Runs the core coverage suite once under `bun test --coverage`
  * and every workspace test suite once from its own package directory, then prints
- * one labeled row per package. Workspaces are discovered by "has *.test.js under
- * dist/" (recursive), not by a top-level dist/__tests__ directory:
- * @arnilo/prism-acp-agent builds its tests to dist/src/__tests__ and
- * @arnilo/prism-work to dist/<area>/__tests__ (plan 070 Task 7).
+ * one labeled row per package. Workspaces are discovered by "has *.test.ts under
+ * src/" for the TypeScript-source packages that publish `exports["."]` as a `.ts`
+ * file (plan 147 onward; the kernel joined them in plan 174 Task 8), and by
+ * "has *.test.js under dist/" (recursive) for any package that still builds —
+ * not by a top-level dist/__tests__ directory. Plan 155 Task 5 moved the work family
+ * to the source-only `@arnilo/prism-tools-work`, which has no dist and is outside the
+ * coverage stage like the other `packages/tools/*` packages.
  * Scoping: Bun 1.4.2 reads coveragePathIgnorePatterns only from $cwd/bunfig.toml,
  * so the core run scopes with the root bunfig and each gated workspace carries a
  * package-local bunfig (`["../**"]`) — the working equivalent of the old Node
- * --test-coverage-include=dist/** (docs/_evidence/phase114-bun-coverage.md §1.6).
+ * --test-coverage-include=<paths> (docs/_evidence/phase114-bun-coverage.md §1.6).
  * The core gate is the parsed `All files` row (lines/functions floors from
  * scripts/coverage-thresholds.json); each non-protected workspace is gated on
  * lines >= its evidence-based threshold (captured at freeze = recompute - 3pp).
@@ -34,9 +37,9 @@ import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { failureRow, TAIL_LINES, tailOf } from "./coverage-failure.mjs";
+import { expandWorkspaceDirs, readManifest } from "./package-truth.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const packagesDir = join(root, "packages");
 
 const THRESHOLDS_PATH = process.env.PRISM_COVERAGE_THRESHOLDS ?? join(root, "scripts", "coverage-thresholds.json");
 const ARTIFACT_PATH = process.env.PRISM_COVERAGE_ARTIFACT ?? join(root, "scripts", "coverage-summary.json");
@@ -64,12 +67,12 @@ function redactTail(tail) {
   return tail ? redactor.redact(tail.split(root).join("<repo>").split(HOME).join("<home>")) : tail;
 }
 
-const coreTests = join(root, "dist/__tests__");
+const coreTests = join(root, "src/__tests__");
 if (!existsSync(coreTests)) {
-  console.error("coverage-summary: no dist/__tests__ — run `bun run build` first");
+  console.error("coverage-summary: no src/__tests__ — the kernel publishes TypeScript source");
   process.exit(1);
 }
-const { createSecretRedactor } = await import(pathToFileURL(join(root, "dist", "index.js")).href);
+const { createSecretRedactor } = await import(pathToFileURL(join(root, "src", "index.ts")).href);
 const redactor = createSecretRedactor(
   Object.entries(process.env)
     .filter(([name, value]) => SECRET_ENV_NAME.test(name) && typeof value === "string" && value.length >= 4)
@@ -130,37 +133,50 @@ function format(name, run, note) {
   return `  ${name.padEnd(32)} ${cells.join("  ")}${note ? `  ${note}` : ""}`;
 }
 
-// Proxy for the coverage denominator: .js files under dist/ (tests excluded).
+// Proxy for the coverage denominator. Plan 147/174: a TypeScript-source package (`exports["."]` is a
+// `.ts` file) is measured over `src/`, a built package over `dist/`.
+function sourcePackage(packageDir) {
+  try {
+    const target = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")).exports?.["."];
+    return typeof target === "string" && target.endsWith(".ts");
+  } catch {
+    return false;
+  }
+}
+
 function findTestFiles(packageDir) {
-  const dist = join(packageDir, "dist");
-  if (!existsSync(dist)) return [];
+  const source = sourcePackage(packageDir);
+  const base = join(packageDir, source ? "src" : "dist");
+  if (!existsSync(base)) return [];
+  const suffix = source ? ".test.ts" : ".test.js";
   const tests = [];
   const walk = (d) => {
     for (const e of readdirSync(d, { withFileTypes: true })) {
       const p = join(d, e.name);
       if (e.isDirectory()) walk(p);
-      else if (e.isFile() && e.name.endsWith(".test.js")) tests.push(relative(packageDir, p));
+      else if (e.isFile() && e.name.endsWith(suffix)) tests.push(relative(packageDir, p));
     }
   };
-  walk(dist);
+  walk(base);
   return tests;
 }
 
 function countDenominatorFiles(packageDir) {
-  const dist = join(packageDir, "dist");
-  if (!existsSync(dist)) return 0;
+  const source = sourcePackage(packageDir);
+  const base = join(packageDir, source ? "src" : "dist");
+  if (!existsSync(base)) return 0;
   let count = 0;
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const p = join(dir, entry.name);
       if (entry.isDirectory()) {
         if (entry.name !== "__tests__") walk(p);
-      } else if (entry.name.endsWith(".js")) {
+      } else if (entry.name.endsWith(source ? ".ts" : ".js")) {
         count++;
       }
     }
   };
-  walk(dist);
+  walk(base);
   return count;
 }
 
@@ -183,9 +199,9 @@ let anyFailed = false;
 const artifact = { captured: new Date().toISOString(), core: {}, packages: {}, belowThreshold: [] };
 
 console.log(`Combined coverage summary (bun test --coverage; core gate ${CORE_GATE} + per-package lines thresholds; protected exempt)`);
-// Bun matches explicit paths and a bare `dist/__tests__/` by suffix, so the two root names
+// Bun matches explicit paths and a bare `src/__tests__/` by suffix, so the two root names
 // also run workspace twins (plan 124 Task 1). spawnSync has no shell, and Bun 1.4.2 does not
-// expand a literal `*.test.js` argv, so expand here and pass the measured ignore pattern.
+// expand a literal `*.test.ts` argv, so expand here and pass the measured ignore pattern.
 const core = capturedCoreRun() ?? runCoverage(["--path-ignore-patterns=packages/**", ...findTestFiles(root)]);
 let corePass = true;
 let coreNote = `[gate ${CORE_GATE}]`;
@@ -208,17 +224,21 @@ artifact.core = {
 };
 if (!corePass) anyFailed = true;
 
-const workspaceNames = readdirSync(packagesDir)
-  .filter((name) => existsSync(join(packagesDir, name, "package.json")))
-  .filter((name) => findTestFiles(join(packagesDir, name)).length > 0)
+// Plan 176 Task 1: the grouped `packages/<group>/<name>` layout is discovered through the
+// same `expandWorkspaceDirs` the test runner trusts (scripts/run-all-tests.mjs), not a flat
+// `packages/*` readdir that saw only the group directories and measured nothing.
+const workspaceDirs = expandWorkspaceDirs(root, readManifest(join(root, "package.json")).workspaces)
+  .filter((dir) => findTestFiles(dir).length > 0)
   .sort();
-for (const name of workspaceNames) {
-  const pkg = JSON.parse(readFileSync(join(packagesDir, name, "package.json"), "utf8"));
-  const pkgName = pkg.name ?? name;
-  const testFiles = findTestFiles(join(packagesDir, name));
-  const run = testFiles.length ? runCoverage(testFiles, join(packagesDir, name)) : { ok: true, lines: undefined, functions: undefined };
+if (workspaceDirs.length === 0) {
+  console.error("coverage-summary: workspace discovery returned no directories — refusing to gate nothing");
+  process.exit(1);
+}
+for (const dir of workspaceDirs) {
+  const pkgName = readManifest(join(dir, "package.json")).name;
+  const run = runCoverage(findTestFiles(dir), dir);
   const thresholdEntry = thresholds.packages?.[pkgName];
-  const denominatorFiles = countDenominatorFiles(join(packagesDir, name));
+  const denominatorFiles = countDenominatorFiles(dir);
   if (!thresholdEntry) {
     // Fail-closed: a workspace with no evidence-based threshold is a config gap.
     console.error(`coverage-summary: ${pkgName} has no threshold entry in ${THRESHOLDS_PATH}`);
@@ -272,7 +292,7 @@ for (const name of workspaceNames) {
 
 writeFileSync(ARTIFACT_PATH, `${JSON.stringify(artifact, null, 2)}\n`);
 console.log(
-  `\n${workspaceNames.length} workspace suites + core reported. Core gate ${CORE_GATE}; per-package lines thresholds enforced (protected exempt). Artifact: ${ARTIFACT_PATH}`,
+  `\n${workspaceDirs.length} workspace suites + core reported. Core gate ${CORE_GATE}; per-package lines thresholds enforced (protected exempt). Artifact: ${ARTIFACT_PATH}`,
 );
 if (anyFailed) {
   console.error("coverage-summary: failures above — a suite failed or a non-protected package regressed below its threshold");

@@ -1,23 +1,22 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ProviderRequest } from "@arnilo/prism";
+import type { ProviderRequest, SystemPromptContribution } from "@arnilo/prism";
 import { composeSystemPrompt, createAgent, providerDone } from "@arnilo/prism";
-import { createMockProvider } from "@arnilo/prism/testing";
-import { loadSystemPromptFiles } from "@arnilo/prism/node/system-prompts";
-import { createPathTrustPolicy } from "@arnilo/prism/node/trust";
 import { providerPackage } from "@arnilo/prism/provider-kit";
+import { createMockProvider } from "@arnilo/prism/testing";
+import { contextFiles, readContextFileLayers } from "@arnilo/prism-context-files";
 
-// Phase 31 system/project prompt files: AGENTS.md (workspace, source: app) and
-// SYSTEM.md (host-supplied globalRoot, source: user) auto-load as SystemPromptContribution
-// layers composed with AgentConfig.instructions (base) via composeSystemPrompt. The
-// host owns globalRoot (the CLI never defaults it to the user's home directory).
+// Context files: AGENTS.md (workspace, source: app) and SYSTEM.md (source: user) load as
+// system-prompt layers through `@arnilo/prism-context-files`, which registers one
+// `context.build` handler and composes them with `AgentConfig.instructions` (the base) via the
+// kernel's `composeSystemPrompt`. The package is trust-gated, reads no home directory unless
+// `globalRoot` is set, and caches the files per session.
 //
-// This demo builds a temp workspace + temp global root, writes the two files,
-// loads them with `loadSystemPromptFiles` (trust-gated for AGENTS.md), then runs
-// a mock agent and prints the composed system instruction that reached the
-// provider request — proving the layering order (base → SYSTEM.md → AGENTS.md)
-// without any network or real credentials.
+// This demo builds a temp workspace + temp global root, writes the two files, shows the layers
+// the package resolves, then runs a mock agent with the package loaded and prints the composed
+// system instruction that reached the provider request — proving the order
+// (base → SYSTEM.md → AGENTS.md) without any network or real credentials.
 
 export async function demo(): Promise<{ composed: string; reachedProvider: boolean }> {
   const workspace = await mkdtemp(join(tmpdir(), "prism-sp-example-ws-"));
@@ -26,17 +25,9 @@ export async function demo(): Promise<{ composed: string; reachedProvider: boole
   await writeFile(join(global, ".prism", "agent", "SYSTEM.md"), "Global system policy.");
   await writeFile(join(workspace, "AGENTS.md"), "Project rule.");
 
-  // Trust gate fails closed — workspace AGENTS.md is never loaded from an untrusted root.
-  const trust = createPathTrustPolicy({ trustedRoots: [workspace] });
-  const layers = await loadSystemPromptFiles({ workspaceRoot: workspace, globalRoot: global, trust });
-
-  // Standalone SDK escape hatch: passing no roots returns [] with no filesystem I/O —
-  // AgentConfig.instructions / systemPrompt keep working without the file loader.
-  const empty = await loadSystemPromptFiles({});
-  void empty;
-
-  // The CLI composes these layers with `instructions` (base) automatically; here we
-  // pass both explicitly to make the composition visible.
+  // The same layering a host gets by loading the package, exposed directly for libraries that
+  // compose the prompt themselves.
+  const layers: readonly SystemPromptContribution[] = await readContextFileLayers({ workspaceRoot: workspace, globalRoot: global });
   const composed = composeSystemPrompt(layers, { base: "You are helpful." }) ?? "";
 
   const captured: ProviderRequest[] = [];
@@ -48,9 +39,8 @@ export async function demo(): Promise<{ composed: string; reachedProvider: boole
   const session = await (
     await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [provider])],
+      packages: [providerPackage("test-provider", [provider]), contextFiles({ root: workspace, globalRoot: global })],
       instructions: "You are helpful.",
-      systemPrompt: layers,
     })
   ).session();
 

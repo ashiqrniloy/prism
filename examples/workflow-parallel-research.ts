@@ -1,15 +1,15 @@
+import { createWorkflowTransitionChannel, type WorkflowEvent } from "@arnilo/prism-workflows";
 import { createAgent, createSecretRedactor, providerDone, providerTextDelta, providerUsage } from "@arnilo/prism";
 import { createMockProvider } from "@arnilo/prism/testing";
 import {
   agentNode,
   createMemoryWorkflowCheckpoints,
   defineWorkflow,
-  fanOutNode,
+  fanOut,
   functionNode,
   joinNode,
   runWorkflow,
-  type WorkflowEvent,
-} from "@arnilo/prism-core/runtime/workflows";
+} from "@arnilo/prism-workflows";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 
 // True parallel research DAG: fan-out normalizes bounded topics, join exposes
@@ -27,9 +27,9 @@ const summarizerAgent = await createAgent({
   instructions: "Synthesize research findings into a one-paragraph summary.",
 });
 
-const fanOut = fanOutNode({
+const topicFan = fanOut({
   items: (ctx) => (ctx.workflowInput as { topics: string[] }).topics,
-  map: (item) => String(item),
+  route: (item) => functionNode({ execute: () => String(item) }),
   maxFanOut: 3,
 });
 const topics = joinNode({ from: "fanOut" });
@@ -50,14 +50,14 @@ const combine = functionNode({
   }),
 });
 const summarise = agentNode({
-  agent: "summarizer",
+  agent: summarizerAgent,
   input: (ctx) => ctx.upstream.combine,
 });
 
 const workflow = defineWorkflow({
   revision: "1",
   id: "parallel-research",
-  nodes: { fanOut, topics, researchA, researchB, researchC, combine, summarise },
+  nodes: { fanOut: topicFan, topics, researchA, researchB, researchC, combine, summarise },
   edges: [
     ["fanOut", "topics"],
     ["topics", "researchA"],
@@ -79,12 +79,11 @@ export async function demo() {
     workflow,
     { topics: ["hooks", "signals", "suspense"] },
     {
-      agentFactory: () => summarizerAgent.session(),
       checkpoints,
       redactor,
       ownership: { tenantId: "demo" },
       signal: AbortSignal.timeout(30_000),
-      onEvent: (event) => events.push(event),
+      transitions: workflowEvents((event) => events.push(event)),
     },
   );
   const findings = (result.outputs.combine as { findings?: unknown[] })?.findings;
@@ -102,3 +101,11 @@ export async function main() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();
+
+function workflowEvents(consume: (event: WorkflowEvent) => void) {
+  const channel = createWorkflowTransitionChannel({ workflowId: "events", runId: "events" });
+  void (async () => {
+    for await (const event of channel.subscribe()) consume(event);
+  })();
+  return channel;
+}

@@ -70,6 +70,31 @@ describe("package config schema", () => {
     bad({ oneOf: [{ type: "number" }, { type: "integer" }] }, 1, "shape");
     ok({ anyOf: [{ type: "number" }, { type: "integer" }] }, 1);
     bad({ anyOf: [{ type: "string" }, { type: "null" }] }, 1, "shape");
+    // Object branches under oneOf/anyOf: a pure combinator node owns no keys, so the branch shapes
+    // decide, not the node's empty property map (plan 164 P1).
+    const prompt: JsonSchema = {
+      oneOf: [
+        { type: "object", properties: { replace: { type: "string" } }, required: ["replace"], additionalProperties: false },
+        { type: "object", properties: { append: { type: "string" } }, required: ["append"], additionalProperties: false },
+      ],
+    };
+    ok(prompt, { replace: "r" });
+    ok(prompt, { append: "a" });
+    bad(prompt, {}, "shape");
+    bad(prompt, { replace: "r", append: "a" }, "shape");
+    bad(prompt, { other: "x" }, "shape");
+    bad(prompt, { replace: 1 }, "shape");
+    const objectAny: JsonSchema = {
+      anyOf: [
+        { type: "object", properties: { a: { type: "string" } }, required: ["a"], additionalProperties: false },
+        { type: "object", properties: { b: { type: "string" } }, required: ["b"], additionalProperties: false },
+      ],
+    };
+    ok(objectAny, { a: "x" });
+    ok(objectAny, { b: "y" });
+    bad(objectAny, {}, "shape");
+    // The fail-closed default still holds for a node that does declare an object.
+    bad({ type: "object" }, { a: 1 }, "unknown_key");
   });
 
   it("applies defaults, including nested ones, without mutating the schema", () => {
@@ -186,7 +211,7 @@ describe("package config resolution", () => {
       apiKey: "env:HOST_KEY",
     });
     assert.deepEqual(resolved.sources, {
-      backend: "manifest",
+      backend: "project",
       region: "host",
       retries: "default",
       limits: "host",

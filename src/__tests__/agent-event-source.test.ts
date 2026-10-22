@@ -1,10 +1,17 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { AgentEventRecord, AgentEventSource, AgentEventType } from "../contracts.js";
-import { AgentEventSourceError, createMemoryAgentEventSource, isTerminalAgentEventType } from "../index.js";
-import { assertAgentEventSourceConforms } from "../testing/agent-event-source-conformance.js";
+import assert from "node:assert/strict";
+import type { AgentEventEnvelope, AgentEventRecord, AgentEventSource, AgentEventSourcePage, AgentEventType } from "../contracts.js";
+import { AgentEventSourceError, isTerminalAgentEventType } from "../index.js";
+import { assertAgentEventSourceConforms, createMemoryAgentEventSource } from "../testing/index.js";
 
 const ownership = { tenantId: "tenant-a", accountId: "account-a", userId: "user-a" };
+
+/** The page's first item, failing loudly instead of asserting its presence. */
+function firstItem(page: AgentEventSourcePage): AgentEventEnvelope {
+  const item = page.items[0];
+  if (!item) throw new Error("page returned no items");
+  return item;
+}
 const input = { ownership, sessionId: "session-a", runId: "run-a" };
 
 describe("AgentEventSource", () => {
@@ -24,7 +31,7 @@ describe("AgentEventSource", () => {
     assert.equal(secondPage.items[0]?.record.id, "event-b");
     assert.equal(secondPage.terminal, true);
     assert.equal(secondPage.nextCursor, undefined);
-    assert.deepEqual(await source.page({ ...input, after: secondPage.items[0]!.cursor }), { items: [], terminal: true });
+    assert.deepEqual(await source.page({ ...input, after: firstItem(secondPage).cursor }), { items: [], terminal: true });
 
     const replay = source.subscribe(input)[Symbol.asyncIterator]();
     assert.equal((await replay.next()).value?.record.id, "event-a");
@@ -35,7 +42,7 @@ describe("AgentEventSource", () => {
   it("hands off from replay to live without a gap or duplicate", async () => {
     const source = createMemoryAgentEventSource();
     await source.append(record("event-a", "run.started"));
-    const cursor = (await source.page(input)).items[0]!.cursor;
+    const cursor = firstItem(await source.page(input)).cursor;
     const iterator = source.subscribe({ ...input, after: cursor })[Symbol.asyncIterator]();
     const next = iterator.next();
     await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
@@ -47,7 +54,7 @@ describe("AgentEventSource", () => {
     const source = createMemoryAgentEventSource({ maxEventBytes: 512 });
     const first = await source.append(record("event-a", "run.started"));
     assert.equal((await source.append(record("event-a", "run.started"))).sequence, first.sequence);
-    const cursor = (await source.page(input)).items[0]!.cursor;
+    const cursor = firstItem(await source.page(input)).cursor;
 
     await rejects(() => source.append({ ...record("event-a", "run.started"), timestamp: "2026-01-01T00:00:01.000Z" }), "INPUT");
     await rejects(() => source.append({ ...record("event-unredacted", "turn.started"), redacted: false }), "INPUT");
@@ -97,7 +104,7 @@ describe("AgentEventSource", () => {
   it("caps retained events per run without retaining stale cursors", async () => {
     const source = createMemoryAgentEventSource({ maxRetainedEventsPerRun: 2 });
     await source.append(record("event-a", "run.started"));
-    const cursor = (await source.page(input)).items[0]!.cursor;
+    const cursor = firstItem(await source.page(input)).cursor;
     await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
     await source.append(record("event-c", "turn.started", "2026-01-01T00:00:02.000Z"));
     assert.deepEqual(
@@ -111,7 +118,7 @@ describe("AgentEventSource", () => {
     const source = createMemoryAgentEventSource();
     await source.append(record("event-a", "run.started"));
     await source.append(record("event-b", "turn.started", "2026-01-01T00:00:01.000Z"));
-    const cursor = (await source.page({ ...input, limit: 1 })).items[0]!.cursor;
+    const cursor = firstItem(await source.page({ ...input, limit: 1 })).cursor;
     assert.deepEqual(await source.cleanup({ ownership, before: "2026-01-01T00:00:02.000Z", limit: 1 }), { deleted: 1 });
     await rejects(() => source.page({ ...input, after: cursor }), "RETENTION");
   });

@@ -1,0 +1,514 @@
+{
+  "schemaVersion": 1,
+  "usageSource": "wire-proxy",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-21T07:46:25.799Z",
+  "suite": "longmemeval-s",
+  "subset": "base",
+  "ability": null,
+  "config": "fabric",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "dataset": {
+    "file": "longmemeval-s.json",
+    "bytes": 277383467,
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 3000000,
+  "ablations": [],
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "episode",
+          "fact",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 12378,
+  "cacheReadTokens": 256,
+  "outputTokens": 3911,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "judge": 18,
+    "gatewayRetries": 0
+  },
+  "turns": 5,
+  "injectedContextTokens": 3572,
+  "injections": [
+    {
+      "questionId": "fca70973",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 192,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "fca70973",
+      "turn": 1,
+      "id": "answer_a1e169b1-r0",
+      "source": "fabric-semantic",
+      "tokens": 511,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "6071bd76",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "6071bd76",
+      "turn": 1,
+      "id": "answer_4dac77cb_2-r0",
+      "source": "fabric-semantic",
+      "tokens": 466,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.5,
+      "cited": true
+    },
+    {
+      "questionId": "80ec1f4f",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 189,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "80ec1f4f",
+      "turn": 1,
+      "id": "answer_990c8992_2-r4",
+      "source": "fabric-semantic",
+      "tokens": 299,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.5333333333333333,
+      "cited": true
+    },
+    {
+      "questionId": "80ec1f4f",
+      "turn": 1,
+      "id": "ultrachat_318441-r3",
+      "source": "fabric-semantic",
+      "tokens": 232,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.4666666666666667,
+      "cited": false
+    },
+    {
+      "questionId": "65240037",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "65240037",
+      "turn": 1,
+      "id": "answer_ultrachat_403752-r2",
+      "source": "fabric-semantic",
+      "tokens": 275,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.6666666666666666,
+      "cited": true
+    },
+    {
+      "questionId": "65240037",
+      "turn": 1,
+      "id": "answer_ultrachat_403752-r3",
+      "source": "fabric-semantic",
+      "tokens": 319,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.6666666666666666,
+      "cited": true
+    },
+    {
+      "questionId": "c8c3f81d",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "c8c3f81d",
+      "turn": 1,
+      "id": "66e94928-r5",
+      "source": "fabric-semantic",
+      "tokens": 201,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.5833333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "c8c3f81d",
+      "turn": 1,
+      "id": "25432e10-r5",
+      "source": "fabric-semantic",
+      "tokens": 326,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "irrelevant",
+      "coverage": 0.5833333333333334,
+      "cited": false
+    }
+  ],
+  "results": [
+    {
+      "id": "6071bd76",
+      "ability": "knowledge-update",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "retrievedSnippetTokens": 466,
+      "retrievalRecallAtK": true
+    },
+    {
+      "id": "80ec1f4f",
+      "ability": "multi-session",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "retrievedSnippetTokens": 531,
+      "retrievalRecallAtK": true
+    },
+    {
+      "id": "65240037",
+      "ability": "single-session-assistant",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "retrievedSnippetTokens": 594,
+      "retrievalRecallAtK": true
+    },
+    {
+      "id": "c8c3f81d",
+      "ability": "single-session-user",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "retrievedSnippetTokens": 527,
+      "retrievalRecallAtK": false
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "inputCap": 870976,
+  "selectedQuestionIds": [
+    "6071bd76",
+    "80ec1f4f",
+    "65240037",
+    "fca70973",
+    "c8c3f81d",
+    "gpt4_e414231f",
+    "0ddfec37_abs",
+    "f685340e",
+    "6456829e",
+    "8464fc84",
+    "0edc2aef",
+    "bc8a6e93",
+    "gpt4_93f6379c",
+    "15745da0_abs",
+    "7e974930",
+    "a346bb18",
+    "4baee567",
+    "57f827a0",
+    "118b2229",
+    "71017276",
+    "29f2956b_abs",
+    "0f05491a",
+    "00ca467f",
+    "8752c811",
+    "32260d93",
+    "b86304ba",
+    "f0853d11",
+    "19b5f2b3_abs",
+    "ce6d2d27",
+    "gpt4_59c863d7",
+    "778164c6",
+    "06878be2",
+    "29f2956b",
+    "gpt4_f420262d",
+    "80ec1f4f_abs",
+    "2698e78f",
+    "gpt4_2f8be40d",
+    "0e5e2d1a",
+    "07b6f563",
+    "37d43f65",
+    "gpt4_c27434e8",
+    "e5ba910e_abs",
+    "031748ae",
+    "c2ac3c61",
+    "dc439ea3",
+    "35a27287",
+    "1faac195",
+    "c8090214",
+    "2133c1b5_abs",
+    "59524333",
+    "9aaed6a3",
+    "4388e9dd",
+    "195a1a1b",
+    "f4f1d8a4",
+    "4dfccbf8",
+    "0862e8bf_abs",
+    "41698283",
+    "0100672e",
+    "a40e080f",
+    "09d032c9",
+    "545bd2b5",
+    "gpt4_1d80365e",
+    "gpt4_fe651585_abs",
+    "affe2881",
+    "60bf93ed",
+    "4c36ccef",
+    "8a2466db",
+    "4100d0a0",
+    "gpt4_468eb064",
+    "bc8a6e93_abs"
+  ],
+  "usageComplete": true,
+  "wireExchanges": 23,
+  "failure": {
+    "questionId": "fca70973",
+    "code": "MemoryBenchJudgeError:invalidinjectionlabel"
+  },
+  "abilities": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0
+    },
+    "multi-session": {
+      "n": 1,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0
+    },
+    "single-session-assistant": {
+      "n": 1,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 1
+    },
+    "single-session-user": {
+      "n": 1,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": 0,
+      "accuracy": 0
+    }
+  },
+  "abilityGroups": {
+    "knowledge-update": {
+      "n": 1,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0
+    },
+    "multi-session": {
+      "n": 1,
+      "correct": 0,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0
+    },
+    "information-extraction": {
+      "n": 2,
+      "correct": 1,
+      "f1": null,
+      "recallAtK": 0.5,
+      "accuracy": 0.5
+    }
+  },
+  "cacheReadRatio": 0.02068185490386169,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 714.4,
+    "irrelevantRate": 0.75,
+    "citedIdRate": 0.5,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 4,
+  "retrievedSnippetTokens": 2118,
+  "retrievalRecallAtK": 0.75
+}

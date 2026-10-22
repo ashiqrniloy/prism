@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { auditBlockedGates, protectedGateSurfaces } from "./blocked-gate.mjs";
-import { expandWorkspaceDirs } from "./package-truth.mjs";
+import { publishableWorkspaceDirs } from "./package-truth.mjs";
 
 const ROOT = join(import.meta.dirname, "..");
 const MANIFEST_PATH = process.env.PRISM_RELEASE_EVIDENCE ?? join(ROOT, "scripts", "release-evidence.json");
@@ -115,7 +115,7 @@ function workspacePackages() {
   // provider package can never be invisible to the live-leg scan. `dir` stays relative to
   // `packages/` because every consumer joins it onto that root.
   const workspaces = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).workspaces ?? [];
-  return expandWorkspaceDirs(ROOT, workspaces)
+  return publishableWorkspaceDirs(ROOT, workspaces)
     .map((dir) => ({
       dir: relative(join(ROOT, "packages"), dir),
       name: JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).name,

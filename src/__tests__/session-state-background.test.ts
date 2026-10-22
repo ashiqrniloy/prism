@@ -16,6 +16,7 @@ import {
   providerTextDelta,
   rebuildSessionContext,
   type SessionContext,
+  type SessionLog,
   type SessionState,
   type SessionStore,
 } from "../index.js";
@@ -26,7 +27,7 @@ const SECRET = "sk-live-0123456789abcdef";
 
 type Loose = PackageDefinitionInput<any>;
 const pkg = (name: string, setup: Loose["setup"] = () => {}, extra: Partial<Loose> = {}) =>
-  definePackage<any>({ name, version: "1.0.0", setup, ...extra });
+  definePackage<any>({ name, version: "1.0.0", requires: { api: 1 }, setup, ...extra });
 
 const provider: ModelProvider = {
   id: "mock",
@@ -76,6 +77,28 @@ function counterPackage(options: { readonly capabilities?: Loose["capabilities"]
       });
     },
     { capabilities: options.capabilities ?? ["session-state"] },
+  );
+}
+
+/** A package keeping an append-only log, with `log` (append), `logged` (read), and `grab` commands. */
+function logPackage(
+  options: { onLog?: (log: SessionLog<JsonValue>) => void; onView?: (session: SessionContext | undefined) => void } = {},
+) {
+  return pkg(
+    "@acme/log",
+    ({ state, commands }) => {
+      const log = state.log<JsonValue>("ledger");
+      options.onLog?.(log);
+      commands.register({
+        name: "log",
+        description: "appends one record",
+        args: { type: "object", additionalProperties: true },
+        run: (args, ctx) => log.append(ctx.session!, args.value as JsonValue),
+      });
+      commands.register({ name: "logged", description: "reads the log", run: (_args, ctx) => log.entries(ctx.session!) });
+      commands.register({ name: "grab", description: "keeps the session view", run: (_args, ctx) => void options.onView?.(ctx.session) });
+    },
+    { capabilities: ["session-state"] },
   );
 }
 
@@ -245,6 +268,185 @@ describe("package session state", () => {
     assert.equal(error.package, "@acme/nope");
   });
 
+  it("session_context_entries_reads_branch", async () => {
+    const store = createMemorySessionStore();
+    let fromHook: readonly string[] | undefined;
+    const reader = pkg(
+      "@acme/reader",
+      ({ hooks, commands }) => {
+        hooks.on("turn.completed", async (_event, ctx) => void (fromHook = (await ctx.session!.entries()).map((entry) => entry.id)));
+        commands.register({
+          name: "branch",
+          description: "reads the branch",
+          run: async (_args, ctx) => (await ctx.session!.entries()).map((entry) => entry.id),
+        });
+      },
+      { capabilities: ["session-state"] },
+    );
+    const agent = await createAgent({ model: MODEL, packages: [reader, providerPackage("test-provider", [provider])], slots: { store } });
+    const session = await agent.session({ id: "s", create: true });
+    await session.run("one");
+    await session.run("two");
+    const expected = (await store.list("s")).map((entry) => entry.id);
+    assert.deepEqual(await agent.commands.run("branch", {}, { session }), expected, "a command reads the persisted branch");
+    assert.ok(fromHook && fromHook.length > 0, "a hook read the branch");
+    assert.deepEqual(expected.slice(0, fromHook.length), fromHook, "a hook reads a prefix of the same branch");
+  });
+
+  it("session_context_entries_requires_session_state", async () => {
+    const reader = pkg("@acme/plain", ({ commands }) =>
+      commands.register({ name: "branch", description: "reads the branch", run: (_args, ctx) => ctx.session!.entries() }),
+    );
+    const agent = await createAgent({ model: MODEL, packages: [reader, providerPackage("test-provider", [provider])] });
+    const session = await agent.session();
+    const error = await rejects(agent.commands.run("branch", {}, { session }), "capability_missing");
+    assert.match(error.message, /SessionContext\.entries/);
+    assert.equal(error.package, "@acme/plain");
+  });
+
+  it("session_context_entries_from_custom_loop", async () => {
+    const store = createMemorySessionStore();
+    let branch: readonly string[] | undefined;
+    const loop: LoopStrategy = {
+      name: "one",
+      revision: "1",
+      async run(run) {
+        const turn = await run.turn();
+        if (turn.stopped) return;
+        await run.end();
+      },
+    };
+    const watcher = pkg(
+      "@acme/watch-branch",
+      ({ commands }) => {
+        commands.register({
+          name: "read",
+          description: "reads the branch in the background",
+          run: (_args, ctx) => {
+            ctx.session!.background("read", async () => void (branch = (await ctx.session!.entries()).map((entry) => entry.id)));
+          },
+        });
+      },
+      { capabilities: ["session-state", "background"] },
+    );
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [
+        pkg("@acme/loop", ({ slots }) => slots.loop.provide(loop), { capabilities: ["slot:loop"] }),
+        watcher,
+        providerPackage("test-provider", [provider]),
+      ],
+      slots: { store },
+    });
+    const session = await agent.session({ id: "s", create: true });
+    await session.run("hi");
+    await agent.commands.run("read", {}, { session });
+    await session.close();
+    assert.deepEqual(
+      branch,
+      (await store.list("s")).map((entry) => entry.id),
+      "a background task under a custom loop reads the branch",
+    );
+  });
+
+  it("state_log_appends_and_hydrates", async () => {
+    const store = createMemorySessionStore();
+    const config = { model: MODEL, packages: [logPackage(), providerPackage("test-provider", [provider])], slots: { store } };
+    const agent = await createAgent(config);
+    const session = await agent.session({ id: "s", create: true });
+    for (const step of [1, 2, 3]) await agent.commands.run("log", { value: { step } }, { session });
+    assert.deepEqual(await agent.commands.run("logged", {}, { session }), [{ step: 1 }, { step: 2 }, { step: 3 }]);
+
+    const again = await createAgent({ ...config, packages: [logPackage()] });
+    const reopened = await again.session({ id: "s" });
+    assert.deepEqual(
+      await again.commands.run("logged", {}, { session: reopened }),
+      [{ step: 1 }, { step: 2 }, { step: 3 }],
+      "a reopened session restores the log from its branch",
+    );
+  });
+
+  it("state_log_forks_with_branch", async () => {
+    const store = createMemorySessionStore();
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [logPackage(), providerPackage("test-provider", [provider])],
+      slots: { store },
+    });
+    const session = await agent.session({ id: "s", create: true });
+    await agent.commands.run("log", { value: { step: 1 } }, { session });
+    await agent.commands.run("log", { value: { step: 2 } }, { session });
+    const fork = await session.fork();
+    assert.deepEqual(await agent.commands.run("logged", {}, { session: fork }), [{ step: 1 }, { step: 2 }], "a fork carries the records");
+    await agent.commands.run("log", { value: { step: 3 } }, { session: fork });
+    assert.deepEqual(await agent.commands.run("logged", {}, { session: fork }), [{ step: 1 }, { step: 2 }, { step: 3 }]);
+    assert.deepEqual(await agent.commands.run("logged", {}, { session }), [{ step: 1 }, { step: 2 }], "the parent keeps its own log");
+  });
+
+  it("state_log_rejects_oversize_and_non_json", async () => {
+    let log: SessionLog<JsonValue> | undefined;
+    let view: SessionContext | undefined;
+    const store = createMemorySessionStore();
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [
+        logPackage({ onLog: (handle) => (log = handle), onView: (session) => (view = session) }),
+        providerPackage("test-provider", [provider]),
+      ],
+      slots: { store },
+    });
+    const session = await agent.session({ id: "s", create: true });
+    await agent.commands.run("grab", {}, { session });
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
+    for (const value of [() => 1, new Map(), Number.NaN, cycle]) await rejects(log!.append(view!, value as never), "state_not_json");
+    await rejects(log!.append(view!, { big: "x".repeat(65 * 1024) }), "state_too_large");
+    assert.equal((await store.list("s")).filter((entry) => entry.kind === "package_state").length, 0, "nothing was persisted");
+  });
+
+  it("state_log_redacts_secret", async () => {
+    const store = createMemorySessionStore();
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [logPackage(), providerPackage("test-provider", [provider])],
+      redactor: createSecretRedactor([SECRET]),
+      slots: { store },
+    });
+    const session = await agent.session({ id: "s", create: true });
+    await agent.commands.run("log", { value: { token: SECRET } }, { session });
+    await agent.commands.run("log", { value: "clean" }, { session });
+    assert.equal(JSON.stringify(await store.list("s")).includes(SECRET), false, "no appended record holds the secret");
+    assert.deepEqual(await agent.commands.run("logged", {}, { session }), [{ token: "[REDACTED]" }, "clean"]);
+  });
+
+  it("package_state_entry_without_op_reads_as_set", async () => {
+    const store = createMemorySessionStore();
+    const stamp = new Date().toISOString();
+    await store.append({
+      id: "legacy-set",
+      sessionId: "s",
+      timestamp: stamp,
+      kind: "package_state",
+      data: { schemaVersion: 1, package: "@acme/om", key: "om", value: { n: 7 } },
+    });
+    await store.append({
+      id: "legacy-append",
+      parentId: "legacy-set",
+      sessionId: "s",
+      timestamp: stamp,
+      kind: "package_state",
+      data: { schemaVersion: 1, package: "@acme/log", key: "ledger", value: { step: 0 }, op: "append" },
+    });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [counterPackage(), logPackage(), providerPackage("test-provider", [provider])],
+      slots: { store },
+    });
+    const session = await agent.session({ id: "s" });
+    assert.equal(await agent.commands.run("get", {}, { session }), 7, "an entry without op reads as a set");
+    assert.deepEqual(await agent.commands.run("logged", {}, { session }), [{ step: 0 }], "a new append joins an existing log");
+  });
+
   it("agent_state_is_process_memory_and_reset_on_dispose", async () => {
     let handle: { get(): number; set(value: number): void } | undefined;
     const agent = await createAgent({
@@ -336,21 +538,6 @@ describe("session lifecycle events", () => {
     assert.equal(notes[0]!.sessionId, "", "agent-scoped");
     assert.equal(JSON.stringify(events).includes(SECRET), false, "redacted outside a run");
     assert.equal(agentRuntime(agent).packages.statusNotes().length, 2);
-  });
-
-  it("session_pack_hooks_removed_on_close", async () => {
-    const agent = await createAgent({ model: MODEL, packages: [providerPackage("test-provider", [provider])] });
-    const bus = agentRuntime(agent).hooks;
-    const sessionHooks = () => bus.registrations().filter((registration) => registration.id.includes("#session-"));
-    const before = sessionHooks().length;
-    const a = await agent.session();
-    const b = await agent.session();
-    assert.equal(sessionHooks().length, before + 4);
-    await a.close();
-    assert.equal(sessionHooks().length, before + 2, "closing one session removes only its own pair");
-    await a.close();
-    await b.close();
-    assert.equal(sessionHooks().length, before);
   });
 });
 

@@ -9,12 +9,9 @@
  *               exporting createJourneyProvider() -> { provider, request } and
  *               optionally journeySecrets() -> string[] for the leak scan)
  *   docker      digest-pinned Docker sandbox (PRISM_TEST_DOCKER_BIN/IMAGE)
- *   workspace   durable Postgres checkpoints/leases + worktree lifecycle
- *   agent-edit  real provider-driven edit through ACP with policy approval
+ *   workspace   in-process `workspace` service: linked worktree for the run branch
  *   check-diagnostics  real named check + host parser + diagnosticDelta
- *   patch-review       patch artifact over the server ArtifactService + review
  *   process-recovery   durable process restart/replica with attach-if-attested
- *   durable-cancel     ownership/version/fence-checked ACP cancellation
  *   forge       real GitHub push + lookup-before-create PR + reconcile + cleanup
  *   browser     host Playwright browser inspection (PRISM_LIVE_PLAYWRIGHT)
  *   pty         host PTY adapter when PRISM_TEST_PTY_BACKEND is set
@@ -34,39 +31,21 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { client, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+import { createMemoryToolEffectStore, createSecretRedactor, createToolRegistry, dispatchToolCall } from "@arnilo/prism";
+import { collectProviderEvents } from "@arnilo/prism/provider-kit";
+import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
+import { createBrowserManager, createBrowserTools } from "@arnilo/prism-tools-browser";
 import {
-  askEveryTool,
-  createAgent,
-  createAgentRunLifecycle,
-  createMemorySessionStore,
-  createMemoryToolEffectStore,
-  createSecretRedactor,
-  createToolRegistry,
-  dispatchToolCall,
-} from "@arnilo/prism";
-import { collectProviderEvents , providerPackage } from "@arnilo/prism/provider-kit";
-import { ACP_RUN_CANCEL_NAMESPACE, createAcpRunRecovery, createPrismAcpAgent } from "@arnilo/prism-ag-ui/acp";
-import {
-  assertCodingPatchAccepted,
   createCodingCheckTool,
-  createCodingPatchReviewManifest,
-  createCodingWorkspaceLifecycle,
+  createDockerSandbox,
   createGitHubForge,
   createGitOperations,
   createProcessSessions,
-  createReadPathSet,
-  createReadTool,
-  createWriteTool,
+  createWorkspaceService,
   diagnosticDelta,
   normalizeDiagnostics,
-} from "@arnilo/prism-coding-tools/agent";
-import { createCodingApprovalPolicy, createDockerSandbox } from "@arnilo/prism-coding-tools/security";
-import { createArtifactService } from "@arnilo/prism-core/runtime/server";
-import { createPostgresPersistence } from "@arnilo/prism-store-postgres";
-import { createBrowserManager, createBrowserTools } from "@arnilo/prism-web-tools/browser";
+} from "@arnilo/prism-tools-coding";
 
-const env = process.env;
 const suffix = env.PRISM_JOURNEY_SUFFIX ?? `j${Date.now().toString(36)}${randomBytes(4).toString("hex")}`; // random suffix (CodeQL js/insecure-randomness, alerts 52-55)
 // mkdtemp: exclusive-created, mode 0700 workspace (CodeQL js/insecure-temporary-file, alerts 81-82).
 const ws = env.PRISM_JOURNEY_WORKSPACE ?? mkdtempSync(join(tmpdir(), "prism-journey-"));
@@ -148,14 +127,10 @@ function sha256Of(buffer) {
 
 let pg = null;
 let sandbox = null;
-let lifecycle = null;
+let workspace = null;
+let workspaceWorktree = null;
 let gitOps = null;
-let workspaceTaskId = "";
 let worktreePath = "";
-let prismAgent = null;
-let acpStore = null;
-let artifactService = null;
-let artifactId = "";
 let replicaA = null;
 let replicaB = null;
 let replicaC = null;
@@ -233,8 +208,8 @@ try {
     assert.ok(forgeRepository && forgeToken, "PRISM_CODING_FORGE_REPOSITORY and PRISM_CODING_FORGE_TOKEN required");
     mkdirSync(repoRoot, { recursive: true });
     git(ws, ["clone", "--depth=1", `https://github.com/${forgeRepository}.git`, repoRoot]);
-    // The seed commit lands on main; the lifecycle creates the run branch as a
-    // linked worktree (git worktree add -b), so no branch exists here yet.
+    // The seed commit lands on main; the `workspace` service creates the run
+    // branch as a linked worktree (git worktree add -b), so no branch exists here yet.
     writeFileSync(join(repoRoot, "counter.ts"), "export const count = 1;\n");
     git(repoRoot, ["add", "counter.ts"]);
     git(repoRoot, [
@@ -251,122 +226,14 @@ try {
     gitOps = await createGitOperations({ cwd: repoRoot, gitPath });
     const fp = await gitOps.fingerprint();
     ids.remoteFingerprint = fp.remoteFingerprint;
-    mkdirSync(worktreeRoot, { recursive: true });
-    lifecycle = createCodingWorkspaceLifecycle({
-      checkpoints: pg.checkpoints,
-      leases: pg.leases,
-      ownerId: "replica-a",
-      ownership,
-      repositories: { app: { root: repoRoot, git: gitOps } },
-      worktreeRoots: [worktreeRoot],
-      // The run-owned worktree legitimately advances its head (the journey
-      // edit); the host policy explicitly allows removing a head-mismatched
-      // own worktree — the refusal matrix stays intact for everything else.
-      policy: { allowMismatchedCleanup: true },
-    });
-    const created = await lifecycle.create({
-      taskId: `journey-${suffix}`,
-      repositories: [{ repositoryId: "app", branch }],
-    });
-    workspaceTaskId = `journey-${suffix}`;
-    worktreePath = created.repositories[0].worktreePath;
+    // The run worktree is owned by the in-process `workspace` service; Postgres
+    // checkpoints/leases are not involved (plan 165 Task 6 retires the lifecycle).
+    workspace = await createWorkspaceService({ root: repoRoot, worktreeRoot, gitPath });
+    workspaceWorktree = await workspace.worktree.create({ branch, base: "HEAD" });
+    worktreePath = workspaceWorktree.path;
     assert.ok(existsSync(join(worktreePath, "counter.ts")), "worktree checkout missing counter.ts");
-    await lifecycle.verify({ taskId: workspaceTaskId, ownership });
-    ids.workspaceId = created.workspaceId;
     ids.worktree = worktreePath;
-    return { workspaceId: created.workspaceId, worktree: worktreePath };
-  });
-
-  // ---------------------------------------------------------------- agent edit
-  await leg("agent-edit", async () => {
-    const readPaths = createReadPathSet();
-    const toolPolicy = createCodingApprovalPolicy({
-      roots: [worktreePath],
-      readOnly: false,
-      readBeforeWrite: true,
-      readPathSet: readPaths,
-      approve: async () => true,
-    });
-    const tools = [
-      createReadTool(worktreePath, { executionPolicy: toolPolicy, readPathSet: readPaths }),
-      createWriteTool(worktreePath, {
-        executionPolicy: toolPolicy,
-        requireReadBeforeWrite: true,
-        readPathSet: readPaths,
-      }),
-    ];
-    const providerAdapter = await import(pathToFileURL(env.PRISM_CODING_PROVIDER).href);
-    const { provider, request } = providerAdapter.createJourneyProvider();
-    prismAgent = await createAgent({
-      hooks: askEveryTool(),
-      id: "journey-agent",
-      model: request.model,
-      packages: [providerPackage("test-provider", [provider])],
-      slots: { store: createMemorySessionStore() },
-      runState: { checkpoints: pg.checkpoints, definitionRevision: "journey-1" },
-      tools,
-      principal: identity.principal,
-      ownership,
-      redactor,
-      limits: { maxTurns: 12 },
-    });
-    const lifecycleApi = createAgentRunLifecycle({
-      checkpoints: pg.checkpoints,
-      resolveAgent: () => ({ agent: prismAgent, definitionRevision: "journey-1" }),
-    });
-    acpStore = {
-      entries: new Map(),
-      async save(entry) {
-        this.entries.set(entry.sessionId, entry);
-      },
-      async loadAll() {
-        return [...this.entries.values()];
-      },
-      async evict(sessionId) {
-        this.entries.delete(sessionId);
-      },
-    };
-    const sessionId = `acp-edit-${suffix}`;
-    const makeApp = () =>
-      createPrismAcpAgent({
-        authorize: () => ({ ownership }),
-        sessionFactory: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
-        lifecycle: lifecycleApi,
-        sessionStore: acpStore,
-        sessions: {
-          load: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
-          list: async () => [{ sessionId, cwd: worktreePath }],
-          resume: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
-          delete: async () => {},
-        },
-        recovery: { checkpoints: pg.checkpoints, leases: pg.leases, ownerId: "replica-a" },
-      });
-    const app = makeApp();
-    const approvals = [];
-    await client({ name: "journey-edit-client" })
-      .onRequest(methods.client.session.requestPermission, ({ params }) => {
-        approvals.push(params.options.map((option) => option.kind));
-        return { outcome: { outcome: "selected", optionId: "allow-once" } };
-      })
-      .connectWith(app, async (connection) => {
-        await connection.request(methods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
-        const created = await connection.request(methods.agent.session.new, { cwd: worktreePath, mcpServers: [] });
-        const result = await connection.request(methods.agent.session.prompt, {
-          sessionId: created.sessionId,
-          prompt: [
-            {
-              type: "text",
-              text: `Worktree: ${worktreePath}. Read counter.ts, then write counter.ts with exactly: export const count = 2; Then stop.`,
-            },
-          ],
-        });
-        assert.equal(result.stopReason, "end_turn", `agent did not finish: ${JSON.stringify(result).slice(0, 300)}`);
-      });
-    assert.ok(approvals.length >= 1, "the write tool must have required policy approval");
-    const edited = readFileSync(join(worktreePath, "counter.ts"), "utf8");
-    assert.ok(edited.includes("count = 2"), `agent edit did not land: ${edited}`);
-    ids.editSession = sessionId;
-    return { approvals: approvals.length, sessionId };
+    return { worktree: worktreePath, branch };
   });
 
   // ---------------------------------------------------------------- check diagnostics
@@ -403,81 +270,6 @@ try {
     assert.equal(again.unchanged.length, 1, "same-generation refresh must report unchanged");
     rmSync(brokenPath, { force: true });
     return { diagnostics: normalized.length };
-  });
-
-  // ---------------------------------------------------------------- patch review
-  await leg("patch-review", async () => {
-    // The agent-driven edit becomes a real commit before the patch manifest.
-    git(join(worktreePath), [
-      "-c",
-      "user.name=prism-journey",
-      "-c",
-      "user.email=journey@prism.local",
-      "commit",
-      "-q",
-      "-a",
-      "-m",
-      `journey edit ${suffix}`,
-    ]);
-    const patch = git(repoRoot, ["diff", `main...${branch}`, "--", "counter.ts"]);
-    const numstat = git(repoRoot, ["diff", "--numstat", `main...${branch}`])
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const [additions, deletions, file] = line.split("\t");
-        return { file, additions: Number(additions), deletions: Number(deletions) };
-      });
-    const patchBytes = Buffer.from(patch, "utf8");
-    // Host-owned artifact reference: the artifact service never accepts local
-    // filesystem paths in uri (fail closed); the body stays host-owned.
-    const patchUri = `journey/${suffix}/counter.patch`;
-    const handoff = await gitOps.prHandoff({ base: "main", head: branch, checks: [{ name: "syntax", exitCode: 0, summary: "ok" }] });
-    assert.ok(handoff.changedPaths.includes("counter.ts"), "handoff must list the changed path");
-    artifactService = createArtifactService(pg.checkpoints, {
-      redactor,
-      linkSecret: `journey-link-${suffix}`,
-    });
-    const { review, artifactInput } = createCodingPatchReviewManifest({
-      threadId: `journey-${suffix}`,
-      artifactId: `patch-${suffix}`,
-      identity: { repositoryId: "app", remoteFingerprint: ids.remoteFingerprint, defaultBranch: "main" },
-      base: "main",
-      head: branch,
-      patch: { kind: "patch", uri: patchUri, sha256: sha256Of(patchBytes), bytes: patchBytes.length },
-      changedPaths: handoff.changedPaths,
-      diffstat: numstat,
-      checks: [{ name: "syntax", exitCode: 0, summary: "ok" }],
-      diagnostics: [],
-    });
-    const attached = await artifactService.attach({ ...artifactInput, ownership, identity });
-    artifactId = attached.id;
-    const pending = assertCodingPatchAccepted({ review, artifact: attached });
-    assert.equal(pending.state, "pending", "fresh review must be pending");
-    const firstVersion = attached.revisions[0].version;
-    const approved = await artifactService.approve({
-      threadId: `journey-${suffix}`,
-      artifactId,
-      version: firstVersion,
-      identity,
-      ownership,
-    });
-    assert.ok(approved.lastValidatedVersion === 1);
-    const accepted = assertCodingPatchAccepted({ review, artifact: approved });
-    assert.equal(accepted.state, "accepted", `expected accepted, got ${accepted.state}`);
-    // A newer revision supersedes the acceptance (stale acceptance refused).
-    const revised = await artifactService.revise({
-      threadId: `journey-${suffix}`,
-      artifactId,
-      uri: patchUri,
-      hash: sha256Of(Buffer.from(`${patch} #${suffix}\n`, "utf8")),
-      identity,
-      ownership,
-    });
-    const superseded = assertCodingPatchAccepted({ review, artifact: revised });
-    assert.equal(superseded.state, "superseded", "a newer patch revision must supersede prior acceptance");
-    ids.artifactId = artifactId;
-    return { artifactId, digest: review.digest };
   });
 
   // ---------------------------------------------------------------- process recovery
@@ -615,82 +407,6 @@ try {
     await replicaD.dispose();
     ids.recovery = `split=${unattached.length}/attached=${restarted.attached}`;
     return { spawned: spawnedChildren, splitBrain: unattached.length, attached: restarted.attached };
-  });
-
-  // ---------------------------------------------------------------- durable cancel
-  await leg("durable-cancel", async () => {
-    assert.ok(prismAgent && acpStore, "agent-edit leg must have run first");
-    const sessionId = `acp-cancel-${suffix}`;
-    const lifecycleApi = createAgentRunLifecycle({
-      checkpoints: pg.checkpoints,
-      resolveAgent: () => ({ agent: prismAgent, definitionRevision: "journey-1" }),
-    });
-    const app = createPrismAcpAgent({
-      authorize: () => ({ ownership }),
-      sessionFactory: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
-      lifecycle: lifecycleApi,
-      sessionStore: acpStore,
-      sessions: {
-        load: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
-        list: async () => [],
-        resume: async () => ({ session: await prismAgent.session({ id: sessionId, create: true }), agentId: "journey-agent" }),
-        delete: async () => {},
-      },
-      recovery: { checkpoints: pg.checkpoints, leases: pg.leases, ownerId: "replica-a" },
-    });
-    // The client rejects every pending tool approval, so the run must never
-    // execute its write (no replay), and the durable cancel then records the
-    // terminal-idempotent cancellation marker through Postgres CAS + fencing.
-    await client({ name: "journey-cancel-client" })
-      .onRequest(methods.client.session.requestPermission, () => ({
-        outcome: { outcome: "selected", optionId: "reject-once" },
-      }))
-      .connectWith(app, async (connection) => {
-        await connection.request(methods.agent.initialize, { protocolVersion: PROTOCOL_VERSION });
-        const created = await connection.request(methods.agent.session.new, { cwd: worktreePath, mcpServers: [] });
-        await connection
-          .request(methods.agent.session.prompt, {
-            sessionId: created.sessionId,
-            prompt: [
-              {
-                type: "text",
-                text: `Worktree: ${worktreePath}. Read counter.ts, then write counter.ts with exactly: export const count = 3;`,
-              },
-            ],
-          })
-          .catch(() => undefined); // the run may end, be denied, or be cancelled — never replayed
-      });
-    const persisted = acpStore.entries.get(sessionId)?.activeRun;
-    assert.ok(persisted, "active-run ref must be persisted for the run");
-    const recovery = createAcpRunRecovery({
-      checkpoints: pg.checkpoints,
-      leases: pg.leases,
-      ownerId: "replica-a",
-      lifecycle: lifecycleApi,
-    });
-    const ref = {
-      runId: persisted.runId,
-      sessionId,
-      status: persisted.status,
-      ...(persisted.version !== undefined ? { version: persisted.version } : {}),
-      updatedAt: persisted.updatedAt,
-    };
-    const cancelled = await recovery.cancel(ref, { ownership, expectedVersion: persisted.version });
-    assert.equal(cancelled.cancelled, true, "durable cancel must succeed");
-    const status = await recovery.status(ref, { ownership });
-    assert.equal(status.status, "cancelled", `expected cancelled, got ${status.status}`);
-    const again = await recovery.cancel(ref, { ownership, expectedVersion: persisted.version });
-    assert.equal(again.cancelled, true, "cancellation must be terminal-idempotent (same outcome, one marker)");
-    const marker = await pg.checkpoints.loadCheckpoint({
-      namespace: ACP_RUN_CANCEL_NAMESPACE,
-      key: persisted.runId,
-      ...ownership,
-    });
-    assert.ok(marker, "cancel marker must exist in durable checkpoints");
-    const edited = readFileSync(join(worktreePath, "counter.ts"), "utf8");
-    assert.ok(!edited.includes("count = 3"), "cancelled run must never have replayed its write");
-    ids.cancelRun = persisted.runId;
-    return { runId: persisted.runId };
   });
 
   // ---------------------------------------------------------------- forge
@@ -857,9 +573,9 @@ try {
       git(repoRoot, ["push", "origin", "--delete", branch]);
     });
   }
-  if (lifecycle && workspaceTaskId) {
+  if (workspaceWorktree) {
     await cleanup("worktree", async () => {
-      await lifecycle.cleanup({ taskId: workspaceTaskId, ownership });
+      await workspaceWorktree.dispose({ force: true });
     });
   }
   if (replicaA) await cleanup("process-replica-a", async () => replicaA.dispose());

@@ -1,6 +1,24 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { type AgentEvent, type ModelProvider, createAgent, askEveryTool, createMemoryCheckpointStore, createMemorySessionStore, HARD_RUN_LIMITS, type LoopStrategy, providerDone, providerTextDelta, providerToolCall, providerUsage, resumeAgentRunStream, type RunLimitBreach, RunLimitError, RunLimitTracker, resolveRunLimits, type ToolDefinition, toolCallContent } from "../index.js";
+import {
+  type AgentEvent,
+  type ModelProvider,
+  createAgent,
+  askEveryTool,
+  createMemorySessionStore,
+  HARD_RUN_LIMITS,
+  type LoopStrategy,
+  providerDone,
+  providerTextDelta,
+  providerToolCall,
+  providerUsage,
+  type RunLimitBreach,
+  RunLimitError,
+  RunLimitTracker,
+  resolveRunLimits,
+  type ToolDefinition,
+  toolCallContent,
+} from "../index.js";
 import { mockProvider } from "../testing/index.js";
 import { providerPackage } from "../provider-kit/index.js";
 
@@ -153,7 +171,10 @@ describe("run limits", () => {
         yield event;
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])] });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+    });
     const within = await (await agent.session()).run("hi", { limits: { maxResponseBytes: bytes } });
     assert.equal(within.status, "completed");
 
@@ -258,7 +279,11 @@ describe("run limits", () => {
       parameters: { type: "object", properties: { i: { type: "number" } } },
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
     const session = await agent.session();
     const events = collect(session.subscribe());
     const failure = await session.run("hi", { limits: { maxTurns: 12, maxToolRounds: 20, maxToolCalls: 20 } });
@@ -318,7 +343,11 @@ describe("run limits", () => {
       parameters: { type: "object", properties: { token: { type: "string" } } },
       execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "echo", value: "ok" }),
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], tools: { add: [echo] } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      tools: { add: [echo] },
+    });
     const session = await agent.session();
     const events = collect(session.subscribe());
     {
@@ -334,7 +363,7 @@ describe("run limits", () => {
     assert.equal(event.attribution?.consumed.inputTokens, 12);
     assert.equal(event.attribution?.consumed.turns, 2);
     assert.equal(event.attribution?.recentToolCalls.length, 1);
-    const [call] = event.attribution?.recentToolCalls;
+    const [call] = event.attribution?.recentToolCalls ?? [];
     assert.ok(call);
     assert.match(call.argHash, /^sha256:[a-f0-9]{64}$/);
     assert.equal(JSON.stringify(event).includes(secret), false, "raw arguments never enter the attribution event");
@@ -354,7 +383,11 @@ describe("run limits", () => {
         );
       },
     };
-    const agent = await createAgent({ model: { provider: "mock", model: "demo" }, packages: [providerPackage("test-provider", [provider])], limits: { maxTurns: 4 } });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      limits: { maxTurns: 4 },
+    });
     const controller = new AbortController();
     const run = (await agent.session()).run("hi", { signal: controller.signal });
     await started;
@@ -368,38 +401,35 @@ describe("run limits", () => {
   });
 
   it("carries attribution on a durable resumed run that dies on a limit", async () => {
-    const checkpoints = createMemoryCheckpointStore();
     const agent = await createAgent({
       hooks: askEveryTool(),
       id: "durable-limit",
       model: { provider: "mock", model: "demo" },
       limits: { maxToolCalls: 1 },
       slots: { store: createMemorySessionStore() },
-      packages: [mockProvider([[
-        providerToolCall(toolCallContent("call-1", "write", { v: 1 })),
-        providerToolCall(toolCallContent("call-2", "write", { v: 2 })),
-        providerDone(),
-      ]])],
+      packages: [
+        mockProvider([
+          [
+            providerToolCall(toolCallContent("call-1", "write", { v: 1 })),
+            providerToolCall(toolCallContent("call-2", "write", { v: 2 })),
+            providerDone(),
+          ],
+        ]),
+      ],
       tools: {
         add: [
           { name: "write", parameters: {}, execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "write", value: "ok" }) },
         ],
       },
     });
-    const first = await (await agent.session({ id: "durable-limit-session", create: true })).run("go", {
-      runState: { checkpoints, definitionRevision: "1" },
-    });
+    const session = await agent.session({ id: "durable-limit-session", create: true });
+    const first = await session.run("go");
     assert.equal(first.status, "suspended");
-    const version = first.runState?.version;
-    assert.ok(version !== undefined, "the suspended run carries its version");
 
     const events: AgentEvent[] = [];
-    // A resumed run that dies on a ceiling ends the stream normally, with its one terminal `run.failed`.
-    for await (const event of resumeAgentRunStream(
-      agent,
-      { runId: first.runId, sessionId: first.sessionId },
-      { decision: "approve", expectedVersion: version },
-      { checkpoints, definitionRevision: "1" },
+    // A resumed leg that dies on a ceiling ends the stream normally, with its one terminal `run.failed`.
+    for await (const event of session.resume(
+      first.pending!.map((pending) => ({ approvalId: pending.approvalId, outcome: "allow_once" as const })),
     )) {
       events.push(event);
     }

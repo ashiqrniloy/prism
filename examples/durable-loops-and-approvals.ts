@@ -1,13 +1,11 @@
 import {
   askEveryTool,
   createAgent,
-  createMemoryCheckpointStore,
   createMemorySessionStore,
   type JsonValue,
   type LoopStrategy,
   providerDone,
   providerTextDelta,
-  resumeAgentRun,
   toolCallContent,
 } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
@@ -17,7 +15,6 @@ import { providerPackage } from "@arnilo/prism/provider-kit";
  * Run: npm run build:core && node examples/durable-loops-and-approvals.ts
  */
 export async function demo(): Promise<Record<string, unknown>> {
-  const checkpoints = createMemoryCheckpointStore();
   const loopState = { turns: 0, restored: false };
   const loop: LoopStrategy = {
     name: "demo-loop",
@@ -70,24 +67,21 @@ export async function demo(): Promise<Record<string, unknown>> {
     },
   });
 
-  const durable = { checkpoints, definitionRevision: "1" };
-  const suspended = await (await agent.session({ id: "phase8-demo", create: true })).run("go", { runState: durable });
+  const session = await agent.session({ id: "phase8-demo", create: true });
+  const suspended = await session.run("go");
   if (suspended.status !== "suspended") throw new Error(`expected suspended, got ${suspended.status}`);
   const pending = suspended.pending ?? [];
   if (pending.length !== 2 || executed.length !== 0) throw new Error("expected two gated approvals before side effects");
 
-  const done = await resumeAgentRun(
-    agent,
-    { runId: suspended.runId, sessionId: suspended.sessionId },
-    {
-      expectedVersion: suspended.runState!.version!,
-      decisions: pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
-    },
-    { checkpoints, definitionRevision: "1" },
-  );
+  let last: string | undefined;
+  for await (const event of session.resume(
+    pending.map((d) => ({ approvalId: d.approvalId, outcome: "allow_once" as const })),
+  )) {
+    last = event.type;
+  }
 
   return {
-    status: done.status,
+    status: last === "run.completed" ? "completed" : last,
     executed,
     loopRestored: loopState.restored,
     loopTurns: loopState.turns,

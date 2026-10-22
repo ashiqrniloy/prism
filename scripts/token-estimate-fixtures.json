@@ -107,7 +107,7 @@
         "event": { "type": "run.started", "sessionId": "s", "runId": "r" }
       },
       "memoryLlm": 13,
-      "memoryOm": 36
+      "memoryOm": 35
     },
     {
       "id": "message-entry",

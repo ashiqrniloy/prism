@@ -1,7 +1,7 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { describe, it } from "bun:test";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -24,7 +24,9 @@ function* walk(dir: string): Generator<string> {
 describe("network-free default test guard", () => {
   it("every live test file is gated by a PRISM_LIVE_* env var", () => {
     for (const file of walk(repoRoot)) {
-      if (!/live/i.test(file)) continue;
+      // A live test is named `live.test.ts` or `<thing>-live.test.ts`; a directory such as `delivery/`
+      // is not one (a path substring match reported 23 false positives).
+      if (!/(?:^|[-_.])live(?:[-_.]|$)/i.test(basename(file))) continue;
       const src = readFileSync(file, "utf8");
       assert.match(src, /PRISM_(?:LIVE|TEST)_[A-Z_]+/, `${file} must be gated by a PRISM_LIVE_* or PRISM_TEST_* env var`);
     }

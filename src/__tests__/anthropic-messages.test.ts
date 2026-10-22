@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { CacheControlledMessage, JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
-import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../provider-kit/anthropic-messages.js";
+import type { JsonObject, ModelConfig, ProviderEvent, ProviderRequest } from "@arnilo/prism";
+import type { CacheControlledMessage } from "@arnilo/prism/provider-kit";
+import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "../provider-kit/codecs/anthropic-messages.js";
 
 const model: ModelConfig = {
   provider: "shared-fixture",
@@ -139,7 +140,7 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
         { type: "content_block_delta", index: 2, delta: { type: "input_json_delta", partial_json: '{"q":"x"}' } },
         { type: "content_block_stop", index: 2 },
         {
-          type: "message.delta",
+          type: "message_delta",
           delta: { stop_reason: "tool_use" },
           usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 4, cache_creation_input_tokens: 2 },
         },
@@ -153,8 +154,9 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     assert.equal((events[0] as any).content.text, "hi");
     assert(events.some((e) => e.type === "content_delta" && e.content.type === "thinking"));
     const usage = events.find((e) => e.type === "usage") as any;
-    assert.equal(usage.usage.inputTokens, 10);
+    assert.equal(usage.usage.inputTokens, 16);
     assert.equal(usage.usage.outputTokens, 5);
+    assert.equal(usage.usage.totalTokens, 21);
     assert.equal(usage.usage.cacheReadTokens, 4);
     assert.equal(usage.usage.cacheWriteTokens, 2);
     assert.deepEqual(
@@ -179,4 +181,361 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     assert.match(String((events.at(-1) as any).error?.message ?? events.at(-1)), /completion evidence/);
     assert.ok(!events.some((e) => e.type === "done"), "truncated stream must not emit done");
   });
+
+  it("anthropic_message_delta_sets_stop_reason_and_usage", async () => {
+    const stream = ok(
+      sse([
+        { type: "message_start", message: { usage: { input_tokens: 10, cache_read_input_tokens: 2 } } },
+        { type: "content_block_start", index: 0, content_block: { type: "text" } },
+        { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "world" } },
+        { type: "content_block_stop", index: 0 },
+        {
+          type: "message_delta",
+          delta: { stop_reason: "end_turn" },
+          usage: { output_tokens: 8 },
+        },
+        { type: "message_stop" },
+      ]),
+    );
+    const events: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
+
+    const usageEvent = events.find((e) => e.type === "usage") as any;
+    assert.ok(usageEvent, "providerUsage must be yielded on message_delta");
+    assert.equal(usageEvent.usage.inputTokens, 12);
+    assert.equal(usageEvent.usage.outputTokens, 8);
+    assert.equal(usageEvent.usage.totalTokens, 20);
+
+    const doneEvent = events.at(-1) as any;
+    assert.equal(doneEvent?.type, "done");
+    assert.equal(doneEvent?.stopReason, "end_turn");
+    assert.equal(doneEvent?.usage?.inputTokens, 12);
+    assert.equal(doneEvent?.usage?.outputTokens, 8);
+  });
+
+  it("anthropic_usage_merges_start_and_delta", async () => {
+    const stream = ok(
+      sse([
+        {
+          type: "message_start",
+          message: { usage: { input_tokens: 12, cache_read_input_tokens: 900 } },
+        },
+        { type: "content_block_start", index: 0, content_block: { type: "text" } },
+        { type: "content_block_delta", index: 0, delta: { type: "text_delta", text: "ans" } },
+        { type: "content_block_stop", index: 0 },
+        {
+          type: "message_delta",
+          delta: { stop_reason: "end_turn" },
+          usage: { output_tokens: 40 },
+        },
+        { type: "message_stop" },
+      ]),
+    );
+    const events: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
+
+    const doneEvent = events.at(-1) as any;
+    assert.equal(doneEvent?.type, "done");
+    assert.deepEqual(doneEvent.usage, {
+      inputTokens: 912,
+      outputTokens: 40,
+      cacheReadTokens: 900,
+      totalTokens: 952,
+    });
+  });
+
+  it("anthropic_signature_delta_is_captured_and_replayed", async () => {
+    const stream = ok(
+      sse([
+        { type: "message_start", message: { usage: { input_tokens: 5, output_tokens: 1 } } },
+        { type: "content_block_start", index: 0, content_block: { type: "thinking" } },
+        { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "deep thought" } },
+        { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "sig_12345" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "content_block_start", index: 1, content_block: { type: "text" } },
+        { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "result" } },
+        { type: "content_block_stop", index: 1 },
+        { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 10 } },
+        { type: "message_stop" },
+      ]),
+    );
+    const events: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
+
+    const thinkingDeltas = events.filter((e) => e.type === "content_delta" && e.content.type === "thinking");
+    assert.ok(thinkingDeltas.length >= 2, "must yield thinking text and signature deltas");
+    const sigDelta = thinkingDeltas.find((e: any) => e.content.signature === "sig_12345");
+    assert.ok(sigDelta, "signature_delta must be emitted in content_delta");
+
+    // Test encoder replay with signature
+    const replayRequest: ProviderRequest = {
+      model,
+      messages: [
+        { role: "user", content: [{ type: "text", text: "question" }] },
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "deep thought", signature: "sig_12345" },
+            { type: "text", text: "result" },
+          ],
+        },
+        { role: "user", content: [{ type: "text", text: "follow up" }] },
+      ],
+    };
+    const body = await anthropicMessagesBody(replayRequest, hooks);
+    const assistantMsg = (body.messages as any[])[1];
+    assert.deepEqual(assistantMsg.content[0], {
+      type: "thinking",
+      thinking: "deep thought",
+      signature: "sig_12345",
+    });
+  });
+
+  it("anthropic_unsigned_thinking_replays_as_text", async () => {
+    const replayRequest: ProviderRequest = {
+      model,
+      messages: [
+        { role: "user", content: [{ type: "text", text: "question" }] },
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "unsigned reasoning" },
+            { type: "text", text: "answer" },
+          ],
+        },
+      ],
+    };
+    const body = await anthropicMessagesBody(replayRequest, hooks);
+    const assistantMsg = (body.messages as any[])[1];
+    // Must replay as text, NEVER as an unsigned thinking block
+    assert.deepEqual(assistantMsg.content[0], {
+      type: "text",
+      text: "unsigned reasoning",
+    });
+  });
+
+  it("anthropic_redacted_thinking_round_trips", async () => {
+    const stream = ok(
+      sse([
+        { type: "message_start", message: { usage: { input_tokens: 5, output_tokens: 1 } } },
+        { type: "content_block_start", index: 0, content_block: { type: "redacted_thinking", data: "enc_blob_xyz" } },
+        { type: "content_block_stop", index: 0 },
+        { type: "content_block_start", index: 1, content_block: { type: "text" } },
+        { type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "safe answer" } },
+        { type: "content_block_stop", index: 1 },
+        { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: 5 } },
+        { type: "message_stop" },
+      ]),
+    );
+    const events: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
+
+    const redacted = events.find(
+      (e) => e.type === "content_delta" && e.content.type === "thinking" && e.content.redacted === true,
+    ) as any;
+    assert.ok(redacted, "redacted_thinking block must be emitted");
+    assert.equal(redacted.content.data, "enc_blob_xyz");
+
+    // Replay through encoder
+    const replayRequest: ProviderRequest = {
+      model,
+      messages: [
+        { role: "user", content: [{ type: "text", text: "prompt" }] },
+        {
+          role: "assistant",
+          content: [
+            { type: "thinking", text: "", redacted: true, data: "enc_blob_xyz" },
+            { type: "text", text: "safe answer" },
+          ],
+        },
+      ],
+    };
+    const body = await anthropicMessagesBody(replayRequest, hooks);
+    const assistantMsg = (body.messages as any[])[1];
+    assert.deepEqual(assistantMsg.content[0], {
+      type: "redacted_thinking",
+      data: "enc_blob_xyz",
+    });
+  });
+
+  it("anthropic_error_event_maps_transient_codes", async () => {
+    // 1. overloaded_error -> transient
+    const stream1 = ok(
+      sse([
+        { type: "message_start" },
+        { type: "error", error: { type: "overloaded_error", message: "Overloaded" } },
+      ]),
+    );
+    const events1: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream1.body!, undefined)) events1.push(event);
+    assert.equal(events1.length, 1);
+    assert.equal(events1[0].type, "error");
+    assert.equal((events1[0] as any).error.code, "overloaded_error");
+    assert.equal((events1[0] as any).error.failureClass, "transient");
+
+    // 2. api_error -> transient
+    const stream2 = ok(
+      sse([
+        { type: "error", error: { type: "api_error", message: "Internal server error" } },
+      ]),
+    );
+    const events2: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream2.body!, undefined)) events2.push(event);
+    assert.equal(events2[0].type, "error");
+    assert.equal((events2[0] as any).error.code, "api_error");
+    assert.equal((events2[0] as any).error.failureClass, "transient");
+
+    // 3. invalid_request_error -> permanent
+    const stream3 = ok(
+      sse([
+        { type: "error", error: { type: "invalid_request_error", message: "Invalid model" } },
+      ]),
+    );
+    const events3: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream3.body!, undefined)) events3.push(event);
+    assert.equal(events3[0].type, "error");
+    assert.equal((events3[0] as any).error.code, "invalid_request_error");
+    assert.equal((events3[0] as any).error.failureClass, "permanent");
+  });
+
+  it("anthropic_malformed_frame_is_terminal_error", async () => {
+    const encoder = new TextEncoder();
+    const stream = ok(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode("data: {invalid json frame\n\n"));
+          controller.close();
+        },
+      }),
+    );
+    const events: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, "error");
+    assert.match(String((events[0] as any).error.message), /Malformed Anthropic SSE frame/);
+    assert.ok(!events.some((e) => e.type === "done"), "stream must not emit done on malformed frame");
+  });
+
+  it("anthropic_ignores_ping", async () => {
+    const encoder = new TextEncoder();
+    const stream = ok(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode("event: ping\ndata: {\"type\":\"ping\"}\n\n"));
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "message_start",
+                message: { usage: { input_tokens: 3, output_tokens: 1 } },
+              })}\n\n`,
+            ),
+          );
+          controller.enqueue(encoder.encode("event: ping\ndata: {\"type\":\"ping\"}\n\n"));
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "content_block_start",
+                index: 0,
+                content_block: { type: "text" },
+              })}\n\n`,
+            ),
+          );
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "content_block_delta",
+                index: 0,
+                delta: { type: "text_delta", text: "pong" },
+              })}\n\n`,
+            ),
+          );
+          controller.enqueue(encoder.encode("event: ping\ndata: {\"type\":\"ping\"}\n\n"));
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "content_block_stop", index: 0 })}\n\n`));
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "message_delta",
+                delta: { stop_reason: "end_turn" },
+                usage: { output_tokens: 2 },
+              })}\n\n`,
+            ),
+          );
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "message_stop" })}\n\n`));
+          controller.close();
+        },
+      }),
+    );
+    const events: ProviderEvent[] = [];
+    for await (const event of anthropicMessagesEvents(stream.body!, undefined)) events.push(event);
+    assert.equal(events[0].type, "content_delta");
+    assert.equal((events[0] as any).content.text, "pong");
+    assert.equal(events.at(-1)?.type, "done");
+  });
+
+  it("anthropic_tool_result_sets_is_error", async () => {
+    const body = await anthropicMessagesBody(
+      {
+        model,
+        messages: [
+          {
+            role: "tool",
+            content: [{ type: "tool_result", toolCallId: "call_1", name: "shell", error: { name: "Error", message: "boom" } }],
+          },
+        ],
+      },
+      hooks,
+    );
+    const block = (body.messages as any[])[0].content[0];
+    assert.equal(block.type, "tool_result");
+    assert.equal(block.is_error, true);
+    assert.equal(block.content, "boom");
+  });
+
+  it("anthropic_tool_result_carries_image_block", async () => {
+    const body = await anthropicMessagesBody(
+      {
+        model: { ...model, capabilities: { input: ["text", "image"], output: ["text"] } },
+        messages: [
+          {
+            role: "tool",
+            content: [
+              { type: "tool_result", toolCallId: "call_1", name: "read", result: "screenshot" },
+              { type: "image", mimeType: "image/png", data: PNG_1X1 },
+            ],
+          },
+        ],
+      },
+      hooks,
+    );
+    const block = (body.messages as any[])[0].content[0];
+    assert.equal(block.content[0].type, "text");
+    assert.equal(block.content[0].text, "screenshot");
+    assert.equal(block.content[1].type, "image");
+    assert.equal(block.content[1].source.type, "base64");
+    assert.equal(block.content[1].source.data, PNG_1X1);
+  });
+
+  it("anthropic_tool_result_image_without_capability_is_noted", async () => {
+    const body = await anthropicMessagesBody(
+      {
+        model,
+        messages: [
+          {
+            role: "tool",
+            content: [
+              { type: "tool_result", toolCallId: "call_1", name: "read", result: "screenshot" },
+              { type: "image", mimeType: "image/png", data: PNG_1X1 },
+            ],
+          },
+        ],
+      },
+      hooks,
+    );
+    const block = (body.messages as any[])[0].content[0];
+    assert.equal(typeof block.content, "string");
+    assert.match(block.content, /screenshot/);
+    assert.match(block.content, /\[image omitted: the model does not accept images\]/);
+  });
 });
+
+const PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";

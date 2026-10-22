@@ -2,7 +2,7 @@
  * Suspended-run store entry (roadmap §2.4 ask path, §2.5 store slot). A run that suspends on an
  * `ask` decision writes one `suspended_run` session entry through the store slot, so a later
  * process over the same store can find it and resume. The entry is self-contained: it carries the
- * full redacted run state, so a resume needs no `CheckpointStore` read.
+ * full redacted run state, so a resume reads nothing else from the store.
  */
 import { parseAgentRunState, type StoredAgentRunState } from "./agent-run-state.js";
 import type { AgentRunInterruption, JsonValue, SessionEntry } from "./contracts.js";
