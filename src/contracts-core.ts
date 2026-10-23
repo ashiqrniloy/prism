@@ -5,6 +5,7 @@ export type { AudioContent, DocumentContent, FileContent } from "./content.js";
 export * from "./contracts-core/agent.js";
 export * from "./contracts-core/compaction.js";
 export * from "./contracts-core/content.js";
+export * from "./contracts-core/decisions.js";
 export * from "./contracts-core/embeddings.js";
 export * from "./contracts-core/discovery.js";
 export * from "./contracts-core/system-prompt.js";

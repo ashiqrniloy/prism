@@ -41,6 +41,7 @@ describe("@arnilo/prism-provider-typesafe", () => {
         createTypeSafeProvider({
           fetch: fetchImpl,
           apiKey: options?.apiKey as any,
+          path: options?.path,
         }),
       recordings,
       keyRequired: true,
@@ -60,6 +61,7 @@ describe("@arnilo/prism-provider-typesafe", () => {
         tools: false,
         streaming: false,
         structuredOutput: "json_schema",
+        decisions: true,
       });
       assert.deepEqual(entry.limits, { contextWindow: 32_000, maxOutputTokens: 0 });
       assert.deepEqual(entry.cost, { input: 0.04, output: 0, currency: "USD", unit: "per_million_tokens" });

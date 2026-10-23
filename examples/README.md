@@ -102,6 +102,7 @@ node examples/host-hooks.ts
 node examples/openai-compatible.ts # Bun-only (Bun.serve fake endpoint)
 node examples/custom-provider.ts
 node examples/side-call.ts
+node examples/decision-models.ts
 node examples/durable-investigation.ts
 node examples/ag-ui-server.ts
 node examples/ag-ui-a2ui.ts
@@ -144,6 +145,7 @@ Each demo prints a single JSON line with its result.
 - `openai-compatible.ts` — **demo** (Phase 5): the kernel's built-in `openai-compatible` provider against a local `Bun.serve` fake endpoint that requires a bearer token; the `ModelSpec` object carries `baseUrl` and an `env:` credential ref, one streamed turn plus a second `RunResult`, and the endpoint asserting the token arrived (imports only `@arnilo/prism`, network-free).
 - `custom-provider.ts` — **demo**: routed provider built with `createRoutedProvider` running offline against a recorded wire fixture via `replayFetch` (network-free).
 - `side-call.ts` — **demo** (Phase 5): a `models`-capability package whose tool calls `prism.models.client("side/side")` mid-turn on two `mockProvider` packages, with the side provider called exactly once (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
+- `decision-models.ts` — **demo** (Phase 18): a `models`-capability package calls `prism.models.decisions()` from a `run.input` hook to route a ticket with `noul`/`choice`/`score` questions, prints the raw probabilities, and proves a model without `decisions` throws `DecisionsError("unsupported_model")` (imports only `@arnilo/prism` and `@arnilo/prism/testing`, network-free).
 - `custom-loop.ts` — **demo**: plan-then-act `LoopStrategy` through `slots.loop` with a host `tool.call` gate denying a `network` tool, the denial reaching the model as a tool result (network-free).
 - `durable-investigation.ts` — **demo**: `checkpointPolicy: "every-turn"` turn checkpoints, simulated worker death, and `decision: "continue"` crash recovery with no tool re-dispatch (network-free).
 - `ag-ui-server.ts` — authorized Web `Request` → bounded AG-UI SSE run with a host-owned mock session.

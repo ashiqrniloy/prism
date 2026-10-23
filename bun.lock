@@ -466,6 +466,17 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
+    "packages/providers/liquid": {
+      "name": "@arnilo/prism-provider-liquid",
+      "version": "0.13.0",
+      "devDependencies": {
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
     "packages/providers/opencode-go": {
       "name": "@arnilo/prism-provider-opencode-go",
       "version": "0.13.0",
@@ -743,6 +754,8 @@
     "@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@workspace:packages/providers/hyper"],
 
     "@arnilo/prism-provider-laya": ["@arnilo/prism-provider-laya@workspace:packages/providers/laya"],
+
+    "@arnilo/prism-provider-liquid": ["@arnilo/prism-provider-liquid@workspace:packages/providers/liquid"],
 
     "@arnilo/prism-provider-opencode-go": ["@arnilo/prism-provider-opencode-go@workspace:packages/providers/opencode-go"],
 

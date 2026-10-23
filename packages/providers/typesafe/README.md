@@ -29,6 +29,7 @@ The bare definition uses the schema defaults, so `packages: [typesafe]` is the s
 | --- | --- | --- | --- |
 | `apiKey` | `env:`/`keyring:` ref | `env:TYPESAFE_API_KEY` | Resolved through the credentials slot on every request. A literal key is rejected (`secret_literal`). |
 | `baseUrl` | string | `https://api.typesafe.ai` | Official base. |
+| `path` | string | `/v1/systemone` | Endpoint path; must start with `/` (e.g. `/providers/microsoft/v1/systemone` for Foundry). |
 | `maxRetries` | number | `2` | Retries after the first attempt, forwarded to the shared System One client. |
 | `models` | `ModelConfig[]` | — | Static catalog. When absent, `models()` returns the curated Jev catalog without fetching. |
 
@@ -38,7 +39,8 @@ cannot come from a manifest.
 
 ## Behaviour
 
-- **A decision model, not a chat model.** A request must carry `options.structuredOutput` with a JSON schema; tools are rejected up front and there is no streaming. One `POST /v1/systemone` round trip returns the rendered, schema-valid JSON as a single text delta.
+- **A decision model, not a chat model.** The primary call is `prism.models.decisions("typesafe/jev-latest").decide({ state, questions })`, which returns raw answers with probabilities, confidence, legends, usage, and timing. A `generate()` request must carry `options.structuredOutput` with a JSON schema; tools are rejected up front and there is no streaming. One `POST /v1/systemone` round trip returns the rendered, schema-valid JSON as a single text delta.
+- **Images stay text-only.** Jev's catalog declares `input: ["text"]` and `decisions: true`; an image part is rejected before fetch, and the `images` field is omitted from every text body.
 - **Raw answers stay raw.** Nothing is coerced: a probability is never rounded, a choice never flattened to a boolean, and a timeout is an error rather than a synthetic neutral answer.
 - **Plaintext remote warning.** A remote plaintext non-loopback `baseUrl` (e.g. `http://...`) emits a warning printing the origin only (no path or userinfo), alerting users while protecting credentials.
 - **The typed decision call lives in the kit.** `askSystemOneDecisions` (with its question/answer types, typed error family, and the schema compiler) is exported from `@arnilo/prism/provider-kit`, not from this package, because both System One vendors share the wire.

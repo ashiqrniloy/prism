@@ -68,6 +68,8 @@ DEFAULT_MAX_AGENT_RUN_STATE_BYTES	export declare const DEFAULT_MAX_AGENT_RUN_STA
 DEFAULT_MAX_ARGUMENT_BYTES	export declare const DEFAULT_MAX_ARGUMENT_BYTES = 262144
 DEFAULT_MAX_AUDIO_DURATION_MS	export declare const DEFAULT_MAX_AUDIO_DURATION_MS: number
 DEFAULT_MAX_BUFFER_BYTES	export declare const DEFAULT_MAX_BUFFER_BYTES = 524288
+DEFAULT_MAX_DECISION_IMAGE_BYTES	export declare const DEFAULT_MAX_DECISION_IMAGE_BYTES: number
+DEFAULT_MAX_DECISION_STATE_BYTES	export declare const DEFAULT_MAX_DECISION_STATE_BYTES = 262144
 DEFAULT_MAX_EVENT_BYTES	export declare const DEFAULT_MAX_EVENT_BYTES = 262144
 DEFAULT_MAX_MEDIA_ITEMS_PER_REQUEST	export declare const DEFAULT_MAX_MEDIA_ITEMS_PER_REQUEST = 32
 DEFAULT_MAX_MEDIA_ITEM_BYTES	export declare const DEFAULT_MAX_MEDIA_ITEM_BYTES = 10000000
@@ -100,10 +102,12 @@ DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT =
 DEFAULT_SNAPSHOT_CACHE_TTL_MS	export declare const DEFAULT_SNAPSHOT_CACHE_TTL_MS = 1000
 DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD	export declare const DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD = 0.5
 DEFAULT_SYSTEMONE_MAX_RETRIES	export declare const DEFAULT_SYSTEMONE_MAX_RETRIES = 2
+DEFAULT_SYSTEMONE_PATH	export declare const DEFAULT_SYSTEMONE_PATH = "/v1/systemone"
 DecideHook	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 DecideHookName	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 Decision	export type { ApprovalOutcome, CompactionTrigger, CompactionTriggerContext, ContextMeter, Decision, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNestedRun, RunLimitCounters, RunLimitName, StickyDecision, TokenEstimate, TokenEstimateConfidence, ToolCallAuthority, ToolCapabilityKind, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotenc
 DecisionScope	export type { ApprovalOutcome, CompactionTrigger, CompactionTriggerContext, ContextMeter, Decision, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNestedRun, RunLimitCounters, RunLimitName, StickyDecision, TokenEstimate, TokenEstimateConfidence, ToolCallAuthority, ToolCapabilityKind, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotenc
+DecisionsError	export declare class DecisionsError extends Error
 DefaultCompactorOptions	export type { DefaultCompactorOptions } from "./compaction.js"
 DefaultInputBuildContext	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
 DefaultInputBuilder	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
@@ -216,7 +220,10 @@ MAX_ACTION_CONSTRAINTS	export declare const MAX_ACTION_CONSTRAINTS = 32
 MAX_ACTION_CONSTRAINT_BYTES	export declare const MAX_ACTION_CONSTRAINT_BYTES: number
 MAX_ATTRIBUTION_DEPTH	export declare const MAX_ATTRIBUTION_DEPTH = 8
 MAX_CLOSURE_PACKAGES	export declare const MAX_CLOSURE_PACKAGES = 512
+MAX_DECISION_CHOICE_OPTIONS	export declare const MAX_DECISION_CHOICE_OPTIONS = 255
+MAX_DECISION_QUESTIONS	export declare const MAX_DECISION_QUESTIONS = 64
 MAX_DECISION_REASON_BYTES	export declare const MAX_DECISION_REASON_BYTES: number
+MAX_DECISION_SCORE_LEVELS	export declare const MAX_DECISION_SCORE_LEVELS = 10
 MAX_ELICITATION_BYTES	export declare const MAX_ELICITATION_BYTES: number
 MAX_EXTERNAL_STATE_BYTES	export declare const MAX_EXTERNAL_STATE_BYTES: number
 MAX_EXTERNAL_STATE_ENTRIES	export declare const MAX_EXTERNAL_STATE_ENTRIES = 10000
@@ -460,6 +467,8 @@ assertCanRegister	export declare function assertCanRegister<K>(map: ReadonlyMap<
 assertCanonicalToolParameters	export declare function assertCanonicalToolParameters(serialized: unknown, original: unknown): void
 assertCompactionTrigger	export declare function assertCompactionTrigger(trigger: CompactionTrigger): CompactionTrigger
 assertCompactorConforms	export declare function assertCompactorConforms(compactor: Compactor, options?: CompactionConformanceOptions): Promise<
+assertDecisionRequest	export declare function assertDecisionRequest(request: DecisionRequest, model: ModelConfig): void
+assertDecisionsSupported	export declare function assertDecisionsSupported(model: ModelConfig): void
 assertDeclaredMediaTypeMatches	export declare function assertDeclaredMediaTypeMatches(declaredMediaType: string, bytes: Uint8Array, policy?: MediaMimePolicy): void
 assertDriverDescriptor	export declare function assertDriverDescriptor(descriptor: DriverDescriptor): void
 assertDriverRequires	export declare function assertDriverRequires(descriptor: DriverDescriptor, requires: DriverRequires | undefined): void
@@ -530,7 +539,7 @@ collectMessageContentBlocks	export declare function collectMessageContentBlocks(
 collectProviderEvents	export declare function collectProviderEvents(provider: ModelProvider, request: ProviderRequest): Promise<readonly ProviderEvent[]>
 compareVersions	export declare function compareVersions(a: SemVer, b: SemVer): number
 compileSystemOneQuestions	export declare function compileSystemOneQuestions(schema: JsonObject): Readonly<Record<string, SystemOneQuestion>>
-compileSystemOneState	export declare function compileSystemOneState(messages: readonly Message[]): SystemOneState
+compileSystemOneState	export declare function compileSystemOneState(messages: readonly Message[], media?: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>): SystemOneCompiledState
 composeSystemPrompt	export declare function composeSystemPrompt(contributions?: SystemPromptConfig, options?: ComposeSystemPromptOptions): string | undefined
 configure	export declare function configure(name: string, patch: JsonObject, options: MaintainOptions): Promise<void>
 contentBlockInputModality	export declare function contentBlockInputModality(block: ContentBlock): ModelInputCapability | undefined
@@ -731,6 +740,7 @@ mergeSystemPromptConfig	export declare function mergeSystemPromptConfig(config: 
 messageTextBytes	export declare function messageTextBytes(message: Message): number
 mockProvider	export declare function mockProvider(script?: readonly (readonly ProviderEvent[])[], options?: MockProviderPackageOptions): PackageInstance
 modelEntrySchema	export declare const modelEntrySchema: JsonSchema
+modelSupportsDecisions	export declare function modelSupportsDecisions(capabilities?: ModelCapabilities): boolean
 modelSupportsEmbeddings	export declare function modelSupportsEmbeddings(capabilities?: ModelCapabilities): boolean
 modelSupportsStructuredOutput	export declare function modelSupportsStructuredOutput(capabilities?: ModelCapabilities): boolean
 modelsProperty	export declare function modelsProperty(description?: string): JsonSchema
@@ -741,6 +751,7 @@ nestedOutcomeToolResult	export declare function nestedOutcomeToolResult(outcome:
 normalizeHostname	export declare function normalizeHostname(value: string): string
 normalizePackageInput	export declare function normalizePackageInput(input: PackageInput): NormalizedPackage
 normalizeStopReason	export declare function normalizeStopReason(reason: ProviderStopReason | string | undefined): ProviderStopReason | undefined
+normalizeSystemOnePath	export declare function normalizeSystemOnePath(path?: string | undefined): string
 normalizeThinkingLevel	export declare function normalizeThinkingLevel(level: string): ThinkingLevel | string | undefined
 normalizeUsage	export declare function normalizeUsage(raw: RawUsageInput | undefined): Usage | undefined
 openAIChatBody	export declare function openAIChatBody(request: ProviderRequest, options?: OpenAIChatCodecOptions): JsonObject
@@ -918,6 +929,7 @@ systemCacheControlField	export declare function systemCacheControlField(messages
 systemOneConformance	export declare function systemOneConformance(options: SystemOneConformanceOptions): Promise<SystemOneConformanceResult>
 systemOneProviderPackage	export declare function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): SystemOneProviderPackageResult
 systemOneScenarioAbort	export declare function systemOneScenarioAbort(options:
+systemOneScenarioDecide	export declare function systemOneScenarioDecide(options:
 systemOneScenarioDecision	export declare function systemOneScenarioDecision(options:
 systemOneScenarioErrorResponse	export declare function systemOneScenarioErrorResponse(options:
 systemOneScenarioToolsRejected	export declare function systemOneScenarioToolsRejected(options:

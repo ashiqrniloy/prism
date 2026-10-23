@@ -24,7 +24,9 @@
  */
 
 import type { JsonObject, JsonValue, Message } from "../contracts.js";
+import type { MediaContentBlock, ResolvedMediaContent } from "../content.js";
 import { isJsonObject } from "../config.js";
+import { bytesToBase64 } from "./media.js";
 import type { SystemOneAnswer, SystemOneChoiceQuestion, SystemOneNoulQuestion, SystemOneQuestion, SystemOneState } from "./systemone.js";
 import { isSystemOneAnswer } from "./systemone.js";
 
@@ -112,20 +114,39 @@ export function renderSystemOneOutput(
   return JSON.stringify(output);
 }
 
+/** Compiled request pieces: text state plus inline image data URLs (empty when none). */
+export interface SystemOneCompiledState {
+  readonly state: SystemOneState;
+  readonly images: readonly string[];
+}
+
 /**
- * Messages → System One `state`. Questions are never written here (a question in the state
- * is judged, not answered); only text content travels. A lone user text message becomes a
- * plain string, anything else a `{ role, text }` array with non-text parts dropped.
+ * Messages → System One `state` + `images`. Questions are never written here (a question in
+ * the state is judged, not answered); text content travels in `state`, image parts from user
+ * messages become `data:` URLs in `images`. Non-text, non-image parts are dropped. Resolved
+ * media (from `resolveProviderMediaMessages`) wins over a raw inline `data` field; an image
+ * that has neither is dropped rather than sent as a broken URL.
  */
-export function compileSystemOneState(messages: readonly Message[]): SystemOneState {
+export function compileSystemOneState(
+  messages: readonly Message[],
+  media?: ReadonlyMap<MediaContentBlock, ResolvedMediaContent>,
+): SystemOneCompiledState {
   const entries: { role: Message["role"]; text: string }[] = [];
+  const images: string[] = [];
   for (const message of messages) {
     const text = message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n");
     if (text) entries.push({ role: message.role, text });
+    if (message.role !== "user") continue;
+    for (const block of message.content) {
+      if (block.type !== "image") continue;
+      const resolved = media?.get(block);
+      if (resolved) images.push(`data:${resolved.mediaType};base64,${bytesToBase64(resolved.bytes)}`);
+      else if (block.data) images.push(`data:${block.mimeType ?? "image/png"};base64,${block.data}`);
+    }
   }
-  if (entries.length === 0) return "";
-  if (entries.length === 1 && entries[0].role === "user") return entries[0].text;
-  return entries;
+  const state: SystemOneState =
+    entries.length === 0 ? "" : entries.length === 1 && entries[0]!.role === "user" ? entries[0]!.text : entries;
+  return { state, images };
 }
 
 /** A compiled field keeps the wire question plus the schema details rendering needs. */

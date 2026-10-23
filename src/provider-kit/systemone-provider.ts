@@ -4,7 +4,20 @@
  * Jev and Laya share the wire and the schema compiler. Vendor packages supply
  * id, error label, and base URL; this file owns the gates and the event sequence.
  */
-import type { ModelConfig, ModelProvider, JsonObject, ProviderEvent, ProviderRequest, StructuredOutputOptions } from "../contracts.js";
+import type {
+  DecisionAnswer,
+  DecisionRequest,
+  DecisionResult,
+  DecisionsProvider,
+  ModelConfig,
+  ModelProvider,
+  JsonObject,
+  ProviderEvent,
+  ProviderRequest,
+  StructuredOutputOptions,
+} from "../contracts.js";
+import { assertDecisionRequest, assertDecisionsSupported, DecisionsError } from "../contracts.js";
+import { redactSecrets } from "../redaction.js";
 import type { PackageDefinition, PackageInstance } from "../packages/api.js";
 import type { JsonSchema } from "../packages/schema.js";
 import type { CredentialValueSource } from "../credentials/index.js";
@@ -16,8 +29,10 @@ import {
 } from "../models/events.js";
 import { assertStructuredOutputRequestSupported } from "./structured-output.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
-import { mapSystemOneUsage, postSystemOne, warnIfPlaintextRemote } from "./systemone.js";
+import { mapSystemOneUsage, normalizeSystemOnePath, postSystemOne, warnIfPlaintextRemote } from "./systemone.js";
 import { compileSystemOneQuestions, compileSystemOneState, renderSystemOneOutput } from "./systemone-schema.js";
+import { resolveProviderMediaMessages } from "./media.js";
+import { askSystemOneDecisions } from "./systemone-decisions.js";
 import { assertNotAborted, resolveProviderApiKey } from "./routed-provider.js";
 import {
   baseUrlProperty,
@@ -34,6 +49,10 @@ export interface SystemOneDecisionProviderOptions {
   /** Prefix on gate and HTTP errors, e.g. "TypeSafe Jev" or "Laya". */
   readonly label: string;
   readonly baseUrl: string;
+  /** Endpoint path; defaults to `/v1/systemone`. Must start with `/`. */
+  readonly path?: string;
+  /** Curated catalog used to gate `decisions()` calls per model; unknown ids are trusted to the caller. */
+  readonly models?: readonly ModelConfig[];
   readonly apiKey?: CredentialValueSource;
   readonly fetch?: typeof fetch;
   /** Retries after the first attempt; forwarded to the shared client (default 2). */
@@ -44,6 +63,7 @@ export interface SystemOneDecisionProviderOptions {
 
 export function createSystemOneDecisionProvider(options: SystemOneDecisionProviderOptions): ModelProvider {
   const baseUrl = trimTrailingSlashes(options.baseUrl);
+  const path = normalizeSystemOnePath(options.path);
   warnIfPlaintextRemote(options.label, baseUrl, options.warn ?? console.warn);
   return {
     id: options.id,
@@ -55,15 +75,19 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
         const structuredOutput = requireStructuredOutput(options.label, request);
         apiKey = await resolveProviderApiKey(options.apiKey, options.id);
         const booleanThreshold = readBooleanThreshold(options.label, request.options?.compat);
+        const media = await resolveProviderMediaMessages(request.messages, request.model, { signal: request.signal });
+        const compiled = compileSystemOneState(request.messages, media);
         const response = await postSystemOne(
           {
             model: request.model.model,
-            state: compileSystemOneState(request.messages),
+            state: compiled.state,
             questions: compileSystemOneQuestions(structuredOutput.schema),
+            ...(compiled.images.length > 0 ? { images: compiled.images } : {}),
           },
           {
             provider: options.label,
             baseUrl,
+            path,
             apiKey,
             fetch: options.fetch,
             maxRetries: options.maxRetries,
@@ -80,7 +104,57 @@ export function createSystemOneDecisionProvider(options: SystemOneDecisionProvid
         yield providerError(error, [apiKey]);
       }
     },
+
+    decisions(): DecisionsProvider {
+      return {
+        id: options.id,
+        async decide(request: DecisionRequest): Promise<DecisionResult> {
+          assertNotAborted(request.signal);
+          const known = options.models?.find((entry) => entry.model === request.model);
+          if (known) assertDecisionsSupported(known);
+          assertDecisionRequest(request, known ?? { provider: options.id, model: request.model });
+          let apiKey: string | undefined;
+          try {
+            apiKey = await resolveProviderApiKey(options.apiKey, options.id);
+            const result = await askSystemOneDecisions(
+              {
+                model: request.model,
+                state: request.state ?? "",
+                questions: request.questions,
+                ...(request.images && request.images.length > 0 ? { images: request.images } : {}),
+              },
+              {
+                provider: options.label,
+                baseUrl,
+                path,
+                apiKey,
+                fetch: options.fetch,
+                maxRetries: options.maxRetries,
+              },
+              request.signal,
+            );
+            return {
+              model: result.model,
+              answers: result.answers as Readonly<Record<string, DecisionAnswer>>,
+              usage: result.usage,
+              timingMs: result.timingMs,
+            };
+          } catch (error) {
+            if (error instanceof DecisionsError || request.signal?.aborted) throw error;
+            throw mapDecideError(error, apiKey);
+          }
+        },
+      };
+    },
   };
+}
+
+/** Every adapter failure surfaces as a kernel DecisionsError with the credential redacted. */
+function mapDecideError(error: unknown, apiKey: string | undefined): DecisionsError {
+  const message = redactSecrets(error instanceof Error ? error.message : String(error), [apiKey]);
+  const mapped = new DecisionsError("invalid_request", message);
+  mapped.cause = error;
+  return mapped;
 }
 
 /** Fail-closed gates: decision models need a schema and cannot call tools. */
@@ -111,6 +185,8 @@ export interface SystemOneProviderConfig {
   readonly apiKey?: string;
   /** Official base; defaults to defaultBaseUrl. */
   readonly baseUrl?: string;
+  /** Endpoint path appended to the base URL; defaults to `/v1/systemone` and must start with `/`. */
+  readonly path?: string;
   /** Retries after the first attempt; forwarded to the shared System One client (default 2). */
   readonly maxRetries?: number;
   /** Static catalog. When absent, `models()` returns the curated catalog. */
@@ -135,6 +211,7 @@ export interface SystemOneProviderPackageSpec {
   readonly createProvider?: (options: {
     readonly id?: string;
     readonly baseUrl?: string;
+    readonly path?: string;
     readonly apiKey?: CredentialValueSource;
     readonly fetch?: typeof fetch;
     readonly maxRetries?: number;
@@ -162,6 +239,11 @@ export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): Sy
     properties: {
       apiKey: secretRefProperty(spec.defaultKeyRef),
       baseUrl: baseUrlProperty("Official base; defaults to the vendor default."),
+      path: {
+        type: "string",
+        pattern: "^/",
+        description: "Endpoint path; defaults to /v1/systemone. Must start with `/`.",
+      },
       maxRetries: {
         type: "number",
         minimum: 0,
@@ -193,6 +275,8 @@ export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): Sy
               id: o.id ?? id,
               label: spec.label,
               baseUrl: o.baseUrl ?? baseUrl,
+              path: o.path,
+              models: spec.models,
               apiKey: o.apiKey,
               fetch: o.fetch,
               maxRetries: o.maxRetries,
@@ -201,6 +285,7 @@ export function systemOneProviderPackage(spec: SystemOneProviderPackageSpec): Sy
         const provider = createFn({
           id,
           baseUrl,
+          path: prism.config.path,
           apiKey,
           fetch: options.fetch,
           maxRetries: prism.config.maxRetries,

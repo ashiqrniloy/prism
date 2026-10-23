@@ -91,6 +91,7 @@ const packages: Array<{
   { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres", sourceExport: true },
   { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper", sourceExport: true },
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya", sourceExport: true },
+  { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid", sourceExport: true },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
@@ -441,7 +442,7 @@ describe("packaging guard", () => {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
-    assert.deepEqual(providerDirs, ["hyper", "laya", "opencode-go", "typesafe"]);
+    assert.deepEqual(providerDirs, ["hyper", "laya", "liquid", "opencode-go", "typesafe"]);
 
     const liveMatrix = JSON.parse(readFileSync(join(repoRoot, "scripts/live-matrix.json"), "utf8")) as {
       suites: Array<{ id: string; status: string }>;
@@ -827,7 +828,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 60 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 43, "43 active packages including root");
+    assert.equal(names.length, 44, "44 active packages including root");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

@@ -113,6 +113,8 @@ from `{ ...agent.config }` reloads independently.
 | `providers.register(provider)` | Adds a `ModelProvider`, selected by `AgentConfig.model.provider`. This is the only way to give an agent a provider. A duplicate id is `provider_conflict`. |
 | `commands.register(command)` | Adds a `PackageCommand`. A duplicate name is `command_conflict`. |
 | `models.client(ref?)` | Needs `models`. A thin client over the agent's provider resolution: `generate(request)` streams one provider turn. `ref` defaults to `AgentConfig.model`. |
+| `models.embeddings(ref?)` | Needs `models`. The model's embeddings adapter (see [Models](models.md)). |
+| `models.decisions(ref?)` | Needs `models`. The model's typed decision adapter, with the resolved model id bound (see [Decisions](decisions.md)). |
 | `credentials.resolve(ref)` | Needs `credentials`. Resolves `env:`/`keyring:` refs through the `credentials` slot and returns a `Secret`. The value is added to the agent's secret set. |
 | `state.session(key, initial)` / `state.agent(key, initial)` | Session state persisted as `package_state` entries (needs `session-state`), and process memory. See "Session state and background work". |
 | `services.provide / consume / require` | A duplicate is `service_conflict`. `consume` returns `undefined` when absent, and a later package's service is visible at call time. `require` throws `missing_service`. |
@@ -268,7 +270,7 @@ access. They are not a process sandbox. A call without the capability throws `Pa
 | `slot:loop`, `slot:compaction`, `slot:store`, `slot:credentials` | `slots.<slot>.provide` |
 | `host-ui` | `host.ui.request` |
 | `background` | `SessionContext.background` |
-| `models` | `models.client` |
+| `models` | `models.client`, `models.embeddings`, `models.decisions` |
 | `credentials` | `credentials.resolve` |
 | `session-state` | `state.session`, `state.log`, `SessionContext.entries` |
 

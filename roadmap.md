@@ -1,6 +1,6 @@
 # Prism Roadmap — SDK kernel and native packages
 
-Updated: **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
+Updated: **2026-10-17** (adds Phase 18, decision models as first-class model calls: `capabilities.decisions`, `ModelProvider.decisions?()`, `PackageAPI.models.decisions`, System One image input and configurable path, and `@arnilo/prism-provider-liquid`; owner decision 2026-10-17 puts Jev, d1-ultra, Laya, and d1-3B in 0.13.0. Previously **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
 
 Shipped baseline: `@arnilo/prism` **0.12.1** and the 0.12.1 family packages. `@arnilo/prism-agent-sdk` **0.1.0** is published. Its unreleased in-tree Phase 1 work (plan 142) is covered under [In-flight work](#in-flight-work). `@arnilo/prism-code` **0.4.1** is the terminal lab; it is deleted, and Prism Agent, an unpublished reference host, takes over its proving role (Phase 12).
 
@@ -152,7 +152,7 @@ The primitives largely exist. This roadmap unifies them into one hook model and 
 | Vendor coding agents | `@arnilo/prism/driver-kit` subpath: `ExternalAgentSpec`, driver contract, capability descriptor, subscription profiles and sign-in handoff, the policy guard over driver-declared auth policy, configuration materializer, callback broker, tool bridge, normalization and protocol helpers, `driverConformance`; the `prism relay` bin (§2.12.10) | The generic process driver (a package, `prism-driver-process`); vendor adapters (host code); installing vendor binaries; holding subscription credentials |
 | Hooks | Typed hook bus: observe, transform, decide, around | Hook-file formats (hooks.json) |
 | Slots | `loop`, `compaction`, `store`, `credentials`, with defaults | Alternative implementations |
-| Models | `ModelProvider` contract, provider registry, `ModelRef`, streaming normalization, retry/backoff, usage and stop-reason normalization, built-in `openai-compatible` provider, `models.client`, `models.embeddings` | Vendor adapters, OAuth flows, model catalogs |
+| Models | `ModelProvider` contract (optional `embeddings?()` and `decisions?()`), provider registry, `ModelRef`, streaming normalization, retry/backoff, usage and stop-reason normalization, built-in `openai-compatible` provider, `models.client`, `models.embeddings`, `models.decisions` | Vendor adapters, OAuth flows, model catalogs |
 | Credentials | `CredentialResolver` contract, `env:` resolver default | Keyring, encrypted vaults |
 | Tools | `ToolDefinition`, registry, JSON-schema argument validation, dispatch, effect annotations | Any concrete tool, sandboxing, approval policy |
 | Skills | `Skill`, registry, `SKILL.md` directory discovery, progressive/eager disclosure, `load_skill` | Wiki or bundled skill sets |
@@ -174,7 +174,7 @@ src/
   loop/           LoopStrategy, RunController, default loop
   hooks/          hook bus, hook catalog and payload types, ordering, error policy
   slots/          slot registry and defaults
-  models/         ModelProvider, registry, ModelRef, ModelClient, retry, usage, openai-compatible
+  models/         ModelProvider (with optional capabilities such as embeddings?() and decisions?()), registry, ModelRef, ModelClient, retry, usage, openai-compatible
   credentials/    CredentialResolver, env resolver
   tools/          ToolDefinition, registry, validation, dispatch
   skills/         Skill, registry, discovery, disclosure, load_skill
@@ -470,7 +470,11 @@ export interface PackageAPI<C> {
   readonly skills: { register(skill: Skill): void; addDir(path: string): void };
   readonly providers: { register(provider: ModelProvider): void };
   readonly commands: { register(command: CommandDefinition): void };
-  readonly models: { client(ref?: ModelRef): ModelClient };               // side calls through the same registry and credentials
+  readonly models: {
+    client(ref?: ModelRef): ModelClient;                                   // side calls through the same registry and credentials
+    embeddings(ref?: ModelRef): EmbeddingsProvider;
+    decisions(ref?: ModelRef): DecisionsProvider;                         // typed decision answers (Phase 18)
+  };
   readonly credentials: { resolve(ref: string): Promise<Secret | undefined> };
   readonly state: {
     session<T extends JsonValue>(key: string, initial: T): SessionState<T>; // persisted as package-state entries; restored on resume; forked with the session
@@ -591,7 +595,7 @@ Native packages are ordinary packages. None is installed by default.
 
 | Package | What it does | Mechanisms | Built from (0.12.1) |
 | --- | --- | --- | --- |
-| `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages) | `providers.register`, credentials | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
+| `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages) | `providers.register`, credentials | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
 | `@arnilo/prism-credentials-keyring` | OS keyring and encrypted credential store | `credentials` slot | `prism-core/credentials`, `prism-code` `credentials.ts` |
 | `@arnilo/prism-tools-coding` | fs, edit, grep, shell, sandbox, execution policy, git, checks, todo with a continuation stop hook, `ask_user`; the `workspace` service (worktree create/dispose, bounded `diff`, merge with conflicts reported; §2.12.14) | tools, `tool.call` hard denies, `run.end`, `host.ui`, `services.provide("workspace")` | `prism-coding-tools/agent`, `/security`, `createCodingWorkspaceLifecycle` |
 | `@arnilo/prism-tools-web` | search and fetch: Brave, Exa, Firecrawl, Obscura | tools, `services.provide("web.fetch")` | `web-tools` |
@@ -1595,7 +1599,8 @@ It works alongside `tools-web`, `tools-browser`, and `memory-rag`. Further domai
 | --- | --- | --- |
 | `@arnilo/prism` | **0.13.0**, the kernel | Phase 11, once. No publish per phase. `next` pre-release tags are optional for lab testing. |
 | Native packages and host libraries | **0.13.0** each, `requires.api: 1` | Alongside the kernel in Phase 11, in lockstep. After that, each is versioned independently. A package names the kernel **API level** it was written against (`requires.api: 1`), so it loads on every kernel that supports level 1 — a kernel 0.14 or 0.15 needs no package change. A breaking kernel change introduces API level 2 instead of bumping the floor. `requires.prism` stays optional, for a package that needs a fix from one release. |
-| External-agent orchestration: the kernel additions and `driver-kit` (Phase 13), `serveTools` and the `workspace` service (Phase 14), `prism-driver-process` (Phase 15), re-scoped `prism-workflows` (Phase 16) | Same as the kernel and native packages | In the same Phase 11 publish. Phase 11 does not start until Phases 12–17 are done. |
+| External-agent orchestration: the kernel additions and `driver-kit` (Phase 13), `serveTools` and the `workspace` service (Phase 14), `prism-driver-process` (Phase 15), re-scoped `prism-workflows` (Phase 16) | Same as the kernel and native packages | In the same Phase 11 publish. Phase 11 does not start until Phases 12–18 are done. |
+| Decision models as first-class model calls (Phase 18) | Same as the kernel and native packages | In the same Phase 11 publish, after Phase 17 and before Phase 12. |
 | `@arnilo/prism-agent-sdk` | Deprecated on npm, pointing to `@arnilo/prism` | Phase 11 |
 | 0.12 family packages | Deprecated on npm, pointing to their replacements | Phase 11 |
 | `@arnilo/prism-remote`, `@arnilo/prism-headless` (Phase 17), `@arnilo/prism-tools-research` (Phase 12) | **0.13.0**, with the native packages and host libraries | Phase 11 |
@@ -1786,7 +1791,7 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
   - the built-in `openai-compatible` provider
 - **Subpaths:** `@arnilo/prism/provider-kit` (SSE, HTTP transport, OpenAI-compatible wire mapping, provider conformance) and the mock provider in `/testing`.
 - **Credentials slot:** `env:` default resolver; OAuth token persistence through the slot.
-- **Provider packages:** ship `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` (owner decision 2026-10-16; others build on `@arnilo/prism/provider-kit`). OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
+- **Provider packages:** ship `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid}` (owner decision 2026-10-17, adding `liquid` to the 2026-10-16 list; others build on `@arnilo/prism/provider-kit`). OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
 - **`@arnilo/prism-credentials-keyring`.**
 - **Examples:**
   - an OpenAI-compatible endpoint with no packages
@@ -2300,6 +2305,31 @@ It is a separate phase because Phase 10 was already underway when this was added
 - Two scheduler processes sharing a store fire each scheduled run exactly once, and the missed-firing policy is honored after a restart.
 - `src/rpc.ts` is gone from the kernel.
 
+### Phase 18 — Decision models as first-class model calls
+
+**Goal.** A decision call is a model capability with typed, calibrated answers, beside `generate` and `embeddings`.
+
+**Why.** A JSON string from `generate()` discards what decision models are for: per-question probabilities and confidence. Hosts and packages currently reach System One endpoints through a raw credential source that bypasses provider resolution, the credentials slot, and the agent redaction set. Making decisions a kernel capability gives every caller the same typed answers through the registry, with the vendor-free codec in `provider-kit`.
+
+**Scope.**
+
+- **Kernel contract:** `capabilities.decisions`, `ModelProvider.decisions?()`, and `PackageAPI.models.decisions(ref?)`, mirroring plan 158's embeddings.
+  - `src/contracts-core/decisions.ts`: `DecisionQuestion` (`noul` | `choice` | `score`), `DecisionRequest` (`state?`, `images?` as `data:` URLs, `questions`, `signal?`), `DecisionResult` (`model`, `answers`, `usage?`, `timingMs`), `DecisionsProvider`, `DecisionsError` (`unsupported_model`, `invalid_request`, `state_too_large`).
+  - Validation in the kernel before any adapter runs: question shapes and counts, state byte cap, image MIME and total byte cap, and an image request to a text-only model fails closed.
+- **System One codec:** `decisions()` on the provided client, `images` on the request body (omitted when empty), image parts forwarded on both the decide and `generate()` + `structuredOutput` paths, and a configurable `path` so every System One endpoint is reachable by configuration.
+- **Provider packages on the capability:** `typesafe` (hosted Jev) and `laya` (local Laya) in Part A; `@arnilo/prism-provider-liquid` (hosted `liquid` with `d1`/`d1-ultra`, and local `liquid-local` with `d1-3B`) in Part B.
+- **Docs and example:** `docs/decisions.md` with the contract, System One endpoint recipes, and operating rules; an offline `examples/decision-models.ts` on the mock provider's `decisions` handler.
+
+**Depends on.** Phase 5; plans 182 (codec location) and 183 (`systemOneProviderPackage`, `systemOneConformance`, keyless Laya).
+
+**Done.**
+
+- Hosted Jev and d1-ultra and local Laya and d1-3B answer `prism.models.decisions(ref).decide(...)` live, with probabilities and confidence intact.
+- A model without `capabilities.decisions`, or a provider with no adapter, throws `DecisionsError("unsupported_model")` before any network call.
+- `generate()` + `structuredOutput` still works for every decision model and forwards image parts to image-capable models.
+- The `typesafe` and `laya` packages pass the extended `systemOneConformance` with `decide` cases, and the `liquid` package passes it too.
+- `examples/decision-models.ts` runs offline, and `docs/decisions.md` documents the endpoint recipes and operating rules.
+
 ### Phase 12 — Prism Agent, the reference host
 
 **Goal.** Prism Agent, an unpublished reference host (§2.13.3), proves before the 0.13.0 freeze that a realistic headless, multi-agent host can be built from published packages and public APIs alone. The research domain pack for 0.13.0 ships from this phase.
@@ -2417,9 +2447,11 @@ The execution order is 13 → 14 → 15 → 16.
 
 Phase 17 (headless host libraries) needs Phases 10 and 13, and can start alongside Phases 14–16. The scheduler's guard against double firing lands after Phase 16's `leases`.
 
+Phase 18 (decision models) needs Phase 5, and runs after Phase 17 and before Phase 12.
+
 Phase 12 (the Prism Agent reference host) needs Phases 7–10 and 13–17. It is the last phase before the freeze, so that the gaps it finds are fixed before the contracts are published.
 
-Phase 11 needs Phases 0–10 and 12–17. From Phase 13 on, the execution order is 13 → 14 → 15 → 16 → 17 → 12 → 11, and Phase 17 may start early.
+Phase 11 needs Phases 0–10 and 12–18. From Phase 13 on, the execution order is 13 → 14 → 15 → 16 → 17 → 18 → 12 → 11, and Phase 17 may start early.
 
 Each phase, when started, becomes a numbered file in `plans/` in the repo's task format. This roadmap is the cut line.
 

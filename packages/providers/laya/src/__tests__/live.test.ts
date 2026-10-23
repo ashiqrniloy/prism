@@ -13,6 +13,7 @@ await runSystemOneLiveScenarios({
   secretEnv: "LAYA_API_KEY",
   skipUnless: () =>
     process.env.PRISM_LIVE_LAYA !== "1" ? "set PRISM_LIVE_PROVIDER_TESTS=1 and PRISM_LIVE_LAYA=1 to run Laya live tests" : false,
+  decideTestName: "laya_live_decide",
   title: "@arnilo/prism-provider-laya live tests",
 });
 

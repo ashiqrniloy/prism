@@ -15,6 +15,7 @@ const DECISION_CAPABILITIES = {
   tools: false,
   streaming: false,
   structuredOutput: "json_schema",
+  decisions: true,
 } as const;
 
 const DECISION_LIMITS = { contextWindow: 32_000, maxOutputTokens: 0 } as const;

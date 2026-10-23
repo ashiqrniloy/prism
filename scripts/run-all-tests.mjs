@@ -79,6 +79,7 @@ export const GATE_FILES = [
   "scripts/blocked-gate.test.mjs",
   "scripts/branch-coverage.test.mjs",
   "scripts/phase126-sqlite-mapping.test.mjs",
+  "scripts/__tests__/decision-bench-metrics.test.mjs",
 ];
 
 // The old chain left the compiled `dist/__tests__/*.test.js` set to the shell. There is no

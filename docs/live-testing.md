@@ -55,8 +55,10 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 |---|---|---|---|---|---|
 | `providers/hyper` | active | `PRISM_LIVE_PROVIDER_TESTS` + `HYPER_API_KEY` | `PRISM_LIVE_HYPER_CHAT_MODEL` (default `deepseek-v4-pro`), `PRISM_LIVE_HYPER_MESSAGES_MODEL` (default `qwen3.6-plus`) | Hyper key; dual-route tier-1 live scenarios (chat & messages). | ~10 requests across both routes incl. prefix cache probe; sub-cent. |
 | `providers/opencode-go` | active | `PRISM_LIVE_PROVIDER_TESTS` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_OPENCODE_GO_CHAT_MODEL` (default `mimo-v2.5`), `PRISM_LIVE_OPENCODE_GO_MESSAGES_MODEL` (default `qwen3.6-plus`) | OpenCode Go key; dual-route tier-1 live scenarios (chat & messages). | ~10 requests across both routes incl. prefix cache probe; sub-cent. |
-| `providers/typesafe` | active | `PRISM_LIVE_PROVIDER_TESTS` + `TYPESAFE_API_KEY` | `PRISM_LIVE_TYPESAFE_MODEL` (default `jev-latest`) | TypeSafe key; System One tier-1 live scenarios (decision model). | ~3 requests; sub-cent. |
-| `providers/laya` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_LIVE_LAYA` | `PRISM_LIVE_LAYA_MODEL` (default `laya`) | Local laya-serve instance on loopback (default http://127.0.0.1:8000); System One tier-1 live scenarios. | ~3 requests; local server, free. |
+| `providers/typesafe` | active | `PRISM_LIVE_PROVIDER_TESTS` + `TYPESAFE_API_KEY` | `PRISM_LIVE_TYPESAFE_MODEL` (default `jev-latest`) | TypeSafe key; System One tier-1 live scenarios (decision model), including one raw decide call with noul/choice/score answers. | ~4 requests; sub-cent. |
+| `providers/laya` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_LIVE_LAYA` | `PRISM_LIVE_LAYA_MODEL` (default `laya`) | Local laya-serve instance on loopback (default http://127.0.0.1:8000); System One tier-1 live scenarios, including one raw decide call with noul/choice/score answers. | ~4 requests; local server, free. |
+| `providers/liquid` | active | `PRISM_LIVE_PROVIDER_TESTS` + `LIQUID_API_KEY` | `PRISM_LIVE_LIQUID_MODELS` (default `d1.1,d1-ultra`) | Liquid key; hosted System One tier-1 live scenarios for d1.1 and d1-ultra, plus one image decide call on d1.1. | ~10 requests (5 per model) + 1 image request; d1.1 $0.02/MTok input, d1-ultra $0.042/MTok, output free; sub-cent. |
+| `providers/liquid-local` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_LIVE_LLAMA_SERVER_URL` | `PRISM_LIVE_LIQUID_LOCAL_MODEL` (default `d1-3B`) | Local llama-server (build b11480 or later) on loopback serving LiquidAI/d1-3B-GGUF:Q8_0; System One tier-1 live scenarios plus one image decide call. | ~5 requests; local server, free. |
 | `web-tools/brave` | active | `PRISM_LIVE_WEB` + `PRISM_BRAVE_SEARCH_TOKEN` | — | Brave Search token, least-privilege plan; 1 result per query. | 1 search request. |
 | `web-tools/exa` | active | `PRISM_LIVE_WEB` + `PRISM_EXA_API_KEY` | — | Exa key; 1 result per query. | 1 search request. |
 | `web-tools/firecrawl` | active | `PRISM_LIVE_WEB` + `PRISM_FIRECRAWL_API_KEY` | — | Firecrawl key; bounded 64 KiB markdown fetch. | 1 fetch request. |
@@ -102,6 +104,22 @@ The scheduled [`live-canaries` workflow](../.github/workflows/live-canaries.yml)
 - Suite costs are bounded and recorded per row; provider model defaults are the cheapest cost-bounded models that satisfy each probe.
 - Per-suite `PRISM_LIVE_SUITE_TIMEOUT_MS` kill timers and opt-in `PRISM_LIVE_CONCURRENCY` parallelism keep a stuck wire from stalling the run.
 - Packaging tests run under `scripts/with-build-lock.mjs` so parallel suites never race the TypeScript build.
+
+## Decision bench
+
+`scripts/decision-bench.mjs` measures decision models on the checked-in `scripts/fixtures/decision-bench.jsonl` set (200 labelled Prism-shaped items: tool choice, route choice, tool-result error, approval-risk score). It is manual-only and never runs in `release:gate`.
+
+```sh
+bun scripts/decision-bench.mjs --check          # validate the fixture + print the request plan, no network
+bun scripts/decision-bench.mjs --models liquid-local/d1-3B@Q8_0,laya/laya --limit 20
+bun scripts/decision-bench.mjs                  # full default list (liquid-local Q8_0/Q4_K_M, laya, hosted d1.1/d1-ultra, jev-latest)
+```
+
+- It calls the public `prism.models.decisions()` contract once per item (plus one option-reversed repeat for choice items), so it also exercises the decisions capability end to end.
+- Credentials come from the live env file (`$PRISM_LIVE_ENV_FILE`, default `~/.config/prism/live.env`); a model without its key or server is skipped with a reason. Nothing is fabricated.
+- `llama-server` rows read `PRISM_LIVE_LLAMA_SERVER_URL`, or `PRISM_LIVE_LLAMA_SERVER_Q8_URL` / `_Q4_URL` when both quants are served side by side. The report records the build (`PRISM_LIVE_LLAMA_SERVER_BUILD` or `llama-server --version`) and the GGUF hash when `PRISM_LIVE_D1_GGUF_SHA256` is set.
+- Output: accuracy, ECE, Brier, p50/p95 latency, option-reversal flip rate, input-token cost, plus the hosted-vs-local agreement rate, written to `docs/_evidence/decision-bench-<date>.md`.
+- The metric math is pinned by `scripts/__tests__/decision-bench-metrics.test.mjs`.
 
 ## Extension and configuration notes
 

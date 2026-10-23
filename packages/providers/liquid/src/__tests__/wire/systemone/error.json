@@ -1,0 +1,31 @@
+{
+  "request": {
+    "model": { "provider": "liquid", "model": "d1.1" },
+    "messages": [
+      {
+        "role": "user",
+        "content": [{ "type": "text", "text": "rm -rf ./build" }]
+      }
+    ],
+    "options": {
+      "structuredOutput": {
+        "name": "decision",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "verdict": {
+              "type": "string",
+              "enum": ["run"],
+              "description": "How should this be handled?"
+            }
+          }
+        }
+      }
+    }
+  },
+  "method": "POST",
+  "path": "/decisions/v1/systemone",
+  "status": 422,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"code\":\"invalid_request\",\"message\":\"questions.verdict.criteria: expected at least 2 options\"}}"
+}

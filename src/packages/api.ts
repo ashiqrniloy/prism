@@ -1,5 +1,6 @@
 import type {
   Agent,
+  DecisionsClient,
   EmbeddingsProvider,
   JsonObject,
   JsonValue,
@@ -124,6 +125,13 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
      * model declares no `capabilities.embeddings` or the provider registers no adapter.
      */
     embeddings(ref?: ModelRef): EmbeddingsProvider;
+    /**
+     * The configured model's decisions adapter, over the same provider resolution as `client`.
+     * Needs `"models"`; `ref` defaults to `AgentConfig.model`, and the returned adapter has the model
+     * id already bound. Throws `DecisionsError` when the model declares no `capabilities.decisions`
+     * or the provider registers no adapter.
+     */
+    decisions(ref?: ModelRef): DecisionsClient;
   };
   /** Needs `"credentials"`. */
   readonly credentials: {

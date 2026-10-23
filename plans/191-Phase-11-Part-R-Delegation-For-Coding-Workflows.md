@@ -531,7 +531,7 @@ Neither change touches the kernel beyond `selectTranscript`. A `run.end` hook ca
     - Code Quality:
       - The transcript slice comes from `selectTranscript` only.
       - No kernel change beyond Task 7's export.
-      - The advisor does not import `@arnilo/prism-delegate`.
+      - The advisor does not import `@arnilo/prism-delegate` at runtime. It reaches the delegate only through the `delegate` service, via a local structural type checked by the test that loads the delegate package as a devDependency.
       - The package follows the new-package layout in `references/prism.md` §4.
     - Security:
       - **Not a security gate.** The advisor is advisory: every failure is "allow" or "end normally", and the README says safety belongs to `@arnilo/prism-approval` and policy packages, not to the advisor. Hooks never throw from an advisor failure, so an advisor outage cannot block a run.
@@ -545,7 +545,7 @@ Neither change touches the kernel beyond `selectTranscript`. A `run.end` hook ca
       - **Prism cannot fail a run from `run.end`.** The README says plainly that the host must gate on `validator.verdict`, and that a run reporting `completed` alone does not mean verified.
   - Approach:
     - Documentation Reviewed:
-      - `src/hooks/types.ts:104-109, 135-154, 174-185`; `src/packages/api.ts:110-170`; `packages/integrations/delegate/src/{index,tools}.ts` (package and tool shape to mirror); Task 1 (i); Task 7.
+      - `src/hooks/types.ts:104-109, 135-154, 174-185`; `src/packages/api.ts:110-170`; `packages/integrations/delegate/src/{index,tools}.ts` (package and tool shape to mirror); `packages/integrations/hooks-json/src/compile.ts:407-422` (`Stop` on `run.end`); `packages/tools/coding/src/agent/goal-verify.ts` (fixed checks plus approval); Task 1 (i), (j); Task 7.
     - Options Considered:
       - **Leave it to hosts (a tool plus hooks in each host).** Rejected by owner decision 2026-10-23. Every host would rebuild the same slice, prompt, verdict parsing, retry guard, and cap.
       - **An advisor as a delegate child.** Rejected as the mechanism. A child is a full agent loop with tools and limits. An advisor is one call, and with Task 7 a reviewer child is already possible for hosts that want an advisor with tools. The README's "Advisor or delegate child?" section explains when to use which.
@@ -580,7 +580,7 @@ Neither change touches the kernel beyond `selectTranscript`. A `run.end` hook ca
       - `packages/integrations/advisor/src/{index,config,consult,tool,triggers,verdict,validate,task-capture}.ts` (new). `validate.ts` declares a local structural type for the two `DelegateService` methods it calls, so the package has no runtime import of `@arnilo/prism-delegate`.
       - `packages/integrations/advisor/src/__tests__/{package,consult,triggers,validate}.test.ts` (new). `validate.test.ts` loads the real delegate package as a devDependency, which also proves the structural type matches `DelegateService`.
       - Enforcement rows from Task 1 (i): `scripts/package-truth.mjs` (and the generated `scripts/package-truth.json`), `scripts/independent-packages.json` (`$comment`: lockstep until Phase 11), `src/__tests__/packaging.test.ts`, `src/__tests__/install-smoke.test.ts`, the coverage and release-evidence rows Task 1 (i) confirms, `scripts/compat-baseline/arnilo__prism-advisor.txt` (new), `docs/index.md` (README link and package table row), and `docs/release.md` if it lists packages.
-      - `examples/advisor.ts` (new, offline on the mock provider: one `advise` call and one `beforeFinish` revise→continue), `examples/README.md`, `examples/tsconfig.json`, and `scripts/e2e-coverage.json`.
+      - `examples/advisor.ts` (new, offline on the mock provider: one `advise` call and one `beforeFinish` revise→continue), `examples/validator.ts` (new, offline: a hidden `verifier` child returns `incomplete` then `complete`, and the host prints the `validator.verdict` events), `examples/README.md`, `examples/tsconfig.json`, and `scripts/e2e-coverage.json`.
       - `bun.lock` (the workspace is added by the existing `packages/integrations/*` glob).
       - `CHANGELOG.md`.
     - References:
@@ -598,14 +598,32 @@ Neither change touches the kernel beyond `selectTranscript`. A `run.end` hook ca
     - `missing_model_fails_setup_naming_field`; `unresolvable_model_notes_warn_and_registers_nothing`.
     - `advisor_event_carries_no_transcript_or_advice`.
     - `advisor_never_reenters_its_own_triggers` (per Task 1 (i)).
-    - `examples_demos_run_to_completion_and_emit_no_secret` covers `examples/advisor.ts`.
+    - `validate_model_complete_ends_run_verified`; `validate_incomplete_continues_with_missing_steer`.
+    - `validate_exhausted_rounds_emits_unverified`: the run ends after `maxRounds` incomplete verdicts and the last event is `unverified`. Fails if the run reports `verified` or loops.
+    - `validate_judges_against_captured_task`: on a 30-turn run with `lastTurns: 2`, the validator's request still contains the run's original input. Fails if the task is cut.
+    - `validate_task_inferred_after_resume`: no captured input gives the first user message of `history` and `task: "inferred"`.
+    - `validate_child_engine_checks_evidence`: a hidden child reads a file with its own tool before answering. Its tool call is visible in the child's events; the parent's tools are not used.
+    - `validate_child_missing_service_or_unknown_child_is_error`: `validator_engine_unavailable`, never `verified`.
+    - `validate_fails_closed_on_error_and_garbage_verdict`: both `onError` modes are covered, and neither gives `verified`.
+    - `validate_rounds_independent_of_consult_cap`.
+    - `validate_respects_max_continuations`.
+    - `before_finish_and_validate_together_fail_config`.
+    - `validator_event_carries_no_transcript_or_answer`: `missing` is capped at 5 × 200 chars.
+    - `examples_demos_run_to_completion_and_emit_no_secret` covers `examples/advisor.ts` and `examples/validator.ts`.
     - Run `bun scripts/release.mjs gate --update-baseline`. The note records the new `arnilo__prism-advisor.txt` baseline.
   - Documentation/Wiki Assessment:
     - Public API or behavior impacted: yes. A new package.
     - Docs pages to create/edit:
-      - `packages/integrations/advisor/README.md`, using the package page structure. It covers Install, Configuration, What it changes (tool, two hooks, `advisor.consult` event), Capabilities, "Cost, security, and failure behavior" (per-consult cost, worst case per run, not a security gate), "Advisor or delegate child?", and Example.
+      - `packages/integrations/advisor/README.md`, using the package page structure. It covers:
+        - Install and Configuration;
+        - What it changes: the tool, the `tool.call`, `run.end`, and `run.input` hooks, and the `advisor.consult` and `validator.verdict` events;
+        - Capabilities;
+        - "Cost, security, and failure behavior": per-consult cost and the worst case per run; advice is not a security gate; validation fails closed; the host gates on `validator.verdict`;
+        - "Completion validation": the model or child engine, rounds, task capture, combining with JSON hooks' `Stop` and coding goal-verify;
+        - "Advisor or delegate child?";
+        - Example.
       - `CHANGELOG.md` (Added).
-    - `docs/index.md` update: yes. One package link (`@arnilo/prism-advisor`: a second model's advice on demand or before chosen tools and the final answer) and the package table row.
+    - `docs/index.md` update: yes. One package link (`@arnilo/prism-advisor`: a second model's advice, and completion validation by a model or a delegate child) and the package table row.
     - Documentation structure reference: `.agents/skills/create-plan/references/prism-wiki.md`
 
 ## Verification (whole plan)

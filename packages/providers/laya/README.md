@@ -28,6 +28,7 @@ The bare definition uses the schema defaults. Unlike cloud providers, Laya defau
 | --- | --- | --- | --- |
 | `apiKey` | `env:`/`keyring:` ref | `env:LAYA_API_KEY` | Optional. Resolved through credentials slot when present. When unset, requests proceed without `Authorization`. A literal key is rejected (`secret_literal`). |
 | `baseUrl` | string | `http://127.0.0.1:8000` | Local or remote server endpoint. |
+| `path` | string | `/v1/systemone` | Endpoint path; must start with `/`. |
 | `maxRetries` | number | `2` | Retries after the first attempt, forwarded to the shared System One client. |
 | `models` | `ModelConfig[]` | — | Static catalog. When absent, `models()` returns the curated checkpoint catalog without fetching. |
 
@@ -37,7 +38,8 @@ cannot come from a manifest.
 
 ## Behaviour
 
-- **A decision model, not a chat model.** A request must carry `options.structuredOutput` with a JSON schema; tools are rejected up front and there is no streaming. One `POST /v1/systemone` round trip returns the rendered, schema-valid JSON as a single text delta.
+- **A decision model, not a chat model.** The primary call is `prism.models.decisions("laya/laya").decide({ state, questions })`, which returns raw answers with probabilities, confidence, legends, usage, and timing. A `generate()` request must carry `options.structuredOutput` with a JSON schema; tools are rejected up front and there is no streaming. One `POST /v1/systemone` round trip returns the rendered, schema-valid JSON as a single text delta.
+- **Images stay text-only.** Laya's catalog declares `input: ["text"]` and `decisions: true`; an image part is rejected before fetch, and the `images` field is omitted from every text body.
 - **Local server prerequisite.** By default, Laya expects a running `laya-serve` instance at `http://127.0.0.1:8000`. Plaintext loopback (`127.0.0.1`, `localhost`, `[::1]`) connects cleanly without warnings.
 - **Plaintext remote warning.** A remote plaintext non-loopback `baseUrl` (e.g. `http://remote.lan:8000`) emits a warning printing the origin only (no path or userinfo) while still allowing the connection for air-gapped LAN environments.
 - **Key-optional contract.** Because Laya is frequently self-hosted without an auth gateway, `keyRequired` is `false`. When no key is resolvable, setup records no warning notes and outgoing requests omit the `Authorization` header.

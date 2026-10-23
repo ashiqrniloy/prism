@@ -275,8 +275,11 @@ describe("@arnilo/prism/provider-kit (systemone-schema)", () => {
   });
 
   it("compiles_state_from_text_content_only", () => {
-    assert.equal(compileSystemOneState([message("user", [{ type: "text", text: "rm -rf ./build" }])]), "rm -rf ./build");
-    assert.equal(compileSystemOneState([]), "");
+    assert.deepEqual(compileSystemOneState([message("user", [{ type: "text", text: "rm -rf ./build" }])]), {
+      state: "rm -rf ./build",
+      images: [],
+    });
+    assert.deepEqual(compileSystemOneState([]), { state: "", images: [] });
     assert.deepEqual(
       compileSystemOneState([
         message("system", [{ type: "text", text: "You judge shell commands." }]),
@@ -284,12 +287,27 @@ describe("@arnilo/prism/provider-kit (systemone-schema)", () => {
         message("assistant", [{ type: "image" }, { type: "text", text: "seen" }]),
         message("tool", [{ type: "image" }]),
       ]),
-      [
-        { role: "system", text: "You judge shell commands." },
-        { role: "user", text: "rm -rf ./build" },
-        { role: "assistant", text: "seen" },
-      ],
-      "non-text parts are dropped, not sent as state",
+      {
+        state: [
+          { role: "system", text: "You judge shell commands." },
+          { role: "user", text: "rm -rf ./build" },
+          { role: "assistant", text: "seen" },
+        ],
+        images: [],
+      },
+      "non-text parts are dropped from state; only user images travel",
     );
+  });
+
+  it("compile_state_moves_user_image_parts_to_images", () => {
+    const compiled = compileSystemOneState([
+      message("user", [
+        { type: "text", text: "what is in this screenshot?" },
+        { type: "image", mimeType: "image/jpeg", data: "aGVsbG8=" },
+      ]),
+      message("assistant", [{ type: "image", mimeType: "image/png", data: "c2tpcA==" }]),
+    ]);
+    assert.equal(compiled.state, "what is in this screenshot?");
+    assert.deepEqual(compiled.images, ["data:image/jpeg;base64,aGVsbG8="], "assistant images are not forwarded");
   });
 });

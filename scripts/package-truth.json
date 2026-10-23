@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T13:10:39.612Z",
+  "generatedAt": "2026-10-23T18:33:28.247Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -37,6 +37,7 @@
     "@arnilo/prism-provider-hyper": "0.13.0",
     "@arnilo/prism-provider-laya": "0.13.0",
     "@arnilo/prism-provider-typesafe": "0.13.0",
+    "@arnilo/prism-provider-liquid": "0.13.0",
     "@arnilo/prism-store-jsonl": "0.13.0",
     "@arnilo/prism-store-codecs": "0.13.0",
     "@arnilo/prism-store-sqlite": "0.13.0",
@@ -50,17 +51,18 @@
     "@arnilo/prism-tools-research": "0.13.0"
   },
   "counts": {
-    "publishable": 43,
-    "workspace": 42,
-    "provider": 4,
+    "publishable": 44,
+    "workspace": 43,
+    "provider": 5,
     "prismFamily": 1,
     "capability": 37,
-    "codeWithPeer": 42,
+    "codeWithPeer": 43,
     "pureManifest": 0
   },
   "providers": [
     "@arnilo/prism-provider-hyper",
     "@arnilo/prism-provider-laya",
+    "@arnilo/prism-provider-liquid",
     "@arnilo/prism-provider-opencode-go",
     "@arnilo/prism-provider-typesafe"
   ],

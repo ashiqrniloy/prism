@@ -5,6 +5,7 @@ import type { HostPort } from "../host/types.js";
 import type { ContextBlock } from "./agent.js";
 import type { JsonObject, Message, ModelConfig, ModelSpec } from "./content.js";
 import type { EmbeddingsProvider } from "./embeddings.js";
+import type { DecisionsProvider } from "./decisions.js";
 import type { Secret } from "./resources.js";
 
 export type CacheRetention = "none" | "short" | "long";
@@ -104,6 +105,11 @@ export interface ModelProvider {
    * embeddings client. Absent means the model cannot embed and callers see `EmbeddingsError`.
    */
   embeddings?(): EmbeddingsProvider;
+  /**
+   * Optional decisions adapter behind `prism.models.decisions(ref)` (plan 195): the provider's own
+   * typed-decision client. Absent means the model cannot decide and callers see `DecisionsError`.
+   */
+  decisions?(): DecisionsProvider;
 }
 
 /**

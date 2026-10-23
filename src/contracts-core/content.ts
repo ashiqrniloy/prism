@@ -158,6 +158,8 @@ export interface ModelCapabilities {
   readonly structuredOutput?: boolean | "json_schema";
   /** Provider-neutral embeddings generation support (plan 061). */
   readonly embeddings?: boolean;
+  /** Provider-neutral typed decision calls over `prism.models.decisions(ref)` (plan 195). */
+  readonly decisions?: boolean;
   /** Portable thinking/reasoning effort levels this model declares, ascending ladder order (`none` < `minimal` < `low` < `medium` < `high` < `xhigh` < `max`). Advisory legality metadata for hosts; absent means forward-compat passthrough (phase 65). */
   readonly thinkingLevels?: readonly string[];
 }

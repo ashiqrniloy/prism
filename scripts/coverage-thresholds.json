@@ -142,6 +142,11 @@
       "branches": null,
       "functions": 100
     },
+    "@arnilo/prism-provider-liquid": {
+      "lines": 97,
+      "branches": null,
+      "functions": 95.24
+    },
     "@arnilo/prism-provider-opencode-go": {
       "lines": 90.99,
       "branches": null,

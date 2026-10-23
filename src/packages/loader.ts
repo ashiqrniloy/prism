@@ -14,6 +14,7 @@ import type {
   Skill,
   ToolDefinition,
 } from "../contracts.js";
+import { assertDecisionRequest, DecisionsError, modelSupportsDecisions } from "../contracts-core/decisions.js";
 import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embeddings.js";
 import type { HookBus, HookRegistrar } from "../hooks/index.js";
 import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, HostUiTerminalRequest, Logger } from "../host/types.js";
@@ -758,6 +759,30 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
             );
           }
           return provider.embeddings();
+        },
+        decisions(ref?: ModelRef) {
+          requireCapability(name, entry.capabilities, "models", "models.decisions");
+          const configured = ref ?? hostConfig.model;
+          if (!configured) throw new TypeError("models.decisions needs a model reference: the agent has none configured");
+          const model = parseModelRef(configured);
+          const provider = resolveProvider(model);
+          // A string ref carries no capabilities; the adapter then gates its own model. A declared set without
+          // the flag fails fast here.
+          if (!provider.decisions || (model.capabilities !== undefined && !modelSupportsDecisions(model.capabilities))) {
+            throw new DecisionsError(
+              "unsupported_model",
+              `Model ${model.provider}/${model.model} does not declare the decisions capability`,
+            );
+          }
+          const adapter = provider.decisions();
+          return {
+            id: adapter.id,
+            decide(request) {
+              const bound = { ...request, model: model.model };
+              assertDecisionRequest(bound, model);
+              return adapter.decide(bound);
+            },
+          };
         },
       },
       credentials: {

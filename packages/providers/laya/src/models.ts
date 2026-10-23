@@ -15,6 +15,7 @@ const DECISION_CAPABILITIES = {
   tools: false,
   streaming: false,
   structuredOutput: "json_schema",
+  decisions: true,
 } as const;
 
 const ZERO_COST = { input: 0, output: 0, currency: "USD", unit: "per_million_tokens" } as const;

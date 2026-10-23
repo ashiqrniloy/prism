@@ -332,10 +332,13 @@ export function acme(options: AcmeProviderPackageOptions & AcmeProviderConfig = 
 
 Prism decision models (such as `@arnilo/prism-provider-typesafe` and `@arnilo/prism-provider-laya`) follow a single standardized shape over `provider-kit`:
 - **`systemOneProviderPackage(spec)`**: Generates the package definition and instance factory from a uniform specification (`name`, `providerId`, `label`, `defaultBaseUrl`, `defaultKeyRef`, `keyRequired`, `models`, and optional `createProvider`).
-- **`createSystemOneDecisionProvider(options)`**: Implements the `ModelProvider` contract over `POST /v1/systemone`. Validates fail-closed that requests provide `options.structuredOutput` with a JSON schema, forbids `tools`, and checks `boolean_threshold` in `request.options.compat`.
+- **`createSystemOneDecisionProvider(options)`**: Implements the `ModelProvider` contract over `POST /v1/systemone`. Validates fail-closed that requests provide `options.structuredOutput` with a JSON schema, forbids `tools`, and checks `boolean_threshold` in `request.options.compat`. It also exposes `decisions()`, which returns raw answers (probabilities, confidence, legend, usage, timing) without the schema renderer.
+- **`path` (default `/v1/systemone`)**: `createSystemOneDecisionProvider` and `systemOneProviderPackage` config accept a path so a host can target Foundry (`/providers/microsoft/v1/systemone`) or another deployment without forking. A path without a leading `/` is a construction error. `normalizeSystemOnePath` is exported for custom clients.
+- **Images**: user image parts become inline `data:image/*` URLs in the request `images` field; the field is omitted when empty, so text-only bodies are byte-identical to earlier recordings. The generate path resolves media once (`resolveProviderMediaMessages`) and fails before fetch when the model does not declare `input: ["image"]`; the decide path enforces the same capability through the resolved model when the provider has a catalog. `SystemOneBody.images` mirrors the wire field.
+- **`decisions()` and catalogs**: a provider built from a curated catalog (Jev, Laya) resolves the requested model id and rejects images for text-only entries; an id outside the catalog is trusted to the caller. 401/422 map to `DecisionsError("invalid_request")` with the credential redacted.
 - **Plaintext endpoint warning (`warnIfPlaintextRemote`)**: Warns if a non-loopback `baseUrl` uses unencrypted `http://`. Prints the origin only (no path, query, or credentials) so userinfo is never leaked. Loopback hosts (`localhost`, `127.0.0.1`, `[::1]`) connect cleanly without warning.
 - **Key-required vs key-optional**: Cloud hosted providers (e.g. TypeSafe Jev) declare `keyRequired: true` (missing key emits `status.note("warn", ...)`); local/self-hosted providers (e.g. Laya) declare `keyRequired: false` (missing key notes nothing and outgoing requests omit `Authorization` headers).
-- **`systemOneConformance(options)`**: Comprehensive conformance test covering tool rejections, schema rendering, 401/422 status mapping, malformed success responses, single credential resolution per request, secret redaction, and wire fixture replay.
+- **`systemOneConformance(options)`**: Comprehensive conformance test covering tool rejections, schema rendering, 401/422 status mapping, malformed success responses, single credential resolution per request, secret redaction, and wire fixture replay. It also covers `decisions()`: raw answers with probabilities intact, the omitted/forwarded `images` field, custom paths, decide-side 401/422 mapping, and one credential resolution per call.
 
 ## Shared surface inventory
 
@@ -345,7 +348,7 @@ Prism decision models (such as `@arnilo/prism-provider-typesafe` and `@arnilo/pr
 | Routed provider | `createRoutedProvider`, `assertNotAborted`, `resolveProviderApiKey`, `createOpenAICompatibleProvider` |
 | Codecs | `openAIChatBody`, `buildOpenAIChatBody`, `openAIChatEvents`, `serializeOpenAIChatMessage`, `serializeOpenAITool`, `mapOpenAIChatUsage`, `anthropicMessagesBody`, `anthropicMessagesEvents` |
 | Wire replay | `replayFetch`, `assertRecordedStreamConforms` |
-| System One | `createSystemOneDecisionProvider`, `systemOneProviderPackage`, `systemOneConformance`, `warnIfPlaintextRemote`, `askSystemOneDecisions`, `createSystemOneClient`, System One schema and options |
+| System One | `createSystemOneDecisionProvider`, `systemOneProviderPackage`, `systemOneConformance`, `warnIfPlaintextRemote`, `askSystemOneDecisions`, `normalizeSystemOnePath`, `DEFAULT_SYSTEMONE_PATH`, `createSystemOneClient`, System One schema and options |
 | Usage | `normalizeUsage`, `mapOpenAIChatUsage`, `mapSystemOneUsage` |
 | Retry | `providerHttpError`, `parseErrorBody`, `readRetryAfterMs`, `RETRYABLE_STATUSES` |
 | Thinking | `normalizeThinkingLevel`, `snapThinkingLevel`, `applyThinkingLevel`, `applyThinkingLevelForModel`, `THINKING_LEVELS`, `resolvePreserveThinking`, `preserveThinking`, `resolveReasoningEffort`, `reasoningEffort`, `resolveThinkingObject`, `thinkingObject`, `resolveReasoningObject`, `reasoningObject`, `stripOwnedCompat`, `DEFAULT_OWNED_COMPAT_KEYS` |
@@ -472,7 +475,7 @@ Every provider package in `packages/providers/<vendor>` is enforced by the suppo
 - `docs/models.md`: `ModelRef`/`ModelSpec`, the provider registry, and the built-in provider.
 - `@arnilo/prism/testing`: `mockProvider` and the provider event helpers.
 - `docs/packages.md`: `definePackage`, `providerPackage`, and the `providers` registrar.
-- `packages/providers/<vendor>/src/index.ts`: the 4 provider packages built on the surface above.
+- `packages/providers/<vendor>/src/index.ts`: the 5 provider packages built on the surface above.
 
 ## Removed
 

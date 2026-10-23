@@ -5,5 +5,6 @@ await runSystemOneLiveScenarios({
   provider: (opts) => typesafe({ apiKey: "env:TYPESAFE_API_KEY", fetch: opts?.fetch }),
   model: process.env.PRISM_LIVE_TYPESAFE_MODEL ?? "jev-latest",
   secretEnv: "TYPESAFE_API_KEY",
+  decideTestName: "typesafe_live_decide",
   title: "@arnilo/prism-provider-typesafe live tests",
 });

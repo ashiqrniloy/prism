@@ -71,7 +71,7 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 
 | 0.12 package | 0.13 package(s) |
 | --- | --- |
-| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}` (the 17 other 0.3 vendors are not shipped in 0.13.0; write a package on `@arnilo/prism/provider-kit`) |
+| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, liquid, opencode-go, typesafe, laya}` (the 17 other 0.3 vendors are not shipped in 0.13.0; write a package on `@arnilo/prism/provider-kit`) |
 | `@arnilo/prism-core` | the kernel `@arnilo/prism` plus the native packages below |
 | `@arnilo/prism-coding-tools` | `@arnilo/prism-tools-coding`, `@arnilo/prism-tools-openapi`, `@arnilo/prism-tools-computer-use`, `@arnilo/prism-approval`, `@arnilo/prism-devtools` |
 | `@arnilo/prism-web-tools` | `@arnilo/prism-tools-web`, `@arnilo/prism-tools-browser` |

@@ -41,7 +41,7 @@ export type AuthMethod =
   | { readonly kind: "oauth"; readonly id: string; login(ctx: AuthContext): Promise<void> };
 ```
 
-`auth` is data for a host's login UI. The kernel never calls `login`. `embeddings?()` is the only optional capability on `ModelProvider`. Speech, transcription, image generation, video, moderation, batch jobs, and realtime sessions are not kernel contracts; providers or host packages implement them directly.
+`auth` is data for a host's login UI. The kernel never calls `login`. `embeddings?()` and `decisions?()` are the optional capabilities on `ModelProvider`; see [Decisions](decisions.md) for typed decision calls. Speech, transcription, image generation, video, moderation, batch jobs, and realtime sessions are not kernel contracts; providers or host packages implement them directly.
 
 ### `parseModelRef(ref: ModelRef): ModelSpec`
 
@@ -149,11 +149,11 @@ redacted `error` event. `done.stopReason` lands on the closed taxonomy on both p
 
 ## Agents with no model
 
-`AgentConfig.model` is optional only for a loop that declares `usesModel: false` (see [loop.md](loop.md)). On such an agent `agent.config.model` is `undefined`, `agent.models.list()` lists only what providers declare, `session.contextMeter()` omits the input cap, and `models.client()` / `models.embeddings()` with no reference throw a `TypeError` naming the missing model. A missing model never falls back to a default provider.
+`AgentConfig.model` is optional only for a loop that declares `usesModel: false` (see [loop.md](loop.md)). On such an agent `agent.config.model` is `undefined`, `agent.models.list()` lists only what providers declare, `session.contextMeter()` omits the input cap, and `models.client()` / `models.embeddings()` / `models.decisions()` with no reference throw a `TypeError` naming the missing model. A missing model never falls back to a default provider.
 
 ## Provider packages
 
-Prism 0.13.0 ships 4 provider packages: `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya}`. Other providers can be built on `@arnilo/prism/provider-kit`.
+Prism 0.13.0 ships 5 provider packages: `@arnilo/prism-provider-{hyper, laya, liquid, opencode-go, typesafe}`. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-provider-liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
 Listing one registers its provider(s); no package imports a sibling. `apiKey` (and every
 other credential field) is an `env:`/`keyring:` ref resolved per request through the `credentials` slot,
 OAuth methods go through `host.ui`, and `keyring:` refs resolve through `@arnilo/prism-credentials-keyring`.

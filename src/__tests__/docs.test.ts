@@ -296,6 +296,7 @@ describe("docs", () => {
   const kernelPages = [
     "agent",
     "agent-adapters",
+    "decisions",
     "drivers",
     "events",
     "hooks",
@@ -1523,6 +1524,7 @@ describe("docs", () => {
         "examples/openai-compatible.ts",
         "examples/custom-provider.ts",
         "examples/side-call.ts",
+        "examples/decision-models.ts",
         "examples/sqlite-resume.ts",
         "examples/observational-memory.ts",
         "examples/durable-approval.ts",

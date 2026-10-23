@@ -17,6 +17,7 @@
           "src/__tests__/artifacts-coverage.test.ts",
           "src/__tests__/ask-resolution.test.ts",
           "examples/custom-loop.ts",
+          "examples/decision-models.ts",
           "examples/define-package.ts",
           "examples/manifest.ts",
           "examples/session.ts",
@@ -666,6 +667,16 @@
           "packages/providers/typesafe/src/__tests__/live.test.ts",
           "packages/providers/typesafe/src/__tests__/package.test.ts",
           "packages/providers/typesafe/src/__tests__/typesafe.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-provider-liquid": {
+      ".": {
+        "suites": [
+          "packages/providers/liquid/src/__tests__/liquid.test.ts",
+          "packages/providers/liquid/src/__tests__/live.test.ts",
+          "packages/providers/liquid/src/__tests__/package.test.ts"
         ],
         "mode": ""
       }

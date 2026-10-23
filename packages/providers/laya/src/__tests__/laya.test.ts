@@ -19,6 +19,7 @@ describe("@arnilo/prism-provider-laya", () => {
         createLayaProvider({
           fetch: fetchImpl,
           apiKey: options?.apiKey as any,
+          path: options?.path,
         }),
       recordings,
       keyRequired: false,
@@ -40,7 +41,7 @@ describe("@arnilo/prism-provider-laya", () => {
       [512, 1024, 1024],
     );
     assert.ok(layaModels.every((entry) => entry.limits?.maxOutputTokens === 0));
-    assert.ok(layaModels.every((entry) => entry.capabilities?.structuredOutput === "json_schema" && entry.capabilities.tools === false));
+    assert.ok(layaModels.every((entry) => entry.capabilities?.structuredOutput === "json_schema" && entry.capabilities.tools === false && entry.capabilities.decisions === true));
     assert.equal(layaModels[1]?.metadata?.extendedContextWindow, 8192);
     assert.ok(layaModels.every((entry) => entry.cost?.input === 0 && entry.cost.output === 0));
 

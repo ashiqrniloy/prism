@@ -97,6 +97,8 @@ export interface SystemOneLiveScenariosOptions {
   readonly reachabilityCheck?: boolean | ((baseUrl: string) => Promise<{ reachable: boolean; reason?: string }>);
   readonly skipUnless?: () => string | false;
   readonly fetch?: typeof fetch;
+  /** Test name for the shared decide leg; packages pass e.g. `typesafe_live_decide`. */
+  readonly decideTestName?: string;
 }
 
 export interface LiveSuiteRegistrationResult {
@@ -267,6 +269,34 @@ export async function liveScenarioTextStream(options: {
     console.info(`[${options.provider.id} live] ${options.route} text usage: ${JSON.stringify(usage)}`);
   }
   return { text, usage };
+}
+
+export async function systemOneScenarioDecide(options: {
+  readonly provider: ModelProvider;
+  readonly model: ModelConfig;
+  readonly secrets: readonly string[];
+}): Promise<{ readonly model: string; readonly answers: unknown; readonly timingMs: number }> {
+  const decisions = options.provider.decisions;
+  assert.ok(decisions, "System One provider must expose decisions()");
+  const result = await decisions().decide({
+    model: options.model.model,
+    state: "A customer reports that checkout fails with error 500 and asks for a refund.",
+    questions: {
+      urgent: { type: "noul", instructions: "Is the customer blocked right now?" },
+      team: { type: "choice", instructions: "Which team owns this?", criteria: { billing: null, shipping: null } },
+      severity: { type: "score", instructions: "How severe is it?", criteria: ["low", "medium", "high"] },
+    },
+  });
+  const answers = result.answers;
+  assert.equal(answers.urgent?.type, "noul", "noul answer must keep its type");
+  assert.equal(answers.team?.type, "choice", "choice answer must keep its type");
+  assert.equal(answers.severity?.type, "score", "score answer must keep its type");
+  assert.ok(typeof result.timingMs === "number" && result.timingMs >= 0);
+  const serialized = JSON.stringify(result);
+  for (const secret of options.secrets) {
+    assert.ok(!serialized.includes(secret), "a live decide result must not contain a credential");
+  }
+  return result;
 }
 
 export async function liveScenarioToolLoop(options: {
@@ -761,13 +791,16 @@ export async function executeSystemOneLiveScenarios(
   const provider = await resolveLiveProvider(options.provider, { fetch: options.fetch, secrets });
   const modelConfig: ModelConfig =
     typeof options.model === "string"
-      ? { provider: provider.id, model: options.model, capabilities: { structuredOutput: "json_schema" } }
+      ? { provider: provider.id, model: options.model, capabilities: { structuredOutput: "json_schema", decisions: true } }
       : options.model;
 
   const results: SystemOneLiveScenarioResult[] = [];
 
   const decisionRes = await systemOneScenarioDecision({ provider, model: modelConfig, secrets });
   results.push({ scenario: "decision", ok: true, details: decisionRes });
+
+  const decideRes = await systemOneScenarioDecide({ provider, model: modelConfig, secrets });
+  results.push({ scenario: "decide", ok: true, details: decideRes });
 
   await systemOneScenarioToolsRejected({ provider, model: modelConfig, secrets });
   results.push({ scenario: "tools-rejected", ok: true });
@@ -947,7 +980,7 @@ export async function runSystemOneLiveScenarios(
       if (!modelConfig) {
         modelConfig =
           typeof options.model === "string"
-            ? { provider: provider.id, model: options.model, capabilities: { structuredOutput: "json_schema" } }
+            ? { provider: provider.id, model: options.model, capabilities: { structuredOutput: "json_schema", decisions: true } }
             : options.model;
       }
     }
@@ -955,6 +988,11 @@ export async function runSystemOneLiveScenarios(
     it("live_decision_renders_schema_valid_json_and_leaks_no_secret", async () => {
       await init();
       await systemOneScenarioDecision({ provider, model: modelConfig, secrets });
+    });
+
+    it(options.decideTestName ?? "live_decide_returns_raw_answers_for_all_question_types", async () => {
+      await init();
+      await systemOneScenarioDecide({ provider, model: modelConfig, secrets });
     });
 
     it("live_tools_rejected_before_fetch", async () => {

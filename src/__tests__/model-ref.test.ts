@@ -91,8 +91,8 @@ describe("ModelRef", () => {
         return [];
       },
     };
-    const members: Record<keyof ModelProvider, true> = { id: true, auth: true, generate: true, models: true, embeddings: true };
-    assert.deepEqual(Object.keys(members).sort(), ["auth", "embeddings", "generate", "id", "models"]);
+    const members: Record<keyof ModelProvider, true> = { id: true, auth: true, generate: true, models: true, embeddings: true, decisions: true };
+    assert.deepEqual(Object.keys(members).sort(), ["auth", "decisions", "embeddings", "generate", "id", "models"]);
     assert.equal(provider.auth?.length, 2);
   });
 });

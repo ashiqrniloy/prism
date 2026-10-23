@@ -78,6 +78,8 @@ export interface SystemOneBody {
   readonly model: string;
   readonly state: SystemOneState;
   readonly questions: Readonly<Record<string, SystemOneQuestion>>;
+  /** Inline `data:image/*` URLs; omitted when empty so text-only bodies stay unchanged. */
+  readonly images?: readonly string[];
 }
 
 export interface SystemOneUsage {
@@ -147,8 +149,10 @@ export class SystemOneAbortedError extends SystemOneError {
 export interface SystemOneClientOptions {
   /** Name used in error messages and credential resolution, e.g. `"TypeSafe Jev"`. */
   readonly provider: string;
-  /** Base URL without the path; `/v1/systemone` is appended (trailing slashes trimmed). */
+  /** Base URL without the path; the path is appended (trailing slashes trimmed). */
   readonly baseUrl: string;
+  /** Endpoint path, appended to `baseUrl`. Default: {@link DEFAULT_SYSTEMONE_PATH}. Must start with `/`. */
+  readonly path?: string;
   /** Bearer credential; omitted → no `Authorization` header (anonymous `laya-serve`). */
   readonly apiKey?: CredentialValueSource;
   /** Fetch implementation; defaults to global `fetch` (tests inject a fake). */
@@ -167,6 +171,15 @@ export interface SystemOneClientOptions {
 
 /** Retries after the first attempt when {@link SystemOneClientOptions.maxRetries} is omitted. */
 export const DEFAULT_SYSTEMONE_MAX_RETRIES = 2;
+
+/** The canonical System One endpoint path; hosts override it for Foundry-style deployments. */
+export const DEFAULT_SYSTEMONE_PATH = "/v1/systemone";
+
+/** Validates and returns a System One endpoint path; a relative path is a configuration error. */
+export function normalizeSystemOnePath(path: string | undefined = DEFAULT_SYSTEMONE_PATH): string {
+  if (!path.startsWith("/")) throw new SystemOneError(`System One path must start with "/"; received ${JSON.stringify(path)}`, 0);
+  return path.length > 1 ? path.replace(/\/+$/, "") : path;
+}
 
 /** 429 rate limits and every 5xx upstream failure (529 overloaded included) are retryable. */
 export function isRetryableSystemOneStatus(status: number): boolean {
@@ -239,7 +252,7 @@ export async function postSystemOne(
   const fetchImpl = options.fetch ?? fetch;
   const apiKey = await resolveCredentialValue(options.apiKey, { provider: options.provider, name: "apiKey" });
   const secrets = [apiKey];
-  const url = `${trimTrailingSlashes(options.baseUrl)}/v1/systemone`;
+  const url = `${trimTrailingSlashes(options.baseUrl)}${normalizeSystemOnePath(options.path)}`;
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (apiKey) headers.authorization = `Bearer ${apiKey}`;
   const payload = JSON.stringify(body);

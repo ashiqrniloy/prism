@@ -17,6 +17,7 @@ import type {
   Usage,
 } from "../contracts.js";
 import {
+  DecisionsError,
   EmbeddingsError,
 } from "../contracts.js";
 import { reconstructToolCallDeltas } from "../models/events.js";
@@ -797,7 +798,7 @@ async function assertEmbeddingsErrorCode(run: () => Promise<unknown>, code: Embe
 export interface SystemOneConformanceOptions {
   readonly factory: (
     fetchImpl?: typeof fetch,
-    options?: { readonly apiKey?: unknown; readonly fetch?: typeof fetch },
+    options?: { readonly apiKey?: unknown; readonly fetch?: typeof fetch; readonly path?: string },
   ) => ModelProvider;
   readonly recordings?: string | URL;
   readonly keyRequired?: boolean;
@@ -1112,7 +1113,154 @@ export async function systemOneConformance(options: SystemOneConformanceOptions)
     scenarios.push({ name: "abort-observed", ok: true });
   }
 
-  // 10. Wire recordings replay
+  // 10. decisions(): raw answers, images, custom path, error mapping, credential resolution
+  {
+    if (!probe.decisions) throw new Error("systemOneConformance: provider must expose decisions()");
+
+    const decideResponse = {
+      model: `${probe.id}-checkpoint`,
+      answers: {
+        urgent: { type: "noul", noul: 0.93 },
+        team: { type: "choice", choice: "billing", probabilities: { billing: 0.71, shipping: 0.29 }, confidence: 0.71 },
+        severity: {
+          type: "score",
+          score: 2.4,
+          legend: { "1": "low", "2": "medium", "3": "high" },
+          probabilities: { "1": 0.1, "2": 0.5, "3": 0.4 },
+          confidence: 0.5,
+        },
+      },
+      usage: { input_tokens: 64, output_tokens: 0 },
+    } as const;
+    const questions = {
+      urgent: { type: "noul", instructions: "Is the customer blocked right now?" },
+      team: { type: "choice", instructions: "Which team owns this?", criteria: { billing: null, shipping: null } },
+      severity: { type: "score", instructions: "How severe is it?", criteria: ["low", "medium", "high"] },
+    } as const;
+
+    // Raw answers, probabilities intact, and no images key on a text-only body.
+    let decideBody: Record<string, unknown> | undefined;
+    const decideFetch = (async (_input: unknown, init?: RequestInit) => {
+      decideBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify(decideResponse), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+    const adapter = options.factory(decideFetch).decisions!();
+    const result = await adapter.decide({ model: modelConfig.model, state: "ticket", questions });
+    if (JSON.stringify(result.answers) !== JSON.stringify(decideResponse.answers)) {
+      throw new Error("systemOneConformance: decisions() must return raw answers with probabilities and confidence intact");
+    }
+    if (result.usage?.inputTokens !== 64 || !(typeof result.timingMs === "number" && result.timingMs >= 0)) {
+      throw new Error("systemOneConformance: decisions() must map usage and timing");
+    }
+    const rawBody = await (async () => {
+      await adapter.decide({ model: modelConfig.model, state: "ticket", questions });
+      return decideBody;
+    })();
+    if (!rawBody || "images" in rawBody) throw new Error("systemOneConformance: decisions() must omit an empty images field");
+
+    // Image input: sent only to a model whose capabilities declare it; rejected before fetch otherwise.
+    const declaredInput = modelConfig.capabilities?.input;
+    const image = "data:image/png;base64,iVBORw0KGgo=";
+    let imageFetchCalls = 0;
+    const imageFetch = (async (_input: unknown, init?: RequestInit) => {
+      imageFetchCalls++;
+      decideBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify(decideResponse), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+    const imageAdapter = options.factory(imageFetch).decisions!();
+    const textOnly = declaredInput !== undefined && !declaredInput.includes("image");
+    if (textOnly) {
+      let rejected: unknown;
+      try {
+        await imageAdapter.decide({ model: modelConfig.model, state: "ticket", questions, images: [image] });
+      } catch (error) {
+        rejected = error;
+      }
+      if (!(rejected instanceof DecisionsError) || rejected.code !== "invalid_request") {
+        throw new Error("systemOneConformance: images to a text-only model must reject with DecisionsError(invalid_request)");
+      }
+      if (imageFetchCalls !== 0) throw new Error("systemOneConformance: text-only image rejection must happen before fetch");
+    } else {
+      await imageAdapter.decide({ model: modelConfig.model, state: "ticket", questions, images: [image] });
+      if (!Array.isArray(decideBody?.images) || (decideBody!.images as string[])[0] !== image) {
+        throw new Error("systemOneConformance: an image-capable or unknown model must forward images as data URLs");
+      }
+    }
+
+    // Custom path is honored; a relative path is a construction error.
+    let customUrl: string | undefined;
+    const customFetch = (async (input: unknown) => {
+      customUrl = String(input);
+      return new Response(JSON.stringify(decideResponse), { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+    const customPath = "/providers/microsoft/v1/systemone";
+    const customAdapter = options.factory(customFetch, { path: customPath }).decisions?.();
+    await customAdapter!.decide({ model: modelConfig.model, state: "ticket", questions });
+    if (!customUrl?.endsWith(customPath)) {
+      throw new Error(`systemOneConformance: custom path not honored, url was ${customUrl}`);
+    }
+    let pathRejected = false;
+    try {
+      options.factory(undefined, { path: "v1/systemone" });
+    } catch {
+      pathRejected = true;
+    }
+    if (!pathRejected) throw new Error("systemOneConformance: a path without a leading slash must fail at construction");
+
+    // 401/422 map to DecisionsError(invalid_request) and never retry or leak.
+    for (const status of [401, 422] as const) {
+      const canary = `sk-decide-${status}-secret`;
+      let attempts = 0;
+      const failingFetch = (async () => {
+        attempts++;
+        return new Response(JSON.stringify({ error: { code: "invalid_request", message: `rejected ${canary}` } }), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
+      }) as unknown as typeof fetch;
+      const failingAdapter = options.factory(failingFetch, { apiKey: canary }).decisions?.();
+      let mapped: unknown;
+      try {
+        await failingAdapter!.decide({ model: modelConfig.model, state: "ticket", questions });
+      } catch (error) {
+        mapped = error;
+      }
+      if (!(mapped instanceof DecisionsError) || mapped.code !== "invalid_request") {
+        throw new Error(`systemOneConformance: ${status} must map to DecisionsError(invalid_request)`);
+      }
+      if (attempts !== 1) throw new Error(`systemOneConformance: ${status} must not be retried, attempts: ${attempts}`);
+      if (mapped.message.includes(canary)) throw new Error(`systemOneConformance: ${status} decide error must redact the key`);
+    }
+
+    // Credential resolves once per decide, and a transport failure carries no secret.
+    let resolutions = 0;
+    const secret = "rotating-decide-credential";
+    const keySource = {
+      resolve: () => {
+        resolutions++;
+        return { type: "api_key", value: secret };
+      },
+    };
+    const throwingFetch = (async (_input: unknown, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get("authorization");
+      if (auth !== `Bearer ${secret}`) throw new Error(`systemOneConformance: expected Bearer secret, got ${auth}`);
+      throw new Error(`transport failed with ${secret}`);
+    }) as unknown as typeof fetch;
+    const throwingAdapter = options.factory(throwingFetch, { apiKey: keySource }).decisions?.();
+    let transportError: unknown;
+    try {
+      await throwingAdapter!.decide({ model: modelConfig.model, state: "ticket", questions });
+    } catch (error) {
+      transportError = error;
+    }
+    if (resolutions !== 1) throw new Error(`systemOneConformance: decide must resolve the credential once, resolved ${resolutions}`);
+    if (!(transportError instanceof DecisionsError) || transportError.message.includes(secret)) {
+      throw new Error("systemOneConformance: decide transport failure must be a DecisionsError with the key redacted");
+    }
+    scenarios.push({ name: "decisions-raw-answers-images-path-and-errors", ok: true });
+  }
+
+  // 11. Wire recordings replay
   if (options.recordings) {
     const recordingsDir =
       options.recordings instanceof URL ? fileURLToPath(options.recordings) : resolve(String(options.recordings));

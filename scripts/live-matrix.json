@@ -80,8 +80,8 @@
           "wired": true
         }
       ],
-      "scope": "TypeSafe key; System One tier-1 live scenarios (decision model).",
-      "cost": "~3 requests; sub-cent."
+      "scope": "TypeSafe key; System One tier-1 live scenarios (decision model), including one raw decide call with noul/choice/score answers.",
+      "cost": "~4 requests; sub-cent."
     },
     {
       "id": "providers/laya",
@@ -101,8 +101,50 @@
           "wired": true
         }
       ],
-      "scope": "Local laya-serve instance on loopback (default http://127.0.0.1:8000); System One tier-1 live scenarios.",
-      "cost": "~3 requests; local server, free."
+      "scope": "Local laya-serve instance on loopback (default http://127.0.0.1:8000); System One tier-1 live scenarios, including one raw decide call with noul/choice/score answers.",
+      "cost": "~4 requests; local server, free."
+    },
+    {
+      "id": "providers/liquid",
+      "package": "@arnilo/prism-provider-liquid",
+      "status": "active",
+      "source": "packages/providers/liquid/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/liquid",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "LIQUID_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_LIQUID_MODELS",
+          "default": "d1.1,d1-ultra",
+          "wired": true
+        }
+      ],
+      "scope": "Liquid key; hosted System One tier-1 live scenarios for d1.1 and d1-ultra, plus one image decide call on d1.1.",
+      "cost": "~10 requests (5 per model) + 1 image request; d1.1 $0.02/MTok input, d1-ultra $0.042/MTok, output free; sub-cent."
+    },
+    {
+      "id": "providers/liquid-local",
+      "package": "@arnilo/prism-provider-liquid",
+      "status": "active",
+      "source": "packages/providers/liquid/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/liquid",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "PRISM_LIVE_LLAMA_SERVER_URL"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_LIQUID_LOCAL_MODEL",
+          "default": "d1-3B",
+          "wired": true
+        }
+      ],
+      "scope": "Local llama-server (build b11480 or later) on loopback serving LiquidAI/d1-3B-GGUF:Q8_0; System One tier-1 live scenarios plus one image decide call.",
+      "cost": "~5 requests; local server, free."
     },
     {
       "id": "web-tools/brave",

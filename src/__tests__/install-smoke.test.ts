@@ -60,6 +60,7 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/stores/postgres", name: "@arnilo/prism-store-postgres" },
   { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
+  { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid" },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
@@ -184,6 +185,7 @@ before(() => {
     "@arnilo/prism-tools-computer-use",
     "@arnilo/prism-provider-hyper",
     "@arnilo/prism-provider-laya",
+    "@arnilo/prism-provider-liquid",
     "@arnilo/prism-provider-opencode-go",
     "@arnilo/prism-provider-typesafe",
     "@arnilo/prism-tools-work",
