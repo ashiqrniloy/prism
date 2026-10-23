@@ -1244,8 +1244,12 @@ export const ACCEPTANCE_18810_JOURNAL = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}
 export const ACCEPTANCE_18810_SUMMARY = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}/acceptance-run.json`;
 export const ACCEPTANCE_18810_COMPARISONS = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}/acceptance-comparisons.json`;
 export const ACCEPTANCE_18810_LOGS = ".cache/memory-bench/188.10/acceptance";
-/** Reservation pool: `x` ~4k/question, `x-tools` ~23k/question, `full` at 188.9's held-out cap. */
-export const ACCEPTANCE_18810_CEILING = 20_000_000;
+/**
+ * Reservation pool. A cap must cover the kernel's in-flight reservation (250k per request, and a
+ * question holds an answer plus its judges and labels), not just measured spend: at concurrency 4
+ * the first attempt exhausted a 1M `x` cap after 4 questions and a 5M `x-tools` cap after 79.
+ */
+export const ACCEPTANCE_18810_CEILING = 26_000_000;
 /** Gate 1 spend before this task: the archived Stage A attempt plus the corrected campaign. */
 export const ACCEPTANCE_18810_PRIOR_RESERVATION = 2_776_286;
 export const ACCEPTANCE_18810_SUBSET = "heldout-v3";
@@ -1265,8 +1269,8 @@ export const ACCEPTANCE_18810_CRITERIA = {
 export const ACCEPTANCE_18810_ARMS = [
   // The local, LLM-free write side: a job with no score, never a reader and never a spend claim.
   { id: "write-x", config: "fabric-x", maxInputTokens: 1_000_000, write: true },
-  { id: "x", config: "fabric-x", maxInputTokens: 1_000_000, writeSide: "write-x" },
-  { id: "x-tools", config: "fabric-x-tools", maxInputTokens: 5_000_000, writeSide: "write-x" },
+  { id: "x", config: "fabric-x", maxInputTokens: 3_000_000, writeSide: "write-x" },
+  { id: "x-tools", config: "fabric-x-tools", maxInputTokens: 9_000_000, writeSide: "write-x" },
   { id: "full", config: "full", maxInputTokens: 14_000_000 },
 ];
 export const ACCEPTANCE_18810_ARM_IDS = Object.fromEntries(ACCEPTANCE_18810_ARMS.map((arm) => [arm.id, `accept18810-${arm.id}`]));

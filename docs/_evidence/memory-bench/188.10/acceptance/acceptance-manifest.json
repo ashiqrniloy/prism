@@ -6,7 +6,7 @@
     "approval": "Gate 1 approved 2026-10-23: 34,000,000 tokens (Stage A, the iteration allowance, and Task 9 on the Stage A path)",
     "scope": "Stage A, the iteration allowance and Task 9 on the Stage A path"
   },
-  "ceiling": 20000000,
+  "ceiling": 26000000,
   "priorReservation": 2776286,
   "provider": "opencode-go",
   "model": "mimo-v2.5",
@@ -25,7 +25,7 @@
     "hash": "dbce0697d29605f788b0685ad671ad4a435af36c37421ad9d79b03fcbfc1c7a5",
     "stageAHash": "dbce0697d29605f788b0685ad671ad4a435af36c37421ad9d79b03fcbfc1c7a5"
   },
-  "harnessHash": "09bb4701c6c86a2d5ec76702e2553329197fb518fe63c0bab12ad2eb4d75ffaa",
+  "harnessHash": "a6f8f39f76fc099b85c4b79d5519efc3622403ef0b948a6da4408e1d6f5111d0",
   "heldoutV3": {
     "subset": "heldout-v3",
     "draw": "SHA-256(\"prism-188.10-memory-bench-v3:\" + id), ascending; 40 multi-session, 20 knowledge-update, 20 temporal-reasoning, 14 single-session-user, 6 single-session-assistant",
@@ -83,7 +83,7 @@
       "suite": "longmemeval-s",
       "config": "fabric-x",
       "subset": "heldout-v3",
-      "maxInputTokens": 1000000,
+      "maxInputTokens": 3000000,
       "concurrency": 4,
       "labelInjections": "on",
       "writeSide": "accept18810-write-x"
@@ -94,7 +94,7 @@
       "suite": "longmemeval-s",
       "config": "fabric-x-tools",
       "subset": "heldout-v3",
-      "maxInputTokens": 5000000,
+      "maxInputTokens": 9000000,
       "concurrency": 4,
       "labelInjections": "on",
       "writeSide": "accept18810-write-x"

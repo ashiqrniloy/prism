@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-99bead70b1bc",
+  "manifestHash": "99bead70b1bcab62ae0f5b6b37b94a1a96203233edcd520680bd444f53801b59",
+  "ceiling": 20000000,
+  "priorReservation": 2776286,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-23T15:14:57.408Z",
+  "updatedAt": "2026-10-23T16:26:19.069Z",
+  "status": "finished",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept18810-write-x@1",
+      "jobId": "accept18810-write-x",
+      "manifestHash": "99bead70b1bcab62ae0f5b6b37b94a1a96203233edcd520680bd444f53801b59",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/acceptance/final-accept18810-write-x.json",
+      "maxInputTokens": 1000000,
+      "reservedInputTokens": 1500000,
+      "startedAt": "2026-10-23T15:14:57.415Z",
+      "confirmedInputTokens": 0,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-23T15:15:34.907Z"
+    },
+    {
+      "attemptId": "accept18810-x@1",
+      "jobId": "accept18810-x",
+      "manifestHash": "99bead70b1bcab62ae0f5b6b37b94a1a96203233edcd520680bd444f53801b59",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/acceptance/final-accept18810-x.json",
+      "maxInputTokens": 1000000,
+      "reservedInputTokens": 1500000,
+      "startedAt": "2026-10-23T15:15:34.908Z",
+      "confirmedInputTokens": 16610,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 640,
+      "endedAt": "2026-10-23T15:16:08.990Z"
+    },
+    {
+      "attemptId": "accept18810-x-tools@1",
+      "jobId": "accept18810-x-tools",
+      "manifestHash": "99bead70b1bcab62ae0f5b6b37b94a1a96203233edcd520680bd444f53801b59",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/acceptance/final-accept18810-x-tools.json",
+      "maxInputTokens": 5000000,
+      "reservedInputTokens": 5500000,
+      "startedAt": "2026-10-23T15:16:08.990Z",
+      "confirmedInputTokens": 2114975,
+      "usageComplete": false,
+      "cacheReadTokens": 646912,
+      "outputTokens": 149171,
+      "endedAt": "2026-10-23T16:26:19.069Z"
+    }
+  ]
+}

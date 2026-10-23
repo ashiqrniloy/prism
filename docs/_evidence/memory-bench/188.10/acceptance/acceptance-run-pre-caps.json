@@ -1,0 +1,58 @@
+{
+  "kind": "188.10-heldout-acceptance-run",
+  "journal": {
+    "campaignId": "campaign-99bead70b1bc",
+    "status": "finished",
+    "ceiling": 20000000,
+    "spend": 5516610,
+    "attempts": [
+      {
+        "attemptId": "accept18810-write-x@1",
+        "jobId": "accept18810-write-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "accept18810-x@1",
+        "jobId": "accept18810-x",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 16610
+      },
+      {
+        "attemptId": "accept18810-x-tools@1",
+        "jobId": "accept18810-x-tools",
+        "status": "failed",
+        "usageComplete": false,
+        "reservedInputTokens": 5500000,
+        "confirmedInputTokens": 2114975
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "accept18810-write-x",
+      "attemptId": "accept18810-write-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 0
+    },
+    {
+      "id": "accept18810-x",
+      "attemptId": "accept18810-x@1",
+      "status": "failed",
+      "usageComplete": true,
+      "charged": 16610
+    },
+    {
+      "id": "accept18810-x-tools",
+      "attemptId": "accept18810-x-tools@1",
+      "status": "failed",
+      "usageComplete": false,
+      "charged": 5500000
+    }
+  ]
+}

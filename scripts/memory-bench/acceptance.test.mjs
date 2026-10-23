@@ -951,7 +951,10 @@ test("acceptance_188_10_ceiling_fits_gate_1_remainder", () => {
   const reads = manifest.jobs.filter((job) => !job.write).reduce((sum, job) => sum + job.maxInputTokens, 0);
   assert.equal(reads, manifest.ceiling, "the ceiling is the read caps' sum");
   assert.throws(() => assertAcceptance18810Manifest({ ...manifest, ceiling: 40_000_000 }), /ceiling must be/);
-  assert.throws(() => assertAcceptance18810Manifest({ ...manifest, priorReservation: 0, ceiling: 34_000_001 }), /ceiling must be 20000000/);
+  assert.throws(
+    () => assertAcceptance18810Manifest({ ...manifest, priorReservation: 0, ceiling: 34_000_001 }),
+    new RegExp(`ceiling must be ${ACCEPTANCE_18810_CEILING}`),
+  );
   // A different prior use or gate cannot fit the same ceiling silently.
   assert.throws(() => assertAcceptance18810Manifest({ ...manifest, priorReservation: 4_000_001 }), /prior use is/);
   assert.throws(
@@ -959,8 +962,8 @@ test("acceptance_188_10_ceiling_fits_gate_1_remainder", () => {
     /cap must be the approved/,
   );
   for (const [arm, cap] of [
-    ["x", 1_000_001],
-    ["x-tools", 5_000_001],
+    ["x", 3_000_001],
+    ["x-tools", 9_000_001],
     ["full", 14_000_001],
   ]) {
     const copy = structuredClone(manifest);
