@@ -25,7 +25,7 @@
     "hash": "dbce0697d29605f788b0685ad671ad4a435af36c37421ad9d79b03fcbfc1c7a5",
     "stageAHash": "dbce0697d29605f788b0685ad671ad4a435af36c37421ad9d79b03fcbfc1c7a5"
   },
-  "harnessHash": "a6f8f39f76fc099b85c4b79d5519efc3622403ef0b948a6da4408e1d6f5111d0",
+  "harnessHash": "4e5956596e83f2638e14ff0fc0c0cc5c581757b07354565abcb1f7e698556b45",
   "heldoutV3": {
     "subset": "heldout-v3",
     "draw": "SHA-256(\"prism-188.10-memory-bench-v3:\" + id), ascending; 40 multi-session, 20 knowledge-update, 20 temporal-reasoning, 14 single-session-user, 6 single-session-assistant",
@@ -84,7 +84,7 @@
       "config": "fabric-x",
       "subset": "heldout-v3",
       "maxInputTokens": 3000000,
-      "concurrency": 4,
+      "concurrency": 2,
       "labelInjections": "on",
       "writeSide": "accept18810-write-x"
     },

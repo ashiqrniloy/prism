@@ -6,6 +6,12 @@ text is stored.
 
 | File | What it shows |
 | --- | --- |
+| `acceptance/acceptance-manifest.json` | The held-out v3 manifest (Task 9): gate 1 verbatim, the Stage A selection and its verdict hash, the frozen product hash, the v3 ids/`idsHash`/`fileHash`, the pre-registered criteria, and the four arm caps. |
+| `acceptance/acceptance-journal.json` | The held-out journal: per-attempt reservations, charges and `usageComplete`, including the failed first reference attempt. |
+| `acceptance/acceptance-journal-pre-caps.json` | The first held-out journal, archived when the arm caps were sized for the kernel's in-flight reservation; it holds the two attempts that hit their cap. |
+| `acceptance/acceptance-run.json` | The campaign's per-arm status and charge summary. |
+| `acceptance/final-<arm>.json` | One arm's report: ratings, token counts, tool counters and per-question rows (ids, scores, counters, booleans). |
+| `acceptance/acceptance-comparisons.json` | The Task 9 verdict and comparisons: the three primary checks, the paired per-ability diffs, the full-context substitution verdict, arm costs and the write-side cost. |
 | `ms-diagnostics-x.json` | Multi-session recall diagnostic on the `fabric-x` write side of `screen-ms-v1` (Task 3): per needed round a rank and a lexical-reachability flag, all-needed at 10/20/uncapped, shipped passive coverage, and stage counts with `partial_evidence`. |
 | `screen-a/screen-a-manifest.json` | Stage A manifest (Task 7): the owner's gate 1 cap verbatim, the frozen `screen-ms-v1` ids, the `fabric-x` writer, the two read arms, `T_dev`, and the write-side key. |
 | `screen-a/spend-journal.json` | Stage A journal: per-attempt reservations, charges and `usageComplete`. |
@@ -135,3 +141,80 @@ Each `rows[]` entry is one question: `neededRounds`, `sessionsSpanned`, `allNeed
 (`"10"`, `"20"`, `"uncapped"`), `allNeededVisible`, `stage`, and `rounds[]` — one entry per needed
 round with its 1-based uncapped question-only rank (`null` = outside the top-32 candidates), its
 `reachable` flag, and `activeFacts` / `supersededFacts` counts. No other field can carry text.
+
+## Live held-out v3 acceptance (Task 9)
+
+Stage A selected `fabric-x-tools`, so Task 8 was not needed and this is the one live run of that
+configuration on ids nobody had read: held-out v3 (100 ids: multi-session 40, knowledge-update 20,
+temporal-reasoning 20, single-session-user 14, single-session-assistant 6), labels on, OpenCode Go
+`mimo-v2.5`, temperature 0, max output 4,096, harness protocol version 2.
+
+The manifest is built from `screen-a/verdict.json`, never from a typed arm name, and refuses to build
+if the product hash differs from Stage A's `dbce0697…`: the run is the selected configuration or it is
+not run at all.
+
+### Spend
+
+| Attempt | Charge | Note |
+| --- | ---: | --- |
+| Stage A (Task 7, including its archived attempt) | 2,776,286 | Prior use recorded in the manifest. |
+| First held-out attempt | 5,516,610 | `x` stopped after 4 questions and `x-tools` after 79: both caps were sized from spend instead of the kernel's 250k-per-request in-flight reservation. |
+| Accepted held-out campaign | 14,923,447 | `x` 637,815, `x-tools` 2,966,891, `full` 11,295,518; the writer is local and free. |
+| **Gate 1 total** | **23,216,343 / 34,000,000** | Ceilings: 26,000,000 for this campaign (read caps 3M + 9M + 14M). |
+
+The first attempt is kept as reliability evidence, not reused: its journal is archived under
+`acceptance-journal-pre-caps.json` and its `x-tools` report (2,114,975 verified but usage-incomplete)
+is not scored. Rerunning the reference after the caps changed costs one arm, not the campaign, because
+the manifest fingerprint (ceiling and caps) did not change when only the arm's concurrency did.
+
+### Primary criteria (from the manifest)
+
+| Check | Target | Measured |
+| --- | --- | --- |
+| Multi-session, selected arm | ≥ 24/40 | **28/40** |
+| Paired multi-session improvement vs `fabric-x` | diff > 0, 95% CI lower bound > 0 | **+0.45, CI [0.275, 0.625]** (McNemar p = 2e-4) |
+| Non-regression | KU ≤ 2, TR ≤ 2, SSU ≤ 1, SSA ≤ 1 lost; overall diff ≥ 0 | **gained 2, 5, 1, 1; overall +0.27 (CI [0.17, 0.37])** |
+
+All three hold, so the plan's **multi-session success** criterion is met and the verdict is
+`met: true` with no hand-set value.
+
+| Arm | Correct | Input tokens | Tokens/question | Tool calls | Run-limit |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `x` (`fabric-x`, passive) | 49/100 | 637,815 | 6,378 | 0 | 0 |
+| `x-tools` (`fabric-x-tools`, selected) | **76/100** | 2,966,891 | 29,669 | 152 | 2% |
+| `full` (whole history) | 69/100 | 11,295,518 | 112,955 | 0 | 0 |
+
+| Ability | `x` | `x-tools` | `full` |
+| --- | ---: | ---: | ---: |
+| Multi-session / 40 | 10 | **28** | 23 |
+| Knowledge update / 20 | 15 | 17 | 16 |
+| Temporal reasoning / 20 | 7 | 12 | 11 |
+| Single-session user / 14 | 12 | 13 | 13 |
+| Single-session assistant / 6 | 5 | 6 | 6 |
+
+Against full context the selected arm is **+0.07 overall (95% CI [-0.03, 0.17])**, inside the
+3-point non-inferiority margin at the CI's lower bound, so the substitution verdict is
+`full-context-substitute`: 76/100 at 26% of the input tokens of the 112,955-token full-context
+question.
+
+### Attribution
+
+The held-out run keeps its judge-only injection labels, so injection precision is comparable with
+188.9: irrelevant block rate 0.810 → 0.777, cited-id rate 0.141 → 0.202. The tool channel is the
+lever: 152 tool calls and 100 recall calls over 100 questions, `evidenceRoundCoverage` 0.628 → 0.834,
+`retrievalRecallAtK` 92 → 96 of 100, and `evidenceAllRequired` 52 → 76.
+
+Conditional accuracy (all needed evidence visible versus not):
+
+| Arm | Visible | Not visible |
+| --- | ---: | ---: |
+| `x` | 44/52 (85%) | 5/42 (12%) |
+| `x-tools` | 68/76 (89%) | 8/19 (42%) |
+
+No stage table is produced for v3: the multi-session diagnostic refuses the held-out draw by design
+(it reads gold evidence), and this plan does not weaken that guard after the fact. The report-level
+counters above are the attribution the run itself supports.
+
+Wall time: `x` 40 min, `x-tools` 53 min, `full` 43 min, 2 h 17 min of read side in sequence against
+the 2-hour limit — the overrun is the full-context arm at the probed concurrency 4, not the selected
+arm's 53 minutes.

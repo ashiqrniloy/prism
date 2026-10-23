@@ -662,6 +662,41 @@ question, so `T_dev` was met: `verdict.json` selects `x-tools`, Stage B is skipp
 failures are `partial_evidence` 17 with 3 lexically unreachable rounds. The gate-1 cap, the target and
 the two arms are frozen in `docs/_evidence/memory-bench/188.10/screen-a/screen-a-manifest.json`.
 
+## Live held-out acceptance (plan 188.10 Task 9)
+
+One paid run of Stage A's selected configuration on ids nobody had read. The manifest is built from
+`screen-a/verdict.json` and refused when the product hash differs from Stage A's, so the run is the
+screened configuration or it does not happen.
+
+```sh
+timeout 60 bun scripts/memory-bench/campaign.mjs --acceptance-188.10 --manifest
+set -a; . ~/.config/prism/live.env; set +a
+timeout 14400 bun scripts/memory-bench/campaign.mjs --acceptance-188.10
+timeout 300 bun scripts/memory-bench/acceptance-report.mjs --plan 188.10
+```
+
+- **Arms.** `write-x` (local, LLM-free exchange snapshot over the 100 held-out v3 ids), `x`
+  (`fabric-x`, the passive reference, reading that snapshot), `x-tools` (`fabric-x-tools`, the
+  selected arm on the same snapshot) and `full` (whole history, run fresh — no v3 reference exists).
+  Labels are on, because injection precision is part of a held-out report.
+- **Pre-registered criteria, held in the manifest as data.** Multi-session ≥ 24/40; a paired
+  multi-session improvement over `fabric-x` with a 95% CI lower bound above 0; non-regression (net
+  loss ≤ 2 for knowledge-update and temporal-reasoning, ≤ 1 for single-session-user and
+  single-session-assistant) and an overall paired difference ≥ 0. `acceptance18810Verdict` applies
+  exactly these, and `--plan 188.10` writes the verdict with the comparisons.
+- **Caps are reservation pools, not spend targets.** The kernel reserves 250,000 tokens per request
+  in flight, and a labelled question holds an answer plus its label and judge calls. Size a cap for
+  that headroom: at concurrency 4 a 1M passive cap died after 4 questions and a 5M tools cap after
+  79. The accepted manifest uses 3M (`x`, concurrency 2), 9M (`x-tools`) and 14M (`full`).
+- **Resume.** A completed attempt is reused, so a failed arm can be rerun alone. Changing only a
+  job's `concurrency` keeps the journal's manifest fingerprint and resumes; changing a cap or the
+  ceiling does not, and the old journal is archived beside the new one (Task 7's rule).
+
+Measured (2026-10-23, gate 1): `x` 49/100 (637,815 tokens), `x-tools` **76/100** (2,966,891, 152 tool
+calls), `full` 69/100 (11,295,518). Multi-session 10 → 28 of 40 with a paired +0.45 (CI 0.275..0.625),
+no ability regressed, and the selected arm is +0.07 over full context (CI -0.03..0.17): a
+full-context substitute at 26% of the tokens. Gate 1 total 23,216,343 of 34,000,000.
+
 ## Statistics
 
 ```sh

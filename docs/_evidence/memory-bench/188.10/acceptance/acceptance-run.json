@@ -1,0 +1,84 @@
+{
+  "kind": "188.10-heldout-acceptance-run",
+  "journal": {
+    "campaignId": "campaign-3f6f3702c4e9",
+    "status": "finished",
+    "ceiling": 26000000,
+    "spend": 14923447,
+    "attempts": [
+      {
+        "attemptId": "accept18810-write-x@1",
+        "jobId": "accept18810-write-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "accept18810-x@1",
+        "jobId": "accept18810-x",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 23223
+      },
+      {
+        "attemptId": "accept18810-x-tools@1",
+        "jobId": "accept18810-x-tools",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 9500000,
+        "confirmedInputTokens": 2966891
+      },
+      {
+        "attemptId": "accept18810-full@1",
+        "jobId": "accept18810-full",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 14500000,
+        "confirmedInputTokens": 11295518
+      },
+      {
+        "attemptId": "accept18810-x@2",
+        "jobId": "accept18810-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 637815
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "accept18810-write-x",
+      "attemptId": "accept18810-write-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "accept18810-x",
+      "attemptId": "accept18810-x@2",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 637815
+    },
+    {
+      "id": "accept18810-x-tools",
+      "attemptId": "accept18810-x-tools@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 2966891
+    },
+    {
+      "id": "accept18810-full",
+      "attemptId": "accept18810-full@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 11295518
+    }
+  ]
+}

@@ -674,6 +674,38 @@ then exchanges, each group in time order**, and selection stays by rank; a fact 
 linked exchange only when `exchange` is among the requested kinds, so naming kinds is also how a
 caller asks for the detail.`memory.recall` with `kinds: ["fact"]` returns the fact alone.
 
+### Recommended conversational profile
+
+The exchange archive plus passive injection plus the read tools is the configuration that passed a
+live held-out acceptance for conversational recall, and it is **opt-in**: the measured arm archives
+exchange text, which is a storage decision no quality result should make for a host on its own.
+
+```ts
+fabric({
+  exchanges: {},                                   // archive every completed turn
+  inject: { query: "task", kinds: ["exchange"] },  // passive block: the best exchanges, by rank
+  semantic: true,                                  // leaves memory.recall / memory.read visible
+  promote: false,                                  // no extractor call, so no per-session model cost
+})
+```
+
+Measured on 100 unused LongMemEval-S ids (2026-10-23, `mimo-v2.5`, temperature 0), against the same
+store with the tools hidden and against a whole-history prompt:
+
+| | Passive only | Passive + tools | Whole history |
+| --- | ---: | ---: | ---: |
+| Judge accuracy | 49/100 | **76/100** | 69/100 |
+| Multi-session | 10/40 | **28/40** | 23/40 |
+| Input tokens per question | 6,378 | 29,669 | 112,955 |
+| Tool calls per question | 0 | 1.5 | 0 |
+
+Passive-plus-tools is a full-context substitute at 26% of the tokens, and the gain comes from the
+agent pulling rounds the block cut (evidence coverage 0.63 → 0.83), not from a larger injection. The
+price is the extra steps: about 3.5k injected tokens per turn and 1.5 tool calls per question, with
+2% of questions hitting the eight-turn limit. Facts (`promote`) were not needed for this result; the
+`fabric-xc` arm that extracts them was not selected. Full evidence:
+`docs/_evidence/memory-bench/188.10/README.md`.
+
 ## Memory directory
 
 With passive injection off by default, the agent still needs to know what long-term memory holds

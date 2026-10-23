@@ -1,0 +1,839 @@
+{
+  "schemaVersion": 1,
+  "kind": "188.10-heldout-acceptance",
+  "plan": "188.10",
+  "metricVersion": 2,
+  "protocolVersion": 2,
+  "manifestHash": "35292d86bcad5807a3cfe1af8164d48fd3fea3a347446dc6737549a6dda85cba",
+  "selection": {
+    "arm": "x-tools",
+    "skipStageB": true,
+    "path": "docs/_evidence/memory-bench/188.10/screen-a/verdict.json",
+    "fileHash": "53e2c642ae7ed5cbde74003b15ef320f4ee054bb57ba5dcf40432387afc1e9e0"
+  },
+  "heldoutV3": {
+    "subset": "heldout-v3",
+    "draw": "SHA-256(\"prism-188.10-memory-bench-v3:\" + id), ascending; 40 multi-session, 20 knowledge-update, 20 temporal-reasoning, 14 single-session-user, 6 single-session-assistant",
+    "salt": "prism-188.10-memory-bench-v3",
+    "datasetSha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "counts": {
+      "multi-session": 40,
+      "knowledge-update": 20,
+      "temporal-reasoning": 20,
+      "single-session-user": 14,
+      "single-session-assistant": 6
+    },
+    "idsHash": "6e948f0ef4007902f540c697987de1c6d4cce8d46b6b6706a712905344b85c60",
+    "fileSha256": "5cdbd6722ed71918075e256003abc36f9d3cf4b1b7134fc0cf735eece4a6df29",
+    "screenOverlap": 0
+  },
+  "criteria": {
+    "multiSessionCorrect": 24,
+    "multiSessionTotal": 40,
+    "maxAbilityLoss": {
+      "knowledge-update": 2,
+      "temporal-reasoning": 2,
+      "single-session-user": 1,
+      "single-session-assistant": 1
+    },
+    "minOverallDiff": 0
+  },
+  "nonInferiorityMargin": 0.03,
+  "incomplete": false,
+  "missing": [],
+  "reliability": {
+    "requiredJobs": 4,
+    "completedJobs": 4,
+    "attempts": 5,
+    "failedAttempts": 1,
+    "usageIncompleteAttempts": 0
+  },
+  "arms": {
+    "write-x": {
+      "status": "completed",
+      "usageComplete": true,
+      "answers": 100,
+      "correct": 0,
+      "runLimitRate": 0,
+      "inputTokens": 0,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "injectedContextTokens": 0,
+      "injectionPrecision": {
+        "granularity": "block",
+        "tokensPerTurn": 0,
+        "irrelevantRate": null,
+        "citedIdRate": null,
+        "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+      },
+      "toolCalls": 0,
+      "toolCallsPerQuestion": 0,
+      "recallCalls": 0,
+      "byAbility": {
+        "multi-session": {
+          "n": 40,
+          "correct": 0,
+          "accuracy": 0,
+          "runLimitRate": 0
+        },
+        "knowledge-update": {
+          "n": 20,
+          "correct": 0,
+          "accuracy": 0,
+          "runLimitRate": 0
+        },
+        "temporal-reasoning": {
+          "n": 20,
+          "correct": 0,
+          "accuracy": 0,
+          "runLimitRate": 0
+        },
+        "single-session-user": {
+          "n": 14,
+          "correct": 0,
+          "accuracy": 0,
+          "runLimitRate": 0
+        },
+        "single-session-assistant": {
+          "n": 6,
+          "correct": 0,
+          "accuracy": 0,
+          "runLimitRate": 0
+        }
+      },
+      "tokensPerQuestion": 0,
+      "timing": {
+        "wallMs": 36068,
+        "concurrency": {
+          "initial": 4,
+          "active": 4,
+          "floor": 1
+        },
+        "questions": {
+          "n": 100,
+          "wallMs": {
+            "p50": 1458,
+            "p95": 1744.3,
+            "mean": 1388.8
+          }
+        },
+        "roles": {},
+        "calls": 0
+      }
+    },
+    "x": {
+      "status": "completed",
+      "usageComplete": true,
+      "answers": 100,
+      "correct": 49,
+      "runLimitRate": 0,
+      "inputTokens": 637815,
+      "cacheReadTokens": 8192,
+      "outputTokens": 84834,
+      "injectedContextTokens": 361439,
+      "injectionPrecision": {
+        "granularity": "block",
+        "tokensPerTurn": 3764.9895833333335,
+        "irrelevantRate": 0.8101910828025478,
+        "citedIdRate": 0.14098837209302326,
+        "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+      },
+      "toolCalls": 0,
+      "toolCallsPerQuestion": 0,
+      "recallCalls": 99,
+      "byAbility": {
+        "multi-session": {
+          "n": 40,
+          "correct": 10,
+          "accuracy": 0.25,
+          "runLimitRate": 0
+        },
+        "knowledge-update": {
+          "n": 20,
+          "correct": 15,
+          "accuracy": 0.75,
+          "runLimitRate": 0
+        },
+        "temporal-reasoning": {
+          "n": 20,
+          "correct": 7,
+          "accuracy": 0.35,
+          "runLimitRate": 0
+        },
+        "single-session-user": {
+          "n": 14,
+          "correct": 12,
+          "accuracy": 0.8571428571428571,
+          "runLimitRate": 0
+        },
+        "single-session-assistant": {
+          "n": 6,
+          "correct": 5,
+          "accuracy": 0.8333333333333334,
+          "runLimitRate": 0
+        }
+      },
+      "tokensPerQuestion": 6378,
+      "timing": {
+        "wallMs": 2421008.9,
+        "concurrency": {
+          "initial": 2,
+          "active": 2,
+          "floor": 1
+        },
+        "questions": {
+          "n": 100,
+          "wallMs": {
+            "p50": 45433.5,
+            "p95": 97192.5,
+            "mean": 47943.4
+          }
+        },
+        "roles": {
+          "injection-label": {
+            "calls": 761,
+            "firstByteMs": {
+              "p50": 5545.4,
+              "p95": 20304.7,
+              "mean": 8047.1
+            },
+            "totalMs": {
+              "p50": 5545.4,
+              "p95": 20304.7,
+              "mean": 8047.1
+            }
+          },
+          "judge": {
+            "calls": 857,
+            "firstByteMs": {
+              "p50": 3527.8,
+              "p95": 14116.4,
+              "mean": 5464
+            },
+            "totalMs": {
+              "p50": 3527.8,
+              "p95": 14116.4,
+              "mean": 5464
+            }
+          },
+          "solver": {
+            "calls": 96,
+            "firstByteMs": {
+              "p50": 1880.9,
+              "p95": 11892.9,
+              "mean": 3331
+            },
+            "totalMs": {
+              "p50": 5583.5,
+              "p95": 13368.8,
+              "mean": 6416.1
+            }
+          }
+        },
+        "calls": 1714
+      }
+    },
+    "x-tools": {
+      "status": "completed",
+      "usageComplete": true,
+      "answers": 100,
+      "correct": 76,
+      "runLimitRate": 0.02,
+      "inputTokens": 2966891,
+      "cacheReadTokens": 965504,
+      "outputTokens": 188293,
+      "injectedContextTokens": 773015,
+      "injectionPrecision": {
+        "granularity": "block",
+        "tokensPerTurn": 3595.4186046511627,
+        "irrelevantRate": 0.7767379679144385,
+        "citedIdRate": 0.2020573108008817,
+        "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+      },
+      "toolCalls": 152,
+      "toolCallsPerQuestion": 1.52,
+      "recallCalls": 100,
+      "byAbility": {
+        "multi-session": {
+          "n": 40,
+          "correct": 28,
+          "accuracy": 0.7,
+          "runLimitRate": 0
+        },
+        "knowledge-update": {
+          "n": 20,
+          "correct": 17,
+          "accuracy": 0.85,
+          "runLimitRate": 0
+        },
+        "temporal-reasoning": {
+          "n": 20,
+          "correct": 12,
+          "accuracy": 0.6,
+          "runLimitRate": 0.1
+        },
+        "single-session-user": {
+          "n": 14,
+          "correct": 13,
+          "accuracy": 0.9285714285714286,
+          "runLimitRate": 0
+        },
+        "single-session-assistant": {
+          "n": 6,
+          "correct": 6,
+          "accuracy": 1,
+          "runLimitRate": 0
+        }
+      },
+      "tokensPerQuestion": 29669,
+      "timing": {
+        "wallMs": 3180029.8,
+        "concurrency": {
+          "initial": 4,
+          "active": 4,
+          "floor": 1
+        },
+        "questions": {
+          "n": 100,
+          "wallMs": {
+            "p50": 102367.2,
+            "p95": 275453.3,
+            "mean": 124650
+          }
+        },
+        "roles": {
+          "injection-label": {
+            "calls": 1496,
+            "firstByteMs": {
+              "p50": 13278.5,
+              "p95": 42585.3,
+              "mean": 17481.8
+            },
+            "totalMs": {
+              "p50": 13278.5,
+              "p95": 42585.3,
+              "mean": 17481.8
+            }
+          },
+          "judge": {
+            "calls": 1594,
+            "firstByteMs": {
+              "p50": 4446,
+              "p95": 19621.9,
+              "mean": 7187.3
+            },
+            "totalMs": {
+              "p50": 4446,
+              "p95": 19621.9,
+              "mean": 7187.3
+            }
+          },
+          "solver": {
+            "calls": 215,
+            "firstByteMs": {
+              "p50": 2540.8,
+              "p95": 9754.6,
+              "mean": 3676
+            },
+            "totalMs": {
+              "p50": 6516.2,
+              "p95": 16717.2,
+              "mean": 7953
+            }
+          }
+        },
+        "calls": 3305
+      }
+    },
+    "full": {
+      "status": "completed",
+      "usageComplete": true,
+      "answers": 100,
+      "correct": 69,
+      "runLimitRate": 0,
+      "inputTokens": 11295518,
+      "cacheReadTokens": 320,
+      "outputTokens": 31574,
+      "injectedContextTokens": 0,
+      "injectionPrecision": {
+        "granularity": "block",
+        "tokensPerTurn": 0,
+        "irrelevantRate": null,
+        "citedIdRate": null,
+        "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+      },
+      "toolCalls": 0,
+      "toolCallsPerQuestion": 0,
+      "recallCalls": 0,
+      "byAbility": {
+        "multi-session": {
+          "n": 40,
+          "correct": 23,
+          "accuracy": 0.575,
+          "runLimitRate": 0
+        },
+        "knowledge-update": {
+          "n": 20,
+          "correct": 17,
+          "accuracy": 0.85,
+          "runLimitRate": 0
+        },
+        "temporal-reasoning": {
+          "n": 20,
+          "correct": 10,
+          "accuracy": 0.5,
+          "runLimitRate": 0
+        },
+        "single-session-user": {
+          "n": 14,
+          "correct": 13,
+          "accuracy": 0.9285714285714286,
+          "runLimitRate": 0
+        },
+        "single-session-assistant": {
+          "n": 6,
+          "correct": 6,
+          "accuracy": 1,
+          "runLimitRate": 0
+        }
+      },
+      "tokensPerQuestion": 112955,
+      "timing": {
+        "wallMs": 2601701.6,
+        "concurrency": {
+          "initial": 4,
+          "active": 4,
+          "floor": 1
+        },
+        "questions": {
+          "n": 100,
+          "wallMs": {
+            "p50": 85960,
+            "p95": 235661.9,
+            "mean": 103111.8
+          }
+        },
+        "roles": {
+          "judge": {
+            "calls": 100,
+            "firstByteMs": {
+              "p50": 2725.6,
+              "p95": 10253.8,
+              "mean": 4874.8
+            },
+            "totalMs": {
+              "p50": 2725.6,
+              "p95": 10253.8,
+              "mean": 4874.8
+            }
+          },
+          "solver": {
+            "calls": 100,
+            "firstByteMs": {
+              "p50": 12049.9,
+              "p95": 193013.1,
+              "mean": 35749.1
+            },
+            "totalMs": {
+              "p50": 18787.1,
+              "p95": 195609.3,
+              "mean": 41009
+            }
+          }
+        },
+        "calls": 200
+      }
+    }
+  },
+  "comparison": {
+    "baseline": "x",
+    "candidate": "x-tools",
+    "multiSession": {
+      "n": 40,
+      "denominator": 40,
+      "aOnly": 1,
+      "bOnly": 19,
+      "diff": 0.45,
+      "ci95": [
+        0.275,
+        0.625
+      ],
+      "p": 0.00019998000199980003,
+      "rawMeans": {
+        "a": 0.25,
+        "b": 0.7
+      },
+      "improvementDelta": 0.44999999999999996,
+      "metric": "multi-session",
+      "metricVersion": 2,
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher",
+      "clusters": 40,
+      "clusterUnit": "row",
+      "method": "paired-cluster-signflip",
+      "power": 1,
+      "powerAssumptions": {
+        "method": "paired-cluster-signflip-simulation",
+        "icc": 1,
+        "clusterSize": 1,
+        "clusters": 40,
+        "alpha": 0.05,
+        "simulations": 200,
+        "independentArms": false
+      },
+      "confirmatory": true,
+      "pHolm": 0.000999900009999
+    },
+    "overall": {
+      "n": 100,
+      "denominator": 100,
+      "aOnly": 3,
+      "bOnly": 30,
+      "diff": 0.27,
+      "ci95": [
+        0.17,
+        0.37
+      ],
+      "p": 0.00009999000099990002,
+      "rawMeans": {
+        "a": 0.49,
+        "b": 0.76
+      },
+      "improvementDelta": 0.27,
+      "metric": "overall",
+      "metricVersion": 2,
+      "definition": "overall judge accuracy across abilities",
+      "unit": "proportion",
+      "direction": "higher",
+      "clusters": 100,
+      "clusterUnit": "row",
+      "method": "paired-cluster-signflip",
+      "power": 1,
+      "powerAssumptions": {
+        "method": "paired-cluster-signflip-simulation",
+        "icc": 1,
+        "clusterSize": 1,
+        "clusters": 100,
+        "alpha": 0.05,
+        "simulations": 200,
+        "independentArms": false
+      },
+      "confirmatory": true,
+      "pHolm": 0.00009999000099990002
+    },
+    "byAbility": {
+      "knowledge-update": {
+        "n": 20,
+        "denominator": 20,
+        "aOnly": 1,
+        "bOnly": 3,
+        "diff": 0.1,
+        "ci95": [
+          -0.1,
+          0.3
+        ],
+        "p": 0.625,
+        "rawMeans": {
+          "a": 0.75,
+          "b": 0.85
+        },
+        "improvementDelta": 0.09999999999999998,
+        "metric": "knowledge-update",
+        "metricVersion": 2,
+        "definition": "fraction of knowledge-update answers accepted by the configured judge",
+        "unit": "proportion",
+        "direction": "higher",
+        "clusters": 20,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 1,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 1,
+          "clusters": 20,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": true,
+        "pHolm": 1
+      },
+      "temporal-reasoning": {
+        "n": 20,
+        "denominator": 20,
+        "aOnly": 1,
+        "bOnly": 6,
+        "diff": 0.25,
+        "ci95": [
+          0,
+          0.5
+        ],
+        "p": 0.125,
+        "rawMeans": {
+          "a": 0.35,
+          "b": 0.6
+        },
+        "improvementDelta": 0.25,
+        "metric": "temporal-reasoning",
+        "metricVersion": 2,
+        "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+        "unit": "proportion",
+        "direction": "higher",
+        "clusters": 20,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 1,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 1,
+          "clusters": 20,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": true,
+        "pHolm": 0.5
+      },
+      "single-session-user": {
+        "n": 14,
+        "denominator": 14,
+        "aOnly": 0,
+        "bOnly": 1,
+        "diff": 0.07142857142857142,
+        "ci95": [
+          0,
+          0.21428571428571427
+        ],
+        "p": 1,
+        "rawMeans": {
+          "a": 0.8571428571428571,
+          "b": 0.9285714285714286
+        },
+        "improvementDelta": 0.07142857142857151,
+        "metric": "single-session-user",
+        "metricVersion": 2,
+        "definition": "fraction of single-session-user answers accepted by the configured judge",
+        "unit": "proportion",
+        "direction": "higher",
+        "clusters": 14,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 1,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 1,
+          "clusters": 14,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": true,
+        "pHolm": 1
+      },
+      "single-session-assistant": {
+        "n": 6,
+        "denominator": 6,
+        "aOnly": 0,
+        "bOnly": 1,
+        "diff": 0.16666666666666666,
+        "ci95": [
+          0,
+          0.5
+        ],
+        "p": 1,
+        "rawMeans": {
+          "a": 0.8333333333333334,
+          "b": 1
+        },
+        "improvementDelta": 0.16666666666666663,
+        "metric": "single-session-assistant",
+        "metricVersion": 2,
+        "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+        "unit": "proportion",
+        "direction": "higher",
+        "clusters": 6,
+        "clusterUnit": "row",
+        "method": "paired-cluster-signflip",
+        "power": 1,
+        "powerAssumptions": {
+          "method": "paired-cluster-signflip-simulation",
+          "icc": 1,
+          "clusterSize": 1,
+          "clusters": 6,
+          "alpha": 0.05,
+          "simulations": 200,
+          "independentArms": false
+        },
+        "confirmatory": false,
+        "pHolm": 1
+      }
+    }
+  },
+  "substitution": {
+    "baseline": "full",
+    "candidate": "x-tools",
+    "overall": {
+      "n": 100,
+      "denominator": 100,
+      "aOnly": 9,
+      "bOnly": 16,
+      "diff": 0.07,
+      "ci95": [
+        -0.03,
+        0.17
+      ],
+      "p": 0.22617738226177383,
+      "rawMeans": {
+        "a": 0.69,
+        "b": 0.76
+      },
+      "improvementDelta": 0.07000000000000006,
+      "metric": "overall",
+      "metricVersion": 2,
+      "definition": "overall judge accuracy across abilities",
+      "unit": "proportion",
+      "direction": "higher",
+      "clusters": 100,
+      "clusterUnit": "row",
+      "method": "paired-cluster-signflip",
+      "power": 1,
+      "powerAssumptions": {
+        "method": "paired-cluster-signflip-simulation",
+        "icc": 1,
+        "clusterSize": 1,
+        "clusters": 100,
+        "alpha": 0.05,
+        "simulations": 200,
+        "independentArms": false
+      },
+      "confirmatory": true,
+      "pHolm": 0.22617738226177383
+    },
+    "verdict": "full-context-substitute"
+  },
+  "writeCost": {
+    "inputTokens": 0,
+    "sessions": 4554,
+    "questions": 100,
+    "perSession": 0,
+    "perQuestion": 0,
+    "failedConsolidations": 0,
+    "wallMs": 36068
+  },
+  "verdict": {
+    "kind": "188.10-heldout-verdict",
+    "criteria": {
+      "multiSessionCorrect": 24,
+      "multiSessionTotal": 40,
+      "maxAbilityLoss": {
+        "knowledge-update": 2,
+        "temporal-reasoning": 2,
+        "single-session-user": 1,
+        "single-session-assistant": 1
+      },
+      "minOverallDiff": 0
+    },
+    "checks": [
+      {
+        "id": "multi-session-absolute",
+        "ok": true,
+        "detail": "multi-session 28/40, target 24/40"
+      },
+      {
+        "id": "multi-session-paired-improvement",
+        "ok": true,
+        "detail": "diff 0.4500, 95% CI [0.2750, 0.6250]"
+      },
+      {
+        "id": "non-regression",
+        "ok": true,
+        "detail": "overall paired diff 0.2700 (needs >= 0)"
+      }
+    ],
+    "abilityLosses": {
+      "knowledge-update": {
+        "loss": -2,
+        "limit": 2,
+        "ok": true
+      },
+      "temporal-reasoning": {
+        "loss": -5,
+        "limit": 2,
+        "ok": true
+      },
+      "single-session-user": {
+        "loss": -1,
+        "limit": 1,
+        "ok": true
+      },
+      "single-session-assistant": {
+        "loss": -1,
+        "limit": 1,
+        "ok": true
+      }
+    },
+    "counts": {
+      "selected": {
+        "correct": 76,
+        "total": 100,
+        "perAbility": {
+          "multi-session": {
+            "correct": 28,
+            "total": 40
+          },
+          "knowledge-update": {
+            "correct": 17,
+            "total": 20
+          },
+          "temporal-reasoning": {
+            "correct": 12,
+            "total": 20
+          },
+          "single-session-user": {
+            "correct": 13,
+            "total": 14
+          },
+          "single-session-assistant": {
+            "correct": 6,
+            "total": 6
+          }
+        },
+        "runLimitRate": 0.02
+      },
+      "reference": {
+        "correct": 49,
+        "total": 100,
+        "perAbility": {
+          "multi-session": {
+            "correct": 10,
+            "total": 40
+          },
+          "knowledge-update": {
+            "correct": 15,
+            "total": 20
+          },
+          "temporal-reasoning": {
+            "correct": 7,
+            "total": 20
+          },
+          "single-session-user": {
+            "correct": 12,
+            "total": 14
+          },
+          "single-session-assistant": {
+            "correct": 5,
+            "total": 6
+          }
+        }
+      }
+    },
+    "met": true,
+    "multiSessionSuccess": true,
+    "reason": "all primary criteria hold"
+  },
+  "taskComplete": true
+}

@@ -923,6 +923,11 @@ test("acceptance_188_10_manifest_splits_writer_from_readers", () => {
     "both memory readers share one exchange snapshot",
   );
   assert.equal(manifest.jobs.find((job) => job.id === "accept18810-full").writeSide, undefined);
+  assert.equal(
+    manifest.jobs.find((job) => job.id === "accept18810-x").concurrency,
+    2,
+    "the label-carrying passive arm needs in-flight headroom below the probed 4",
+  );
   const writeOnly = structuredClone(manifest);
   delete writeOnly.jobs.find((job) => job.id === "accept18810-write-x").write;
   assert.throws(() => assertAcceptance18810Manifest(writeOnly), /needs its `fabric-x` writer/);

@@ -409,6 +409,42 @@ foreign context in 13/24 sessions (.542), promotion-on stopped at 9/24, and `om+
 Promotion and injection stay off; defaults are unchanged and provisional. Task 8 and 188.6 Task 6
 remain unchecked.
 
+## Plan 188.10 live held-out v3 acceptance (2026-10-23)
+
+Multi-session recall was the owner's 0.13.0 requirement, and 188.9 had left it unproven (+0.25 on
+held-out v2, Holm p 0.19). This plan measured the failure stage, added a partial-selection cue and
+instance-safe facts, and screened the cheapest lever on development data before spending the one
+fresh draw: passive injection **plus** the `memory.*` read tools over the same exchange store.
+Development moved multi-session 8/30 → 22/30 with no ability regression, so Stage B (extraction) was
+dropped and the tools arm went to held-out v3 — 100 ids never read before (multi-session 40,
+knowledge-update 20, temporal-reasoning 20, single-session-user 14, single-session-assistant 6).
+
+| Arm | Scored | Correct | Input tokens | Tokens/question | Notes |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `fabric-x` (passive) | 100/100 | 49/100 | 637,815 | 6,378 | reference, same snapshot |
+| `fabric-x-tools` (selected) | 100/100 | **76/100** | 2,966,891 | 29,669 | 152 tool calls, 2% run-limit |
+| `full` (whole history) | 100/100 | 69/100 | 11,295,518 | 112,955 | |
+
+All three pre-registered primary criteria hold: **multi-session 28/40** (target 24/40), a paired
+**+0.45** against the passive reference (95% CI 0.275..0.625, McNemar p = 2e-4), and no
+non-regression (knowledge-update +2, temporal-reasoning +5, single-session-user +1,
+single-session-assistant +1; overall +0.27, CI 0.17..0.37). Against full context the selected arm is
+**+0.07** (95% CI -0.03..0.17), inside the 3-point margin, so the substitution verdict is
+**full-context-substitute**: 76/100 at 26% of full context's input tokens.
+
+Attribution is the tool channel, not a bigger window: `evidenceRoundCoverage` 0.628 → 0.834,
+`evidenceAllRequired` 52 → 76, irrelevant injection 0.810 → 0.777, and conditional accuracy 44/52
+(85%) → 68/76 (89%) when the needed evidence is visible, 5/42 (12%) → 8/19 (42%) when it is not. No
+stage table exists for v3 because the multi-session diagnostic refuses the held-out draw by design;
+the plan did not weaken that guard after scoring.
+
+Gate 1 used **23,216,343 of 34,000,000** across Stage A, one aborted held-out attempt whose caps were
+sized from spend rather than the kernel's in-flight reservation, and the accepted campaign
+(14,923,447). The aborted attempt is kept as reliability evidence in its archived journal. Defaults
+stay off: the quality rule is met, but exchange archiving changes what the product stores by
+default, and no safety or leakage verdict covers that. `fabric-x-tools` is documented as the
+recommended **conversational profile**, opt-in.
+
 ## Plan 188.9 held-out acceptance (2026-10-23)
 
 The plan asked whether an **exchange** representation (one completed user turn plus the reply,

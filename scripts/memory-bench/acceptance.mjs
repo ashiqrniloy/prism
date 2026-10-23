@@ -1269,7 +1269,9 @@ export const ACCEPTANCE_18810_CRITERIA = {
 export const ACCEPTANCE_18810_ARMS = [
   // The local, LLM-free write side: a job with no score, never a reader and never a spend claim.
   { id: "write-x", config: "fabric-x", maxInputTokens: 1_000_000, write: true },
-  { id: "x", config: "fabric-x", maxInputTokens: 3_000_000, writeSide: "write-x" },
+  // Labels are on here, so one question holds an answer plus its label and judge calls: at
+  // concurrency 4 the passive arm needs ~3.25M in flight alone, so it runs two at a time.
+  { id: "x", config: "fabric-x", maxInputTokens: 3_000_000, writeSide: "write-x", concurrency: 2 },
   { id: "x-tools", config: "fabric-x-tools", maxInputTokens: 9_000_000, writeSide: "write-x" },
   { id: "full", config: "full", maxInputTokens: 14_000_000 },
 ];
@@ -1283,7 +1285,7 @@ export function acceptance18810Jobs() {
     config: arm.config,
     subset: ACCEPTANCE_18810_SUBSET,
     maxInputTokens: arm.maxInputTokens,
-    concurrency: ACCEPTANCE_18810_CONCURRENCY,
+    concurrency: arm.concurrency ?? ACCEPTANCE_18810_CONCURRENCY,
     // A held-out acceptance keeps its judge-only injection labels: precision is part of the evidence.
     labelInjections: "on",
     ...(arm.write ? { write: true } : {}),
@@ -1418,6 +1420,8 @@ export function assertAcceptance18810Manifest(manifest) {
     if (job.suite !== "longmemeval-s") throw new AcceptanceManifestError(`${arm.id} must run longmemeval-s`);
     if (job.subset !== ACCEPTANCE_18810_SUBSET) throw new AcceptanceManifestError(`${arm.id} must run ${ACCEPTANCE_18810_SUBSET}`);
     if (job.labelInjections !== "on") throw new AcceptanceManifestError(`${arm.id} keeps its injection labels`);
+    if (!Number.isSafeInteger(job.concurrency) || job.concurrency < 1 || job.concurrency > ACCEPTANCE_18810_CONCURRENCY)
+      throw new AcceptanceManifestError(`${arm.id} concurrency must be 1..${ACCEPTANCE_18810_CONCURRENCY}`);
     if ((job.maxInputTokens ?? 0) > arm.maxInputTokens) throw new AcceptanceManifestError(`${arm.id} cap exceeds ${arm.maxInputTokens}`);
     if (arm.write) {
       if (job.write !== true) throw new AcceptanceManifestError(`${arm.id} is the writer`);
