@@ -9,7 +9,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import confirmatory from "./confirmatory.json" with { type: "json" };
 import heldoutV2 from "./heldout-v2.json" with { type: "json" };
+import heldoutV3 from "./heldout-v3.json" with { type: "json" };
 import { metricValue } from "./metrics.mjs";
+import screenMsV1 from "./screen-ms-v1.json" with { type: "json" };
 import screenV1 from "./screen-v1.json" with { type: "json" };
 import { CONFIRMATORY_MIN_CLUSTERS, holm } from "./stats.mjs";
 
@@ -1228,4 +1230,259 @@ export function assertAcceptance1889Manifest(manifest) {
   if (!manifest.fullReference?.ok) throw new AcceptanceManifestError("the full reference must be a checked reuse");
   if (!manifest.writeSideKey) throw new AcceptanceManifestError("the write side needs its cache key");
   return manifest;
+}
+
+/*
+ * Plan 188.10 Task 9: the live held-out v3 acceptance of Stage A's selected configuration. The arm
+ * comes from the Stage A verdict and the product hash must equal Stage A's, so nothing here can
+ * quietly run a different configuration on ids nobody has read. The primary criteria are data in the
+ * manifest, and the verdict is computed from them.
+ */
+export const ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE = `${ACCEPTANCE_18810_EVIDENCE}/acceptance`;
+export const ACCEPTANCE_18810_MANIFEST = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}/acceptance-manifest.json`;
+export const ACCEPTANCE_18810_JOURNAL = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}/acceptance-journal.json`;
+export const ACCEPTANCE_18810_SUMMARY = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}/acceptance-run.json`;
+export const ACCEPTANCE_18810_COMPARISONS = `${ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE}/acceptance-comparisons.json`;
+export const ACCEPTANCE_18810_LOGS = ".cache/memory-bench/188.10/acceptance";
+/** Reservation pool: `x` ~4k/question, `x-tools` ~23k/question, `full` at 188.9's held-out cap. */
+export const ACCEPTANCE_18810_CEILING = 20_000_000;
+/** Gate 1 spend before this task: the archived Stage A attempt plus the corrected campaign. */
+export const ACCEPTANCE_18810_PRIOR_RESERVATION = 2_776_286;
+export const ACCEPTANCE_18810_SUBSET = "heldout-v3";
+export const ACCEPTANCE_18810_CONCURRENCY = SCREEN_A_CONCURRENCY;
+/** Pre-registered: an absolute multi-session target, a paired improvement and explicit non-regression. */
+export const ACCEPTANCE_18810_CRITERIA = {
+  multiSessionCorrect: 24,
+  multiSessionTotal: 40,
+  maxAbilityLoss: {
+    "knowledge-update": 2,
+    "temporal-reasoning": 2,
+    "single-session-user": 1,
+    "single-session-assistant": 1,
+  },
+  minOverallDiff: 0,
+};
+export const ACCEPTANCE_18810_ARMS = [
+  // The local, LLM-free write side: a job with no score, never a reader and never a spend claim.
+  { id: "write-x", config: "fabric-x", maxInputTokens: 1_000_000, write: true },
+  { id: "x", config: "fabric-x", maxInputTokens: 1_000_000, writeSide: "write-x" },
+  { id: "x-tools", config: "fabric-x-tools", maxInputTokens: 5_000_000, writeSide: "write-x" },
+  { id: "full", config: "full", maxInputTokens: 14_000_000 },
+];
+export const ACCEPTANCE_18810_ARM_IDS = Object.fromEntries(ACCEPTANCE_18810_ARMS.map((arm) => [arm.id, `accept18810-${arm.id}`]));
+
+export function acceptance18810Jobs() {
+  return ACCEPTANCE_18810_ARMS.map((arm) => ({
+    id: ACCEPTANCE_18810_ARM_IDS[arm.id],
+    family: "quality",
+    suite: "longmemeval-s",
+    config: arm.config,
+    subset: ACCEPTANCE_18810_SUBSET,
+    maxInputTokens: arm.maxInputTokens,
+    concurrency: ACCEPTANCE_18810_CONCURRENCY,
+    // A held-out acceptance keeps its judge-only injection labels: precision is part of the evidence.
+    labelInjections: "on",
+    ...(arm.write ? { write: true } : {}),
+    ...(arm.writeSide ? { writeSide: ACCEPTANCE_18810_ARM_IDS[arm.writeSide] } : {}),
+  }));
+}
+
+/** The held-out v3 draw as recorded in Task 2, plus the overlap that would void the held-out claim. */
+export function heldoutV3Draw() {
+  const screen = new Set(Object.values(screenMsV1.abilities).flat());
+  const ids = Object.values(heldoutV3.abilities).flat();
+  return {
+    subset: ACCEPTANCE_18810_SUBSET,
+    draw: heldoutV3.draw,
+    salt: heldoutV3.seed,
+    datasetSha256: heldoutV3.datasetSha256,
+    counts: Object.fromEntries(Object.entries(heldoutV3.abilities).map(([ability, value]) => [ability, value.length])),
+    idsHash: heldoutV3.idsHash,
+    fileSha256: heldoutV3.fileHash,
+    screenOverlap: ids.filter((id) => screen.has(id)).length,
+  };
+}
+
+/**
+ * Stage A's selection, read from its committed verdict. A verdict with no winner (or a missing
+ * `skipStageB`) means Task 8 was the path taken, and this manifest must not be built.
+ */
+export function stageASelection(verdict, { path = SCREEN_A_VERDICT, fileHash = null } = {}) {
+  if (!verdict) throw new AcceptanceManifestError(`the Stage A verdict is missing: ${path}`);
+  if (verdict.kind !== "188.10-stage-a-verdict") throw new AcceptanceManifestError(`not the Stage A verdict: ${path}`);
+  if (verdict.selected !== "x-tools")
+    throw new AcceptanceManifestError(`Stage A selected ${verdict.selected ?? "nothing"}: the held-out arm must be \`x-tools\``);
+  if (verdict.next?.skipStageB !== true)
+    throw new AcceptanceManifestError("Stage A did not skip Stage B, so this is not the selected path");
+  if (verdict.next?.heldoutArm !== verdict.selected)
+    throw new AcceptanceManifestError("the Stage A verdict's held-out arm disagrees with its selection");
+  if (!fileHash) throw new AcceptanceManifestError("the Stage A verdict needs its file hash");
+  return { arm: verdict.selected, skipStageB: true, path, fileHash };
+}
+
+/** The product is frozen at Stage A's selection; a different tree is a different configuration. */
+export function frozenProduct({ productHash = null, stageAManifest } = {}) {
+  if (!stageAManifest?.productHash) throw new AcceptanceManifestError("the Stage A manifest has no product hash");
+  if (!productHash) throw new AcceptanceManifestError("the acceptance needs the current product hash");
+  if (productHash !== stageAManifest.productHash)
+    throw new AcceptanceManifestError("the product changed since Stage A: this is not the selected configuration");
+  return { hash: productHash, stageAHash: stageAManifest.productHash };
+}
+
+export function buildAcceptance18810Manifest({ harnessHash = null, product = null, selection = null, writeSideKey = null } = {}) {
+  return {
+    schemaVersion: 5,
+    kind: "188.10-heldout-acceptance",
+    gate: { cap: GATE_1_CAP, approval: GATE_1_APPROVAL, scope: "Stage A, the iteration allowance and Task 9 on the Stage A path" },
+    ceiling: ACCEPTANCE_18810_CEILING,
+    priorReservation: ACCEPTANCE_18810_PRIOR_RESERVATION,
+    provider: "opencode-go",
+    model: "mimo-v2.5",
+    judge: "opencode-go/mimo-v2.5",
+    judgeProtocol: "enum-json-v1",
+    protocolVersion: ACCEPTANCE_1888_PROTOCOL_VERSION,
+    dataset: WRITE_SIDE_DATASET,
+    sourceRevision: "working-tree",
+    selection,
+    product,
+    // Provenance only: what the harness looked like when the manifest was frozen.
+    harnessHash,
+    heldoutV3: heldoutV3Draw(),
+    criteria: ACCEPTANCE_18810_CRITERIA,
+    nonInferiorityMargin: NONINFERIORITY_MARGIN_1888,
+    concurrency: {
+      concurrency: ACCEPTANCE_18810_CONCURRENCY,
+      reason: "188.9 probe: 4 questions in flight, 0 overloads",
+    },
+    writeSideKey,
+    limitations: [
+      "Held-out v3 labels are inspected only after scoring, for stage attribution.",
+      "Preference and abstention have no fresh ids; their non-regression is Stage A's `T_dev` guard.",
+      "The `x` and `x-tools` arms read one `write-x` snapshot, so they differ only in tool visibility.",
+      "No `xc` arm runs: Stage A selected the exchange arm.",
+    ],
+    jobs: acceptance18810Jobs(),
+  };
+}
+
+export function assertAcceptance18810Manifest(manifest) {
+  if (manifest?.kind !== "188.10-heldout-acceptance") throw new AcceptanceManifestError("not the 188.10 acceptance manifest");
+  const gate = manifest.gate ?? {};
+  if (gate.cap !== GATE_1_CAP) throw new AcceptanceManifestError(`gate 1 cap must be the approved ${GATE_1_CAP}`);
+  if (gate.approval === "pending owner approval")
+    throw new AcceptanceManifestError("gate 1 cap is not owner-approved yet: no paid call may run");
+  if (typeof gate.approval !== "string" || gate.approval.length < 12)
+    throw new AcceptanceManifestError("the gate 1 approval is recorded verbatim with its date");
+  if (manifest.ceiling !== ACCEPTANCE_18810_CEILING) throw new AcceptanceManifestError(`ceiling must be ${ACCEPTANCE_18810_CEILING}`);
+  if (manifest.priorReservation !== ACCEPTANCE_18810_PRIOR_RESERVATION)
+    throw new AcceptanceManifestError(`gate 1 prior use is ${ACCEPTANCE_18810_PRIOR_RESERVATION}`);
+  if (manifest.priorReservation + manifest.ceiling > gate.cap)
+    throw new AcceptanceManifestError("the ceiling does not fit gate 1's remainder");
+  if (manifest.protocolVersion !== ACCEPTANCE_1888_PROTOCOL_VERSION)
+    throw new AcceptanceManifestError(`protocol version must be ${ACCEPTANCE_1888_PROTOCOL_VERSION}`);
+  const selection = manifest.selection ?? {};
+  if (selection.arm !== "x-tools" || selection.skipStageB !== true || !selection.path || !selection.fileHash)
+    throw new AcceptanceManifestError("Stage A's selected `x-tools` arm is not the manifest's selection");
+  if (!manifest.harnessHash) throw new AcceptanceManifestError("the acceptance needs its harness hash");
+  const product = manifest.product ?? {};
+  if (!product.hash || product.hash !== product.stageAHash)
+    throw new AcceptanceManifestError("the product is not frozen at Stage A's selection");
+  const criteria = manifest.criteria ?? {};
+  for (const [field, value] of Object.entries(ACCEPTANCE_18810_CRITERIA))
+    if (JSON.stringify(criteria[field]) !== JSON.stringify(value))
+      throw new AcceptanceManifestError(`the pre-registered criteria fix ${field}`);
+  const heldout = manifest.heldoutV3 ?? {};
+  if (heldout.subset !== ACCEPTANCE_18810_SUBSET) throw new AcceptanceManifestError(`the acceptance runs ${ACCEPTANCE_18810_SUBSET}`);
+  if (heldout.idsHash !== heldoutV3.idsHash || heldout.fileSha256 !== heldoutV3.fileHash)
+    throw new AcceptanceManifestError("the held-out v3 ids differ from the frozen draw");
+  if (heldout.screenOverlap !== 0) throw new AcceptanceManifestError("the held-out draw overlaps the development screen");
+  const counts = heldoutV3Draw().counts;
+  for (const [ability, size] of Object.entries(counts))
+    if (heldout.counts?.[ability] !== size) throw new AcceptanceManifestError(`held-out v3 ${ability} needs ${size} ids`);
+  const jobs = manifest.jobs ?? [];
+  if (jobs.length !== ACCEPTANCE_18810_ARMS.length || new Set(jobs.map((job) => job.id)).size !== jobs.length)
+    throw new AcceptanceManifestError("the acceptance runs exactly its declared arms");
+  if (jobs.some((job) => ["xc", "fabric-xc", "fabric-xc-tools"].includes(job.config)))
+    throw new AcceptanceManifestError("no `xc` job runs on the Stage A path");
+  let reads = 0;
+  const writer = jobs.find((job) => job.id === ACCEPTANCE_18810_ARM_IDS["write-x"]);
+  if (!writer?.write) throw new AcceptanceManifestError("the acceptance needs its `fabric-x` writer");
+  for (const arm of ACCEPTANCE_18810_ARMS) {
+    const job = jobs.find((item) => item.id === ACCEPTANCE_18810_ARM_IDS[arm.id]);
+    if (!job) throw new AcceptanceManifestError(`missing acceptance arm: ${arm.id}`);
+    if (job.config !== arm.config) throw new AcceptanceManifestError(`${arm.id} must be ${arm.config}`);
+    if (job.suite !== "longmemeval-s") throw new AcceptanceManifestError(`${arm.id} must run longmemeval-s`);
+    if (job.subset !== ACCEPTANCE_18810_SUBSET) throw new AcceptanceManifestError(`${arm.id} must run ${ACCEPTANCE_18810_SUBSET}`);
+    if (job.labelInjections !== "on") throw new AcceptanceManifestError(`${arm.id} keeps its injection labels`);
+    if ((job.maxInputTokens ?? 0) > arm.maxInputTokens) throw new AcceptanceManifestError(`${arm.id} cap exceeds ${arm.maxInputTokens}`);
+    if (arm.write) {
+      if (job.write !== true) throw new AcceptanceManifestError(`${arm.id} is the writer`);
+      if (job.writeSide) throw new AcceptanceManifestError(`${arm.id} writes, so it cannot also read a snapshot`);
+      continue;
+    }
+    // `full` reads no memory store; a memory arm must read the one `write-x` snapshot.
+    if (arm.writeSide && job.writeSide !== writer.id) throw new AcceptanceManifestError(`${arm.id} must reuse the \`fabric-x\` snapshot`);
+    if (!arm.writeSide && job.writeSide) throw new AcceptanceManifestError(`${arm.id} has no write side to read`);
+    reads += job.maxInputTokens ?? 0;
+  }
+  // The reads are the spend claim; the `fabric-x` write side makes no model call.
+  if (reads > manifest.ceiling) throw new AcceptanceManifestError("acceptance read caps exceed the ceiling");
+  if (!manifest.writeSideKey) throw new AcceptanceManifestError("the write side needs its cache key");
+  return manifest;
+}
+
+/**
+ * The pre-registered Task 9 verdict. All three primary criteria must hold: the absolute target, the
+ * paired multi-session improvement with a CI lower bound above zero, and per-ability non-regression
+ * plus an overall difference at or above zero.
+ */
+export function acceptance18810Verdict({ reference, arm, comparison, criteria = ACCEPTANCE_18810_CRITERIA } = {}) {
+  if (!reference || !arm) throw new AcceptanceManifestError("the verdict needs both the reference and the selected arm");
+  const base = screenArmCounts(reference);
+  const treated = screenArmCounts(arm);
+  const multiSession = treated.perAbility["multi-session"] ?? { correct: 0, total: 0 };
+  const checks = [];
+  checks.push({
+    id: "multi-session-absolute",
+    ok: multiSession.correct >= criteria.multiSessionCorrect && multiSession.total === criteria.multiSessionTotal,
+    detail: `multi-session ${multiSession.correct}/${multiSession.total}, target ${criteria.multiSessionCorrect}/${criteria.multiSessionTotal}`,
+  });
+  const paired = comparison?.["multi-session"] ?? null;
+  checks.push({
+    id: "multi-session-paired-improvement",
+    ok: Boolean(paired && paired.diff > 0 && (paired.ci95?.[0] ?? -Infinity) > 0),
+    detail: paired
+      ? `diff ${paired.diff.toFixed(4)}, 95% CI [${paired.ci95.map((value) => value.toFixed(4)).join(", ")}]`
+      : "no paired multi-session comparison",
+  });
+  const abilityLosses = {};
+  for (const [ability, limit] of Object.entries(criteria.maxAbilityLoss)) {
+    const loss = (base.perAbility[ability]?.correct ?? 0) - (treated.perAbility[ability]?.correct ?? 0);
+    abilityLosses[ability] = { loss, limit, ok: loss <= limit };
+  }
+  const regressed = Object.entries(abilityLosses)
+    .filter(([, value]) => !value.ok)
+    .map(([ability, value]) => `${ability} lost ${value.loss} > ${value.limit}`);
+  const overallDiff = comparison?.overall?.diff ?? null;
+  checks.push({
+    id: "non-regression",
+    ok: regressed.length === 0 && overallDiff !== null && overallDiff >= criteria.minOverallDiff,
+    detail: regressed.length
+      ? regressed.join("; ")
+      : `overall paired diff ${overallDiff === null ? "missing" : overallDiff.toFixed(4)} (needs >= ${criteria.minOverallDiff})`,
+  });
+  const failed = checks.filter((check) => !check.ok);
+  return {
+    kind: "188.10-heldout-verdict",
+    criteria,
+    checks,
+    abilityLosses,
+    counts: {
+      selected: { correct: treated.correct, total: treated.total, perAbility: treated.perAbility, runLimitRate: treated.runLimitRate },
+      reference: { correct: base.correct, total: base.total, perAbility: base.perAbility },
+    },
+    met: failed.length === 0,
+    multiSessionSuccess: failed.length === 0,
+    reason: failed.length ? failed.map((check) => `${check.id}: ${check.detail}`).join("; ") : "all primary criteria hold",
+  };
 }

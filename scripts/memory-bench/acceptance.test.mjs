@@ -9,14 +9,20 @@ import {
   ACCEPTANCE_1889_CEILING,
   ACCEPTANCE_1889_FULL_REPORT,
   ACCEPTANCE_1889_SCREEN_CEILING,
+  ACCEPTANCE_18810_CEILING,
+  ACCEPTANCE_18810_CRITERIA,
+  ACCEPTANCE_18810_PRIOR_RESERVATION,
+  ACCEPTANCE_18810_SUBSET,
   AcceptanceManifestError,
   ARM_1889_IDS,
   acceptance1888TaskState,
+  acceptance18810Verdict,
   armRecord1888,
   assertAcceptance1888Manifest,
   assertAcceptance1889Manifest,
   assertAcceptance1889ProbeManifest,
   assertAcceptance1889ScreenManifest,
+  assertAcceptance18810Manifest,
   assertAcceptanceManifest,
   assertScreenAManifest,
   assertScreenProfile,
@@ -24,14 +30,18 @@ import {
   buildAcceptance1889Manifest,
   buildAcceptance1889ProbeManifest,
   buildAcceptance1889ScreenManifest,
+  buildAcceptance18810Manifest,
   buildAcceptanceManifest,
   buildScreenAManifest,
   chooseConcurrency,
   defaultGate,
   findingVerdict1888,
+  frozenProduct,
   fullReferenceReuse1889,
+  GATE_1_CAP,
   HELDOUT_SUBSETS,
   heldout1888,
+  heldoutV3Draw,
   improvementVerdict,
   LIFECYCLE_ARMS,
   LIFECYCLE_SEEDS,
@@ -50,12 +60,14 @@ import {
   screenAVerdict,
   screenVerdict,
   sourceFingerprint,
+  stageASelection,
   statisticallyPowered,
   substitutionVerdict,
   validateFindingMatrix,
 } from "./acceptance.mjs";
 import { writeCostOf } from "./acceptance-report.mjs";
 import confirmatory from "./confirmatory.json" with { type: "json" };
+import { multiSessionDiagnostic } from "./retrieval-diagnostics.mjs";
 import screenV1 from "./screen-v1.json" with { type: "json" };
 import { holm } from "./stats.mjs";
 import subsets from "./subsets.json" with { type: "json" };
@@ -820,4 +832,262 @@ test("write_side_cost_reported_per_session_and_per_question", () => {
   assert.equal(cost.perQuestion, Math.round(417437 / 2));
   assert.equal(cost.failedConsolidations, 3);
   assert.equal(writeCostOf(null), null);
+});
+
+/* Plan 188.10 Task 9: held-out v3 acceptance of Stage A's selected configuration. */
+const STAGE_A_VERDICT = {
+  kind: "188.10-stage-a-verdict",
+  selected: "x-tools",
+  next: { skipStageB: true, heldoutArm: "x-tools" },
+};
+const ACCEPTANCE_MANIFEST_18810 = (overrides = {}) =>
+  buildAcceptance18810Manifest({
+    harnessHash: "a".repeat(64),
+    product: { hash: "b".repeat(64), stageAHash: "b".repeat(64) },
+    selection: { arm: "x-tools", skipStageB: true, path: "verdict.json", fileHash: "c".repeat(64) },
+    writeSideKey: "d".repeat(64),
+    ...overrides,
+  });
+
+test("acceptance_188_10_manifest_requires_v3_selected_arm_and_full", () => {
+  const manifest = ACCEPTANCE_MANIFEST_18810();
+  assert.equal(assertAcceptance18810Manifest(manifest), manifest);
+  assert.equal(manifest.kind, "188.10-heldout-acceptance");
+  assert.equal(manifest.heldoutV3.subset, ACCEPTANCE_18810_SUBSET);
+  assert.deepEqual(manifest.heldoutV3.counts, {
+    "multi-session": 40,
+    "knowledge-update": 20,
+    "temporal-reasoning": 20,
+    "single-session-user": 14,
+    "single-session-assistant": 6,
+  });
+  assert.equal(manifest.heldoutV3.screenOverlap, 0, "no development id reaches the held-out draw");
+  assert.deepEqual(
+    manifest.jobs.map((job) => job.id),
+    ["write-x", "x", "x-tools", "full"].map((arm) => `accept18810-${arm}`),
+  );
+  assert.ok(manifest.jobs.every((job) => job.subset === "heldout-v3" && job.suite === "longmemeval-s"));
+  assert.ok(
+    manifest.jobs.every((job) => job.labelInjections === "on"),
+    "a held-out report keeps injection precision",
+  );
+  assert.equal(manifest.protocolVersion, ACCEPTANCE_1888_PROTOCOL_VERSION);
+  for (const [mutate, message] of [
+    [(item) => (item.heldoutV3.idsHash = "f".repeat(64)), /differ from the frozen draw/],
+    [(item) => (item.heldoutV3.counts["multi-session"] = 30), /needs 40 ids/],
+    [(item) => item.jobs.pop(), /exactly its declared arms/],
+    [(item) => (item.jobs[3].subset = "heldout-v2"), /must run heldout-v3/],
+    [(item) => (item.jobs[1].labelInjections = "off"), /keeps its injection labels/],
+    [(item) => (item.selection.arm = "x"), /selected `x-tools` arm/],
+  ]) {
+    const copy = structuredClone(manifest);
+    mutate(copy);
+    assert.throws(() => assertAcceptance18810Manifest(copy), message);
+  }
+});
+
+test("acceptance_188_10_selection_comes_from_stage_a_verdict", () => {
+  const hash = (value) => value;
+  assert.deepEqual(stageASelection(STAGE_A_VERDICT, { path: "v.json", fileHash: hash("x") }), {
+    arm: "x-tools",
+    skipStageB: true,
+    path: "v.json",
+    fileHash: "x",
+  });
+  assert.throws(() => stageASelection(null), /verdict is missing/);
+  assert.throws(() => stageASelection({ kind: "other", selected: "x-tools" }), /not the Stage A verdict/);
+  assert.throws(() => stageASelection({ ...STAGE_A_VERDICT, selected: null }, { fileHash: "x" }), /selected nothing/);
+  assert.throws(() => stageASelection({ ...STAGE_A_VERDICT, selected: "x" }, { fileHash: "x" }), /must be `x-tools`/);
+  assert.throws(
+    () => stageASelection({ ...STAGE_A_VERDICT, next: { skipStageB: false, heldoutArm: "x-tools" } }, { fileHash: "x" }),
+    /did not skip Stage B/,
+  );
+  assert.throws(
+    () => stageASelection({ ...STAGE_A_VERDICT, next: { skipStageB: true, heldoutArm: "x" } }, { fileHash: "x" }),
+    /disagrees with its selection/,
+  );
+  assert.throws(() => stageASelection(STAGE_A_VERDICT), /needs its file hash/);
+});
+
+test("acceptance_188_10_manifest_splits_writer_from_readers", () => {
+  const manifest = ACCEPTANCE_MANIFEST_18810();
+  const writer = manifest.jobs.find((job) => job.id === "accept18810-write-x");
+  assert.equal(writer.write, true, "the writer is the only job that writes");
+  assert.equal(writer.writeSide, undefined);
+  assert.deepEqual(
+    manifest.jobs.filter((job) => job.writeSide).map((job) => [job.id, job.writeSide]),
+    [
+      ["accept18810-x", "accept18810-write-x"],
+      ["accept18810-x-tools", "accept18810-write-x"],
+    ],
+    "both memory readers share one exchange snapshot",
+  );
+  assert.equal(manifest.jobs.find((job) => job.id === "accept18810-full").writeSide, undefined);
+  const writeOnly = structuredClone(manifest);
+  delete writeOnly.jobs.find((job) => job.id === "accept18810-write-x").write;
+  assert.throws(() => assertAcceptance18810Manifest(writeOnly), /needs its `fabric-x` writer/);
+  const scoredWriter = structuredClone(manifest);
+  scoredWriter.jobs.find((job) => job.id === "accept18810-write-x").writeSide = "accept18810-write-x";
+  assert.throws(() => assertAcceptance18810Manifest(scoredWriter), /cannot also read a snapshot/);
+  const split = structuredClone(manifest);
+  split.jobs.find((job) => job.id === "accept18810-x-tools").writeSide = "accept18810-x";
+  assert.throws(() => assertAcceptance18810Manifest(split), /must reuse the `fabric-x` snapshot/);
+});
+
+test("acceptance_188_10_manifest_has_no_xc_job_on_stage_a_path", () => {
+  const manifest = ACCEPTANCE_MANIFEST_18810();
+  assert.ok(!manifest.jobs.some((job) => job.config.startsWith("fabric-xc")), "no `xc` arm was selected");
+  assert.ok(!manifest.jobs.some((job) => job.id.includes("xc")));
+  const xc = structuredClone(manifest);
+  xc.jobs[2] = { ...xc.jobs[2], config: "fabric-xc-tools" };
+  assert.throws(() => assertAcceptance18810Manifest(xc), /no `xc` job/);
+});
+
+test("acceptance_188_10_ceiling_fits_gate_1_remainder", () => {
+  const manifest = ACCEPTANCE_MANIFEST_18810();
+  assert.equal(manifest.ceiling, ACCEPTANCE_18810_CEILING);
+  assert.equal(manifest.priorReservation, ACCEPTANCE_18810_PRIOR_RESERVATION);
+  assert.ok(manifest.priorReservation + manifest.ceiling <= GATE_1_CAP, "gate 1 still covers the held-out run");
+  const reads = manifest.jobs.filter((job) => !job.write).reduce((sum, job) => sum + job.maxInputTokens, 0);
+  assert.equal(reads, manifest.ceiling, "the ceiling is the read caps' sum");
+  assert.throws(() => assertAcceptance18810Manifest({ ...manifest, ceiling: 40_000_000 }), /ceiling must be/);
+  assert.throws(() => assertAcceptance18810Manifest({ ...manifest, priorReservation: 0, ceiling: 34_000_001 }), /ceiling must be 20000000/);
+  // A different prior use or gate cannot fit the same ceiling silently.
+  assert.throws(() => assertAcceptance18810Manifest({ ...manifest, priorReservation: 4_000_001 }), /prior use is/);
+  assert.throws(
+    () => assertAcceptance18810Manifest({ ...manifest, gate: { ...manifest.gate, cap: 30_000_000 } }),
+    /cap must be the approved/,
+  );
+  for (const [arm, cap] of [
+    ["x", 1_000_001],
+    ["x-tools", 5_000_001],
+    ["full", 14_000_001],
+  ]) {
+    const copy = structuredClone(manifest);
+    const job = copy.jobs.find((item) => item.id === `accept18810-${arm}`);
+    job.maxInputTokens = cap;
+    copy.ceiling = ACCEPTANCE_18810_CEILING + cap;
+    copy.ceiling = ACCEPTANCE_18810_CEILING;
+    assert.throws(() => assertAcceptance18810Manifest(copy), /cap exceeds/);
+  }
+});
+
+test("acceptance_188_10_refuses_product_drift_from_stage_a", () => {
+  const stageA = { productHash: "b".repeat(64) };
+  assert.deepEqual(frozenProduct({ productHash: "b".repeat(64), stageAManifest: stageA }), {
+    hash: "b".repeat(64),
+    stageAHash: "b".repeat(64),
+  });
+  assert.throws(() => frozenProduct({ productHash: "e".repeat(64), stageAManifest: stageA }), /product changed since Stage A/);
+  assert.throws(() => frozenProduct({ productHash: "b".repeat(64), stageAManifest: {} }), /no product hash/);
+  assert.throws(() => frozenProduct({ stageAManifest: stageA }), /current product hash/);
+  const drifted = structuredClone(ACCEPTANCE_MANIFEST_18810());
+  drifted.product.hash = "e".repeat(64);
+  assert.throws(() => assertAcceptance18810Manifest(drifted), /not frozen at Stage A's selection/);
+});
+
+test("multi_session_target_and_non_regression_are_pre_registered", () => {
+  const manifest = ACCEPTANCE_MANIFEST_18810();
+  assert.deepEqual(manifest.criteria, ACCEPTANCE_18810_CRITERIA);
+  assert.equal(manifest.criteria.multiSessionCorrect, 24);
+  assert.equal(manifest.criteria.multiSessionTotal, 40);
+  assert.deepEqual(manifest.criteria.maxAbilityLoss, {
+    "knowledge-update": 2,
+    "temporal-reasoning": 2,
+    "single-session-user": 1,
+    "single-session-assistant": 1,
+  });
+  for (const [mutate, message] of [
+    [(item) => (item.criteria.multiSessionCorrect = 20), /fix multiSessionCorrect/],
+    [(item) => (item.criteria.maxAbilityLoss["knowledge-update"] = 5), /fix maxAbilityLoss/],
+    [(item) => (item.criteria.minOverallDiff = -0.1), /fix minOverallDiff/],
+  ]) {
+    const copy = structuredClone(manifest);
+    mutate(copy);
+    assert.throws(() => assertAcceptance18810Manifest(copy), message);
+  }
+});
+
+test("heldout_v3_unreadable_until_campaign", async () => {
+  // The diagnostic reads gold evidence, so it refuses the live draw before touching a store.
+  await assert.rejects(() => multiSessionDiagnostic({ subset: "heldout-v3", storeFrom: "/nonexistent" }), /refuse the held-out v3 draw/);
+  // A screen profile refuses it too, and the held-out subset list is the one guard both use.
+  assert.ok(HELDOUT_SUBSETS.includes(ACCEPTANCE_18810_SUBSET));
+  const draw = heldoutV3Draw();
+  assert.equal(draw.screenOverlap, 0);
+  assert.equal(draw.idsHash.length, 64);
+});
+
+test("success_verdict_requires_all_primary_criteria", () => {
+  const reference = stageAReport({
+    "multi-session": { correct: 14, total: 40 },
+    "knowledge-update": { correct: 12, total: 20 },
+    "temporal-reasoning": { correct: 12, total: 20 },
+    "single-session-user": { correct: 10, total: 14 },
+    "single-session-assistant": { correct: 4, total: 6 },
+  });
+  const arm = (multiSession, overrides = {}) =>
+    stageAReport({
+      "multi-session": { correct: multiSession, total: 40 },
+      "knowledge-update": { correct: 12, total: 20 },
+      "temporal-reasoning": { correct: 12, total: 20 },
+      "single-session-user": { correct: 10, total: 14 },
+      "single-session-assistant": { correct: 4, total: 6 },
+      ...overrides,
+    });
+  const improvement = (diff, low) => ({
+    "multi-session": { diff, ci95: [low, low + 0.2] },
+    overall: { diff: diff >= 0 ? diff : diff },
+  });
+  const met = acceptance18810Verdict({ reference, arm: arm(30), comparison: improvement(0.4, 0.15) });
+  assert.equal(met.met, true, met.reason);
+  assert.equal(met.multiSessionSuccess, true);
+  assert.deepEqual(
+    met.checks.map((check) => check.id),
+    ["multi-session-absolute", "multi-session-paired-improvement", "non-regression"],
+  );
+
+  const belowTarget = acceptance18810Verdict({ reference, arm: arm(23), comparison: improvement(0.2, 0.02) });
+  assert.equal(belowTarget.met, false);
+  assert.match(belowTarget.reason, /multi-session 23\/40, target 24\/40/);
+
+  // A positive diff whose CI straddles zero is not an improvement.
+  const unclear = acceptance18810Verdict({ reference, arm: arm(26), comparison: improvement(0.3, -0.01) });
+  assert.equal(unclear.met, false);
+  assert.match(unclear.reason, /multi-session-paired-improvement/);
+
+  // Knowledge-update may lose two, not three; the overall difference may not go negative.
+  const regressed = acceptance18810Verdict({
+    reference,
+    arm: arm(30, { "knowledge-update": { correct: 9, total: 20 } }),
+    comparison: improvement(0.2, 0.05),
+  });
+  assert.equal(regressed.met, false);
+  assert.match(regressed.reason, /knowledge-update lost 3 > 2/);
+  const overallDown = acceptance18810Verdict({
+    reference,
+    arm: arm(30),
+    comparison: { ...improvement(0.2, 0.05), overall: { diff: -0.01 } },
+  });
+  assert.equal(overallDown.met, false);
+  assert.match(overallDown.reason, /overall paired diff -0.0100/);
+
+  // A missing comparison cannot pass.
+  const missing = acceptance18810Verdict({ reference, arm: arm(30) });
+  assert.equal(missing.met, false);
+  assert.match(missing.reason, /no paired multi-session comparison/);
+  assert.throws(() => acceptance18810Verdict({ arm: arm(30) }), /needs both/);
+});
+
+test("evidence_contains_no_text_or_oracle_material", async () => {
+  // The manifest is ids, hashes, counts and criteria: no question, answer or label text.
+  const manifest = ACCEPTANCE_MANIFEST_18810();
+  const text = JSON.stringify(manifest);
+  assert.doesNotMatch(text, /"question"|"answer"|"text"|"prompt"|"gold"/);
+  const dir = await mkdtemp(join(tmpdir(), "accept18810-"));
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  const saved = JSON.parse(await Bun.file(join(dir, "manifest.json")).text());
+  assert.equal(saved.heldoutV3.idsHash, manifest.heldoutV3.idsHash);
+  assert.deepEqual(Object.keys(saved.heldoutV3.counts).sort(), Object.keys(manifest.heldoutV3.counts).sort());
 });

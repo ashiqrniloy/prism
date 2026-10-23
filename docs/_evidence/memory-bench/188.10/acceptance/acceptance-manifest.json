@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 5,
+  "kind": "188.10-heldout-acceptance",
+  "gate": {
+    "cap": 34000000,
+    "approval": "Gate 1 approved 2026-10-23: 34,000,000 tokens (Stage A, the iteration allowance, and Task 9 on the Stage A path)",
+    "scope": "Stage A, the iteration allowance and Task 9 on the Stage A path"
+  },
+  "ceiling": 20000000,
+  "priorReservation": 2776286,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "judgeProtocol": "enum-json-v1",
+  "protocolVersion": 2,
+  "dataset": "longmemeval-s@98d7416c",
+  "sourceRevision": "working-tree",
+  "selection": {
+    "arm": "x-tools",
+    "skipStageB": true,
+    "path": "docs/_evidence/memory-bench/188.10/screen-a/verdict.json",
+    "fileHash": "53e2c642ae7ed5cbde74003b15ef320f4ee054bb57ba5dcf40432387afc1e9e0"
+  },
+  "product": {
+    "hash": "dbce0697d29605f788b0685ad671ad4a435af36c37421ad9d79b03fcbfc1c7a5",
+    "stageAHash": "dbce0697d29605f788b0685ad671ad4a435af36c37421ad9d79b03fcbfc1c7a5"
+  },
+  "harnessHash": "09bb4701c6c86a2d5ec76702e2553329197fb518fe63c0bab12ad2eb4d75ffaa",
+  "heldoutV3": {
+    "subset": "heldout-v3",
+    "draw": "SHA-256(\"prism-188.10-memory-bench-v3:\" + id), ascending; 40 multi-session, 20 knowledge-update, 20 temporal-reasoning, 14 single-session-user, 6 single-session-assistant",
+    "salt": "prism-188.10-memory-bench-v3",
+    "datasetSha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "counts": {
+      "multi-session": 40,
+      "knowledge-update": 20,
+      "temporal-reasoning": 20,
+      "single-session-user": 14,
+      "single-session-assistant": 6
+    },
+    "idsHash": "6e948f0ef4007902f540c697987de1c6d4cce8d46b6b6706a712905344b85c60",
+    "fileSha256": "5cdbd6722ed71918075e256003abc36f9d3cf4b1b7134fc0cf735eece4a6df29",
+    "screenOverlap": 0
+  },
+  "criteria": {
+    "multiSessionCorrect": 24,
+    "multiSessionTotal": 40,
+    "maxAbilityLoss": {
+      "knowledge-update": 2,
+      "temporal-reasoning": 2,
+      "single-session-user": 1,
+      "single-session-assistant": 1
+    },
+    "minOverallDiff": 0
+  },
+  "nonInferiorityMargin": 0.03,
+  "concurrency": {
+    "concurrency": 4,
+    "reason": "188.9 probe: 4 questions in flight, 0 overloads"
+  },
+  "writeSideKey": "7f60cb8fe549057102f15db848fb9d279372d89f0989d5ecfb38487458b909ff",
+  "limitations": [
+    "Held-out v3 labels are inspected only after scoring, for stage attribution.",
+    "Preference and abstention have no fresh ids; their non-regression is Stage A's `T_dev` guard.",
+    "The `x` and `x-tools` arms read one `write-x` snapshot, so they differ only in tool visibility.",
+    "No `xc` arm runs: Stage A selected the exchange arm."
+  ],
+  "jobs": [
+    {
+      "id": "accept18810-write-x",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric-x",
+      "subset": "heldout-v3",
+      "maxInputTokens": 1000000,
+      "concurrency": 4,
+      "labelInjections": "on",
+      "write": true
+    },
+    {
+      "id": "accept18810-x",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric-x",
+      "subset": "heldout-v3",
+      "maxInputTokens": 1000000,
+      "concurrency": 4,
+      "labelInjections": "on",
+      "writeSide": "accept18810-write-x"
+    },
+    {
+      "id": "accept18810-x-tools",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric-x-tools",
+      "subset": "heldout-v3",
+      "maxInputTokens": 5000000,
+      "concurrency": 4,
+      "labelInjections": "on",
+      "writeSide": "accept18810-write-x"
+    },
+    {
+      "id": "accept18810-full",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "full",
+      "subset": "heldout-v3",
+      "maxInputTokens": 14000000,
+      "concurrency": 4,
+      "labelInjections": "on"
+    }
+  ]
+}

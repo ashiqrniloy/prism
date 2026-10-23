@@ -8,15 +8,22 @@ import {
   ACCEPTANCE_1889_EVIDENCE,
   ACCEPTANCE_1889_JOURNAL,
   ACCEPTANCE_1889_MANIFEST,
+  ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE,
+  ACCEPTANCE_18810_ARM_IDS,
+  ACCEPTANCE_18810_COMPARISONS,
+  ACCEPTANCE_18810_JOURNAL,
+  ACCEPTANCE_18810_MANIFEST,
   ACCEPTANCE_EVIDENCE,
   ACCEPTANCE_JOURNAL,
   ACCEPTANCE_MANIFEST,
   ARM_1888_IDS,
   ARM_1889_IDS,
   acceptance1888TaskState,
+  acceptance18810Verdict,
   armRecord1888,
   assertAcceptance1888Manifest,
   assertAcceptance1889Manifest,
+  assertAcceptance18810Manifest,
   assertAcceptanceManifest,
   findingVerdict1888,
   improvementVerdict,
@@ -541,6 +548,7 @@ async function main1888() {
 if (import.meta.main) {
   if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
   else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.9") await main1889();
+  else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.10") await main18810();
   else await main();
 }
 
@@ -754,4 +762,149 @@ async function delivery1888From(report, results) {
       notVisible: { ...strata.notVisible, accuracy: rate(strata.notVisible) },
     },
   };
+}
+
+/**
+ * Plan 188.10 Task 9: held-out v3 for the selected `x-tools` arm, paired against the passive `x`
+ * reference on the same snapshot. The primary criteria come from the manifest; the report never
+ * chooses them, and a missing arm leaves the run incomplete rather than scored.
+ */
+async function main18810() {
+  const manifest = assertAcceptance18810Manifest(JSON.parse(await readFile(ACCEPTANCE_18810_MANIFEST, "utf8")));
+  const journal = JSON.parse(await readFile(ACCEPTANCE_18810_JOURNAL, "utf8"));
+  const attempts = journal.attempts ?? [];
+  const reports = new Map();
+  const missing = [];
+  for (const job of manifest.jobs) {
+    const candidates = await reportsFor(job.id, ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE);
+    const completed = candidates.find((report) => report.status === "completed");
+    if (completed) reports.set(job.id, completed);
+    else missing.push({ id: job.id, attempts: candidates.map((report) => ({ status: report.status, inputTokens: report.inputTokens })) });
+  }
+  const arm = (name) => reports.get(ACCEPTANCE_18810_ARM_IDS[name]);
+  const record = (report) => {
+    if (!report) return null;
+    const rows = report.results ?? [];
+    return {
+      status: report.status,
+      usageComplete: report.usageComplete !== false,
+      answers: rows.length,
+      correct: rows.filter((row) => row.correct === true).length,
+      runLimitRate: rows.length ? rows.filter((row) => row.outcome === "run_limit").length / rows.length : 0,
+      inputTokens: report.inputTokens ?? 0,
+      cacheReadTokens: report.cacheReadTokens ?? 0,
+      outputTokens: report.outputTokens ?? 0,
+      injectedContextTokens: report.injectedContextTokens ?? null,
+      injectionPrecision: report.injectionPrecision ?? null,
+      toolCalls: report.toolCalls ?? null,
+      toolCallsPerQuestion: report.toolCallsPerQuestion ?? null,
+      recallCalls: report.recallCalls ?? null,
+      byAbility: byAbility1888(report),
+      tokensPerQuestion: rows.length ? Math.round((report.inputTokens ?? 0) / rows.length) : null,
+      timing: report.timing ?? null,
+    };
+  };
+  const reference = arm("x");
+  const selected = arm("x-tools");
+  const full = arm("full");
+  const comparison = reference && selected ? paired1888(reference, selected) : null;
+  const verdict = acceptance18810Verdict({ reference, arm: selected, comparison: comparison ?? {}, criteria: manifest.criteria });
+  if (!comparison) {
+    verdict.met = false;
+    verdict.multiSessionSuccess = false;
+    verdict.checks = verdict.checks.map((check) => (check.ok ? check : check));
+    verdict.reason = `incomplete arms: ${missing.map((item) => item.id).join(", ") || "no reports"}`;
+  }
+  const substitutionGroups = full && selected ? paired1888(full, selected) : null;
+  const substitution = substitutionGroups
+    ? substitutionVerdict({
+        overall: substitutionGroups.overall,
+        powered: Boolean(selected.status === "completed" && statisticallyPowered(substitutionGroups.overall)),
+      })
+    : "not-a-substitute";
+  const sortKeys = (value) =>
+    value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b))) : value;
+  const summary = {
+    schemaVersion: 1,
+    kind: "188.10-heldout-acceptance",
+    plan: "188.10",
+    metricVersion: METRIC_VERSION,
+    protocolVersion: manifest.protocolVersion,
+    manifestHash: stableHash({
+      ceiling: manifest.ceiling,
+      selection: manifest.selection,
+      product: manifest.product,
+      heldoutV3: manifest.heldoutV3.idsHash,
+      jobs: manifest.jobs.map((job) => [job.id, job.config, job.subset, job.maxInputTokens]),
+    }),
+    selection: manifest.selection,
+    heldoutV3: manifest.heldoutV3,
+    criteria: manifest.criteria,
+    nonInferiorityMargin: manifest.nonInferiorityMargin,
+    incomplete: missing.length > 0,
+    missing,
+    reliability: {
+      requiredJobs: manifest.jobs.length,
+      completedJobs: reports.size,
+      attempts: attempts.length,
+      failedAttempts: attempts.filter((attempt) => ["failed", "setup-failure", "abandoned"].includes(attempt.status)).length,
+      usageIncompleteAttempts: attempts.filter((attempt) => attempt.usageComplete === false).length,
+    },
+    arms: Object.fromEntries(["write-x", "x", "x-tools", "full"].map((name) => [name, record(arm(name))])),
+    comparison: comparison
+      ? {
+          baseline: "x",
+          candidate: "x-tools",
+          multiSession: comparison["multi-session"] ?? null,
+          overall: comparison.overall ?? null,
+          byAbility: Object.fromEntries(
+            Object.entries(comparison).filter(([ability]) => ability !== "multi-session" && ability !== "overall"),
+          ),
+        }
+      : null,
+    substitution: substitutionGroups
+      ? { baseline: "full", candidate: "x-tools", overall: substitutionGroups.overall, verdict: substitution }
+      : null,
+    writeCost: writeCostOf(arm("write-x")),
+    verdict,
+    taskComplete: !missing.length,
+  };
+  await writeFile(ACCEPTANCE_18810_COMPARISONS, `${JSON.stringify(summary, null, 2)}\n`);
+  const row = (label, groups) =>
+    Object.entries(sortKeys(groups ?? {})).map(
+      ([metric, group]) =>
+        `| ${label} | ${metric} | ${group.n} | ${group.diff.toFixed(4)} | [${group.ci95.map((value) => value.toFixed(4)).join(", ")}] | ${group.p.toExponential(3)} |`,
+    );
+  const lines = [
+    "# 188.10 held-out v3 acceptance",
+    "",
+    `Selected arm: ${manifest.selection.arm} (from ${manifest.selection.path}); product frozen at Stage A (${manifest.product.hash.slice(0, 8)}).`,
+    `Required arms: ${manifest.jobs.length}; completed: ${reports.size}; missing: ${missing.length}; attempts: ${attempts.length}.`,
+    `Multi-session success: ${verdict.multiSessionSuccess}; ${verdict.reason}.`,
+    "",
+    "| Check | Result | Detail |",
+    "| --- | --- | --- |",
+    ...verdict.checks.map((check) => `| ${check.id} | ${check.ok ? "pass" : "fail"} | ${check.detail} |`),
+    "",
+    "| Arm | Ability | n | Diff | 95% CI | p |",
+    "| --- | --- | ---: | ---: | --- | ---: |",
+    ...row("x-tools-x", comparison),
+    ...(substitutionGroups ? row("x-tools-full", { overall: substitutionGroups.overall }) : []),
+    "",
+    "| Arm | Correct | Input | Cache-read | Tokens/question | Tools/question | Run-limit |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ...["x", "x-tools", "full"]
+      .map((name) => [name, record(arm(name))])
+      .filter(([, row]) => row)
+      .map(
+        ([name, row]) =>
+          `| ${name} | ${row.correct}/${row.answers} | ${row.inputTokens} | ${row.cacheReadTokens} | ${row.tokensPerQuestion} | ${row.toolCallsPerQuestion ?? "—"} | ${row.runLimitRate.toFixed(4)} |`,
+      ),
+    ...(summary.writeCost
+      ? [`| write-x | — | ${summary.writeCost.inputTokens} | — | — | — | ${summary.writeCost.perSession} per session |`]
+      : []),
+    ...missing.map((item) => `- missing completed report: ${item.id}`),
+  ];
+  await writeFile(ACCEPTANCE_18810_COMPARISONS.replace(/\.json$/, ".md"), `${lines.join("\n")}\n`);
+  console.log(JSON.stringify({ verdict: summary.verdict, missing, taskComplete: summary.taskComplete }, null, 2));
 }

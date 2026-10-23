@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { createHash } from "node:crypto";
 import { closeSync, existsSync, openSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -23,6 +24,11 @@ import {
   ACCEPTANCE_1889_SCREEN_SUMMARY,
   ACCEPTANCE_1889_SCREEN_VERDICT,
   ACCEPTANCE_1889_SUMMARY,
+  ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE,
+  ACCEPTANCE_18810_JOURNAL,
+  ACCEPTANCE_18810_LOGS,
+  ACCEPTANCE_18810_MANIFEST,
+  ACCEPTANCE_18810_SUMMARY,
   ACCEPTANCE_EVIDENCE,
   ACCEPTANCE_JOURNAL,
   ACCEPTANCE_MANIFEST,
@@ -31,6 +37,7 @@ import {
   assertAcceptance1889Manifest,
   assertAcceptance1889ProbeManifest,
   assertAcceptance1889ScreenManifest,
+  assertAcceptance18810Manifest,
   assertAcceptanceManifest,
   assertJobDependencies,
   assertScreenAManifest,
@@ -39,9 +46,11 @@ import {
   buildAcceptance1889Manifest,
   buildAcceptance1889ProbeManifest,
   buildAcceptance1889ScreenManifest,
+  buildAcceptance18810Manifest,
   buildAcceptanceManifest,
   buildScreenAManifest,
   chooseConcurrency,
+  frozenProduct,
   fullReferenceReuse1889,
   HARNESS_PATHS,
   heldout1888,
@@ -60,6 +69,7 @@ import {
   screenAVerdict,
   screenVerdict,
   sourceFingerprint,
+  stageASelection,
   WRITE_SIDE_CACHE,
   WRITE_SIDE_PATHS,
   writeSideCacheDir,
@@ -99,6 +109,18 @@ function runSpec(mode) {
       maxAttempts: 2,
       build: async () => assertAcceptance1889ProbeManifest(buildAcceptance1889ProbeManifest()),
       write: () => writeProbeManifest1889(),
+    };
+  if (mode === "acceptance18810")
+    return {
+      evidence: ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE,
+      logs: ACCEPTANCE_18810_LOGS,
+      summaryPath: ACCEPTANCE_18810_SUMMARY,
+      journalPath: ACCEPTANCE_18810_JOURNAL,
+      summaryKind: "188.10-heldout-acceptance-run",
+      timeout: "14400s",
+      maxAttempts: 3,
+      build: () => buildAcceptance18810(),
+      write: () => writeAcceptance18810Manifest(),
     };
   if (mode === "screenA18810")
     return {
@@ -392,6 +414,33 @@ export async function writeScreenAVerdict(journal, manifest, path = SCREEN_A_VER
   const payload = { ...verdict, sources, ceiling: manifest?.ceiling ?? SCREEN_A_CEILING };
   await writeFile(path, `${JSON.stringify(payload, null, 2)}\n`);
   return payload;
+}
+
+/**
+ * Task 9: held-out v3 for Stage A's selected arm. The selection comes from the committed verdict and
+ * the product must still hash to Stage A's value, so neither can drift into this run.
+ */
+async function buildAcceptance18810() {
+  const verdictBytes = await readFile(SCREEN_A_VERDICT, "utf8");
+  const stageAManifest = JSON.parse(await readFile(SCREEN_A_MANIFEST, "utf8"));
+  return assertAcceptance18810Manifest(
+    buildAcceptance18810Manifest({
+      harnessHash: await sourceFingerprint(HARNESS_PATHS),
+      product: frozenProduct({ productHash: await sourceFingerprint(WRITE_SIDE_PATHS), stageAManifest }),
+      selection: stageASelection(JSON.parse(verdictBytes), {
+        fileHash: createHash("sha256").update(verdictBytes).digest("hex"),
+      }),
+      writeSideKey: await writeSideCacheDir({ config: "fabric-x" }),
+    }),
+  );
+}
+
+/** Held-out dry run: write the manifest only. It never creates, rewrites or spends from the journal. */
+export async function writeAcceptance18810Manifest(path = ACCEPTANCE_18810_MANIFEST) {
+  await mkdir(ACCEPTANCE_18810_ACCEPTANCE_EVIDENCE, { recursive: true });
+  const manifest = await buildAcceptance18810();
+  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+  return manifest;
 }
 
 /** Frozen probe manifest; dry-run only on --manifest. */
@@ -784,19 +833,22 @@ export async function runCampaign(mode = "task6", { parallelArms = 1, screen = f
 if (import.meta.main) {
   const mode = process.argv.includes("--acceptance-188.10-screen-a")
     ? "screenA18810"
-    : process.argv.includes("--acceptance-188.9-probe")
-      ? "probe1889"
-      : process.argv.includes("--acceptance-188.9-screen")
-        ? "screen1889"
-        : process.argv.includes("--acceptance-188.9")
-          ? "acceptance1889"
-          : process.argv.includes("--acceptance-188.8")
-            ? "acceptance1888"
-            : process.argv.includes("--acceptance")
-              ? "acceptance"
-              : "task6";
+    : process.argv.includes("--acceptance-188.10")
+      ? "acceptance18810"
+      : process.argv.includes("--acceptance-188.9-probe")
+        ? "probe1889"
+        : process.argv.includes("--acceptance-188.9-screen")
+          ? "screen1889"
+          : process.argv.includes("--acceptance-188.9")
+            ? "acceptance1889"
+            : process.argv.includes("--acceptance-188.8")
+              ? "acceptance1888"
+              : process.argv.includes("--acceptance")
+                ? "acceptance"
+                : "task6";
   if (process.argv.includes("--manifest")) {
     if (mode === "screenA18810") await writeScreenAManifest();
+    else if (mode === "acceptance18810") await writeAcceptance18810Manifest();
     else if (mode === "probe1889") await writeProbeManifest1889();
     else if (mode === "screen1889") await writeScreenManifest1889();
     else if (mode === "acceptance1889") await writeAcceptance1889Manifest();
