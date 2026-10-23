@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-6a23cbf5e21b",
+  "manifestHash": "6a23cbf5e21b5284a6b0f3c2965cffdafcb7b9174218779ee9c59a598e394cd1",
+  "ceiling": 8000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-23T14:04:08.055Z",
+  "updatedAt": "2026-10-23T14:23:49.844Z",
+  "status": "finished",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept18810-screen-a-write-x@1",
+      "jobId": "accept18810-screen-a-write-x",
+      "manifestHash": "6a23cbf5e21b5284a6b0f3c2965cffdafcb7b9174218779ee9c59a598e394cd1",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/screen-a/screen-a-accept18810-screen-a-write-x.json",
+      "maxInputTokens": 1000000,
+      "reservedInputTokens": 1500000,
+      "startedAt": "2026-10-23T14:04:08.060Z",
+      "confirmedInputTokens": 0,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-23T14:04:30.654Z"
+    },
+    {
+      "attemptId": "accept18810-screen-a-x@1",
+      "jobId": "accept18810-screen-a-x",
+      "manifestHash": "6a23cbf5e21b5284a6b0f3c2965cffdafcb7b9174218779ee9c59a598e394cd1",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/screen-a/screen-a-accept18810-screen-a-x.json",
+      "maxInputTokens": 3000000,
+      "reservedInputTokens": 3500000,
+      "startedAt": "2026-10-23T14:04:30.655Z",
+      "confirmedInputTokens": 239050,
+      "usageComplete": true,
+      "cacheReadTokens": 896,
+      "outputTokens": 11486,
+      "endedAt": "2026-10-23T14:13:31.369Z"
+    },
+    {
+      "attemptId": "accept18810-screen-a-x-tools@1",
+      "jobId": "accept18810-screen-a-x-tools",
+      "manifestHash": "6a23cbf5e21b5284a6b0f3c2965cffdafcb7b9174218779ee9c59a598e394cd1",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/screen-a/screen-a-accept18810-screen-a-x-tools.json",
+      "maxInputTokens": 3000000,
+      "reservedInputTokens": 3500000,
+      "startedAt": "2026-10-23T14:13:31.370Z",
+      "confirmedInputTokens": 1399977,
+      "usageComplete": true,
+      "cacheReadTokens": 408896,
+      "outputTokens": 26670,
+      "endedAt": "2026-10-23T14:23:49.844Z"
+    }
+  ]
+}

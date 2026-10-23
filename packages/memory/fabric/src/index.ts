@@ -42,6 +42,7 @@ import {
   type Embedder,
   type Memory,
   MemoryValidationError,
+  type MemoryVectorRecord,
   type VectorStore,
   type WorkingMemoryStore,
 } from "@arnilo/prism-memory-core";
@@ -61,6 +62,7 @@ import { createFabricCore } from "./delivery/core.js";
 import { createFabricCues } from "./delivery/cues.js";
 import { createFabricTeam, type FabricTeam, type FabricTeamApproval } from "./delivery/team.js";
 import { createFabricDirectory } from "./directory.js";
+import { createExchangeArchive, type ExchangeArchive, exchangePairs } from "./exchanges.js";
 import { createFabricFileJail } from "./files.js";
 import { createScopeClock, readScopeClockState, SCOPE_CLOCK_COUNTER } from "./lifecycle/clock.js";
 import { citationEvidence } from "./lifecycle/evidence.js";
@@ -86,6 +88,7 @@ export {
   type MemoryFabricConfig,
   type MemoryFabricCoreConfig,
   type MemoryFabricCuesConfig,
+  type MemoryFabricExchangesConfig,
   type MemoryFabricInjectConfig,
   type MemoryFabricLifecycleConfig,
   type MemoryFabricMarkdownStoreConfig,
@@ -98,6 +101,7 @@ export {
   memoryFabricConfigSchema,
   memoryFabricLifecycleSchema,
   type ResolvedFabricCoreOptions,
+  type ResolvedFabricExchangesOptions,
   type ResolvedFabricScope,
   type ResolvedFabricTeamOptions,
   type ResolvedLifecycleConfig,
@@ -117,6 +121,7 @@ const FABRIC_ENABLED_KEY = "fabric.enabled";
 const TOUCHED_PATHS_KEY = "fabric.touchedPaths";
 const CUES_STATE_KEY = "fabric.cues";
 const PROMOTE_STATE_KEY = "fabric.promote";
+const EXCHANGE_STATE_KEY = "fabric.exchanges";
 const SCOPE_CLOCK_KEY = "fabric.clock";
 const FABRIC_CONTEXT_HOOK_ID = "memory-fabric:context.build";
 
@@ -215,6 +220,11 @@ const definition = definePackage<MemoryFabricConfig>({
       scopes: memories,
       promote: config.promote,
       promoteRoot: config.scopes.project?.root ?? config.tools.root ?? process.cwd(),
+      exchanges: { enabled: config.exchanges.enabled },
+      // The repository rules need a real root, not the cwd fallback `promoteRoot` uses for derivability.
+      repositoryRules:
+        config.scopes.active.some((scope) => scope.level === "project") &&
+        (config.scopes.project?.root !== undefined || config.tools.root !== undefined),
       resolveModelClient: (model) => prism.models.client(model),
       onDeciderFailure: () => prism.status.note("warn", "memory-fabric: consolidation decision failed; preserving both notes"),
       notify: (message) => prism.status.note("warn", message),
@@ -436,6 +446,31 @@ const definition = definePackage<MemoryFabricConfig>({
               ),
           );
 
+    /** `memory.read` by id looks in every active scope, narrowest first, through each scope's own read filters. */
+    const readNotesAcrossScopes = async (ids: readonly string[], signal?: AbortSignal): Promise<readonly MemoryVectorRecord[]> => {
+      const found = new Map<string, MemoryVectorRecord>();
+      for (const binding of memories) {
+        const missing = ids.filter((id) => !found.has(id));
+        if (missing.length === 0) break;
+        for (const record of await binding.memory.get(missing, signal === undefined ? {} : { signal })) {
+          if (!found.has(record.id)) found.set(record.id, record);
+        }
+      }
+      return [...found.values()];
+    };
+
+    // The exchange archive (plan 188.9 Task 7): verbatim turns in the scope resolved at setup. Off by
+    // default; the write runs in the background and makes no model or embedding call.
+    const exchangeState = prism.state.session<JsonObject>(EXCHANGE_STATE_KEY, { archived: 0 });
+    const exchangeArchive = config.exchanges.enabled
+      ? createExchangeArchive({
+          remember: fabric.remember,
+          exists: async (id) => (await readNotesAcrossScopes([id])).length > 0,
+          maxTextChars: memory.limits.maxEntryTextChars,
+          scope: config.exchanges.scope,
+        })
+      : undefined;
+
     // --- tools: `when` gates visibility and callability per session (the kernel blocks hidden calls).
     // `memory.recall` additionally needs the embeddings service, which may arrive after this package.
     const tracker = createFabricCitationTracker();
@@ -446,6 +481,7 @@ const definition = definePackage<MemoryFabricConfig>({
       forget: fabric.forget,
       isIndexedNotesAvailable: indexedNotes,
       tracker,
+      readNotes: readNotesAcrossScopes,
       scopeLevel: memories[0]!.level,
       ...(directory ? { directory } : {}),
       lifecycle: {
@@ -492,6 +528,44 @@ const definition = definePackage<MemoryFabricConfig>({
       const session = context.session;
       if (!session || !enabled.get(session)) return;
       touchedFor(session).record({ name: event.call.name, arguments: event.call.arguments });
+    });
+    // A completed turn is archived once the reply is on the branch (`message.completed` fires after
+    // the append; `turn.completed` fires inside the provider round, before it). Tool rounds are not
+    // exchanges, so an assistant message carrying a `tool_call` is skipped.
+    prism.hooks.on("message.completed", (event, context) => {
+      const session = context.session;
+      if (exchangeArchive === undefined || !session || !enabled.get(session)) return;
+      const message = event.message;
+      if (message.role !== "assistant" || message.content.some((block) => block.type === "tool_call")) return;
+      const replyText = message.content.some((block) => block.type === "text" && block.text.trim().length > 0);
+      if (!replyText) return;
+      session.background("fabric.exchange", async (signal) => {
+        const entries = await session.entries();
+        const text = message.content
+          .flatMap((block) => (block.type === "text" ? [block.text] : []))
+          .join("\n")
+          .trim();
+        // The entry id is not in the event; match the persisted message by id, then by its text. A mock
+        // or provider that omits a message id still archives the reply that just completed.
+        const assistant =
+          (message.id === undefined
+            ? undefined
+            : entries.find((entry) => entry.message !== undefined && entry.message.id === message.id)) ??
+          [...entries].reverse().find((entry) => entry.message?.role === "assistant" && messageTextMatches(entry.message, text));
+        const pair = assistant === undefined ? undefined : exchangePairs(entries).find((item) => item.assistant.id === assistant.id);
+        if (pair === undefined) return;
+        const report = await exchangeArchive.pair(pair, { sessionId: session.id, signal });
+        if (report.refused.trust + report.refused.secret > 0) {
+          prism.status.note(
+            "warn",
+            `memory-fabric: ${report.refused.trust + report.refused.secret} exchange(s) refused by the trust scan or redactor; not archived`,
+          );
+        }
+        if (report.archived > 0) {
+          const state = readExchangeState(exchangeState.get(session));
+          await exchangeState.set(session, { cursor: pair.assistant.id, archived: state.archived + report.archived });
+        }
+      });
     });
     prism.hooks.on("session.closed", (_event, context) => {
       touchedTrackers.delete(context.sessionId);
@@ -569,6 +643,7 @@ const definition = definePackage<MemoryFabricConfig>({
         lifecycle: config.lifecycle,
       }),
     );
+    prism.commands.register(createMemoryArchiveCommand(exchangeArchive, exchangeState, (message) => prism.status.note("warn", message)));
     prism.commands.register(createMemoryMaintainCommand(fabric));
     prism.commands.register(createMemoryReindexCommand(stores.reindex));
     const bundle = {
@@ -845,6 +920,67 @@ function createMemoryImportCommand(deps: OkfBundleDeps): PackageCommand {
   };
 }
 
+/** Whether a persisted assistant message is the one the event reported (id-less providers fall back here). */
+function messageTextMatches(
+  message: NonNullable<Awaited<ReturnType<SessionContext["entries"]>>[number]["message"]>,
+  text: string,
+): boolean {
+  return (
+    message.content
+      .flatMap((block) => (block.type === "text" ? [block.text] : []))
+      .join("\n")
+      .trim() === text
+  );
+}
+
+/** The exchange archive's per-session state: where the back-fill stopped, and how much it wrote. */
+function readExchangeState(raw: JsonObject | undefined): { readonly cursor?: string; readonly archived: number } {
+  const cursor = typeof raw?.cursor === "string" && raw.cursor.length > 0 ? raw.cursor : undefined;
+  const archived = typeof raw?.archived === "number" && Number.isSafeInteger(raw.archived) ? raw.archived : 0;
+  return { ...(cursor === undefined ? {} : { cursor }), archived };
+}
+
+function createMemoryArchiveCommand(
+  archive: ExchangeArchive | undefined,
+  state: SessionState<JsonObject>,
+  note: (message: string) => void,
+): PackageCommand {
+  const args: JsonSchema = { type: "object", additionalProperties: false, properties: {} };
+  return {
+    name: "memory:archive",
+    description:
+      "Back-fill every completed exchange of this session into the exchange archive: one verbatim note per user turn plus the assistant reply that followed it, skipping tool rounds. Idempotent; reports archived, skipped and parts.",
+    args,
+    async run(_args: JsonObject, context: PackageCommandContext): Promise<JsonObject> {
+      if (archive === undefined) {
+        return { ok: false, reason: "disabled", text: "The exchange archive is off: set exchanges in the fabric config to enable it." };
+      }
+      const session = context.session;
+      if (!session) return { ok: false, reason: "no_session", text: "memory:archive needs a session: run it against one." };
+      const before = readExchangeState(state.get(session));
+      const report = await archive.entries(await session.entries(), {
+        sessionId: session.id,
+        ...(before.cursor === undefined ? {} : { cursor: before.cursor }),
+      });
+      if (report.cursor !== undefined && (report.archived > 0 || report.cursor !== before.cursor)) {
+        await state.set(session, {
+          ...(report.cursor === undefined ? {} : { cursor: report.cursor }),
+          archived: before.archived + report.archived,
+        });
+      }
+      const refused = report.refused.trust + report.refused.secret;
+      if (refused > 0) note(`memory-fabric: ${refused} exchange(s) refused by the trust scan or redactor; not archived`);
+      return {
+        ok: true,
+        ...report,
+        // This session's total, including the turns the background hook archived before this back-fill.
+        totalArchived: before.archived + report.archived,
+        text: `Archived ${report.archived} exchange(s) as ${report.parts} note(s); ${report.skipped} skipped (already archived, a tool round, or refused)${refused > 0 ? `; ${refused} refused` : ""}.`,
+      };
+    },
+  };
+}
+
 function createMemoryConsolidateCommand(fabric: MemoryFabric, promoteState: SessionState<JsonObject>): PackageCommand {
   const args: JsonSchema = { type: "object", additionalProperties: false, properties: {} };
   return {
@@ -861,13 +997,24 @@ function createMemoryConsolidateCommand(fabric: MemoryFabric, promoteState: Sess
           ...(state.cursor === undefined ? {} : { cursor: state.cursor }),
         });
         if (result.report === undefined || !result.ran) {
+          // A failed extraction also records its report, so the failure is visible to `memory:status`.
+          if (result.reason === "failed" && result.report !== undefined)
+            await promoteState.set(session, {
+              ...(state.cursor === undefined ? {} : { cursor: state.cursor }),
+              last: result.report as unknown as JsonObject,
+              refused: state.refused,
+            });
           return {
             ok: false,
-            reason: result.reason ?? "empty",
+            reason: result.reason === "failed" ? "extraction_failed" : (result.reason ?? "empty"),
+            ...(result.reasonCode === undefined ? {} : { reasonCode: result.reasonCode }),
+            ...(result.report === undefined ? {} : { failures: result.report.failures ?? {}, modelCalls: result.report.modelCalls }),
             text:
               result.reason === "disabled"
                 ? "Consolidation is off: set promote in the fabric config to enable it."
-                : "Nothing new to consolidate in this session.",
+                : result.reason === "failed"
+                  ? `Consolidation failed (${result.reasonCode ?? "model_call_failed"}); nothing was written and the material is kept for the next pass.`
+                  : "Nothing new to consolidate in this session.",
           };
         }
         const report = result.report;
@@ -893,6 +1040,15 @@ function createMemoryConsolidateCommand(fabric: MemoryFabric, promoteState: Sess
       }
     },
   };
+}
+
+/** The failed pass's reason and output limit, so `memory:status` does not drop them. */
+function failureText(report: import("./promote.js").FabricConsolidationReport): string {
+  const reasons = Object.entries(report.failures ?? {})
+    .map(([code, count]) => `${code} ${count}`)
+    .join(", ");
+  if (reasons.length === 0 && (report.outputLimited ?? 0) === 0) return "";
+  return ` Failed extraction: ${reasons || "none"}${report.outputLimited === undefined ? "" : `; ${report.outputLimited} call(s) stopped on the output limit`}.`;
 }
 
 function createMemoryMaintainCommand(fabric: MemoryFabric): PackageCommand {
@@ -945,7 +1101,7 @@ function createMemoryStatusCommand(lifecycle: FabricLifecycle, promoteState: Ses
         refused,
         ...(teamCounts === undefined ? {} : { team: { ...teamCounts } }),
         ...(last === undefined ? {} : { last: last as unknown as JsonObject }),
-        text: `Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}; ${refused} note(s) refused.${teamText}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.`}`,
+        text: `Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}; ${refused} note(s) refused.${teamText}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
       };
     },
   };

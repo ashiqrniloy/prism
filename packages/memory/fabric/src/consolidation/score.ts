@@ -147,7 +147,9 @@ export function scorePromotion(note: ExtractedNote, context: PromotionScoreConte
 
   const sources = new Set(context.candidates.map((candidate) => candidate.source));
   const signals: PromotionSignals = {
-    explicit: note.explicit && sources.has("explicit") ? 1 : 0,
+    // An archived exchange is verbatim user speech, so it supports an explicit user statement the
+    // same way a live "explicit" candidate does (plan 188.9 Task 8).
+    explicit: note.explicit && (sources.has("explicit") || sources.has("exchange")) ? 1 : 0,
     correction: note.correction && sources.has("correction") ? 1 : 0,
     outcome: context.candidates.some((candidate) => candidate.signals.outcome === 1) ? 1 : 0,
     recurrence: recurrenceSignal(context.sessions),

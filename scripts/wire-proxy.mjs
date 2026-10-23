@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /**
@@ -293,7 +293,7 @@ export async function startWireProxy(options = {}) {
           method: req.method,
           headers: forwardHeaders,
           body: upstreamBody,
-          // @ts-ignore
+          // @ts-expect-error
           duplex: "half",
         });
       } catch (err) {
@@ -460,7 +460,13 @@ async function handleExchangeCompletion(params) {
       cacheWriteTokens: normalized?.cacheWriteTokens ?? 0,
       totalTokens: normalized?.totalTokens ?? 0,
     };
-    appendFileSync(usageLogFile, `${JSON.stringify(logEntry)}\n`, "utf8");
+    // The run may already be tearing its scratch directory down while a streamed reply finishes;
+    // a lost usage line after teardown must not fail the run that is ending.
+    try {
+      appendFileSync(usageLogFile, `${JSON.stringify(logEntry)}\n`, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
   }
 }
 

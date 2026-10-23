@@ -1,0 +1,112 @@
+{
+  "kind": "188.8-heldout-acceptance-run",
+  "journal": {
+    "campaignId": "campaign-a572bcd1aae3",
+    "status": "finished",
+    "ceiling": 30000000,
+    "spend": 25132478,
+    "attempts": [
+      {
+        "attemptId": "accept1888-prefix@1",
+        "jobId": "accept1888-prefix",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "accept1888-prefix@2",
+        "jobId": "accept1888-prefix",
+        "status": "failed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 35000
+      },
+      {
+        "attemptId": "accept1888-postfix@1",
+        "jobId": "accept1888-postfix",
+        "status": "abandoned",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 1500000
+      },
+      {
+        "attemptId": "accept1888-prefix@3",
+        "jobId": "accept1888-prefix",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 218663
+      },
+      {
+        "attemptId": "accept1888-postfix@2",
+        "jobId": "accept1888-postfix",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 249736
+      },
+      {
+        "attemptId": "accept1888-agentic@1",
+        "jobId": "accept1888-agentic",
+        "status": "completed",
+        "usageComplete": false,
+        "reservedInputTokens": 8500000,
+        "confirmedInputTokens": 5438935
+      },
+      {
+        "attemptId": "accept1888-development@1",
+        "jobId": "accept1888-development",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 347040
+      },
+      {
+        "attemptId": "accept1888-full@1",
+        "jobId": "accept1888-full",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 14500000,
+        "confirmedInputTokens": 11500702
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "accept1888-prefix",
+      "attemptId": "accept1888-prefix@3",
+      "status": "completed",
+      "usageComplete": false,
+      "charged": 1500000
+    },
+    {
+      "id": "accept1888-postfix",
+      "attemptId": "accept1888-postfix@2",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 249736
+    },
+    {
+      "id": "accept1888-agentic",
+      "attemptId": "accept1888-agentic@1",
+      "status": "completed",
+      "usageComplete": false,
+      "charged": 8500000
+    },
+    {
+      "id": "accept1888-development",
+      "attemptId": "accept1888-development@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 347040
+    },
+    {
+      "id": "accept1888-full",
+      "attemptId": "accept1888-full@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 11500702
+    }
+  ]
+}

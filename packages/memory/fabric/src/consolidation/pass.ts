@@ -47,6 +47,15 @@ export interface ConsolidationPassInput {
   readonly secrets?: readonly (string | undefined)[];
   /** Workspace root the `derivableFrom` files resolve inside. */
   readonly root: string;
+  /** The project scope has a root, so the extractor gets the repository and derivability rules. */
+  readonly repositoryRules?: boolean;
+  /**
+   * Not-yet-consolidated archived exchanges, gathered by the caller from the store. They join the
+   * pass's candidates so one extractor call turns verbatim history into dated, keyed facts.
+   */
+  readonly exchanges?: readonly ConsolidationExchangeCandidate[];
+  /** Marks the gathered exchanges as consolidated, after the pass wrote (or found nothing to write). */
+  readonly markExchangesConsolidated?: (ids: readonly string[], at: string) => Promise<void>;
   readonly scratchDir?: string;
   /** The `<slug>--<id8>` id an exception records in the wider note's `contradictedIn`. */
   readonly projectId?: string;
@@ -58,6 +67,14 @@ export interface ConsolidationPassInput {
     scope: MemoryNoteScope,
     limit: number,
   ) => Promise<readonly ConsolidationExistingNote[]> | readonly ConsolidationExistingNote[];
+}
+
+/** One archived exchange offered to the pass as evidence. */
+export interface ConsolidationExchangeCandidate {
+  readonly id: string;
+  readonly text: string;
+  readonly level: MemoryNoteScope;
+  readonly tRef?: string;
 }
 
 export interface ConsolidationPassResult {
@@ -105,11 +122,9 @@ export function createConsolidationLease(): {
   };
 }
 
-/** Gather, extract once, score, gate, write; returns the report and the cursor to persist on success. */
-export async function runConsolidationPass(input: ConsolidationPassInput): Promise<ConsolidationPassResult> {
-  const at = (input.now ?? new Date()).toISOString();
-  const pass = input.pass ?? at;
-  const report = (fields: Partial<FabricConsolidationReport> = {}): FabricConsolidationReport => ({
+/** The zero report every pass starts from; a failed pass persists one so `memory:status` keeps the reason. */
+export function consolidationReport(at: string, fields: Partial<FabricConsolidationReport> = {}, pass = at): FabricConsolidationReport {
+  return {
     pass,
     at,
     candidates: 0,
@@ -122,15 +137,35 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
     retired: 0,
     modelCalls: 0,
     ...fields,
-  });
+  };
+}
+
+/** Gather, extract once, score, gate, write; returns the report and the cursor to persist on success. */
+export async function runConsolidationPass(input: ConsolidationPassInput): Promise<ConsolidationPassResult> {
+  const at = (input.now ?? new Date()).toISOString();
+  const pass = input.pass ?? at;
+  const report = (fields: Partial<FabricConsolidationReport> = {}): FabricConsolidationReport => consolidationReport(at, fields, pass);
 
   const maxCandidates = Math.min(input.config.maxCandidates, PASS_CANDIDATE_LIMIT);
-  const candidates = gatherConsolidationCandidates(input.entries, {
+  const gathered = gatherConsolidationCandidates(input.entries, {
     ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
     maxCandidates,
     maxTextChars: input.memory.limits.maxEntryTextChars,
     ...(input.redactor === undefined ? {} : { redact: (text: string) => input.redactor!.redact(text) }),
   });
+  // Exchanges are the second source of candidates: verbatim history the archive already kept, so a
+  // general pass reads facts out of it instead of out of the live transcript. Bounded with the rest.
+  const exchanges = (input.exchanges ?? []).slice(0, Math.max(0, maxCandidates - gathered.length));
+  const candidates: readonly ConsolidationCandidate[] = [
+    ...gathered,
+    ...exchanges.map((exchange) => ({
+      source: "exchange" as const,
+      text: exchange.text.slice(0, input.memory.limits.maxEntryTextChars),
+      evidenceIds: [exchange.id],
+      signals: {},
+      ...(exchange.tRef === undefined ? {} : { tRef: exchange.tRef }),
+    })),
+  ];
   const tail = entriesAfter(input.entries, input.cursor);
   const ledger = foldObservationalMemoryLedger(tail);
   const bindings = scopesOf(input);
@@ -163,7 +198,14 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
 
   const extraction =
     candidates.length === 0
-      ? { notes: [] as const, existing: [] as const, rejected: { trust: 0, secret: 0 }, modelCalls: 0, correctionCalls: 0 }
+      ? {
+          notes: [] as const,
+          existing: [] as const,
+          rejected: { trust: 0, secret: 0 },
+          modelCalls: 0,
+          correctionCalls: 0,
+          outputLimited: 0,
+        }
       : await extract(input, candidates, extraExisting, ledger.taskState);
 
   const knownById = new Map<string, ConsolidationKnownNote>();
@@ -203,10 +245,14 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
       rejected[score.reason ?? "score"] += 1;
       continue;
     }
+    // A keyed value that is later than the shown note with the same key supersedes it, so one
+    // current value stays current instead of two notes with one key piling up.
+    const superseded = supersedingNote(note, extraction.existing);
     accepted.push({
       note,
       score,
       evidenceEntryIds: evidenceIds,
+      ...(superseded === undefined ? {} : { supersedes: { id: superseded } }),
       ...(replacing === undefined ? {} : { replacing: knownFromRecord(replacing.record, replacing.level) }),
       ...(contradicts === undefined ? {} : { contradicts }),
     });
@@ -222,6 +268,7 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
     remember: input.remember,
     memory: input.memory,
     ...(input.scopes === undefined ? {} : { scopes: input.scopes }),
+    ...(exchanges.length === 0 ? {} : { exchangeEvidence: new Map(exchanges.map((exchange) => [exchange.id, exchange.level])) }),
     notes: accepted,
     ...(retire.length === 0 ? {} : { retire }),
     sessionId: input.sessionId,
@@ -230,6 +277,15 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
     now: at,
     ...(input.signal === undefined ? {} : { signal: input.signal }),
   });
+
+  // The exchanges were shown to the extractor: they never need to be gathered again, whether or not
+  // this pass had anything durable to write from them.
+  if (exchanges.length > 0 && input.markExchangesConsolidated !== undefined) {
+    await input.markExchangesConsolidated(
+      exchanges.map((exchange) => exchange.id),
+      at,
+    );
+  }
 
   const last = input.entries.at(-1)?.id;
   return {
@@ -244,6 +300,7 @@ export async function runConsolidationPass(input: ConsolidationPassInput): Promi
       retired: written.retired,
       modelCalls: extraction.modelCalls,
       correctionCalls: extraction.correctionCalls,
+      ...(extraction.outputLimited === 0 ? {} : { outputLimited: extraction.outputLimited }),
     }),
     ...(last === undefined ? {} : { cursor: last }),
   };
@@ -286,8 +343,29 @@ async function extract(
     ...(input.redactor === undefined ? {} : { redactor: input.redactor }),
     ...(input.secrets === undefined ? {} : { secrets: input.secrets }),
     sessionId: input.sessionId,
+    ...(input.config.thinkingLevel === undefined ? {} : { thinkingLevel: input.config.thinkingLevel }),
+    ...(input.repositoryRules === true ? { repositoryRules: true } : {}),
     ...(input.signal === undefined ? {} : { signal: input.signal }),
   });
+}
+
+/**
+ * The shown note a keyed value replaces: same kind and scope, same key, and strictly earlier in time.
+ * A key alone is not enough — two instances of one key (two invoices, two trips) both stay.
+ */
+function supersedingNote(note: ExtractedNote, existing: readonly ConsolidationExistingNote[]): string | undefined {
+  if (note.key === undefined || note.tRef === undefined) return undefined;
+  const at = Date.parse(note.tRef);
+  if (!Number.isFinite(at)) return undefined;
+  return existing.find(
+    (candidate) =>
+      candidate.key === note.key &&
+      candidate.kind === note.kind &&
+      candidate.scope === note.scope &&
+      candidate.tRef !== undefined &&
+      Number.isFinite(Date.parse(candidate.tRef)) &&
+      Date.parse(candidate.tRef) < at,
+  )?.id;
 }
 
 function candidateEvidence(candidates: readonly ConsolidationCandidate[], id: string): readonly string[] {
@@ -349,5 +427,6 @@ function existingFromRecord(record: MemoryVectorRecord, level: MemoryNoteScope):
     scope: metadata.scope ?? level,
     kind: metadata.kind,
     ...(metadata.key === undefined ? {} : { key: metadata.key }),
+    ...(metadata.tRef === undefined ? {} : { tRef: metadata.tRef }),
   };
 }

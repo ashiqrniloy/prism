@@ -1,0 +1,1049 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "usageSource": "wire-proxy",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-22T08:38:23.493Z",
+  "suite": "longmemeval-s",
+  "subset": "heldout-v2",
+  "ability": null,
+  "seed": null,
+  "config": "fabric",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "judgeProtocol": "enum-json-v1",
+  "dataset": {
+    "file": "longmemeval-s.json",
+    "bytes": 277383467,
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 1000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "9bf1dbbcd625d7a7ace23c3cebb5f810c43c0a1c",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 3,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "episode",
+          "fact",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 35000,
+  "cacheReadTokens": 7552,
+  "outputTokens": 6585,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "judge": 21,
+    "judgeAttempts": 21,
+    "gatewayRetries": 0
+  },
+  "turns": 7,
+  "injectedContextTokens": 5176,
+  "injections": [
+    {
+      "questionId": "10e09553",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "10e09553",
+      "turn": 1,
+      "id": "answer_67be2c38_2-r4",
+      "source": "fabric-semantic",
+      "tokens": 290,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.75,
+      "cited": true
+    },
+    {
+      "questionId": "184da446",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "184da446",
+      "turn": 1,
+      "id": "answer_e2f4f947_2-r0",
+      "source": "fabric-semantic",
+      "tokens": 803,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.875,
+      "cited": true
+    },
+    {
+      "questionId": "07741c44",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "07741c44",
+      "turn": 1,
+      "id": "answer_7e9ad7b4_1-r1",
+      "source": "fabric-semantic",
+      "tokens": 539,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.75,
+      "cited": false
+    },
+    {
+      "questionId": "d7c942c3",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 189,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "d7c942c3",
+      "turn": 1,
+      "id": "answer_eecb10d9_2-r2",
+      "source": "fabric-semantic",
+      "tokens": 262,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.8333333333333334,
+      "cited": true
+    },
+    {
+      "questionId": "945e3d21",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "used",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "945e3d21",
+      "turn": 1,
+      "id": "answer_6a4f8626_2-r1",
+      "source": "fabric-semantic",
+      "tokens": 676,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.6666666666666666,
+      "cited": true
+    },
+    {
+      "questionId": "01493427",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "01493427",
+      "turn": 1,
+      "id": "answer_a7b44747_1-r3",
+      "source": "fabric-semantic",
+      "tokens": 501,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "6a27ffc2",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": "irrelevant",
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "6a27ffc2",
+      "turn": 1,
+      "id": "answer_77f32504_1-r0",
+      "source": "fabric-semantic",
+      "tokens": 792,
+      "placement": "tail",
+      "granularity": "item",
+      "label": "used",
+      "coverage": 0.8888888888888888,
+      "cited": false
+    }
+  ],
+  "attemptId": "accept1888-prefix@2",
+  "protocolHash": "d6ca345983565e42b1721c4a309987290851bf04e7571703dfb0d2ca7df7433f",
+  "resumedResults": 8,
+  "results": [
+    {
+      "id": "c6853660",
+      "ability": "knowledge-update",
+      "cluster": "lme-dbf25d8d987c",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_626e93c4_2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 734,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "89941a94",
+      "ability": "knowledge-update",
+      "cluster": "lme-9b25455ab6ca",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_e1403127_2-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 663,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "eace081b",
+      "ability": "knowledge-update",
+      "cluster": "lme-8704c72bf2d3",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_8a791264_1-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 686,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "ba61f0b9",
+      "ability": "knowledge-update",
+      "cluster": "lme-242317cd8614",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_f377cda7_1-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 685,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "18bc8abd",
+      "ability": "knowledge-update",
+      "cluster": "lme-6d9ba4d1911f",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_fff743f5_2-r5"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 636,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "2133c1b5",
+      "ability": "knowledge-update",
+      "cluster": "lme-52ed3f6d4803",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_52382508_1-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 637,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "603deb26",
+      "ability": "knowledge-update",
+      "cluster": "lme-aea97faf21a9",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_8afdebac_2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 703,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "1cea1afa",
+      "ability": "knowledge-update",
+      "cluster": "lme-80b940a637b1",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_79c395a9_2-r5"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 550,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "resumed": true
+    },
+    {
+      "id": "10e09553",
+      "ability": "knowledge-update",
+      "cluster": "lme-cd9272ccc04e",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_67be2c38_2-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 290,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "07741c44",
+      "ability": "knowledge-update",
+      "cluster": "lme-601731eca095",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_7e9ad7b4_1-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 539,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "d7c942c3",
+      "ability": "knowledge-update",
+      "cluster": "lme-c997f78d6338",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_eecb10d9_2-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 262,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "184da446",
+      "ability": "knowledge-update",
+      "cluster": "lme-fe0ca5e3c982",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_e2f4f947_2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 803,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "945e3d21",
+      "ability": "knowledge-update",
+      "cluster": "lme-1d2313a19569",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_6a4f8626_2-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 676,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "6a27ffc2",
+      "ability": "knowledge-update",
+      "cluster": "lme-e692a54a171f",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_77f32504_1-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 792,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "01493427",
+      "ability": "knowledge-update",
+      "cluster": "lme-010df195b9d9",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_a7b44747_1-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 501,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    }
+  ],
+  "status": "failed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "resumedFrom": {
+    "protocolHash": "d6ca345983565e42b1721c4a309987290851bf04e7571703dfb0d2ca7df7433f",
+    "results": 8,
+    "inputTokens": 20343
+  },
+  "inputCap": 870976,
+  "selectedQuestionIds": [
+    "c6853660",
+    "89941a94",
+    "eace081b",
+    "ba61f0b9",
+    "18bc8abd",
+    "2133c1b5",
+    "603deb26",
+    "1cea1afa",
+    "10e09553",
+    "07741c44",
+    "d7c942c3",
+    "184da446",
+    "945e3d21",
+    "6a27ffc2",
+    "01493427",
+    "852ce960",
+    "72e3ee87",
+    "08e075c7",
+    "b6019101",
+    "7401057b",
+    "09ba9854",
+    "ba358f49",
+    "60472f9c",
+    "6d550036",
+    "10d9b85a",
+    "gpt4_7fce9456",
+    "a4996e51",
+    "46a3abf7",
+    "8e91e7d9",
+    "81507db6",
+    "60036106",
+    "85fa3a3f",
+    "d682f1a2",
+    "27016adc",
+    "9d25d4e0",
+    "51c32626",
+    "77eafa52",
+    "e25c3b8d",
+    "ef66a6e5",
+    "ef9cf60a",
+    "gpt4_93159ced",
+    "gpt4_af6db32f",
+    "gpt4_5dcc0aab",
+    "0bb5a684",
+    "8077ef71",
+    "gpt4_4929293a",
+    "gpt4_1d4ab0c9",
+    "gpt4_6dc9b45b",
+    "gpt4_483dd43c",
+    "gpt4_5438fa52",
+    "gpt4_fe651585",
+    "gpt4_e414231e",
+    "c9f37c46",
+    "gpt4_1e4a8aec",
+    "bcbe585f",
+    "gpt4_b5700ca9",
+    "2c63a862",
+    "gpt4_fa19884d",
+    "gpt4_2d58bcd6",
+    "71017277",
+    "a06e4cfe",
+    "75499fd8",
+    "b320f3f8",
+    "caf9ead2",
+    "311778f1",
+    "86f00804",
+    "25e5aa4f",
+    "8e9d538c",
+    "95bcc1c8",
+    "21436231",
+    "001be529",
+    "faba32e5",
+    "0862e8bf",
+    "3b6f954b",
+    "af8d2e46",
+    "6ade9755",
+    "e47becba",
+    "8a137a7f",
+    "15745da0",
+    "76d63226",
+    "f523d9fe",
+    "fea54f57",
+    "7161e7e2",
+    "c8f1aeed",
+    "8aef76bc",
+    "1568498a",
+    "1de5cff2",
+    "5809eb10",
+    "1b9b7252",
+    "18dcd5a5",
+    "561fabcd",
+    "8b9d4367",
+    "488d3006",
+    "6ae235be",
+    "70b3e69b",
+    "352ab8bd",
+    "1903aded",
+    "51b23612",
+    "28bcfaac",
+    "8cf51dda"
+  ],
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 64,
+  "failure": {
+    "questionId": "852ce960",
+    "code": "MemoryBenchReplayError",
+    "message": "vector text exceeds 64384 characters"
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "knowledge-update": {
+      "n": 15,
+      "correct": 6,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0.4,
+      "runLimitRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 1,
+      "evidenceRoundCoverage": 0.4,
+      "evidenceAllRequired": 0.06666666666666667,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "knowledge-update",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "knowledge-update": {
+      "n": 15,
+      "correct": 6,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0.4,
+      "runLimitRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 1,
+      "evidenceRoundCoverage": 0.4,
+      "evidenceAllRequired": 0.06666666666666667,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "knowledge-update",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "knowledge-update": {
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher",
+      "unregistered": true
+    }
+  },
+  "runLimitRate": 0,
+  "cacheReadRatio": 0.21577142857142856,
+  "injectionPrecision": {
+    "granularity": "block",
+    "tokensPerTurn": 739.4285714285714,
+    "irrelevantRate": 0.21428571428571427,
+    "citedIdRate": 0.5714285714285714,
+    "tokenAccounting": "estimated ceil(characters/4); billing is wire usage"
+  },
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 15,
+  "retrievedSnippetTokens": 9157,
+  "answerSessionHitAtK": 1,
+  "evidenceRoundCoverage": 0.4,
+  "evidenceAllRequired": 0.06666666666666667,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": 1,
+  "retrievalRecallAtK": 1
+}

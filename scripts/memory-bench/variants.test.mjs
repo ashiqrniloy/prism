@@ -88,7 +88,8 @@ test("historical_combined_source_variants_keep_trust_checks_and_compile", async 
   for (const { path } of provenance) {
     const transformed = transformVariantSource(path, await source(path), specs);
     assert.doesNotThrow(() => new Bun.Transpiler({ loader: "ts" }).transformSync(transformed));
-    if (path.endsWith("/context.ts")) assert.match(transformed, /!isActiveNote\(hit, \{ asOfMs \}\).*hit.flags/);
+    if (path.endsWith("/context.ts"))
+      assert.match(transformed, /isActiveNote\(hit, \{ asOfMs \}\) && \(hit\.flags\?\.length \?\? 0\) === 0/);
     if (path.endsWith("/flush.ts")) {
       assert.doesNotMatch(transformed, /consumedObservationIds: uncovered|supersededReflectionIds: activeReflections/);
       assert.match(transformed, /type: REFLECTIONS_RECORDED/);
@@ -139,16 +140,19 @@ test("historical_calendar_maintenance_uses_calendar_even_with_persisted_session_
 });
 
 test("historical_tool_multiquery_and_snippet_budget_change_real_recall", async () => {
-  const code = `import {createMemoryVectorStore} from './packages/memory/core/src/index.ts';import {createMemory} from './packages/memory/fabric/src/memory.ts';import {createMemoryFabric} from './packages/memory/fabric/src/create.ts';const memory=createMemory({tenantId:'t',resourceId:'r',threadId:'s',vectorStore:createMemoryVectorStore()});const fabric=createMemoryFabric({memory,consolidate:false});await fabric.remember({kind:'fact',content:'canary '+ 'alpha '.repeat(350)});await fabric.remember({kind:'fact',content:'canary '+ 'beta '.repeat(350)});const tool=fabric.tools().find(t=>t.name==='memory.recall');const context={sessionId:'s',runId:'r',toolCallId:'c'};const normal=await tool.execute({query:'canary'},context);let plural=true;try{await tool.execute({queries:['canary']},context)}catch{plural=false}console.log(JSON.stringify({count:normal.value.hits.length,plural,advertised:'queries'in tool.parameters.properties}));`;
+  const code = `import {createMemoryVectorStore} from './packages/memory/core/src/index.ts';import {createMemory} from './packages/memory/fabric/src/memory.ts';import {createMemoryFabric} from './packages/memory/fabric/src/create.ts';const memory=createMemory({tenantId:'t',resourceId:'r',threadId:'s',vectorStore:createMemoryVectorStore()});const fabric=createMemoryFabric({memory,consolidate:false});for(const word of ['alpha','beta','gamma','delta','epsilon','zeta','eta','theta']){await fabric.remember({kind:'fact',content:'canary '+ (word+' ').repeat(350)})}const tool=fabric.tools().find(t=>t.name==='memory.recall');const context={sessionId:'s',runId:'r',toolCallId:'c'};const normal=await tool.execute({query:'canary'},context);let plural=true;try{await tool.execute({queries:['canary']},context)}catch{plural=false}console.log(JSON.stringify({count:normal.value.hits.length,plural,advertised:'queries'in tool.parameters.properties}));`;
   const baseline = await child([], code),
     off = await child(["fabric.multiQuery=off"], code);
   assert.equal(baseline.plural, true);
   assert.equal(baseline.advertised, true);
   assert.equal(off.plural, false);
   assert.equal(off.advertised, false);
-  assert.equal((await child(["fabric.snippetBudget=600"], code)).count, 1);
-  assert.equal((await child(["fabric.snippetBudget=1200"], code)).count, 2);
-  assert.equal((await child(["fabric.snippetBudget=2400"], code)).count, 2);
+  // The budget now counts rendered snippet lines (600-char window + header), so a smaller default shows fewer hits.
+  const small = (await child(["fabric.snippetBudget=600"], code)).count;
+  const normalDefault = (await child(["fabric.snippetBudget=1200"], code)).count;
+  const large = (await child(["fabric.snippetBudget=2400"], code)).count;
+  assert.ok(small < normalDefault, `600 tokens shows fewer hits than 1200 (${small} vs ${normalDefault})`);
+  assert.ok(large >= normalDefault, "a larger budget never shows fewer hits");
 });
 
 test("historical_retrieval_verification_uses_shown_ids_without_forged_citations", async () => {
@@ -169,4 +173,52 @@ test("historical_every_reflection_promotes_actual_ledger_once_and_keeps_trust_ga
   assert.equal(result.hits.length, 1);
   assert.equal(result.hits[0].text, "The release uses bun");
   assert.ok(result.hits[0].sources.includes("user1"));
+});
+
+test("baseline_arm_reproduces_188_8_delivery_rule", async () => {
+  // 188.8 delivered whole notes under a 600-token budget (top 3, similarity 0.35); the shipped 188.9
+  // delivery excerpts the best hit into a 4,000-token budget. One long source plus two short ones
+  // separates the two rules: the variant shows the long note whole and drops the short ones, the
+  // shipped rule excerpts the long note instead.
+  const long = "cobalt ".repeat(6000);
+  const question = {
+    id: "q",
+    question: "What color?",
+    answers: ["cobalt"],
+    date: "2024-01-03T00:00:00.000Z",
+    sessions: [
+      {
+        id: "s1",
+        date: "2024-01-01T00:00:00.000Z",
+        messages: [
+          { id: "m1", role: "user", text: `The project color is ${long}` },
+          { id: "m2", role: "assistant", text: "Noted." },
+        ],
+      },
+      {
+        id: "s2",
+        date: "2024-01-02T00:00:00.000Z",
+        messages: [
+          { id: "m3", role: "user", text: "The color stayed cobalt." },
+          { id: "m4", role: "assistant", text: "Good." },
+        ],
+      },
+    ],
+  };
+  const code = `import { mockProvider, replay } from "./scripts/memory-bench/replay.mjs";
+const state = { phase: "answer", questionId: "q", turns: 0, injectedContextTokens: 0, injections: [], injectionText: new Map(), mockInputTokens: 0, ceilingReached: () => false };
+const out = await replay(${JSON.stringify(question)}, { config: "fabric", suite: "longmemeval-s", modelConfig: { provider: "mock", model: "m" }, inputCap: 200000 }, [mockProvider(state)], state);
+console.log(JSON.stringify({ tokens: state.injections.filter((item) => item.source === "fabric-semantic").reduce((n, item) => n + item.tokens, 0), items: state.injections.filter((item) => item.source === "fabric-semantic").length, text: [...state.injectionText.entries()].filter(([item]) => item.source === "fabric-semantic").map(([, text]) => text).join("\\n"), answer: out.answer }));`;
+  const shipped = await child([], code);
+  const pinned = await child(["fabric.delivery=188.8"], code);
+  assert.equal(shipped.answer, "cobalt");
+  assert.equal(pinned.answer, "cobalt");
+  assert.ok(shipped.text.includes("…"), "the shipped rule excerpts a source that exceeds the 4,000-token budget");
+  assert.ok(!pinned.text.includes("…"), "188.8 shows whole notes only");
+  assert.ok(shipped.tokens > 3900, `the shipped rule fills its budget (${shipped.tokens})`);
+  assert.ok(
+    pinned.tokens > shipped.tokens,
+    `188.8 shows the whole best note even past its 600-token budget (${pinned.tokens} vs ${shipped.tokens})`,
+  );
+  assert.equal(pinned.items, 1, "one whole note is all that fits");
 });

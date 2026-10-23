@@ -1,0 +1,85 @@
+{
+  "kind": "188.10-stage-a-verdict",
+  "target": {
+    "multiSessionCorrect": 18,
+    "multiSessionTotal": 30,
+    "maxAbilityLoss": 1,
+    "maxRunLimit": 0.05
+  },
+  "reference": {
+    "correct": 28,
+    "total": 60,
+    "perAbility": {
+      "multi-session": {
+        "correct": 8,
+        "total": 30
+      },
+      "abstention": {
+        "correct": 2,
+        "total": 5
+      },
+      "knowledge-update": {
+        "correct": 5,
+        "total": 5
+      },
+      "single-session-assistant": {
+        "correct": 4,
+        "total": 5
+      },
+      "single-session-preference": {
+        "correct": 2,
+        "total": 5
+      },
+      "single-session-user": {
+        "correct": 5,
+        "total": 5
+      },
+      "temporal-reasoning": {
+        "correct": 2,
+        "total": 5
+      }
+    }
+  },
+  "arms": {
+    "x-tools": {
+      "met": true,
+      "multiSession": {
+        "correct": 22,
+        "total": 30
+      },
+      "abilityLosses": {
+        "abstention": -3,
+        "knowledge-update": 0,
+        "single-session-assistant": -1,
+        "single-session-preference": -3,
+        "single-session-user": 0,
+        "temporal-reasoning": -1
+      },
+      "maxAbilityLoss": 0,
+      "runLimitRate": 0,
+      "correct": 50,
+      "total": 60,
+      "reason": "multi-session 22/30, worst ability loss 0, run limit 0"
+    }
+  },
+  "selected": "x-tools",
+  "next": {
+    "skipStageB": true,
+    "heldoutArm": "x-tools"
+  },
+  "sources": {
+    "write-x": {
+      "jobId": "accept18810-screen-a-write-x",
+      "attemptId": "accept18810-screen-a-write-x@1"
+    },
+    "x": {
+      "jobId": "accept18810-screen-a-x",
+      "attemptId": "accept18810-screen-a-x@1"
+    },
+    "x-tools": {
+      "jobId": "accept18810-screen-a-x-tools",
+      "attemptId": "accept18810-screen-a-x-tools@1"
+    }
+  },
+  "ceiling": 8000000
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "188.9-screen-write-side-abandoned",
+  "reason": "at concurrency 16 the provider reset streams and retried: 457 calls, 1 of 35 ids in 52 minutes, ~10 calls per session instead of ~1, which projects ~15,700 calls and ~30M+ input (and ~7h at the proven-clean concurrency 4) for the 35-id screen - outside the approved cap and the 30-minute target",
+  "inputTokens": 3348740,
+  "cacheReadTokens": 325504,
+  "outputTokens": 561127,
+  "exchanges": 462,
+  "callsAtMaxOutput": 22,
+  "uniqueExchanges": 462
+}

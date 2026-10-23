@@ -1,0 +1,101 @@
+{
+  "kind": "188.9-screen-verdict",
+  "screen": {
+    "subset": "screen-v1",
+    "draw": "SHA-256(\"prism-188.9-memory-bench-screen-v1:\" + id), ascending; 5 per ability",
+    "salt": "prism-188.9-memory-bench-screen-v1",
+    "counts": {
+      "abstention": 5,
+      "knowledge-update": 5,
+      "multi-session": 5,
+      "single-session-assistant": 5,
+      "single-session-preference": 5,
+      "single-session-user": 5,
+      "temporal-reasoning": 5
+    },
+    "idsHash": "86d7dcfbde70c33e1f5182a868e21289723d756cb3d199b496d904b8831451c0",
+    "fileSha256": "0e3192f4df7b673a85a4d809c527f6574d66ba88bc987a33441f38b0e5594177"
+  },
+  "rule": {
+    "minGainQuestions": 3,
+    "maxAbilityLoss": 1,
+    "maxRunLimit": 0.05
+  },
+  "baseline": {
+    "correct": 26,
+    "total": 35,
+    "runLimitRate": 0,
+    "perAbility": {
+      "abstention": {
+        "correct": 5,
+        "total": 5
+      },
+      "knowledge-update": {
+        "correct": 4,
+        "total": 5
+      },
+      "multi-session": {
+        "correct": 1,
+        "total": 5
+      },
+      "single-session-assistant": {
+        "correct": 5,
+        "total": 5
+      },
+      "single-session-preference": {
+        "correct": 4,
+        "total": 5
+      },
+      "single-session-user": {
+        "correct": 5,
+        "total": 5
+      },
+      "temporal-reasoning": {
+        "correct": 2,
+        "total": 5
+      }
+    }
+  },
+  "arms": {
+    "x": {
+      "proceed": false,
+      "gainQuestions": -1,
+      "abilityLosses": {
+        "abstention": 1,
+        "knowledge-update": -1,
+        "multi-session": 0,
+        "single-session-assistant": 1,
+        "single-session-preference": 0,
+        "single-session-user": 0,
+        "temporal-reasoning": 0
+      },
+      "runLimitRate": 0,
+      "reason": "gained -1 questions; worst ability loss 1 (needs +3 and <= 1)"
+    },
+    "xc": {
+      "proceed": false,
+      "missing": true,
+      "reason": "excluded: paid write side measured ~3.3M input and ~1h per screened id; ~30M+ and ~7h for 35 ids exceeds the approved screen cap"
+    },
+    "xc-agentic": {
+      "proceed": false,
+      "missing": true,
+      "reason": "excluded: reuses the excluded `xc` store"
+    }
+  },
+  "proceed": [],
+  "sources": {
+    "baseline": {
+      "jobId": "accept1889-screen-baseline",
+      "attemptId": "accept1889-screen-baseline@2"
+    },
+    "write-x": {
+      "jobId": "accept1889-screen-write-x",
+      "attemptId": "accept1889-screen-write-x@1"
+    },
+    "x": {
+      "jobId": "accept1889-screen-x",
+      "attemptId": "accept1889-screen-x@1"
+    }
+  }
+}

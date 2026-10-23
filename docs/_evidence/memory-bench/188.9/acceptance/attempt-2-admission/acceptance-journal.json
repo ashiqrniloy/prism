@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-94543612d6ee",
+  "manifestHash": "94543612d6eeedbd6b884b4f3fae86ae1f80df964575c872ada89fcbae04e6c4",
+  "ceiling": 8000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-23T01:22:48.784Z",
+  "updatedAt": "2026-10-23T01:30:04.279Z",
+  "status": "active",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept1889-write-x@1",
+      "jobId": "accept1889-write-x",
+      "manifestHash": "94543612d6eeedbd6b884b4f3fae86ae1f80df964575c872ada89fcbae04e6c4",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-write-x.json",
+      "maxInputTokens": 1500000,
+      "reservedInputTokens": 2000000,
+      "startedAt": "2026-10-23T01:22:48.790Z",
+      "confirmedInputTokens": 0,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-23T01:23:23.246Z"
+    },
+    {
+      "attemptId": "accept1889-baseline@1",
+      "jobId": "accept1889-baseline",
+      "manifestHash": "94543612d6eeedbd6b884b4f3fae86ae1f80df964575c872ada89fcbae04e6c4",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-baseline.json",
+      "maxInputTokens": 1500000,
+      "reservedInputTokens": 2000000,
+      "startedAt": "2026-10-23T01:23:23.246Z",
+      "confirmedInputTokens": 71357,
+      "usageComplete": true,
+      "cacheReadTokens": 6848,
+      "outputTokens": 15023,
+      "endedAt": "2026-10-23T01:30:04.278Z"
+    },
+    {
+      "attemptId": "accept1889-x@1",
+      "jobId": "accept1889-x",
+      "manifestHash": "94543612d6eeedbd6b884b4f3fae86ae1f80df964575c872ada89fcbae04e6c4",
+      "status": "reserved",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-x.json",
+      "maxInputTokens": 4000000,
+      "reservedInputTokens": 4500000,
+      "startedAt": "2026-10-23T01:30:04.279Z"
+    }
+  ]
+}

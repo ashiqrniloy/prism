@@ -1,0 +1,2605 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "usageSource": "wire-proxy",
+  "phase": "all",
+  "labelInjections": "off",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-22T20:59:09.842Z",
+  "suite": "longmemeval-s",
+  "subset": "screen-v1",
+  "ability": null,
+  "seed": null,
+  "config": "fabric",
+  "ingestion": "legacy-direct-ingest",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "judgeProtocol": "enum-json-v1",
+  "dataset": {
+    "file": "longmemeval-s.json",
+    "bytes": 277383467,
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 2000000,
+  "ablations": [
+    "fabric.delivery=188.8"
+  ],
+  "sourceVariants": [
+    {
+      "path": "packages/memory/fabric/src/config.ts",
+      "originalSha256": "c1ca8ce78198f51187d1fe1b1c08ce1f825cc59f345d03621b2fc37284baa9ad",
+      "transformedSha256": "b1ba995101e2b1e86eb1c622f73930805c0e972aeb671e0442e5782233d4710b"
+    },
+    {
+      "path": "packages/memory/fabric/src/context.ts",
+      "originalSha256": "d51174322aeeb75e8f424c704b9a38b5704cb1a27b442da9151b166816dccaad",
+      "transformedSha256": "8c65cbeaed01ede8a8434b6e531eecd3d7f1b651e52aef615448e9c5bb84ca51"
+    }
+  ],
+  "sourceRevision": "9bf1dbbcd625d7a7ace23c3cebb5f810c43c0a1c",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 3,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "episode",
+          "fact",
+          "file"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": false,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 45393,
+  "cacheReadTokens": 3904,
+  "outputTokens": 9672,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 35,
+    "judgeAttempts": 35,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 35,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 35,
+  "injectedContextTokens": 26396,
+  "injections": [
+    {
+      "questionId": "2698e78f_abs",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "2698e78f_abs",
+      "turn": 1,
+      "id": "answer_9282283d_abs_2-r3",
+      "source": "fabric-semantic",
+      "tokens": 532,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "88432d0a_abs",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "88432d0a_abs",
+      "turn": 1,
+      "id": "92ad6d8f_2-r0",
+      "source": "fabric-semantic",
+      "tokens": 584,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "6aeb4375_abs",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "6aeb4375_abs",
+      "turn": 1,
+      "id": "answer_3f9693b7_abs_1-r4",
+      "source": "fabric-semantic",
+      "tokens": 247,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6,
+      "cited": false
+    },
+    {
+      "questionId": "6aeb4375_abs",
+      "turn": 1,
+      "id": "ultrachat_181672-r2",
+      "source": "fabric-semantic",
+      "tokens": 204,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "60bf93ed_abs",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "60bf93ed_abs",
+      "turn": 1,
+      "id": "sharegpt_7mz4EV7_0-r2",
+      "source": "fabric-semantic",
+      "tokens": 517,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "c8090214_abs",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "c8090214_abs",
+      "turn": 1,
+      "id": "answer_70dc7d08_abs_1-r4",
+      "source": "fabric-semantic",
+      "tokens": 560,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "5c40ec5b",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5c40ec5b",
+      "turn": 1,
+      "id": "answer_1cb52d0a_2-r4",
+      "source": "fabric-semantic",
+      "tokens": 463,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8333333333333334,
+      "cited": false
+    },
+    {
+      "questionId": "45dc21b6",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 190,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "45dc21b6",
+      "turn": 1,
+      "id": "answer_07664d43_1-r0",
+      "source": "fabric-semantic",
+      "tokens": 583,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "c4ea545c",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 190,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "c4ea545c",
+      "turn": 1,
+      "id": "answer_d3bf812b_1-r2",
+      "source": "fabric-semantic",
+      "tokens": 317,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "c4ea545c",
+      "turn": 1,
+      "id": "sharegpt_JJu53iW_0-r4",
+      "source": "fabric-semantic",
+      "tokens": 265,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4,
+      "cited": false
+    },
+    {
+      "questionId": "5831f84d",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "5831f84d",
+      "turn": 1,
+      "id": "answer_8d63a897_1-r0",
+      "source": "fabric-semantic",
+      "tokens": 655,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "7a87bd0c",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 189,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "7a87bd0c",
+      "turn": 1,
+      "id": "answer_d08a934d_1-r4",
+      "source": "fabric-semantic",
+      "tokens": 488,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8,
+      "cited": false
+    },
+    {
+      "questionId": "129d1232",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "129d1232",
+      "turn": 1,
+      "id": "answer_1de862d6_2-r1",
+      "source": "fabric-semantic",
+      "tokens": 848,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5555555555555556,
+      "cited": false
+    },
+    {
+      "questionId": "1c549ce4",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "1c549ce4",
+      "turn": 1,
+      "id": "answer_4cb841a8_2-r5",
+      "source": "fabric-semantic",
+      "tokens": 592,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "157a136e",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "157a136e",
+      "turn": 1,
+      "id": "ultrachat_255132-r2",
+      "source": "fabric-semantic",
+      "tokens": 474,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.75,
+      "cited": false
+    },
+    {
+      "questionId": "3fdac837",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "3fdac837",
+      "turn": 1,
+      "id": "answer_419d21d5_2-r4",
+      "source": "fabric-semantic",
+      "tokens": 517,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "c4a1ceb8",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "c4a1ceb8",
+      "turn": 1,
+      "id": "answer_56d02cab_1-r5",
+      "source": "fabric-semantic",
+      "tokens": 724,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.75,
+      "cited": false
+    },
+    {
+      "questionId": "41275add",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "41275add",
+      "turn": 1,
+      "id": "answer_sharegpt_81riySf_0-r0",
+      "source": "fabric-semantic",
+      "tokens": 289,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.42857142857142855,
+      "cited": false
+    },
+    {
+      "questionId": "58470ed2",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "58470ed2",
+      "turn": 1,
+      "id": "answer_sharegpt_U4oCSfU_7-r0",
+      "source": "fabric-semantic",
+      "tokens": 1026,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.46153846153846156,
+      "cited": false
+    },
+    {
+      "questionId": "71a3fd6b",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 190,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "2bf43736",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "2bf43736",
+      "turn": 1,
+      "id": "answer_sharegpt_2kpncbX_13-r4",
+      "source": "fabric-semantic",
+      "tokens": 222,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6190476190476191,
+      "cited": false
+    },
+    {
+      "questionId": "e3fc4d6e",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "e3fc4d6e",
+      "turn": 1,
+      "id": "answer_sharegpt_5m7gg5F_0-r0",
+      "source": "fabric-semantic",
+      "tokens": 1148,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6,
+      "cited": false
+    },
+    {
+      "questionId": "caf03d32",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 192,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "caf03d32",
+      "turn": 1,
+      "id": "answer_2fc6aabb-r7",
+      "source": "fabric-semantic",
+      "tokens": 394,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5,
+      "cited": false
+    },
+    {
+      "questionId": "1d4e3b97",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "1d4e3b97",
+      "turn": 1,
+      "id": "ecb24dd8_2-r3",
+      "source": "fabric-semantic",
+      "tokens": 708,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.45454545454545453,
+      "cited": false
+    },
+    {
+      "questionId": "1c0ddc50",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 191,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "1c0ddc50",
+      "turn": 1,
+      "id": "2aa70c9c_1-r4",
+      "source": "fabric-semantic",
+      "tokens": 488,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6666666666666666,
+      "cited": false
+    },
+    {
+      "questionId": "0a34ad58",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 188,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "0a34ad58",
+      "turn": 1,
+      "id": "answer_cebb7159-r4",
+      "source": "fabric-semantic",
+      "tokens": 621,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.4444444444444444,
+      "cited": false
+    },
+    {
+      "questionId": "38146c39",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "38146c39",
+      "turn": 1,
+      "id": "answer_772472c8-r0",
+      "source": "fabric-semantic",
+      "tokens": 692,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5454545454545454,
+      "cited": false
+    },
+    {
+      "questionId": "a82c026e",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "a82c026e",
+      "turn": 1,
+      "id": "answer_787e6a6d-r1",
+      "source": "fabric-semantic",
+      "tokens": 344,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "8ebdbe50",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 185,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "8ebdbe50",
+      "turn": 1,
+      "id": "answer_8ad8a34f-r1",
+      "source": "fabric-semantic",
+      "tokens": 766,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.75,
+      "cited": false
+    },
+    {
+      "questionId": "dccbc061",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "dccbc061",
+      "turn": 1,
+      "id": "answer_8f276838-r0",
+      "source": "fabric-semantic",
+      "tokens": 831,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "c960da58",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "c960da58",
+      "turn": 1,
+      "id": "answer_e05e4612-r3",
+      "source": "fabric-semantic",
+      "tokens": 766,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "7527f7e2",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "7527f7e2",
+      "turn": 1,
+      "id": "answer_7cb94507-r2",
+      "source": "fabric-semantic",
+      "tokens": 656,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 1,
+      "cited": false
+    },
+    {
+      "questionId": "982b5123",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "a3045048",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 189,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "a3045048",
+      "turn": 1,
+      "id": "answer_016f6bd4_1-r3",
+      "source": "fabric-semantic",
+      "tokens": 576,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.8888888888888888,
+      "cited": false
+    },
+    {
+      "questionId": "9a707b82",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 185,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "9a707b82",
+      "turn": 1,
+      "id": "8e78fa70_1-r1",
+      "source": "fabric-semantic",
+      "tokens": 434,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.5714285714285714,
+      "cited": false
+    },
+    {
+      "questionId": "gpt4_e072b769",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "gpt4_e072b769",
+      "turn": 1,
+      "id": "answer_c19bd2bf_1-r4",
+      "source": "fabric-semantic",
+      "tokens": 604,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.75,
+      "cited": false
+    },
+    {
+      "questionId": "gpt4_1e4a8aeb",
+      "turn": 1,
+      "id": "block:Long-term memory",
+      "source": "fabric-directory",
+      "tokens": 187,
+      "placement": "prefix",
+      "granularity": "block",
+      "label": null,
+      "coverage": null,
+      "cited": false
+    },
+    {
+      "questionId": "gpt4_1e4a8aeb",
+      "turn": 1,
+      "id": "answer_16bd5ea5_2-r0",
+      "source": "fabric-semantic",
+      "tokens": 694,
+      "placement": "tail",
+      "granularity": "item",
+      "label": null,
+      "coverage": 0.6,
+      "cited": false
+    }
+  ],
+  "attemptId": "accept1889-screen-baseline@1",
+  "protocolHash": "e7e7f692f04f4c74891e42636f48574547dab2db4b963566bbf6c740b7da2ea2",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "60bf93ed_abs",
+      "ability": "abstention",
+      "cluster": "lme-47a16423cf73",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "sharegpt_7mz4EV7_0-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 517,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "2698e78f_abs",
+      "ability": "abstention",
+      "cluster": "lme-c794675798bc",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_9282283d_abs_2-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 532,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "88432d0a_abs",
+      "ability": "abstention",
+      "cluster": "lme-d4b071089db5",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "92ad6d8f_2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 584,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "6aeb4375_abs",
+      "ability": "abstention",
+      "cluster": "lme-237da69b5132",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_3f9693b7_abs_1-r4",
+        "ultrachat_181672-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 451,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "c8090214_abs",
+      "ability": "abstention",
+      "cluster": "lme-e4f886aa917f",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_70dc7d08_abs_1-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 560,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "5c40ec5b",
+      "ability": "knowledge-update",
+      "cluster": "lme-ca3bed3e3956",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_1cb52d0a_2-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 463,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "45dc21b6",
+      "ability": "knowledge-update",
+      "cluster": "lme-83a57f3aaf85",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_07664d43_1-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 583,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "c4ea545c",
+      "ability": "knowledge-update",
+      "cluster": "lme-2eac68443011",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_d3bf812b_1-r2",
+        "sharegpt_JJu53iW_0-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 582,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "5831f84d",
+      "ability": "knowledge-update",
+      "cluster": "lme-154ecb371cb9",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_8d63a897_1-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 655,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "7a87bd0c",
+      "ability": "knowledge-update",
+      "cluster": "lme-30b28557dcf8",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_d08a934d_1-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 488,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "1c549ce4",
+      "ability": "multi-session",
+      "cluster": "lme-2ec73a004321",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_4cb841a8_2-r5"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 592,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "157a136e",
+      "ability": "multi-session",
+      "cluster": "lme-5706f889159b",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "ultrachat_255132-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 474,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "129d1232",
+      "ability": "multi-session",
+      "cluster": "lme-fc99aab06e1f",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_1de862d6_2-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 848,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.3333333333333333,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "3fdac837",
+      "ability": "multi-session",
+      "cluster": "lme-f54ffc630292",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_419d21d5_2-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 517,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "c4a1ceb8",
+      "ability": "multi-session",
+      "cluster": "lme-d393c29cecf5",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_56d02cab_1-r5"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 724,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "41275add",
+      "ability": "single-session-assistant",
+      "cluster": "lme-1ae8c9814ff8",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_sharegpt_81riySf_0-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 289,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "58470ed2",
+      "ability": "single-session-assistant",
+      "cluster": "lme-ccceb6ef2a42",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_sharegpt_U4oCSfU_7-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 1026,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "71a3fd6b",
+      "ability": "single-session-assistant",
+      "cluster": "lme-cfe898279107",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "2bf43736",
+      "ability": "single-session-assistant",
+      "cluster": "lme-9e6aa8159dac",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_sharegpt_2kpncbX_13-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 222,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "e3fc4d6e",
+      "ability": "single-session-assistant",
+      "cluster": "lme-8e8ddde4583e",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_sharegpt_5m7gg5F_0-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 1148,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "caf03d32",
+      "ability": "single-session-preference",
+      "cluster": "lme-20f0551c7622",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_2fc6aabb-r7"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 394,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "1d4e3b97",
+      "ability": "single-session-preference",
+      "cluster": "lme-a601c1572bbe",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "ecb24dd8_2-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 708,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "1c0ddc50",
+      "ability": "single-session-preference",
+      "cluster": "lme-9a661df987d4",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "2aa70c9c_1-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 488,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "0a34ad58",
+      "ability": "single-session-preference",
+      "cluster": "lme-c6f7c095bcb8",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_cebb7159-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 621,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "38146c39",
+      "ability": "single-session-preference",
+      "cluster": "lme-8a1973cbb834",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_772472c8-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 692,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "8ebdbe50",
+      "ability": "single-session-user",
+      "cluster": "lme-ad31006814c2",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_8ad8a34f-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 766,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "a82c026e",
+      "ability": "single-session-user",
+      "cluster": "lme-0ce4ee74db53",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_787e6a6d-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 344,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "dccbc061",
+      "ability": "single-session-user",
+      "cluster": "lme-33ff937264d2",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_8f276838-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 831,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 1,
+      "evidenceAllRequired": true,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "c960da58",
+      "ability": "single-session-user",
+      "cluster": "lme-43b4d471b7b0",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_e05e4612-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 766,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "7527f7e2",
+      "ability": "single-session-user",
+      "cluster": "lme-d6d8cf3f9a65",
+      "correct": true,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_7cb94507-r2"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 656,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "982b5123",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-9703eeb1c94c",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 0,
+      "retrievalRecallAtK": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "9a707b82",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-f8f21438d606",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "8e78fa70_1-r1"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 434,
+      "retrievalRecallAtK": false,
+      "answerSessionHitAtK": false,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "a3045048",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-c3c23177579a",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_016f6bd4_1-r3"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 576,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "gpt4_e072b769",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e8001748d24e",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_c19bd2bf_1-r4"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 604,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    },
+    {
+      "id": "gpt4_1e4a8aeb",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-be9744642193",
+      "correct": false,
+      "truncated": false,
+      "syntheticDates": false,
+      "toolCalls": 0,
+      "recallCalls": 1,
+      "recalledIds": [
+        "answer_16bd5ea5_2-r0"
+      ],
+      "answerRetries": 0,
+      "turns": 1,
+      "turnTrace": [],
+      "writes": [],
+      "visibleChannels": [
+        "fabric-tool",
+        "fabric-directory",
+        "fabric-semantic"
+      ],
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      },
+      "retrievedSnippetTokens": 694,
+      "retrievalRecallAtK": true,
+      "answerSessionHitAtK": true,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": false,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "inputCap": 870976,
+  "selectedQuestionIds": [
+    "60bf93ed_abs",
+    "2698e78f_abs",
+    "88432d0a_abs",
+    "6aeb4375_abs",
+    "c8090214_abs",
+    "5c40ec5b",
+    "45dc21b6",
+    "c4ea545c",
+    "5831f84d",
+    "7a87bd0c",
+    "1c549ce4",
+    "157a136e",
+    "129d1232",
+    "3fdac837",
+    "c4a1ceb8",
+    "41275add",
+    "58470ed2",
+    "71a3fd6b",
+    "2bf43736",
+    "e3fc4d6e",
+    "caf03d32",
+    "1d4e3b97",
+    "1c0ddc50",
+    "0a34ad58",
+    "38146c39",
+    "8ebdbe50",
+    "a82c026e",
+    "dccbc061",
+    "c960da58",
+    "7527f7e2",
+    "982b5123",
+    "9a707b82",
+    "a3045048",
+    "gpt4_e072b769",
+    "gpt4_1e4a8aeb"
+  ],
+  "runPathFingerprint": "a71bdd2a4823b1511464de52445ff3ca36f06a30b0f02548b92c0838aa4bf8d2",
+  "usageComplete": true,
+  "usageMissingExchanges": 0,
+  "wireExchanges": 70,
+  "timing": {
+    "wallMs": 206654.1,
+    "concurrency": {
+      "initial": 4,
+      "active": 4,
+      "floor": 1
+    },
+    "questions": {
+      "n": 35,
+      "wallMs": {
+        "p50": 24605.1,
+        "p95": 42182.8,
+        "mean": 23006.4
+      }
+    },
+    "roles": {
+      "judge": {
+        "calls": 35,
+        "firstByteMs": {
+          "p50": 2992,
+          "p95": 9882.4,
+          "mean": 4259.6
+        },
+        "totalMs": {
+          "p50": 2992,
+          "p95": 9882.4,
+          "mean": 4259.6
+        }
+      },
+      "solver": {
+        "calls": 35,
+        "firstByteMs": {
+          "p50": 2560.8,
+          "p95": 21490,
+          "mean": 5072.1
+        },
+        "totalMs": {
+          "p50": 7654.8,
+          "p95": 28552.8,
+          "mean": 9818.7
+        }
+      }
+    },
+    "calls": 70
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "abstention": {
+      "n": 5,
+      "correct": 4,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.6,
+      "accuracy": 0.8,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.6,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.6,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 5,
+      "correct": 1,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0.2,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 1,
+      "evidenceRoundCoverage": 0.3,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "multi-session": {
+      "n": 5,
+      "correct": 0,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.8,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.8,
+      "evidenceRoundCoverage": 0.16666666666666666,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.8,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "n": 5,
+      "correct": 4,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.8,
+      "accuracy": 0.8,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.8,
+      "evidenceRoundCoverage": 0.8,
+      "evidenceAllRequired": 0.8,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.8,
+      "metric": "single-session-assistant",
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "n": 5,
+      "correct": 4,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.6,
+      "accuracy": 0.8,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.6,
+      "evidenceRoundCoverage": 0.2,
+      "evidenceAllRequired": 0.2,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.6,
+      "metric": "single-session-preference",
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "n": 5,
+      "correct": 4,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0.8,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 1,
+      "evidenceRoundCoverage": 0.6,
+      "evidenceAllRequired": 0.6,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "single-session-user",
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 5,
+      "correct": 0,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.75,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.75,
+      "evidenceRoundCoverage": 0.125,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.75,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "abstention": {
+      "n": 5,
+      "correct": 4,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.6,
+      "accuracy": 0.8,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.6,
+      "evidenceRoundCoverage": 0.5,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.6,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 5,
+      "correct": 1,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 1,
+      "accuracy": 0.2,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 1,
+      "evidenceRoundCoverage": 0.3,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 1,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "multi-session": {
+      "n": 5,
+      "correct": 0,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.8,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.8,
+      "evidenceRoundCoverage": 0.16666666666666666,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.8,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "information-extraction": {
+      "n": 15,
+      "correct": 12,
+      "scored": 15,
+      "f1": null,
+      "recallAtK": 0.8,
+      "accuracy": 0.8,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.8,
+      "evidenceRoundCoverage": 0.5333333333333333,
+      "evidenceAllRequired": 0.5333333333333333,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.8,
+      "metric": "information-extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 5,
+      "correct": 0,
+      "scored": 5,
+      "f1": null,
+      "recallAtK": 0.75,
+      "accuracy": 0,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": 0.75,
+      "evidenceRoundCoverage": 0.125,
+      "evidenceAllRequired": 0,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": 0.75,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "multi-session": {
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0.0860044500253343,
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 35,
+  "retrievedSnippetTokens": 19829,
+  "answerSessionHitAtK": 0.7941176470588235,
+  "evidenceRoundCoverage": 0.3777777777777778,
+  "evidenceAllRequired": 0.26666666666666666,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": 0.7941176470588235,
+  "retrievalRecallAtK": 0.7941176470588235
+}

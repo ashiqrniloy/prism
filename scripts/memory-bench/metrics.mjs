@@ -30,6 +30,19 @@ export const METRIC_DEFINITIONS = {
   ),
   tokensPerSession: { definition: "wire input tokens per session", unit: "tokens/session", direction: "lower" },
   accuracy: proportion("fraction of answers accepted by the configured judge (judge accuracy, not token F1)"),
+  overall: proportion("overall judge accuracy across abilities"),
+  // LongMemEval-S abilities are the judge accuracy of that question type, not new metrics.
+  ...Object.fromEntries(
+    [
+      "knowledge-update",
+      "multi-session",
+      "temporal-reasoning",
+      "single-session-user",
+      "single-session-assistant",
+      "single-session-preference",
+      "abstention",
+    ].map((ability) => [ability, proportion(`fraction of ${ability} answers accepted by the configured judge`)]),
+  ),
   tokenF1: proportion("mean token-level F1 against the gold answer (never a judge verdict)"),
   answerSessionHitAtK: proportion("coarse boolean: at least one recalled round belongs to an answer session"),
   evidenceRoundCoverage: proportion("mean fraction of message-evidence rounds recalled (coarse round granularity)"),

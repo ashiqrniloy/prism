@@ -1,0 +1,58 @@
+{
+  "seed": 1889,
+  "salt": "prism-188.9-memory-bench-screen-v1",
+  "draw": "SHA-256(\"prism-188.9-memory-bench-screen-v1:\" + id), ascending; 5 per ability",
+  "source": "development (confirmatory) pool; held-out v2 ids are disjoint by construction",
+  "idsPerAbility": 5,
+  "abilities": {
+    "abstention": [
+      "60bf93ed_abs",
+      "2698e78f_abs",
+      "88432d0a_abs",
+      "6aeb4375_abs",
+      "c8090214_abs"
+    ],
+    "knowledge-update": [
+      "5c40ec5b",
+      "45dc21b6",
+      "c4ea545c",
+      "5831f84d",
+      "7a87bd0c"
+    ],
+    "multi-session": [
+      "1c549ce4",
+      "157a136e",
+      "129d1232",
+      "3fdac837",
+      "c4a1ceb8"
+    ],
+    "single-session-assistant": [
+      "41275add",
+      "58470ed2",
+      "71a3fd6b",
+      "2bf43736",
+      "e3fc4d6e"
+    ],
+    "single-session-preference": [
+      "caf03d32",
+      "1d4e3b97",
+      "1c0ddc50",
+      "0a34ad58",
+      "38146c39"
+    ],
+    "single-session-user": [
+      "8ebdbe50",
+      "a82c026e",
+      "dccbc061",
+      "c960da58",
+      "7527f7e2"
+    ],
+    "temporal-reasoning": [
+      "982b5123",
+      "9a707b82",
+      "a3045048",
+      "gpt4_e072b769",
+      "gpt4_1e4a8aeb"
+    ]
+  }
+}

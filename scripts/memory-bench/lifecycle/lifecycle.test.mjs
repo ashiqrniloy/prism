@@ -174,7 +174,15 @@ test("replay_caches_injected_model_client_and_separates_models", () =>
     assert.equal(calls, 2);
     await replayLedgers({ ...options, modelId: "scripted/other" });
     assert.equal(calls, 4);
-    await assert.rejects(replayLedgers({ ...options, client: undefined, modelId: "missing/model" }), /cache miss/);
+    // A cache miss with no client is a failed pass, reported rather than thrown (plan 188.10 Task 5):
+    // the run completes with every pass naming the reason and nothing promoted.
+    const missed = await replayLedgers({ ...options, client: undefined, modelId: "missing/model" });
+    assert.deepEqual(
+      missed.passes.map((pass) => pass.reasonCode),
+      ["model_call_failed", "model_call_failed"],
+      "the missing client is reported, never silently an empty write",
+    );
+    assert.equal(missed.counts.promoted, 0);
   }));
 test("recorded_om_ids_remain_valid_and_shared_scope_identity_survives", () =>
   temporary(async (dir) => {

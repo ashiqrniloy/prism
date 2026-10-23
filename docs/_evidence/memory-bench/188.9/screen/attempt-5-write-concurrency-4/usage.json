@@ -1,0 +1,8 @@
+{
+  "kind": "188.9-screen-write-side-abandoned",
+  "reason": "4 questions in flight makes the 35-id write side about 7 hours; restarted at 16, which the probe measured clean",
+  "inputTokens": 753970,
+  "cacheReadTokens": 83456,
+  "outputTokens": 124732,
+  "exchanges": 101
+}

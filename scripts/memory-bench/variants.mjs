@@ -12,6 +12,9 @@ export const VARIANT_PATHS = {
   "fabric.stem=off": ["packages/memory/core/src/lexical.ts"],
   "fabric.multiQuery=off": [`${fabric}tools.ts`],
   ...Object.fromEntries([600, 1200, 2400].map((budget) => [`fabric.snippetBudget=${budget}`, [`${fabric}tools.ts`]])),
+  // 188.8's passive delivery rule (whole notes, 600 tokens, top 3, similarity 0.35) so the held-out
+  // baseline reproduces 188.8 post-fix instead of the 4000/12/0.2 delivery 188.9 Task 5 shipped.
+  "fabric.delivery=188.8": [`${fabric}config.ts`, `${fabric}context.ts`],
   "fabric.keyWeight=off": ["packages/memory/core/src/sqlite/index.ts"],
   "om.dates=off": [`${om}serialize.ts`, `${om}render.ts`, `${om}workers/reflector.ts`],
   "om.taskState=off": [`${om}workers/observer.ts`, `${om}render.ts`],
@@ -95,8 +98,49 @@ export function transformVariantSource(path, source, input = []) {
         `const budget = typeof args.budget === "number" ? args.budget : ${budget};`,
       );
       replace(
-        "Ceiling on the summed token count of the hits; default 1200.",
-        `Ceiling on the summed token count of the hits; default ${budget}.`,
+        "Ceiling on the summed tokens of the rendered snippet lines; default 1200.",
+        `Ceiling on the summed tokens of the rendered snippet lines; default ${budget}.`,
+      );
+    }
+  }
+  if (active("fabric.delivery=188.8")) {
+    if (path === `${fabric}config.ts`) {
+      replace(
+        'minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.2 },',
+        'minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.35 },',
+      );
+      replace(
+        'topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 12 },',
+        'topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 3 },',
+      );
+      replace(
+        'budgetTokens: { type: "integer", minimum: 1, default: 4000 },',
+        'budgetTokens: { type: "integer", minimum: 1, default: 600 },',
+      );
+    } else {
+      replace("minSimilarity: inject.minSimilarity ?? 0.2,", "minSimilarity: inject.minSimilarity ?? 0.35,");
+      replace("inject.budgetTokens ?? 4000,", "inject.budgetTokens ?? 600,");
+      replace("inject.topK ?? 12,", "inject.topK ?? 3,");
+      replace(
+        `          const { hits, lines: semanticLines } = fitInjection(
+            eligible,
+            lexicalTerms(query),
+            inject.budgetTokens ?? 600,
+            inject.topK ?? 3,
+            eligible.length,
+          );`,
+        `          const hits: MemoryNoteHit[] = [];
+          const semanticLines: string[] = ["Cite the ids you use as [id]."];
+          let tokens = Math.ceil(semanticLines[0]!.length / 4);
+          for (const hit of eligible) {
+            const line = \`- [\${hit.id}] \${hit.level ?? "project"} \${hit.kind} (\${hit.ingestedAt.slice(0, 10)})\${hit.tRef ? \` tRef=\${hit.tRef}\` : ""} \${hit.content}\`;
+            const cost = Math.ceil(line.length / 4);
+            if (tokens + cost > (inject.budgetTokens ?? 600) && hits.length > 0) continue;
+            hits.push(hit);
+            semanticLines.push(line);
+            tokens += cost;
+            if (hits.length >= (inject.topK ?? 3)) break;
+          }`,
       );
     }
   }
@@ -128,10 +172,15 @@ export function transformVariantSource(path, source, input = []) {
     replace("supersededReflectionIds: activeReflections(afterObservations).map((item) => item.id),", "");
   }
   if (active("fabric.crossSourceDedup=off")) replace("const duplicate = visibleMemory(draft, entries);", "const duplicate = () => false;");
-  if (active("lifecycle.verification=retrieval")) replace('return state ? [...state.cited] : [];', 'return state ? [...state.shown] : [];');
+  if (active("lifecycle.verification=retrieval")) replace("return state ? [...state.cited] : [];", "return state ? [...state.shown] : [];");
   if (active("lifecycle.promotion=every-reflection")) {
-    replace('import { randomUUID } from "node:crypto";', 'import { randomUUID } from "node:crypto";\nimport { scanScopedMemoryContent } from "./scoped/trust.js";');
-    replace('    consolidate,\n    recall,', `    consolidate: async (session, consolidateOptions = {}) => {
+    replace(
+      'import { randomUUID } from "node:crypto";',
+      'import { randomUUID } from "node:crypto";\nimport { scanScopedMemoryContent } from "./scoped/trust.js";',
+    );
+    replace(
+      "    consolidate,\n    recall,",
+      `    consolidate: async (session, consolidateOptions = {}) => {
       if (promotion === undefined) return {ran: false, reason: "disabled"};
       if (!consolidationLease.enter(session.id)) return {ran: false, reason: "busy"};
       try {
@@ -153,7 +202,8 @@ export function transformVariantSource(path, source, input = []) {
         return {ran: report.written > 0, ...(report.written ? {} : {reason: "empty"}), ...(entries.at(-1)?.id === undefined ? {} : {cursor: entries.at(-1).id}), report};
       } finally {consolidationLease.exit(session.id);}
     },
-    recall,`);
+    recall,`,
+    );
   }
   if (active("lifecycle.capacity=off"))
     replace(

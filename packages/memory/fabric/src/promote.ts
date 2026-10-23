@@ -1,5 +1,7 @@
 import type { JsonSchema } from "@arnilo/prism";
+import { isThinkingLevel, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
+import { type ConsolidationExtractionReason, EXTRACTION_REASONS } from "./consolidation/extract.js";
 import { DEFAULT_MAX_CONSOLIDATION_CANDIDATES } from "./consolidation/gather.js";
 import {
   DEFAULT_DERIVABLE_FROM,
@@ -28,11 +30,20 @@ export interface MemoryFabricPromoteConfig {
   readonly minTurnsBetween?: number;
   /** Files a note may not merely restate. Default `["AGENTS.md", "README.md", "package.json", "CLAUDE.md"]`. */
   readonly derivableFrom?: readonly string[];
+  /**
+   * The extractor's output budget. Capped by the model's own `limits.maxOutputTokens`; absent, the
+   * model's parameters apply unchanged. Extracting 48 notes needs room the solver budget may not give.
+   */
+  readonly maxOutputTokens?: number;
+  /** The extractor's reasoning effort, one of `THINKING_LEVELS`; absent, the model's default. */
+  readonly thinkingLevel?: string;
 }
 
 export interface ResolvedPromoteConfig {
   readonly enabled: boolean;
   readonly model?: string;
+  readonly maxOutputTokens?: number;
+  readonly thinkingLevel?: string;
   readonly minScore: number;
   readonly weights?: Readonly<Partial<PromotionWeights>>;
   readonly maxCandidates: number;
@@ -41,6 +52,10 @@ export interface ResolvedPromoteConfig {
 }
 
 const promotionWeightSchema: JsonSchema = { type: "number", minimum: -8, maximum: 8 };
+
+/** The extractor budget bounds: below 256 an answer cannot hold one note; 32,768 is the largest asked of any model. */
+export const HARD_PROMOTE_MAX_OUTPUT_TOKENS = 32_768;
+export const MIN_PROMOTE_MAX_OUTPUT_TOKENS = 256;
 
 export const memoryFabricPromoteSchema = {
   anyOf: [
@@ -59,6 +74,13 @@ export const memoryFabricPromoteSchema = {
         maxCandidates: { type: "integer", minimum: 1, maximum: 256 },
         minTurnsBetween: { type: "integer", minimum: 1, maximum: HARD_PROMOTE_MIN_TURNS_BETWEEN },
         derivableFrom: { type: "array", maxItems: 16, items: { type: "string", minLength: 1, maxLength: 200 } },
+        maxOutputTokens: {
+          type: "integer",
+          minimum: MIN_PROMOTE_MAX_OUTPUT_TOKENS,
+          maximum: HARD_PROMOTE_MAX_OUTPUT_TOKENS,
+        },
+        // The closed provider-kit set: an unknown level is a config error, never a silent no-op.
+        thinkingLevel: { type: "string", enum: [...THINKING_LEVELS] },
       },
     },
   ],
@@ -75,9 +97,23 @@ export function resolvePromoteConfig(value: false | MemoryFabricPromoteConfig | 
   const config = value === undefined || value === false ? undefined : value;
   const minScore = config?.minScore ?? DEFAULT_PROMOTION_MIN_SCORE;
   if (!Number.isFinite(minScore) || minScore < 0) throw new MemoryValidationError("promote.minScore must be a finite non-negative number");
+  const maxOutputTokens = config?.maxOutputTokens;
+  if (
+    maxOutputTokens !== undefined &&
+    (!Number.isSafeInteger(maxOutputTokens) ||
+      maxOutputTokens < MIN_PROMOTE_MAX_OUTPUT_TOKENS ||
+      maxOutputTokens > HARD_PROMOTE_MAX_OUTPUT_TOKENS)
+  )
+    throw new MemoryValidationError(
+      `promote.maxOutputTokens must be an integer in [${MIN_PROMOTE_MAX_OUTPUT_TOKENS},${HARD_PROMOTE_MAX_OUTPUT_TOKENS}]`,
+    );
+  if (config?.thinkingLevel !== undefined && !isThinkingLevel(config.thinkingLevel))
+    throw new MemoryValidationError(`promote.thinkingLevel must be one of ${THINKING_LEVELS.join(", ")}`);
   return {
     enabled,
     ...(config?.model === undefined ? {} : { model: config.model }),
+    ...(maxOutputTokens === undefined ? {} : { maxOutputTokens }),
+    ...(config?.thinkingLevel === undefined ? {} : { thinkingLevel: config.thinkingLevel }),
     minScore,
     ...(config?.weights === undefined ? {} : { weights: config.weights }),
     maxCandidates: bounded("maxCandidates", config?.maxCandidates, DEFAULT_MAX_CONSOLIDATION_CANDIDATES, 256),
@@ -108,6 +144,13 @@ export interface FabricConsolidationReport {
   readonly modelCalls: number;
   /** Extractor calls spent correcting a malformed answer; never more than 1. */
   readonly correctionCalls?: number;
+  /**
+   * Why the pass's extraction failed, by reason code. Present only on a failed pass: the pass keeps
+   * its cursor and writes nothing, so `memory:status` shows the reason instead of dropping it.
+   */
+  readonly failures?: Readonly<Partial<Record<ConsolidationExtractionReason, number>>>;
+  /** Extractor calls that stopped on the output limit, whether or not a repair followed. */
+  readonly outputLimited?: number;
 }
 
 /** Per-session consolidation state: the cursor, the last pass's counts, and trust-scan refusals. */
@@ -150,6 +193,7 @@ function readReport(value: unknown): FabricConsolidationReport | undefined {
   const reasons = ["score", "ephemeral", "derivable", "trust", "secret"] as const;
   const rejectedRecord = rejected as Record<string, unknown>;
   if (reasons.some((key) => typeof rejectedRecord[key] !== "number" || !Number.isSafeInteger(rejectedRecord[key]))) return undefined;
+  const failures = readFailures(record.failures);
   return {
     pass: record.pass,
     at: record.at,
@@ -165,7 +209,24 @@ function readReport(value: unknown): FabricConsolidationReport | undefined {
     ...(typeof record.correctionCalls === "number" && Number.isSafeInteger(record.correctionCalls) && record.correctionCalls >= 0
       ? { correctionCalls: record.correctionCalls }
       : {}),
+    ...(failures === undefined ? {} : { failures }),
+    ...(typeof record.outputLimited === "number" && Number.isSafeInteger(record.outputLimited) && record.outputLimited >= 0
+      ? { outputLimited: record.outputLimited }
+      : {}),
   };
+}
+
+/** Fail-closed: a malformed tally is dropped, and so is the entry that holds it. */
+function readFailures(value: unknown): FabricConsolidationReport["failures"] | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const tally: Partial<Record<ConsolidationExtractionReason, number>> = {};
+  for (const [key, count] of Object.entries(value as Record<string, unknown>)) {
+    if (!EXTRACTION_REASONS.has(key as ConsolidationExtractionReason)) return undefined;
+    if (typeof count !== "number" || !Number.isSafeInteger(count) || count < 1) return undefined;
+    tally[key as ConsolidationExtractionReason] = count;
+  }
+  return tally;
 }
 
 export interface FabricNoteCensus {

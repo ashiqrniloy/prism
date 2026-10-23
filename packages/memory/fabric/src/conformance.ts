@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
+import type { Embedder, VectorStore, WorkingMemoryStore } from "@arnilo/prism-memory-core";
 import { MemoryConflictError, MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-core";
 import { createMemory } from "./memory.js";
-import type { Embedder, VectorStore, WorkingMemoryStore } from "@arnilo/prism-memory-core";
 
 export interface MemoryConformanceStores {
   readonly embedder: Embedder;
@@ -74,7 +74,10 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
     { wait: true },
   );
 
-  assert.deepEqual((await memory.get(["1", "missing", "1"])).map(record => record.id), ["1"]);
+  assert.deepEqual(
+    (await memory.get(["1", "missing", "1"])).map((record) => record.id),
+    ["1"],
+  );
   assert.equal((await otherThread.get(["1"])).length, 0);
   assert.equal((await memory.get([])).length, 0);
   await assert.rejects(memory.get([""]), MemoryValidationError);
@@ -233,7 +236,6 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
   });
   await assert.rejects(noThread.recall("x"), MemoryScopeError);
 
-
   // Directory aggregates (plan 188 Task 12): every store counts the same active notes.
   const directory = createMemory({
     tenantId: "tenant-a",
@@ -256,6 +258,7 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
         note("d-fact-3", { kind: "fact", keywords: ["billing", "auth"] }),
         note("d-proc-1", { kind: "procedure", tags: ["deploy"] }),
         note("d-file-1", { kind: "file", path: "notes/deploy.md" }),
+        note("d-exchange-1", { kind: "exchange" }),
         note("d-old", { kind: "fact", tags: ["stale"], validTo: "2000-01-01T00:00:00.000Z" }),
         note("d-future", { kind: "fact", tags: ["future"], validFrom: "2999-01-01T00:00:00.000Z" }),
         note("d-candidate", { kind: "fact", tags: ["candidate"] }, { status: "candidate" }),
@@ -268,14 +271,14 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
   );
   await directory.setConsent("d-revoked", { visible: false });
   await directory.forget({ ids: ["d-forgotten"] });
-  assert.deepEqual(await directory.countByKind(), { fact: 3, file: 1, procedure: 1 });
+  assert.deepEqual(await directory.countByKind(), { exchange: 1, fact: 3, file: 1, procedure: 1 });
   assert.deepEqual(await directory.topTags({ limit: 10 }), [
     { tag: "deploy", count: 3 },
     { tag: "billing", count: 2 },
     { tag: "auth", count: 1 },
   ]);
   assert.deepEqual(await directory.topTags({ limit: 1 }), [{ tag: "deploy", count: 3 }]);
-  assert.deepEqual(await directory.countByKind({ asOf: "1999-06-01T00:00:00.000Z" }), { fact: 4, file: 1, procedure: 1 });
+  assert.deepEqual(await directory.countByKind({ asOf: "1999-06-01T00:00:00.000Z" }), { exchange: 1, fact: 4, file: 1, procedure: 1 });
   assert.deepEqual(await otherThread.countByKind(), {}, "another thread's notes are never counted");
   await assert.rejects(directory.countByKind({ asOf: "not-a-date" }), MemoryValidationError);
   await assert.rejects(directory.topTags({ limit: 0 }), MemoryValidationError);
@@ -331,7 +334,11 @@ export async function runMemoryConformance(createStores: () => Promise<MemoryCon
     const counter = { tenantId: "tenant-a", resourceId: "projects/scan", name: "sessions" } as const;
     assert.equal(await stores.vectorStore.scopeCounter.get(counter), 0);
     const values = await Promise.all(Array.from({ length: 5 }, () => stores.vectorStore.scopeCounter!.increment(counter)));
-    assert.deepEqual(values.sort((a, b) => a - b), [1, 2, 3, 4, 5], "concurrent increments serialize");
+    assert.deepEqual(
+      values.sort((a, b) => a - b),
+      [1, 2, 3, 4, 5],
+      "concurrent increments serialize",
+    );
     assert.equal(await stores.vectorStore.scopeCounter.get(counter), 5);
   }
 

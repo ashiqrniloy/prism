@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { HookRegistrar, JsonObject } from "@arnilo/prism";
+import type { HookRegistrar, JsonObject, Message, ModelClient, ModelRef } from "@arnilo/prism";
 import { resolveRedactor } from "@arnilo/prism";
 import type { Memory, MemoryConsentInput, MemoryContextProviderOptions, RecallScoringOptions } from "@arnilo/prism-memory-core";
 import {
@@ -14,7 +14,14 @@ import {
 import { createMemoryId, foldObservationalMemoryLedger, isMemoryId, resolveMemoryWorkerLimits } from "@arnilo/prism-memory-observational";
 import { assertFabricBlockLabel, fabricBlockId, setFabricBlock, tombstoneFabricBlock } from "./blocks.js";
 import { type MemoryConsolidationPlan, mergeNoteMetadata, planMemoryConsolidation } from "./consolidate.js";
-import { type ConsolidationLifecycle, createConsolidationLease, runConsolidationPass } from "./consolidation/pass.js";
+import { ConsolidationExtractionError } from "./consolidation/extract.js";
+import {
+  type ConsolidationExchangeCandidate,
+  type ConsolidationLifecycle,
+  consolidationReport,
+  createConsolidationLease,
+  runConsolidationPass,
+} from "./consolidation/pass.js";
 import type { ConsolidationExistingNote } from "./consolidation/prompts.js";
 import { createFabricCitationTracker } from "./context.js";
 import { decideConsolidation } from "./decider.js";
@@ -69,6 +76,18 @@ import {
 import { resolveMemoryFabricSettings, runFabricEvolutionWorker } from "./workers.js";
 
 const isIso = (value: unknown): value is string => typeof value === "string" && value.length > 0 && Number.isFinite(Date.parse(value));
+
+/**
+ * Re-resolve the extractor's model with `parameters.maxTokens`, capped by the model's own limit (the
+ * same rule compaction's `withOutputBudget` uses). No budget means the host's client, untouched.
+ */
+function withOutputBudget(resolve: (ref?: ModelRef) => ModelClient, ref: string | undefined, maxTokens: number | undefined): ModelClient {
+  const base = resolve(ref);
+  if (maxTokens === undefined) return base;
+  const declared = base.model.limits?.maxOutputTokens;
+  const cap = Number.isSafeInteger(declared) && (declared as number) > 0 ? Math.min(maxTokens, declared as number) : maxTokens;
+  return resolve({ ...base.model, parameters: { ...base.model.parameters, maxTokens: cap } });
+}
 
 /** Storage identity of a note's scope: notes written before scopes existed are project notes. */
 function noteScopeKey(level: MemoryNoteScope | undefined, appliesTo: readonly string[] | undefined): string {
@@ -652,6 +671,58 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
   }
 
   /**
+   * Archived exchanges the pass has not consolidated, read through the same scoped recall the tools
+   * use, with the session tail as the query. Bounded and scope-tagged; text is bounded by the pass.
+   */
+  async function gatherExchanges(
+    entries: readonly import("@arnilo/prism").SessionEntry[],
+    limit: number,
+    levels: Map<string, FabricScopeLevel>,
+    signal?: AbortSignal,
+  ): Promise<readonly ConsolidationExchangeCandidate[]> {
+    const query = [...entries]
+      .reverse()
+      .flatMap((entry) => (entry.kind === "message" && entry.message?.role === "user" ? messageTextOf(entry.message) : []))
+      .join("\n")
+      .slice(0, 2_000);
+    if (query.trim().length === 0 || limit < 1) return [];
+    const found = new Map<string, ConsolidationExchangeCandidate>();
+    for (const binding of options.scopes ?? [{ level: "project" as const, memory }]) {
+      const rows = await recallCandidates(query, EXCHANGE_KINDS, Date.now(), limit, signal, undefined, undefined, binding.memory);
+      for (const { hit, metadata } of rows) {
+        if (metadata.consolidatedAt !== undefined || found.has(hit.id)) continue;
+        const level: FabricScopeLevel = metadata.scope === undefined || metadata.scope === "path" ? binding.level : metadata.scope;
+        levels.set(hit.id, level);
+        found.set(hit.id, {
+          id: hit.id,
+          text: hit.text,
+          level,
+          ...(metadata.tRef === undefined ? {} : { tRef: metadata.tRef }),
+        });
+      }
+    }
+    return [...found.values()].slice(0, limit);
+  }
+
+  /** Mark the exchanges a pass read, so the next pass gathers only new history. */
+  async function markExchangesConsolidated(
+    ids: readonly string[],
+    at: string,
+    levels: ReadonlyMap<string, FabricScopeLevel>,
+  ): Promise<void> {
+    for (const id of ids) {
+      const level = levels.get(id);
+      if (level === undefined) continue;
+      await memoryForScope(level).patchMetadata(id, (current) => {
+        const metadata = parseMemoryNoteMetadata(current);
+        return metadata === undefined
+          ? current
+          : { ...current, [MEMORY_NOTE_METADATA_KEY]: encodeMemoryNoteMetadata({ ...metadata, consolidatedAt: at }) };
+      });
+    }
+  }
+
+  /**
    * One consolidation pass over the session tail. The extractor client resolves only when candidates
    * exist, so a turn or command with nothing to consolidate makes no model call.
    */
@@ -664,6 +735,11 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
     try {
       const entries = await session.entries();
       if (consolidateOptions.signal?.aborted) throw consolidateOptions.signal.reason;
+      const exchangeLevels = new Map<string, FabricScopeLevel>();
+      const exchanges =
+        options.exchanges?.enabled === true
+          ? await gatherExchanges(entries, promotion.maxCandidates, exchangeLevels, consolidateOptions.signal)
+          : [];
       const result = await runConsolidationPass({
         sessionId: session.id,
         entries,
@@ -677,14 +753,22 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
           if (options.resolveModelClient === undefined) {
             throw new MemoryValidationError("consolidation needs resolveModelClient to reach a model");
           }
-          return options.resolveModelClient(promotion.model);
+          return withOutputBudget(options.resolveModelClient, promotion.model, promotion.maxOutputTokens);
         },
         limits: consolidationLimits!,
         ...(redactor === undefined ? {} : { redactor }),
         ...(options.secrets === undefined ? {} : { secrets: options.secrets }),
         root: options.promoteRoot ?? process.cwd(),
+        ...(options.repositoryRules === true ? { repositoryRules: true } : {}),
+        ...(exchanges.length === 0 ? {} : { exchanges }),
+        ...(exchanges.length === 0
+          ? {}
+          : { markExchangesConsolidated: (ids: readonly string[], at: string) => markExchangesConsolidated(ids, at, exchangeLevels) }),
         ...(consolidateOptions.signal === undefined ? {} : { signal: consolidateOptions.signal }),
         recallExisting: async (query, scope, limit) => {
+          // A disabled scope has no existing notes to reconcile against; consolidation must still run
+          // in a configuration that turns `user` or `agent` off (plan 188.9 Task 9 found this).
+          if (scoped && !scopeMemories.has(scope === "path" ? "project" : scope)) return [];
           const source = memoryForScope(scope === "path" ? "project" : scope);
           const recalled = await source.recall(query, { topK: limit });
           const notes: ConsolidationExistingNote[] = [];
@@ -699,6 +783,7 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
               scope: metadata.scope ?? scope,
               kind: metadata.kind,
               ...(metadata.key === undefined ? {} : { key: metadata.key }),
+              ...(metadata.tRef === undefined ? {} : { tRef: metadata.tRef }),
             });
           }
           return notes;
@@ -726,6 +811,21 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
         ...(report.modelCalls === 0 && report.retired === 0 ? { reason: "empty" as const } : {}),
         ...(result.cursor === undefined ? {} : { cursor: result.cursor }),
         report,
+      };
+    } catch (error) {
+      // A failed extraction writes nothing and keeps the cursor, so the material is retried next
+      // pass. The reason is counted in a report instead of thrown away: `memory:status` reads it.
+      if (!(error instanceof ConsolidationExtractionError)) throw error;
+      return {
+        ran: false,
+        reason: "failed",
+        reasonCode: error.reasonCode,
+        report: consolidationReport(new Date().toISOString(), {
+          modelCalls: error.modelCalls,
+          ...(error.correctionCalls === 0 ? {} : { correctionCalls: error.correctionCalls }),
+          failures: { [error.reasonCode]: 1 },
+          ...(error.reasonCode === "output_truncated" ? { outputLimited: 1 } : {}),
+        }),
       };
     } finally {
       consolidationLease.exit(session.id);
@@ -899,6 +999,7 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
       forget,
       tracker,
       noteMemory: (id, signal) => memoryWithNote(id, signal),
+      readNotes: (ids, signal) => getNotesAcrossScopes(ids, signal),
       ...(options.scopes === undefined ? {} : { scopeLevel: options.scopes[orderedMemories.indexOf(memory)]?.level ?? "project" }),
       ...(options.touchedPaths === undefined ? {} : { touchedPaths: options.touchedPaths }),
       lifecycle: {
@@ -907,4 +1008,15 @@ export function createMemoryFabric(options: CreateMemoryFabricOptions): MemoryFa
       },
     }),
   };
+}
+
+/** The one kind an exchange candidate carries; a pass never gathers anything else from the store. */
+const EXCHANGE_KINDS: ReadonlySet<MemoryNoteKind> = new Set<MemoryNoteKind>(["exchange"]);
+
+function messageTextOf(message: Message): string {
+  return message.content
+    .filter((block) => block.type === "text")
+    .map((block) => (block.type === "text" ? block.text : ""))
+    .join("\n")
+    .trim();
 }

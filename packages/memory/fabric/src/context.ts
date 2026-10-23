@@ -11,6 +11,7 @@ import {
   contentToText,
   HARD_TOP_K_CAP,
   latestUserText,
+  lexicalTerms,
   type Memory,
   type MemoryContextProviderOptions,
   withTailContext,
@@ -20,8 +21,9 @@ import type { MemoryFabricInjectConfig } from "./config.js";
 import type { FabricCore } from "./delivery/core.js";
 import type { FabricCueDuplicate, FabricCues } from "./delivery/cues.js";
 import { type FabricDirectoryHandle, renderFabricDirectory } from "./directory.js";
+import { fitInjection } from "./excerpt.js";
 import { isActiveNote } from "./lifecycle/index.js";
-import type { MemoryFabric, MemoryFabricRecallOptions, MemoryNoteHit } from "./types.js";
+import type { MemoryFabric, MemoryFabricRecallOptions } from "./types.js";
 
 /** Tracks notes shown to the model in each session and records citations in assistant text. */
 export interface FabricCitationTracker {
@@ -280,7 +282,7 @@ export function createFabricContext(
             ? await recall(query, {
                 ...period.options,
                 kinds: inject.kinds,
-                minSimilarity: inject.minSimilarity ?? 0.35,
+                minSimilarity: inject.minSimilarity ?? 0.2,
                 topK: HARD_TOP_K_CAP,
                 // Injection never shows archived notes, so it never pays for the archive query either.
                 archiveSearch: false,
@@ -289,23 +291,18 @@ export function createFabricContext(
               })
             : { hits: [] };
           const duplicate = visibleMemory(draft, entries);
-          const hits: MemoryNoteHit[] = [];
-          const semanticLines = ["Cite the ids you use as [id]."];
-          let tokens = Math.ceil(semanticLines[0]!.length / 4);
           const asOfMs = period.options.asOf ? new Date(period.options.asOf).getTime() : Date.now();
-          for (const hit of result.hits) {
-            // A candidate, trust-flagged, or inactive/archived note is never injected passively; only tool recall sees it.
-            if (!isActiveNote(hit, { asOfMs }) || (hit.flags?.length ?? 0) > 0 || duplicate(hit)) continue;
-            const line = `- [${hit.id}] ${hit.level ?? "project"} ${hit.kind} (${hit.ingestedAt.slice(0, 10)})${hit.tRef ? ` tRef=${hit.tRef}` : ""} ${hit.content}`;
-            const cost = Math.ceil(line.length / 4);
-            // The best hit is always shown, even when it alone exceeds the snippet budget; later hits
-            // must fit. Dropping the top source would make the budget hide the only useful memory.
-            if (tokens + cost > (inject.budgetTokens ?? 600) && hits.length > 0) continue;
-            hits.push(hit);
-            semanticLines.push(line);
-            tokens += cost;
-            if (hits.length >= (inject.topK ?? 3)) break;
-          }
+          // A candidate, trust-flagged, or inactive/archived note is never injected passively; only tool recall sees it.
+          const eligible = result.hits.filter((hit) => isActiveNote(hit, { asOfMs }) && (hit.flags?.length ?? 0) === 0 && !duplicate(hit));
+          // Evidence-sized delivery: whole notes by rank up to the budget, and the best hit always
+          // shown (as an excerpt when it alone exceeds the budget) so the budget cannot hide it.
+          const { hits, lines: semanticLines } = fitInjection(
+            eligible,
+            lexicalTerms(query),
+            inject.budgetTokens ?? 4000,
+            inject.topK ?? 12,
+            eligible.length,
+          );
           if (hits.length > 0) {
             lines = semanticLines;
             ids = hits.map((hit) => hit.id);

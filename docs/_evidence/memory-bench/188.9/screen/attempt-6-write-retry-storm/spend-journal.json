@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-8eef5354a936",
+  "manifestHash": "8eef5354a936b9b497a6fec648e8509429878935f5f9d3a7e47ae4dd20d3a95d",
+  "ceiling": 18000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-22T18:29:19.184Z",
+  "updatedAt": "2026-10-22T18:29:33.558Z",
+  "status": "active",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept1889-screen-write-x@1",
+      "jobId": "accept1889-screen-write-x",
+      "manifestHash": "8eef5354a936b9b497a6fec648e8509429878935f5f9d3a7e47ae4dd20d3a95d",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/screen/screen-accept1889-screen-write-x.json",
+      "maxInputTokens": 1500000,
+      "reservedInputTokens": 2000000,
+      "startedAt": "2026-10-22T18:29:19.204Z",
+      "confirmedInputTokens": 0,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-22T18:29:33.557Z"
+    },
+    {
+      "attemptId": "accept1889-screen-write-xc@1",
+      "jobId": "accept1889-screen-write-xc",
+      "manifestHash": "8eef5354a936b9b497a6fec648e8509429878935f5f9d3a7e47ae4dd20d3a95d",
+      "status": "reserved",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/screen/screen-accept1889-screen-write-xc.json",
+      "maxInputTokens": 13000000,
+      "reservedInputTokens": 13500000,
+      "startedAt": "2026-10-22T18:29:33.558Z"
+    }
+  ]
+}

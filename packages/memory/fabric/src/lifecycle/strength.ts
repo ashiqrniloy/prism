@@ -43,6 +43,8 @@ export const DEFAULT_DECAY: MemoryNoteDecay = Object.freeze({
   preference: 0.2,
   procedure: 0.4,
   file: 0.4,
+  // Verbatim history is detail, not a lesson: it fades faster than a fact but slower than an episode.
+  exchange: 0.5,
 });
 
 export const DEFAULT_STORAGE_WEIGHTS: StorageWeights = Object.freeze({

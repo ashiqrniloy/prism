@@ -10,6 +10,19 @@ import type { JsonSchema } from "@arnilo/prism";
 import { HARD_TOP_K_CAP, MemoryValidationError } from "@arnilo/prism-memory-core";
 import type { MemoryWorkerLimitOptions } from "@arnilo/prism-memory-observational";
 import {
+  HARD_CORE_TOKENS,
+  type MemoryFabricCoreConfig,
+  type ResolvedFabricCoreOptions,
+  resolveFabricCoreOptions,
+} from "./delivery/core.js";
+import {
+  HARD_CUE_TOKENS,
+  HARD_CUES_PER_TURN,
+  type MemoryFabricCuesConfig,
+  type ResolvedFabricCuesOptions,
+  resolveFabricCuesOptions,
+} from "./delivery/cues.js";
+import {
   HARD_DIRECTORY_FILES,
   HARD_DIRECTORY_TOKENS,
   HARD_DIRECTORY_TOPICS,
@@ -17,24 +30,20 @@ import {
   type ResolvedFabricDirectoryOptions,
   resolveFabricDirectoryOptions,
 } from "./directory.js";
-import {
-  HARD_CORE_TOKENS,
-  type MemoryFabricCoreConfig,
-  type ResolvedFabricCoreOptions,
-  resolveFabricCoreOptions,
-} from "./delivery/core.js";
-import {
-  HARD_CUES_PER_TURN,
-  HARD_CUE_TOKENS,
-  type MemoryFabricCuesConfig,
-  type ResolvedFabricCuesOptions,
-  resolveFabricCuesOptions,
-} from "./delivery/cues.js";
 
-export type { MemoryFabricCoreConfig, MemoryFabricCuesConfig, MemoryFabricTeamConfig, ResolvedFabricCoreOptions, ResolvedFabricCuesOptions, ResolvedFabricTeamOptions };
+export type {
+  MemoryFabricCoreConfig,
+  MemoryFabricCuesConfig,
+  MemoryFabricTeamConfig,
+  ResolvedFabricCoreOptions,
+  ResolvedFabricCuesOptions,
+  ResolvedFabricTeamOptions,
+};
+
 import { type MemoryFabricTeamConfig, type ResolvedFabricTeamOptions, resolveFabricTeamOptions } from "./delivery/team.js";
 import {
   type ArchiveConfig,
+  type CapacityLimits,
   DEFAULT_ARCHIVE_CONFIG,
   DEFAULT_CAPACITY,
   DEFAULT_DECAY,
@@ -43,33 +52,31 @@ import {
   DEFAULT_STORAGE_WEIGHTS,
   DEFAULT_STRENGTH_WEIGHTS,
   DEFAULT_VERIFY_AFTER_SESSIONS,
+  DEFAULT_WIDEN_CONFIG,
   HARD_VERIFY_AFTER_SESSIONS,
   MAX_ARCHIVE_BELOW,
+  MAX_DUPLICATE_DICE,
   MAX_EPISODE_CLUSTER,
   MAX_FABRIC_CAPACITY_NOTES,
   MAX_FABRIC_CAPACITY_TOKENS,
   MAX_GRACE_SESSIONS,
   MAX_STORAGE_WEIGHT,
   MAX_STRENGTH_WEIGHT,
-  MIN_DUPLICATE_DICE,
-  MAX_DUPLICATE_DICE,
-  type CapacityLimits,
-  type MemoryNoteDecay,
-  DEFAULT_WIDEN_CONFIG,
   MAX_WIDEN_CONTRADICTIONS,
   MAX_WIDEN_PROJECTS,
   MAX_WIDEN_SIBLINGS,
+  type MemoryNoteDecay,
+  MIN_DUPLICATE_DICE,
   MIN_WIDEN_CONTRADICTIONS,
   MIN_WIDEN_PROJECTS,
   MIN_WIDEN_SIBLINGS,
   type StorageWeights,
   type StrengthWeights,
 } from "./lifecycle/index.js";
-import type { MemoryNoteKind } from "./types.js";
 import { type MemoryFabricPromoteConfig, memoryFabricPromoteSchema, type ResolvedPromoteConfig, resolvePromoteConfig } from "./promote.js";
 import { projectResourceId, resolveProjectIdentity } from "./scope/identity.js";
 import { resolveScopePriors, type ScopePriors } from "./scope/recall.js";
-import type { FabricScopeLevel, MemoryFabricConsolidationOptions } from "./types.js";
+import type { FabricScopeLevel, MemoryFabricConsolidationOptions, MemoryNoteKind } from "./types.js";
 
 /** `project.id` must be `<slug>--<id8>`: the resource suffix the identity resolver produces. */
 const PROJECT_ID = /^[a-z0-9-]{1,40}--[0-9a-f]{8}$/;
@@ -142,8 +149,19 @@ export interface MemoryFabricScopedConfig {
 }
 
 export interface MemoryFabricInjectConfig {
+  /**
+   * Relevance floor for a passively injected hit. Default `0.2`, chosen with the other two defaults
+   * by the plan 188.9 Task 5 rule (cheapest cell at the evidence-sized cost whose per-ability
+   * answer visibility does not fall below the 600/3/0.35 control).
+   */
   readonly minSimilarity?: number;
+  /** Whole notes delivered per turn, best first. Default `12`. */
   readonly topK?: number;
+  /**
+   * Rendered-token ceiling for the injected block, about 4k tokens per user turn when opted in.
+   * Default `4000`. Delivery fills by rank with whole notes and skips a note that does not fit, so
+   * the block never exceeds this budget.
+   */
   readonly budgetTokens?: number;
   readonly query?: "task" | "user";
   readonly kinds?: readonly import("./types.js").MemoryNoteKind[];
@@ -223,7 +241,7 @@ export interface ResolvedLifecycleConfig {
   readonly widen: ResolvedWidenConfig;
 }
 
-const DECAY_KINDS = ["episode", "fact", "preference", "procedure"] as const;
+const DECAY_KINDS = ["episode", "fact", "preference", "procedure", "exchange"] as const;
 const CAPACITY_LEVELS = ["user", "agent", "project"] as const;
 const STORAGE_TERMS = ["explicit", "sessions", "helpful", "harmful", "outcome"] as const;
 
@@ -240,6 +258,7 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
         fact: { type: "number", minimum: 0, maximum: 1 },
         preference: { type: "number", minimum: 0, maximum: 1 },
         procedure: { type: "number", minimum: 0, maximum: 1 },
+        exchange: { type: "number", minimum: 0, maximum: 1 },
       },
     },
     storageWeights: {
@@ -286,7 +305,11 @@ export const memoryFabricLifecycleSchema: JsonSchema = {
       additionalProperties: false,
       properties: {
         duplicateDice: { type: "number", minimum: MIN_DUPLICATE_DICE, maximum: MAX_DUPLICATE_DICE },
-        episodes: { type: "object", additionalProperties: false, properties: { minCluster: { type: "integer" }, model: { type: "string" } } },
+        episodes: {
+          type: "object",
+          additionalProperties: false,
+          properties: { minCluster: { type: "integer" }, model: { type: "string" } },
+        },
       },
     },
     widen: {
@@ -323,12 +346,27 @@ export function resolveLifecycleConfig(value: MemoryFabricLifecycleConfig | unde
     if (input !== undefined) storageWeights[term] = bounded(`lifecycle.storageWeights.${term}`, input, 0, MAX_STORAGE_WEIGHT);
   }
   const recall = {
-    retrieval: bounded("lifecycle.recall.retrieval", value?.recall?.retrieval ?? DEFAULT_STRENGTH_WEIGHTS.retrieval, 0, MAX_STRENGTH_WEIGHT),
+    retrieval: bounded(
+      "lifecycle.recall.retrieval",
+      value?.recall?.retrieval ?? DEFAULT_STRENGTH_WEIGHTS.retrieval,
+      0,
+      MAX_STRENGTH_WEIGHT,
+    ),
     storage: bounded("lifecycle.recall.storage", value?.recall?.storage ?? DEFAULT_STRENGTH_WEIGHTS.storage, 0, MAX_STRENGTH_WEIGHT),
   };
   const archive = {
-    retrievalBelow: bounded("lifecycle.archive.retrievalBelow", value?.archive?.retrievalBelow ?? DEFAULT_ARCHIVE_CONFIG.retrievalBelow, -MAX_ARCHIVE_BELOW, 0),
-    storageBelow: bounded("lifecycle.archive.storageBelow", value?.archive?.storageBelow ?? DEFAULT_ARCHIVE_CONFIG.storageBelow, 0, MAX_ARCHIVE_BELOW),
+    retrievalBelow: bounded(
+      "lifecycle.archive.retrievalBelow",
+      value?.archive?.retrievalBelow ?? DEFAULT_ARCHIVE_CONFIG.retrievalBelow,
+      -MAX_ARCHIVE_BELOW,
+      0,
+    ),
+    storageBelow: bounded(
+      "lifecycle.archive.storageBelow",
+      value?.archive?.storageBelow ?? DEFAULT_ARCHIVE_CONFIG.storageBelow,
+      0,
+      MAX_ARCHIVE_BELOW,
+    ),
     graceSessions: value?.archive?.graceSessions ?? DEFAULT_ARCHIVE_CONFIG.graceSessions,
   };
   if (!Number.isSafeInteger(archive.graceSessions) || archive.graceSessions < 0 || archive.graceSessions > MAX_GRACE_SESSIONS) {
@@ -374,8 +412,20 @@ function resolveWidenConfig(value: MemoryFabricLifecycleConfig["widen"]): Resolv
     return resolved;
   };
   return {
-    minProjects: integer("lifecycle.widen.minProjects", value?.minProjects, MIN_WIDEN_PROJECTS, MAX_WIDEN_PROJECTS, DEFAULT_WIDEN_CONFIG.minProjects),
-    minSiblings: integer("lifecycle.widen.minSiblings", value?.minSiblings, MIN_WIDEN_SIBLINGS, MAX_WIDEN_SIBLINGS, DEFAULT_WIDEN_CONFIG.minSiblings),
+    minProjects: integer(
+      "lifecycle.widen.minProjects",
+      value?.minProjects,
+      MIN_WIDEN_PROJECTS,
+      MAX_WIDEN_PROJECTS,
+      DEFAULT_WIDEN_CONFIG.minProjects,
+    ),
+    minSiblings: integer(
+      "lifecycle.widen.minSiblings",
+      value?.minSiblings,
+      MIN_WIDEN_SIBLINGS,
+      MAX_WIDEN_SIBLINGS,
+      DEFAULT_WIDEN_CONFIG.minSiblings,
+    ),
     contradictionsToSupersede: integer(
       "lifecycle.widen.contradictionsToSupersede",
       value?.contradictionsToSupersede,
@@ -401,6 +451,19 @@ function resolveMergeConfig(value: MemoryFabricLifecycleConfig["merge"]): Resolv
     throw new MemoryValidationError("lifecycle.merge.episodes.model must be a non-empty string");
   }
   return { duplicateDice, episodes: { minCluster, ...(episodes.model === undefined ? {} : { model: episodes.model }) } };
+}
+
+/** The exchange archive knobs (plan 188.9 Task 7). */
+export interface MemoryFabricExchangesConfig {
+  /** `false` keeps the archive off; absent in an object means on. Default off. */
+  readonly enabled?: boolean;
+}
+
+/** {@link MemoryFabricExchangesConfig} with the write scope the archive resolved. */
+export interface ResolvedFabricExchangesOptions {
+  readonly enabled: boolean;
+  /** The scope an exchange is written to; never `path`. */
+  readonly scope: "user" | "agent" | "project";
 }
 
 /** Validated `packageConfig` for `@arnilo/prism-memory-fabric`. */
@@ -455,6 +518,13 @@ export interface MemoryFabricConfig {
   readonly linker?: boolean | { readonly enabled?: boolean; readonly topK?: number };
   readonly evolution?: boolean | { readonly enabled?: boolean; readonly maxPatches?: number };
   readonly passive?: boolean;
+  /**
+   * The exchange archive: one verbatim note per completed user turn (user text plus the assistant
+   * reply), written in the background after the reply is stored. Off by default. The scope is the
+   * project only when the project scope is active and a root was declared; otherwise the user scope,
+   * then the agent scope (plan 188.9 Task 1c).
+   */
+  readonly exchanges?: boolean | MemoryFabricExchangesConfig;
   /** The note lifecycle: verification by use across sessions. */
   readonly lifecycle?: MemoryFabricLifecycleConfig;
   /**
@@ -511,6 +581,8 @@ export interface ResolvedMemoryFabricConfig {
   readonly linker?: MemoryFabricConfig["linker"];
   readonly evolution?: MemoryFabricConfig["evolution"];
   readonly passive?: boolean;
+  /** The exchange archive, with its write scope resolved from the raw config. */
+  readonly exchanges: ResolvedFabricExchangesOptions;
   readonly lifecycle: ResolvedLifecycleConfig;
   readonly promote: ResolvedPromoteConfig;
   readonly workerLimits?: MemoryWorkerLimitOptions;
@@ -545,11 +617,11 @@ export const memoryFabricConfigSchema: JsonSchema = {
           type: "object",
           additionalProperties: false,
           properties: {
-            minSimilarity: { type: "number", minimum: -1, maximum: 1 },
-            topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP },
-            budgetTokens: { type: "integer", minimum: 1 },
+            minSimilarity: { type: "number", minimum: -1, maximum: 1, default: 0.2 },
+            topK: { type: "integer", minimum: 1, maximum: HARD_TOP_K_CAP, default: 12 },
+            budgetTokens: { type: "integer", minimum: 1, default: 4000 },
             query: { enum: ["task", "user"] },
-            kinds: { type: "array", minItems: 1, items: { enum: ["fact", "file", "procedure", "episode", "working"] } },
+            kinds: { type: "array", minItems: 1, items: { enum: ["fact", "file", "procedure", "episode", "working", "exchange"] } },
           },
         },
       ],
@@ -678,8 +750,7 @@ export const memoryFabricConfigSchema: JsonSchema = {
             decay: {
               type: "object",
               additionalProperties: false,
-              properties: {
-              },
+              properties: {},
             },
             activation: {
               type: "object",
@@ -732,6 +803,7 @@ export const memoryFabricConfigSchema: JsonSchema = {
       maxPatches: { type: "integer", minimum: 1, maximum: 32 },
     }),
     passive: { type: "boolean" },
+    exchanges: flagOrObject({ enabled: { type: "boolean" } }),
     lifecycle: memoryFabricLifecycleSchema,
     promote: memoryFabricPromoteSchema,
     workerLimits: { type: "object", additionalProperties: true },
@@ -780,10 +852,33 @@ export function resolveMemoryFabricConfig(config: MemoryFabricConfig = {}): Reso
     ...(config.linker === undefined ? {} : { linker: config.linker }),
     ...(config.evolution === undefined ? {} : { evolution: config.evolution }),
     ...(config.passive === undefined ? {} : { passive: config.passive }),
+    exchanges: resolveExchangesConfig(config, resolvedScopes.scopes.active),
     lifecycle: resolveLifecycleConfig(config.lifecycle),
     promote: resolvePromoteConfig(config.promote),
     ...(config.workerLimits === undefined ? {} : { workerLimits: config.workerLimits }),
   };
+}
+
+/**
+ * The exchange archive's write scope (plan 188.9 Task 1c): `project` only when the project scope is
+ * active *and* a root was declared (`scopes.project.root` or `tools.root`) — otherwise a conversational
+ * host with no declared root would file history under whatever directory the process started in. Then
+ * `user`, then `agent`, then the cwd-derived project, which is the only active scope left.
+ */
+function resolveExchangesConfig(config: MemoryFabricConfig, active: readonly ResolvedFabricScope[]): ResolvedFabricExchangesOptions {
+  const input = config.exchanges;
+  const enabled = input === true || (typeof input === "object" && input.enabled !== false);
+  const declaredRoot = config.scopes?.project !== false && (config.scopes?.project?.root !== undefined || config.tools?.root !== undefined);
+  const activeLevels = new Set(active.map((scope) => scope.level));
+  const scope =
+    declaredRoot && activeLevels.has("project")
+      ? "project"
+      : activeLevels.has("user")
+        ? "user"
+        : activeLevels.has("agent")
+          ? "agent"
+          : "project";
+  return { enabled, scope };
 }
 
 /**

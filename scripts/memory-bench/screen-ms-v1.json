@@ -1,0 +1,94 @@
+{
+  "seed": 18810,
+  "salt": "prism-188.10-memory-bench-screen-ms-v1",
+  "draw": "20 held-out v2 multi-session ids + SHA-256(\"prism-188.10-memory-bench-screen-ms-v1:\" + id), ascending, 10 of the 30-id development multi-session pool + screen-v1's 30 non-multi-session ids",
+  "source": "development: held-out v2 (labels read after 188.9) and the development multi-session pool; screen-v1 for the other abilities",
+  "developmentOnly": true,
+  "counts": {
+    "multi-session": 30,
+    "abstention": 5,
+    "knowledge-update": 5,
+    "single-session-assistant": 5,
+    "single-session-preference": 5,
+    "single-session-user": 5,
+    "temporal-reasoning": 5
+  },
+  "idsHash": "7c16dbabf8acea11bfa9d61cc0369b284c977694aa4d1b14f3a3598a013898d2",
+  "abilities": {
+    "multi-session": [
+      "09ba9854",
+      "ba358f49",
+      "60472f9c",
+      "6d550036",
+      "10d9b85a",
+      "gpt4_7fce9456",
+      "a4996e51",
+      "46a3abf7",
+      "8e91e7d9",
+      "81507db6",
+      "60036106",
+      "85fa3a3f",
+      "d682f1a2",
+      "27016adc",
+      "9d25d4e0",
+      "51c32626",
+      "77eafa52",
+      "e25c3b8d",
+      "ef66a6e5",
+      "ef9cf60a",
+      "e831120c",
+      "1c549ce4",
+      "00ca467f",
+      "92a0aa75",
+      "80ec1f4f",
+      "c4a1ceb8",
+      "681a1674",
+      "129d1232",
+      "5a7937c8",
+      "3c1045c8"
+    ],
+    "abstention": [
+      "60bf93ed_abs",
+      "2698e78f_abs",
+      "88432d0a_abs",
+      "6aeb4375_abs",
+      "c8090214_abs"
+    ],
+    "knowledge-update": [
+      "5c40ec5b",
+      "45dc21b6",
+      "c4ea545c",
+      "5831f84d",
+      "7a87bd0c"
+    ],
+    "single-session-assistant": [
+      "41275add",
+      "58470ed2",
+      "71a3fd6b",
+      "2bf43736",
+      "e3fc4d6e"
+    ],
+    "single-session-preference": [
+      "caf03d32",
+      "1d4e3b97",
+      "1c0ddc50",
+      "0a34ad58",
+      "38146c39"
+    ],
+    "single-session-user": [
+      "8ebdbe50",
+      "a82c026e",
+      "dccbc061",
+      "c960da58",
+      "7527f7e2"
+    ],
+    "temporal-reasoning": [
+      "982b5123",
+      "9a707b82",
+      "a3045048",
+      "gpt4_e072b769",
+      "gpt4_1e4a8aeb"
+    ]
+  },
+  "fileHash": "e0a9fad369c9210ad5e7bc1a02f3ff35367ea54f0ed44aa7cc5008d403048107"
+}

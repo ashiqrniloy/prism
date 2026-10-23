@@ -1,0 +1,58 @@
+{
+  "kind": "188.10-stage-a-run",
+  "journal": {
+    "campaignId": "campaign-6a23cbf5e21b",
+    "status": "finished",
+    "ceiling": 8000000,
+    "spend": 1639027,
+    "attempts": [
+      {
+        "attemptId": "accept18810-screen-a-write-x@1",
+        "jobId": "accept18810-screen-a-write-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 1500000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "accept18810-screen-a-x@1",
+        "jobId": "accept18810-screen-a-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 239050
+      },
+      {
+        "attemptId": "accept18810-screen-a-x-tools@1",
+        "jobId": "accept18810-screen-a-x-tools",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 3500000,
+        "confirmedInputTokens": 1399977
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "accept18810-screen-a-write-x",
+      "attemptId": "accept18810-screen-a-write-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 0
+    },
+    {
+      "id": "accept18810-screen-a-x",
+      "attemptId": "accept18810-screen-a-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 239050
+    },
+    {
+      "id": "accept18810-screen-a-x-tools",
+      "attemptId": "accept18810-screen-a-x-tools@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 1399977
+    }
+  ]
+}

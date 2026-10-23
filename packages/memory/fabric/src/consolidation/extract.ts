@@ -16,6 +16,7 @@ import type { ConsolidationCandidate } from "./gather.js";
 import {
   buildConsolidationExtractPrompt,
   CONSOLIDATION_EXTRACT_SYSTEM,
+  CONSOLIDATION_EXTRACT_SYSTEM_PROJECT,
   type ConsolidationExistingNote,
   type ConsolidationSegment,
   candidateIds,
@@ -42,6 +43,8 @@ export interface ExtractedNote {
   readonly scope: ExtractedNoteScope;
   readonly appliesTo?: readonly string[];
   readonly key?: string;
+  /** When the fact or event happened; copied from the evidence when it carries a time. */
+  readonly tRef?: string;
   readonly keywords: readonly string[];
   readonly aliases: readonly string[];
   /** Ids of the shown candidates (`c1`, `c2`, ...) that support the note. */
@@ -66,6 +69,8 @@ export interface ConsolidationExtraction {
   readonly modelCalls: number;
   /** The subset of `modelCalls` spent repairing a malformed answer. */
   readonly correctionCalls: number;
+  /** Calls that stopped on the output limit (`max_output_tokens`), repaired or not. */
+  readonly outputLimited: number;
 }
 
 /** Safe validation reason codes; never raw model text. */
@@ -78,6 +83,7 @@ export type ConsolidationExtractionReason =
   | "path_scope"
   | "applies_to_shape"
   | "note_key"
+  | "note_tref"
   | "evidence_shape"
   | "evidence_not_shown"
   | "contradicts_shape"
@@ -88,7 +94,33 @@ export type ConsolidationExtractionReason =
   | "segment_duplicate"
   | "tool_call_missing"
   | "tool_call_shape"
+  | "output_truncated"
   | "model_call_failed";
+
+/** The closed set, for a fail-closed read of a persisted tally. */
+export const EXTRACTION_REASONS: ReadonlySet<ConsolidationExtractionReason> = new Set([
+  "answer_shape",
+  "notes_shape",
+  "note_shape",
+  "note_kind",
+  "note_scope",
+  "path_scope",
+  "applies_to_shape",
+  "note_key",
+  "note_tref",
+  "evidence_shape",
+  "evidence_not_shown",
+  "contradicts_shape",
+  "contradicts_not_shown",
+  "episode_shape",
+  "segment_shape",
+  "segment_not_shown",
+  "segment_duplicate",
+  "tool_call_missing",
+  "tool_call_shape",
+  "output_truncated",
+  "model_call_failed",
+]);
 
 /** Shape-only failures may be corrected once; provenance, safety, abort and limit failures never are. */
 const REPAIRABLE_REASONS: ReadonlySet<ConsolidationExtractionReason> = new Set([
@@ -100,6 +132,7 @@ const REPAIRABLE_REASONS: ReadonlySet<ConsolidationExtractionReason> = new Set([
   "path_scope",
   "applies_to_shape",
   "note_key",
+  "note_tref",
   "evidence_shape",
   "contradicts_shape",
   "episode_shape",
@@ -107,6 +140,8 @@ const REPAIRABLE_REASONS: ReadonlySet<ConsolidationExtractionReason> = new Set([
   "segment_duplicate",
   "tool_call_missing",
   "tool_call_shape",
+  // A truncated answer is a shape failure the model can fix once by writing fewer, shorter notes.
+  "output_truncated",
 ]);
 
 export class ConsolidationExtractionError extends Error {
@@ -151,8 +186,12 @@ export interface ExtractConsolidationNotesInput {
   readonly redactor?: SecretRedactor;
   readonly secrets?: readonly (string | undefined)[];
   readonly sessionId?: string;
+  /** The project scope with a root is active, so the repository and derivability rules apply. */
+  readonly repositoryRules?: boolean;
   /** Default 48, capped by `MAX_EXTRACTED_NOTES`. */
   readonly maxNotes?: number;
+  /** The extractor's reasoning effort, passed through to the worker loop. */
+  readonly thinkingLevel?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -189,10 +228,16 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
 
   let calls = 0;
   let correctionCalls = 0;
+  let outputLimited = 0;
   let repair: ConsolidationExtractionError | undefined;
   let recorded: readonly ExtractedNote[] | undefined;
   for (;;) {
     recorded = undefined;
+    // The worker loop drops `done` events, so the stop reason is captured on the way through.
+    let truncated = false;
+    const client = observingStops(input.client, (stopReason) => {
+      if (stopReason === "max_output_tokens") truncated = true;
+    });
     let failure: ConsolidationExtractionError | undefined;
     const tool: ToolDefinition = {
       name: EXTRACT_TOOL_NAME,
@@ -219,7 +264,9 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
             repair: {
               reason: repair.reasonCode,
               instruction:
-                "The previous record_notes answer was rejected for shape only. Call it again with the same shown evidence and intent. Do not cite new ids or widen scope.",
+                repair.reasonCode === "output_truncated"
+                  ? `The previous answer hit the output limit before ${EXTRACT_TOOL_NAME} was recorded. Call it again with fewer, shorter notes over the same shown evidence: one sentence per note, merge related items. Do not cite new ids or widen scope.`
+                  : "The previous record_notes answer was rejected for shape only. Call it again with the same shown evidence and intent. Do not cite new ids or widen scope.",
             },
           };
     measureWorkerJson(prompt, input.limits.maxMessageBytes, "fabric extractor input");
@@ -230,16 +277,19 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
         maxTurns: 1,
         maxToolCalls: 1,
         maxToolCallsPerTurn: 1,
-        client: input.client,
-        system: CONSOLIDATION_EXTRACT_SYSTEM,
+        client,
+        system: input.repositoryRules === true ? CONSOLIDATION_EXTRACT_SYSTEM_PROJECT : CONSOLIDATION_EXTRACT_SYSTEM,
         prompt: JSON.stringify(prompt),
         tools: [tool],
+        ...(input.thinkingLevel === undefined ? {} : { thinkingLevel: input.thinkingLevel }),
         ...(input.secrets === undefined ? {} : { secrets: input.secrets }),
         ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId }),
         ...(input.signal === undefined ? {} : { signal: input.signal }),
       });
     } catch (error) {
       if (input.signal?.aborted) throw input.signal.reason ?? error;
+      // A truncated stream may fail before `done`, so the captured stop reason is one signal of many.
+      if (truncated) outputLimited += 1;
       const classified = failure ?? (error instanceof ConsolidationExtractionError ? error : undefined);
       if (classified?.repairable && correctionCalls === 0) {
         repair = classified;
@@ -258,8 +308,13 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
         correctionCalls,
       });
     }
+    if (truncated) outputLimited += 1;
     if (recorded === undefined) {
-      const error = new ConsolidationExtractionError(`missing ${EXTRACT_TOOL_NAME} call`, { reasonCode: "tool_call_missing" });
+      // An answer that stopped at the output limit without a usable record_notes call is repairable
+      // once with fewer, shorter notes; a second one fails the pass with that code.
+      const error = truncated
+        ? new ConsolidationExtractionError("the extractor stopped on the output limit", { reasonCode: "output_truncated" })
+        : new ConsolidationExtractionError(`missing ${EXTRACT_TOOL_NAME} call`, { reasonCode: "tool_call_missing" });
       if (correctionCalls === 0) {
         repair = error;
         correctionCalls += 1;
@@ -286,7 +341,22 @@ export async function extractConsolidationNotes(input: ExtractConsolidationNotes
     }
     notes.push(note);
   }
-  return { notes, existing, rejected: { trust, secret }, modelCalls: calls, correctionCalls };
+  return { notes, existing, rejected: { trust, secret }, modelCalls: calls, correctionCalls, outputLimited };
+}
+
+/** Pass-through client that reports each turn's stop reason; the worker loop itself discards it. */
+function observingStops(client: ModelClient, onDone: (stopReason: string | undefined) => void): ModelClient {
+  return {
+    model: client.model,
+    generate(request) {
+      return (async function* observed() {
+        for await (const event of client.generate(request)) {
+          if (event.type === "done") onDone(event.stopReason);
+          yield event;
+        }
+      })();
+    },
+  };
 }
 
 /** Up to 12 active notes per scope, by the caller's lexical recall over the candidate text. */
@@ -304,7 +374,14 @@ async function loadExisting(input: ExtractConsolidationNotesInput, maxNotes: num
       if (typeof note?.id !== "string" || note.id.length === 0 || typeof note.text !== "string") continue;
       if (seen.has(note.id)) continue;
       seen.add(note.id);
-      existing.push({ id: note.id, text: note.text, scope: note.scope });
+      existing.push({
+        id: note.id,
+        text: note.text,
+        scope: note.scope,
+        ...(note.kind === undefined ? {} : { kind: note.kind }),
+        ...(note.key === undefined ? {} : { key: note.key }),
+        ...(note.tRef === undefined ? {} : { tRef: note.tRef }),
+      });
     }
   }
   return existing;
@@ -397,6 +474,13 @@ function parseExtractedNotes(raw: unknown, context: ParseContext): readonly Extr
       }
     }
 
+    let tRef: string | undefined;
+    if (note!.tRef !== undefined) {
+      if (typeof note!.tRef !== "string" || !Number.isFinite(Date.parse(note!.tRef)) || !/^\d{4}-\d{2}-\d{2}T/.test(note!.tRef))
+        fail("note_tref", "tRef must be an ISO 8601 timestamp");
+      tRef = note!.tRef;
+    }
+
     const evidence = stringList(note!.evidence, MAX_EXTRACTED_EVIDENCE, "evidence");
     if (evidence.length === 0) fail("evidence_shape", "evidence must name at least one shown candidate");
     for (const id of evidence) if (!context.candidateIds.has(id)) fail("evidence_not_shown", "evidence names an id that was not shown");
@@ -424,6 +508,7 @@ function parseExtractedNotes(raw: unknown, context: ParseContext): readonly Extr
       scope,
       ...(appliesTo === undefined ? {} : { appliesTo }),
       ...(key === undefined ? {} : { key }),
+      ...(tRef === undefined ? {} : { tRef }),
       keywords: stringList(note!.keywords, MAX_EXTRACTED_KEYWORDS, "keywords"),
       aliases: stringList(note!.aliases, MAX_EXTRACTED_ALIASES, "aliases"),
       evidence,

@@ -6,10 +6,11 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { createAgent, createDefaultRetryPolicy, resolveInputCap } from "@arnilo/prism";
-import { providerPackage, readBoundedResponseText } from "@arnilo/prism/provider-kit";
+import { providerPackage, readBoundedResponseText, THINKING_LEVELS } from "@arnilo/prism/provider-kit";
 import { parseEnvFile } from "../live-matrix.mjs";
 import { startWireProxy } from "../wire-proxy.mjs";
-import { historicalVariants, memoryConfigs, resolvedMemoryConfigs } from "./ablations.mjs";
+import { historicalVariants, memoryConfigs, resolvedMemoryConfigs, writeGeneration } from "./ablations.mjs";
+import { fileFingerprint } from "./acceptance.mjs";
 import {
   CODING_SUITES,
   codingAccess,
@@ -22,9 +23,27 @@ import {
 import { DATASETS, loadDataset, normalizeCodingItem, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import fixture from "./fixtures/synthetic.json" with { type: "json" };
 import { createAdmission, requireAttemptReservation, stableHash } from "./journal.mjs";
-import { judgeOutput, judgeProviderOptions, labelInjections, scoreAnswer } from "./judge.mjs";
-import { BENCH_MAX_TURNS, BENCH_RETRY, mockProvider, replay } from "./replay.mjs";
+import {
+  createAnswerCache,
+  createJudgeCache,
+  JUDGE_TEMPLATE_VERSION,
+  judgeOutput,
+  judgeProviderOptions,
+  labelInjections,
+  scoreAnswerCached,
+} from "./judge.mjs";
+import {
+  BENCH_MAX_TURNS,
+  BENCH_PROTOCOL_VERSION,
+  BENCH_RETRY,
+  isProductIngest,
+  LEGACY_INGEST,
+  mockProvider,
+  PRODUCT_INGEST,
+  replay,
+} from "./replay.mjs";
 import { summarize, writeReport } from "./report.mjs";
+import { createGate, createTiming } from "./timing.mjs";
 import { missingUsageCount } from "./usage.mjs";
 import { variantProvenance } from "./variants.mjs";
 
@@ -62,6 +81,15 @@ export function parseArgs(argv) {
     "journal",
     "attempt",
     "resume",
+    "concurrency",
+    "phase",
+    "label-injections",
+    "write-snapshot",
+    "seed-snapshot",
+    "reuse-from",
+    "reuse-fallback",
+    "write-output-tokens",
+    "write-thinking",
   ]);
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--offline") {
@@ -76,12 +104,35 @@ export function parseArgs(argv) {
     if (key === "ablate") (options.ablate ??= []).push(value);
     else options[key] = value;
   }
-  for (const key of ["maxInputTokens", "maxQuestions", "seed"])
+  for (const key of ["maxInputTokens", "maxQuestions", "seed", "concurrency"])
     if (options[key] !== undefined) {
       options[key] = Number(options[key]);
       if (!Number.isSafeInteger(options[key]) || options[key] < 1)
         throw new Error("MemoryBenchArguments: limits must be positive integers");
     }
+  if (options.concurrency !== undefined && (options.concurrency < 1 || options.concurrency > 32))
+    throw new Error("MemoryBenchArguments: concurrency must be 1-32");
+  // Plan 188.10 Task 5: the extractor's own budget, never the answer's.
+  if (options.writeOutputTokens !== undefined) {
+    options.writeOutputTokens = Number(options.writeOutputTokens);
+    if (!Number.isSafeInteger(options.writeOutputTokens) || options.writeOutputTokens < 256 || options.writeOutputTokens > 32_768)
+      throw new Error("MemoryBenchArguments: write-output-tokens must be an integer in [256,32768]");
+  }
+  if (options.writeThinking !== undefined && !THINKING_LEVELS.includes(options.writeThinking))
+    throw new Error(`MemoryBenchArguments: write-thinking must be one of ${THINKING_LEVELS.join(", ")}`);
+  // "write" is the write-side job: build the store, snapshot it, answer nothing.
+  if (options.phase !== undefined && !["answer", "judge", "all", "write"].includes(options.phase))
+    throw new Error("MemoryBenchArguments: phase must be answer, judge, all or write");
+  if (options.labelInjections !== undefined && !["on", "off"].includes(options.labelInjections))
+    throw new Error("MemoryBenchArguments: label-injections must be on or off");
+  if (options.writeSnapshot && options.seedSnapshot)
+    throw new Error("MemoryBenchArguments: --write-snapshot and --seed-snapshot are exclusive");
+  if (options.phase === "write" && !options.writeSnapshot)
+    throw new Error("MemoryBenchArguments: --phase write must name where the store goes: --write-snapshot <dir>");
+  if (options.phase === "write" && options.seedSnapshot)
+    throw new Error("MemoryBenchArguments: --phase write builds a store, so it cannot seed one");
+  if (options.reuseFallback !== undefined && !["run", "refuse"].includes(options.reuseFallback))
+    throw new Error("MemoryBenchArguments: reuse-fallback must be run or refuse");
   return options;
 }
 export function loadEnv() {
@@ -90,7 +141,12 @@ export function loadEnv() {
     for (const [name, value] of Object.entries(parseEnvFile(path))) if (process.env[name] === undefined) process.env[name] = value;
   } else if (process.env.PRISM_LIVE_ENV_FILE) throw new Error("MemoryBenchCredentials: explicit live env file missing");
 }
-export function benchmarkFetch({ beforeAttempt = async () => {}, onRetry = () => {}, fetch: transport = fetch } = {}) {
+export function benchmarkFetch({
+  beforeAttempt = async () => {},
+  onRetry = () => {},
+  onOverload = () => {},
+  fetch: transport = fetch,
+} = {}) {
   const policy = createDefaultRetryPolicy({ maxAttempts: 3, baseDelayMs: 250, maxDelayMs: 1000 });
   return async (input, init) => {
     for (let attempt = 1; ; attempt++) {
@@ -108,6 +164,8 @@ export function benchmarkFetch({ beforeAttempt = async () => {}, onRetry = () =>
         code = 503;
       }
       const decision = policy.decide({ attempt, error: { code, message: response.statusText }, signal: init?.signal });
+      // 429/overload: back off and let this arm shrink its own in-flight ceiling (never below 1).
+      if (code === 429 || code === 503 || code === 529) onOverload();
       if (!decision.retry) return response;
       onRetry();
       await response.body?.cancel();
@@ -153,14 +211,25 @@ export const refOf = (ref) => {
   if (slash < 1 || slash === ref.length - 1) throw new Error("MemoryBenchArguments: judge must be provider/model");
   return { provider: ref.slice(0, slash), model: ref.slice(slash + 1) };
 };
-/** Bounded question concurrency; an in-flight request may finish after the ceiling. */
-export async function runQuestionPool(questions, concurrency, run, stopped) {
+/**
+ * Bounded question concurrency; an in-flight request may finish after the ceiling. With a `gate`,
+ * its limit can shrink at runtime (provider overload) without losing the in-flight permits.
+ */
+export async function runQuestionPool(questions, concurrency, run, stopped, gate) {
   let cursor = 0;
+  const workers = Math.min(concurrency, questions.length);
   await Promise.all(
-    Array.from({ length: Math.min(concurrency, questions.length) }, async () => {
+    Array.from({ length: workers }, async () => {
       while (!stopped() && cursor < questions.length) {
         const question = questions[cursor++];
-        await run(question);
+        if (gate) {
+          await gate.acquire();
+          try {
+            await run(question);
+          } finally {
+            gate.release();
+          }
+        } else await run(question);
       }
     }),
   );
@@ -177,6 +246,20 @@ function terminalRetryCause(error) {
     /usage_missing/i.test(code) ||
     /RunLimit/i.test(String(cause?.name ?? ""))
   );
+}
+
+/**
+ * One question that trips a product limit is a wrong answer, not the end of the arm
+ * (plan 188.8 Task 5). A provider/transport failure always carries `cause` and still
+ * ends the arm, and a systematic product break is capped so it cannot pass as a score.
+ */
+export const QUESTION_ERROR_MIN = 3;
+export const QUESTION_ERROR_FRACTION = 0.05;
+export function questionFailureDisposition({ error, budget = false, errored = 0, total = 0 } = {}) {
+  if (budget) return "token-ceiling";
+  if (error?.cause) return "failed";
+  if (errored >= Math.max(QUESTION_ERROR_MIN, Math.ceil(total * QUESTION_ERROR_FRACTION))) return "failed";
+  return "scored";
 }
 
 /** A malformed or cut judge answer can be re-asked; auth, permanent, budget and run-limit cannot. */
@@ -219,6 +302,7 @@ export async function askJudge({
   account,
   ceilingReached,
   calls,
+  timing,
   backoffMs = (attempt) => 1000 * attempt,
   timeoutMs = 600_000,
 }) {
@@ -231,10 +315,12 @@ export async function askJudge({
       if (ceilingReached()) throw new Error("MemoryBenchTokenCeiling");
       session = await agent.session();
       calls.judgeAttempts++;
-      const result = await session.run(`${prompt}\nReturn a JSON object with one field verdict containing the requested label.`, {
-        providerOptions: judgeProviderOptions(labels),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      const run = () =>
+        session.run(`${prompt}\nReturn a JSON object with one field verdict containing the requested label.`, {
+          providerOptions: judgeProviderOptions(labels),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      const result = timing ? await timing.measure("judge", run) : await run();
       if (!["completed", "stopped"].includes(result.status)) {
         throw new Error(`MemoryBenchJudgeError:${result.error?.code ?? result.status}`, { cause: result.error });
       }
@@ -260,6 +346,71 @@ function sourceRevision() {
 }
 
 /** Everything that makes two reports comparable; a changed value refuses a resume. */
+/**
+ * Plan 188.9 Task 4 reuse identity: what the arm's answers would be, not the repo's git HEAD.
+ * `sourceRevision` necessarily differs between plans, so it is replaced by content hashes of the
+ * files that shape a run.
+ */
+export const RUN_PATH_PATHS = [
+  "scripts/memory-bench/replay.mjs",
+  "scripts/memory-bench/judge.mjs",
+  "scripts/memory-bench/judge-prompts.json",
+  "scripts/memory-bench/datasets.mjs",
+];
+
+let runPathSourceHashes;
+
+export async function runPathFingerprint(report, { ids = [], inputCap, generation = report.generation } = {}) {
+  runPathSourceHashes ??= await fileFingerprint(RUN_PATH_PATHS);
+  return stableHash({
+    kind: "run-path-v1",
+    suite: report.suite,
+    subset: report.subset ?? null,
+    ability: report.ability ?? null,
+    config: report.config,
+    ids: stableHash([...ids].map(String).sort()),
+    inputCap: inputCap ?? null,
+    generation: generation ?? null,
+    provider: report.provider,
+    model: report.model,
+    judge: report.judge,
+    judgeProtocol: report.judgeProtocol,
+    judgeTemplate: JUDGE_TEMPLATE_VERSION,
+    dataset: report.dataset?.revision ?? report.dataset?.url ?? report.dataset?.license ?? null,
+    seed: report.seed ?? null,
+    ablations: report.ablations,
+    sourceVariants: report.sourceVariants,
+    memoryConfig: report.memoryConfig,
+    protocolVersion: report.protocolVersion ?? 1,
+    protocol: report.protocol ?? null,
+    sourceHashes: runPathSourceHashes,
+  });
+}
+
+/**
+ * Reuse a completed arm instead of paying for it again. The declared fingerprint may be omitted;
+ * the comparison is always recomputed against the source report's recorded run-path hash.
+ */
+export async function reuseSource({ report, sourcePath, ids }) {
+  const source = typeof sourcePath === "string" ? JSON.parse(await readFile(sourcePath, "utf8")) : sourcePath;
+  const refuse = (reason) => {
+    throw new Error(`MemoryBenchReuseMismatch: ${reason}`);
+  };
+  if (source?.status !== "completed") refuse(`source is ${source?.status ?? "unreadable"}`);
+  if (source.usageComplete === false) refuse("source usage is incomplete");
+  const sourceIds = (source.results ?? []).map((row) => String(row.id));
+  if (sourceIds.length !== ids.length || new Set(sourceIds).size !== new Set(ids).size || sourceIds.some((id) => !ids.includes(id)))
+    refuse("source ids differ");
+  const expected = await runPathFingerprint(report, { ids, inputCap: report.inputCap });
+  if (!source.runPathFingerprint) refuse("source has no run-path fingerprint");
+  if (source.runPathFingerprint !== expected) refuse("run-path fingerprint differs");
+  return {
+    from: typeof sourcePath === "string" ? sourcePath : (source.generatedAt ?? "embedded report"),
+    fingerprint: expected,
+    results: source.results.map((row) => ({ ...row, reused: true })),
+  };
+}
+
 export function protocolFingerprint(report) {
   return stableHash({
     suite: report.suite,
@@ -275,6 +426,7 @@ export function protocolFingerprint(report) {
     ablations: report.ablations,
     sourceVariants: report.sourceVariants,
     memoryConfig: report.memoryConfig,
+    protocolVersion: report.protocolVersion ?? 1,
     protocol: report.protocol ?? null,
     sourceRevision: report.sourceRevision,
   });
@@ -300,31 +452,67 @@ export async function runBench(input = {}) {
     });
   }
   const options = { config: "full", subset: "base", maxInputTokens: 15_000_000, ...input };
+  const phase = options.phase ?? "all";
+  const labelInjectionsEnabled = (options.labelInjections ?? "on") !== "off";
+  if (!["answer", "judge", "all", "write"].includes(phase)) throw new Error("MemoryBenchArguments: invalid phase");
+  if (phase === "judge" && !options.resume)
+    throw new Error("MemoryBenchArguments: --phase judge scores an answer checkpoint, so --resume is required");
   if (!Number.isSafeInteger(options.maxInputTokens) || options.maxInputTokens < 1)
     throw new Error("MemoryBenchArguments: positive token ceiling required");
-  const validConfigs = ["full", "om", "fabric", "fabric-hybrid", "fabric-agentic", "om+fabric"];
+  const validConfigs = [
+    "full",
+    "om",
+    "fabric",
+    "fabric-hybrid",
+    "fabric-agentic",
+    "om+fabric",
+    "fabric-x",
+    "fabric-xc",
+    "fabric-xc-agentic",
+    "fabric-x-tools",
+    "fabric-xc-tools",
+  ];
   if (!validConfigs.includes(options.config)) throw new Error("MemoryBenchArguments: invalid config");
   if (options.config === "fabric-hybrid" && !options.embeddings) {
     throw new Error("MemoryBenchArguments: fabric-hybrid requires --embeddings provider/model");
   }
-  if (!["base", "confirmatory", "targeted", "all"].includes(options.subset)) throw new Error("MemoryBenchArguments: invalid subset");
+  if (
+    !["base", "confirmatory", "development", "heldout-v2", "heldout-v3", "screen-v1", "screen-ms-v1", "targeted", "all"].includes(
+      options.subset,
+    )
+  )
+    throw new Error("MemoryBenchArguments: invalid subset");
   if (options.subset === "targeted" && (options.suite !== "longmemeval-s" || !options.ability))
     throw new Error("MemoryBenchArguments: targeted needs LongMemEval and ability");
+  if (coding && phase !== "all")
+    throw new Error("MemoryBenchArguments: coding suites grade with executable tests, so only --phase all applies");
   if (coding && (options.offline || !codingAccess(options.suite).available)) return codingSchemaReport(options);
   if (!options.offline && (!DATASETS[options.suite] || !options.provider || !options.model || (!coding && !options.judge)))
     throw new Error("MemoryBenchArguments: suite, provider, model and judge required");
   options.memoryConfigs = memoryConfigs(options);
+  // The write side of a non-promoting arm is local: no extractor call, so no live provider.
+  const localWrite = phase === "write" && options.memoryConfigs.fabric !== null && options.memoryConfigs.fabric?.promote === undefined;
+  if (localWrite && options.seedSnapshot) throw new Error("MemoryBenchArguments: a local write side builds a store, so it cannot seed one");
   const report = {
     schemaVersion: 1,
-    usageSource: options.offline ? "mock" : "wire-proxy",
-    concurrency: options.offline ? 1 : 4,
+    protocolVersion: BENCH_PROTOCOL_VERSION,
+    usageSource: options.offline ? "mock" : phase === "write" ? "local" : "wire-proxy",
+    phase,
+    labelInjections: labelInjectionsEnabled ? "on" : "off",
+    // Offline stays serial unless a timing test asks otherwise; a live arm defaults to 4.
+    concurrency: coding ? 1 : (options.concurrency ?? (options.offline ? 1 : 4)),
     generation: options.offline ? null : { temperature: 0, maxTokens: 4096 },
+    // The extractor's generation, recorded separately: two write-side budgets never share a snapshot.
+    writeGeneration: writeGeneration(options),
     generatedAt: new Date().toISOString(),
     suite: options.offline ? "synthetic" : options.suite,
     subset: options.subset,
     ability: options.ability ?? null,
     seed: options.seed ?? null,
     config: options.config,
+    // Which write path built the store (plan 188.9 Task 9): the product commands, or 188.8's
+    // direct upsert kept only for the baseline arm.
+    ingestion: options.config.includes("fabric") ? (isProductIngest(options.config) ? PRODUCT_INGEST : LEGACY_INGEST) : "none",
     embeddings: options.embeddings ?? null,
     provider: options.offline ? "mock" : options.provider,
     model: options.offline ? "synthetic" : options.model,
@@ -346,7 +534,21 @@ export async function runBench(input = {}) {
     inputTokens: 0,
     cacheReadTokens: 0,
     outputTokens: 0,
-    calls: { observer: 0, reflector: 0, dropper: 0, embedding: 0, decider: 0, judge: 0, judgeAttempts: 0, gatewayRetries: 0 },
+    calls: {
+      observer: 0,
+      reflector: 0,
+      dropper: 0,
+      embedding: 0,
+      decider: 0,
+      consolidate: 0,
+      judge: 0,
+      judgeAttempts: 0,
+      gatewayRetries: 0,
+      judgeCacheHits: 0,
+      judgeCacheMisses: 0,
+      concurrencyHalvings: 0,
+      overloads: 0,
+    },
     turns: 0,
     injectedContextTokens: 0,
     injections: [],
@@ -361,6 +563,15 @@ export async function runBench(input = {}) {
       "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable.",
     ],
   };
+  const timing = createTiming();
+  const startedAt = performance.now();
+  const gate = createGate(report.concurrency);
+  const answerCache = createAnswerCache({ root: options.answersDir ?? resolve(".cache/memory-bench/answers") });
+  const judgeCache = createJudgeCache({
+    root: options.judgeCacheDir ?? resolve(".cache/memory-bench/judge"),
+    judge: report.judge,
+    generation: report.generation,
+  });
   if (coding) {
     report.coding = codingMetadata(options.suite);
     report.judge = "executable-tests";
@@ -381,6 +592,8 @@ export async function runBench(input = {}) {
     if (prior.protocolHash !== fingerprint) throw new Error("MemoryBenchResumeMismatch");
     report.protocolHash = fingerprint;
     report.resumedFrom = { protocolHash: fingerprint, results: prior.results.length, inputTokens: prior.inputTokens ?? 0 };
+    // Injection rows carry the labels; the judge phase rehydrates their text from the answer cache.
+    report.injections = prior.injections ?? [];
   }
   report.protocolHash ??= protocolFingerprint(report);
   const priorResults = new Map((prior?.results ?? []).map((row) => [row.id, row]));
@@ -392,7 +605,8 @@ export async function runBench(input = {}) {
     usageMissingExchanges: prior?.usageMissingExchanges ?? 0,
   };
   let admission;
-  if (!options.offline) {
+  // A local write side spends nothing, so it needs no paid-attempt reservation.
+  if (!options.offline && !localWrite) {
     const reserved = await requireAttemptReservation({
       journalPath: options.journal ?? process.env.PRISM_MEMORY_BENCH_JOURNAL,
       attemptId: options.attempt ?? process.env.PRISM_MEMORY_BENCH_ATTEMPT,
@@ -406,6 +620,8 @@ export async function runBench(input = {}) {
   const temp = await mkdtemp(join(tmpdir(), "prism-memory-bench-"));
   const state = {
     ...report,
+    timing,
+    mockLatencyMs: options.mockLatencyMs ?? 0,
     mockInputTokens: 0,
     injectionText: new Map(),
     phase: "ingest",
@@ -414,7 +630,7 @@ export async function runBench(input = {}) {
   let live, judgeAgent;
   const questionStates = new Set([state]);
   const readUsage = async (strict = true) => {
-    if (options.offline) report.inputTokens = base.inputTokens + state.mockInputTokens;
+    if (options.offline || localWrite) report.inputTokens = base.inputTokens + state.mockInputTokens;
     else {
       const rows = [];
       for (const { proxy, usageLog } of live.proxies) {
@@ -452,9 +668,21 @@ export async function runBench(input = {}) {
   try {
     let questions, providers;
     if (options.offline) {
-      questions = fixture.questions.map((question) => ({ ...question, sessions: fixture.sessions, date: fixture.sessions.at(-1).date }));
+      // Tests may replace the fixture mix; production always reads the fixture.
+      questions = (options.questions ?? fixture.questions).map((question) => ({
+        ...question,
+        sessions: question.sessions ?? fixture.sessions,
+        date: question.date ?? question.sessions?.at(-1)?.date ?? fixture.sessions.at(-1).date,
+      }));
       options.modelConfig = { provider: "mock", model: "synthetic", limits: { contextWindow: 128_000, maxOutputTokens: 1024 } };
       providers = [mockProvider(state)];
+    } else if (localWrite) {
+      // A write-only arm with no extractor (fabric-x) makes no model call: it builds the product
+      // store locally, so no provider, judge or paid-attempt guard is needed.
+      const raw = await loadDataset(options.suite, { cache: options.cache });
+      questions = selectQuestions(normalizeDataset(raw, options.suite), options.suite, options);
+      options.modelConfig = { provider: "mock", model: "synthetic", limits: { contextWindow: 128_000, maxOutputTokens: 1024 } };
+      providers = [];
     } else {
       loadEnv();
       const raw = await loadDataset(options.suite, { cache: options.cache });
@@ -473,6 +701,12 @@ export async function runBench(input = {}) {
           if (state.ceilingReached()) throw new Error("MemoryBenchTokenCeiling");
         },
         onRetry: () => report.calls.gatewayRetries++,
+        onOverload: () => {
+          // Count every overload signal, not only the ones that could halve the gate: a probe at
+          // concurrency 1 still needs to know the provider pushed back.
+          report.calls.overloads++;
+          if (gate.halve()) report.calls.concurrencyHalvings++;
+        },
       });
       providers = live.providers;
       options.modelConfig = live.models.get(`${options.provider}/${options.model}`);
@@ -488,11 +722,37 @@ export async function runBench(input = {}) {
     options.inputCap = resolveInputCap(undefined, options.modelConfig);
     report.inputCap = options.inputCap;
     report.selectedQuestionIds = questions.map((question) => question.id);
+    // Recorded on every arm so a later campaign can prove a reuse instead of trusting a filename.
+    report.runPathFingerprint = await runPathFingerprint(report, {
+      ids: report.selectedQuestionIds,
+      inputCap: report.inputCap,
+    });
+    // Plan 188.9 Task 4: a matching completed arm is copied, marked, and costs nothing.
+    if (options.reuseFrom) {
+      const ids = report.selectedQuestionIds;
+      try {
+        const reused = await reuseSource({ report, sourcePath: options.reuseFrom, ids });
+        report.results = reused.results;
+        report.status = "completed";
+        report.reusedFrom = { from: reused.from, fingerprint: reused.fingerprint };
+        report.timing = timing.summary({
+          wallMs: performance.now() - startedAt,
+          concurrency: { initial: report.concurrency, active: gate.limit, floor: 1 },
+        });
+        return summarize(report);
+      } catch (error) {
+        if (options.reuseFallback !== "run") throw error;
+        report.reuseRefusal = error.message;
+      }
+    }
     const generate = async (prompt, { labels }) => {
       if (options.offline) {
-        report.calls.judge++;
-        state.mockInputTokens += Math.ceil(prompt.length / 4);
-        return prompt.includes("Answer used or irrelevant") ? "used" : "yes";
+        return timing.measure("judge", async () => {
+          if (options.mockLatencyMs) await delay(options.mockLatencyMs);
+          report.calls.judge++;
+          state.mockInputTokens += Math.ceil(prompt.length / 4);
+          return prompt.includes("Answer used or irrelevant") ? "used" : "yes";
+        });
       }
       return askJudge({
         agent: judgeAgent,
@@ -502,16 +762,78 @@ export async function runBench(input = {}) {
         account,
         ceilingReached: state.ceilingReached,
         calls: report.calls,
+        timing,
         backoffMs: (attempt) => BENCH_RETRY.judgeBackoffMs[Math.min(attempt - 1, BENCH_RETRY.judgeBackoffMs.length - 1)],
       });
     };
     const selected = questions.slice(0, options.maxQuestions ?? questions.length);
+    // A read-side arm refuses to run without its write side; it never re-ingests silently.
+    if (options.seedSnapshot) {
+      const missing = selected
+        .map((question) => join(options.seedSnapshot, encodeURIComponent(question.id)))
+        .filter((dir) => !existsSync(dir));
+      if (missing.length)
+        throw new Error(`MemoryBenchWriteSideMissing: ${missing.length} of ${selected.length} snapshots missing`, {
+          cause: { path: options.seedSnapshot },
+        });
+    }
+    const suiteFor = (question) =>
+      options.offline
+        ? question.ability.startsWith("conflict-resolution")
+          ? "memoryagentbench-cr"
+          : ["single-hop", "multi-hop", "temporal", "open-domain", "adversarial"].includes(question.ability)
+            ? "locomo"
+            : "longmemeval-s"
+        : options.suite;
+    const scoreCached = async (question, answer, suite) => {
+      const { score, cached } = await scoreAnswerCached(question, answer, suite, generate, judgeCache, {
+        synthetic: options.offline,
+      });
+      if (cached) report.calls.judgeCacheHits++;
+      else if (suite !== "memoryagentbench-cr") report.calls.judgeCacheMisses++;
+      return score;
+    };
+    const judgeCheckpoint = async (question, done) => {
+      const entry = done?.answerKey ? await answerCache.read(done.answerKey) : null;
+      if (!entry?.answer)
+        throw new Error("MemoryBenchAnswers: answer checkpoint has no cached answer; rerun --phase answer for this protocol");
+      const questionState = {
+        ...state,
+        questionId: question.id,
+        turns: 0,
+        injectedContextTokens: 0,
+        injections: report.injections,
+        injectionText: new Map(),
+      };
+      for (const [index, text] of entry.injections ?? [])
+        if (report.injections[index] && typeof text === "string") questionState.injectionText.set(report.injections[index], text);
+      const suite = suiteFor(question);
+      const score = await scoreCached(question, entry.answer, suite);
+      if (labelInjectionsEnabled)
+        await labelInjections(question, entry.answer, questionState, generate, { concurrency: report.concurrency, timing });
+      report.results.push({ ...done, ...score });
+      await account();
+      if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
+    };
     const runQuestion = async (question) => {
+      const stopQuestion = timing.startQuestion();
+      try {
+        await runOne(question);
+      } finally {
+        stopQuestion();
+      }
+    };
+    const runOne = async (question) => {
       const done = priorResults.get(question.id);
-      if (done) {
+      if (done && done.correct !== undefined) {
         // A validated same-protocol checkpoint: reuse the score, spend nothing.
         report.results.push({ ...done, resumed: true });
         report.resumedResults = (report.resumedResults ?? 0) + 1;
+        return;
+      }
+      if (phase === "judge") {
+        if (!done) throw new Error("MemoryBenchArguments: --phase judge needs an answer checkpoint row for every question");
+        await judgeCheckpoint(question, done);
         return;
       }
       const questionState = options.offline ? state : { ...state, turns: 0, injectedContextTokens: 0, injectionText: new Map() };
@@ -527,21 +849,79 @@ export async function runBench(input = {}) {
         }
         const response = await replay(
           question,
-          workspace ? { ...options, codingTools: workspace.tools } : options,
+          workspace
+            ? { ...options, codingTools: workspace.tools, writeOnly: phase === "write" }
+            : { ...options, writeOnly: phase === "write" },
           providers,
           questionState,
         );
-        const suite = options.offline
-          ? question.ability.startsWith("conflict-resolution")
-            ? "memoryagentbench-cr"
-            : ["single-hop", "multi-hop", "temporal", "open-domain", "adversarial"].includes(question.ability)
-              ? "locomo"
-              : "longmemeval-s"
-          : options.suite;
-        const score = coding
-          ? { correct: await workspace.grade() }
-          : await scoreAnswer(question, response.answer, suite, generate, { synthetic: options.offline });
-        if (!coding) await labelInjections(question, response.answer, questionState, generate);
+        const suite = suiteFor(question);
+        // A write-side job builds the store and stops: no answer, no judge, nothing read.
+        if (phase === "write") {
+          report.results.push({
+            id: question.id,
+            ability: question.ability,
+            cluster: question.cluster ?? question.conversationId ?? question.id,
+            outcome: "ingested",
+            ingest: response.ingest ?? null,
+            storage: response.storage,
+          });
+          await account();
+          if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
+          if (!options.offline) console.log(`${report.results.length}/${questions.length} ingested; input=${report.inputTokens}`);
+          return;
+        }
+        // `answer` writes the verdict-free checkpoint and the local answer cache, and calls no judge.
+        if (phase === "answer") {
+          const answerKey = answerCache.key({ protocolHash: report.protocolHash, id: question.id });
+          await answerCache.write(answerKey, {
+            answer: response.answer,
+            injections: questionState.injections
+              .map((item, index) => [index, questionState.injectionText.get(item)])
+              .filter(([, text]) => typeof text === "string"),
+          });
+          report.results.push({
+            id: question.id,
+            ability: question.ability,
+            cluster: question.cluster ?? question.conversationId ?? question.id,
+            outcome: "answered",
+            answerKey,
+            truncated: response.truncated,
+            syntheticDates: question.syntheticDates ?? false,
+            toolCalls: response.toolCalls ?? 0,
+            recallCalls: response.recallCalls ?? 0,
+            recalledIds: response.recalledIds ?? [],
+            answerRetries: response.answerRetries ?? 0,
+            turns: response.turns ?? 0,
+            turnTrace: safeFailureTrace({ tools: response.turnTrace })?.tools ?? [],
+            writes: response.writes ?? [],
+            visibleChannels: response.visibleChannels ?? [],
+            storage: response.storage ?? { fabric: "none", sessions: "ephemeral" },
+            retrievedSnippetTokens: response.retrievedSnippetTokens ?? 0,
+            retrievalRecallAtK: response.retrievalRecallAtK ?? null,
+            answerSessionHitAtK: response.answerSessionHitAtK ?? null,
+            evidenceRoundCoverage: response.evidenceRoundCoverage ?? null,
+            evidenceAllRequired: response.evidenceAllRequired ?? null,
+            fineEvidenceRecall: response.fineEvidenceRecall ?? null,
+            fineEvidencePrecision: response.fineEvidencePrecision ?? null,
+          });
+          await account();
+          if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
+          if (report.inputTokens >= options.maxInputTokens) {
+            if (report.status === "completed") report.status = "token-ceiling";
+            return;
+          }
+          if (!options.offline) console.log(`${report.results.length}/${questions.length} answered; input=${report.inputTokens}`);
+          return;
+        }
+        const score =
+          response.outcome === "run_limit"
+            ? { correct: false, outcome: "run_limit" }
+            : coding
+              ? { correct: await workspace.grade() }
+              : await scoreCached(question, response.answer, suite);
+        if (!coding && response.outcome !== "run_limit" && labelInjectionsEnabled)
+          await labelInjections(question, response.answer, questionState, generate, { concurrency: report.concurrency, timing });
         report.results.push({
           id: question.id,
           ability: question.ability,
@@ -555,7 +935,7 @@ export async function runBench(input = {}) {
           recalledIds: response.recalledIds ?? [],
           answerRetries: response.answerRetries ?? 0,
           turns: response.turns ?? 0,
-          turnTrace: response.turnTrace ?? [],
+          turnTrace: safeFailureTrace({ tools: response.turnTrace })?.tools ?? [],
           writes: response.writes ?? [],
           visibleChannels: response.visibleChannels ?? [],
           storage: response.storage ?? { fabric: "none", sessions: "ephemeral" },
@@ -576,11 +956,7 @@ export async function runBench(input = {}) {
         }
         if (!options.offline) console.log(`${report.results.length}/${questions.length} scored; input=${report.inputTokens}`);
       } catch (error) {
-        report.status =
-          state.ceilingReached() || questionState.budgetExceeded || error.message === "MemoryBenchTokenCeiling"
-            ? "token-ceiling"
-            : "failed";
-        report.failure = {
+        const failure = {
           questionId: question.id,
           code: error.message.startsWith("MemoryBench")
             ? error.message.replace(/[^a-zA-Z0-9_:-]/g, "").slice(0, 100)
@@ -618,12 +994,46 @@ export async function runBench(input = {}) {
             : {}),
           ...(safeFailureTrace(error.diagnostics) ? { trace: safeFailureTrace(error.diagnostics) } : {}),
         };
+        const disposition = questionFailureDisposition({
+          error,
+          budget: state.ceilingReached() || questionState.budgetExceeded || error.message === "MemoryBenchTokenCeiling",
+          errored: report.results.filter((row) => row.outcome === "error").length,
+          total: selected.length,
+        });
+        // Bounded error evidence stays on the report either way.
+        report.errors = [...(report.errors ?? []), failure].slice(-10);
+        if (disposition === "scored") {
+          report.results.push({
+            id: question.id,
+            ability: question.ability,
+            cluster: question.cluster ?? question.conversationId ?? question.id,
+            correct: false,
+            outcome: "error",
+            errorCode: String(error.name ?? "Error")
+              .replace(/[^a-zA-Z0-9_:-]/g, "")
+              .slice(0, 60),
+            truncated: false,
+            syntheticDates: question.syntheticDates ?? false,
+          });
+          await account(false);
+          if (options.output) await writeReport(summarize({ ...report, status: "running" }), options.output);
+          if (!options.offline) console.log(`${report.results.length}/${questions.length} scored; input=${report.inputTokens}`);
+          return;
+        }
+        report.status = disposition;
+        report.failure = failure;
         await account(false);
       } finally {
         await workspace?.close();
       }
     };
-    await runQuestionPool(selected, options.offline || coding ? 1 : 4, runQuestion, () => report.status !== "completed");
+    await runQuestionPool(
+      selected,
+      report.concurrency,
+      runQuestion,
+      () => report.status !== "completed",
+      report.concurrency > 1 ? gate : undefined,
+    );
     const order = new Map(questions.map((question, index) => [question.id, index]));
     report.results.sort((a, b) => order.get(a.id) - order.get(b.id));
     if (options.maxQuestions && options.maxQuestions < questions.length && report.status === "completed") report.status = "partial";
@@ -633,6 +1043,12 @@ export async function runBench(input = {}) {
     await rm(temp, { recursive: true, force: true });
   }
   if (coding) report.metrics = summarizeCoding(options.suite, report.results);
+  // An answer-only checkpoint is not a score; it exists to be judged in its own phase.
+  if (phase === "answer" && report.status === "completed") report.status = "answers";
+  report.timing = timing.summary({
+    wallMs: performance.now() - startedAt,
+    concurrency: { initial: report.concurrency, active: gate.limit, floor: 1 },
+  });
   return summarize(report);
 }
 if (import.meta.main) {
@@ -659,7 +1075,8 @@ if (import.meta.main) {
       if (!["completed", "unavailable", "schema-smoke"].includes(report.status)) process.exitCode = 1;
     }
   } catch (error) {
-    console.error(`${error.name}: memory benchmark setup failed; check arguments, credentials, dataset cache and README`);
+    console.error(`${error.name}: ${error.message}`);
+    console.error("memory benchmark setup failed; check arguments, credentials, dataset cache and README");
     process.exitCode = 1;
   }
 }

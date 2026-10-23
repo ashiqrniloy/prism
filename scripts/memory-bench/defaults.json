@@ -50,7 +50,8 @@
           "fact": 0.4,
           "preference": 0.2,
           "procedure": 0.4,
-          "file": 0.4
+          "file": 0.4,
+          "exchange": 0.5
         },
         "storageWeights": {
           "explicit": 1,
@@ -90,6 +91,10 @@
           "minSiblings": 2,
           "contradictionsToSupersede": 2
         }
+      },
+      "exchanges": {
+        "enabled": false,
+        "scope": "user"
       },
       "promote": {
         "enabled": false,

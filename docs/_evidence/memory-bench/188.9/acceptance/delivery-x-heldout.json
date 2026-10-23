@@ -1,0 +1,5531 @@
+{
+  "schemaVersion": 2,
+  "protocol": "delivery-stage-v2",
+  "protocolVersion": 2,
+  "suite": "longmemeval-s",
+  "subset": "heldout-v2",
+  "dataset": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+  "sourceReport": "1f500b94265d4d918bad51069e6d3ebe8a3f481b720d9976d2cb538d1669d893",
+  "partition": "heldout-v2",
+  "referenceTime": "question.date",
+  "questionOnlyAblation": "question text only; no recallPeriod; minSimilarity 0.35",
+  "questionOnlyRankAblation": "question text only; no recallPeriod; minSimilarity 0 (ranking without coverage floor)",
+  "visibility": "allNeeded requires nonempty fine message evidence; answerMessageVisible requires any complete has_answer message in a rendered line; no fine labels means allNeeded is false; dataset has_answer flags are retained even on abstention",
+  "query": "question-only",
+  "injection": {
+    "budgetTokens": 4000,
+    "topK": 12,
+    "minSimilarity": 0.2
+  },
+  "injectionRenderer": "excerpt",
+  "storeSource": "product-snapshot",
+  "candidateTopK": 32,
+  "questions": 100,
+  "summary": {
+    "byStage": {
+      "correct": 76,
+      "answer_gap": 5,
+      "partial_evidence": 8,
+      "candidate_gap": 5,
+      "fine_selection_gap": 4,
+      "gold_unknown": 2
+    },
+    "byAbility": {
+      "knowledge-update": {
+        "n": 20,
+        "byStage": {
+          "correct": 19,
+          "answer_gap": 1
+        },
+        "allNeededVisible": 18,
+        "answerMessageVisible": 20,
+        "allNeededAt": {
+          "1": 1,
+          "3": 13,
+          "5": 18,
+          "10": 18,
+          "20": 18
+        },
+        "questionOnlyAllNeededAt": {
+          "1": 1,
+          "3": 13,
+          "5": 18,
+          "10": 18,
+          "20": 18
+        },
+        "questionOnlyRankAllNeededAt": {
+          "1": 1,
+          "3": 13,
+          "5": 17,
+          "10": 20,
+          "20": 20
+        },
+        "queryTerms": 144,
+        "nonQuestionTerms": 0,
+        "selectedRounds": 100
+      },
+      "multi-session": {
+        "n": 20,
+        "byStage": {
+          "answer_gap": 2,
+          "partial_evidence": 7,
+          "correct": 8,
+          "candidate_gap": 2,
+          "fine_selection_gap": 1
+        },
+        "allNeededVisible": 5,
+        "answerMessageVisible": 17,
+        "allNeededAt": {
+          "1": 0,
+          "3": 0,
+          "5": 3,
+          "10": 7,
+          "20": 8
+        },
+        "questionOnlyAllNeededAt": {
+          "1": 0,
+          "3": 1,
+          "5": 4,
+          "10": 8,
+          "20": 9
+        },
+        "questionOnlyRankAllNeededAt": {
+          "1": 0,
+          "3": 1,
+          "5": 4,
+          "10": 10,
+          "20": 12
+        },
+        "queryTerms": 145,
+        "nonQuestionTerms": 0,
+        "selectedRounds": 106
+      },
+      "temporal-reasoning": {
+        "n": 20,
+        "byStage": {
+          "partial_evidence": 1,
+          "correct": 10,
+          "gold_unknown": 2,
+          "answer_gap": 2,
+          "candidate_gap": 3,
+          "fine_selection_gap": 2
+        },
+        "allNeededVisible": 9,
+        "answerMessageVisible": 12,
+        "allNeededAt": {
+          "1": 7,
+          "3": 8,
+          "5": 9,
+          "10": 11,
+          "20": 11
+        },
+        "questionOnlyAllNeededAt": {
+          "1": 7,
+          "3": 8,
+          "5": 9,
+          "10": 11,
+          "20": 11
+        },
+        "questionOnlyRankAllNeededAt": {
+          "1": 6,
+          "3": 8,
+          "5": 9,
+          "10": 13,
+          "20": 17
+        },
+        "queryTerms": 161,
+        "nonQuestionTerms": 0,
+        "selectedRounds": 69
+      },
+      "single-session-user": {
+        "n": 20,
+        "byStage": {
+          "correct": 20
+        },
+        "allNeededVisible": 19,
+        "answerMessageVisible": 19,
+        "allNeededAt": {
+          "1": 17,
+          "3": 19,
+          "5": 19,
+          "10": 19,
+          "20": 19
+        },
+        "questionOnlyAllNeededAt": {
+          "1": 17,
+          "3": 19,
+          "5": 19,
+          "10": 19,
+          "20": 19
+        },
+        "questionOnlyRankAllNeededAt": {
+          "1": 17,
+          "3": 19,
+          "5": 19,
+          "10": 20,
+          "20": 20
+        },
+        "queryTerms": 102,
+        "nonQuestionTerms": 0,
+        "selectedRounds": 106
+      },
+      "single-session-assistant": {
+        "n": 20,
+        "byStage": {
+          "correct": 19,
+          "fine_selection_gap": 1
+        },
+        "allNeededVisible": 17,
+        "answerMessageVisible": 17,
+        "allNeededAt": {
+          "1": 16,
+          "3": 16,
+          "5": 17,
+          "10": 17,
+          "20": 17
+        },
+        "questionOnlyAllNeededAt": {
+          "1": 16,
+          "3": 16,
+          "5": 17,
+          "10": 17,
+          "20": 17
+        },
+        "questionOnlyRankAllNeededAt": {
+          "1": 16,
+          "3": 17,
+          "5": 18,
+          "10": 19,
+          "20": 19
+        },
+        "queryTerms": 354,
+        "nonQuestionTerms": 0,
+        "selectedRounds": 60
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "c6853660",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_626e93c4_1-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_626e93c4_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3148,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 10,
+      "candidateRounds": 4,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 3148,
+      "stage": "correct"
+    },
+    {
+      "id": "89941a94",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e1403127_1-r2",
+          "rank": 4
+        },
+        {
+          "id": "answer_e1403127_2-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3994,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 10,
+      "candidateGold": 7,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3994,
+      "stage": "correct"
+    },
+    {
+      "id": "eace081b",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_8a791264_2-r1",
+          "rank": 3
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3843,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 11,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 2,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3843,
+      "stage": "correct"
+    },
+    {
+      "id": "ba61f0b9",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_f377cda7_1-r1",
+          "rank": 1
+        },
+        {
+          "id": "answer_f377cda7_2-r0",
+          "rank": 3
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2737,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 4,
+      "selectedTokens": 2737,
+      "stage": "correct"
+    },
+    {
+      "id": "18bc8abd",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_fff743f5_1-r1",
+          "rank": null
+        },
+        {
+          "id": "answer_fff743f5_2-r0",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 1536,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 2,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 1,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 1536,
+      "stage": "correct"
+    },
+    {
+      "id": "2133c1b5",
+      "ability": "knowledge-update",
+      "answerCorrect": false,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_52382508_1-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2396,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 4,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2396,
+      "stage": "answer_gap"
+    },
+    {
+      "id": "603deb26",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 11,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_8afdebac_1-r2",
+          "rank": 4
+        },
+        {
+          "id": "answer_8afdebac_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3999,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 14,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 7,
+      "selectedTokens": 3999,
+      "stage": "correct"
+    },
+    {
+      "id": "1cea1afa",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_79c395a9_1-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_79c395a9_2-r0",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3456,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 13,
+      "candidateGold": 9,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 5,
+      "selectedTokens": 3456,
+      "stage": "correct"
+    },
+    {
+      "id": "10e09553",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 12,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_67be2c38_1-r1",
+          "rank": 3
+        },
+        {
+          "id": "answer_67be2c38_2-r1",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 1569,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 10,
+      "candidateRounds": 3,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 1,
+      "selectedGold": 3,
+      "selectedFine": 2,
+      "selectedRounds": 3,
+      "selectedTokens": 1569,
+      "stage": "correct"
+    },
+    {
+      "id": "07741c44",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_7e9ad7b4_1-r1",
+          "rank": 1
+        },
+        {
+          "id": "answer_7e9ad7b4_2-r0",
+          "rank": 4
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3617,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 16,
+      "candidateGold": 9,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3617,
+      "stage": "correct"
+    },
+    {
+      "id": "d7c942c3",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_eecb10d9_1-r4",
+          "rank": 2
+        },
+        {
+          "id": "answer_eecb10d9_2-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2023,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 4,
+      "selectedTokens": 2023,
+      "stage": "correct"
+    },
+    {
+      "id": "184da446",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e2f4f947_1-r0",
+          "rank": 4
+        },
+        {
+          "id": "answer_e2f4f947_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3975,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 7,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 5,
+      "selectedTokens": 3975,
+      "stage": "correct"
+    },
+    {
+      "id": "945e3d21",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_6a4f8626_1-r2",
+          "rank": 5
+        },
+        {
+          "id": "answer_6a4f8626_2-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3923,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 9,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 2,
+      "selectedRounds": 5,
+      "selectedTokens": 3923,
+      "stage": "correct"
+    },
+    {
+      "id": "6a27ffc2",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_77f32504_1-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_77f32504_2-r1",
+          "rank": 3
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3349,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 4,
+      "selectedTokens": 3349,
+      "stage": "correct"
+    },
+    {
+      "id": "01493427",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_a7b44747_1-r3",
+          "rank": 1
+        },
+        {
+          "id": "answer_a7b44747_2-r3",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3598,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 13,
+      "candidateGold": 8,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 6,
+      "selectedFine": 2,
+      "selectedRounds": 7,
+      "selectedTokens": 3598,
+      "stage": "correct"
+    },
+    {
+      "id": "852ce960",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_3a6f1e82_1-r1",
+          "rank": 2
+        },
+        {
+          "id": "answer_3a6f1e82_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3567,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 6,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3567,
+      "stage": "correct"
+    },
+    {
+      "id": "72e3ee87",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_d7de9a6a_1-r0",
+          "rank": 2
+        },
+        {
+          "id": "answer_d7de9a6a_2-r4",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3739,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 6,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3739,
+      "stage": "correct"
+    },
+    {
+      "id": "08e075c7",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_cdbe2250_1-r1",
+          "rank": 2
+        },
+        {
+          "id": "answer_cdbe2250_2-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3370,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 10,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3370,
+      "stage": "correct"
+    },
+    {
+      "id": "b6019101",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_67074b4b_1-r2",
+          "rank": 1
+        },
+        {
+          "id": "answer_67074b4b_2-r0",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2151,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 4,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 2,
+      "selectedRounds": 4,
+      "selectedTokens": 2151,
+      "stage": "correct"
+    },
+    {
+      "id": "7401057b",
+      "ability": "knowledge-update",
+      "answerCorrect": true,
+      "queryTermCount": 10,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_94650bfa_1-r2",
+          "rank": 2
+        },
+        {
+          "id": "answer_94650bfa_2-r0",
+          "rank": 3
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3363,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 8,
+      "candidateGold": 7,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 1,
+      "selectedGold": 6,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3363,
+      "stage": "correct"
+    },
+    {
+      "id": "09ba9854",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_96c743d0_2-r2",
+          "rank": 6
+        },
+        {
+          "id": "answer_96c743d0_1-r3",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3965,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 11,
+      "candidateGold": 11,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 8,
+      "selectedFine": 2,
+      "selectedRounds": 8,
+      "selectedTokens": 3965,
+      "stage": "answer_gap"
+    },
+    {
+      "id": "ba358f49",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_cbd08e3c_1-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_cbd08e3c_2-r1",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3972,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 6,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 3972,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "60472f9c",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e7fe8c8b_2-r0",
+          "rank": 2
+        },
+        {
+          "id": "answer_e7fe8c8b_3-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2785,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 18,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 1,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2785,
+      "stage": "correct"
+    },
+    {
+      "id": "6d550036",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ec904b3c_1-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_ec904b3c_4-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_ec904b3c_3-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_ec904b3c_2-r1",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 4,
+      "tokens": 3980,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 22,
+      "candidateRounds": 6,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 4,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3980,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "10d9b85a",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e0585cb5_2-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_e0585cb5_1-r1",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 2,
+      "tokens": 0,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": true,
+      "goldRounds": 11,
+      "candidateRounds": 0,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 2,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 0,
+      "selectedTokens": 0,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_7fce9456",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_a679a86a_5-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_a679a86a_4-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_a679a86a_2-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_a679a86a_3-r2",
+          "rank": null
+        },
+        {
+          "id": "answer_a679a86a_3-r3",
+          "rank": null
+        },
+        {
+          "id": "answer_a679a86a_1-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 6,
+      "tokens": 3820,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 30,
+      "candidateRounds": 6,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 6,
+      "bestFineRank": 0,
+      "selectedGold": 6,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3820,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "a4996e51",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_feb5f98a_1-r0",
+          "rank": 5
+        },
+        {
+          "id": "answer_feb5f98a_2-r1",
+          "rank": 4
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3447,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 7,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 3,
+      "selectedGold": 5,
+      "selectedFine": 2,
+      "selectedRounds": 5,
+      "selectedTokens": 3447,
+      "stage": "correct"
+    },
+    {
+      "id": "46a3abf7",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_c65042d7_3-r0",
+          "rank": 4
+        },
+        {
+          "id": "answer_c65042d7_2-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_c65042d7_1-r0",
+          "rank": 14
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 3,
+      "tokens": 3802,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 18,
+      "candidateRounds": 17,
+      "candidateGold": 7,
+      "bestGoldRank": 0,
+      "fineRounds": 3,
+      "bestFineRank": 3,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 7,
+      "selectedTokens": 3802,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "8e91e7d9",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 3,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_477ae455_1-r1",
+          "rank": null
+        },
+        {
+          "id": "answer_477ae455_2-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 2,
+      "tokens": 831,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 2,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 2,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 2,
+      "selectedTokens": 831,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "81507db6",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_da3c1266_1-r0",
+          "rank": 5
+        },
+        {
+          "id": "answer_da3c1266_5-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_da3c1266_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 3,
+      "tokens": 3698,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 29,
+      "candidateRounds": 7,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 3,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3698,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "60036106",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 10,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e552e1f9_1-r0",
+          "rank": 6
+        },
+        {
+          "id": "answer_e552e1f9_2-r0",
+          "rank": 4
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3968,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 9,
+      "candidateGold": 8,
+      "bestGoldRank": 1,
+      "fineRounds": 2,
+      "bestFineRank": 3,
+      "selectedGold": 5,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3968,
+      "stage": "correct"
+    },
+    {
+      "id": "85fa3a3f",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 14,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_dcb18b9b_2-r1",
+          "rank": 4
+        },
+        {
+          "id": "answer_dcb18b9b_2-r2",
+          "rank": 3
+        },
+        {
+          "id": "answer_dcb18b9b_1-r0",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 3,
+      "tokens": 944,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 3,
+      "bestFineRank": 1,
+      "selectedGold": 4,
+      "selectedFine": 3,
+      "selectedRounds": 4,
+      "selectedTokens": 944,
+      "stage": "correct"
+    },
+    {
+      "id": "d682f1a2",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_c008e5df_1-r0",
+          "rank": 5
+        },
+        {
+          "id": "answer_c008e5df_2-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_c008e5df_3-r0",
+          "rank": 6
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 3,
+      "tokens": 3885,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 18,
+      "candidateRounds": 16,
+      "candidateGold": 5,
+      "bestGoldRank": 4,
+      "fineRounds": 3,
+      "bestFineRank": 4,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3885,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "27016adc",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_a37bdf22_2-r0",
+          "rank": 6
+        },
+        {
+          "id": "answer_a37bdf22_1-r1",
+          "rank": 7
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 2,
+      "tokens": 3614,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 8,
+      "candidateGold": 8,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 5,
+      "selectedGold": 4,
+      "selectedFine": 0,
+      "selectedRounds": 4,
+      "selectedTokens": 3614,
+      "stage": "fine_selection_gap"
+    },
+    {
+      "id": "9d25d4e0",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_fcff2dc4_2-r0",
+          "rank": 11
+        },
+        {
+          "id": "answer_fcff2dc4_2-r4",
+          "rank": 2
+        },
+        {
+          "id": "answer_fcff2dc4_1-r0",
+          "rank": 10
+        },
+        {
+          "id": "answer_fcff2dc4_1-r4",
+          "rank": null
+        },
+        {
+          "id": "answer_fcff2dc4_3-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 5,
+      "tokens": 3894,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 18,
+      "candidateRounds": 11,
+      "candidateGold": 8,
+      "bestGoldRank": 0,
+      "fineRounds": 5,
+      "bestFineRank": 1,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 8,
+      "selectedTokens": 3894,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "51c32626",
+      "ability": "multi-session",
+      "answerCorrect": false,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_58820c75_1-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_58820c75_2-r4",
+          "rank": 5
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3570,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 10,
+      "candidateRounds": 13,
+      "candidateGold": 10,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3570,
+      "stage": "answer_gap"
+    },
+    {
+      "id": "77eafa52",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_33c251f0_2-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_33c251f0_1-r1",
+          "rank": 4
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3574,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 8,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 3,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3574,
+      "stage": "correct"
+    },
+    {
+      "id": "e25c3b8d",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_6702277b_1-r0",
+          "rank": null
+        },
+        {
+          "id": "answer_6702277b_2-r3",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2123,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2123,
+      "stage": "correct"
+    },
+    {
+      "id": "ef66a6e5",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_f7fd1029_2-r0",
+          "rank": 7
+        },
+        {
+          "id": "answer_f7fd1029_1-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3714,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 10,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3714,
+      "stage": "correct"
+    },
+    {
+      "id": "ef9cf60a",
+      "ability": "multi-session",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_87e3a1cb_1-r0",
+          "rank": 11
+        },
+        {
+          "id": "answer_87e3a1cb_2-r0",
+          "rank": 7
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3941,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 11,
+      "candidateGold": 9,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 6,
+      "selectedGold": 7,
+      "selectedFine": 1,
+      "selectedRounds": 7,
+      "selectedTokens": 3941,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_93159ced",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e5131a1b_2-r2",
+          "rank": 4
+        },
+        {
+          "id": "answer_e5131a1b_2-r5",
+          "rank": 1
+        },
+        {
+          "id": "answer_e5131a1b_1-r1",
+          "rank": 7
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 3,
+      "tokens": 3619,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 14,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 3,
+      "bestFineRank": 0,
+      "selectedGold": 3,
+      "selectedFine": 2,
+      "selectedRounds": 6,
+      "selectedTokens": 3619,
+      "stage": "partial_evidence"
+    },
+    {
+      "id": "gpt4_af6db32f",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_184c8f56_1-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 633,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 633,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_5dcc0aab",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 0,
+      "tokens": 2645,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 0,
+      "candidateRounds": 8,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 0,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 8,
+      "selectedTokens": 2645,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "0bb5a684",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 11,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e936197f_1-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3891,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 8,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 3891,
+      "stage": "answer_gap"
+    },
+    {
+      "id": "8077ef71",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_0dd54b7c_1-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2645,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 5,
+      "candidateRounds": 5,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 2645,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_4929293a",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_add9b012_2-r0",
+          "rank": 1
+        },
+        {
+          "id": "answer_add9b012_1-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 928,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 2,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 928,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_1d4ab0c9",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 12,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_febde667_1-r0",
+          "rank": 2
+        },
+        {
+          "id": "answer_febde667_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2791,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 2,
+      "selectedRounds": 4,
+      "selectedTokens": 2791,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_6dc9b45b",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_c4df007f_1-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3914,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 8,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 3914,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_483dd43c",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_fb793c87_2-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2458,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 5,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 3,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2458,
+      "stage": "answer_gap"
+    },
+    {
+      "id": "gpt4_5438fa52",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_b10f3828_2-r2",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 0,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 0,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 0,
+      "selectedTokens": 0,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "gpt4_fe651585",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_65600ff6_2-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 357,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 1,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 1,
+      "selectedTokens": 357,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_e414231e",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 11,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e28c1f0d_1-r0",
+          "rank": 4
+        },
+        {
+          "id": "answer_e28c1f0d_2-r0",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2970,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 4,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 1,
+      "selectedGold": 3,
+      "selectedFine": 2,
+      "selectedRounds": 4,
+      "selectedTokens": 2970,
+      "stage": "correct"
+    },
+    {
+      "id": "c9f37c46",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 13,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 0,
+      "tokens": 0,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 0,
+      "candidateRounds": 0,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 0,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 0,
+      "selectedTokens": 0,
+      "stage": "gold_unknown"
+    },
+    {
+      "id": "gpt4_1e4a8aec",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_16bd5ea6_2-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 1208,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 2,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 2,
+      "selectedTokens": 1208,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "bcbe585f",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 10,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_43ba3965_1-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 871,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 2,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 871,
+      "stage": "correct"
+    },
+    {
+      "id": "gpt4_b5700ca9",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 9,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_a17423e7_1-r3",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 514,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 514,
+      "stage": "correct"
+    },
+    {
+      "id": "2c63a862",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 10,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_d39b7977_1-r4",
+          "rank": null
+        },
+        {
+          "id": "answer_d39b7977_2-r0",
+          "rank": 8
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 2,
+      "tokens": 3280,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 9,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 7,
+      "selectedGold": 5,
+      "selectedFine": 0,
+      "selectedRounds": 6,
+      "selectedTokens": 3280,
+      "stage": "fine_selection_gap"
+    },
+    {
+      "id": "gpt4_fa19884d",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ff201787_2-r5",
+          "rank": 22
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 3926,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 24,
+      "candidateGold": 8,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 21,
+      "selectedGold": 3,
+      "selectedFine": 0,
+      "selectedRounds": 7,
+      "selectedTokens": 3926,
+      "stage": "fine_selection_gap"
+    },
+    {
+      "id": "gpt4_2d58bcd6",
+      "ability": "temporal-reasoning",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_3e11e0ae_1-r0",
+          "rank": 3
+        },
+        {
+          "id": "answer_3e11e0ae_2-r0",
+          "rank": 6
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 3936,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 13,
+      "candidateGold": 8,
+      "bestGoldRank": 0,
+      "fineRounds": 2,
+      "bestFineRank": 2,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3936,
+      "stage": "correct"
+    },
+    {
+      "id": "71017277",
+      "ability": "temporal-reasoning",
+      "answerCorrect": false,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_0b4a8adc_1-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 584,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 1,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 1,
+      "selectedTokens": 584,
+      "stage": "candidate_gap"
+    },
+    {
+      "id": "a06e4cfe",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_6fe9fb49-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2762,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2762,
+      "stage": "correct"
+    },
+    {
+      "id": "75499fd8",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 2,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_723bf11f-r4",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3644,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 6,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 1,
+      "selectedGold": 6,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3644,
+      "stage": "correct"
+    },
+    {
+      "id": "b320f3f8",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 6,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_5cc9b056-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 1571,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 2,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 1571,
+      "stage": "correct"
+    },
+    {
+      "id": "caf9ead2",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_0714183a-r4",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 4000,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 28,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 10,
+      "selectedTokens": 4000,
+      "stage": "correct"
+    },
+    {
+      "id": "311778f1",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_e40b054e-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2337,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 7,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 3,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2337,
+      "stage": "correct"
+    },
+    {
+      "id": "86f00804",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_96b8c9ee-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3622,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 10,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3622,
+      "stage": "correct"
+    },
+    {
+      "id": "25e5aa4f",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_986de8c3-r2",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 3729,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 7,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 4,
+      "selectedFine": 0,
+      "selectedRounds": 5,
+      "selectedTokens": 3729,
+      "stage": "correct"
+    },
+    {
+      "id": "8e9d538c",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_7bdcbd23-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 2897,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 5,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 2897,
+      "stage": "correct"
+    },
+    {
+      "id": "95bcc1c8",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_cb742a61-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3082,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 5,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 3,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 3082,
+      "stage": "correct"
+    },
+    {
+      "id": "21436231",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 8,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_1e6d4567-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3668,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 5,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 3668,
+      "stage": "correct"
+    },
+    {
+      "id": "001be529",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_530960c1-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3310,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 6,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3310,
+      "stage": "correct"
+    },
+    {
+      "id": "faba32e5",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_39b12014-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2452,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2452,
+      "stage": "correct"
+    },
+    {
+      "id": "0862e8bf",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 2,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_c6fd8ebd-r5",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3936,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 18,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 9,
+      "selectedTokens": 3936,
+      "stage": "correct"
+    },
+    {
+      "id": "3b6f954b",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_94030872-r4",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2793,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 5,
+      "candidateRounds": 4,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2793,
+      "stage": "correct"
+    },
+    {
+      "id": "af8d2e46",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 7,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_82a04f59-r3",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3995,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 5,
+      "candidateRounds": 7,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 3,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3995,
+      "stage": "correct"
+    },
+    {
+      "id": "6ade9755",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 3,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_9398da02-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2277,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 5,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 3,
+      "selectedFine": 1,
+      "selectedRounds": 5,
+      "selectedTokens": 2277,
+      "stage": "correct"
+    },
+    {
+      "id": "e47becba",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 2,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_280352e9-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 2,
+      "tokens": 1604,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 2,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 1604,
+      "stage": "correct"
+    },
+    {
+      "id": "8a137a7f",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 5,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_15d63a22-r1",
+          "rank": 2
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3964,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 10,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 1,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3964,
+      "stage": "correct"
+    },
+    {
+      "id": "15745da0",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_586de428-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3304,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 5,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 3304,
+      "stage": "correct"
+    },
+    {
+      "id": "76d63226",
+      "ability": "single-session-user",
+      "answerCorrect": true,
+      "queryTermCount": 4,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_bbdc7b0a-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3997,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 5,
+      "candidateRounds": 10,
+      "candidateGold": 3,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 8,
+      "selectedTokens": 3997,
+      "stage": "correct"
+    },
+    {
+      "id": "f523d9fe",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 21,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_m2xJfjo_0-r7",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 157,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 11,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 157,
+      "stage": "correct"
+    },
+    {
+      "id": "fea54f57",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 16,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_187684-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 419,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 7,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 419,
+      "stage": "correct"
+    },
+    {
+      "id": "7161e7e2",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 14,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_5Lzox6N_0-r6",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 1852,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 7,
+      "candidateRounds": 7,
+      "candidateGold": 7,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 7,
+      "selectedFine": 1,
+      "selectedRounds": 7,
+      "selectedTokens": 1852,
+      "stage": "correct"
+    },
+    {
+      "id": "c8f1aeed",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 29,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_519486-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 929,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 3,
+      "candidateRounds": 2,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 929,
+      "stage": "correct"
+    },
+    {
+      "id": "8aef76bc",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 18,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_563222-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 669,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 4,
+      "candidateRounds": 2,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 669,
+      "stage": "correct"
+    },
+    {
+      "id": "1568498a",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 12,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_d6JJiqH_76-r9",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 151,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 12,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 1,
+      "selectedFine": 0,
+      "selectedRounds": 1,
+      "selectedTokens": 151,
+      "stage": "correct"
+    },
+    {
+      "id": "1de5cff2",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 17,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_440262-r3",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 675,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 2,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 675,
+      "stage": "correct"
+    },
+    {
+      "id": "5809eb10",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 16,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_4aJsGCH_0-r0",
+          "rank": 5
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 3187,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 6,
+      "candidateGold": 5,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 4,
+      "selectedGold": 5,
+      "selectedFine": 1,
+      "selectedRounds": 6,
+      "selectedTokens": 3187,
+      "stage": "correct"
+    },
+    {
+      "id": "1b9b7252",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 23,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_115151-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 1560,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 4,
+      "candidateRounds": 3,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 3,
+      "selectedTokens": 1560,
+      "stage": "correct"
+    },
+    {
+      "id": "18dcd5a5",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 15,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_hn3IS1q_0-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 887,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 1,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 887,
+      "stage": "correct"
+    },
+    {
+      "id": "561fabcd",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 13,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_hChsWOp_97-r3",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 1250,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 9,
+      "candidateRounds": 3,
+      "candidateGold": 0,
+      "bestGoldRank": -1,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 0,
+      "selectedFine": 0,
+      "selectedRounds": 3,
+      "selectedTokens": 1250,
+      "stage": "correct"
+    },
+    {
+      "id": "8b9d4367",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 20,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_289157-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 924,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 3,
+      "candidateRounds": 2,
+      "candidateGold": 2,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 2,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 924,
+      "stage": "correct"
+    },
+    {
+      "id": "488d3006",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 23,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_275993-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2958,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 7,
+      "candidateRounds": 7,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 7,
+      "selectedTokens": 2958,
+      "stage": "correct"
+    },
+    {
+      "id": "6ae235be",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 14,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_IUWQYGQ_0-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 1180,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 4,
+      "candidateRounds": 2,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 2,
+      "selectedTokens": 1180,
+      "stage": "correct"
+    },
+    {
+      "id": "70b3e69b",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 22,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_334948-r2",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 1901,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 7,
+      "candidateRounds": 4,
+      "candidateGold": 4,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 4,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 1901,
+      "stage": "correct"
+    },
+    {
+      "id": "352ab8bd",
+      "ability": "single-session-assistant",
+      "answerCorrect": false,
+      "queryTermCount": 19,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_NoDZzot_7-r0",
+          "rank": null
+        }
+      ],
+      "allNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "allNeededVisible": false,
+      "answerMessageVisible": false,
+      "answerMessages": 1,
+      "tokens": 2433,
+      "questionOnlyAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": false,
+        "3": false,
+        "5": false,
+        "10": false,
+        "20": false
+      },
+      "periodFiltered": false,
+      "goldRounds": 8,
+      "candidateRounds": 6,
+      "candidateGold": 6,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": -1,
+      "selectedGold": 6,
+      "selectedFine": 0,
+      "selectedRounds": 6,
+      "selectedTokens": 2433,
+      "stage": "fine_selection_gap"
+    },
+    {
+      "id": "1903aded",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 11,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_hA7AkP3_0-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2044,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 1,
+      "candidateRounds": 4,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2044,
+      "stage": "correct"
+    },
+    {
+      "id": "51b23612",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 16,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_427265-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 538,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 6,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 538,
+      "stage": "correct"
+    },
+    {
+      "id": "28bcfaac",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 18,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_ultrachat_446979-r1",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 2799,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 3,
+      "candidateRounds": 4,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 4,
+      "selectedTokens": 2799,
+      "stage": "correct"
+    },
+    {
+      "id": "8cf51dda",
+      "ability": "single-session-assistant",
+      "answerCorrect": true,
+      "queryTermCount": 17,
+      "nonQuestionTerms": 0,
+      "nonQuestionTermShare": 0,
+      "fineEvidenceRanks": [
+        {
+          "id": "answer_sharegpt_HFMn2ZX_0-r0",
+          "rank": 1
+        }
+      ],
+      "allNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "allNeededVisible": true,
+      "answerMessageVisible": true,
+      "answerMessages": 1,
+      "tokens": 596,
+      "questionOnlyAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "questionOnlyRankAllNeededAt": {
+        "1": true,
+        "3": true,
+        "5": true,
+        "10": true,
+        "20": true
+      },
+      "periodFiltered": false,
+      "goldRounds": 1,
+      "candidateRounds": 1,
+      "candidateGold": 1,
+      "bestGoldRank": 0,
+      "fineRounds": 1,
+      "bestFineRank": 0,
+      "selectedGold": 1,
+      "selectedFine": 1,
+      "selectedRounds": 1,
+      "selectedTokens": 596,
+      "stage": "correct"
+    }
+  ]
+}

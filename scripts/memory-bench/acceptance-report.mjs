@@ -2,24 +2,42 @@
 /** Post-campaign acceptance aggregation. Reads only ids/scores/statuses from paid evidence. */
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import {
+  ACCEPTANCE_1888_EVIDENCE,
+  ACCEPTANCE_1888_JOURNAL,
+  ACCEPTANCE_1888_MANIFEST,
+  ACCEPTANCE_1889_EVIDENCE,
+  ACCEPTANCE_1889_JOURNAL,
+  ACCEPTANCE_1889_MANIFEST,
   ACCEPTANCE_EVIDENCE,
   ACCEPTANCE_JOURNAL,
   ACCEPTANCE_MANIFEST,
+  ARM_1888_IDS,
+  ARM_1889_IDS,
+  acceptance1888TaskState,
+  armRecord1888,
+  assertAcceptance1888Manifest,
+  assertAcceptance1889Manifest,
   assertAcceptanceManifest,
+  findingVerdict1888,
+  improvementVerdict,
   LIFECYCLE_ARMS,
   LIFECYCLE_SEEDS,
+  primaryFamily1888,
   qualityVerdict,
   REQUIRED_LME_CONFIGS,
+  statisticallyPowered,
+  substitutionVerdict,
 } from "./acceptance.mjs";
 import { stableHash } from "./journal.mjs";
 import { summarizeLifecycle } from "./lifecycle/suite.mjs";
 import { METRIC_VERSION } from "./metrics.mjs";
+import { stageFromCounts } from "./replay.mjs";
 import { compare, holm } from "./stats.mjs";
 
-async function reportsFor(jobId) {
-  const files = (await readdir(ACCEPTANCE_EVIDENCE)).filter((file) => file.startsWith(`final-${jobId}`) && file.endsWith(".json")).sort();
+async function reportsFor(jobId, directory = ACCEPTANCE_EVIDENCE, prefix = "final") {
+  const files = (await readdir(directory)).filter((file) => file.startsWith(`${prefix}-${jobId}`) && file.endsWith(".json")).sort();
   const reports = [];
-  for (const file of files) reports.push(JSON.parse(await readFile(`${ACCEPTANCE_EVIDENCE}/${file}`, "utf8")));
+  for (const file of files) reports.push(JSON.parse(await readFile(`${directory}/${file}`, "utf8")));
   return reports;
 }
 
@@ -262,4 +280,478 @@ async function main() {
   console.log(JSON.stringify({ summary, missing }, null, 2));
 }
 
-if (import.meta.main) await main();
+/* Plan 188.8: paired held-out before/after on the frozen v2 draw. */
+function byAbility1888(report) {
+  const grouped = new Map();
+  for (const row of report.results) {
+    const group = grouped.get(row.ability) ?? { n: 0, correct: 0, runLimit: 0 };
+    group.n += 1;
+    if (row.correct === true) group.correct += 1;
+    if (row.outcome === "run_limit") group.runLimit += 1;
+    grouped.set(row.ability, group);
+  }
+  return Object.fromEntries(
+    [...grouped].map(([ability, group]) => [
+      ability,
+      { n: group.n, correct: group.correct, accuracy: group.correct / group.n, runLimitRate: group.runLimit / group.n },
+    ]),
+  );
+}
+
+function stageStratumLabel(stratum) {
+  const accuracy = stratum?.accuracy;
+  return stratum === null || accuracy === null || accuracy === undefined
+    ? "n/a"
+    : `${stratum.correct}/${stratum.n} (${Math.round(accuracy * 100)}%)`;
+}
+
+function paired1888(a, b) {
+  return { ...compare(comparable(a), comparable(b)), ...overallGroups(a, b) };
+}
+
+async function delivery1888(name, results = []) {
+  try {
+    const report = JSON.parse(await readFile(`${ACCEPTANCE_1888_EVIDENCE}/delivery-diagnostics-${name}.json`, "utf8"));
+    // Conditional accuracy: does the solver answer when the evidence is visible at all? Joins the
+    // paid verdict by id; the diagnostic contributes ids, flags and counts only.
+    const correctById = new Map(results.map((row) => [row.id, row.correct === true]));
+    const strata = { visible: { n: 0, correct: 0 }, notVisible: { n: 0, correct: 0 } };
+    // Stages are re-derived with the corrected classifier (partial_evidence), so this report never
+    // repeats a stage a committed diagnostic recorded under the old one.
+    const byStage = {};
+    const byAbilityStage = {};
+    const stagesAsRecorded = {};
+    for (const row of report.rows ?? []) {
+      stagesAsRecorded[row.stage] = (stagesAsRecorded[row.stage] ?? 0) + 1;
+      const stage =
+        row.stage === "store_error"
+          ? "store_error"
+          : stageFromCounts({
+              goldRounds: row.goldRounds,
+              candidateGold: row.candidateGold,
+              selectedGold: row.selectedGold,
+              fineRounds: row.fineRounds,
+              fineSelected: row.selectedFine,
+              correct: row.answerCorrect === true,
+            });
+      byStage[stage] = (byStage[stage] ?? 0) + 1;
+      const abilityStage = (byAbilityStage[row.ability] ??= {});
+      abilityStage[stage] = (abilityStage[stage] ?? 0) + 1;
+      // A question with no fine gold has no "visible evidence" state to condition on.
+      if (row.answerCorrect === undefined || !row.fineRounds) continue;
+      const stratum = row.allNeededVisible ? strata.visible : strata.notVisible;
+      stratum.n += 1;
+      stratum.correct += Number(correctById.get(row.id) === true);
+    }
+    const rate = (stratum) => (stratum.n === 0 ? null : stratum.correct / stratum.n);
+    return {
+      protocol: report.protocol,
+      subset: report.subset,
+      renderer: report.injectionRenderer ?? null,
+      byAbility: Object.fromEntries(
+        Object.entries(report.summary?.byAbility ?? {}).map(([ability, value]) => [
+          ability,
+          {
+            n: value.n,
+            allNeededVisible: value.allNeededVisible,
+            answerMessageVisible: value.answerMessageVisible,
+            byStage: byAbilityStage[ability] ?? value.byStage,
+          },
+        ]),
+      ),
+      stages: byStage,
+      stagesAsRecorded,
+      conditionalAccuracy: {
+        visible: { ...strata.visible, accuracy: rate(strata.visible) },
+        notVisible: { ...strata.notVisible, accuracy: rate(strata.notVisible) },
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function main1888() {
+  const manifest = assertAcceptance1888Manifest(JSON.parse(await readFile(ACCEPTANCE_1888_MANIFEST, "utf8")));
+  const journal = JSON.parse(await readFile(ACCEPTANCE_1888_JOURNAL, "utf8"));
+  const attempts = journal.attempts;
+  const reports = new Map();
+  const missing = [];
+  for (const job of manifest.jobs) {
+    const candidates = await reportsFor(job.id, ACCEPTANCE_1888_EVIDENCE);
+    const completed = candidates.find((report) => report.status === "completed");
+    if (completed) reports.set(job.id, completed);
+    else
+      missing.push({
+        id: job.id,
+        attempts: candidates.map((report) => ({ status: report.status, inputTokens: report.inputTokens })),
+      });
+  }
+  const arm = (name) => reports.get(ARM_1888_IDS[name]);
+  const record = (report) => (report ? { ...armRecord1888(report), byAbility: byAbility1888(report) } : null);
+  const prefix = arm("prefix");
+  const postfix = arm("postfix");
+  const agentic = arm("agentic");
+  const full = arm("full");
+  const improvement = prefix && postfix ? paired1888(prefix, postfix) : null;
+  const primary = improvement ? primaryFamily1888(improvement) : null;
+  const overall = improvement?.overall ?? null;
+  const powered = Boolean(prefix?.status === "completed" && postfix?.status === "completed" && statisticallyPowered(overall));
+  const improvementResult = primary ? improvementVerdict({ groups: primary, powered }) : "inconclusive";
+  const usageComplete = [prefix, postfix, agentic, full].every((report) => report?.usageComplete !== false);
+  const substitutions = [];
+  for (const [name, report] of [
+    ["prefix", prefix],
+    ["postfix", postfix],
+    ["agentic", agentic],
+  ]) {
+    if (!report || !full) continue;
+    const groups = paired1888(full, report);
+    substitutions.push({
+      arm: name,
+      baseline: "full",
+      groups,
+      verdict: substitutionVerdict({
+        overall: groups.overall,
+        powered: Boolean(report.status === "completed" && full.status === "completed" && statisticallyPowered(groups.overall)),
+      }),
+    });
+  }
+  const agenticComparison = agentic && postfix ? paired1888(postfix, agentic) : null;
+  const delivery = Object.fromEntries(
+    await Promise.all(
+      [
+        ["heldout-prefix", "prefix"],
+        ["heldout-postfix", "postfix"],
+        ["heldout-agentic", "agentic"],
+        ["development-postfix", "development"],
+      ].map(async ([name, armName]) => [name, await delivery1888(name, arm(armName)?.results ?? [])]),
+    ),
+  );
+  const summary = {
+    schemaVersion: 1,
+    kind: "188.8-heldout-acceptance",
+    plan: "188.8",
+    metricVersion: METRIC_VERSION,
+    protocolVersion: manifest.protocolVersion,
+    manifestHash: stableHash({
+      ceiling: manifest.ceiling,
+      jobs: manifest.jobs.map((job) => [job.id, job.config, job.subset, job.maxInputTokens, job.cwd ?? null]),
+    }),
+    primaryFamily: manifest.primaryAbilities,
+    nonInferiorityMargin: manifest.nonInferiorityMargin,
+    usageComplete,
+    // Cost is never claimed without complete wire usage; quality verdicts do not depend on it.
+    costClaim: usageComplete,
+    ...acceptance1888TaskState({ missing }),
+    reliability: {
+      requiredJobs: manifest.jobs.length,
+      completedJobs: reports.size,
+      attempts: attempts.length,
+      failedAttempts: attempts.filter((attempt) => ["failed", "setup-failure", "abandoned"].includes(attempt.status)).length,
+      usageIncompleteAttempts: attempts.filter((attempt) => attempt.usageComplete === false).length,
+    },
+    arms: Object.fromEntries(["prefix", "postfix", "agentic", "development", "full"].map((name) => [name, record(arm(name))])),
+    improvement: {
+      baseline: "prefix",
+      candidate: "postfix",
+      powered,
+      primary,
+      overall,
+      verdict: improvementResult,
+    },
+    agenticVsPostfix: agenticComparison
+      ? {
+          baseline: "postfix",
+          candidate: "agentic",
+          groups: { ...agenticComparison },
+          verdict: qualityVerdict({
+            candidateImproves: Boolean(agenticComparison.overall?.improvementDelta > 0 && agenticComparison.overall?.pHolm < 0.05),
+            fullContextNonInferior: Boolean(agenticComparison.overall?.confirmatory),
+            powered: Boolean(agenticComparison.overall?.confirmatory),
+          }),
+        }
+      : null,
+    substitution: substitutions,
+    verdicts: {
+      improvement: improvementResult,
+      substitution: substitutions.find((entry) => entry.arm === "postfix")?.verdict ?? "not-a-substitute",
+      finding: findingVerdict1888({
+        substitution: substitutions.find((entry) => entry.arm === "postfix")?.verdict ?? "not-a-substitute",
+        powered,
+      }),
+    },
+    delivery,
+  };
+  await writeFile(`${ACCEPTANCE_1888_EVIDENCE}/acceptance-comparisons.json`, `${JSON.stringify(summary, null, 2)}\n`);
+  const row = (label, groups) =>
+    Object.entries(groups ?? {}).map(
+      ([metric, group]) =>
+        `| ${label} | ${metric} | ${group.n} | ${group.diff.toFixed(4)} | [${group.ci95.map((value) => value.toFixed(4)).join(", ")}] | ${group.p.toExponential(3)} | ${(group.pHolm ?? NaN).toExponential(3)} |`,
+    );
+  const lines = [
+    "# 188.8 held-out acceptance comparisons",
+    "",
+    `Required arms: ${manifest.jobs.length}; completed: ${reports.size}; missing: ${missing.length}; attempts: ${attempts.length}.`,
+    `Improvement verdict: ${summary.verdicts.improvement}; substitution verdict: ${summary.verdicts.substitution}; F13: ${summary.verdicts.finding}.`,
+    "",
+    "Question (1): does post-fix fabric improve on pre-fix fabric? Question (2): is any fabric arm a full-context substitute?",
+    "They are reported separately; (1) passing alone is an opt-in improvement, never substitution.",
+    "",
+    "| Arm | Ability | n | Diff | 95% CI | p | p-Holm |",
+    "| --- | --- | ---: | ---: | --- | ---: | ---: |",
+    ...row("postfix-prefix", primary),
+    ...row("postfix-prefix", { overall }),
+    ...row(
+      "postfix-prefix-descriptive",
+      Object.fromEntries(Object.entries(improvement ?? {}).filter(([ability]) => !(ability in (primary ?? {})) && ability !== "overall")),
+    ),
+    ...(agenticComparison ? row("agentic-postfix", agenticComparison) : []),
+    ...substitutions.flatMap((entry) => row(`${entry.arm}-vs-full`, { overall: entry.groups.overall })),
+    "",
+    "Conditional accuracy: does the solver answer when all needed evidence is visible in the injected context? Stage counts use the corrected classifier (partial_evidence when only some fine rounds are visible).",
+    "",
+    "| Diagnostics arm | Renderer | Stages | All needed visible | Not all visible |",
+    "| --- | --- | --- | --- | --- |",
+    ...Object.entries(delivery)
+      .filter(([, value]) => value)
+      .map(
+        ([name, value]) =>
+          `| ${name} | ${value.renderer} | ${Object.entries(value.stages ?? {})
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([stage, count]) => `${stage} ${count}`)
+            .join(
+              ", ",
+            )} | ${stageStratumLabel(value.conditionalAccuracy?.visible)} | ${stageStratumLabel(value.conditionalAccuracy?.notVisible)} |`,
+      ),
+    "",
+    "Cost is wire input/cache/output only. Currency is not available without authenticated rate semantics.",
+    ...Object.entries(summary.arms)
+      .filter(([, value]) => value)
+      .map(
+        ([name, value]) =>
+          `- ${name}: ${value.correct}/${value.answers}, ${value.status}, ${value.inputTokens} input, ${value.cacheReadTokens} cache-read, run-limit ${value.runLimitRate.toFixed(4)}.`,
+      ),
+    ...missing.map((item) => `- missing completed report: ${item.id}`),
+  ];
+  await writeFile(`${ACCEPTANCE_1888_EVIDENCE}/acceptance-comparisons.md`, `${lines.join("\n")}\n`);
+  console.log(JSON.stringify({ verdicts: summary.verdicts, missing, taskComplete: summary.taskComplete }, null, 2));
+}
+
+if (import.meta.main) {
+  if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.8") await main1888();
+  else if (process.argv.includes("--plan") && process.argv[process.argv.indexOf("--plan") + 1] === "188.9") await main1889();
+  else await main();
+}
+
+/* Plan 188.9 Task 11: held-out acceptance for the screened-in arms (no `fabric-xc`). */
+async function main1889() {
+  const manifest = assertAcceptance1889Manifest(JSON.parse(await readFile(ACCEPTANCE_1889_MANIFEST, "utf8")));
+  const journal = JSON.parse(await readFile(ACCEPTANCE_1889_JOURNAL, "utf8"));
+  const attempts = journal.attempts;
+  const reports = new Map();
+  const missing = [];
+  for (const job of manifest.jobs) {
+    const candidates = await reportsFor(job.id, ACCEPTANCE_1889_EVIDENCE);
+    const completed = candidates.find((report) => report.status === "completed");
+    if (completed) reports.set(job.id, completed);
+    else missing.push({ id: job.id, attempts: candidates.map((report) => ({ status: report.status, inputTokens: report.inputTokens })) });
+  }
+  const arm = (name) => reports.get(ARM_1889_IDS[name]);
+  const full = JSON.parse(await readFile(manifest.fullReference.from, "utf8"));
+  // A write-side report has no `correct` field: score what exists instead of refusing the report.
+  const record = (report) => {
+    if (!report) return null;
+    const rows = report.results ?? [];
+    return {
+      status: report.status,
+      usageComplete: report.usageComplete !== false,
+      answers: rows.length,
+      correct: rows.filter((row) => row.correct === true).length,
+      runLimitRate: rows.length ? rows.filter((row) => row.outcome === "run_limit").length / rows.length : 0,
+      inputTokens: report.inputTokens ?? 0,
+      cacheReadTokens: report.cacheReadTokens ?? 0,
+      outputTokens: report.outputTokens ?? 0,
+      byAbility: byAbility1888(report),
+      tokensPerQuestion: rows.length ? Math.round((report.inputTokens ?? 0) / rows.length) : null,
+      timing: report.timing ?? null,
+    };
+  };
+  const baseline = arm("baseline");
+  const treatment = arm("x");
+  const comparison = baseline && treatment ? paired1888(baseline, treatment) : null;
+  const primary = comparison ? primaryFamily1888(comparison) : null;
+  const overall = comparison?.overall ?? null;
+  const powered = Boolean(baseline?.status === "completed" && treatment?.status === "completed" && statisticallyPowered(overall));
+  const improvement = primary ? improvementVerdict({ groups: primary, powered }) : "inconclusive";
+  const substitutionGroups = treatment && full ? paired1888(full, treatment) : null;
+  const substitution = substitutionGroups
+    ? substitutionVerdict({
+        overall: substitutionGroups.overall,
+        powered: Boolean(treatment.status === "completed" && statisticallyPowered(substitutionGroups.overall)),
+      })
+    : "not-a-substitute";
+  const usageComplete = [baseline, treatment, full].every((report) => report?.usageComplete !== false);
+  // Write-side cost is reported per stored session and per question, never folded into the read cost.
+  const writeCost = writeCostOf(arm("write-x"));
+  const delivery = {};
+  for (const name of ["baseline", "x"]) {
+    try {
+      const report = JSON.parse(await readFile(`${ACCEPTANCE_1889_EVIDENCE}/delivery-${name}-heldout.json`, "utf8"));
+      delivery[name] = await delivery1888From(report, arm(name)?.results ?? []);
+    } catch {
+      delivery[name] = null;
+    }
+  }
+  const quality = qualityVerdict({
+    candidateImproves: Boolean(overall?.diff > 0 && overall.pHolm < 0.05),
+    fullContextNonInferior: substitution === "full-context-substitute",
+    powered,
+  });
+  const summary = {
+    schemaVersion: 1,
+    kind: "188.9-heldout-acceptance",
+    plan: "188.9",
+    metricVersion: METRIC_VERSION,
+    protocolVersion: manifest.protocolVersion,
+    manifestHash: stableHash({
+      ceiling: manifest.ceiling,
+      jobs: manifest.jobs.map((job) => [job.id, job.config, job.subset, job.maxInputTokens, job.ablate ?? null]),
+    }),
+    primaryFamily: manifest.primaryAbilities,
+    nonInferiorityMargin: manifest.nonInferiorityMargin,
+    fullReference: manifest.fullReference,
+    usageComplete,
+    ...acceptance1888TaskState({ missing }),
+    reliability: {
+      requiredJobs: manifest.jobs.length,
+      completedJobs: reports.size,
+      attempts: attempts.length,
+      failedAttempts: attempts.filter((attempt) => ["failed", "setup-failure", "abandoned"].includes(attempt.status)).length,
+      usageIncompleteAttempts: attempts.filter((attempt) => attempt.usageComplete === false).length,
+    },
+    arms: Object.fromEntries(["baseline", "x", "write-x"].map((name) => [name, record(arm(name))])),
+    full: {
+      reusedFrom: manifest.fullReference.from,
+      // The reused report predates this plan's metric version; score it by the same boolean rule.
+      correct: (full.results ?? []).filter((row) => row.correct === true).length,
+      answers: (full.results ?? []).length,
+      inputTokens: full.inputTokens ?? 0,
+      byAbility: byAbility1888(full),
+    },
+    improvement: { baseline: "baseline", candidate: "x", powered, primary, overall, verdict: improvement },
+    substitution: substitutionGroups ? { baseline: "full", candidate: "x", groups: substitutionGroups, verdict: substitution } : null,
+    writeCost,
+    delivery,
+    verdicts: {
+      improvement,
+      substitution,
+      finding: findingVerdict1888({ substitution, powered }),
+      quality,
+    },
+  };
+  await writeFile(`${ACCEPTANCE_1889_EVIDENCE}/acceptance-comparisons.json`, `${JSON.stringify(summary, null, 2)}\n`);
+  const row = (label, groups) =>
+    Object.entries(groups ?? {}).map(
+      ([metric, group]) =>
+        `| ${label} | ${metric} | ${group.n} | ${group.diff.toFixed(4)} | [${group.ci95.map((value) => value.toFixed(4)).join(", ")}] | ${group.p.toExponential(3)} | ${(group.pHolm ?? NaN).toExponential(3)} |`,
+    );
+  const lines = [
+    "# 188.9 held-out acceptance comparisons",
+    "",
+    `Required arms: ${manifest.jobs.length}; completed: ${reports.size}; missing: ${missing.length}; attempts: ${attempts.length}.`,
+    `Improvement verdict: ${improvement}; substitution verdict: ${substitution}; F13: ${summary.verdicts.finding}.`,
+    `Full-context reference: reused from ${manifest.fullReference.from} (${manifest.fullReference.reason}).`,
+    "",
+    "| Arm | Ability | n | Diff | 95% CI | p | p-Holm |",
+    "| --- | --- | ---: | ---: | --- | ---: | ---: |",
+    ...row("x-baseline", primary),
+    ...row("x-baseline", { overall }),
+    ...row(
+      "x-baseline-descriptive",
+      Object.fromEntries(Object.entries(comparison ?? {}).filter(([ability]) => !(ability in (primary ?? {})) && ability !== "overall")),
+    ),
+    ...(substitutionGroups ? row("x-vs-full", { overall: substitutionGroups.overall }) : []),
+    "",
+    "| Arm | Correct | Input | Cache-read | Tokens/question | Run-limit |",
+    "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ...["baseline", "x"]
+      .map((name) => [name, record(arm(name))])
+      .filter(([, row]) => row)
+      .map(
+        ([name, row]) =>
+          `| ${name} | ${row.correct}/${row.answers} | ${row.inputTokens} | ${row.cacheReadTokens} | ${row.tokensPerQuestion} | ${row.runLimitRate.toFixed(4)} |`,
+      ),
+    ...(writeCost ? [`| write-x | — | ${writeCost.inputTokens} | — | ${writeCost.perSession} per session | — |`] : []),
+    "",
+    ...Object.entries(delivery)
+      .filter(([, value]) => value)
+      .map(
+        ([name, value]) =>
+          `- ${name} stages: ${Object.entries(value.stages ?? {})
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([stage, count]) => `${stage} ${count}`)
+            .join(
+              ", ",
+            )}; all needed visible ${stageStratumLabel(value.conditionalAccuracy?.visible)}; not visible ${stageStratumLabel(value.conditionalAccuracy?.notVisible)}.`,
+      ),
+    ...missing.map((item) => `- missing completed report: ${item.id}`),
+  ];
+  await writeFile(`${ACCEPTANCE_1889_EVIDENCE}/acceptance-comparisons.md`, `${lines.join("\n")}\n`);
+  console.log(JSON.stringify({ verdicts: summary.verdicts, missing, taskComplete: summary.taskComplete }, null, 2));
+}
+
+/**
+ * The product cost is per stored session, the benchmark cost is per question: they are never
+ * folded together, and a failed consolidation is reported because it is work the product paid for.
+ */
+export function writeCostOf(report) {
+  if (!report) return null;
+  const rows = report.results ?? [];
+  const sessions = rows.reduce((sum, row) => sum + (row.ingest?.sessions ?? 0), 0);
+  return {
+    inputTokens: report.inputTokens ?? 0,
+    sessions,
+    questions: rows.length,
+    perSession: sessions ? Math.round((report.inputTokens ?? 0) / sessions) : null,
+    perQuestion: rows.length ? Math.round((report.inputTokens ?? 0) / rows.length) : null,
+    failedConsolidations: rows.reduce((sum, row) => sum + (row.ingest?.consolidationFailures ?? 0), 0),
+    wallMs: report.timing?.wallMs ?? null,
+  };
+}
+
+/** Conditional accuracy for an offline diagnostic, joined to the paid verdict by question id. */
+async function delivery1888From(report, results) {
+  const correctById = new Map(results.map((row) => [row.id, row.correct === true]));
+  const strata = { visible: { n: 0, correct: 0 }, notVisible: { n: 0, correct: 0 } };
+  const byStage = {};
+  for (const row of report.rows ?? []) {
+    const stage =
+      row.stage === "store_error"
+        ? "store_error"
+        : stageFromCounts({
+            goldRounds: row.goldRounds,
+            candidateGold: row.candidateGold,
+            selectedGold: row.selectedGold,
+            fineRounds: row.fineRounds,
+            fineSelected: row.selectedFine,
+            correct: row.answerCorrect === true,
+          });
+    byStage[stage] = (byStage[stage] ?? 0) + 1;
+    if (row.answerCorrect === undefined || !row.fineRounds) continue;
+    const stratum = row.allNeededVisible ? strata.visible : strata.notVisible;
+    stratum.n += 1;
+    stratum.correct += Number(correctById.get(row.id) === true);
+  }
+  const rate = (stratum) => (stratum.n === 0 ? null : stratum.correct / stratum.n);
+  return {
+    protocol: report.protocol,
+    subset: report.subset,
+    renderer: report.injectionRenderer ?? null,
+    stages: byStage,
+    conditionalAccuracy: {
+      visible: { ...strata.visible, accuracy: rate(strata.visible) },
+      notVisible: { ...strata.notVisible, accuracy: rate(strata.notVisible) },
+    },
+  };
+}

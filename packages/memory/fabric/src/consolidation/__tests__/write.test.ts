@@ -112,6 +112,36 @@ describe("consolidation writes", () => {
     assert.equal(hit.generated?.by, "promotion", "recall exposes the same provenance");
   });
 
+  it("exchange_links_only_when_the_note_scope_can_read_them", async () => {
+    const { fabric, project } = scoped();
+    const projectExchange = await fabric.remember({ kind: "exchange", content: "user: npm\n\nassistant: ok", scope: "project" });
+    const userExchange = await fabric.remember({ kind: "exchange", content: "user: I ship on Fridays\n\nassistant: noted", scope: "user" });
+    const note = accepted(
+      { kind: "fact", scope: "user", text: "The user ships on Fridays." },
+      { evidenceEntryIds: [projectExchange.id, userExchange.id, "e1"] },
+    );
+    await writeConsolidationNotes({
+      remember: fabric.remember,
+      memory: project,
+      notes: [note],
+      exchangeEvidence: new Map([
+        [projectExchange.id, "project"],
+        [userExchange.id, "user"],
+      ]),
+      sessionId: "s1",
+      pass: PASS,
+    });
+
+    const hit = (await fabric.recall(note.note.text, { minSimilarity: 0, kinds: ["fact"] })).hits[0];
+    assert.ok(hit);
+    assert.deepEqual(
+      (hit.links ?? []).map((link) => link.id),
+      [userExchange.id],
+      "a user note never links project-only evidence it cannot read",
+    );
+    assert.deepEqual(hit.sourceEntryIds, ["e1"], "exchange ids are links, not transcript sources");
+  });
+
   it("contradiction_of_user_preference_writes_project_exception_and_counts", async () => {
     const { fabric, project, user, bindings } = scoped();
     const preference = await fabric.remember({

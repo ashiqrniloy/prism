@@ -1,0 +1,68 @@
+{
+  "kind": "188.9-development-screen-run",
+  "journal": {
+    "campaignId": "campaign-9ba30ef8f149",
+    "status": "finished",
+    "ceiling": 18000000,
+    "spend": 2804529,
+    "attempts": [
+      {
+        "attemptId": "accept1889-screen-write-x@1",
+        "jobId": "accept1889-screen-write-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 2000000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "accept1889-screen-baseline@1",
+        "jobId": "accept1889-screen-baseline",
+        "status": "failed",
+        "usageComplete": false,
+        "reservedInputTokens": 2500000,
+        "confirmedInputTokens": 49346
+      },
+      {
+        "attemptId": "accept1889-screen-x@1",
+        "jobId": "accept1889-screen-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 2500000,
+        "confirmedInputTokens": 147524
+      },
+      {
+        "attemptId": "accept1889-screen-baseline@2",
+        "jobId": "accept1889-screen-baseline",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 2500000,
+        "confirmedInputTokens": 157005
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "accept1889-screen-write-x",
+      "attemptId": "accept1889-screen-write-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 0
+    },
+    {
+      "id": "accept1889-screen-baseline",
+      "attemptId": "accept1889-screen-baseline@2",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 157005
+    },
+    {
+      "id": "accept1889-screen-x",
+      "attemptId": "accept1889-screen-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "reused": true,
+      "charged": 147524
+    }
+  ]
+}

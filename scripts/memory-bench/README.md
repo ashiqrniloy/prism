@@ -21,7 +21,8 @@ timeout 30 bun scripts/memory-bench/report.mjs --compare a.json b.json
 ```
 
 The suites are `longmemeval-s`, `locomo`, and `memoryagentbench-cr`; configurations
-are `full`, `om`, `fabric`, `fabric-hybrid`, `fabric-agentic`, and `om+fabric`.
+are `full`, `om`, `fabric`, `fabric-hybrid`, `fabric-agentic`, `om+fabric`, and the
+product-ingestion arms `fabric-x`, `fabric-xc` and `fabric-xc-agentic` (below).
 `fabric-hybrid` requires an embeddings model via `--embeddings <provider/model>`.
 Supported live transports are the existing Hyper and OpenCode Go providers.
 The judge can use a different provider or model. Credentials use the existing
@@ -92,6 +93,21 @@ judge requests and `calls.judgeAttempts` counts provider attempts. The report
 protocol records retry limits and `maxTurns`; changing either is a new arm, not
 a comparable old one.
 
+An answer ending with `ERR_PRISM_RUN_LIMIT` is scored `correct: false, outcome: "run_limit"`;
+the arm continues without retrying or judging that answer. The result keeps the bounded tool-name
+trace (64 names, 80 characters each; no arguments), tool/recall counts and usage accounting.
+JSON summaries include `runLimitRate` overall, per ability and per ability group; Markdown tables
+show it per ability. Transport and other answer failures still fail the arm. The standard
+`maxTurns` remains 8; raising it requires a separate arm.
+
+Public-suite reports use `protocolVersion: 2`. Every arm submits question-only
+user text with `metadata.sourceDate`; the harness stores new answer entries at
+the question date, including retry branches. It renders `[<date>] <question>`
+after fabric builds its passive query, so date-prefix terms never enter recall.
+Named months and relative periods resolve against the question date. History
+and causal cutoffs stay unchanged. The protocol fingerprint rejects v1
+checkpoints; rerun those arms under v2 instead of resuming them.
+
 **Default cost ceiling: 15,000,000 input tokens per suite × configuration**,
 including memory workers and both answer and injection judging. Usage is read
 from plan 182's loopback wire proxy, including cache-read tokens; raw exchanges
@@ -112,11 +128,68 @@ PRISM_LIVE_MEMORY_BENCH_MANUAL=1 timeout 21000 bun scripts/memory-bench/live.mjs
 
 ### Fabric configurations (`fabric`, `fabric-hybrid`, `fabric-agentic`)
 
-The `fabric*` configurations isolate retrieval by ingesting the haystack directly into a fresh per-question markdown store (in an OS scratch directory cleaned up after the question finishes), one `episode` note per dialogue round with the source date, session id, and round id. This matches LongMemEval's round-value evaluation design and avoids coupling retrieval evaluation to OM worker promotion:
+The `fabric` baseline arm (188.8 shape) ingests the haystack directly into a fresh per-question markdown store (in an OS scratch directory cleaned up after the question finishes), one `episode` note per dialogue round with the source date, session id, and round id; reports label that path `legacy-direct-ingest`. This matches LongMemEval's round-value evaluation design and avoids coupling retrieval evaluation to OM worker promotion:
 - **`fabric`**: Lexical (BM25) retrieval over the markdown store. Answers with passive injection on (`inject: { query: "task" }`) and filters out `memory.*` tools from model requests. Ingestion makes zero model calls.
 - **`fabric-hybrid`**: Hybrid (BM25 + vector reciprocal rank fusion) retrieval over the markdown store. Requires an embeddings model via `--embeddings <provider/model>` (fails at startup if missing). Ingestion batches embedding calls at 64 items per page; answering uses passive injection with no memory tools.
 - **`fabric-agentic`**: Agentic retrieval with passive injection disabled (`inject: false`) and `memory.*` tools enabled, letting the agent search and recall memories dynamically within turn and token budgets.
 - **`om+fabric`**: Runs OM background workers over the dated session history **and** ingests the same causal corpus into the disposable fabric store. Both channels see the same pre-question records; passive injection stays on.
+
+### Product-ingestion arms (`fabric-x`, `fabric-xc`, `fabric-xc-agentic`)
+
+These arms measure the write path the product actually ships instead of a direct upsert
+(plan 188.9 Task 9, finding M5). Each causal haystack session becomes its own product
+session: its messages are appended with their timestamps, the shipped `memory:archive`
+command back-fills the session's completed exchanges, `memory:consolidate` runs for the
+`xc` arms, and the session closes. The answer session is fresh: memory survives in the
+per-question store, the transcript does not. Reports label the path `product-per-session`
+(`ingestion`), and `--phase write` builds only the store:
+
+```sh
+# local write side: 140 development questions, no model call, no paid guard
+timeout 1800 bun scripts/memory-bench/run.mjs --suite longmemeval-s --subset development \
+  --config fabric-x --phase write --write-snapshot .cache/memory-bench/write/fabric-x \
+  --provider opencode-go --model mimo-v2.5 --judge opencode-go/mimo-v2.5 \
+  --max-input-tokens 200000 --output .cache/memory-bench/fabric-x-write.json
+```
+
+- **`fabric-x`**: exchanges only, LLM-free write side, passive injection of `exchange` notes with Task 5's evidence-sized renderer.
+- **`fabric-xc`**: the same exchanges plus consolidation, so the extractor turns archived exchanges into dated, keyed `fact` notes that link back to them; injection reads facts first, then exchanges.
+- **`fabric-xc-agentic`**: the `fabric-xc` store, `inject: false`, `memory.*` tools on (recall then read).
+- **`fabric-x-tools`** / **`fabric-xc-tools`**: the product's shipping shape (plan 188.10 Task 4) —
+  passive injection on with the same kinds and defaults as the matching passive arm, and the
+  `memory.*` tools left visible, so the agent can widen a selection the block disclosed as partial.
+  Their write sides are the existing `fabric-x`/`fabric-xc` snapshots. Metrics record tool calls,
+  recall calls, reads, writes and the run limit exactly as for agentic arms; the solver protocol is
+  unchanged (`maxTurns` 8, output 4,096). A local (free) check that the arm is wired:
+  `bun scripts/memory-bench/run.mjs --offline --config fabric-x-tools --max-input-tokens 200000`
+  reports `fabric-tool` and `fabric-semantic` in `visibleChannels` (28 tool calls, 14 recalls and no
+  write on the synthetic 14-question fixture).
+
+The `xc` write side is the one paid write path: it makes exactly one extractor call per
+haystack session (an empty pass costs nothing), so it runs as its own `writeSide` job in
+the campaign and every read arm reuses its snapshot. Its extractor generation is a separate
+knob from the answer's (plan 188.10 Task 5):
+
+```sh
+# budget the extractor only; answer and judge generation stay at 4,096
+timeout 1800 bun scripts/memory-bench/run.mjs --suite longmemeval-s --subset development \
+  --config fabric-xc --phase write --write-output-tokens 8192 --write-thinking low \
+  --write-snapshot .cache/memory-bench/write/fabric-xc-8192 \
+  --max-input-tokens 200000 --output .cache/memory-bench/fabric-xc-8192-write.json
+```
+
+- **`--write-output-tokens`** (256–32,768) sets `promote.maxOutputTokens` on arms that promote;
+  `fabric-x` has no extractor, so it is ignored there rather than given one.
+- **`--write-thinking`** (`none`…`max`) sets `promote.thinkingLevel`.
+- The manifest records `writeGeneration` beside `generation`, and `writeSideKey`/`writeSideCacheDir`
+  hash it: two extractor budgets never share a snapshot, while answer and judge comparability is
+  untouched. The write side also reports `consolidationFailuresByReason`, `extractorCallsAtMaxOutput`
+  and `extractorInputPerSession`, so a truncated or failing extractor is a number, not a reading of
+  the notes. A read arm never re-ingests and
+refuses to run without the snapshot (`--seed-snapshot`); snapshots also carry the
+producer's exchange-note → round map, so evidence stages stay round-grained. Diagnose a
+product store offline with `retrieval-diagnostics.mjs --store-from <snapshot dir>`, which
+folds exchange hits back to their round and reports `storeSource: "product-snapshot"`.
 
 ## Metrics and comparability
 
@@ -175,8 +248,11 @@ timeout 900 bun scripts/memory-bench/retrieval-diagnostics.mjs \
 The report replays the lexical fabric through the real package and records ids, ranks, counts and
 one stage per selected question: `correct` for a correct answer, `candidate_gap` (no labelled answer-session round in the candidate
 pool), `selection_gap` (candidate exists but the passive budget/topK shows none), `fine_selection_gap`
-(the answer session is shown but its labelled message round is not), `answer_gap` (the labelled
-round is visible and the answer is still wrong), or `gold_unknown` (no usable gold). Gold stays offline; queries and reports never carry
+(the answer session is shown but none of its labelled message rounds is), `partial_evidence` (some
+but not all labelled message rounds are visible), `answer_gap` (every labelled round is visible and
+the answer is still wrong), or `gold_unknown` (no usable gold). Corrected 2026-10-23: before
+`partial_evidence` existed, one visible round among several was reported as `answer_gap`, which
+overstated synthesis failures. Gold stays offline; queries and reports never carry
 source text. The generated [retrieval diagnostics](../../docs/_evidence/memory-bench/188.7/retrieval-diagnostics.json)
 show 21 `answer_gap`, 13 `fine_selection_gap` and 13 `selection_gap` of 47 failed fabric questions;
 the old 70-question arm stays diagnostic/development evidence.
@@ -197,7 +273,7 @@ have no unused ids and remain development-only non-regression checks.
 timeout 1800 bun scripts/memory-bench/retrieval-diagnostics.mjs \
   --suite longmemeval-s --subset development \
   --failed-report docs/_evidence/memory-bench/188.7/final-accept-lme-fabric.json \
-  --output docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-before.json
+  --output docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-after.json
 ```
 
 Despite its historical name, `--failed-report` now annotates correctness for the
@@ -211,10 +287,18 @@ uses offsets in memory and only the Boolean is published. `allNeeded` requires
 nonempty fine evidence. Dataset `has_answer` flags are retained even on abstention;
 these are visibility diagnostics, not answer scores.
 
-The shipped-query measure uses `recallPeriod`, the frozen old harness reference
-time `2026-10-22T00:00:00.000Z`, and the 0.35 coverage floor. The budget mirror
-includes the citation preamble and the best-hit exception; a regression compares
-its selected ids with the real `createFabricContext` output. Gold never enters a
+The v2 shipped-query measure uses question-only text, `recallPeriod` referenced
+to each question date, and the 0.35 coverage floor. The committed pre-fix v1
+baseline retains its frozen wall-clock reference `2026-10-22T00:00:00.000Z`
+and date-prefixed query; rerunning the command above produces v2 evidence. Injection
+visibility comes from the product's own rendering decision (`fitInjection` in
+`packages/memory/fabric/src/excerpt.ts`), not a copy: whole notes by rank until the
+budget runs out, a skipped note rather than a truncated one, the best hit excerpted
+only when it alone exceeds the budget, and time-ordered delivery. Diagnosis uses the
+shipped defaults (plan 188.9 Task 5: `budgetTokens 4000`, `topK 12`,
+`minSimilarity 0.2`), so a diagnostic cell describes what an opted-in host receives. A
+regression compares its ids and rendered lines with the real `createFabricContext`
+output. Gold never enters a
 query. Two separate date-free ranking ablations retain and remove the coverage
 floor: the investigation's original ranking table used **no floor**. Its counts
 must not be mistaken for what the shipped floor delivers. The committed
@@ -222,13 +306,361 @@ must not be mistaken for what the shipped floor delivers. The committed
 contains only ids, counts, ranks, Booleans and protocol/hash metadata.
 
 The diagnostic also accepts `--subset heldout-v2` for later retrieval-only checks;
-no held-out diagnostic was run to select these fixes. Paid runner/manifest support
-belongs to 188.8 Task 5. Task 3 must replace the budget mirror with the shared
-rendering decision when it changes product rendering.
+no held-out diagnostic was run to select these fixes. It refuses `--subset heldout-v3`:
+a diagnostic reads gold evidence, and the live held-out draw must stay unread until the
+paid campaign finishes. Paid runner/manifest support belongs to 188.8 Task 5. Task 3's evidence is the
+[after-renderer report](../../docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-after.json),
+its [whole-note protocol-v2 control](../../docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-protocol-v2.json)
+and the [rejected equal-share excerpt run](../../docs/_evidence/memory-bench/188.8/delivery-diagnostics-dev-rejected-equal-share.json).
 
 Token allocations use `ceil(characters/4)`; they are labeled estimates and separate from billing.
 `used`/`irrelevant` labels are judge decisions, not causal evidence. Cited-id rates require the later citation
 instructions and metadata; absence is not proof the model ignored a memory.
+
+### Held-out v3 and the multi-session development screen (188.10)
+
+`heldout-v3.json` is the live held-out draw for 188.10: 100 LongMemEval-S ids — 40
+multi-session, 20 knowledge-update, 20 temporal-reasoning, 14 single-session-user and 6
+single-session-assistant — sorted by SHA-256(`prism-188.10-memory-bench-v3:` + id) and
+excluded from base, targeted, confirmatory and held-out v2. The file records the dataset
+SHA-256, the ids hash, a hash of the manifest itself (minus that hash) and the residual pool
+each stratum was drawn from (71 / 22 / 77 / 14 / 6), so an exhausted stratum is visible
+before a spend. Preference and abstention have no unused ids. `drawHeldoutV3` reads `id` and
+`ability` only and refuses a short or duplicated stratum; a diagnostic, a ceiling scan or a
+screen never runs on it.
+
+`screen-ms-v1.json` is development data and gates that spend: all 20 held-out v2
+multi-session ids (their labels were read after 188.9), 10 more multi-session ids drawn by
+SHA-256(`prism-188.10-memory-bench-screen-ms-v1:` + id) from the 30-id development pool, and
+screen-v1's 30 non-multi-session ids — 60 ids, five per ability outside multi-session. A job
+naming a held-out draw (`heldout-v2`, `heldout-v3`) is refused by the screen profile.
+
+```sh
+timeout 1800 bun scripts/memory-bench/run.mjs --suite longmemeval-s --subset screen-ms-v1 \
+  --config fabric-x --phase all --label-injections off \
+  --provider opencode-go --model <id> --judge opencode-go/<id> \
+  --max-input-tokens 3000000 --output .cache/memory-bench/screen-ms-v1.json
+```
+
+### Multi-session diagnostic (188.10)
+
+`retrieval-diagnostics.mjs --multi-session --store-from <snapshot>` reads one product store per
+multi-session id and reports, per needed fine round, its 1-based rank in the uncapped
+question-only lexical ranking and whether it is `lexicallyReachable` (shares at least one stemmed
+non-stopword term with the question); per question, the rounds and sessions spanned, all-needed
+within the top 10, 20 and uncapped, and shipped passive coverage; and stage counts with
+`partial_evidence`. That separates the three levers: unreachable needs write-time category terms,
+reachable-but-ranked-late needs read-time phrasings, and a needed round whose only linked fact is
+superseded or retired needs instance-safe keys. The fact view reads note metadata only (relations,
+status, `supersedes`), so it is reported whenever the store holds facts; `fabric-x` stores
+exchanges only and correctly reports zeros for it. It refuses `heldout-v3`, requires `--store-from`,
+and fails closed on a missing snapshot. Ids, ranks, counts and booleans only: no question, gold,
+round or note text.
+
+```sh
+# local, free: fabric-x makes no model call, so this needs no paid-attempt guard
+timeout 900 bun scripts/memory-bench/run.mjs --suite longmemeval-s --subset screen-ms-v1 \
+  --config fabric-x --phase write --write-snapshot .cache/memory-bench/write/188.10-fabric-x-screen-ms-v1 \
+  --provider opencode-go --model mimo-v2.5 --judge opencode-go/mimo-v2.5 \
+  --max-input-tokens 200000 --output .cache/memory-bench/188.10/write-x.json
+timeout 900 bun scripts/memory-bench/retrieval-diagnostics.mjs --suite longmemeval-s \
+  --subset screen-ms-v1 --multi-session \
+  --store-from .cache/memory-bench/write/188.10-fabric-x-screen-ms-v1 \
+  --output docs/_evidence/memory-bench/188.10/ms-diagnostics-x.json
+```
+
+### Paid held-out acceptance (188.8)
+
+Task 5's campaign measures the plan's product changes against a held-out draw, not the diagnosed
+development ids. The manifest freezes five arms, the 30M owner-approved ceiling for this campaign
+only, protocol version 2, the 100 held-out ids, both product source hashes and the shared harness
+hash:
+
+```sh
+timeout 60 bun scripts/memory-bench/campaign.mjs --acceptance-188.8 --manifest   # spends nothing
+timeout 50000 bun scripts/memory-bench/campaign.mjs --acceptance-188.8
+timeout 300 bun scripts/memory-bench/acceptance-report.mjs --plan 188.8
+```
+
+Arms: pre-fix `fabric` (an isolated worktree at the plan's start commit carrying the post-fix
+harness only, so the product is the treatment), post-fix `fabric`, post-fix `fabric-agentic`, a
+`full` reference, and a development `fabric` non-regression arm for preference and abstention.
+`prefixArmAudit` hashes the worktree's harness and product before any spend and refuses a run whose
+harness differs or whose product is identical to the treatment. The child's journal path and output
+are absolute, so a worktree child reads and writes this repo's journal and evidence.
+
+The report answers two separate questions and never merges them: the predeclared primary family is
+post-fix versus pre-fix `fabric` on knowledge-update, multi-session, temporal-reasoning and
+single-session-user (Holm across four), and the substitution question is each fabric arm against
+`full` under a 3-point non-inferiority margin. `statisticallyPowered` gates quality verdicts on
+paired clusters and simulated power; `confirmatory` also demands complete wire-usage accounting, so
+an arm with one usage-less exchange can still support a quality verdict while `costClaim` stays
+false. The F13 vocabulary in `findings.json` follows the substitution verdict only: an improvement
+alone never marks a finding fixed.
+
+The 2026-10-23 run completed all five arms. Post-fix `fabric` scored 47/100 against pre-fix 46/100
+(overall +0.01, 95% CI [-0.05, 0.07], Holm p 1.0; no primary ability changed), `fabric-agentic`
+38/100 with an 18% eight-turn run-limit rate, `full` 79/100, and development `fabric` 65/140 with
+preference 5/20 and abstention 17/20. Post-fix fabric is -0.32 against full context, so the verdict
+is an unresolved F13, not a substitution. See
+[the evidence README](../../docs/_evidence/memory-bench/188.8/README.md) and
+`acceptance-comparisons.json`.
+
+A per-question product error (for example a round above the core 64,384-character entry limit) is
+now scored as a wrong answer with `outcome: "error"`, `errorCode` and `errorRate`, and the arm
+continues; a provider failure carrying a cause still ends the arm, and more than `max(3, 5%)`
+errored questions fails it. A run whose child writes no report at all stops the campaign rather than
+charging every remaining arm's reservation.
+
+Delivery stages are measured per arm with the renderer that arm shipped: `--renderer whole` mirrors
+the pre-fix rule from `1400917`'s `context.ts`, and `--renderer excerpt` uses the product's
+`fitInjection`. A question whose rounds cannot be stored is reported as `store_error` with no
+visibility instead of aborting the diagnostic.
+
+`acceptance-report.mjs --plan 188.8` re-derives per-arm stage counts with the current classifier
+(it never repeats a stage a committed diagnostic recorded under an older one) and emits a
+conditional-accuracy table: accuracy when every labelled message round is visible versus when it is
+not. That table is the delivery-versus-synthesis split; the same numbers are in
+[`docs/_evidence/memory-bench/188.9/stage-correction-188.8.json`](../../docs/_evidence/memory-bench/188.9/stage-correction-188.8.json),
+which re-buckets the committed 188.8 diagnostics from stored ids and flags only.
+
+### Re-bucketing a committed diagnostic (no recall, no spend)
+
+```sh
+timeout 60 bun scripts/memory-bench/retrieval-diagnostics.mjs \
+  --restage docs/_evidence/memory-bench/188.8/delivery-diagnostics-heldout-postfix.json \
+  --output docs/_evidence/memory-bench/188.9/stage-correction-188.8.json
+```
+
+`--restage` takes a comma-separated list and writes one entry per source. Every stage is recomputed
+with `stageFromCounts` from the stored counts, so a classifier change never needs a re-run. Only ids,
+stages, counts and flags are written.
+
+### Delivery ceiling grid (development only)
+
+```sh
+timeout 3600 bun scripts/memory-bench/retrieval-diagnostics.mjs \
+  --suite longmemeval-s --subset development --ceiling \
+  --output docs/_evidence/memory-bench/188.9/ceiling-development.json
+```
+
+`--ceiling` refuses any subset other than `development` (and `confirmatory`, its frozen alias) with
+`MemoryBenchDatasetError`, before any dataset read, so no cell can be chosen on held-out evidence.
+The grid is frozen in `CEILING_GRID`: `budgetTokens` 600/1500/2000/3000/4000/6000, `topK`
+3/6/8/12/16, `minSimilarity` 0/0.2/0.35, renderer `excerpt`/`whole` — 180 cells. One ingestion per
+question and one recall per similarity floor feed every cell (three recalls per question), which is
+why 140 development questions finish in under a minute. Each cell reports all-needed-visible,
+answer-message-visible, mean and p95 injected tokens, and mean injected tokens on the abstention
+stratum, plus per-ability medians.
+
+The report also carries two reproduction blocks with explicit definitions, because the original
+ceiling probe was never committed:
+
+- `evidenceBudget`: all needed rounds inside the top-32 candidate ranking (floor 0.35) and the
+  whole-note tokens of ranks 1..deepest needed round at most the budget. Medians and per-budget
+  counts per ability.
+- `candidateCoverage`: every needed round inside the top-32 candidate ranking, per similarity floor.
+  This reproduces investigation M3 exactly (multi-session 6 vs 10, temporal 9 vs 14, preference
+  8 vs 18, knowledge-update 17 vs 19 at floor 0.35 vs 0).
+
+## Fast experimentation (188.9 Task 3)
+
+Speed comes from three independent things: questions run in parallel, an answer is judged in a
+separate phase, and an identical verdict is never paid for twice. None of them changes what a paid
+acceptance arm measures — the protocol hash, the journal reservation and the judge prompt are the
+same as before.
+
+```sh
+# Answer phase: solver only, no judge call. Writes the arm's checkpoint plus an answer cache.
+timeout 7200 bun scripts/memory-bench/run.mjs --suite longmemeval-s --subset development --config fabric \
+  --concurrency 8 --phase answer --output .cache/memory-bench/screen/fabric.json
+
+# Judge phase: scores that checkpoint, at its own concurrency, spending against the same attempt.
+timeout 3600 bun scripts/memory-bench/run.mjs --suite longmemeval-s --subset development --config fabric \
+  --provider opencode-go --model mimo-v2.5 --judge opencode-go/mimo-v2.5 \
+  --phase judge --resume .cache/memory-bench/screen/fabric.json --concurrency 16
+```
+
+`--phase all` (the default) is the old behaviour: replay, judge and label per question. The judge
+phase needs `--resume`, because it scores that checkpoint and nothing else; it refuses a row with no
+cached answer text instead of silently re-running the solver. `--phase answer` ends with status
+`answers` and every row `outcome: "answered"`, no `correct` field, and an `answerKey`; `summarize`
+divides accuracy by scored rows, so an answer-only checkpoint reports `accuracy: null` rather than 0.
+Coding suites grade with executable tests and only support `--phase all`.
+
+`--concurrency 1-32` (default 4, offline 1) bounds the question pool. A `429`, `503` or `529` from a
+provider halves the arm's active ceiling (never below 1) and increments
+`calls.concurrencyHalvings`; `timing.concurrency` records `{initial, active, floor}` so a report says
+which ceiling it actually ran at. Passing `--concurrency` with `--offline` is a harness-timing aid
+only: the mock shares one state object, so parallel offline questions are not a scored configuration.
+
+`--label-injections off` skips the per-item injection labels — one judge call per injected item — and
+records `injectionPrecision: null` with `injectionPrecisionReason: "not-labelled"`. It is refused for
+any job in an acceptance manifest (`campaign.mjs` throws before reserving), because precision is part
+of that evidence. With labels on, a question's items are labelled in parallel up to the arm's
+concurrency.
+
+Caches live under `.cache/` (gitignored) with mode `0600`:
+
+- `.cache/memory-bench/answers/<sha256(protocolHash, questionId)>.json` holds the answer text and the
+  injection texts a later judge phase needs. Evidence keeps only `answerKey`.
+- `.cache/memory-bench/judge/<sha256(templateVersion, judge, generation, suite, ability, questionId,
+  answerText)>.json` holds the verdict. A hit makes no provider call and counts in
+  `calls.judgeCacheHits`; a changed template, judge model, generation or answer is a miss. The
+  template version is a hash of `judge-prompts.json`, so editing a prompt invalidates every verdict.
+
+Every report now carries a `timing` block: `wallMs`, `questions.wallMs` p50/p95, `concurrency`, and
+`roles` for `solver`, `judge`, `injection-label` and the consolidation workers (`observer`,
+`reflector`, `dropper`, `decider`), each with call count and p50/p95/mean total time and time to
+first byte. Solver calls stream, so their two numbers differ; a non-streaming judge call reports the
+same value for both. The rendered `.md` repeats this as one line. Timings are milliseconds and
+counts only — no prompt, question or answer text.
+
+## Paid campaign cycle (188.9 Task 4)
+
+The order is: an offline diagnostic, then a paid screen on development ids, then held-out
+acceptance. Each step costs less than the next and none of them re-measures the same thing twice.
+
+```sh
+# 0. Free: the deterministic replay suite (one process, mock provider).
+timeout 600 bun test --timeout=0 scripts/memory-bench
+
+# 1. Paid screen: the frozen 35-id development draw, 5 per LongMemEval ability.
+timeout 5400 bun scripts/memory-bench/campaign.mjs --screen --parallel-arms 3
+
+# 2. Held-out acceptance: a manifest whose jobs name their evidence and their write side.
+timeout 7200 bun scripts/memory-bench/campaign.mjs --acceptance-188.9 --parallel-arms 2
+```
+
+Wall time is proportional to `questions × calls / concurrency`, and every report states its own
+`timing.wallMs`, per-question p50/p95 and per-role latency, so plan the next arm from measurement
+rather than a constant in this file. The 35-id screen at concurrency 8 with three parallel arms is
+the cheapest paid step; a held-out acceptance arm is the most expensive and runs last.
+
+`--parallel-arms <1-8>` (default 1) runs that many arms at once. Each arm still reserves
+`cap + 500k` in the journal *before* its child starts, so the ceiling holds even when every running
+arm hits its cap, and a blocked reservation stops new launches while the running arms finish and
+reconcile. A failed arm never cancels a sibling's accounting: the sibling reconciles its own
+reservation, and the summary names both. Ctrl-C still kills every owned child.
+
+`--screen` applies one profile to every job: `--subset screen-v1 --phase all
+--label-injections off --concurrency 8`. The draw is frozen in `screen-v1.json`
+(`sha256("prism-188.9-memory-bench-screen-v1:" + id)`, ascending, 5 per ability) and is taken from
+the development pool, so it can never contain a held-out id. The profile is refused for a held-out
+subset, for any non-LongMemEval suite, and for any acceptance manifest.
+
+### Reuse
+
+A job may declare `reuse: { from: "<evidence report>", fallback: "run" | "refuse" }`. The child
+computes `runPathFingerprint` — `sha256` over the arm's id set, `inputCap`, generation, provider,
+model, judge, judge protocol, the judge prompt template hash, dataset, seed, ablations, memory
+config, protocol block, and content hashes of `replay.mjs`, `judge.mjs`, `judge-prompts.json` and
+`datasets.mjs` — and compares it to the source report's own `runPathFingerprint`. `sourceRevision`
+is deliberately not used: a whole-repo git HEAD necessarily differs between plans, which would
+refuse every legitimate reuse or prove nothing.
+
+When the fingerprint matches, the source report is `completed` with complete usage and the same ids,
+the run copies its verdict rows into this arm's results marked `reused: true` and spends nothing
+(`inputTokens: 0`, no provider call). Any mismatch throws `MemoryBenchReuseMismatch`; with
+`fallback: "run"` the arm records `reuseRefusal` and runs normally instead. A partial checkpoint is
+never reused, and reuse requires the local model catalog, so credentials must still be present.
+
+### Write-side cache
+
+Ingesting a 500-round haystack is the expensive half of a fabric arm and depends on nothing the
+answer phase produces. A read-side job may therefore name a producer:
+
+```json
+{ "id": "accept-fabric", "writeSide": "accept-fabric-write" },
+{ "id": "accept-fabric-write", "config": "fabric-agentic" }
+```
+
+The producer runs with `--write-snapshot` and stores each question's fabric store at
+`.cache/memory-bench/write/<key>/<questionId>/`. The key is
+`sha256(dataset ‖ product write-path source hash ‖ extractor model and generation ‖ consolidation
+prompt template hash ‖ harness ingest hash)`, so a product, prompt, model or dataset change is a
+miss. Read-side arms run with `--seed-snapshot`, copy the stored tree into their temp root and skip
+ingestion; the pool always runs producers first. A missing snapshot fails the arm closed
+(`MemoryBenchWriteSideMissing`) — it is never re-written silently — and a read-side arm never
+starts unless its producer's attempt is `completed` and the cache directory is non-empty.
+Snapshots hold the disposable benchmark store only; no credentials, and the same `.cache/` gitignore
+and `0600` rules as the other caches.
+
+## Development screen (plan 188.9 Task 10)
+
+The screen is the pre-registered development gate before any held-out spend. It runs only
+the frozen 35-id `screen-v1` draw (5 ids per LongMemEval ability, taken from the development
+pool; a held-out id is refused), never tunes a parameter, and can only drop an arm.
+
+```sh
+timeout 60 bun scripts/memory-bench/campaign.mjs --acceptance-188.9-probe --manifest
+set -a; . ~/.config/prism/live.env; set +a
+timeout 2400 bun scripts/memory-bench/campaign.mjs --acceptance-188.9-probe --parallel-arms 1
+timeout 60 bun scripts/memory-bench/campaign.mjs --acceptance-188.9-screen --manifest
+timeout 14400 bun scripts/memory-bench/campaign.mjs --acceptance-188.9-screen --parallel-arms 1
+```
+
+- **Probe first.** Four passive-baseline jobs on 8 screen ids at question concurrency 4, 8,
+  16 and 24, run one at a time. Each records per-question p50/p95 wall time and the number
+  of provider overloads (`calls.overloads` counts every 429/503/529, not just gate halvings).
+  `chooseConcurrency` picks the highest step with zero overloads and a p95 under 1.5x the
+  step-4 p95; a step that did not finish is ignored. The probe's own reservation is a pool,
+  not a spend target: the journal charges 250k for every request in flight, so a 24-question
+  step reserves 13M even though it spends a few tens of thousands.
+- **The screen.** `fabric` baseline, `fabric-x`, `fabric-xc` and `fabric-xc-agentic` on the
+  35 ids, with injection labels off, plus two `writeSide` producers: `fabric-x` (local, free)
+  and `fabric-xc` (the one paid write path). The agentic arm reuses the `fabric-xc` snapshot.
+  Snapshots are cached under `.cache/memory-bench/write/<key>`, keyed by config as well as
+  product/extractor/ingest hashes, and a read arm refuses to run without its producer's snapshot.
+- **Held-out arms are declared, not skipped.** The 188.9 screen holds `fabric-xc` (and so its
+  agentic reader) out of the verdict until its write-side cost is measured; the verdict marks those
+  arms `missing` instead of scoring them as failures. A measured write side (1 development question,
+  51 sessions, concurrency 1) came to 1.26 extractor calls and 8,185 input tokens per session, with
+  half the sessions failing consolidation at the 4,096-token output cap.
+- **The baseline arm pins 188.8's delivery by variant.** `fabric.delivery=188.8` sets the passive
+  injection defaults back to 600 tokens / top 3 / similarity 0.35 and restores 188.8's whole-note
+  renderer, so a screen or acceptance baseline on the current tree reproduces 188.8 post-fix rather
+  than the 4,000-token delivery 188.9 Task 5 shipped. The shipped-delivery arm runs beside it as
+  `baseline-new-delivery`, descriptive only.
+- **Verdict.** The campaign writes `verdict.json` itself from the manifest's rule: `fabric-x`
+  and `fabric-xc` proceed when they gain at least 3 of 35 questions over the baseline and no
+  ability loses more than 1; `fabric-xc-agentic` proceeds when its run-limit rate is at most
+  5%. Evidence holds ids, counts, tokens, timings and reasons only.
+
+## Gate 1 and Stage A (plan 188.10 Task 7)
+
+The cheapest plausible lever first: passive injection *plus* the read tools, on the same exchange
+store, against the pre-registered development target `T_dev`. Gate 1's owner-approved cap covers this
+screen, the iteration allowance and Task 9 on the Stage A path; while `GATE_1_APPROVAL` in
+`acceptance.mjs` still says "pending owner approval", `--manifest` and the campaign both refuse, so
+no paid call can run on an unapproved cap.
+
+```sh
+timeout 60 bun scripts/memory-bench/campaign.mjs --acceptance-188.10-screen-a --manifest
+set -a; . ~/.config/prism/live.env; set +a
+timeout 7200 bun scripts/memory-bench/campaign.mjs --acceptance-188.10-screen-a --parallel-arms 1
+```
+
+- **Draw and arms.** The frozen 60-id `screen-ms-v1` development draw (30 multi-session ids + 5 per
+  other ability), labels off, concurrency 4 from 188.9's probe. `fabric-x` is the reference with its
+  local LLM-free write side; `fabric-x-tools` reuses that snapshot with `memory.*` visible next to
+  passive injection, so the two arms differ only in tool visibility.
+- **`T_dev`, pre-registered in the manifest.** Multi-session at least 18/30, every other ability down
+  at most one question against `fabric-x`, run-limit rate at most 5%. An arm that answered fewer than
+  30 multi-session questions cannot claim the absolute target.
+- **Verdict by campaign.** `writeScreenAVerdict` applies `T_dev` to the two reports and writes
+  `screen-a/verdict.json`: `selected` names the tools arm when it met the target, and `next` is
+  `{ skipStageB: true, heldoutArm }` — otherwise `"stage-b"`. Nothing here can tune a parameter.
+- **Diagnostics.** Task 3's `--multi-session` diagnostic runs over the reference snapshot into
+  `screen-a/ms-diagnostics-x.json` (ids, ranks, counts, stages only), so a Stage B iteration starts
+  from measured failure stages rather than a guess.
+
+Measured (2026-10-23, gate 1): the writer took 40 s and charged 0, `fabric-x` scored 28/60 with
+239,050 input tokens, `fabric-x-tools` 50/60 with 1,399,977 — 1,639,027 in total against the 8M
+ceiling and ≈ 19 min against the 60-min limit. Multi-session went 8/30 → 22/30 and no ability lost a
+question, so `T_dev` was met: `verdict.json` selects `x-tools`, Stage B is skipped, and the residual
+failures are `partial_evidence` 17 with 3 lexically unreachable rounds. The gate-1 cap, the target and
+the two arms are frozen in `docs/_evidence/memory-bench/188.10/screen-a/screen-a-manifest.json`.
 
 ## Statistics
 

@@ -88,6 +88,20 @@
     "verdict": "unresolved",
     "tests": "retrieval-diagnostics.mjs; lexical selection and best-hit budget tests",
     "paidEvidence": "confirmatory fabric 62/140 versus full 100/140 (overall diff -0.2714, 95% CI [-0.3643,-0.1786], Holm p 0.0008); update -0.5, multi-session -0.5 and single-session-user -0.45 are significant losses",
-    "limitations": "The failure is localized to passive selection/answer gaps, but no larger budget, hybrid backend or reranker was evidenced as a fix."
+    "limitations": "The failure is localized to passive selection/answer gaps, but no larger budget, hybrid backend or reranker was evidenced as a fix.",
+    "evidence1888": {
+      "verdict": "unresolved",
+      "tests": "held-out v2 paired campaign (campaign.mjs --acceptance-188.8) and per-arm delivery diagnostics (retrieval-diagnostics.mjs)",
+      "paidEvidence": "docs/_evidence/memory-bench/188.8/acceptance-comparisons.json: post-fix fabric 47/100 vs pre-fix fabric 46/100 on held-out v2 (overall +0.01, 95% CI [-0.05,0.07], Holm p 1.0; no primary ability changed significantly). fabric-agentic 38/100, full context 79/100. Post-fix fabric is -0.32 against full (95% CI [-0.42,-0.23], p<1e-4), so the plan reports an opt-in improvement question and a substitution question separately; neither passes.",
+      "attribution": "delivery is no longer the main loss: all-needed-visible rises (knowledge-update 1/20 -> 3/20, single-session-user 17/20 -> 19/20) and fine_selection_gap falls 18 -> 15, but answers do not move; answering/synthesis stays the largest bucket (answer_gap 26 of 53 failures), then fine selection 15, candidate gap 6, selection gap 3, one store error and two questions without usable gold.",
+      "remainingLimits": "D6 multi-session aggregation stays unaddressed (4/20 post-fix; 15/20 full), and D7 preference has no held-out ids (development-only 5/20). One held-out question cannot be stored at all: a single round exceeds the core 64,384-character entry limit, which both fabric arms score wrong identically. The agentic arm hits the eight-turn limit on 18% of questions even with the default-kind discovery hint, so its 38/100 is a turn-budget result, not a retrieval result."
+    },
+    "evidence1889": {
+      "verdict": "unresolved",
+      "tests": "held-out v2 paired campaign (campaign.mjs --acceptance-188.9) and a product-store delivery diagnostic (retrieval-diagnostics.mjs --store-from)",
+      "paidEvidence": "docs/_evidence/memory-bench/188.9/acceptance/acceptance-comparisons.json: fabric-x 76/100 vs 188.8-pinned fabric 51/100 on held-out v2 (overall +0.25, 95% CI [0.16,0.34]; knowledge-update +0.5, Holm p 0.0078; the other three primary abilities positive but not significant after Holm). Full context is 79/100 and reused from 188.8, so fabric-x is -0.03 overall (95% CI [-0.12,0.06]): an improvement over the pinned baseline, not a full-context substitute.",
+      "attribution": "delivery still decides most remaining failures on the exchange store: of 24 failures, partial_evidence 8, candidate_gap 5, fine_selection_gap 4 and synthesis (answer_gap) 5, with 2 questions without usable gold. Conditional accuracy is 63/68 (93%) when all needed evidence is visible and 13/30 (43%) when it is not, so the visible-evidence answerer is strong and the loss is in getting the evidence in.",
+      "remainingLimits": "The baseline has no product-store snapshot (legacy direct ingest), so only the treatment arm has a stage table. `fabric-xc` was not run: its write side is unmeasured and half its measured sessions failed consolidation at the 4,096-token output cap. Multi-session (x-baseline +0.25, Holm p 0.19) and temporal-reasoning (+0.25, p 0.25) stay unproven, and abstention has no held-out ids."
+    }
   }
 ]

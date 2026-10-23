@@ -1,0 +1,61 @@
+{
+  "kind": "188.9-concurrency-probe",
+  "steps": [
+    {
+      "concurrency": 4,
+      "jobId": "accept1889-probe-c4",
+      "attemptId": "accept1889-probe-c4@2",
+      "status": "failed",
+      "inputTokens": 17993,
+      "p50Ms": 816.3,
+      "p95Ms": 15304.2,
+      "wallMs": 18044.9,
+      "answers": 3,
+      "overloads": 0,
+      "concurrencyHalvings": 0
+    },
+    {
+      "concurrency": 8,
+      "jobId": "accept1889-probe-c8",
+      "attemptId": "accept1889-probe-c8@2",
+      "status": "failed",
+      "inputTokens": 18831,
+      "p50Ms": 1083.7,
+      "p95Ms": 32204.9,
+      "wallMs": 34892.1,
+      "answers": 3,
+      "overloads": 0,
+      "concurrencyHalvings": 0
+    },
+    {
+      "concurrency": 16,
+      "jobId": "accept1889-probe-c16",
+      "attemptId": "accept1889-probe-c16@2",
+      "status": "failed",
+      "inputTokens": 18858,
+      "p50Ms": 1171.9,
+      "p95Ms": 15412.5,
+      "wallMs": 18401.2,
+      "answers": 3,
+      "overloads": 0,
+      "concurrencyHalvings": 0
+    },
+    {
+      "concurrency": 24,
+      "jobId": "accept1889-probe-c24",
+      "attemptId": "accept1889-probe-c24@2",
+      "status": "failed",
+      "inputTokens": 9030,
+      "p50Ms": 1097.3,
+      "p95Ms": 22928.1,
+      "wallMs": 25582.8,
+      "answers": 3,
+      "overloads": 0,
+      "concurrencyHalvings": 0
+    }
+  ],
+  "chosen": {
+    "concurrency": 24,
+    "reason": "highest step with 0 overloads and p95 22928.1ms < 1.5x 15304.2ms"
+  }
+}

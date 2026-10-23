@@ -408,3 +408,70 @@ foreign context in 13/24 sessions (.542), promotion-on stopped at 9/24, and `om+
 `LifecycleObserverError` before one session. The 12-persona powered safety gate was not reached.
 Promotion and injection stay off; defaults are unchanged and provisional. Task 8 and 188.6 Task 6
 remain unchecked.
+
+## Plan 188.9 held-out acceptance (2026-10-23)
+
+The plan asked whether an **exchange** representation (one completed user turn plus the reply,
+archived verbatim) beats 188.8's episode store once delivery is held constant, and 188.8 Task 5's
+4,000-token delivery is what the screen had compared. So the baseline is the current tree with 188.8's
+delivery rule pinned by variant (`fabric.delivery=188.8`: whole notes, 600 tokens, top 3,
+similarity 0.35) and the treatment is the same tree with the exchange archive. Both ran held-out v2
+(100 ids) on OpenCode Go `mimo-v2.5`, temperature 0, max output 4,096, harness protocol version 2.
+`fabric-xc` is out of scope by owner decision: its write side is unmeasured and 25 of 51 measured
+sessions failed consolidation. The full-context reference is reused from 188.8's report; its prompt
+is the dataset and the protocol, never the delivery code this plan changed.
+
+| Arm | Scored | Correct | Input tokens | Tokens/question | Notes |
+| --- | ---: | ---: | ---: | ---: | --- |
+| fabric (188.8 delivery pinned) | 100/100 | 51/100 | 215,717 | 2,157 | baseline |
+| fabric-x (exchange archive) | 100/100 | 76/100 | 661,681 | 6,617 | screened in on development |
+| full (reused) | 100/100 | 79/100 | 11,500,702 | 115,007 | from 188.8 |
+
+Paired improvement `fabric-x` vs the pinned baseline: **+0.25 overall** (95% CI 0.16..0.34),
+knowledge-update **+0.5** (Holm p 0.0078). Multi-session +0.25 (Holm p 0.19), temporal-reasoning
++0.25 (Holm p 0.25) and single-session-user +0.15 (Holm p 0.25) are positive but not significant
+after Holm. Against full context, `fabric-x` is **-0.03** (95% CI -0.12..0.06): the gap is nearly
+closed but the non-inferiority margin (3 points) is missed at the CI's lower bound, so it is an
+**opt-in improvement, not a full-context substitute**. F13 stays `unresolved` for the same reason.
+
+Delivery attribution on the exchange store: of 24 failures, partial_evidence 8, candidate_gap 5,
+fine_selection_gap 4, answer_gap 5 and 2 without usable gold. Conditional accuracy is 63/68 (93%)
+when all needed evidence is visible and 13/30 (43%) when it is not, so the remaining loss is mostly
+selection, not synthesis. The baseline has no product-store snapshot, so only the treatment arm has
+a stage table.
+
+Full evidence, the reproduced screen correction and the aborted-attempt accounting are in
+[`memory-bench/188.9/README.md`](memory-bench/188.9/README.md). Defaults stay off and provisional:
+the 188.6 enablement rule needs a full-context-substitute verdict, which this evidence does not give.
+
+## Plan 188.8 held-out acceptance (2026-10-23)
+
+The 140 diagnosed confirmatory ids became **development** data for this plan, so the remediation was
+measured on a fresh held-out draw of 100 unused LongMemEval-S ids (20 each of knowledge-update,
+multi-session, temporal-reasoning, single-session-user and single-session-assistant; preference and
+abstention have no unused ids and stay development-only). A 30M-token campaign under harness protocol
+version 2 completed all five arms on OpenCode Go `mimo-v2.5`. Full evidence and the aborted-launch
+accounting are in [`memory-bench/188.8/README.md`](memory-bench/188.8/README.md).
+
+| Arm | Held-out v2 | Input | Note |
+| --- | ---: | ---: | --- |
+| `fabric` pre-fix (product treatment only) | 46/100 | 218,663 | delivery = whole best note |
+| `fabric` post-fix | 47/100 | 249,736 | bounded query-centred excerpts |
+| `fabric-agentic` post-fix | 38/100 | 5,438,935 | 18% eight-turn run-limit |
+| `full` reference | 79/100 | 11,500,702 | |
+| `fabric` post-fix, development | 65/140 | 347,040 | preference 5/20, abstention 17/20 |
+
+The predeclared primary family (paired post-fix versus pre-fix fabric, Holm across four abilities) is
+flat: +0.05 knowledge-update, +0.05 multi-session, -0.05 temporal-reasoning, -0.05 single-session-user,
+all p = 1.0, overall +0.01 (95% CI -0.05..0.07). Question (1) is therefore **inconclusive — no
+measurable improvement**; the offline development gains did not transfer. Question (2) is **no**:
+post-fix fabric is -0.32 against full context (95% CI -0.42..-0.23, p < 1e-4), agentic -0.41. F13 in
+`memory-bench/188.7/findings.json` is updated to **unresolved** with the 188.8 evidence column; the
+matrix still validates all 13 rows.
+
+Delivery attribution is unambiguous: the excerpt renderer raises all-needed-visible evidence
+(knowledge-update 1/20 → 3/20, single-session-user 17/20 → 19/20) and cuts `fine_selection_gap` from
+18 to 15 without moving answers, so `answer_gap` absorbs it (26 of 53 failures). Multi-session
+aggregation and the preference vocabulary gap are untouched. One round exceeds the core
+64,384-character entry limit and cannot be stored by either fabric arm. No paid process remains;
+`inject: false` and `defaults.json` are unchanged.

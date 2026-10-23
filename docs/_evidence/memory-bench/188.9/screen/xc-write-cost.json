@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "status": "partial",
+  "phase": "write",
+  "config": "fabric-xc",
+  "suite": "longmemeval-s",
+  "subset": "screen-v1",
+  "selectedQuestionIds": [
+    "60bf93ed_abs",
+    "2698e78f_abs",
+    "88432d0a_abs",
+    "6aeb4375_abs",
+    "c8090214_abs",
+    "5c40ec5b",
+    "45dc21b6",
+    "c4ea545c",
+    "5831f84d",
+    "7a87bd0c",
+    "1c549ce4",
+    "157a136e",
+    "129d1232",
+    "3fdac837",
+    "c4a1ceb8",
+    "41275add",
+    "58470ed2",
+    "71a3fd6b",
+    "2bf43736",
+    "e3fc4d6e",
+    "caf03d32",
+    "1d4e3b97",
+    "1c0ddc50",
+    "0a34ad58",
+    "38146c39",
+    "8ebdbe50",
+    "a82c026e",
+    "dccbc061",
+    "c960da58",
+    "7527f7e2",
+    "982b5123",
+    "9a707b82",
+    "a3045048",
+    "gpt4_e072b769",
+    "gpt4_1e4a8aeb"
+  ],
+  "inputTokens": 417437,
+  "outputTokens": 88123,
+  "cacheReadTokens": 40832,
+  "wireExchanges": 64,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 64,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "timing": {
+    "wallMs": 2137023.7,
+    "concurrency": {
+      "initial": 1,
+      "active": 1,
+      "floor": 1
+    },
+    "questions": {
+      "n": 1,
+      "wallMs": {
+        "p50": 2135024.8,
+        "p95": 2135024.8,
+        "mean": 2135024.8
+      }
+    },
+    "roles": {
+      "extractor": {
+        "calls": 64,
+        "firstByteMs": {
+          "p50": 2286.4,
+          "p95": 15315.2,
+          "mean": 5901.7
+        },
+        "totalMs": {
+          "p50": 25902.9,
+          "p95": 93149.2,
+          "mean": 33056.1
+        }
+      }
+    },
+    "calls": 64
+  },
+  "concurrency": 1,
+  "maxInputTokens": 1000000,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 3,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "protocolVersion": 2,
+  "protocolHash": "b73b4035ee6ad94adcdc1dce3ceaf8d7167a0889742e0a2d33a413b777adfe04",
+  "runPathFingerprint": "7f8a0a313a4ea04a069cc5704dcdb44fdca27a4c0610cc3dfa9bdae5c6b6fea5",
+  "sourceRevision": "9bf1dbbcd625d7a7ace23c3cebb5f810c43c0a1c",
+  "sourceVariants": [],
+  "model": "mimo-v2.5",
+  "provider": "opencode-go",
+  "judge": "opencode-go/mimo-v2.5",
+  "dataset": {
+    "file": "longmemeval-s.json",
+    "bytes": 277383467,
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "fact",
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": true,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "60bf93ed_abs",
+      "ability": "abstention",
+      "cluster": "lme-47a16423cf73",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 521,
+        "archived": 257,
+        "parts": 257,
+        "consolidationFailures": 25
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    }
+  ],
+  "limitations": [
+    "One development question (51 sessions, 521 entries) at concurrency 1, not the screen draw.",
+    "Measured with the 4,096-token output cap the acceptance protocol pins; 25 of 51 sessions failed consolidation, so the failure rate is not the protocol's steady state.",
+    "Answers were never requested: the run stops after the write side, so no oracle material is present."
+  ],
+  "usageComplete": true,
+  "kind": "188.9-xc-write-cost-measurement"
+}

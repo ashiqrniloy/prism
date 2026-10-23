@@ -16,7 +16,8 @@ import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
 import memoryFabric, { createMemory, createMemoryFabric } from "@arnilo/prism-memory-fabric";
 
 // Network-free: session one consolidates an explicit statement into a typed project note through
-// `memory:consolidate`; a second process (a fresh agent over the same markdown store) recalls it.
+// `memory:consolidate` and archives the turn itself through `memory:archive`; a second process (a
+// fresh agent over the same markdown store) recalls both the fact and the verbatim exchange.
 // The store is canonical note files under `<root>/notes` with a derived SQLite index. A third agent
 // roots a different project at the same store: it sees the shared user preference but not the first
 // project's fact.
@@ -79,7 +80,7 @@ try {
       ]),
       embeddings(),
       // One extractor call per pass; the command runs regardless of minTurnsBetween.
-      memoryFabric({ tools: { root }, promote: { minTurnsBetween: 8 } }),
+      memoryFabric({ tools: { root }, promote: { minTurnsBetween: 8 }, exchanges: {} }),
     ],
     slots: { store: createMemorySessionStore() },
   });
@@ -87,6 +88,8 @@ try {
   await firstSession.run("Always keep the retry budget small.");
   const consolidated = (await first.commands.run("memory:consolidate", {}, { session: firstSession })) as { written: number };
   console.log(`session one: memory:consolidate wrote ${consolidated.written} project note(s)`);
+  const archived = (await first.commands.run("memory:archive", {}, { session: firstSession })) as { totalArchived: number };
+  console.log(`session one: exchange archive holds ${archived.totalArchived} turn(s) for this session`);
   await first.dispose();
 
   const results: string[] = [];
@@ -95,7 +98,9 @@ try {
     packages: [
       mockProvider(
         [
-          [providerToolCall(toolCallContent("c1", "memory.recall", { query: "retry budget" })), providerDone()],
+          [providerToolCall(toolCallContent("c1", "memory.recall", { query: "retry budget", kinds: ["fact"] })), providerDone()],
+          [providerTextDelta("recalled"), providerDone()],
+          [providerToolCall(toolCallContent("c2", "memory.recall", { query: "retry budget", kinds: ["exchange"] })), providerDone()],
           [providerTextDelta("recalled"), providerDone()],
         ],
         {
@@ -109,10 +114,13 @@ try {
       memoryFabric({ tools: { root } }),
     ],
   });
-  await (await second.session({ id: "session-two", create: true })).run("What do you know about retries?");
+  const secondSession = await second.session({ id: "session-two", create: true });
+  await secondSession.run("What do you know about retries?");
+  await secondSession.run("What exactly did we say about the retry budget?");
+  const recalled = results.join("\n");
   console.log(
     "session two:",
-    results.join("\n").includes("smallest retry budget") ? "recalled the fact from the markdown store" : "nothing recalled",
+    `${recalled.includes("smallest retry budget") ? "recalled the fact" : "no fact"} and ${recalled.includes("Always keep the retry budget small.") ? "the verbatim exchange" : "no exchange"} from the markdown store`,
   );
   await second.dispose();
 

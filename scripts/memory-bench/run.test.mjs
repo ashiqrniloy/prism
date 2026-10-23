@@ -1,11 +1,11 @@
-import { test } from "bun:test";
+import { spyOn, test } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, providerDone, providerError, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { loadDataset, normalizeDataset, selectQuestions } from "./datasets.mjs";
+import { loadDataset, MemoryBenchDatasetError, normalizeDataset, selectQuestions } from "./datasets.mjs";
 import {
   causalSessions,
   extractEvidence,
@@ -14,8 +14,11 @@ import {
   mockProvider,
   replay,
   retrievalStage,
+  sessionRounds,
 } from "./replay.mjs";
-import { askJudge, isRetryableJudgeFailure, missingUsageCount, runBench } from "./run.mjs";
+import { summarize } from "./report.mjs";
+import { CEILING_GRID, ceilingCells, ceilingScan, deliveryMetrics, restageReport } from "./retrieval-diagnostics.mjs";
+import { askJudge, isRetryableJudgeFailure, missingUsageCount, questionFailureDisposition, runBench } from "./run.mjs";
 import { compare, mcnemar } from "./stats.mjs";
 import subsets from "./subsets.json" with { type: "json" };
 
@@ -64,6 +67,10 @@ test("truncated_stream_is_retried_but_a_real_failure_is_not", () => {
   };
   assert.equal(isTruncatedStreamFailure(truncated), true);
   assert.equal(isTruncatedStreamFailure({ status: "completed", error: undefined }), false);
+  assert.equal(
+    isTruncatedStreamFailure({ status: "failed", error: { code: "ERR_PRISM_RUN_LIMIT", message: "without completion evidence" } }),
+    false,
+  );
   assert.equal(isTruncatedStreamFailure({ status: "failed", error: { message: "HTTP 400 bad request" } }), false);
 });
 
@@ -246,29 +253,42 @@ test("auth_permanent_budget_and_runlimit_failures_keep_original_reason", async (
   assert.equal(requests, 1, "auth is never retried");
 });
 
-test("agentic_limit_failure_has_bounded_trace_and_explicit_protocol", async () => {
-  const state = benchState();
+test("run_limit_answer_is_scored_wrong_and_arm_continues", async () => {
+  const module = await import("./replay.mjs");
+  const original = module.replay;
+  let requests = 0;
   const provider = {
     id: "mock",
     async *generate() {
+      requests++;
       yield providerToolCall(toolCallContent("recall", "memory.recall", { query: "project color", kinds: ["all"] }));
       yield providerDone();
     },
   };
+  let questions = 0;
+  const spy = spyOn(module, "replay").mockImplementation((question, options, providers, state) =>
+    original(question, options, questions++ === 0 ? [provider] : providers, state),
+  );
   try {
-    await replay(
-      retryQuestion,
-      { config: "fabric-agentic", suite: "longmemeval-s", modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
-      [provider],
-      state,
-    );
-    assert.fail("agentic loop must hit the turn limit");
-  } catch (error) {
-    assert.match(error.message, /MemoryBenchAnswerError:ERR_PRISM_RUN_LIMIT/);
-    assert.equal(error.diagnostics.maxTurns, 8);
-    assert.ok(error.diagnostics.turns <= 8);
-    assert.ok(error.diagnostics.tools.length <= 8);
-    assert.ok(error.diagnostics.tools.every((name) => name === "memory.recall"));
+    const report = await runBench({ offline: true, config: "fabric-agentic" });
+    assert.equal(report.status, "completed");
+    assert.ok(report.results.length > 1);
+    const row = report.results[0];
+    assert.equal(row.outcome, "run_limit");
+    assert.equal(row.correct, false);
+    assert.equal(row.answerRetries, 0);
+    assert.equal(requests, 8, "run_limit_is_not_retried: exactly the standard turn allowance");
+    assert.ok(row.turnTrace.length > 0 && row.turnTrace.length <= 64);
+    assert.ok(row.turnTrace.every((name) => name === "memory.recall"));
+    assert.equal(report.abilities[row.ability].runLimitRate, 1 / report.abilities[row.ability].n);
+    assert.equal(report.runLimitRate, 1 / report.results.length);
+    assert.ok(!JSON.stringify(row).includes("project color"));
+    assert.equal(report.protocol.maxTurns, 8);
+    assert.ok(report.results.slice(1).every((result) => result.outcome !== "run_limit"));
+    const { summarize } = await import("./report.mjs");
+    assert.equal(summarize({ results: [] }).runLimitRate, 0);
+  } finally {
+    spy.mockRestore();
   }
 });
 
@@ -880,6 +900,17 @@ test("markdown_scale_smoke_reports_all_metrics", async () => {
   }
 }, 65000);
 
+test("mock_agentic_question_converges_in_three_turns", async () => {
+  // Plan 188.9 Task 6: recall returns snippets, so the mock reads the ids it was shown, then answers.
+  const report = await runBench({ offline: true, config: "fabric-agentic", maxQuestions: 1 });
+  const row = report.results[0];
+  assert.deepEqual(row.turnTrace, ["memory.recall", "memory.read"], "recall -> read ids -> answer, no discovery call");
+  assert.equal(row.turns, 3, "three model rounds: recall, read, answer");
+  assert.equal(row.toolCalls, 2);
+  assert.equal(report.protocol.maxTurns, 8, "the treatment is the tools, not a raised turn limit");
+  assert.notEqual(row.outcome, "run_limit");
+});
+
 test("memory_bench_fabric_hybrid_requires_embeddings", async () => {
   await assert.rejects(runBench({ offline: true, config: "fabric-hybrid" }), /fabric-hybrid requires --embeddings/);
 });
@@ -1109,6 +1140,122 @@ test("retrieval_failure_stage_is_attributable_without_source_text", () => {
   assert.equal(retrievalStage({ goldRounds: [], candidateRounds: [], selectedRounds: [], correct: true }), "correct");
 });
 
+test("partial_evidence_is_not_answer_gap", () => {
+  // Three fine rounds, one visible, wrong answer: partial evidence, not a synthesis gap.
+  assert.equal(
+    retrievalStage({
+      goldRounds: ["session"],
+      candidateRounds: ["session"],
+      selectedRounds: ["session", "fine-a"],
+      fineGoldRounds: ["fine-a", "fine-b", "fine-c"],
+      fineSelectedRounds: ["fine-a"],
+      correct: false,
+    }),
+    "partial_evidence",
+  );
+  assert.equal(
+    retrievalStage({
+      goldRounds: ["session"],
+      candidateRounds: ["session"],
+      selectedRounds: ["session", "fine-a", "fine-b"],
+      fineGoldRounds: ["fine-a", "fine-b", "fine-c"],
+      fineSelectedRounds: ["fine-a", "fine-b"],
+      correct: false,
+    }),
+    "partial_evidence",
+  );
+});
+
+test("answer_gap_requires_every_fine_round", () => {
+  assert.equal(
+    retrievalStage({
+      goldRounds: ["session"],
+      candidateRounds: ["session"],
+      selectedRounds: ["session", "fine-a", "fine-b", "fine-c"],
+      fineGoldRounds: ["fine-a", "fine-b", "fine-c"],
+      fineSelectedRounds: ["fine-a", "fine-b", "fine-c"],
+      correct: false,
+    }),
+    "answer_gap",
+  );
+  // One fine round is answer_gap once it is visible: the old classifier's meaning is preserved.
+  assert.equal(
+    retrievalStage({
+      goldRounds: ["session"],
+      candidateRounds: ["session"],
+      selectedRounds: ["session", "fine-a"],
+      fineGoldRounds: ["fine-a"],
+      fineSelectedRounds: ["fine-a"],
+      correct: false,
+    }),
+    "answer_gap",
+  );
+  assert.equal(retrievalStage({ goldRounds: ["g"], candidateRounds: ["g"], selectedRounds: ["g"], correct: true }), "correct");
+});
+
+test("ceiling_refuses_heldout", async () => {
+  // Refusal happens before any dataset read or ingestion.
+  await assert.rejects(ceilingScan({ suite: "longmemeval-s", subset: "heldout-v2" }), MemoryBenchDatasetError);
+  await assert.rejects(ceilingScan({ suite: "longmemeval-s", subset: "base" }), MemoryBenchDatasetError);
+  assert.equal(CEILING_GRID.budgetTokens.includes(2000), true);
+  assert.equal(ceilingCells().length, 6 * 5 * 3 * 2);
+  assert.equal(new Set(ceilingCells().map((cell) => JSON.stringify(cell))).size, ceilingCells().length);
+});
+
+test("ceiling_reproduces_investigation_cells", () => {
+  const hit = (id, chars) => ({
+    id,
+    kind: "episode",
+    level: "project",
+    ingestedAt: "2025-01-01T00:00:00.000Z",
+    content: "x".repeat(chars),
+  });
+  const hits = [hit("fine-a", 1000), hit("fine-b", 900), hit("other", 400)];
+  const question = { question: "where is the key", ability: "single-session-user" };
+  const rounds = [];
+  const fine = new Set(["fine-a", "fine-b"]);
+  const at = (budgetTokens, topK, renderer) =>
+    deliveryMetrics({ question, query: question.question, hits, rounds, fine, renderer, budgetTokens, topK });
+  // A budget smaller than the second round leaves partial evidence; the whole budget shows both.
+  assert.equal(at(100, 16, "whole").allNeededVisible, false);
+  assert.equal(at(600, 16, "whole").allNeededVisible, true);
+  assert.equal(at(600, 1, "excerpt").allNeededVisible, false);
+  assert.equal(at(600, 6, "excerpt").allNeededVisible, true);
+});
+
+test("stage_correction_contains_no_text", () => {
+  const source = {
+    protocol: "delivery-stage-v2",
+    suite: "longmemeval-s",
+    subset: "development",
+    injectionRenderer: "excerpt",
+    rows: [
+      {
+        id: "q1",
+        ability: "multi-session",
+        answerCorrect: false,
+        allNeededVisible: false,
+        answerMessageVisible: false,
+        goldRounds: 1,
+        candidateGold: 1,
+        selectedGold: 1,
+        fineRounds: 3,
+        selectedFine: 1,
+        selectedRounds: 3,
+        stage: "answer_gap",
+        question: "SECRET QUESTION TEXT",
+        content: "SECRET NOTE TEXT",
+      },
+    ],
+  };
+  const correction = restageReport(source);
+  assert.equal(correction.rows[0].stage, "partial_evidence");
+  assert.equal(correction.stagesBefore.answer_gap, 1);
+  assert.equal(correction.stagesAfter.partial_evidence, 1);
+  const text = JSON.stringify(correction);
+  assert.equal(text.includes("SECRET"), false);
+});
+
 test("missing_gold_stays_unknown", () => {
   const question = { answers: ["answer"] };
   const grade = gradeEvidence({
@@ -1171,7 +1318,13 @@ test("heldout_v2_draw_is_deterministic_and_fails_closed_when_a_stratum_is_short"
 
 test("delivery_diagnostic_reports_all_needed_visible_without_text", async () => {
   const { deliveryMetrics } = await import("./retrieval-diagnostics.mjs");
-  const hits = ["a", "b"].map((id) => ({ id, kind: "episode", ingestedAt: "2023-01-01", content: `${id} PRIVATE_FIXTURE `.repeat(150) }));
+  // "a" fits whole; "b" is larger than what remains, so it is skipped rather than truncated.
+  const hits = ["a", "b"].map((id) => ({
+    id,
+    kind: "episode",
+    ingestedAt: "2023-01-01",
+    content: `${id} PRIVATE_FIXTURE `.repeat(id === "a" ? 50 : 150),
+  }));
   const rounds = hits.map((hit) => ({ id: hit.id, messages: [{ hasAnswer: true, text: hit.content }] }));
   const metrics = deliveryMetrics({
     question: { question: "fixture query" },
@@ -1179,6 +1332,8 @@ test("delivery_diagnostic_reports_all_needed_visible_without_text", async () => 
     hits,
     rounds,
     fine: new Set(["a", "b"]),
+    // A 600-token budget is smaller than one note: whole-note delivery cannot fit both.
+    budgetTokens: 600,
   });
   assert.equal(metrics.allNeededVisible, false);
   assert.equal(metrics.answerMessageVisible, true);
@@ -1204,7 +1359,7 @@ test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
   const { createFabricContext } = await import("../../packages/memory/fabric/src/context.ts");
   const { createMemory, createMemoryFabric } = await import("@arnilo/prism-memory-fabric");
   const { selectInjection } = await import("./retrieval-diagnostics.mjs");
-  assert.deepEqual(selectInjection([]), { ids: [], tokens: 0 });
+  assert.deepEqual(selectInjection([], "question"), { ids: [], lines: [], tokens: 0 });
   const memory = createMemory({ tenantId: "t", resourceId: "r", threadId: "s" });
   const fabric = createMemoryFabric({ memory, consolidate: false });
   const hits = [];
@@ -1219,18 +1374,32 @@ test("delivery_diagnostic_mirrors_shipped_injection_rule", async () => {
     message: { role: "user", content: [{ type: "text", text: "question" }] },
   };
   const context = { sessionId: "s", session: { id: "s", entries: async () => [user] } };
-  for (const candidates of [hits, hits.slice(1)]) {
+  const long = await fabric.remember({ kind: "fact", content: `${"filler ".repeat(300)}question${" tail".repeat(300)}` });
+  for (const candidates of [hits, hits.slice(1), [hits[1], { ...long, score: 1 }, hits[2]]]) {
     // Exact boundary: the citation preamble must consume budget too.
-    for (const budgetTokens of [1, 600, selectInjection(candidates, 10000).tokens]) {
+    for (const budgetTokens of [1, 300, 600, selectInjection(candidates, "question", 10000).tokens]) {
       const draft = await createFabricContext(memory, async () => ({ hits: candidates, explain: [] }), { budgetTokens, topK: 3 }).build(
         { messages: [user.message] },
         context,
       );
       const rendered = draft.messages[0].content.map((block) => block.text ?? "").join("\n");
+      const mirrored = selectInjection(candidates, "question", budgetTokens);
+      // Delivery is chronological, so compare the selected set and then that both agree on the order.
       assert.deepEqual(
-        candidates.filter((hit) => rendered.includes(`[${hit.id}]`)).map((hit) => hit.id),
-        selectInjection(candidates, budgetTokens).ids,
+        candidates
+          .filter((hit) => rendered.includes(`[${hit.id}]`))
+          .map((hit) => hit.id)
+          .sort(),
+        [...mirrored.ids].sort(),
       );
+      const positions = mirrored.ids.map((id) => rendered.indexOf(`[${id}]`));
+      assert.deepEqual(
+        positions,
+        [...positions].sort((a, b) => a - b),
+        "the product delivers in the mirror's order",
+      );
+      // Same rendered text too, excerpts included, not just the same ids.
+      for (const line of mirrored.lines) assert.ok(rendered.includes(line));
     }
   }
 });
@@ -1305,4 +1474,1145 @@ test("delivery_seams_date_prefix_order_store_timestamp_and_iso_period", async ()
   } finally {
     await agent.dispose();
   }
+});
+
+test("v2_question_message_carries_date_metadata_not_query_text", async () => {
+  const context = await import("../../packages/memory/fabric/src/context.ts");
+  const build = context.createFabricContext;
+  const queries = [];
+  const probe = spyOn(context, "createFabricContext").mockImplementation((memory, recall, ...args) =>
+    build(
+      memory,
+      (query, options) => {
+        queries.push(query);
+        return recall(query, options);
+      },
+      ...args,
+    ),
+  );
+  try {
+    await replay(
+      retryQuestion,
+      { config: "fabric", offline: true, modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+      [mockProvider(benchState())],
+      benchState(),
+    );
+    assert.deepEqual(queries, [retryQuestion.question]);
+  } finally {
+    probe.mockRestore();
+  }
+});
+
+test("v2_answer_entry_timestamp_equals_question_date_including_retry_fork", async () => {
+  const sdk = await import("@arnilo/prism");
+  const createStore = sdk.createMemorySessionStore;
+  const entries = [];
+  const probe = spyOn(sdk, "createMemorySessionStore").mockImplementation(() => {
+    const store = createStore();
+    const append = store.append.bind(store);
+    store.append = (entry, options) => {
+      entries.push(entry);
+      return append(entry, options);
+    };
+    return store;
+  });
+  try {
+    for (const config of ["full", "fabric"]) {
+      const state = benchState();
+      const result = await replay(
+        retryQuestion,
+        { config, offline: true, modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+        [truncatingProvider(state)],
+        state,
+      );
+      assert.equal(result.answerRetries, 1);
+    }
+    const questions = entries.filter((entry) => entry.message?.metadata?.sourceDate === retryQuestion.date);
+    assert.equal(questions.length, 4);
+    assert.ok(questions.every((entry) => entry.timestamp === retryQuestion.date));
+    assert.ok(questions.every((entry) => entry.message.content[0].text === retryQuestion.question));
+    const history = entries.filter((entry) => entry.message?.metadata?.sourceId === "m1");
+    assert.ok(history.length > 0);
+    assert.ok(history.every((entry) => entry.timestamp === retryQuestion.sessions[0].date));
+  } finally {
+    probe.mockRestore();
+  }
+});
+
+test("named_month_resolves_against_question_date_in_replay", async () => {
+  const context = await import("../../packages/memory/fabric/src/context.ts");
+  const build = context.createFabricContext;
+  const periods = [];
+  const probe = spyOn(context, "createFabricContext").mockImplementation((memory, recall, ...args) =>
+    build(
+      memory,
+      (query, options) => {
+        periods.push(options.tRef);
+        return recall(query, options);
+      },
+      ...args,
+    ),
+  );
+  try {
+    for (const [phrase, from, to] of [
+      ["in March", "2023-03-01T00:00:00.000Z", "2023-04-01T00:00:00.000Z"],
+      ["last week", "2023-05-22T00:00:00.000Z", "2023-05-29T00:00:00.000Z"],
+    ]) {
+      const state = benchState();
+      await replay(
+        { ...retryQuestion, date: "2023-05-30T23:40:00.000Z", question: `What did I buy ${phrase}?` },
+        { config: "fabric", offline: true, modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+        [mockProvider(state)],
+        state,
+      );
+      assert.deepEqual(periods.at(-1), { from, to });
+    }
+  } finally {
+    probe.mockRestore();
+  }
+});
+
+test("full_and_memory_arms_render_the_same_dated_question", async () => {
+  const questions = [];
+  for (const config of ["full", "om", "fabric", "fabric-hybrid", "fabric-agentic", "om+fabric"]) {
+    const state = benchState();
+    const base = mockProvider(state);
+    const provider = {
+      id: "mock",
+      async *generate(request) {
+        if (state.phase === "answer") {
+          const message = request.messages.findLast((message) => message.role === "user");
+          if (message?.metadata?.sourceDate === retryQuestion.date) questions.push(message);
+        }
+        yield* base.generate(request);
+      },
+    };
+    await replay(
+      retryQuestion,
+      { config, offline: true, embeddings: "mock/embeddings", modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+      [provider],
+      state,
+    );
+  }
+  assert.ok(questions.length >= 6);
+  for (const message of questions) {
+    assert.deepEqual(message.content, [{ type: "text", text: `[${retryQuestion.date}] ${retryQuestion.question}` }]);
+  }
+});
+
+test("v1_checkpoint_is_not_resumed_into_v2", async () => {
+  const { protocolFingerprint } = await import("./run.mjs");
+  const report = await runBench({ offline: true, config: "fabric" });
+  assert.equal(report.protocolVersion, 2);
+  const prior = { ...report, protocolVersion: 1 };
+  prior.protocolHash = protocolFingerprint(prior);
+  assert.notEqual(prior.protocolHash, report.protocolHash);
+  await assert.rejects(() => runBench({ offline: true, config: "fabric", resume: prior }), /MemoryBenchResumeMismatch/);
+  delete prior.protocolVersion;
+  prior.protocolHash = protocolFingerprint(prior);
+  await assert.rejects(() => runBench({ offline: true, config: "fabric", resume: prior }), /MemoryBenchResumeMismatch/);
+});
+
+// Plan 188.8 Task 5: one held-out question trips the core 64,384-character entry limit.
+test("one_question_product_error_is_scored_wrong_and_the_arm_continues", () => {
+  const productError = new Error("vector text exceeds 64384 characters");
+  productError.name = "MemoryLimitError";
+  assert.equal(questionFailureDisposition({ error: productError, errored: 0, total: 100 }), "scored");
+  assert.equal(questionFailureDisposition({ error: productError, errored: 2, total: 100 }), "scored");
+  // A provider or transport failure carries a cause and still ends the arm.
+  const providerFailure = Object.assign(new Error("MemoryBenchReplayError"), { cause: { failureClass: "auth", code: "E401" } });
+  assert.equal(questionFailureDisposition({ error: providerFailure, errored: 0, total: 100 }), "failed");
+  assert.equal(questionFailureDisposition({ error: productError, budget: true }), "token-ceiling");
+  // A systematic product break cannot pass as a score.
+  assert.equal(questionFailureDisposition({ error: productError, errored: 5, total: 100 }), "failed");
+  const report = summarize({
+    schemaVersion: 1,
+    suite: "longmemeval-s",
+    inputTokens: 10,
+    cacheReadTokens: 0,
+    results: [
+      { id: "a", ability: "knowledge-update", correct: false, outcome: "error", errorCode: "MemoryLimitError" },
+      { id: "b", ability: "knowledge-update", correct: true },
+    ],
+  });
+  assert.equal(report.errorRate, 0.5);
+  assert.equal(report.abilities["knowledge-update"].errorRate, 0.5);
+  assert.equal(report.abilities["knowledge-update"].accuracy, 0.5);
+});
+
+// Plan 188.8 Task 5: the before arm is diagnosed with the renderer it shipped.
+test("whole_note_injection_mirrors_the_prefix_delivery_rule", async () => {
+  const { wholeNoteInjection } = await import("./retrieval-diagnostics.mjs");
+  const hit = (id, chars) => ({ id, level: "user", kind: "episode", ingestedAt: "2023-05-30T00:00:00.000Z", content: "x".repeat(chars) });
+  // The best hit is always shown, even alone past the 600-token budget.
+  const best = wholeNoteInjection([hit("best", 3000)], 600, 3);
+  assert.deepEqual(best.ids, ["best"]);
+  // A later note that does not fit is dropped; a short one fits.
+  assert.deepEqual(wholeNoteInjection([hit("a", 3000), hit("b", 2400)], 600, 3).ids, ["a"]);
+  assert.deepEqual(wholeNoteInjection([hit("a", 100), hit("b", 100)], 600, 3).ids, ["a", "b"]);
+  assert.ok(wholeNoteInjection([hit("a", 100), hit("b", 400)], 600, 3).tokens <= 600);
+});
+
+// --- Plan 188.9 Task 3: fast run path -------------------------------------------------------
+
+const benchDirs = async (name) => {
+  const root = await mkdtemp(join(tmpdir(), `memory-bench-${name}-`));
+  return { answersDir: join(root, "answers"), judgeCacheDir: join(root, "judge"), root };
+};
+
+test("report_records_per_call_latency_by_role", async () => {
+  const dirs = await benchDirs("timing");
+  const report = await runBench({
+    offline: true,
+    maxQuestions: 1,
+    answersDir: dirs.answersDir,
+    judgeCacheDir: dirs.judgeCacheDir,
+  });
+  const { timing } = report;
+  assert.ok(timing.wallMs > 0);
+  assert.equal(timing.concurrency.initial, 1);
+  assert.equal(timing.questions.n, 1);
+  assert.ok(timing.questions.wallMs.p50 >= 0);
+  assert.ok(timing.roles.solver.calls >= 1);
+  assert.ok(timing.roles.judge.calls >= 1);
+  for (const role of Object.values(timing.roles)) {
+    assert.ok(role.totalMs.p50 <= role.totalMs.p95);
+    assert.ok(role.firstByteMs.p50 <= role.totalMs.p95);
+  }
+  // No prompt, question or answer text rides along with the timings.
+  const text = JSON.stringify(timing);
+  assert.ok(!/cobalt|synthetic:knowledge-update/.test(text));
+});
+
+test("concurrency_bounds_in_flight_calls_and_halves_on_429", async () => {
+  const { createGate } = await import("./timing.mjs");
+  const gate = createGate(8);
+  assert.equal(gate.limit, 8);
+  for (let i = 0; i < 8; i++) await gate.acquire();
+  assert.equal(gate.active, 8);
+  // Overload shrinks the ceiling without dropping an in-flight permit, and never below one.
+  assert.equal(gate.halve(), true);
+  assert.equal(gate.limit, 4);
+  assert.equal(gate.active, 8);
+  gate.release();
+  assert.equal(gate.active, 7);
+  for (let i = 0; i < 3; i++) gate.release();
+  assert.equal(gate.active, 4);
+  gate.halve();
+  gate.halve();
+  gate.halve();
+  assert.equal(gate.limit, 1);
+  assert.equal(gate.halve(), false);
+
+  // The fetch wrapper reports an overload status to the arm so it can halve.
+  const { benchmarkFetch } = await import("./run.mjs");
+  let overloads = 0;
+  const responses = [new Response("busy", { status: 429 }), new Response("ok", { status: 200 })];
+  const wrapped = benchmarkFetch({ onOverload: () => overloads++, fetch: async () => responses.shift() });
+  const response = await wrapped("http://bench.invalid/v1/chat/completions", {});
+  assert.equal(response.status, 200);
+  assert.equal(overloads, 1);
+});
+
+test("answer_phase_makes_no_judge_call_and_judge_phase_resumes_it", async () => {
+  const dirs = await benchDirs("phases");
+  const base = { offline: true, answersDir: dirs.answersDir, judgeCacheDir: dirs.judgeCacheDir };
+  const answers = await runBench({ ...base, phase: "answer", output: join(dirs.root, "answers.json") });
+  assert.equal(answers.status, "answers");
+  assert.equal(answers.calls.judge, 0, "the answer phase must not pay for a judge");
+  assert.equal(answers.results.length, 14, "the synthetic fixture has 14 questions");
+  assert.ok(answers.results.every((row) => row.outcome === "answered" && row.correct === undefined && row.answerKey));
+  assert.ok(answers.timing.roles.judge === undefined);
+  assert.equal(answers.abilities[answers.results[0].ability].accuracy, null);
+
+  const judged = await runBench({
+    ...base,
+    phase: "judge",
+    resume: join(dirs.root, "answers.json"),
+    output: join(dirs.root, "judged.json"),
+    concurrency: 3,
+  });
+  assert.equal(judged.status, "completed");
+  assert.ok(judged.calls.judge > 0);
+  assert.equal(judged.turns, 0, "the judge phase must not replay a question");
+  assert.equal(judged.timing.roles.solver, undefined);
+  assert.ok(judged.results.every((row) => typeof row.correct === "boolean"));
+});
+
+test("judge_cache_hit_spends_nothing_and_misses_on_template_change", async () => {
+  const { createJudgeCache, JUDGE_TEMPLATE_VERSION } = await import("./judge.mjs");
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-judge-cache-"));
+  const generation = { temperature: 0, maxTokens: 4096 };
+  const cache = createJudgeCache({ root: dir, judge: "opencode-go/mimo-v2.5", generation });
+  const item = { suite: "longmemeval-s", ability: "multi-session", id: "q1", answer: "cobalt" };
+  const key = cache.key(item);
+  await cache.write(key, { correct: true });
+  assert.deepEqual(await cache.read(key), { correct: true });
+  assert.notEqual(cache.key({ ...item, id: "q2" }), key, "a different question id is a miss");
+  assert.notEqual(cache.key({ ...item, answer: "cerulean" }), key, "a different answer is a miss");
+  assert.notEqual(createJudgeCache({ root: dir, judge: "other/model", generation }).key(item), key);
+  assert.equal(createJudgeCache({ root: dir, judge: "opencode-go/mimo-v2.5", generation }).key(item), key);
+  // A prompt-template edit invalidates every cached verdict.
+  assert.notEqual(createJudgeCache({ root: dir, judge: "opencode-go/mimo-v2.5", generation, version: "edited" }).key(item), key);
+  assert.match(JUDGE_TEMPLATE_VERSION, /^[a-f0-9]{64}$/);
+
+  // End to end: the second judge phase answers from the cache and makes no provider call.
+  const dirs = await benchDirs("judge-cache");
+  const base = {
+    offline: true,
+    maxQuestions: 2,
+    answersDir: dirs.answersDir,
+    judgeCacheDir: dirs.judgeCacheDir,
+    labelInjections: "off",
+  };
+  await runBench({ ...base, phase: "answer", output: join(dirs.root, "answers.json") });
+  const first = await runBench({ ...base, phase: "judge", resume: join(dirs.root, "answers.json") });
+  assert.ok(first.calls.judge > 0);
+  const second = await runBench({ ...base, phase: "judge", resume: join(dirs.root, "answers.json") });
+  assert.equal(second.calls.judge, 0, "a cached verdict spends nothing");
+  assert.equal(second.calls.judgeCacheHits, first.calls.judge);
+  assert.equal(second.calls.judgeCacheMisses, 0);
+});
+
+test("label_injections_off_is_refused_in_acceptance_manifest", async () => {
+  const { labelInjectionsArg } = await import("./campaign.mjs");
+  assert.deepEqual(labelInjectionsArg({ labelInjections: "off" }, { acceptance: false }), ["--label-injections", "off"]);
+  assert.deepEqual(labelInjectionsArg({ labelInjections: "on" }, { acceptance: true }), ["--label-injections", "on"]);
+  assert.deepEqual(labelInjectionsArg({}, { acceptance: true }), []);
+  assert.throws(() => labelInjectionsArg({ labelInjections: "off" }, { acceptance: true }), /refused in an acceptance manifest/);
+  assert.throws(() => labelInjectionsArg({ labelInjections: "maybe" }, {}), /must be on or off/);
+});
+
+test("label_injections_off_records_not_labelled_instead_of_a_zero_rate", async () => {
+  const report = await runBench({ offline: true, maxQuestions: 1, labelInjections: "off" });
+  assert.equal(report.labelInjections, "off");
+  assert.equal(report.injectionPrecision, null);
+  assert.equal(report.injectionPrecisionReason, "not-labelled");
+});
+
+test("split_phase_arm_is_faster_than_serial_on_delayed_mock", async () => {
+  // 20 questions, one solver call and one judge call each, 100 ms per call. The plan's 2 s
+  // latency is scaled down only to keep the suite fast; the ratio it asserts is unchanged.
+  const questions = Array.from({ length: 20 }, (_, index) => ({
+    id: `timing:${index}`,
+    ability: "knowledge-update",
+    question: "What is the project color?",
+    answers: ["cobalt"],
+  }));
+  const latency = 100;
+  const dirs = await benchDirs("speed");
+  const base = { offline: true, questions, mockLatencyMs: latency, answersDir: dirs.answersDir, judgeCacheDir: dirs.judgeCacheDir };
+  const startedSerial = performance.now();
+  await runBench({ ...base, phase: "all", concurrency: 1, judgeCacheDir: join(dirs.root, "judge-serial") });
+  const serial = performance.now() - startedSerial;
+  const startedSplit = performance.now();
+  await runBench({ ...base, phase: "answer", concurrency: 8, output: join(dirs.root, "answers.json") });
+  await runBench({
+    ...base,
+    phase: "judge",
+    concurrency: 8,
+    resume: join(dirs.root, "answers.json"),
+    judgeCacheDir: join(dirs.root, "judge-split"),
+  });
+  const split = performance.now() - startedSplit;
+  assert.ok(serial > 20 * latency, `serial run too fast to measure: ${serial}ms`);
+  assert.ok(split < serial * 0.4, `split phases ${split.toFixed(0)}ms vs serial ${serial.toFixed(0)}ms`);
+});
+
+test("caches_never_enter_evidence_and_hold_no_secret", async () => {
+  const { readFile, readdir, stat } = await import("node:fs/promises");
+  const dirs = await benchDirs("cache-secret");
+  const report = await runBench({
+    offline: true,
+    maxQuestions: 1,
+    phase: "answer",
+    answersDir: dirs.answersDir,
+    judgeCacheDir: dirs.judgeCacheDir,
+    output: join(dirs.root, "checkpoint.json"),
+  });
+  assert.ok(report.results[0].answerKey);
+  for (const file of await readdir(dirs.answersDir)) {
+    assert.equal((await stat(join(dirs.answersDir, file))).mode & 0o777, 0o600, "answer cache must be private");
+  }
+  const checkpoint = await readFile(join(dirs.root, "checkpoint.json"), "utf8");
+  const rendered = await readFile(join(dirs.root, "checkpoint.md"), "utf8");
+  for (const text of [checkpoint, rendered]) {
+    assert.ok(!/cobalt/.test(text), "no answer text in a report");
+    assert.ok(!/OPENCODE|API_KEY|Bearer/.test(text), "no credential in a report");
+  }
+  // The caches live under the gitignored `.cache/` tree, never under the evidence directory.
+  assert.match(await readFile(new URL("../../.gitignore", import.meta.url), "utf8"), /^\/\.cache\/$/m);
+  assert.ok(dirs.answersDir.includes(tmpdir()));
+});
+
+// --- Plan 188.9 Task 4: reuse and the write-side cache ---------------------------------------
+
+test("reuse_copies_only_on_matching_fingerprint_and_refuses_otherwise", async () => {
+  const { writeReport } = await import("./report.mjs");
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-reuse-"));
+  const source = join(dir, "source.json");
+  const first = await runBench({ offline: true, output: join(dir, "checkpoint.json") });
+  await writeReport(first, source);
+  assert.match(first.runPathFingerprint ?? "", /^[a-f0-9]{64}$/);
+
+  const reused = await runBench({ offline: true, reuseFrom: source });
+  assert.equal(reused.status, "completed");
+  assert.equal(reused.inputTokens, 0, "reuse charges nothing");
+  assert.ok(reused.results.every((row) => row.reused === true));
+  assert.equal(reused.results.length, first.results.length);
+  assert.deepEqual(
+    reused.results.map((row) => row.correct),
+    first.results.map((row) => row.correct),
+  );
+  assert.equal(reused.reusedFrom.fingerprint, first.runPathFingerprint);
+
+  await assert.rejects(
+    () => runBench({ offline: true, config: "fabric", reuseFrom: source }),
+    /MemoryBenchReuseMismatch: run-path fingerprint differs/,
+  );
+  const fallback = await runBench({ offline: true, config: "fabric", reuseFrom: source, reuseFallback: "run" });
+  assert.equal(fallback.status, "completed");
+  assert.match(fallback.reuseRefusal ?? "", /MemoryBenchReuseMismatch/);
+  assert.ok(fallback.inputTokens > 0, "a refused reuse runs the arm instead of claiming a score");
+
+  // A completed arm is required, and a partial checkpoint is never reused.
+  const partial = await runBench({ offline: true, maxQuestions: 3, output: join(dir, "partial.json") });
+  await writeReport(partial, join(dir, "partial.json"));
+  await assert.rejects(() => runBench({ offline: true, reuseFrom: join(dir, "partial.json") }), /source is partial/);
+});
+
+test("missing_write_side_snapshot_fails_closed", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-write-"));
+  await assert.rejects(
+    () => runBench({ offline: true, config: "fabric", maxQuestions: 1, seedSnapshot: join(dir, "absent") }),
+    /MemoryBenchWriteSideMissing/,
+  );
+  // A snapshot directory that exists but lacks the question still fails, and is never re-ingested.
+  await mkdir(join(dir, "empty"), { recursive: true });
+  await assert.rejects(
+    () => runBench({ offline: true, config: "fabric", maxQuestions: 1, seedSnapshot: join(dir, "empty") }),
+    /MemoryBenchWriteSideMissing/,
+  );
+});
+
+test("write_side_snapshot_round_trips_and_keys_every_input", async () => {
+  const { readdir, readFile, stat } = await import("node:fs/promises");
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-snapshot-"));
+  const produced = await runBench({ offline: true, config: "fabric", maxQuestions: 1, writeSnapshot: dir });
+  const entries = await readdir(dir);
+  assert.equal(entries.length, 1);
+  const snapshot = join(dir, entries[0]);
+  assert.ok((await stat(join(snapshot, "notes"))).isDirectory());
+
+  const seeded = await runBench({ offline: true, config: "fabric", maxQuestions: 1, seedSnapshot: dir });
+  assert.equal(seeded.status, produced.status);
+  assert.equal(seeded.results.length, 1);
+  // The read side reads the ingester's store: the same note files are present after seeding.
+  const files = (await readdir(join(snapshot, "notes"), { recursive: true })).filter((file) => String(file).endsWith(".md"));
+  assert.ok(files.length > 0);
+  assert.ok((await readFile(join(snapshot, "notes", String(files[0])), "utf8")).length > 0);
+
+  const { writeSideKey, writeSideCacheDir } = await import("./acceptance.mjs");
+  const base = {
+    config: "fabric-xc",
+    dataset: "longmemeval-s@98d7416c",
+    productHash: "a".repeat(64),
+    extractorModel: "opencode-go/mimo-v2.5",
+    generation: "temperature=0;maxTokens=4096",
+    promptTemplateHash: "b".repeat(64),
+    ingestHash: "c".repeat(64),
+  };
+  const key = writeSideKey(base);
+  assert.match(key, /^[a-f0-9]{64}$/);
+  assert.equal(writeSideKey({ ...base }), key);
+  for (const [field, value] of [
+    ["config", "fabric-x"],
+    ["dataset", "locomo@x"],
+    ["productHash", "d".repeat(64)],
+    ["extractorModel", "other/model"],
+    ["generation", "temperature=1;maxTokens=4096"],
+    ["promptTemplateHash", "e".repeat(64)],
+    ["ingestHash", "f".repeat(64)],
+  ])
+    assert.notEqual(writeSideKey({ ...base, [field]: value }), key, `${field} must change the key`);
+  assert.throws(() => writeSideKey({ ...base, productHash: "" }), /productHash is required/);
+  assert.match(await writeSideCacheDir(), /^[a-f0-9]{64}$/);
+  assert.notEqual(await writeSideCacheDir({ config: "fabric-x" }), await writeSideCacheDir({ config: "fabric-xc" }));
+});
+
+test("fabric_x_exchanges_match_session_rounds", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const fixture = (await import("./fixtures/synthetic.json", { with: { type: "json" } })).default;
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-x-"));
+  const report = await runBench({ offline: true, config: "fabric-x", maxQuestions: 1, phase: "write", writeSnapshot: dir });
+  assert.equal(report.ingestion, "product-per-session", "the x arm ingests through the product write path");
+  assert.equal(report.results[0].outcome, "ingested");
+  const [snapshotId] = await readdir(dir);
+  const root = join(dir, snapshotId, "notes");
+  const files = (await readdir(root, { recursive: true }))
+    .map(String)
+    .filter((file) => file.includes("/exchanges/") && file.endsWith(".md"));
+  const raw = fixture.questions[0];
+  const sessions = causalSessions({
+    ...raw,
+    sessions: raw.sessions ?? fixture.sessions,
+    date: raw.date ?? raw.sessions?.at(-1)?.date ?? fixture.sessions.at(-1).date,
+  });
+  const rounds = sessions.flatMap((session, index) => sessionRounds(session, index));
+  assert.equal(files.length, rounds.length, "one exchange note per haystack round (the fixture has no tool payloads)");
+  const matched = new Set();
+  for (const file of files) {
+    const text = await readFile(join(root, file), "utf8");
+    const body = text
+      .split(/\n---\n/)
+      .at(-1)
+      .trim();
+    const round = rounds.find((candidate) => {
+      const user = candidate.messages.find((message) => message.role === "user");
+      const assistant = candidate.messages.find((message) => message.role === "assistant");
+      return user !== undefined && assistant !== undefined && body === `user: ${user.text}\n\nassistant: ${assistant.text}`;
+    });
+    assert.ok(round, `archived exchange text is the round's user and assistant text: ${body.slice(0, 60)}`);
+    const sources = JSON.parse(/^sources: (\[.*\])$/m.exec(text)[1]).map((source) => source.id);
+    const user = round.messages.find((message) => message.role === "user");
+    const assistant = round.messages.find((message) => message.role === "assistant");
+    assert.deepEqual(sources, [`source:${user.id}`, `source:${assistant.id}`], "source ids are the session entries of the round");
+    matched.add(round.id);
+  }
+  assert.equal(matched.size, rounds.length);
+  // The producer's index is what a read-side arm uses: every archived note maps to its round.
+  const index = JSON.parse(await readFile(join(dir, snapshotId, "exchange-rounds.json"), "utf8"));
+  assert.deepEqual(new Set(Object.values(index)), new Set(rounds.map((round) => round.id)));
+});
+
+test("xc_runs_one_consolidate_per_haystack_session", async () => {
+  const state = benchState();
+  const calls = [];
+  const base = mockProvider(state);
+  const provider = {
+    id: "mock",
+    async *generate(request) {
+      const names = request.tools?.map((tool) => tool.name) ?? [];
+      if (names.includes("record_notes")) {
+        calls.push(request);
+        // A valid answer: one call per session, no shape repair.
+        yield providerToolCall(toolCallContent("n1", "record_notes", { notes: [] }));
+        return;
+      }
+      yield* base.generate(request);
+    },
+  };
+  const result = await replay(
+    {
+      ...retryQuestion,
+      sessions: [
+        {
+          id: "s1",
+          date: "2024-01-01T00:00:00.000Z",
+          messages: [
+            { id: "m1", role: "user", text: "The project color is cobalt." },
+            { id: "m1a", role: "assistant", text: "Noted." },
+          ],
+        },
+        {
+          id: "s2",
+          date: "2024-01-02T00:00:00.000Z",
+          messages: [
+            { id: "m2", role: "user", text: "The project color is cobalt now." },
+            { id: "m2a", role: "assistant", text: "Still cobalt." },
+          ],
+        },
+      ],
+    },
+    { config: "fabric-xc", suite: "longmemeval-s", offline: true, modelConfig: { provider: "mock", model: "m" }, inputCap: 128000 },
+    [provider],
+    state,
+  );
+  assert.equal(calls.length, 2, "one extractor call per haystack session, not per turn");
+  assert.equal(result.ingest.sessions, 2);
+  assert.equal(result.ingest.consolidationFailures, 0);
+  assert.equal(result.storage.fabric, "disposable");
+});
+
+test("read_side_refuses_without_write_snapshot", async () => {
+  const { writeSideUnavailable, orderJobs } = await import("./campaign.mjs");
+  const { assertJobDependencies } = await import("./acceptance.mjs");
+  const jobs = [
+    { id: "read", suite: "longmemeval-s", config: "fabric-xc-agentic", writeSide: "write" },
+    { id: "write", suite: "longmemeval-s", config: "fabric-xc" },
+  ];
+  assert.doesNotThrow(() => assertJobDependencies(jobs));
+  assert.deepEqual(
+    orderJobs(jobs).map((job) => job.id),
+    ["write", "read"],
+  );
+  const read = jobs[0];
+  assert.equal(writeSideUnavailable(read, { producer: { status: "completed" }, snapshotPresent: true }), false);
+  assert.equal(writeSideUnavailable(read, { producer: undefined, snapshotPresent: true }), true);
+  assert.equal(writeSideUnavailable(read, { producer: { status: "failed" }, snapshotPresent: true }), true);
+  assert.equal(writeSideUnavailable(read, { producer: { status: "completed" }, snapshotPresent: false }), true);
+  assert.equal(writeSideUnavailable(jobs[1], { producer: undefined, snapshotPresent: false }), false, "a producer has no write side");
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-xc-read-"));
+  await assert.rejects(
+    () => runBench({ offline: true, config: "fabric-xc-agentic", maxQuestions: 1, seedSnapshot: join(dir, "absent") }),
+    /MemoryBenchWriteSideMissing/,
+  );
+});
+
+test("legacy_direct_ingest_is_labelled_in_report", async () => {
+  const legacy = await runBench({ offline: true, config: "fabric", maxQuestions: 1 });
+  assert.equal(legacy.ingestion, "legacy-direct-ingest");
+  const product = await runBench({ offline: true, config: "fabric-x", maxQuestions: 1 });
+  assert.equal(product.ingestion, "product-per-session");
+  const plain = await runBench({ offline: true, config: "full", maxQuestions: 1 });
+  assert.equal(plain.ingestion, "none");
+});
+
+test("ingestion_respects_causal_cutoff", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "memory-bench-causal-"));
+  const question = {
+    id: "causal-cutoff",
+    ability: "knowledge-update",
+    question: "What color is the project?",
+    answers: ["amber"],
+    date: "2024-01-02T00:00:00.000Z",
+    sessions: [
+      {
+        id: "s1",
+        date: "2024-01-01T00:00:00.000Z",
+        messages: [
+          { id: "u1", role: "user", text: "The project color is amber." },
+          { id: "a1", role: "assistant", text: "Noted." },
+        ],
+      },
+      {
+        id: "s2",
+        date: "2024-01-03T00:00:00.000Z",
+        messages: [
+          { id: "u2", role: "user", text: "The project color is now cobalt." },
+          { id: "a2", role: "assistant", text: "Updated." },
+        ],
+      },
+    ],
+    oracle: { answer: "cobalt", sessions: [] },
+    hasAnswer: true,
+  };
+  const report = await runBench({
+    offline: true,
+    config: "fabric-x",
+    questions: [question],
+    maxQuestions: 1,
+    phase: "write",
+    writeSnapshot: dir,
+  });
+  assert.equal(report.results[0].ingest.sessions, 1, "only the session dated at or before the question");
+  const text = await (await import("node:fs/promises")).readFile(join(dir, "causal-cutoff", "exchange-rounds.json"), "utf8");
+  assert.equal(Object.keys(JSON.parse(text)).length, 1);
+  const { readdir: listFiles, readFile: readText } = await import("node:fs/promises");
+  const notes = join(dir, "causal-cutoff", "notes");
+  const files = (await listFiles(notes, { recursive: true })).map(String).filter((file) => file.includes("/exchanges/"));
+  const written = await Promise.all(files.map((file) => readText(join(notes, file), "utf8")));
+  assert.ok(
+    written.every((body) => !body.includes("now cobalt")),
+    "a future session never enters the store",
+  );
+});
+
+test("offline_smoke_covers_new_configs", async () => {
+  for (const config of ["fabric-x", "fabric-xc", "fabric-xc-agentic"]) {
+    const report = await runBench({ offline: true, config, maxQuestions: 1 });
+    assert.equal(report.results.length, 1, config);
+    assert.equal(report.ingestion, "product-per-session", config);
+    assert.equal(report.memoryConfig.fabric.exchanges.enabled, true, `${config} archives exchanges`);
+    assert.equal(report.memoryConfig.fabric.promote.enabled, config !== "fabric-x", `${config} promotion`);
+    const inject = report.memoryConfig.fabric.inject;
+    assert.deepEqual(
+      inject === false ? false : inject.kinds,
+      config === "fabric-xc-agentic" ? false : config === "fabric-x" ? ["exchange"] : ["fact", "exchange"],
+    );
+  }
+});
+
+test("fabric_x_delivery_diagnostic_describes_the_product_store", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const product = JSON.parse(await readFile("docs/_evidence/memory-bench/188.9/delivery-development-fabric-x.json", "utf8"));
+  const direct = JSON.parse(await readFile("docs/_evidence/memory-bench/188.9/delivery-development.json", "utf8"));
+  assert.equal(product.storeSource, "product-snapshot");
+  assert.equal(product.injectionRenderer, "excerpt");
+  assert.equal(product.questions, 140);
+  assert.equal(direct.questions, 140);
+  // The exchange store carries the assistant reply (and no date prefix) instead of an episode
+  // round, so stages move by a few questions; a large drift means the product write path changed.
+  const before = direct.summary.byStage;
+  const after = product.summary.byStage;
+  const stages = new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const stage of stages) assert.ok(Math.abs((before[stage] ?? 0) - (after[stage] ?? 0)) <= 4, `${stage} drifted`);
+  const directReached = direct.rows.filter((row) => row.candidateGold > 0).length;
+  const productReached = product.rows.filter((row) => row.candidateGold > 0).length;
+  assert.ok(Math.abs(directReached - productReached) <= 6, "the product store recalls the labelled evidence about as often");
+});
+
+test("screen_v1_draw_is_deterministic_and_stratified", async () => {
+  const { drawScreenV1 } = await import("./datasets.mjs");
+  const screen = (await import("./screen-v1.json", { with: { type: "json" } })).default;
+  const drawn = drawScreenV1();
+  assert.deepEqual(drawn, screen.abilities, "the committed draw matches the frozen salt");
+  assert.deepEqual(drawScreenV1(), drawn);
+  const confirmatory = (await import("./confirmatory.json", { with: { type: "json" } })).default;
+  const heldout = (await import("./heldout-v2.json", { with: { type: "json" } })).default;
+  const devIds = new Set(Object.values(confirmatory.abilities).flat());
+  const heldIds = new Set(Object.values(heldout.abilities).flat());
+  assert.equal(Object.keys(drawn).length, 7);
+  for (const [ability, ids] of Object.entries(drawn)) {
+    assert.equal(ids.length, 5, `${ability} needs five ids`);
+    assert.equal(new Set(ids).size, 5);
+    for (const id of ids) {
+      assert.ok(devIds.has(id), `${id} is a development id`);
+      assert.ok(!heldIds.has(id), `${id} must not be held out`);
+    }
+  }
+  assert.equal(new Set(Object.values(drawn).flat()).size, 35);
+});
+
+// --- Plan 188.10 Task 2: held-out v3 and the multi-session development screen -----------------
+
+test("heldout_v3_draw_is_label_blind_and_frozen", async () => {
+  const { createHash } = await import("node:crypto");
+  const { drawHeldoutV3, HELDOUT_V3_SALT, HELDOUT_V3_STRATA } = await import("./datasets.mjs");
+  const heldout = (await import("./heldout-v3.json", { with: { type: "json" } })).default;
+  const rows = Object.keys(HELDOUT_V3_STRATA).flatMap((ability) =>
+    Array.from({ length: 50 }, (_, i) => ({
+      id: `${ability}-${i}`,
+      ability,
+      question: `question ${i}`,
+      answers: [`answer ${i}`],
+      sessions: [{ messages: [{ text: `PRIVATE_${i}` }] }],
+    })),
+  );
+  const drawn = drawHeldoutV3(rows);
+  const hash = (id) => createHash("sha256").update(`${HELDOUT_V3_SALT}:${id}`).digest("hex");
+  assert.deepEqual(Object.keys(drawn), Object.keys(HELDOUT_V3_STRATA));
+  for (const [ability, size] of Object.entries(HELDOUT_V3_STRATA)) {
+    const expected = rows
+      .filter((row) => row.ability === ability)
+      .map((row) => row.id)
+      .sort((a, b) => hash(a).localeCompare(hash(b)))
+      .slice(0, size);
+    assert.deepEqual(drawn[ability], expected, `${ability} is salted and ascending`);
+  }
+  // Label-blind: answers, questions and haystacks never reach the draw.
+  const mutated = rows.map((row) => ({ ...row, question: "mutated", answers: ["mutated"], sessions: [], answerSessionIds: ["x"] }));
+  assert.deepEqual(drawHeldoutV3(mutated), drawn);
+  assert.deepEqual(drawHeldoutV3([...rows].reverse()), drawn);
+  // Short stratum: 39 multi-session candidates cannot fill 40.
+  assert.throws(() => drawHeldoutV3(rows.filter((row) => row.ability !== "multi-session" || Number(row.id.split("-").at(-1)) > 10)), {
+    name: "MemoryBenchDatasetError",
+  });
+  // The frozen file is a hash chain over the same facts, with the residual pool that bounds it.
+  assert.equal(heldout.seed, HELDOUT_V3_SALT);
+  assert.equal(heldout.datasetSha256.length, 64);
+  assert.deepEqual(heldout.exclusions, ["base", "targeted", "confirmatory", "heldout-v2"]);
+  assert.deepEqual(heldout.residualPool, {
+    "multi-session": 71,
+    "knowledge-update": 22,
+    "temporal-reasoning": 77,
+    "single-session-user": 14,
+    "single-session-assistant": 6,
+  });
+  const ids = Object.values(heldout.abilities).flat().sort();
+  assert.equal(ids.length, 100);
+  assert.equal(heldout.idsHash, createHash("sha256").update(JSON.stringify(ids)).digest("hex"));
+  const { fileHash, ...rest } = heldout;
+  assert.equal(fileHash, createHash("sha256").update(JSON.stringify(rest)).digest("hex"));
+  // A different salt draws different ids, so the frozen file hash no longer describes the draw.
+  assert.notEqual(
+    createHash("sha256")
+      .update(JSON.stringify({ ...rest, seed: "prism-188.10-memory-bench-v4" }))
+      .digest("hex"),
+    fileHash,
+  );
+});
+
+test("heldout_v3_excludes_every_prior_partition", async () => {
+  const { selectQuestions } = await import("./datasets.mjs");
+  const heldout = (await import("./heldout-v3.json", { with: { type: "json" } })).default;
+  const confirmatory = (await import("./confirmatory.json", { with: { type: "json" } })).default;
+  const prior = (await import("./heldout-v2.json", { with: { type: "json" } })).default;
+  const ids = Object.values(heldout.abilities).flat();
+  const development = new Set(Object.values(confirmatory.abilities).flat());
+  const v2 = new Set(Object.values(prior.abilities).flat());
+  const excluded = new Set([
+    ...Object.values(subsets.longmemeval.base).flat(),
+    ...Object.values(subsets.longmemeval.targeted).flat(),
+    ...development,
+  ]);
+  assert.equal(ids.length, 100);
+  assert.equal(new Set(ids).size, 100);
+  assert.ok(
+    ids.every((id) => !excluded.has(id)),
+    "no base, targeted or development id",
+  );
+  // The v3 manifest refuses a development or prior held-out id.
+  assert.ok(ids.every((id) => !development.has(id) && !v2.has(id)));
+  const rows = ids.map((id) => ({ id }));
+  assert.equal(selectQuestions(rows, "longmemeval-s", { subset: "heldout-v3" }).length, 100);
+  assert.throws(() => selectQuestions(rows.slice(1), "longmemeval-s", { subset: "heldout-v3" }), /Pinned subset/);
+});
+
+test("screen_ms_v1_is_development_only_and_refuses_v3", async () => {
+  const { createHash } = await import("node:crypto");
+  const { drawScreenMsV1, SCREEN_MS_V1_SALT, SCREEN_MS_V1_DEVELOPMENT_COUNT } = await import("./datasets.mjs");
+  const screen = (await import("./screen-ms-v1.json", { with: { type: "json" } })).default;
+  const drawn = drawScreenMsV1();
+  assert.deepEqual(drawn, screen.abilities, "the committed draw matches the frozen salt");
+  assert.deepEqual(drawScreenMsV1(), drawn);
+  assert.equal(screen.salt, SCREEN_MS_V1_SALT);
+  assert.equal(screen.developmentOnly, true);
+  const confirmatory = (await import("./confirmatory.json", { with: { type: "json" } })).default;
+  const prior = (await import("./heldout-v2.json", { with: { type: "json" } })).default;
+  const heldout = (await import("./heldout-v3.json", { with: { type: "json" } })).default;
+  const v1 = (await import("./screen-v1.json", { with: { type: "json" } })).default;
+  const development = new Set([
+    ...Object.values(confirmatory.abilities).flat(),
+    ...Object.values(subsets.longmemeval.targeted).flat(),
+    ...Object.values(prior.abilities).flat(),
+  ]);
+  const live = new Set(Object.values(heldout.abilities).flat());
+  const ids = Object.values(drawn).flat();
+  assert.equal(ids.length, 60);
+  assert.equal(new Set(ids).size, 60);
+  assert.ok(
+    ids.every((id) => development.has(id)),
+    "every screen id is development data",
+  );
+  assert.ok(
+    ids.every((id) => !live.has(id)),
+    "the screen never touches the held-out v3 draw",
+  );
+  // Multi-session: all 20 prior held-out ids, then a fresh 10 from the development pool.
+  const multi = drawn["multi-session"];
+  assert.equal(multi.length, 30);
+  assert.deepEqual(multi.slice(0, 20), prior.abilities["multi-session"]);
+  const pool = new Set(subsets.longmemeval.targeted["multi-session"]);
+  const fresh = multi.slice(20);
+  assert.equal(fresh.length, SCREEN_MS_V1_DEVELOPMENT_COUNT);
+  assert.ok(fresh.every((id) => pool.has(id) && !prior.abilities["multi-session"].includes(id)));
+  // The other six abilities are screen-v1's 30 non-multi-session ids, five each.
+  for (const [ability, list] of Object.entries(v1.abilities)) {
+    if (ability === "multi-session") continue;
+    assert.deepEqual(drawn[ability], list);
+  }
+  const sorted = ids.slice().sort();
+  assert.equal(screen.idsHash, createHash("sha256").update(JSON.stringify(sorted)).digest("hex"));
+  const { fileHash, ...rest } = screen;
+  assert.equal(fileHash, createHash("sha256").update(JSON.stringify(rest)).digest("hex"));
+  const rows = ids.map((id) => ({ id }));
+  assert.equal(selectQuestions(rows, "longmemeval-s", { subset: "screen-ms-v1" }).length, 60);
+  assert.throws(() => selectQuestions(rows.slice(1), "longmemeval-s", { subset: "screen-ms-v1" }), /Pinned subset/);
+});
+
+/**
+ * A two-session fixture whose product store holds one superseded fact and one active fact, so the
+ * multi-session diagnostic is exercised end to end against the same code the CLI runs.
+ */
+async function multiSessionFixture({ instances = false } = {}) {
+  const { createMarkdownMemoryStores } = await import("@arnilo/prism-memory-core/fabric");
+  const { createMemory, createMemoryFabric, resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-fabric");
+  const { BENCH_SCOPE } = await import("./bench-scope.mjs");
+  const { EXCHANGE_ROUNDS_FILE } = await import("./replay.mjs");
+  const dir = await mkdtemp(join(tmpdir(), "prism-ms-diagnostics-"));
+  const question = {
+    id: instances ? "q-ms-instances" : "q-ms-1",
+    ability: "multi-session",
+    question: instances ? "Which doctors has the user seen?" : "Which coffee brand does the user keep buying?",
+    date: "2024-03-10",
+    evidence: ["m-old", "m-new"],
+    answerSessionIds: ["s1", "s2"],
+    sessions: [
+      {
+        id: "s1",
+        date: "2024-01-02",
+        messages: [
+          {
+            id: "m-old",
+            role: "user",
+            text: instances ? "I saw a doctor, Dr. Patel, about a rash." : "I buy Sourceless Roasters coffee every week.",
+            hasAnswer: true,
+          },
+        ],
+      },
+      {
+        id: "s2",
+        date: "2024-02-05",
+        messages: [
+          {
+            id: "m-new",
+            role: "user",
+            text: instances ? "I saw a doctor, Dr. Ruiz, about chest pain." : "I switched to Blackwater Coffee now.",
+            hasAnswer: true,
+          },
+        ],
+      },
+      {
+        id: "s3",
+        date: "2024-03-01",
+        messages: [
+          { id: "m-weather", role: "user", text: "The weather is grey today." },
+          { id: "m-reply", role: "assistant", text: "Grey indeed." },
+        ],
+      },
+    ],
+  };
+  const rounds = question.sessions.flatMap((session, index) => sessionRounds(session, index));
+  const questionRoot = join(dir, encodeURIComponent(question.id));
+  const stores = await createMarkdownMemoryStores({ root: join(questionRoot, "notes") });
+  const memory = createMemory({ ...BENCH_SCOPE, vectorStore: stores.vectorStore, workingStore: stores.workingStore });
+  const config = resolveMemoryFabricConfig({ retrieval: "lexical", inject: { query: "task", kinds: ["fact", "exchange"] } });
+  const { scopes: _scopes, tools: _tools, store: _store, ...fabricOptions } = config;
+  const fabric = createMemoryFabric({ memory, vectorStore: stores.vectorStore, ...fabricOptions });
+  const exchangeRounds = {};
+  const exchangeIdByRound = {};
+  for (const round of rounds) {
+    const note = await fabric.remember({ kind: "exchange", content: round.text, scope: "project" });
+    exchangeRounds[note.id] = round.id;
+    exchangeIdByRound[round.id] = note.id;
+  }
+  const link = (roundId) => [{ id: exchangeIdByRound[roundId], relation: "evidence" }];
+  const oldFact = await fabric.remember({
+    kind: "fact",
+    // Plan 188.10 Task 6: the instance variant carries category keywords and no key at all.
+    content: instances ? "The user saw a dermatologist, Dr. Patel, about a rash." : "Coffee brand: Sourceless Roasters.",
+    scope: "project",
+    ...(instances ? { keywords: ["doctor", "health", "appointment"] } : { key: "coffee.brand" }),
+    tRef: "2024-01-02T00:00:00.000Z",
+    links: link("s1-r0"),
+  });
+  await fabric.remember({
+    kind: "fact",
+    content: instances ? "The user saw a cardiologist, Dr. Ruiz, about chest pain." : "Coffee brand: Blackwater.",
+    scope: "project",
+    ...(instances ? { keywords: ["doctor", "health", "appointment"] } : { key: "coffee.brand", supersedes: oldFact.id }),
+    tRef: "2024-02-05T00:00:00.000Z",
+    links: link("s2-r0"),
+  });
+  await stores.close();
+  await writeFile(join(questionRoot, EXCHANGE_ROUNDS_FILE), JSON.stringify(exchangeRounds));
+  return { dir, question };
+}
+
+test("fabric_x_tools_keeps_memory_tools_and_injection", async () => {
+  const { isToolsConfig, memoryConfigs } = await import("./ablations.mjs");
+  // Plan 188.10 Task 4: the product's shape is passive injection *and* tools; agentic is tools only.
+  assert.equal(isToolsConfig("fabric-x-tools"), true);
+  assert.equal(isToolsConfig("fabric-xc-tools"), true);
+  assert.equal(isToolsConfig("fabric-xc-agentic"), true);
+  // `replay.mjs` strips `memory.*` only when this is false.
+  for (const config of ["fabric-x", "fabric-xc", "fabric", "fabric-hybrid", "om+fabric"])
+    assert.equal(isToolsConfig(config), false, `${config} keeps the shipped no-tools passive shape`);
+  const x = memoryConfigs({ config: "fabric-x-tools" });
+  assert.deepEqual(x.fabric.inject, { query: "task", kinds: ["exchange"] });
+  assert.equal(x.fabric.promote, undefined, "fabric-x-tools is the exchange store's local write side");
+  assert.deepEqual(x.fabric.exchanges, {});
+  const xc = memoryConfigs({ config: "fabric-xc-tools" });
+  assert.deepEqual(xc.fabric.inject, { query: "task", kinds: ["fact", "exchange"] });
+  assert.deepEqual(xc.fabric.promote, {}, "the xc write side promotes exchanges into facts");
+  // The agentic arm is unchanged: tools only, no passive injection.
+  assert.equal(memoryConfigs({ config: "fabric-xc-agentic" }).fabric.inject, false);
+  // The solver protocol is unchanged.
+  const { BENCH_MAX_TURNS } = await import("./replay.mjs");
+  assert.deepEqual(BENCH_MAX_TURNS, { standard: 8, coding: 250 });
+});
+
+test("bench_write_generation_does_not_change_answer_generation", async () => {
+  const { parseArgs } = await import("./run.mjs");
+  const { extractorSettings, memoryConfigs, writeGeneration } = await import("./ablations.mjs");
+  // Plan 188.10 Task 5: the extractor's budget is a write-side setting; the answer keeps 4,096.
+  const options = parseArgs(["--write-output-tokens", "8192", "--write-thinking", "low"]);
+  assert.equal(options.writeOutputTokens, 8192);
+  assert.equal(options.writeThinking, "low");
+  assert.throws(() => parseArgs(["--write-output-tokens", "128"]), /write-output-tokens/);
+  assert.throws(() => parseArgs(["--write-output-tokens", "40000"]), /write-output-tokens/);
+  assert.throws(() => parseArgs(["--write-thinking", "very-high"]), /write-thinking/);
+
+  assert.deepEqual(extractorSettings(options), { maxOutputTokens: 8192, thinkingLevel: "low" });
+  // Only an arm that promotes takes the budget: `fabric-x` has no extractor to budget.
+  assert.equal(memoryConfigs({ config: "fabric-x", ...options }).fabric.promote, undefined);
+  assert.deepEqual(memoryConfigs({ config: "fabric-xc", ...options }).fabric.promote, {
+    maxOutputTokens: 8192,
+    thinkingLevel: "low",
+  });
+  assert.deepEqual(memoryConfigs({ config: "fabric-xc" }).fabric.promote, {});
+
+  // The manifest records the write generation beside — never inside — the answer generation.
+  assert.deepEqual(writeGeneration(options), { temperature: 0, maxTokens: 8192, thinkingLevel: "low" });
+  assert.deepEqual(writeGeneration({}), { temperature: 0, maxTokens: 4096 });
+  assert.equal(writeGeneration({ offline: true }), null);
+  const report = await runBench({ offline: true, config: "fabric-xc", maxQuestions: 1, phase: "write", ...options });
+  assert.equal(report.generation, null, "offline runs record no live generation");
+  assert.equal(report.writeGeneration, null);
+});
+
+test("write_side_key_separates_extractor_budgets", async () => {
+  const { writeSideKey, writeSideCacheDir } = await import("./acceptance.mjs");
+  const base = {
+    config: "fabric-xc",
+    dataset: "longmemeval-s@98d7416c",
+    productHash: "a".repeat(64),
+    extractorModel: "opencode-go/mimo-v2.5",
+    generation: "temperature=0;maxTokens=4096",
+    promptTemplateHash: "b".repeat(64),
+    ingestHash: "c".repeat(64),
+  };
+  const key = writeSideKey(base);
+  assert.equal(writeSideKey({ ...base, writeGeneration: "temperature=0;maxTokens=4096" }), key, "the default is explicit");
+  assert.notEqual(writeSideKey({ ...base, writeGeneration: "temperature=0;maxTokens=8192;thinkingLevel=low" }), key);
+  assert.throws(() => writeSideKey({ ...base, writeGeneration: "" }), /writeGeneration is required/);
+  assert.notEqual(
+    await writeSideCacheDir({ writeGeneration: "temperature=0;maxTokens=8192" }),
+    await writeSideCacheDir({ writeGeneration: "temperature=0;maxTokens=4096" }),
+  );
+});
+
+test("multi_session_diagnostic_reports_reachability_without_text", async () => {
+  const { multiSessionDiagnostic } = await import("./retrieval-diagnostics.mjs");
+  const { rm } = await import("node:fs/promises");
+  const { dir, question } = await multiSessionFixture();
+  try {
+    const report = await multiSessionDiagnostic({ suite: "longmemeval-s", subset: "screen-ms-v1", storeFrom: dir, questions: [question] });
+    assert.equal(report.questions, 1);
+    assert.equal(report.protocol, "multi-session-recall-v1");
+    assert.equal(report.storeSource, "product-snapshot");
+    assert.equal(report.summary.neededRounds, 2);
+    assert.equal(report.summary.sessionsSpanned, 2);
+    // Both needed rounds share "coffee"/"buy" with the question.
+    assert.equal(report.summary.reachableRounds, 2);
+    assert.equal(report.summary.questionsAllReachable, 1);
+    const row = report.rows[0];
+    assert.deepEqual(
+      row.rounds.map((round) => round.id),
+      ["s1-r0", "s2-r0"],
+    );
+    assert.ok(row.rounds.every((round) => round.reachable && Number.isInteger(round.rank) && round.rank >= 1));
+    assert.deepEqual(row.allNeededAt, { 10: true, 20: true, uncapped: true });
+    assert.equal(row.allNeededVisible, true);
+    assert.equal(report.summary.passiveVisible, 1);
+    assert.equal(report.summary.partialEvidence, 0);
+    // Text-free: ids, ranks, counts and booleans only.
+    const text = JSON.stringify(report);
+    for (const secret of ["Sourceless", "Blackwater", "coffee", "weather", "Grey indeed", question.question])
+      assert.ok(!text.includes(secret), `no question, note or fact text: ${secret}`);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("supersession_loss_counts_needed_round_whose_fact_is_superseded", async () => {
+  const { multiSessionDiagnostic } = await import("./retrieval-diagnostics.mjs");
+  const { rm } = await import("node:fs/promises");
+  const { dir, question } = await multiSessionFixture();
+  try {
+    const report = await multiSessionDiagnostic({ suite: "longmemeval-s", subset: "screen-ms-v1", storeFrom: dir, questions: [question] });
+    // Two links, one per needed round; only the newer keyed instance is active.
+    assert.equal(report.summary.facts.linkedRounds, 2);
+    assert.equal(report.summary.facts.activeRounds, 1);
+    assert.equal(report.summary.facts.supersessionLostRounds, 1);
+    assert.equal(report.summary.facts.factsPerNeededRound, 1);
+    const [older, newer] = report.rows[0].rounds;
+    assert.deepEqual([older.activeFacts, older.supersededFacts], [0, 1]);
+    assert.deepEqual([newer.activeFacts, newer.supersededFacts], [1, 0]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("instance_facts_leave_no_supersession_loss", async () => {
+  const { multiSessionDiagnostic } = await import("./retrieval-diagnostics.mjs");
+  const { rm } = await import("node:fs/promises");
+  const { dir, question } = await multiSessionFixture({ instances: true });
+  try {
+    const report = await multiSessionDiagnostic({ suite: "longmemeval-s", subset: "screen-ms-v1", storeFrom: dir, questions: [question] });
+    // Plan 188.10 Task 6: two visits, two notes; the instance rule keeps the first one active.
+    assert.equal(report.summary.neededRounds, 2);
+    assert.equal(report.summary.reachableRounds, 2, "the category word reaches both rounds");
+    assert.equal(report.summary.facts.activeRounds, 2, "each instance is its own covering fact");
+    assert.equal(report.summary.facts.supersessionLostRounds, 0, "an un-keyed instance supersedes nothing");
+    assert.equal(report.summary.facts.factsPerNeededRound, 1);
+    assert.deepEqual(
+      report.rows[0].rounds.map((round) => [round.activeFacts, round.supersededFacts]),
+      [
+        [1, 0],
+        [1, 0],
+      ],
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("multi_session_diagnostic_refuses_heldout_v3_and_a_missing_snapshot", async () => {
+  const { multiSessionDiagnostic } = await import("./retrieval-diagnostics.mjs");
+  await assert.rejects(
+    multiSessionDiagnostic({ suite: "longmemeval-s", subset: "heldout-v3", storeFrom: "/nonexistent" }),
+    MemoryBenchDatasetError,
+  );
+  await assert.rejects(
+    multiSessionDiagnostic({ suite: "longmemeval-s", subset: "screen-ms-v1", storeFrom: join(tmpdir(), "prism-no-such-snapshot") }),
+    /no product store snapshot/,
+  );
+  await assert.rejects(multiSessionDiagnostic({ suite: "longmemeval-s", subset: "screen-ms-v1" }), /needs --store-from/);
+});
+
+test("runner_accepts_the_two_new_longmemeval_subsets", async () => {
+  const { spawnSync } = await import("node:child_process");
+  for (const subset of ["heldout-v3", "screen-ms-v1"]) {
+    const run = spawnSync(process.execPath, ["scripts/memory-bench/run.mjs", "--suite", "longmemeval-s", "--subset", subset], {
+      encoding: "utf8",
+    });
+    assert.notEqual(run.status, 0);
+    assert.doesNotMatch(`${run.stdout}${run.stderr}`, /invalid subset/, `${subset} is a known subset`);
+    assert.match(`${run.stdout}${run.stderr}`, /provider, model and judge required/, "validation reaches the provider check");
+  }
+  const bad = spawnSync(process.execPath, ["scripts/memory-bench/run.mjs", "--suite", "longmemeval-s", "--subset", "heldout-v4"], {
+    encoding: "utf8",
+  });
+  assert.match(`${bad.stdout}${bad.stderr}`, /invalid subset/);
+});
+
+test("diagnostics_refuse_heldout_v3", async () => {
+  const { diagnoseRetrieval } = await import("./retrieval-diagnostics.mjs");
+  // Refusal happens before any dataset read.
+  await assert.rejects(ceilingScan({ suite: "longmemeval-s", subset: "heldout-v3" }), MemoryBenchDatasetError);
+  await assert.rejects(diagnoseRetrieval({ suite: "longmemeval-s", subset: "heldout-v3" }), MemoryBenchDatasetError);
+});
+
+// --- Plan 188.9 Task 5: evidence-sized delivery ---------------------------------------------
+
+test("defaults_match_pre_registered_grid_choice", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { chooseDeliveryDefaults, INJECT_DEFAULTS } = await import("./retrieval-diagnostics.mjs");
+  const { memoryFabricConfigSchema } = await import("../../packages/memory/fabric/src/config.ts");
+  const report = JSON.parse(await readFile("docs/_evidence/memory-bench/188.9/ceiling-development.json", "utf8"));
+  const chosen = chooseDeliveryDefaults(report);
+  assert.deepEqual(chosen, INJECT_DEFAULTS);
+  assert.deepEqual(chosen, { budgetTokens: 4000, topK: 12, minSimilarity: 0.2 });
+  // The schema's declared defaults are the same cell, so a caller reading the schema sees the truth.
+  const inject = memoryFabricConfigSchema.properties.inject.anyOf[1].properties;
+  assert.deepEqual(
+    {
+      budgetTokens: inject.budgetTokens.default,
+      topK: inject.topK.default,
+      minSimilarity: inject.minSimilarity.default,
+    },
+    chosen,
+  );
+  // Rejected neighbours are still in the evidence: the chosen cell is not the cheapest, but no 4k cell
+  // delivers more evidence, and the next step up costs more than a third again.
+  const cell = (budgetTokens, topK, minSimilarity) =>
+    report.cells.find(
+      (row) => row.budgetTokens === budgetTokens && row.topK === topK && row.minSimilarity === minSimilarity && row.renderer === "excerpt",
+    );
+  const abilities = ["knowledge-update", "multi-session", "temporal-reasoning", "single-session-user", "single-session-assistant"];
+  const s = (row) => abilities.reduce((sum, ability) => sum + row.byAbility[ability].allNeededVisible, 0);
+  assert.ok(s(cell(4000, 8, 0.2)) < s(cell(4000, 12, 0.2)));
+  assert.ok(cell(6000, 12, 0.2).tokensMean > cell(4000, 12, 0.2).tokensMean * 1.3);
 });

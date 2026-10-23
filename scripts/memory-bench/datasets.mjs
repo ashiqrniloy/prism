@@ -6,7 +6,25 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import confirmatory from "./confirmatory.json" with { type: "json" };
 import heldoutV2 from "./heldout-v2.json" with { type: "json" };
+import heldoutV3 from "./heldout-v3.json" with { type: "json" };
+import screenMsV1 from "./screen-ms-v1.json" with { type: "json" };
+import screenV1 from "./screen-v1.json" with { type: "json" };
 import subsets from "./subsets.json" with { type: "json" };
+/** Plan 188.9 Task 4 screening draw: fixed salt, five ids per LongMemEval ability. */
+export const SCREEN_V1_SALT = "prism-188.9-memory-bench-screen-v1";
+export const SCREEN_V1_IDS_PER_ABILITY = 5;
+/** Plan 188.10 Task 2 live held-out draw, and the development screen that gates it. */
+export const HELDOUT_V3_SALT = "prism-188.10-memory-bench-v3";
+export const HELDOUT_V3_STRATA = {
+  "multi-session": 40,
+  "knowledge-update": 20,
+  "temporal-reasoning": 20,
+  "single-session-user": 14,
+  "single-session-assistant": 6,
+};
+export const SCREEN_MS_V1_SALT = "prism-188.10-memory-bench-screen-ms-v1";
+export const SCREEN_MS_V1_DEVELOPMENT_COUNT = 10;
+
 export class MemoryBenchDatasetError extends Error {
   name = "MemoryBenchDatasetError";
 }
@@ -245,18 +263,85 @@ export function drawHeldoutV2(questions) {
   return abilities;
 }
 
+/**
+ * Plan 188.9 Task 4: a frozen 5-per-ability screening draw from the development (confirmatory)
+ * pool, so a screen never touches a held-out id and never depends on dataset order.
+ */
+export function drawScreenV1(abilities = confirmatory.abilities) {
+  const hash = (id) => createHash("sha256").update(`${SCREEN_V1_SALT}:${id}`).digest("hex");
+  return Object.fromEntries(
+    Object.entries(abilities).map(([ability, ids]) => [
+      ability,
+      [...ids].sort((a, b) => hash(a).localeCompare(hash(b))).slice(0, SCREEN_V1_IDS_PER_ABILITY),
+    ]),
+  );
+}
+
+/**
+ * Plan 188.10 Task 2: the live held-out draw. Every prior partition is excluded, including held-out
+ * v2, whose labels were read after 188.9's paid runs. Ids and abilities only; the residual pool
+ * counts are recorded in `heldout-v3.json` so a stratum that cannot be drawn again is visible.
+ */
+export function drawHeldoutV3(questions) {
+  const excluded = new Set([
+    ...Object.values(subsets.longmemeval.base).flat(),
+    ...Object.values(subsets.longmemeval.targeted).flat(),
+    ...Object.values(confirmatory.abilities).flat(),
+    ...Object.values(heldoutV2.abilities).flat(),
+  ]);
+  const hash = (id) => createHash("sha256").update(`${HELDOUT_V3_SALT}:${id}`).digest("hex");
+  const abilities = {};
+  for (const [ability, size] of Object.entries(HELDOUT_V3_STRATA)) {
+    const candidates = questions.filter((row) => row.ability === ability && !excluded.has(row.id));
+    if (candidates.length < size || new Set(candidates.map((row) => row.id)).size !== candidates.length)
+      throw new MemoryBenchDatasetError(`Held-out v3 stratum is short or duplicated: ${ability}`);
+    abilities[ability] = candidates
+      .sort((a, b) => hash(a.id).localeCompare(hash(b.id)))
+      .slice(0, size)
+      .map((row) => row.id);
+  }
+  return abilities;
+}
+
+/**
+ * Plan 188.10 Task 2: development-only screen for the multi-session fix. It reuses the 20 held-out
+ * v2 multi-session ids (now development data, with committed `fabric-x` outcomes), draws 10 more
+ * from the 30-id development multi-session pool, and keeps `screen-v1`'s 30 non-multi-session ids
+ * so a fix for multi-session cannot quietly regress another ability.
+ */
+export function drawScreenMsV1() {
+  const held = heldoutV2.abilities["multi-session"];
+  const pool = subsets.longmemeval.targeted["multi-session"];
+  const heldSet = new Set(held);
+  const hash = (id) => createHash("sha256").update(`${SCREEN_MS_V1_SALT}:${id}`).digest("hex");
+  const drawn = pool
+    .filter((id) => !heldSet.has(id))
+    .sort((a, b) => hash(a).localeCompare(hash(b)))
+    .slice(0, SCREEN_MS_V1_DEVELOPMENT_COUNT);
+  if (drawn.length < SCREEN_MS_V1_DEVELOPMENT_COUNT)
+    throw new MemoryBenchDatasetError("Screen multi-session draw is short: the development pool is exhausted");
+  const rest = Object.entries(screenV1.abilities).filter(([ability]) => ability !== "multi-session");
+  if (rest.some(([, ids]) => ids.length !== SCREEN_V1_IDS_PER_ABILITY))
+    throw new MemoryBenchDatasetError("Screen v1 non-multi-session stratum is short");
+  return { "multi-session": [...held, ...drawn], ...Object.fromEntries(rest) };
+}
+
 export function selectQuestions(questions, suite, { subset = "base", ability } = {}) {
   if (subset === "all") return questions;
   let ids;
   if (suite === "longmemeval-s") {
-    ids =
-      subset === "confirmatory" || subset === "development" || subset === "heldout-v2"
-        ? ability
-          ? (subset === "heldout-v2" ? heldoutV2 : confirmatory).abilities[ability]
-          : Object.values((subset === "heldout-v2" ? heldoutV2 : confirmatory).abilities).flat()
-        : subset === "targeted"
-          ? subsets.longmemeval.targeted[ability]
-          : Array.from({ length: 10 }, (_, index) => Object.values(subsets.longmemeval.base).map((ids) => ids[index])).flat();
+    // Frozen draws are the only source of a subset's ids; a wrong id fails closed below.
+    const frozen = {
+      "screen-v1": screenV1,
+      "screen-ms-v1": screenMsV1,
+      "heldout-v2": heldoutV2,
+      "heldout-v3": heldoutV3,
+      confirmatory,
+      development: confirmatory,
+    }[subset];
+    if (frozen) ids = ability ? frozen.abilities[ability] : Object.values(frozen.abilities).flat();
+    else if (subset === "targeted") ids = subsets.longmemeval.targeted[ability];
+    else ids = Array.from({ length: 10 }, (_, index) => Object.values(subsets.longmemeval.base).map((ids) => ids[index])).flat();
   } else if (suite === "locomo")
     ids = questions.filter((row) => subsets.locomo.conversations.includes(row.conversationId)).map((row) => row.id);
   else ids = subsets.memoryagentbench.pairs.map((pair) => pair.join(":"));

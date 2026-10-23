@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "kind": "188.9-development-screen",
+  "ceiling": 18000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "protocolVersion": 2,
+  "dataset": "longmemeval-s@98d7416c",
+  "sourceRevision": "working-tree",
+  "screen": {
+    "subset": "screen-v1",
+    "draw": "SHA-256(\"prism-188.9-memory-bench-screen-v1:\" + id), ascending; 5 per ability",
+    "salt": "prism-188.9-memory-bench-screen-v1",
+    "counts": {
+      "abstention": 5,
+      "knowledge-update": 5,
+      "multi-session": 5,
+      "single-session-assistant": 5,
+      "single-session-preference": 5,
+      "single-session-user": 5,
+      "temporal-reasoning": 5
+    },
+    "idsHash": "86d7dcfbde70c33e1f5182a868e21289723d756cb3d199b496d904b8831451c0",
+    "fileSha256": "0e3192f4df7b673a85a4d809c527f6574d66ba88bc987a33441f38b0e5594177"
+  },
+  "rule": {
+    "minGainQuestions": 3,
+    "maxAbilityLoss": 1,
+    "maxRunLimit": 0.05
+  },
+  "concurrency": {
+    "concurrency": 4,
+    "reason": "highest step with 0 overloads and p95 27907.3ms < 1.5x 27907.3ms; capped at 4 by the reservation bound"
+  },
+  "harnessHash": "40911836cb8d1be8de044c25a2a9e006550ad776def96827f7c364d658ff45e5",
+  "productHash": "a50984c77e4b51a3498f15eb20c430fa06587335c78517e029d0f06e7c458525",
+  "writeSideKeys": {
+    "x": "fe9f3f4212efdb054011cfe951b7d3960787fa513fc96f3324b687c8e0d14fa3",
+    "xc": "4584e25e4c4d5079be6c24bf0f4f60776de61a398a0fc9cbd411fafd3b6f499c"
+  },
+  "excluded": [
+    {
+      "arm": "xc",
+      "reason": "not measured: the write-side attempt was killed at concurrency 16 with 1 of 35 ids finished and its per-id cost unknown; a capped measurement runs before Task 11"
+    },
+    {
+      "arm": "write-xc",
+      "reason": "the `xc` write side it exists for is not measured yet"
+    },
+    {
+      "arm": "xc-agentic",
+      "reason": "reuses the unmeasured `xc` store"
+    }
+  ],
+  "limitations": [
+    "Development data only: a failed arm is dropped, never tuned.",
+    "The `xc` write side is the only paid write path; `fabric-x` writes locally and spends nothing.",
+    "xc excluded: not measured: the write-side attempt was killed at concurrency 16 with 1 of 35 ids finished and its per-id cost unknown; a capped measurement runs before Task 11",
+    "write-xc excluded: the `xc` write side it exists for is not measured yet",
+    "xc-agentic excluded: reuses the unmeasured `xc` store"
+  ],
+  "jobs": [
+    {
+      "id": "accept1889-screen-baseline",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "screen-v1",
+      "maxInputTokens": 2000000,
+      "ablate": [
+        "fabric.delivery=188.8"
+      ],
+      "labelInjections": "off"
+    },
+    {
+      "id": "accept1889-screen-baseline-new-delivery",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "screen-v1",
+      "maxInputTokens": 2000000,
+      "labelInjections": "off"
+    },
+    {
+      "id": "accept1889-screen-write-x",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric-x",
+      "subset": "screen-v1",
+      "maxInputTokens": 1500000,
+      "labelInjections": "off"
+    },
+    {
+      "id": "accept1889-screen-x",
+      "family": "quality",
+      "suite": "longmemeval-s",
+      "config": "fabric-x",
+      "subset": "screen-v1",
+      "maxInputTokens": 2000000,
+      "labelInjections": "off",
+      "writeSide": "accept1889-screen-write-x"
+    }
+  ]
+}

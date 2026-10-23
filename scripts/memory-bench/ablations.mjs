@@ -5,7 +5,9 @@ import { BENCH_SCOPES } from "./bench-scope.mjs";
 import { parseVariantSpecs, VARIANT_PATHS } from "./variants.mjs";
 
 export function historicalVariants(specs = []) {
-  return parseVariantSpecs(specs.filter((spec) => typeof spec === "string" && Object.keys(VARIANT_PATHS).some((key) => key.split("=")[0] === spec.split("=")[0])));
+  return parseVariantSpecs(
+    specs.filter((spec) => typeof spec === "string" && Object.keys(VARIANT_PATHS).some((key) => key.split("=")[0] === spec.split("=")[0])),
+  );
 }
 
 const paths = new Set([
@@ -23,6 +25,7 @@ const paths = new Set([
   "fabric.consolidate.decider",
   "fabric.promote",
   "fabric.promote.minScore",
+  "fabric.exchanges",
   "fabric.lifecycle.verifyAfterSessions",
   "fabric.lifecycle.archive.retrievalBelow",
   "fabric.lifecycle.archive.storageBelow",
@@ -37,9 +40,38 @@ const paths = new Set([
   ...["explicit", "correction", "outcome", "recurrence", "generality", "ephemerality", "derivability", "duplicate"].map(
     (k) => `fabric.promote.weights.${k}`,
   ),
-  ...["episode", "fact", "preference", "procedure"].map((k) => `fabric.lifecycle.decay.${k}`),
+  ...["episode", "fact", "preference", "procedure", "exchange"].map((k) => `fabric.lifecycle.decay.${k}`),
   ...["user", "agent", "project"].flatMap((scope) => ["notes", "tokens"].map((k) => `fabric.lifecycle.capacity.${scope}.${k}`)),
 ]);
+
+/**
+ * Plan 188.10 Task 4: the arms that ship passive injection *and* the memory tools. `agentic` means
+ * tools with injection off; `-tools` means the product's shape, both on.
+ */
+export function isToolsConfig(config) {
+  return typeof config === "string" && (config.includes("agentic") || config.endsWith("-tools"));
+}
+
+/**
+ * Plan 188.10 Task 5: the extractor's budget and reasoning level belong to the write side, so they go
+ * into `promote` (answer and judge generation stay 4,096). Only an arm that promotes takes them.
+ */
+export function extractorSettings(options = {}) {
+  return {
+    ...(options.writeOutputTokens === undefined ? {} : { maxOutputTokens: options.writeOutputTokens }),
+    ...(options.writeThinking === undefined ? {} : { thinkingLevel: options.writeThinking }),
+  };
+}
+
+/** The manifest's write-side generation, recorded separately from `generation`. */
+export function writeGeneration(options = {}) {
+  if (options.offline) return null;
+  return {
+    temperature: 0,
+    maxTokens: options.writeOutputTokens ?? 4096,
+    ...(options.writeThinking === undefined ? {} : { thinkingLevel: options.writeThinking }),
+  };
+}
 
 /** Only shipped settings: unsupported historical mechanisms fail before any paid call. */
 export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) {
@@ -61,6 +93,29 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
         ...(!lifecycle ? { scopes: BENCH_SCOPES } : {}),
       }
     : null;
+  // Plan 188.9 Task 9: the product-ingestion arms. `fabric-x` archives exchanges and delivers them
+  // with Task 5's evidence-sized renderer, LLM-free write side (no promote). `fabric-xc` also
+  // promotes, so consolidation links dated facts to their exchanges; `fabric-xc-agentic` is the
+  // same store with tools and passive injection off. Kinds are explicit: an x store holds
+  // exchanges, an xc store holds exchanges plus the facts extracted from them.
+  // Plan 188.10 Task 4: the `-tools` arms are the product's shipping shape — passive injection with
+  // the same kinds and defaults, and the memory tools left on — over the x or xc store.
+  if (options.config?.startsWith("fabric-x") && fabric) {
+    const agentic = options.config === "fabric-xc-agentic";
+    const exchangesOnly = options.config.startsWith("fabric-x") && !options.config.startsWith("fabric-xc");
+    fabric.exchanges = {};
+    fabric.inject = agentic
+      ? false
+      : (structuredClone(policy.inject) ?? {
+          query: "task",
+          kinds: exchangesOnly ? ["exchange"] : ["fact", "exchange"],
+        });
+    // The write side builds balances of fact+exchange only for xc; x has no extractor to call.
+    if (!exchangesOnly) fabric.promote = {};
+  }
+  // The extractor budget reaches only an arm that promotes: adding `promote` to `fabric-x` would
+  // give an LLM-free write side a model call.
+  if (fabric && typeof fabric.promote === "object") fabric.promote = { ...fabric.promote, ...extractorSettings(options) };
   const configs = { om: observational, fabric };
   const seen = new Set();
   if (options.ablate !== undefined && !Array.isArray(options.ablate)) throw new Error("MemoryBenchAblation: expected array");
@@ -72,7 +127,8 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   for (const spec of options.ablate ?? []) {
     if (typeof spec !== "string") throw new Error("MemoryBenchAblation: expected path=value");
     if (historical.includes(spec)) {
-      if (spec.startsWith("om.") && !observational || !spec.startsWith("om.") && !fabric) throw new Error("MemoryBenchAblation: inactive historical arm");
+      if ((spec.startsWith("om.") && !observational) || (!spec.startsWith("om.") && !fabric))
+        throw new Error("MemoryBenchAblation: inactive historical arm");
       continue;
     }
     const index = spec.indexOf("="),

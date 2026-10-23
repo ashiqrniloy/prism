@@ -26,9 +26,13 @@ export function summarize(report) {
       [report.abilities, row.ability],
       [report.abilityGroups, row.ability.startsWith("single-session-") ? "information-extraction" : row.ability],
     ]) {
-      const group = (groups[name] ??= { n: 0, correct: 0, f1: null, recallAtK: null });
+      const group = (groups[name] ??= { n: 0, correct: 0, scored: 0, f1: null, recallAtK: null });
       group.n++;
-      group.correct += Number(row.correct);
+      // An answer-only checkpoint row has no verdict yet; accuracy divides by scored rows, not all.
+      group.scored += row.correct === undefined ? 0 : 1;
+      group.correct += row.correct === true ? 1 : 0;
+      bump(group, "runLimitRate", row.outcome === "run_limit");
+      bump(group, "errorRate", row.outcome === "error");
       if (row.f1 !== undefined) group.f1 = (group.f1 ?? 0) + row.f1;
       if (typeof row.value === "number") bump(group, "value", row.value);
       for (const key of [
@@ -44,7 +48,9 @@ export function summarize(report) {
   }
   for (const [name, group] of [...Object.entries(report.abilities), ...Object.entries(report.abilityGroups)]) {
     const definition = metricDefinition(name);
-    group.accuracy = group.correct / group.n;
+    group.accuracy = group.scored ? group.correct / group.scored : null;
+    group.runLimitRate = finish(group, "runLimitRate");
+    group.errorRate = finish(group, "errorRate");
     if (group.f1 !== null) group.f1 /= group.n;
     group.valueMean = finish(group, "value");
     group.answerSessionHitAtK = finish(group, "answerSessionHitAtK");
@@ -62,17 +68,27 @@ export function summarize(report) {
   report.metricDefinitions = Object.fromEntries(
     [...new Set(report.results.map((row) => row.ability))].map((name) => [name, metricDefinition(name)]),
   );
+  report.runLimitRate = report.results.length
+    ? report.results.filter((row) => row.outcome === "run_limit").length / report.results.length
+    : 0;
+  report.errorRate = report.results.length ? report.results.filter((row) => row.outcome === "error").length / report.results.length : 0;
   report.cacheReadRatio = report.inputTokens ? report.cacheReadTokens / report.inputTokens : 0;
   const injections = report.injections ?? [];
   const labeled = injections.filter((item) => item.label !== null);
   const items = injections.filter((item) => item.granularity === "item");
-  report.injectionPrecision = {
-    granularity: items.length === injections.length && items.length ? "item" : "block",
-    tokensPerTurn: report.turns ? report.injectedContextTokens / report.turns : 0,
-    irrelevantRate: labeled.length ? labeled.filter((item) => item.label === "irrelevant").length / labeled.length : null,
-    citedIdRate: items.length ? items.filter((item) => item.cited).length / items.length : null,
-    tokenAccounting: "estimated ceil(characters/4); billing is wire usage",
-  };
+  // Labels cost one judge call per injected item; a screening run may skip them, but then the
+  // precision fields are unavailable and must say so rather than read as zero.
+  report.injectionPrecision =
+    report.labelInjections === "off"
+      ? null
+      : {
+          granularity: items.length === injections.length && items.length ? "item" : "block",
+          tokensPerTurn: report.turns ? report.injectedContextTokens / report.turns : 0,
+          irrelevantRate: labeled.length ? labeled.filter((item) => item.label === "irrelevant").length / labeled.length : null,
+          citedIdRate: items.length ? items.filter((item) => item.cited).length / items.length : null,
+          tokenAccounting: "estimated ceil(characters/4); billing is wire usage",
+        };
+  report.injectionPrecisionReason = report.labelInjections === "off" ? "not-labelled" : null;
   const totalToolCalls = report.results.reduce((n, row) => n + (row.toolCalls ?? 0), 0);
   const totalRecallCalls = report.results.reduce((n, row) => n + (row.recallCalls ?? 0), 0);
   const totalSnippetTokens = report.results.reduce((n, row) => n + (row.retrievedSnippetTokens ?? 0), 0);
@@ -96,6 +112,16 @@ export function summarize(report) {
 
   return report;
 }
+/** One line of timing evidence: wall time, per-question spread and per-role call latency. */
+export function describeTiming(timing) {
+  if (!timing) return "Timing: not recorded.";
+  const questions = timing.questions?.wallMs;
+  const roles = Object.entries(timing.roles ?? {})
+    .map(([role, value]) => `${role} ${value.calls}x p50 ${value.totalMs.p50 ?? "n/a"}ms`)
+    .join(", ");
+  return `Timing: arm ${timing.wallMs ?? "n/a"} ms at concurrency ${timing.concurrency?.active ?? "n/a"} (initial ${timing.concurrency?.initial ?? "n/a"}); questions p50 ${questions?.p50 ?? "n/a"} ms / p95 ${questions?.p95 ?? "n/a"} ms; ${roles || "no calls"}.`;
+}
+
 async function writeArtifact(path, text) {
   const temp = `${path}.${randomUUID()}.tmp`;
   try {
@@ -111,7 +137,7 @@ export async function writeReport(report, path) {
   await writeArtifact(path, `${JSON.stringify(report, null, 2)}\n`);
   const rows = Object.entries(report.abilities).map(
     ([ability, score]) =>
-      `| ${ability} | ${score.n} | ${score.accuracy.toFixed(4)} | ${score.f1 ?? "n/a"} | ${score.recallAtK !== null && score.recallAtK !== undefined ? score.recallAtK.toFixed(4) : "n/a"} |`,
+      `| ${ability} | ${score.n} | ${score.accuracy === null ? "n/a" : score.accuracy.toFixed(4)} | ${score.f1 ?? "n/a"} | ${score.recallAtK !== null && score.recallAtK !== undefined ? score.recallAtK.toFixed(4) : "n/a"} | ${score.evidenceRoundCoverage ?? "n/a"} | ${score.evidenceAllRequired ?? "n/a"} | ${score.runLimitRate.toFixed(4)} |`,
   );
   await writeArtifact(
     path.replace(/\.json$/, ".md"),
@@ -122,13 +148,14 @@ export async function writeReport(report, path) {
       `Attempt: ${report.attemptId ?? "none"}; usage complete: ${report.usageComplete !== false}; resumed results: ${report.resumedResults ?? 0}.`,
       `Tool calls: ${report.toolCalls ?? 0} (${(report.toolCallsPerQuestion ?? 0).toFixed(2)}/q); recall calls: ${report.recallCalls ?? 0}; snippet tokens: ${report.retrievedSnippetTokens ?? 0}; recall@k: ${report.retrievalRecallAtK !== null && report.retrievalRecallAtK !== undefined ? report.retrievalRecallAtK.toFixed(4) : "n/a"}.`,
       `Judge: ${report.judge}. Truncated questions: ${report.results.filter((row) => row.truncated).length}. Metric version: ${report.metricVersion ?? "historical"}.`,
+      `Phase: ${report.phase ?? "all"}. ${describeTiming(report.timing)}`,
       "",
       "Judge accuracy and token F1 are separate metrics. Answer-session hit@k is a coarse any-round boolean;",
       "evidence coverage is round-level and all-required evidence coverage is a separate constraint. Fine-gold",
       "recall/precision stay n/a when the dataset does not expose usable fine gold.",
       "",
-      "| Ability | Questions | Judge accuracy | Token F1 | Answer-session hit@k | Evidence-round coverage | All-required evidence |",
-      "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+      "| Ability | Questions | Judge accuracy | Token F1 | Answer-session hit@k | Evidence-round coverage | All-required evidence | Run-limit rate |",
+      "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
       ...rows,
       "",
       ...(report.coding

@@ -1,23 +1,29 @@
 import { createHash } from "node:crypto";
 import { relative } from "node:path";
 import type { JsonObject, ToolDefinition, ToolExecutionContext, ToolResult } from "@arnilo/prism";
-import type { Memory } from "@arnilo/prism-memory-core";
+import type { Memory, MemoryVectorRecord } from "@arnilo/prism-memory-core";
 import { lexicalMatches, lexicalTerms, MemoryValidationError } from "@arnilo/prism-memory-core";
+import { noteRelPath } from "@arnilo/prism-memory-core/fabric";
 import { appendFabricBlock, assertFabricBlockLabel, fabricBlockId, readFabricBlock } from "./blocks.js";
 import type { FabricCitationTracker } from "./context.js";
 import { type FabricDirectoryHandle, pageFabricDirectory, renderFabricDirectory } from "./directory.js";
+import { queryExcerpt } from "./excerpt.js";
 import { createFabricFileJail, type FabricFileJail } from "./files.js";
 import { parseRecallKinds } from "./recall.js";
 import { selectWithScopeReserve } from "./scope/recall.js";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
 import {
+  estimateNoteTokens,
   type FabricScopeLevel,
+  MEMORY_NOTE_KINDS,
   MEMORY_NOTE_METADATA_KEY,
   type MemoryFabric,
   type MemoryFabricForgetInput,
   type MemoryFabricToolsOptions,
   type MemoryNoteHit,
   type MemoryNoteKind,
+  noteFields,
+  parseMemoryNoteMetadata,
   stampProvenance,
 } from "./types.js";
 
@@ -40,13 +46,23 @@ export interface MemoryFabricToolDeps {
   readonly tracker?: FabricCitationTracker;
   /** Locate the active scope memory that holds `id`; without it every note operation uses `memory`. */
   readonly noteMemory?: (id: string, signal?: AbortSignal) => Promise<Memory | undefined>;
+  /**
+   * Read notes by id across every active scope, through the same consent, invalidation and redaction
+   * filters as recall; without it a read falls back to this fabric's single `memory`.
+   */
+  readonly readNotes?: (ids: readonly string[], signal?: AbortSignal) => Promise<readonly MemoryVectorRecord[]>;
   /** The session's touched files, used to arm a `path` note's prior. */
   readonly touchedPaths?: (sessionId: string) => readonly string[];
   /** The scope this tool set runs in; set only when the fabric is scoped. Widening writes `agent`. */
   readonly scopeLevel?: FabricScopeLevel;
 }
 
-const CONTENT_PREVIEW_CHARS = 400;
+/** Characters of a recalled note the tool shows; the densest matched window when the note is longer. */
+const SNIPPET_CHARS = 600;
+/** The tool default: every stored kind except `working`, which is already in the context prefix. */
+const RECALL_TOOL_KINDS: readonly MemoryNoteKind[] = MEMORY_NOTE_KINDS.filter((kind) => kind !== "working");
+/** One `memory.read` call reads at most this many notes by id. */
+const MAX_READ_IDS = 8;
 
 const ok = (name: string, context: ToolExecutionContext, value: unknown, text: string): ToolResult => ({
   toolCallId: context.toolCallId,
@@ -88,6 +104,41 @@ async function clearFlagsAndStamp(memory: Memory, id: string, context: ToolExecu
     },
     context.signal === undefined ? {} : { signal: context.signal },
   );
+}
+
+/** What a `memory.read` by id returns: the note's header fields and its full text. */
+interface ReadNote {
+  readonly id: string;
+  readonly kind: MemoryNoteKind;
+  readonly level?: MemoryNoteHit["level"];
+  readonly status?: MemoryNoteHit["status"];
+  readonly ingestedAt: string;
+  readonly path: string;
+  readonly tokenCount: number;
+  readonly content: string;
+}
+
+/** A note's relative path: a file note names its file, every other note its file under the memory store. */
+function notePathOf(note: {
+  readonly id: string;
+  readonly kind: MemoryNoteKind;
+  readonly path?: string;
+  readonly block?: string;
+  readonly content: string;
+  readonly status?: MemoryNoteHit["status"];
+  readonly scope?: MemoryNoteHit["scope"];
+}): string {
+  if (note.kind === "working") return `working/${note.block ?? note.id}`;
+  if (note.path !== undefined) return note.path;
+  if (note.scope === undefined) return `entries/${note.id.slice(0, 8)}.md`;
+  return noteRelPath({
+    tenantId: note.scope.tenantId,
+    resourceId: note.scope.resourceId,
+    kind: note.kind,
+    text: note.content,
+    archived: note.status === "archived",
+    id: note.id,
+  });
 }
 
 /**
@@ -188,13 +239,82 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: readName,
         kind: "read",
         description:
-          "Read one file inside the fabric memory directory. Output is cut at the configured byte cap and flagged when truncated.",
+          "Read one file inside the fabric memory directory, or notes by id. Pass exactly one of `path`, `id` or `ids` (1-8). Reading notes returns each one's full content with its id, kind, scope, date and path; an unknown or unreadable id is reported as not_found for that id alone. A file read is cut at the configured byte cap and flagged when truncated.",
         parameters: {
           type: "object",
-          properties: { path: { type: "string", description: "File to read, relative to the memory root." } },
-          required: ["path"],
+          properties: {
+            path: { type: "string", description: "File to read, relative to the memory root." },
+            id: { type: "string", description: "Note id to read in full." },
+            ids: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 1,
+              maxItems: MAX_READ_IDS,
+              description: "Note ids to read in full.",
+            },
+          },
         } as JsonObject,
         async execute(args, context) {
+          if (args.ids !== undefined && !Array.isArray(args.ids)) throw new MemoryValidationError("ids must be an array of note ids");
+          const targets: readonly unknown[] | undefined = Array.isArray(args.ids)
+            ? args.ids
+            : typeof args.id === "string"
+              ? [args.id]
+              : undefined;
+          if (targets !== undefined) {
+            if (typeof args.path === "string" || (typeof args.id === "string" && args.ids !== undefined))
+              throw new MemoryValidationError("read accepts exactly one of path, id or ids");
+            const wanted = [
+              ...new Set(
+                targets.map((id) => {
+                  if (typeof id !== "string" || id.length === 0) throw new MemoryValidationError("each note id must be a non-empty string");
+                  return id;
+                }),
+              ),
+            ];
+            if (wanted.length === 0) throw new MemoryValidationError("read requires at least one note id");
+            if (wanted.length > MAX_READ_IDS) throw new MemoryValidationError(`read accepts at most ${MAX_READ_IDS} note ids`);
+            if (!indexedNotesAvailable()) return indexedNotesUnavailable(readName, context);
+            const readOptions = context.signal === undefined ? {} : { signal: context.signal };
+            const records =
+              deps.readNotes === undefined ? await deps.memory.get(wanted, readOptions) : await deps.readNotes(wanted, context.signal);
+            const byId = new Map(records.map((record) => [record.id, record]));
+            const notes: ReadNote[] = [];
+            const missing: string[] = [];
+            for (const id of wanted) {
+              const record = byId.get(id);
+              const metadata = record === undefined ? undefined : parseMemoryNoteMetadata(record.metadata);
+              if (record === undefined || metadata === undefined) {
+                missing.push(id);
+                continue;
+              }
+              const fields = noteFields(metadata);
+              const source = {
+                id,
+                kind: metadata.kind,
+                content: record.text,
+                ...(fields.path === undefined ? {} : { path: fields.path }),
+                ...(fields.status === undefined ? {} : { status: fields.status }),
+                scope: { tenantId: record.tenantId, resourceId: record.resourceId, threadId: record.threadId },
+              };
+              notes.push({
+                id,
+                kind: metadata.kind,
+                ...(fields.level === undefined ? {} : { level: fields.level }),
+                ...(fields.status === undefined ? {} : { status: fields.status }),
+                ingestedAt: record.createdAt,
+                content: record.text,
+                tokenCount: estimateNoteTokens(record.text),
+                path: notePathOf(source),
+              });
+            }
+            const lines = notes.map(
+              (note) =>
+                `${note.id} ${note.level ?? "project"} [${note.kind}] date=${note.ingestedAt.slice(0, 10)} path=${note.path}\n${note.content}`,
+            );
+            for (const id of missing) lines.push(`${id} not_found`);
+            return ok(readName, context, { found: notes.length > 0, notes, missing }, lines.join("\n\n"));
+          }
           const access = gateFiles(readName, context);
           if ("denied" in access) return access.denied;
           const { files } = access;
@@ -421,7 +541,7 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         name: recallName,
         kind: "search",
         description:
-          "Recall fabric notes. Pass `query`, or `queries` with up to 4 phrasings (synonyms, aliases) fused into one ranked list. Returns ranked snippets with ids, scope, kind, dates, note paths, and the matched terms.",
+          "Recall fabric notes. Pass `query`, or `queries` with up to 4 phrasings (synonyms, aliases) fused into one ranked list. Returns ranked snippets with ids, scope, kind, dates, note paths, and the matched terms; each snippet is the densest matched window of its note. Defaults to every stored kind except working, and to 1,200 rendered tokens of output. Use memory.read with an id for a note in full.",
         parameters: {
           type: "object",
           properties: {
@@ -435,12 +555,12 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
             },
             kinds: {
               type: "array",
-              items: { type: "string", enum: ["fact", "preference", "procedure", "file", "working", "episode", "all"] },
-              description: 'Kinds to search; defaults to fact, preference, and file. `["all"]` searches every kind.',
+              items: { type: "string", enum: ["fact", "preference", "procedure", "file", "working", "episode", "exchange", "all"] },
+              description: 'Kinds to search; defaults to every kind except working. `["all"]` searches every kind.',
             },
             topK: { type: "integer", description: "Maximum hits." },
             asOf: { type: "string", description: "ISO timestamp used for the validity window; defaults to now." },
-            budget: { type: "integer", description: "Ceiling on the summed token count of the hits; default 1200." },
+            budget: { type: "integer", description: "Ceiling on the summed tokens of the rendered snippet lines; default 1200." },
             includeArchived: {
               type: "boolean",
               description: "Also search archived notes, appended after the active hits and marked [archived].",
@@ -450,11 +570,11 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
         async execute(args, context) {
           if (!indexedNotesAvailable()) return indexedNotesUnavailable(recallName, context);
           const queries = readQueries(args);
-          const kinds = readKinds(args.kinds);
+          const kinds = readKinds(args.kinds) ?? RECALL_TOOL_KINDS;
           const options = {
             // Lexical mode returns weak coverage hits so the agent can judge them; hybrid keeps the cosine floor.
             minSimilarity: deps.memory.retrieval === "lexical" ? 0 : 0.35,
-            ...(kinds === undefined ? {} : { kinds }),
+            kinds,
             ...(typeof args.topK === "number" ? { topK: args.topK } : {}),
             ...(typeof args.asOf === "string" ? { asOf: args.asOf } : {}),
             ...(args.includeArchived === true ? { includeArchived: true } : {}),
@@ -474,9 +594,21 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           }
           const budget = typeof args.budget === "number" ? args.budget : 1200;
           const ranked = [...fused.values()].sort((a, b) => b.score - a.score).map(({ hit }) => hit);
+          const queryTerms = new Set<string>();
+          for (const query of queries) for (const term of lexicalTerms(query)) queryTerms.add(term);
+          // Render before selecting: the budget counts what the model reads, header, path and snippet included.
+          const rendered = new Map(
+            ranked.map((hit) => {
+              const matched = lexicalMatches(queryTerms, lexicalTerms(hit.content));
+              const flagged = hit.flags?.length ? ` [flagged: ${hit.flags.join(", ")}]` : "";
+              const lifecycle = hit.status === "candidate" ? " (candidate)" : hit.status === "archived" ? " [archived]" : "";
+              const line = `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged} path=${notePathOf(hit)} date=${hit.ingestedAt.slice(0, 10)} matched=[${matched.join(", ")}] ${queryExcerpt(hit.content, queryTerms, SNIPPET_CHARS)}`;
+              return [hit.id, line] as const;
+            }),
+          );
           const hits = selectWithScopeReserve(ranked, {
             budget,
-            tokens: (hit) => hit.tokenCount,
+            tokens: (hit) => Math.max(1, Math.ceil((rendered.get(hit.id) ?? "").length / 4)),
             level: (hit) => hit.level ?? "project",
           });
           if (context.sessionId && hits.length > 0) {
@@ -485,18 +617,10 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
               hits.map((hit) => hit.id),
             );
           }
-          const queryTerms = new Set<string>();
-          for (const query of queries) for (const term of lexicalTerms(query)) queryTerms.add(term);
-          const lines = hits.map((hit) => {
-            const where = hit.path === undefined ? (hit.block === undefined ? "" : ` block=${hit.block}`) : ` path=${hit.path}`;
-            const matched = lexicalMatches(queryTerms, lexicalTerms(hit.content));
-            const flagged = hit.flags?.length ? ` [flagged: ${hit.flags.join(", ")}]` : "";
-            const lifecycle = hit.status === "candidate" ? " (candidate)" : hit.status === "archived" ? " [archived]" : "";
-            return `${hit.id} ${hit.level ?? "project"} [${hit.kind}]${lifecycle}${flagged}${where} date=${hit.ingestedAt.slice(0, 10)} matched=[${matched.join(", ")}] ${renderSnippet(hit.content, matched)}`;
-          });
+          const lines = hits.map((hit) => rendered.get(hit.id) ?? "");
           const top = hits.length === 0 ? 0 : Math.max(...hits.map((hit) => hit.coverage ?? hit.similarity ?? hit.score));
-          if (lines.length === 0) lines.push("no confident match");
-          if (top < 0.34) lines.push("Weak match: try synonyms, an alias, or other terms.");
+          if (lines.length === 0) lines.push("no match in any kind");
+          else if (top < 0.34) lines.push("Weak match: try synonyms, an alias, or other terms.");
           if (hits.length > 0) lines.push("Cite [id] for notes you use.");
           return ok(recallName, context, { hits, explain: [] }, lines.join("\n"));
         },
@@ -559,19 +683,4 @@ function readQueries(args: JsonObject): readonly string[] {
     if (!cleaned.includes(query.trim())) cleaned.push(query.trim());
   }
   return cleaned;
-}
-
-/** A ±200-character window around the first matched term, or the head when nothing matched. */
-function renderSnippet(content: string, matched: readonly string[]): string {
-  if (matched.length === 0) return content.slice(0, CONTENT_PREVIEW_CHARS);
-  const lower = content.toLowerCase();
-  let at = -1;
-  for (const term of matched) {
-    const index = lower.indexOf(term);
-    if (index >= 0 && (at < 0 || index < at)) at = index;
-  }
-  if (at < 0) return content.slice(0, CONTENT_PREVIEW_CHARS);
-  const start = Math.max(0, at - 200);
-  const end = Math.min(content.length, at + 200);
-  return `${start > 0 ? "…" : ""}${content.slice(start, end)}${end < content.length ? "…" : ""}`;
 }

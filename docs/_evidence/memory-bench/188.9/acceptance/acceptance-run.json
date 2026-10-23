@@ -1,0 +1,58 @@
+{
+  "kind": "188.9-heldout-acceptance-run",
+  "journal": {
+    "campaignId": "campaign-87f3ab718a42",
+    "status": "finished",
+    "ceiling": 12000000,
+    "spend": 877398,
+    "attempts": [
+      {
+        "attemptId": "accept1889-write-x@1",
+        "jobId": "accept1889-write-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 2000000,
+        "confirmedInputTokens": 0
+      },
+      {
+        "attemptId": "accept1889-baseline@1",
+        "jobId": "accept1889-baseline",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 4500000,
+        "confirmedInputTokens": 215717
+      },
+      {
+        "attemptId": "accept1889-x@1",
+        "jobId": "accept1889-x",
+        "status": "completed",
+        "usageComplete": true,
+        "reservedInputTokens": 5500000,
+        "confirmedInputTokens": 661681
+      }
+    ]
+  },
+  "results": [
+    {
+      "id": "accept1889-write-x",
+      "attemptId": "accept1889-write-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 0
+    },
+    {
+      "id": "accept1889-baseline",
+      "attemptId": "accept1889-baseline@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 215717
+    },
+    {
+      "id": "accept1889-x",
+      "attemptId": "accept1889-x@1",
+      "status": "completed",
+      "usageComplete": true,
+      "charged": 661681
+    }
+  ]
+}

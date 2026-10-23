@@ -150,3 +150,23 @@ test("legacy_evidence_is_imported_once_at_its_allocation", async () => {
     JournalInvalid,
   );
 });
+
+test("parallel_arms_never_exceed_ceiling_when_all_hit_caps", async () => {
+  const { dir, path } = await workspace();
+  // Room for exactly two arms at their caps, so a third launch must be refused, not over-committed.
+  const cap = 1_000_000;
+  const journal = await openJournal({ path, manifest: manifest(2 * reserved(cap) + 1), legacyDirectory: dir });
+  for (const jobId of ["arm-a", "arm-b"]) reserveAttempt(journal, { jobId, output: join(dir, `${jobId}.json`), maxInputTokens: cap });
+  assert.equal(journalSpend(journal), 2 * reserved(cap));
+  assert.throws(
+    () => reserveAttempt(journal, { jobId: "arm-c", output: join(dir, "arm-c.json"), maxInputTokens: cap }),
+    CampaignBudgetBlocked,
+  );
+  // Both reservations stay chargeable while the parallel arms run.
+  await saveJournal(path, journal);
+  for (const jobId of ["arm-a", "arm-b"]) {
+    const attempt = await requireAttemptReservation({ journalPath: path, attemptId: `${jobId}@1`, maxInputTokens: cap });
+    assert.equal(attempt.attempt.reservedInputTokens, reserved(cap));
+  }
+  assert.equal(availableTokens(journal), 1);
+});

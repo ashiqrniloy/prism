@@ -1,0 +1,1917 @@
+{
+  "schemaVersion": 1,
+  "protocolVersion": 2,
+  "usageSource": "local",
+  "phase": "write",
+  "labelInjections": "off",
+  "concurrency": 4,
+  "generation": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "writeGeneration": {
+    "temperature": 0,
+    "maxTokens": 4096
+  },
+  "generatedAt": "2026-10-23T14:04:08.131Z",
+  "suite": "longmemeval-s",
+  "subset": "screen-ms-v1",
+  "ability": null,
+  "seed": null,
+  "config": "fabric-x",
+  "ingestion": "product-per-session",
+  "embeddings": null,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "judgeProtocol": "enum-json-v1",
+  "dataset": {
+    "file": "longmemeval-s.json",
+    "bytes": 277383467,
+    "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+    "license": "MIT",
+    "url": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/resolve/98d7416c24c778c2fee6e6f3006e7a073259d48f/longmemeval_s_cleaned.json",
+    "licenseUrl": "https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned/blob/98d7416c24c778c2fee6e6f3006e7a073259d48f/README.md"
+  },
+  "maxInputTokens": 1000000,
+  "ablations": [],
+  "sourceVariants": [],
+  "sourceRevision": "9bf1dbbcd625d7a7ace23c3cebb5f810c43c0a1c",
+  "protocol": {
+    "answerAttempts": 3,
+    "answerBackoffMs": [
+      2000,
+      10000
+    ],
+    "judgeAttempts": 3,
+    "judgeBackoffMs": [
+      1000,
+      2000
+    ],
+    "maxTurns": 8
+  },
+  "memoryConfig": {
+    "observational": null,
+    "fabric": {
+      "enabled": true,
+      "retrieval": "lexical",
+      "semantic": true,
+      "inject": {
+        "query": "task",
+        "kinds": [
+          "exchange"
+        ]
+      },
+      "directory": {
+        "maxTopics": 8,
+        "maxFiles": 10,
+        "maxTokens": 200
+      },
+      "core": {
+        "maxTokens": 600,
+        "scopes": [
+          "user",
+          "project"
+        ]
+      },
+      "cues": {
+        "budgetTokens": 300,
+        "maxPerTurn": 2
+      },
+      "team": false,
+      "scopes": {
+        "tenantId": "prism",
+        "threadId": "default",
+        "priors": {
+          "path": 0.15,
+          "project": 0.1,
+          "team": 0.075,
+          "agent": 0.05,
+          "user": 0
+        },
+        "active": [
+          {
+            "level": "project",
+            "resourceId": "projects/bench--00000000"
+          }
+        ],
+        "project": {
+          "resourceId": "projects/bench--00000000",
+          "source": "path"
+        }
+      },
+      "store": "memory",
+      "tools": {},
+      "exchanges": {
+        "enabled": true,
+        "scope": "project"
+      },
+      "lifecycle": {
+        "verifyAfterSessions": 2,
+        "decay": {
+          "working": 0.4,
+          "episode": 0.8,
+          "fact": 0.4,
+          "preference": 0.2,
+          "procedure": 0.4,
+          "file": 0.4,
+          "exchange": 0.5
+        },
+        "storageWeights": {
+          "explicit": 1,
+          "sessions": 0.5,
+          "helpful": 0.5,
+          "harmful": 1,
+          "outcome": 0.5
+        },
+        "recall": {
+          "retrieval": 0.05,
+          "storage": 0.05
+        },
+        "archive": {
+          "retrievalBelow": -2,
+          "storageBelow": 1,
+          "graceSessions": 10
+        },
+        "capacity": {
+          "user": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "agent": {
+            "notes": 200,
+            "tokens": 20000
+          },
+          "project": {
+            "notes": 500,
+            "tokens": 60000
+          }
+        },
+        "merge": {
+          "duplicateDice": 0.8
+        },
+        "widen": {
+          "minProjects": 2,
+          "minSiblings": 2,
+          "contradictionsToSupersede": 2
+        }
+      },
+      "promote": {
+        "enabled": false,
+        "minScore": 0.5,
+        "maxCandidates": 48,
+        "minTurnsBetween": 8,
+        "derivableFrom": [
+          "AGENTS.md",
+          "README.md",
+          "package.json",
+          "CLAUDE.md"
+        ]
+      }
+    }
+  },
+  "inputTokens": 0,
+  "cacheReadTokens": 0,
+  "outputTokens": 0,
+  "calls": {
+    "observer": 0,
+    "reflector": 0,
+    "dropper": 0,
+    "embedding": 0,
+    "decider": 0,
+    "consolidate": 0,
+    "judge": 0,
+    "judgeAttempts": 0,
+    "gatewayRetries": 0,
+    "judgeCacheHits": 0,
+    "judgeCacheMisses": 0,
+    "concurrencyHalvings": 0,
+    "overloads": 0
+  },
+  "turns": 0,
+  "injectedContextTokens": 0,
+  "injections": [],
+  "attemptId": null,
+  "protocolHash": "1e02987ae4840d9966864969f0a8cb3b57cfd160094d9bf9da89ab85561df7dd",
+  "resumedResults": 0,
+  "results": [
+    {
+      "id": "09ba9854",
+      "ability": "multi-session",
+      "cluster": "lme-cf9dde75629c",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 479,
+        "archived": 239,
+        "parts": 239,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "ba358f49",
+      "ability": "multi-session",
+      "cluster": "lme-5f691c356952",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 41,
+        "entries": 409,
+        "archived": 203,
+        "parts": 203,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "60472f9c",
+      "ability": "multi-session",
+      "cluster": "lme-1fdfc973ff4c",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 454,
+        "archived": 226,
+        "parts": 226,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "6d550036",
+      "ability": "multi-session",
+      "cluster": "lme-5620ce4652ca",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 505,
+        "archived": 249,
+        "parts": 249,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "10d9b85a",
+      "ability": "multi-session",
+      "cluster": "lme-69323a7343d9",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 466,
+        "archived": 232,
+        "parts": 232,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_7fce9456",
+      "ability": "multi-session",
+      "cluster": "lme-9b30157355b8",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 497,
+        "archived": 242,
+        "parts": 242,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "a4996e51",
+      "ability": "multi-session",
+      "cluster": "lme-44d04a7976b3",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 48,
+        "entries": 512,
+        "archived": 254,
+        "parts": 254,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "46a3abf7",
+      "ability": "multi-session",
+      "cluster": "lme-b193e81b691f",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 50,
+        "entries": 503,
+        "archived": 248,
+        "parts": 248,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "8e91e7d9",
+      "ability": "multi-session",
+      "cluster": "lme-06d0a942c03e",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 498,
+        "archived": 248,
+        "parts": 248,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "81507db6",
+      "ability": "multi-session",
+      "cluster": "lme-5ab2ddd5ad0b",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 50,
+        "entries": 510,
+        "archived": 253,
+        "parts": 253,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "60036106",
+      "ability": "multi-session",
+      "cluster": "lme-c45561c1db06",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 483,
+        "archived": 239,
+        "parts": 239,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "85fa3a3f",
+      "ability": "multi-session",
+      "cluster": "lme-dc8c468f49e7",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 493,
+        "archived": 244,
+        "parts": 244,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "d682f1a2",
+      "ability": "multi-session",
+      "cluster": "lme-9c54d3777eef",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 469,
+        "archived": 230,
+        "parts": 230,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "27016adc",
+      "ability": "multi-session",
+      "cluster": "lme-f0e5c3dad47e",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 491,
+        "archived": 243,
+        "parts": 243,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "9d25d4e0",
+      "ability": "multi-session",
+      "cluster": "lme-9eb219af06e1",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 493,
+        "archived": 242,
+        "parts": 242,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "51c32626",
+      "ability": "multi-session",
+      "cluster": "lme-bd4190d41be3",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 490,
+        "archived": 241,
+        "parts": 241,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "77eafa52",
+      "ability": "multi-session",
+      "cluster": "lme-8adc7aafba21",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 527,
+        "archived": 260,
+        "parts": 260,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "e25c3b8d",
+      "ability": "multi-session",
+      "cluster": "lme-be637cda6de5",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 48,
+        "entries": 530,
+        "archived": 256,
+        "parts": 256,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "ef66a6e5",
+      "ability": "multi-session",
+      "cluster": "lme-1b5626713bf9",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 445,
+        "archived": 221,
+        "parts": 221,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "ef9cf60a",
+      "ability": "multi-session",
+      "cluster": "lme-fc3c644cdfeb",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 54,
+        "entries": 522,
+        "archived": 257,
+        "parts": 257,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "e831120c",
+      "ability": "multi-session",
+      "cluster": "lme-7c5fe3f4aa8f",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 481,
+        "archived": 239,
+        "parts": 239,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1c549ce4",
+      "ability": "multi-session",
+      "cluster": "lme-2ec73a004321",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 462,
+        "archived": 225,
+        "parts": 225,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "00ca467f",
+      "ability": "multi-session",
+      "cluster": "lme-c133517db35c",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 486,
+        "archived": 243,
+        "parts": 243,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "92a0aa75",
+      "ability": "multi-session",
+      "cluster": "lme-c76fc3895293",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 42,
+        "entries": 455,
+        "archived": 225,
+        "parts": 227,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "80ec1f4f",
+      "ability": "multi-session",
+      "cluster": "lme-34b2a870dd13",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 46,
+        "entries": 487,
+        "archived": 242,
+        "parts": 242,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "c4a1ceb8",
+      "ability": "multi-session",
+      "cluster": "lme-d393c29cecf5",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 49,
+        "entries": 488,
+        "archived": 242,
+        "parts": 242,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "681a1674",
+      "ability": "multi-session",
+      "cluster": "lme-ccd59e0312cd",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 49,
+        "entries": 476,
+        "archived": 232,
+        "parts": 232,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "129d1232",
+      "ability": "multi-session",
+      "cluster": "lme-fc99aab06e1f",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 48,
+        "entries": 451,
+        "archived": 224,
+        "parts": 224,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "5a7937c8",
+      "ability": "multi-session",
+      "cluster": "lme-1eec9a2fe951",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 42,
+        "entries": 419,
+        "archived": 209,
+        "parts": 209,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "3c1045c8",
+      "ability": "multi-session",
+      "cluster": "lme-1718abbf2147",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 52,
+        "entries": 542,
+        "archived": 264,
+        "parts": 264,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "60bf93ed_abs",
+      "ability": "abstention",
+      "cluster": "lme-47a16423cf73",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 521,
+        "archived": 257,
+        "parts": 257,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "2698e78f_abs",
+      "ability": "abstention",
+      "cluster": "lme-c794675798bc",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 46,
+        "entries": 462,
+        "archived": 230,
+        "parts": 230,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "88432d0a_abs",
+      "ability": "abstention",
+      "cluster": "lme-d4b071089db5",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 510,
+        "archived": 254,
+        "parts": 254,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "6aeb4375_abs",
+      "ability": "abstention",
+      "cluster": "lme-237da69b5132",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 46,
+        "entries": 521,
+        "archived": 259,
+        "parts": 259,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "c8090214_abs",
+      "ability": "abstention",
+      "cluster": "lme-e4f886aa917f",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 10,
+        "entries": 104,
+        "archived": 52,
+        "parts": 52,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "5c40ec5b",
+      "ability": "knowledge-update",
+      "cluster": "lme-ca3bed3e3956",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 479,
+        "archived": 238,
+        "parts": 238,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "45dc21b6",
+      "ability": "knowledge-update",
+      "cluster": "lme-83a57f3aaf85",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 49,
+        "entries": 485,
+        "archived": 242,
+        "parts": 242,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "c4ea545c",
+      "ability": "knowledge-update",
+      "cluster": "lme-2eac68443011",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 46,
+        "entries": 490,
+        "archived": 244,
+        "parts": 244,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "5831f84d",
+      "ability": "knowledge-update",
+      "cluster": "lme-154ecb371cb9",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 39,
+        "entries": 412,
+        "archived": 204,
+        "parts": 204,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "7a87bd0c",
+      "ability": "knowledge-update",
+      "cluster": "lme-30b28557dcf8",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 476,
+        "archived": 236,
+        "parts": 236,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "41275add",
+      "ability": "single-session-assistant",
+      "cluster": "lme-1ae8c9814ff8",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 53,
+        "entries": 531,
+        "archived": 264,
+        "parts": 264,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "58470ed2",
+      "ability": "single-session-assistant",
+      "cluster": "lme-ccceb6ef2a42",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 50,
+        "entries": 471,
+        "archived": 232,
+        "parts": 232,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "71a3fd6b",
+      "ability": "single-session-assistant",
+      "cluster": "lme-cfe898279107",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 439,
+        "archived": 215,
+        "parts": 215,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "2bf43736",
+      "ability": "single-session-assistant",
+      "cluster": "lme-9e6aa8159dac",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 44,
+        "entries": 478,
+        "archived": 237,
+        "parts": 237,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "e3fc4d6e",
+      "ability": "single-session-assistant",
+      "cluster": "lme-8e8ddde4583e",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 53,
+        "entries": 519,
+        "archived": 258,
+        "parts": 258,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "caf03d32",
+      "ability": "single-session-preference",
+      "cluster": "lme-20f0551c7622",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 493,
+        "archived": 243,
+        "parts": 243,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1d4e3b97",
+      "ability": "single-session-preference",
+      "cluster": "lme-a601c1572bbe",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 474,
+        "archived": 235,
+        "parts": 235,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "1c0ddc50",
+      "ability": "single-session-preference",
+      "cluster": "lme-9a661df987d4",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 51,
+        "entries": 548,
+        "archived": 270,
+        "parts": 270,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "0a34ad58",
+      "ability": "single-session-preference",
+      "cluster": "lme-c6f7c095bcb8",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 42,
+        "entries": 485,
+        "archived": 242,
+        "parts": 242,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "38146c39",
+      "ability": "single-session-preference",
+      "cluster": "lme-8a1973cbb834",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 46,
+        "entries": 538,
+        "archived": 267,
+        "parts": 267,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "8ebdbe50",
+      "ability": "single-session-user",
+      "cluster": "lme-ad31006814c2",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 48,
+        "entries": 487,
+        "archived": 241,
+        "parts": 241,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "a82c026e",
+      "ability": "single-session-user",
+      "cluster": "lme-0ce4ee74db53",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 47,
+        "entries": 476,
+        "archived": 236,
+        "parts": 236,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "dccbc061",
+      "ability": "single-session-user",
+      "cluster": "lme-33ff937264d2",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 49,
+        "entries": 505,
+        "archived": 250,
+        "parts": 250,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "c960da58",
+      "ability": "single-session-user",
+      "cluster": "lme-43b4d471b7b0",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 46,
+        "entries": 504,
+        "archived": 250,
+        "parts": 250,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "7527f7e2",
+      "ability": "single-session-user",
+      "cluster": "lme-d6d8cf3f9a65",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 490,
+        "archived": 243,
+        "parts": 243,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "982b5123",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-9703eeb1c94c",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 28,
+        "entries": 275,
+        "archived": 137,
+        "parts": 137,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "9a707b82",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-f8f21438d606",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 53,
+        "entries": 532,
+        "archived": 264,
+        "parts": 264,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "a3045048",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-c3c23177579a",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 31,
+        "entries": 361,
+        "archived": 178,
+        "parts": 178,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_e072b769",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-e8001748d24e",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 45,
+        "entries": 444,
+        "archived": 219,
+        "parts": 219,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    },
+    {
+      "id": "gpt4_1e4a8aeb",
+      "ability": "temporal-reasoning",
+      "cluster": "lme-be9744642193",
+      "outcome": "ingested",
+      "ingest": {
+        "sessions": 48,
+        "entries": 479,
+        "archived": 232,
+        "parts": 235,
+        "consolidationFailures": 0,
+        "consolidationFailuresByReason": {},
+        "extractorCalls": 0,
+        "extractorCallsAtMaxOutput": 0,
+        "extractorInputTokens": 0,
+        "extractorInputPerSession": 0
+      },
+      "storage": {
+        "fabric": "disposable",
+        "sessions": "ephemeral"
+      }
+    }
+  ],
+  "status": "completed",
+  "limitations": [
+    "Block-level injection accounting until item metadata lands in Tasks 4, 9, 11 and 12.",
+    "Injection token allocations are character estimates, not billing usage.",
+    "OpenCode Go and Hyper judges differ from the papers; scores are not directly comparable."
+  ],
+  "inputCap": 125952,
+  "selectedQuestionIds": [
+    "09ba9854",
+    "ba358f49",
+    "60472f9c",
+    "6d550036",
+    "10d9b85a",
+    "gpt4_7fce9456",
+    "a4996e51",
+    "46a3abf7",
+    "8e91e7d9",
+    "81507db6",
+    "60036106",
+    "85fa3a3f",
+    "d682f1a2",
+    "27016adc",
+    "9d25d4e0",
+    "51c32626",
+    "77eafa52",
+    "e25c3b8d",
+    "ef66a6e5",
+    "ef9cf60a",
+    "e831120c",
+    "1c549ce4",
+    "00ca467f",
+    "92a0aa75",
+    "80ec1f4f",
+    "c4a1ceb8",
+    "681a1674",
+    "129d1232",
+    "5a7937c8",
+    "3c1045c8",
+    "60bf93ed_abs",
+    "2698e78f_abs",
+    "88432d0a_abs",
+    "6aeb4375_abs",
+    "c8090214_abs",
+    "5c40ec5b",
+    "45dc21b6",
+    "c4ea545c",
+    "5831f84d",
+    "7a87bd0c",
+    "41275add",
+    "58470ed2",
+    "71a3fd6b",
+    "2bf43736",
+    "e3fc4d6e",
+    "caf03d32",
+    "1d4e3b97",
+    "1c0ddc50",
+    "0a34ad58",
+    "38146c39",
+    "8ebdbe50",
+    "a82c026e",
+    "dccbc061",
+    "c960da58",
+    "7527f7e2",
+    "982b5123",
+    "9a707b82",
+    "a3045048",
+    "gpt4_e072b769",
+    "gpt4_1e4a8aeb"
+  ],
+  "runPathFingerprint": "c56f86aceacc88a56eb9466e0d2ae7a2c5c5c97a91ecc1de4de86327a7b9a769",
+  "timing": {
+    "wallMs": 22468.5,
+    "concurrency": {
+      "initial": 4,
+      "active": 4,
+      "floor": 1
+    },
+    "questions": {
+      "n": 60,
+      "wallMs": {
+        "p50": 1424.1,
+        "p95": 1599.9,
+        "mean": 1403.2
+      }
+    },
+    "roles": {},
+    "calls": 0
+  },
+  "metricVersion": 2,
+  "abilities": {
+    "multi-session": {
+      "n": 30,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-assistant",
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-preference",
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "single-session-user",
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "abilityGroups": {
+    "multi-session": {
+      "n": 30,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "multi-session",
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "abstention",
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "knowledge-update",
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "information-extraction": {
+      "n": 15,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "information-extraction",
+      "definition": "unregistered metric; descriptive only",
+      "unit": "unknown",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "n": 5,
+      "correct": 0,
+      "scored": 0,
+      "f1": null,
+      "recallAtK": null,
+      "accuracy": null,
+      "runLimitRate": 0,
+      "errorRate": 0,
+      "valueMean": null,
+      "answerSessionHitAtK": null,
+      "evidenceRoundCoverage": null,
+      "evidenceAllRequired": null,
+      "fineEvidenceRecall": null,
+      "fineEvidencePrecision": null,
+      "legacyRetrievalRecallAtK": null,
+      "metric": "temporal-reasoning",
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "metricDefinitions": {
+    "multi-session": {
+      "definition": "fraction of multi-session answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "abstention": {
+      "definition": "fraction of abstention answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "knowledge-update": {
+      "definition": "fraction of knowledge-update answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-assistant": {
+      "definition": "fraction of single-session-assistant answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-preference": {
+      "definition": "fraction of single-session-preference answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "single-session-user": {
+      "definition": "fraction of single-session-user answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    },
+    "temporal-reasoning": {
+      "definition": "fraction of temporal-reasoning answers accepted by the configured judge",
+      "unit": "proportion",
+      "direction": "higher"
+    }
+  },
+  "runLimitRate": 0,
+  "errorRate": 0,
+  "cacheReadRatio": 0,
+  "injectionPrecision": null,
+  "injectionPrecisionReason": "not-labelled",
+  "toolCalls": 0,
+  "toolCallsPerQuestion": 0,
+  "recallCalls": 0,
+  "retrievedSnippetTokens": 0,
+  "answerSessionHitAtK": null,
+  "evidenceRoundCoverage": null,
+  "evidenceAllRequired": null,
+  "fineEvidenceRecall": null,
+  "fineEvidencePrecision": null,
+  "legacyRetrievalRecallAtK": null,
+  "retrievalRecallAtK": null
+}

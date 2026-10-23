@@ -1,4 +1,4 @@
-import type { JsonObject, ModelClient, SecretRedactor, SessionEntry, ToolDefinition } from "@arnilo/prism";
+import type { JsonObject, ModelClient, ModelRef, SecretRedactor, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import type {
   Memory,
   MemoryConsent,
@@ -22,14 +22,16 @@ import { isMemoryNoteStatus } from "./lifecycle/status.js";
 
 /**
  * Note kinds a fabric record may carry. `episode` is a **view** over an observational-memory
- * id: it is never stored as a second row, so `kind: "episode"` writes nothing.
+ * id: it is never stored as a second row, so `kind: "episode"` writes nothing. `exchange` is the
+ * verbatim archive of a completed user turn plus the assistant reply (plan 188.9 Task 7); the
+ * archive writes it, never a tool call.
  */
-export type MemoryNoteKind = "working" | "episode" | "fact" | "preference" | "procedure" | "file";
+export type MemoryNoteKind = "working" | "episode" | "fact" | "preference" | "procedure" | "file" | "exchange";
 
-export type { MemoryNoteStatus } from "./lifecycle/status.js";
 export type { MemoryNoteUseEvent } from "./lifecycle/events.js";
+export type { MemoryNoteStatus } from "./lifecycle/status.js";
 
-export const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[] = ["working", "episode", "fact", "preference", "procedure", "file"];
+export const MEMORY_NOTE_KINDS: readonly MemoryNoteKind[] = ["working", "episode", "fact", "preference", "procedure", "file", "exchange"];
 
 /** Storage levels a fabric reads and writes, narrowest first. `path` notes live in `project`; `team` is the
  * checked-in shared store, read-only to tools (plan 188.5 Task 3). */
@@ -80,7 +82,7 @@ export function validateNoteKey(value: unknown): string {
  * Kinds `recall` returns when the caller does not name kinds. `procedure` is opt-in: it is
  * never mixed into an untyped recall, and `working` is injected as a core block instead.
  */
-export const DEFAULT_RECALL_KINDS: readonly MemoryNoteKind[] = ["fact", "preference", "file"];
+export const DEFAULT_RECALL_KINDS: readonly MemoryNoteKind[] = ["fact", "preference", "file", "exchange"];
 
 /** Reserved `metadata` key holding the fabric note fields on a vector record. */
 export const MEMORY_NOTE_METADATA_KEY = "fabric";
@@ -404,8 +406,12 @@ export interface CreateMemoryFabricOptions {
    * retained with a similar link when its content differs. Pass `false` to write unconditionally.
    */
   readonly consolidate?: boolean | MemoryFabricConsolidationOptions;
-  /** Lazily resolved only for the opt-in model decider. */
-  readonly resolveModelClient?: (model?: string) => ModelClient;
+  /**
+   * Lazily resolved only for the opt-in model decider and the extractor. A `ModelRef` (not just a
+   * name) because the extractor's output budget is applied by re-resolving with a capped `ModelSpec`,
+   * the same rule compaction uses.
+   */
+  readonly resolveModelClient?: (ref?: ModelRef) => ModelClient;
   /**
    * Human-readable maintenance warnings (a scope whose protected notes alone exceed its capacity
    * budget). The package definition routes it to `prism.status.note("warn", ...)`.
@@ -426,6 +432,13 @@ export interface CreateMemoryFabricOptions {
   readonly promote?: import("./promote.js").ResolvedPromoteConfig;
   /** Workspace root the `promote.derivableFrom` files resolve inside. Default `process.cwd()`. */
   readonly promoteRoot?: string;
+  /**
+   * A project scope with a declared root is active, so the extractor gets the repository and
+   * derivability rules (plan 188.9 Task 8). Absent means the domain-neutral prompt.
+   */
+  readonly repositoryRules?: boolean;
+  /** The archive config; when it is enabled, its unconsolidated exchanges join a pass's candidates. */
+  readonly exchanges?: import("./config.js").MemoryFabricExchangesConfig;
 }
 
 export interface MemoryFabricConsolidationOptions {
@@ -514,7 +527,10 @@ export interface MemoryFabricConsolidateOptions {
 /** `ran: false` names why a pass did no work; a busy trigger is dropped, not queued. */
 export interface MemoryFabricConsolidateResult {
   readonly ran: boolean;
-  readonly reason?: "disabled" | "busy" | "empty";
+  /** `failed` is an extraction failure: nothing was written, the cursor stayed, and `report.failures` says why. */
+  readonly reason?: "disabled" | "busy" | "empty" | "failed";
+  /** The extractor's reason code when `reason` is `failed`; a code, never model text. */
+  readonly reasonCode?: import("./consolidation/extract.js").ConsolidationExtractionReason;
   readonly cursor?: string;
   readonly report?: import("./promote.js").FabricConsolidationReport;
 }
@@ -649,6 +665,8 @@ export interface MemoryNoteMetadata {
   readonly reconsolidate?: boolean;
   /** The wider-scope note this exception shadows; same `key`, so narrowest-scope shadowing applies. */
   readonly overrides?: string;
+  /** When a consolidation pass read this exchange; absent means the pass still gathers it. */
+  readonly consolidatedAt?: string;
   /** Set when capacity merging archived this note into another; the survivor's id. */
   readonly mergedInto?: string;
   /** Set when widening archived this note into a wider scope; the wider note's id. */
@@ -748,6 +766,7 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
   if (record.contentHash !== undefined && (typeof record.contentHash !== "string" || !/^[a-f0-9]{64}$/.test(record.contentHash)))
     return undefined;
   if (record.archivedAt !== undefined && !isIsoTimestamp(record.archivedAt)) return undefined;
+  if (record.consolidatedAt !== undefined && !isIsoTimestamp(record.consolidatedAt)) return undefined;
   if (record.archivedFrom !== undefined && record.archivedFrom !== "candidate" && record.archivedFrom !== "verified") return undefined;
   if (record.pinned !== undefined && typeof record.pinned !== "boolean") return undefined;
   if (record.created !== undefined && (!Number.isSafeInteger(record.created) || (record.created as number) < 0)) return undefined;
@@ -824,6 +843,7 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
     ...(record.key === undefined ? {} : { key: record.key as string }),
     ...(record.flags === undefined ? {} : { flags: record.flags as readonly string[] }),
     ...(record.archivedAt === undefined ? {} : { archivedAt: record.archivedAt as string }),
+    ...(record.consolidatedAt === undefined ? {} : { consolidatedAt: record.consolidatedAt as string }),
     ...(record.archivedFrom === undefined ? {} : { archivedFrom: record.archivedFrom as MemoryNoteStatus }),
     ...(record.pinned === undefined ? {} : { pinned: record.pinned as boolean }),
     ...(record.created === undefined ? {} : { created: record.created as number }),

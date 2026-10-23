@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "kind": "188.9-development-concurrency-probe",
+  "ceiling": 1000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "judge": "opencode-go/mimo-v2.5",
+  "protocolVersion": 2,
+  "dataset": "longmemeval-s@98d7416c",
+  "screen": {
+    "subset": "screen-v1",
+    "draw": "SHA-256(\"prism-188.9-memory-bench-screen-v1:\" + id), ascending; 5 per ability",
+    "salt": "prism-188.9-memory-bench-screen-v1",
+    "counts": {
+      "abstention": 5,
+      "knowledge-update": 5,
+      "multi-session": 5,
+      "single-session-assistant": 5,
+      "single-session-preference": 5,
+      "single-session-user": 5,
+      "temporal-reasoning": 5
+    },
+    "idsHash": "86d7dcfbde70c33e1f5182a868e21289723d756cb3d199b496d904b8831451c0",
+    "fileSha256": "0e3192f4df7b673a85a4d809c527f6574d66ba88bc987a33441f38b0e5594177"
+  },
+  "steps": [
+    4,
+    8,
+    16,
+    24
+  ],
+  "questions": 8,
+  "jobs": [
+    {
+      "id": "accept1889-probe-c4",
+      "family": "timing",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "screen-v1",
+      "maxInputTokens": 120000,
+      "maxQuestions": 8,
+      "concurrency": 4
+    },
+    {
+      "id": "accept1889-probe-c8",
+      "family": "timing",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "screen-v1",
+      "maxInputTokens": 120000,
+      "maxQuestions": 8,
+      "concurrency": 8
+    },
+    {
+      "id": "accept1889-probe-c16",
+      "family": "timing",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "screen-v1",
+      "maxInputTokens": 120000,
+      "maxQuestions": 8,
+      "concurrency": 16
+    },
+    {
+      "id": "accept1889-probe-c24",
+      "family": "timing",
+      "suite": "longmemeval-s",
+      "config": "fabric",
+      "subset": "screen-v1",
+      "maxInputTokens": 120000,
+      "maxQuestions": 8,
+      "concurrency": 24
+    }
+  ]
+}

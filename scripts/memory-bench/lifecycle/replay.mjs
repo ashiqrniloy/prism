@@ -76,7 +76,10 @@ function cachedClient({ modelId, client, offline, cache, calls, onModelCall }) {
       const canonical = replace({ ...input, existing }, ids);
       const key = hash([modelId, PROMPT_VERSION, request.messages[0], canonical, replace(request.tools, ids)]);
       const path = join(cache, `${key}.json`);
-      if (process.env.DBG) { const parts=Object.fromEntries(Object.entries(canonical).map(([k,v])=>[k,hash(v).slice(0,8)])); console.error("REQ", key.slice(0,8), JSON.stringify(parts)); }
+      if (process.env.DBG) {
+        const parts = Object.fromEntries(Object.entries(canonical).map(([k, v]) => [k, hash(v).slice(0, 8)]));
+        console.error("REQ", key.slice(0, 8), JSON.stringify(parts));
+      }
       let events;
       try {
         const cached = JSON.parse(await readFile(path, "utf8"));
@@ -358,6 +361,8 @@ export async function replayLedgers({
       passes.push({
         session: hash(m.session),
         ...(historicalReflections === undefined ? {} : { historicalReflections }),
+        // A failed extraction is reported, never thrown (plan 188.10 Task 5): the reason stays visible.
+        ...(result.reasonCode === undefined ? {} : { reasonCode: result.reasonCode }),
         ...(result.report
           ? {
               candidates: result.report.candidates,

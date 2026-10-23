@@ -207,8 +207,7 @@ describe("memory.recall tool: multi-query, snippets, budget", () => {
     await fabric.remember({ kind: "fact", content: "canary rollout protects deploys" });
     const recall = fabric.tools().find((definition) => definition.name === "memory.recall")!;
     const empty = (await recall.execute({ query: "kubernetes helm" } as JsonObject, toolContext)) as ToolResult;
-    assert.match(okText(empty), /no confident match/);
-    assert.match(okText(empty), /try synonyms/i);
+    assert.equal(okText(empty), "no match in any kind", "an empty default call is one stop line, not a hint");
     const weak = (await recall.execute({ query: "canary billing auth" } as JsonObject, toolContext)) as ToolResult;
     assert.equal((weak.value as { hits: unknown[] }).hits.length, 1, "a weak-but-matching hit is returned so the agent can judge it");
     assert.match(okText(weak), /try synonyms/i);

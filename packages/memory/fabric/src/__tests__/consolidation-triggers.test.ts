@@ -235,7 +235,12 @@ describe("consolidation triggers, command and host API (plan 188.3 Task 5)", () 
       },
     };
     const { fabric, session } = fabricFor([userEntry("e1")], { client });
-    await assert.rejects(fabric.consolidate(session), /provider down/);
+    const failed = await fabric.consolidate(session);
+    assert.equal(failed.ran, false);
+    assert.equal(failed.reason, "failed");
+    assert.equal(failed.reasonCode, "model_call_failed");
+    assert.deepEqual(failed.report?.failures, { model_call_failed: 1 }, "the failure is counted, not thrown away");
+    assert.equal(failed.cursor, undefined, "a failed pass reports no cursor");
     const retried = await fabric.consolidate(session);
     assert.equal(retried.ran, true);
     assert.equal(retried.cursor, "e1");
@@ -282,7 +287,11 @@ describe("consolidation triggers, command and host API (plan 188.3 Task 5)", () 
       },
     };
     const { fabric, session } = fabricFor([userEntry("e1")], { client });
-    await assert.rejects(fabric.consolidate(session), /note kind/);
+    const failed = await fabric.consolidate(session);
+    assert.equal(failed.reason, "failed");
+    assert.equal(failed.reasonCode, "note_kind");
+    assert.equal(failed.report?.modelCalls, 2);
+    assert.deepEqual(failed.report?.failures, { note_kind: 1 });
     assert.equal(calls, 2, "one repair call, then fail closed");
     assert.equal((await fabric.recall(NOTE.text, { minSimilarity: 0 })).hits.length, 0, "no partial write");
 
@@ -331,7 +340,9 @@ describe("consolidation triggers, command and host API (plan 188.3 Task 5)", () 
       };
     });
 
-    await assert.rejects(fabric.consolidate(session), /malformed answer/);
+    const failed = await fabric.consolidate(session);
+    assert.equal(failed.reason, "failed");
+    assert.equal(failed.reasonCode, "model_call_failed");
     const supersededRow = await memory.getEntry(superseded.id);
     const reopenedRow = await memory.getEntry(reopened.id);
     assert.equal(parseMemoryNoteMetadata(supersededRow?.metadata)?.validTo, undefined, "nothing is retired before extraction succeeds");

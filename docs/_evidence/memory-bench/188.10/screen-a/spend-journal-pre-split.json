@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-e89499449cab",
+  "manifestHash": "e89499449cabb36192de7aa81604be6e5c88f7cbd5083218d5f11932470f742e",
+  "ceiling": 8000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-23T13:51:42.740Z",
+  "updatedAt": "2026-10-23T14:00:52.122Z",
+  "status": "active",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept18810-screen-a-x@1",
+      "jobId": "accept18810-screen-a-x",
+      "manifestHash": "e89499449cabb36192de7aa81604be6e5c88f7cbd5083218d5f11932470f742e",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/screen-a/screen-a-accept18810-screen-a-x.json",
+      "maxInputTokens": 3000000,
+      "reservedInputTokens": 3500000,
+      "startedAt": "2026-10-23T13:51:42.745Z",
+      "confirmedInputTokens": 0,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-23T13:52:05.280Z"
+    },
+    {
+      "attemptId": "accept18810-screen-a-x-tools@1",
+      "jobId": "accept18810-screen-a-x-tools",
+      "manifestHash": "e89499449cabb36192de7aa81604be6e5c88f7cbd5083218d5f11932470f742e",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.10/screen-a/screen-a-accept18810-screen-a-x-tools.json",
+      "maxInputTokens": 3000000,
+      "reservedInputTokens": 3500000,
+      "startedAt": "2026-10-23T13:52:05.281Z",
+      "confirmedInputTokens": 1137259,
+      "usageComplete": true,
+      "cacheReadTokens": 348224,
+      "outputTokens": 24098,
+      "endedAt": "2026-10-23T14:00:52.122Z"
+    }
+  ]
+}

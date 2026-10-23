@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-a572bcd1aae3",
+  "manifestHash": "a572bcd1aae3105e18fef02fb5b1c5f7d85a0158b95b8fbffb414fa7392bcad2",
+  "ceiling": 30000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-22T08:13:56.489Z",
+  "updatedAt": "2026-10-22T08:13:56.572Z",
+  "status": "setup-failure",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept1888-prefix@1",
+      "jobId": "accept1888-prefix",
+      "manifestHash": "a572bcd1aae3105e18fef02fb5b1c5f7d85a0158b95b8fbffb414fa7392bcad2",
+      "status": "setup-failure",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.8/final-accept1888-prefix.json",
+      "maxInputTokens": 1000000,
+      "reservedInputTokens": 1500000,
+      "startedAt": "2026-10-22T08:13:56.490Z",
+      "confirmedInputTokens": 1500000,
+      "usageComplete": false,
+      "endedAt": "2026-10-22T08:13:56.572Z"
+    }
+  ]
+}

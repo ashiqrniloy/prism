@@ -22,7 +22,7 @@ import {
   recordData,
 } from "@arnilo/prism-memory-observational";
 
-export type ConsolidationSource = "explicit" | "correction" | "decision" | "observation" | "reflection";
+export type ConsolidationSource = "explicit" | "correction" | "decision" | "observation" | "reflection" | "exchange";
 
 /** The signals a candidate carries into scoring (Task 3); every other term comes from the extractor. */
 export interface ConsolidationSignals {
@@ -36,6 +36,8 @@ export interface ConsolidationCandidate {
   readonly text: string;
   readonly evidenceIds: readonly string[];
   readonly signals: ConsolidationSignals;
+  /** When the evidence happened, for a candidate that knows (an archived exchange). */
+  readonly tRef?: string;
   /** Notes the assistant cited before the user corrected it; harmful evidence for those notes. */
   readonly citedNotes?: readonly string[];
 }
@@ -118,6 +120,7 @@ export function gatherConsolidationCandidates(
     decision: [],
     observation: [],
     reflection: [],
+    exchange: [],
   };
 
   const candidate = (

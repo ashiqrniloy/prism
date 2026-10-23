@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "campaign-def2f0f11c18",
+  "manifestHash": "def2f0f11c182218e0af1e46c17e5d4d280da8ecfa8d582c6d69c2af7b9e438f",
+  "ceiling": 8000000,
+  "priorReservation": 0,
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "createdAt": "2026-10-23T00:59:23.290Z",
+  "updatedAt": "2026-10-23T01:16:46.951Z",
+  "status": "finished",
+  "legacy": [],
+  "attempts": [
+    {
+      "attemptId": "accept1889-write-x@1",
+      "jobId": "accept1889-write-x",
+      "manifestHash": "def2f0f11c182218e0af1e46c17e5d4d280da8ecfa8d582c6d69c2af7b9e438f",
+      "status": "abandoned",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-write-x.json",
+      "maxInputTokens": 1500000,
+      "reservedInputTokens": 2000000,
+      "startedAt": "2026-10-23T00:59:23.295Z",
+      "confirmedInputTokens": 2000000,
+      "usageComplete": false,
+      "endedAt": "2026-10-23T01:00:33.546Z"
+    },
+    {
+      "attemptId": "accept1889-write-x@2",
+      "jobId": "accept1889-write-x",
+      "manifestHash": "def2f0f11c182218e0af1e46c17e5d4d280da8ecfa8d582c6d69c2af7b9e438f",
+      "status": "completed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-write-x-2.json",
+      "maxInputTokens": 1500000,
+      "reservedInputTokens": 2000000,
+      "startedAt": "2026-10-23T01:00:33.551Z",
+      "confirmedInputTokens": 0,
+      "usageComplete": true,
+      "cacheReadTokens": 0,
+      "outputTokens": 0,
+      "endedAt": "2026-10-23T01:01:06.839Z"
+    },
+    {
+      "attemptId": "accept1889-baseline@1",
+      "jobId": "accept1889-baseline",
+      "manifestHash": "def2f0f11c182218e0af1e46c17e5d4d280da8ecfa8d582c6d69c2af7b9e438f",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-baseline.json",
+      "maxInputTokens": 1500000,
+      "reservedInputTokens": 2000000,
+      "startedAt": "2026-10-23T01:01:06.839Z",
+      "confirmedInputTokens": 164011,
+      "usageComplete": true,
+      "cacheReadTokens": 6400,
+      "outputTokens": 31786,
+      "endedAt": "2026-10-23T01:15:49.922Z"
+    },
+    {
+      "attemptId": "accept1889-x@1",
+      "jobId": "accept1889-x",
+      "manifestHash": "def2f0f11c182218e0af1e46c17e5d4d280da8ecfa8d582c6d69c2af7b9e438f",
+      "status": "failed",
+      "output": "/home/arn/Projects/prism/docs/_evidence/memory-bench/188.9/acceptance/final-accept1889-x.json",
+      "maxInputTokens": 2500000,
+      "reservedInputTokens": 3000000,
+      "startedAt": "2026-10-23T01:15:49.923Z",
+      "confirmedInputTokens": 23800,
+      "usageComplete": true,
+      "cacheReadTokens": 320,
+      "outputTokens": 3011,
+      "endedAt": "2026-10-23T01:16:46.951Z"
+    }
+  ]
+}

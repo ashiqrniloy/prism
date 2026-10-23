@@ -59,6 +59,12 @@ uncallable by a session where it is off.
 - The team store (below) is one extra markdown store opened at setup, when `.prism/memory/` exists:
   one bounded reconcile plus one trust scan of its notes, and one extra query per recall. No model
   call and no embedding call; writes happen only through `memory:share`, after a person approves.
+- The exchange archive (below) is off by default and costs **one local fabric write per completed
+  turn** (several only when a turn is long enough to split), plus one branch read for the pair. No
+  model call, no embedding call in lexical mode, and no added store query: the write runs in
+  `session.background` after the reply is stored. Storage grows by about one turn's text per turn, so
+  the default is off. `DEFAULT_RECALL_KINDS` includes `exchange`, so an opted-in archive makes passive
+  delivery longer by the history it recalls (facts are delivered first, then exchanges).
 - Session consolidation (below) is off by default and costs **one model call per pass**, only when a
   pass runs; new notes embed once each in hybrid mode (plus one decider call when
   `consolidate.decider` is `"model"`). Verifying a candidate and archiving a stale one are metadata
@@ -138,6 +144,16 @@ the signals in the transcript itself, and returns ordered candidates
 | `decision` | `MemoryTaskState.decisions` in `om.task_state.recorded` records after the cursor | — |
 | `observation` | observations rated `high` or `critical` (`critical` first) | — |
 | `reflection` | reflections no later record superseded | — |
+| `exchange` | not-yet-consolidated archived exchanges, read through scoped recall with the session tail as the query | `explicit: 1` support when the extractor's note cites it |
+
+An **exchange** candidate is added by the pass, not by `gatherConsolidationCandidates`: when
+`exchanges` is enabled, `createMemoryFabric().consolidate()` recalls archived exchanges that no pass
+has read yet (metadata `consolidatedAt` absent), scope-tagged, capped by the same `maxCandidates`
+budget as the transcript candidates and at `maxTextChars` each, and marks them read once the pass
+returns. Its evidence id is the exchange note id and its `tRef` is the exchange's. Measured facts then
+carry `links: [{ id, relation: "evidence" }]` to the exchanges behind them, so the fact is the index
+and the exchange is the verbatim detail; an exchange outside the note's readable scopes is never
+linked.
 
 `patterns` defaults to the exported `CONSOLIDATION_PATTERNS`:
 
@@ -168,35 +184,85 @@ existing-note ids it was shown. When no task segment is shown, `episode` is abse
 kind enum; a `path` note is offered only with `applies_to`. The runtime parser enforces both rules
 regardless of how much conditional JSON Schema the provider honours.
 
-The prompt (`CONSOLIDATION_EXTRACT_SYSTEM`) carries the candidates, up to 12 active notes per scope
-from `recallExisting` (lexical, over the candidate text), and the session's task segments. It asks
-for one atomic, self-contained, typed note each — `fact`, `procedure`, `preference` or `episode` —
-with a proposed scope, keys and aliases, evidence ids, generality and ephemerality, and the
-precision-first scope rule: the narrowest scope that stays true, never wider than the evidence.
+The prompt carries the candidates, up to 12 active notes per scope from `recallExisting` (lexical,
+over the candidate text), and the session's task segments. It asks for one atomic, self-contained,
+typed note each — `fact`, `procedure`, `preference` or `episode` — with a proposed scope, keys and
+aliases, evidence ids, generality and ephemerality, and the precision-first scope rule: the narrowest
+scope that stays true, never wider than the evidence.
+
+Two system prompts share those rules. `CONSOLIDATION_EXTRACT_SYSTEM` is domain-neutral ("an agent's
+session"); `CONSOLIDATION_EXTRACT_SYSTEM_PROJECT` adds the repository and derivability rules and is
+used only when a project scope with a declared root is active, so a coding session keeps its
+repository rules while a host without a project is not asked for them. Both add the general
+fact rules: a specific fact the user stated (a possession, event, date, count, name, plan or changed
+value) is durable; `tRef` carries the instant when the evidence has one, and an event with no time of
+its own takes the date of the candidate it came from; and `key` names one changeable attribute — a
+value a later statement replaces — so a later value supersedes the earlier one instead of piling up
+next to it. `tRef` is validated as an ISO 8601 timestamp and stored on the note; a keyed note whose
+`tRef` is later than the shown note with the same kind, scope and key supersedes it through the write
+path (`supersedes`), so one current value stays current.
+
+Conversational history needs three rules on top of that (plan 188.10 Task 6), and they are prompt
+text only: no new note kind, no new field. **One fact per instance** — each event, purchase, visit,
+trip, item or person the user mentions is its own note, even when several share a category.
+**Keys are for attributes, never instances** — two visits never share a key; an instance takes no key,
+or one unique to it (`trip.2023-05-kyoto`), so both stay active and a count across them stays
+answerable. A count the user states ("I have 3 bikes") is an attribute; the bikes are instances.
+**Category keywords** — every fact carries 2–4 generic words someone would search for ("doctor",
+"health", "appointment" for a visit to a dermatologist), while specific names and synonyms go in
+`aliases`. Both reach the lexical index (aliases merge into `keywords` on write, weighted above the
+body), so "which doctors did I see" finds a note that only says "dermatologist" — which is what makes
+cross-session aggregation work without a read-time model call.
 
 - **`agent` scope is downgraded to `project`.** Only the widening pass writes agent-scope notes from
   promotions. An explicit user statement may target `user`.
 - **Episodes** are one per task segment (the span between OM task-state goal changes), at most 280
   characters. A second episode for a shown segment fails the answer.
-- **Derivability**: anything a reader can derive from `AGENTS.md`, `README.md`, `package.json` or the
-  code is not a note.
+- **Derivability** (project prompt only): anything a reader can derive from `AGENTS.md`,
+  `README.md`, `package.json` or the code is not a note.
 - **Fail closed**: a malformed answer — invalid shape, an unknown kind or scope, an evidence or
   `contradicts` id that was not shown, more notes than the pass allows, an oversize item — is
   rejected whole. A shape-only failure gets **one** repair call with a safe `reasonCode` and the same
   shown ids; a second invalid answer, an invented id, an unsafe scope, a trust/secret rejection, an
-  abort or a worker limit never becomes accepted through repair. The pass then throws
-  `ConsolidationExtractionError` with `reasonCode` and call counts (`modelCalls`,
-  `correctionCalls`), writes nothing, keeps its cursor, warns once and retries on the next trigger.
-  An aborted call aborts the pass.
+  abort or a worker limit never becomes accepted through repair. The pass then fails with a
+  `reasonCode` and call counts (`modelCalls`, `correctionCalls`), writes nothing and keeps its cursor,
+  so the material is retried on the next trigger. An aborted call aborts the pass itself.
+- **Truncation is its own reason.** A turn that stops on the output limit (`max_output_tokens`) without
+  a valid `record_notes` call fails as `output_truncated`, which is repaired once: the repair asks for
+  fewer, shorter notes over the same evidence. A second truncation fails the pass. Raising
+  `promote.maxOutputTokens` is the fix for losing a long session's facts this way.
 - **Per-item rejection**: the trust scan (`scanScopedMemoryContent`) and the secret redactor run on
   every output text, keyword and alias. A flagged or secret-bearing note is dropped and counted as
   `rejected.trust` / `rejected.secret` instead of failing the whole answer.
 
-Cost: one model call per valid pass; a malformed answer costs at most one additional call. Input is
-bounded by `maxCandidates × maxTextChars` plus at most 48 existing-note snippets (240 characters
-each), all measured against `workerLimits` before it is sent. The pass report counts the actual
-`modelCalls` and `correctionCalls`, so a repair is attributable. The client is resolved by the caller
-only when a pass runs, so loading the package resolves none.
+Cost: one model call per valid pass; a malformed answer costs at most one additional call; exchanges
+join that same call rather than adding one. Input is bounded by `maxCandidates × maxTextChars` plus
+at most 48 existing-note snippets (240 characters each), all measured against `workerLimits` before it
+is sent — the `maxCandidates` budget is shared by transcript and exchange candidates, so enabling
+`exchanges` widens a pass's input only up to that ceiling. `promote` off or `exchanges` off avoids the
+exchange share entirely. The pass report counts the actual
+`modelCalls` and `correctionCalls`, so a repair is attributable, plus `failures` (a tally by
+`reasonCode`) and `outputLimited` (calls that stopped on the output limit), which `memory:status`
+reads back. The client is resolved by the caller only when a pass runs, so loading the package
+resolves none.
+
+Two host knobs tune that one call:
+
+- **`promote.maxOutputTokens`** (integer 256–32,768) re-resolves the extractor's client with
+  `parameters.maxTokens = min(maxOutputTokens, model.limits.maxOutputTokens)`, the same rule
+  compaction uses. Absent, the model's own parameters apply unchanged. 48 notes do not fit a solver's
+  4,096-token answer budget; this is a write-side cost, never the answer's.
+- **`promote.thinkingLevel`** (`none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) is passed to
+  the worker loop. Absent, the model's default applies. Reasoning before one large structured answer
+  is where truncation hides, so a level is cheaper than a repair.
+
+**Measured overhead** (5 development multi-session haystacks, real prompt builder, offline): the
+extractor prompt is ~44 kB with an empty store and ~58 kB with the worst case the constants allow (48
+existing notes at the 240-character cap). By part: system 2,845 B, schema 1,621–2,156 B, existing
+notes 0–13,383 B, the session's own candidates 39,179 B, segments 0–437 B. The candidates dominate
+(~89%), so the harness is a bounded minority and no trim of the existing-note or schema share was
+justified. A fixture in `__tests__/extractor-budget.test.ts` pins the parts, so a later overhead
+regression fails a test instead of a paid run.
 
 ### Consolidation: scoring and the gate
 
@@ -215,7 +281,7 @@ weights are exported as `DEFAULT_PROMOTION_WEIGHTS`.
 
 | Signal | Meaning |
 | --- | --- |
-| `explicit` | The user said it directly. Requires an `explicit` candidate in the note's evidence; without one the flag is cleared. Never rejected for score. |
+| `explicit` | The user said it directly. Requires an `explicit` (or archived `exchange`, which is verbatim user speech) candidate in the note's evidence; without one the flag is cleared. Never rejected for score. |
 | `correction` | The user corrected the agent, and a `correction` candidate supports the note. |
 | `outcome` | An outcome tag (a passing test run, a commit, an approval) covers the note's evidence. |
 | `recurrence` | `log2(1 + distinct sessions)`, normalised to reach 1 at four distinct sessions and capped there. Repeats inside one session add nothing. |
@@ -242,7 +308,7 @@ memoryFabric({
   enabled: true, // default
   retrieval: "lexical", // default; "hybrid" adds the embeddings leg
   semantic: true, // default; whether indexed notes are available
-  inject: false, // default; opt in with { minSimilarity: 0.35, topK: 3, budgetTokens: 600, query: "task" }
+  inject: false, // default; opt in with { query: "task" } → minSimilarity 0.2, topK 12, budgetTokens 4000
   directory: true, // default when semantic or tools.root is set; or { maxTopics: 8, maxFiles: 10, maxTokens: 200 }
   core: true, // default; or { maxTokens: 600, scopes: ["user", "project"] }
   cues: true, // default; or { budgetTokens: 300, maxPerTurn: 2 }
@@ -266,11 +332,13 @@ memoryFabric({
   linker: false | { enabled: true, topK: 3 },
   evolution: false | { enabled: true, maxPatches: 4 },
   passive: false,
+  // The exchange archive: off by default; {} archives each completed user turn verbatim.
+  exchanges: false | { enabled: true },
   // Verification by use across separate sessions (a citation is a use, a retrieval is not).
   lifecycle: {
     verifyAfterSessions: 2,
     // Retrieval-strength decay per kind; higher forgets faster. Provisional until plan 188.6.
-    decay: { episode: 0.8, fact: 0.4, procedure: 0.4, preference: 0.2 },
+    decay: { episode: 0.8, fact: 0.4, procedure: 0.4, preference: 0.2, exchange: 0.5 },
     // Storage-strength coefficients of `explicit + sessions·log(1+useSessions) + helpful − harmful + outcome`.
     storageWeights: { explicit: 1, sessions: 0.5, helpful: 0.5, harmful: 1, outcome: 0.5 },
     // Recall priors `w_R·σ(R) + w_S·σ(S)`; each in [0, 0.5], default 0.05.
@@ -292,6 +360,8 @@ memoryFabric({
     minTurnsBetween: 8,
     maxCandidates: 48,
     derivableFrom: ["AGENTS.md", "README.md", "package.json", "CLAUDE.md"],
+    maxOutputTokens: 8192, // default absent: the model's own parameters; capped by its limit
+    thinkingLevel: "low", // default absent: the model's default
   },
 });
 ```
@@ -436,7 +506,7 @@ always-present tier stays small:
 | Pinned core | `fabric-core` | prompt prefix | a write, pin, forget, or maintenance pass changes a note it shows | zero after the first cached turn |
 | Path cues | `fabric-semantic` tail | tail | a file tool touches a path for the first time in the session | tokens only on the turn a new path matches; none otherwise |
 | Directory | `fabric-directory` | prompt prefix | the same as the core | one aggregate query per rebuild |
-| On demand | — | `memory.recall` | — | one lexical query per call |
+| On demand | — | `memory.recall` | — | normal recall plus one local lexical discovery query per active scope only when default kinds return zero hits |
 
 Two properties hold the cost down, and `packages/memory/fabric/src/__tests__/prefix-stability.test.ts`
 pins the first one: a quiet turn sends byte-identical prefix blocks (the directory and the core), so a
@@ -551,6 +621,58 @@ The file is written but never committed: reviewing and committing is the person'
 VCS. A candidate, an archived or flagged note, `write: "off"`, a declined prompt, and a host with no
 UI (`unavailable`) all refuse the share with a reason (`not_verified`, `write_off`, `denied`,
 `host_unavailable`), and nothing is written.
+
+## Exchange archive
+
+Off by default (`exchanges: false`). Turn it on with `exchanges: {}` and every completed turn is
+archived as one note of kind `exchange`: the user's text and the assistant reply that followed it,
+verbatim, in the order they were said.
+
+```text
+user: Remember the launch moved to Monday.
+assistant: Noted; I will treat Monday as the launch date.
+```
+
+- **Pairing, not messages.** The archive hooks `message.completed`, which fires after the reply is
+  appended (not `turn.completed`, which fires inside the provider round before it). Only an
+  assistant message with **no `tool_call` block** ends a turn, so a tool round never becomes an
+  exchange and tool arguments/results are never stored.
+- **Dated and source-backed.** `tRef` is the user entry's timestamp; `sourceEntryIds` are the two
+  **session entry** ids (not message ids). Passive delivery uses them to suppress an exchange whose
+  turn is still in the prompt, so history is never injected twice.
+- **Scope** (settled by plan 188.9 Task 1c): `project` only when the project scope is active **and**
+  a root was declared (`scopes.project.root` or `tools.root`); otherwise `user`; otherwise `agent`.
+  A conversational host with no declared root therefore does not file history under whatever
+  directory the process started in. An exchange is never written to `path`.
+- **Long turns split.** Above `limits.maxEntryTextChars` (16,384 by default) a turn splits on the
+  message boundary first, then paragraph, then line, then character boundaries. The parts share
+  `tRef` and the source ids and link to each other (`relation: "part"`), so recalling one part can
+  expand to its siblings; each part carries `context: "part i of n"`. Other writes keep the hard
+  limit.
+- **Lifecycle.** Exchanges decay with their own `lifecycle.decay.exchange` (default 0.5) and are
+  subject to the same capacity and archive rules as other notes. They are never promoted, never
+  pinned to core, never shared with the team store, and never written by a tool.
+- **Security.** The kernel writes session entries after redaction, so an agent redactor has already
+  replaced its secrets before the archive reads the turn; an explicit `redactor` passed to the
+  module additionally *refuses* a turn it would rewrite rather than storing altered history. The
+  text is passed through `scanScopedMemoryContent` first, and a refusal (prompt injection,
+  exfiltration, invisible Unicode) is counted and reported through `prism.status.note`, never
+  stored.
+
+`memory:archive` back-fills the session: it archives every completed exchange not yet archived
+(idempotent by the session entry ids), and reports `archived`, `skipped`, and `parts`. It is the
+import path for a session recorded before the archive was on, and for the benchmark harness:
+
+```ts
+const agent = await createAgent({ model, packages: [fabric({ exchanges: {} })] });
+await agent.commands.run("memory:archive", {}, { session });
+```
+
+`memory:recall` accepts `exchange` explicitly and `DEFAULT_RECALL_KINDS` includes it, so an untyped
+recall or a passive injection can return archived history. Passive delivery renders **facts first,
+then exchanges, each group in time order**, and selection stays by rank; a fact hit expands to its
+linked exchange only when `exchange` is among the requested kinds, so naming kinds is also how a
+caller asks for the detail.`memory.recall` with `kinds: ["fact"]` returns the fact alone.
 
 ## Memory directory
 
@@ -864,7 +986,8 @@ a failed pass leaves the material for the next trigger and fails only its backgr
 
 `memory:status` reports the last pass from session state alongside the note census: candidates,
 accepted, written, updated, exceptions, retired, model calls, and rejections by reason (`score`,
-`ephemeral`, `derivable`, `trust`, `secret`). `memory:consolidate` returns the same counts.
+`ephemeral`, `derivable`, `trust`, `secret`), and — on a failed pass — `failures` by reason code with
+`outputLimited` for calls that hit the output limit. `memory:consolidate` returns the same counts.
 
 ### OKF export and import
 
@@ -888,11 +1011,17 @@ refuse without it, and refuse a path that escapes it or overlaps the live `notes
 | Tool | Effects | Needs |
 | --- | --- | --- |
 | `memory.view` | `read` | `tools.root` for paths; the directory needs none |
-| `memory.read` | `read` | `tools.root` |
+| `memory.read` | `read` | `tools.root` for paths; a note id needs none |
 | `memory.insert` | `edit` | block, file path, or fact/preference/procedure kind |
 | `memory.replace` | `edit` | block, file path, or note id |
 | `memory.recall` | `read` | — |
 | `memory.forget` | `write` | — |
+
+`memory.read` accepts exactly one of `path`, `id`, or `ids` (1–8). A note read returns each note in
+full with its header — id, scope, kind, date, and the note's path — through the same scope, consent,
+invalidation and redaction filters as recall; an unknown, foreign-scope, or revoked id is
+`not_found` for that id alone, and the call reads at most 8 notes. A file read stays jailed and
+byte-capped.
 
 `memory.insert` accepts exactly one of `block`, `path`, or `kind: "fact" | "preference" | "procedure"`.
 Typed notes accept `supersedes`, `tRef`, `validFrom`, `validTo`, `tags`, `keywords`, `scope`,
@@ -918,24 +1047,62 @@ semantic embedding or vector/lexical query; `memory.recall` retrieves detail whe
 This default has no measured benchmark gain yet: Task 14 must supply paired benchmark evidence
 before changing it. Working memory stays in the prefix and changes on writes.
 
-Opt in with `inject: { minSimilarity: 0.35, topK: 3, budgetTokens: 600, query: "task" }`.
-The best matching note is always injected even when it alone exceeds `budgetTokens`; later notes
-must fit, so an oversized top note cannot hide the only useful memory. Every injected block — the
+Opt in with `inject: { query: "task" }`; the defaults are `minSimilarity: 0.2`, `topK: 12` and
+`budgetTokens: 4000`, so an opted-in turn adds **about 4,000 tokens** of memory at most (measured
+mean 3,739 in the ceiling grid and 2,865 in the shipped-query delivery diagnostic over the 140
+development questions). Delivery fills by rank with **whole** notes: each
+note renders in full while it fits the remaining budget, up to `topK`, and a later note that does
+not fit whole is **skipped, not truncated** — a shorter note after it may still fit. The best
+matching note is always shown: when it alone exceeds the budget it renders as an excerpt centred on
+the densest run of matched query terms, of the whole budget, ending
+`(excerpt; memory.read <id> for the full note)`. Shown notes are delivered in **time order**
+(`tRef` else `ingestedAt`, ties by rank) with their date header, so a knowledge update is read after
+the value it replaces; ranking still decides *which* notes are selected. Rendering changes how much
+of a note is shown, not which notes are ranked or filtered, and adds no query, write, or model call;
+injected tokens stay within `budgetTokens` with no exception. The defaults come from the frozen
+ceiling grid (plan 188.9 Task 5): at the ~4,000-token cost anchor they deliver the most needed
+evidence of any cell whose per-ability answer visibility does not fall below the 600/3/0.35 control.
+
+**When the block is a selection, it says so.** If fewer notes are shown than were eligible after the
+similarity floor (before `topK` or the budget cut them), the block ends with one line:
+`Showing N of M matching notes. To list, count or compare across past conversations, call
+memory.recall with several phrasings (queries) and memory.read the ids you need.` It names the two
+read tools instead of asking the host, because per-run tool availability is not visible to the
+package; a host that hides them still reads a coherent line. It carries counts only, never note
+text, and it is absent when everything eligible was shown or when `inject` is off. The line counts
+inside `budgetTokens` (about 43 tokens by the block's own `chars / 4` estimate): it takes the
+space of the last delivered note rather than overspending, and is dropped only if even one note
+leaves no room. The cue is the reason the block can be trusted as complete-or-labelled: an agent
+that sees it searches instead of concluding that memory holds no more.
+
+Every injected block — the
 working prefix, the directory, and the semantic tail — is marked
 `untrusted`, `inert`, and `injectionCapable`, so remembered text is never treated as host
 instructions.
-The `0.35` floor is applied to the active mode's similarity: query-term coverage in lexical mode
-(calibrated in plan 188.1 Task 2) or pre-fusion vector cosine in hybrid mode (provisional until
-plan 188.6). A hybrid opt-in host gets one status note naming the embedder and floor. Empty results
-inject nothing; the recall tool says `no confident match`.
+The `minSimilarity` floor (default `0.2`) is applied to the active mode's similarity: query-term
+coverage in lexical mode (calibrated in plan 188.1 Task 2) or pre-fusion vector cosine in hybrid
+mode (provisional until plan 188.6). A hybrid opt-in host gets one status note naming the embedder and floor. Empty results
+inject nothing; the recall tool says `no match in any kind`.
+
+`memory.recall` is the agent's detail channel: one call returns at most **1,200 rendered tokens**
+(the `budget`, counted on the snippet lines it prints, header, path and matched terms included) and
+each snippet is the densest window of matched query terms in its note, capped at 600 characters.
+Every line carries the note's relative path; `memory.read <id>` returns the note whole. Without
+`kinds` the tool searches **every stored kind except `working`** (that tier is already in the
+prefix), so an episode or a procedure from stored history answers without a second call. It makes
+exactly one recall query — there is no kind-discovery follow-up — and an empty result is the single
+stop line `no match in any kind`.
 
 Fabric recall uses the store's lexical leg and, in hybrid mode, the vector leg too, fused with
 `fuseRankings` before optional recency/importance scoring. Lexical-only stores use the lexical
 ranking alone. Each scope is queried separately and the union is ranked as described under
 [Recall across scopes](#recall-across-scopes); injected lines name the level (`[id] user preference
-2026-09-30 …`). Kinds default to `fact`, `preference`, and `file`; `inject.kinds` or recall's
-`kinds` can name others, and `kinds: ["all"]` means every kind (`working`, `episode`, `fact`,
-`preference`, `procedure`, `file`). Validity and consent apply to both query hits and one-hop links.
+2026-09-30 …`). Passive kinds default to `fact`, `preference`, and `file`; `inject.kinds` or
+recall's `kinds` can name others, and `kinds: ["all"]` means every kind (`working`, `episode`,
+`fact`, `preference`, `procedure`, `file`). The tool's own default is wider — every kind but
+`working` — so stored history answers there without changing what an opted-in turn injects.
+Validity and consent apply to both query hits and one-hop links.
+
 Link expansion fetches up to `topK` targets in at most one scoped `Memory.get` batch, including notes
 outside the query candidates.
 Notes embed content plus keywords, tags, and context; stored content stays unchanged, including

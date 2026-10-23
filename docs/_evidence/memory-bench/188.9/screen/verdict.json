@@ -1,0 +1,107 @@
+{
+  "kind": "188.9-screen-verdict",
+  "screen": {
+    "subset": "screen-v1",
+    "draw": "SHA-256(\"prism-188.9-memory-bench-screen-v1:\" + id), ascending; 5 per ability",
+    "salt": "prism-188.9-memory-bench-screen-v1",
+    "counts": {
+      "abstention": 5,
+      "knowledge-update": 5,
+      "multi-session": 5,
+      "single-session-assistant": 5,
+      "single-session-preference": 5,
+      "single-session-user": 5,
+      "temporal-reasoning": 5
+    },
+    "idsHash": "86d7dcfbde70c33e1f5182a868e21289723d756cb3d199b496d904b8831451c0",
+    "fileSha256": "0e3192f4df7b673a85a4d809c527f6574d66ba88bc987a33441f38b0e5594177"
+  },
+  "rule": {
+    "minGainQuestions": 3,
+    "maxAbilityLoss": 1,
+    "maxRunLimit": 0.05
+  },
+  "baseline": {
+    "correct": 17,
+    "total": 35,
+    "runLimitRate": 0,
+    "perAbility": {
+      "abstention": {
+        "correct": 4,
+        "total": 5
+      },
+      "knowledge-update": {
+        "correct": 1,
+        "total": 5
+      },
+      "multi-session": {
+        "correct": 0,
+        "total": 5
+      },
+      "single-session-assistant": {
+        "correct": 4,
+        "total": 5
+      },
+      "single-session-preference": {
+        "correct": 4,
+        "total": 5
+      },
+      "single-session-user": {
+        "correct": 4,
+        "total": 5
+      },
+      "temporal-reasoning": {
+        "correct": 0,
+        "total": 5
+      }
+    }
+  },
+  "arms": {
+    "x": {
+      "proceed": true,
+      "gainQuestions": 8,
+      "abilityLosses": {
+        "abstention": -1,
+        "knowledge-update": -3,
+        "multi-session": -1,
+        "single-session-assistant": -1,
+        "single-session-preference": 1,
+        "single-session-user": -1,
+        "temporal-reasoning": -2
+      },
+      "runLimitRate": 0,
+      "reason": "gained 8 questions; worst ability loss 1"
+    },
+    "xc": {
+      "proceed": false,
+      "missing": true,
+      "reason": "excluded: not measured: the write-side attempt was killed at concurrency 16 with 1 of 35 ids finished and its per-id cost unknown; a capped measurement runs before Task 11"
+    },
+    "xc-agentic": {
+      "proceed": false,
+      "missing": true,
+      "reason": "excluded: reuses the unmeasured `xc` store"
+    }
+  },
+  "proceed": [
+    "x"
+  ],
+  "sources": {
+    "baseline": {
+      "jobId": "accept1889-screen-baseline",
+      "attemptId": "accept1889-screen-baseline@1"
+    },
+    "baseline-new-delivery": {
+      "jobId": "accept1889-screen-baseline-new-delivery",
+      "attemptId": "accept1889-screen-baseline-new-delivery@1"
+    },
+    "write-x": {
+      "jobId": "accept1889-screen-write-x",
+      "attemptId": "accept1889-screen-write-x@1"
+    },
+    "x": {
+      "jobId": "accept1889-screen-x",
+      "attemptId": "accept1889-screen-x@1"
+    }
+  }
+}

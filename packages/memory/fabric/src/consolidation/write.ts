@@ -48,6 +48,8 @@ export interface AcceptedConsolidationNote {
   readonly replacing?: ConsolidationKnownNote;
   /** A shown existing note this note contradicts. */
   readonly contradicts?: ConsolidationKnownNote;
+  /** A shown note this keyed value replaces; the write path supersedes it. */
+  readonly supersedes?: { readonly id: string };
 }
 
 export interface WriteConsolidationNotesInput {
@@ -58,6 +60,8 @@ export interface WriteConsolidationNotesInput {
   readonly notes: readonly AcceptedConsolidationNote[];
   /** Reconsolidating notes the extractor returned nothing for: retired, never deleted. */
   readonly retire?: readonly { readonly id: string; readonly level?: MemoryNoteScope }[];
+  /** Exchange note ids → the scope they live in, so a fact links only exchanges its scope can read. */
+  readonly exchangeEvidence?: ReadonlyMap<string, MemoryNoteScope>;
   readonly sessionId: string;
   readonly pass: string;
   /** The project id added to `contradictedIn`; required for an exception to be written. */
@@ -97,6 +101,9 @@ export interface WriteConsolidationNotesResult {
 export async function writeConsolidationNotes(input: WriteConsolidationNotesInput): Promise<WriteConsolidationNotesResult> {
   const memories = new Map<MemoryNoteScope, Memory>([["project", input.memory]]);
   for (const binding of input.scopes ?? []) memories.set(binding.level, binding.memory);
+  // Only a caller that declared its active scopes can have a note scope remapped; one that passed
+  // just a memory keeps writing where the note says (the single-scope shape of the direct API).
+  const scopesDeclared = (input.scopes ?? []).length > 0;
   const memoryFor = (level: MemoryNoteScope | undefined): Memory =>
     level === undefined || level === "project" ? input.memory : (memories.get(level) ?? input.memory);
 
@@ -107,6 +114,10 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
 
   for (const accepted of input.notes) {
     const { note, score } = accepted;
+    // A scope that is not active cannot receive the write: the note lands in the project scope
+    // instead of failing the whole pass (plan 188.9 Task 9 runs with user and agent off).
+    const level: MemoryNoteScope =
+      note.scope === "path" || note.scope === "project" || !scopesDeclared || memories.has(note.scope) ? note.scope : "project";
     if (!isStorableExtractedKind(note.kind)) {
       skipped.push({ text: note.text, reason: "episode-view" });
       continue;
@@ -136,7 +147,7 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
       continue;
     }
 
-    const existing = accepted.replacing === undefined ? undefined : await readKnownNote(memoryFor(note.scope), accepted.replacing.id);
+    const existing = accepted.replacing === undefined ? undefined : await readKnownNote(memoryFor(level), accepted.replacing.id);
     if (accepted.replacing !== undefined && existing === undefined) {
       skipped.push({ text: note.text, reason: "contradicted-note-missing" });
       continue;
@@ -150,9 +161,29 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
     }
 
     const keywords = [...new Set([...note.keywords, ...note.aliases])];
-    const links =
-      contradiction === undefined || wider || existing !== undefined ? undefined : [{ id: contradiction.id, relation: "contradicts" }];
-    const sourceEntryIds = [...new Set([...(existing?.sourceEntryIds ?? []), ...accepted.evidenceEntryIds])];
+    // The exchanges behind the note are its verbatim evidence: a fact is the key, the exchange is the
+    // detail. Only an exchange the note's own scope can read is linked.
+    const exchangeLinks = [...new Set(accepted.evidenceEntryIds)].flatMap((id) => {
+      const evidenceScope = input.exchangeEvidence?.get(id);
+      return evidenceScope === undefined || !readableFrom(evidenceScope, level) ? [] : [{ id, relation: "evidence" as const }];
+    });
+    const supersededBy = accepted.supersedes?.id;
+    const contradicting =
+      contradiction === undefined ||
+      wider ||
+      existing !== undefined ||
+      accepted.supersedes !== undefined ||
+      contradiction.id === supersededBy
+        ? []
+        : [{ id: contradiction.id, relation: "contradicts" as const }];
+    const links = [...contradicting, ...exchangeLinks];
+    // An exchange is linked, not a session entry: `sources` stays the transcript entries behind the note.
+    const sourceEntryIds = [
+      ...new Set([
+        ...(existing?.sourceEntryIds ?? []),
+        ...accepted.evidenceEntryIds.filter((id) => input.exchangeEvidence?.has(id) !== true),
+      ]),
+    ];
     const writeOptions: MemoryFabricWriteOptions = {
       sessionId: input.sessionId,
       // A verified note stays verified through a reconsolidating rewrite; absent status means verified.
@@ -164,14 +195,16 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
       {
         kind: note.kind as MemoryNoteKind,
         content: note.text,
-        scope: note.scope,
+        scope: level,
         ...(exceptionKey === undefined ? {} : { key: exceptionKey }),
+        ...(note.tRef === undefined ? {} : { tRef: note.tRef }),
         ...(note.appliesTo === undefined ? {} : { appliesTo: note.appliesTo }),
         ...(keywords.length === 0 ? {} : { keywords }),
         ...(sourceEntryIds.length === 0 ? {} : { sourceEntryIds }),
-        ...(links === undefined ? {} : { links }),
+        ...(links.length === 0 ? {} : { links }),
         ...(wider ? { overrides: contradicted!.id } : {}),
         ...(existing === undefined ? {} : { id: existing.id }),
+        ...(accepted.supersedes === undefined ? {} : { supersedes: accepted.supersedes.id }),
         ...(existing?.supersedes === undefined ? {} : { supersedes: existing.supersedes }),
         promotion: { score: score.score, signals: signalsRecord(score.signals), pass: input.pass },
       },
@@ -198,6 +231,11 @@ export async function writeConsolidationNotes(input: WriteConsolidationNotesInpu
   }
 
   return { written, updated, exceptions, retired, skipped };
+}
+
+/** A note may link evidence held at its own scope, at `user` (readable everywhere), or path→project. */
+function readableFrom(evidence: MemoryNoteScope, scope: MemoryNoteScope): boolean {
+  return evidence === "user" || evidence === scope || (scope === "path" && evidence === "project");
 }
 
 function signalsRecord(signals: PromotionSignals): Record<string, number> {

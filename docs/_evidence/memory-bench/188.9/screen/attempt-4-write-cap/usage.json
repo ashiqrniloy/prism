@@ -1,0 +1,9 @@
+{
+  "kind": "188.9-screen-write-side-abandoned",
+  "reason": "stopped at the plan's 7M estimate; the real write side needs ~11M for 35 ids, so the cap was raised and the run restarted",
+  "attempt": "accept1889-screen-write-xc@1",
+  "inputTokens": 574347,
+  "cacheReadTokens": 78208,
+  "outputTokens": 75248,
+  "exchanges": 76
+}
