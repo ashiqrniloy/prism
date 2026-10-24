@@ -171,7 +171,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
   let pushedInput = false;
 
   const append = async (message: Message): Promise<Message> => {
-    const transformed = await internals.hooks.transform("message.append", message);
+    const transformed = await internals.hooks.transform("message.append", message, { sessionId: internals.sessionId, runId: internals.runId });
     internals.history.push(transformed);
     await internals.appendMessage(transformed);
     return transformed;
@@ -201,9 +201,9 @@ export function createRunController(internals: RunControllerInternals): RunContr
     let request = await internals.assemble(nextInput, currentTurn, options);
     throwIfAborted(internals.signal);
     const draft = draftFromRequest(request);
-    const built = await internals.hooks.transform("context.build", draft);
+    const built = await internals.hooks.transform("context.build", draft, { sessionId: internals.sessionId, runId: internals.runId });
     if (built !== draft) request = applyDraft(request, built);
-    const transformedRequest = await internals.hooks.transform("model.request", request);
+    const transformedRequest = await internals.hooks.transform("model.request", request, { sessionId: internals.sessionId, runId: internals.runId });
     // A transform may declare secrets it injected; they join the provider error-redaction set.
     const requestSecrets: (string | undefined)[] = [];
     let outgoing: ProviderRequest = request;
@@ -227,7 +227,7 @@ export function createRunController(internals: RunControllerInternals): RunContr
         content: result.content,
         ...(result.metadata ? { metadata: result.metadata } : {}),
       };
-      const transformed = await internals.hooks.transform("model.response", message);
+      const transformed = await internals.hooks.transform("model.response", message, { sessionId: internals.sessionId, runId: internals.runId });
       await append(transformed);
       internals.emit({ type: "message.completed", sessionId: internals.sessionId, runId: internals.runId, message: transformed });
     }

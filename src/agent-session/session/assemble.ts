@@ -352,6 +352,7 @@ async function assembleRoundContext(params: {
     ...(await session.hooks().transform(
       "run.input",
       inputToMessages(input).map((message) => session.redact(message)),
+      { sessionId: session.id, runId },
     )),
   ];
   for (const message of inputMessages) await session.appendMessage(message, runId);

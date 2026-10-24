@@ -5,47 +5,48 @@ export type SkillsDisclosure = "progressive" | "eager";
 
 export const EMPTY_SKILL_DESCRIPTION = "(no description)" as const;
 export const DEFAULT_MAX_SKILL_CATALOG_ENTRIES = 64;
-export const HARD_MAX_SKILL_CATALOG_ENTRIES = 256;
 export const DEFAULT_MAX_SKILL_DESCRIPTION_BYTES = 512;
-export const HARD_MAX_SKILL_DESCRIPTION_BYTES = 4_096;
 export const DEFAULT_MAX_SKILL_INSTRUCTION_BYTES = 32_768;
 export const HARD_MAX_SKILL_INSTRUCTION_BYTES = 262_144;
 
-export const SKILL_DISCLOSURE_ERROR_CODE = "skill_disclosure_exceeded" as const;
-
-export class SkillDisclosureError extends Error {
-  readonly code = SKILL_DISCLOSURE_ERROR_CODE;
-  constructor(message: string) {
-    super(message);
-    this.name = "SkillDisclosureError";
-  }
-}
-
-export function isSkillDisclosureError(error: unknown): error is SkillDisclosureError {
-  return error instanceof Error && (error as { code?: unknown }).code === SKILL_DISCLOSURE_ERROR_CODE;
-}
+const SKILL_CATALOG_PREAMBLE =
+  "Skills are task-specific instructions. When a task matches a skill below, call load_skill with its name before starting.";
 
 export interface LoadedSkillSet {
   has(name: string): boolean;
-  add(name: string): void;
+  /** Record a load; the optional run id keeps compaction re-attach run-scoped. */
+  add(name: string, runId?: string): void;
   list(): readonly string[];
   clear(): void;
+  /** Name→run view; optional so an existing host implementation keeps compiling. */
+  entries?(): readonly { readonly name: string; readonly runId?: string }[];
+  remove?(name: string): void;
 }
 
 export function createLoadedSkillSet(): LoadedSkillSet {
   const names = new Set<string>();
+  const runIds = new Map<string, string>();
   return {
     has(name) {
       return names.has(name);
     },
-    add(name) {
+    add(name, runId) {
       names.add(name);
+      if (runId !== undefined) runIds.set(name, runId);
     },
     list() {
       return [...names];
     },
     clear() {
       names.clear();
+      runIds.clear();
+    },
+    entries() {
+      return [...names].map((name) => ({ name, ...(runIds.has(name) ? { runId: runIds.get(name) } : {}) }));
+    },
+    remove(name) {
+      names.delete(name);
+      runIds.delete(name);
     },
   };
 }
@@ -62,9 +63,6 @@ export function resolveSkillsDisclosure(run?: SkillsDisclosure, agent?: SkillsDi
 }
 
 export function capSkillCatalog(skills: readonly Skill[]): readonly Skill[] {
-  if (skills.length > HARD_MAX_SKILL_CATALOG_ENTRIES) {
-    throw new SkillDisclosureError(`Skill catalog exceeds hard cap (${HARD_MAX_SKILL_CATALOG_ENTRIES} entries)`);
-  }
   return skills.slice(0, DEFAULT_MAX_SKILL_CATALOG_ENTRIES);
 }
 
@@ -87,31 +85,36 @@ export function skillPromptText(skill: Skill, context: SkillRenderContext = {}):
 
   if (includeBody) {
     if (!skill.instructions) return undefined;
-    const bytes = estimateTextBytes(skill.instructions);
-    if (bytes > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
-      throw new SkillDisclosureError(`Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes)`);
-    }
     return `Skill ${skill.name}:\n${skill.instructions}`;
   }
+  return skillCatalogLine(skill);
+}
 
-  let description = skill.description?.trim() || EMPTY_SKILL_DESCRIPTION;
-  const bytes = estimateTextBytes(description);
-  if (bytes > HARD_MAX_SKILL_DESCRIPTION_BYTES) {
-    throw new SkillDisclosureError(`Skill ${skill.name} description exceeds hard cap (${HARD_MAX_SKILL_DESCRIPTION_BYTES} bytes)`);
-  }
-  if (bytes > DEFAULT_MAX_SKILL_DESCRIPTION_BYTES) {
-    description = truncateUtf8Bytes(description, DEFAULT_MAX_SKILL_DESCRIPTION_BYTES);
-  }
-  return `Skill ${skill.name}: ${description}`;
+/** One catalog line; descriptions are truncated, never rejected, so a skill cannot fail a run. */
+function skillCatalogLine(skill: Skill): string {
+  const raw = skill.description?.trim() || EMPTY_SKILL_DESCRIPTION;
+  const description =
+    estimateTextBytes(raw) > DEFAULT_MAX_SKILL_DESCRIPTION_BYTES ? truncateUtf8Bytes(raw, DEFAULT_MAX_SKILL_DESCRIPTION_BYTES) : raw;
+  return `- ${skill.name}: ${description}`;
 }
 
 export function skillMessages(skills: readonly Skill[] | undefined, context: SkillRenderContext = {}): Message[] {
-  return capSkillCatalog(selectSkillsForPrompt(skills ?? [], context))
-    .map((skill) => {
+  const all = selectSkillsForPrompt(skills ?? [], context);
+  const selected = capSkillCatalog(all);
+  const lines: string[] = [];
+  const bodies: Message[] = [];
+  for (const skill of selected) {
+    if (skillHasRenderableBody(skill, context)) {
       const text = skillPromptText(skill, context);
-      return text ? textMessage("system", text, skill.metadata) : undefined;
-    })
-    .filter((message): message is Message => message !== undefined);
+      if (text) bodies.push(textMessage("system", text, skill.metadata));
+    } else {
+      lines.push(skillCatalogLine(skill));
+    }
+  }
+  const unlisted = all.length - selected.length;
+  if (lines.length === 0 && (unlisted === 0 || context.disclosure === "eager")) return bodies;
+  const overflow = unlisted > 0 ? [`(${unlisted} more skills are installed but not listed.)`] : [];
+  return [textMessage("system", [SKILL_CATALOG_PREAMBLE, ...lines, ...overflow].join("\n")), ...bodies];
 }
 
 function textMessage(role: Message["role"], text: string, metadata?: Readonly<Record<string, unknown>>): Message {

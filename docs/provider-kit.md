@@ -62,7 +62,8 @@ A `role: "tool"` message carries one `tool_result` block plus any image blocks. 
 - text results reach the model as text — a joined `result` string is sent byte-for-byte, so quotes, tabs, and newlines are no longer JSON-escaped;
 - a structured `ToolResult.value` is still `JSON.stringify`'d;
 - an error is sent as its `message`, and the Anthropic Messages route also sets `is_error: true`;
-- `EMPTY_TOOL_RESULT_TEXT` is sent unchanged.
+- `EMPTY_TOOL_RESULT_TEXT` is sent unchanged;
+- a result marked `UNTRUSTED_EXTERNAL_TRUST` arrives pre-wrapped in the kernel's untrusted envelope (`formatUntrustedToolText`), so codecs never format or escape it themselves (`docs/tools.md`, "Untrusted external results").
 
 Images follow the route. Anthropic Messages puts them in `tool_result.content` as `text` and `image` blocks (resolved through `resolveProviderMediaMessages`, so `tool_result` media needs no separate path). OpenAI Chat Completions accepts only text in a `tool` message, so `openAIChatBody` appends one `user` message — `Images returned by <tool> (<toolCallId>):` plus the images — after that round's contiguous `tool` replies. When the model declares no image input, both routes send `[image omitted: the model does not accept images]` as text instead, and `assertMessagesSupportModelCapabilities` no longer fails for an image inside a tool message (images in any other message still fail closed).
 

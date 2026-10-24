@@ -64,7 +64,7 @@ try {
 | `origin` | The bridge origin every served call is attributed to. |
 | `prefix` | Prepended to each served tool name in `tools/list` and `tools/call`. |
 | `resources` | Static `{ uri, name, mimeType?, text }` resources, each bounded to 256 KiB. |
-| `limits` | `{ maxConcurrentCalls?, resultBytes? }`. Defaults 8 / 1 MiB; hard caps 64 / 8 MiB. |
+| `limits` | `{ maxConcurrentCalls?, resultBytes? }`. Defaults 8 / 1 MiB; hard caps 64 / 8 MiB. Caps text, `structuredContent`, and the envelope body alike. |
 | `permissionTool` | `{ name, effects?, rewrite?, codec? }`: also serve a permission-prompt tool backed by `run.ask`. |
 | `relay` | `{ command }`, required for `stdio-relay`. |
 | `headerEnv` | The bearer-token variable name. Default `PRISM_MCP_TOKEN`. |
@@ -82,6 +82,25 @@ tool is absent from `tools/list` and a `tools/call` naming one is a JSON-RPC err
 idempotent, unregisters the route (later relay frames get the broker's `no MCP route is registered`),
 and closes the handler; it runs on `run.signal` abort and after an `approval_pending` result. A call
 after close is refused with JSON-RPC `-32000` and `served tools are closed`.
+
+### What a served call returns
+
+A `tools/call` answer carries both halves of the `ToolResult`:
+
+| `ToolResult` | Served as |
+| --- | --- |
+| text content | a `text` content block |
+| `value`, a JSON object within `limits.resultBytes` | `structuredContent` (the same value, unmodified) |
+| `value`, with no text content | a `text` block holding the clipped JSON |
+| `error` | `isError: true` and one `text` block, `<code>: <message>` |
+| `metadata.trust === "untrusted_external"` | one `text` block holding the kernel envelope (`formatUntrustedToolText`), so a vendor agent sees exactly what the internal loop would; `structuredContent` still carries the value, and any non-text blocks follow the envelope |
+| nothing | an empty `content` array |
+
+`structuredContent` is only sent for a JSON object: a client that advertises no output schema
+validates nothing, so a bare array or primitive would be rejected by strict clients, and the value
+already reaches them as JSON text. An over-cap value is not structured either — the clipped text is
+the whole answer. Redaction happens in the kernel before the bridge, so both halves are the
+redacted ones.
 
 ### Permission tool
 

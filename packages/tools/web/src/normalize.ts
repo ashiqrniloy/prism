@@ -57,12 +57,12 @@ export function snapshotWebEvidence(input: {
     ...(input.span === undefined ? {} : { span: input.span }),
   };
 }
+/** Result rows only: provider/rate facts stay once at the response's top level, never per result. */
 export function normalizeSearchResults(
   provider: "brave" | "exa",
   _query: string,
   raw: unknown,
   maxResults: number,
-  metadata?: WebProviderMetadata,
 ): readonly WebSearchResult[] {
   const root = object(raw),
     list = provider === "brave" ? object(root.web).results : root.results;
@@ -87,7 +87,6 @@ export function normalizeSearchResults(
       highlights,
       publishedAt: text(provider === "brave" ? item.page_age : item.publishedDate),
       retrievedAt,
-      metadata,
     });
   }
   return out;

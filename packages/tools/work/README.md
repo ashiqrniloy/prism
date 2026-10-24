@@ -21,7 +21,8 @@ const agent = await createAgent({
 | Sandbox exec | `work_exec` | `execute` | `work.enabled` (default `true`) plus a host `work.sandbox` service |
 | Connectors | `m365_*` / `gws_*` | `network` (reads) or `network` + `external` (drafts/writes) | a resolvable `connectors.*.credential` ref |
 
-`office_parse` / `office_import` return content tagged `trust: "untrusted_external"`. `work_exec` runs an argv command inside the host-injected `WorkSandbox`; without that service the package notes why and registers the rest.
+`office_parse` / `office_import` return results tagged `trust: "untrusted_external"`, which the kernel
+wraps in its envelope (`docs/tools.md`). `work_exec` runs an argv command inside the host-injected `WorkSandbox`; without that service the package notes why and registers the rest.
 
 The bounded document reader is **not** a tool: it is provided as the `work.reader` service so `@arnilo/prism-tools-coding`'s `read` tool can consume it.
 

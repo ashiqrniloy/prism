@@ -4,7 +4,10 @@ import { HARD_MAX_SKILL_INSTRUCTION_BYTES, type LoadedSkillSet } from "./skill-d
 
 export const DEFAULT_LOAD_SKILL_TOOL_NAME = "load_skill" as const;
 export const SKILL_LOAD_ERROR_CODE = "skill_load_failed" as const;
-export const MAX_LOAD_SKILL_RESULT_BYTES = 512;
+/** HARD_MAX_SKILL_INSTRUCTION_BYTES (262_144) + a 1_024-byte header allowance. */
+export const MAX_LOAD_SKILL_RESULT_BYTES = 263_168;
+/** Failure text keeps the pre-body bound so an error never fills the context. */
+const MAX_LOAD_SKILL_ERROR_BYTES = 512;
 
 // Bodies-mode persistence bounds (plan 018 Task 6 closeout `checkpoint-bodies`): the
 // checkpoint `maxStateBytes` ceiling is the documented outer bound (oversize refuses at
@@ -109,6 +112,8 @@ export interface ResolveSkillLoadOptions {
   readonly tools?: readonly ToolDefinition[];
   readonly loaded?: LoadedSkillSet;
   readonly activeSkillNames?: readonly string[];
+  /** The tool answers an already-loaded skill as a normal result; direct callers keep the failure. */
+  readonly allowLoaded?: boolean;
 }
 
 export function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill {
@@ -137,7 +142,7 @@ export function resolveSkillLoad(options: ResolveSkillLoadOptions): Skill {
     throw new SkillLoadError(`Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes)`);
   }
 
-  if (options.loaded?.has(skill.name)) throw new SkillLoadError(`Skill ${skill.name} is already loaded`);
+  if (!options.allowLoaded && options.loaded?.has(skill.name)) throw new SkillLoadError(`Skill ${skill.name} is already loaded`);
 
   return skill;
 }
@@ -161,11 +166,11 @@ function skillLoadMetadata(context: ToolExecutionContext): SkillLoadToolMetadata
   return metadata as SkillLoadToolMetadata;
 }
 
-function capLoadSkillText(text: string): string {
+function capLoadSkillText(text: string, maxBytes = MAX_LOAD_SKILL_RESULT_BYTES): string {
   const bytes = estimateTextBytes(text);
-  if (bytes <= MAX_LOAD_SKILL_RESULT_BYTES) return text;
+  if (bytes <= maxBytes) return text;
   const suffix = "…";
-  let end = MAX_LOAD_SKILL_RESULT_BYTES - new TextEncoder().encode(suffix).length;
+  let end = maxBytes - new TextEncoder().encode(suffix).length;
   const encoded = new TextEncoder().encode(text);
   while (end > 0 && (encoded[end]! & 0xc0) === 0x80) end--;
   return new TextDecoder().decode(encoded.slice(0, end)) + suffix;
@@ -195,7 +200,7 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
     } as JsonObject,
     execute(args, context) {
       const fail = (reason: string, text: string): ToolResult => {
-        const bounded = capLoadSkillText(text);
+        const bounded = capLoadSkillText(text, MAX_LOAD_SKILL_ERROR_BYTES);
         return {
           toolCallId: context.toolCallId,
           name: toolName,
@@ -216,15 +221,33 @@ export function createLoadSkillTool(options: CreateLoadSkillToolOptions): ToolDe
           tools: metadata?.activeTools ?? options.tools,
           loaded,
           activeSkillNames: metadata?.activeSkillNames,
+          allowLoaded: true,
         });
-        loaded.add(skill.name);
-        const dirSuffix = skill.path ? ` Skill directory: ${skillDirname(skill.path)}` : "";
-        const text = capLoadSkillText(`Loaded skill ${skill.name} for this session.${dirSuffix}`);
+        const alreadyLoaded = loaded.has(skill.name);
+        // Always stamp this run: a reload of an earlier-run name makes the body current again.
+        loaded.add(skill.name, context.runId);
+        if (alreadyLoaded) {
+          const text = capLoadSkillText(
+            `Skill ${skill.name} is already loaded; its instructions are earlier in this conversation.`,
+            MAX_LOAD_SKILL_ERROR_BYTES,
+          );
+          return {
+            toolCallId: context.toolCallId,
+            name: toolName,
+            value: { ok: true, name: skill.name, text, alreadyLoaded: true },
+            content: [{ type: "text", text }],
+          };
+        }
+        const header = skill.path
+          ? `Loaded skill ${skill.name}. Skill directory: ${skillDirname(skill.path)}. Paths in these instructions are relative to it.`
+          : `Loaded skill ${skill.name}.`;
+        const text = capLoadSkillText(`${header}\n\n${skill.instructions}`);
         return {
           toolCallId: context.toolCallId,
           name: toolName,
           value: { ok: true, name: skill.name, text },
           content: [{ type: "text", text }],
+          metadata: { loadedSkill: skill.name, loadedSkillRunId: context.runId },
         };
       } catch (error) {
         const message = error instanceof Error ? error.message : "Skill load failed";

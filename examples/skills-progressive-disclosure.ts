@@ -38,10 +38,10 @@ export async function demo() {
 
   const catalogOnly = skills.every(
     (skill) =>
-      catalogText.includes(`Skill ${skill.name}: ${skill.description}`) && !catalogText.includes((skill.instructions ?? "").slice(0, 40)),
+      catalogText.includes(`- ${skill.name}: ${skill.description}`) && !catalogText.includes((skill.instructions ?? "").slice(0, 40)),
   );
 
-  await dispatchToolCall({
+  const loadResult = await dispatchToolCall({
     call: toolCallContent("call_1", "load_skill", { name: "skill-3" }),
     registry: toolRegistry,
     context: {
@@ -59,15 +59,20 @@ export async function demo() {
   const loadedRequest = await assembleProviderInput({
     model: { provider: "mock", model: "demo" },
     input: "Use loaded skill",
+    history: [
+      {
+        role: "tool",
+        content: [{ type: "tool_result", toolCallId: "call_1", name: "load_skill", result: loadResult.value }],
+        metadata: loadResult.metadata,
+      },
+    ],
     skills,
     skillsDisclosure: "progressive",
     loadedSkills: loaded,
+    runId: "r1",
+    tailSegments: new Map(),
   });
-  const loadedText = loadedRequest.messages
-    .flatMap((message) => message.content)
-    .map((block) => (block.type === "text" ? block.text : ""))
-    .join("\n");
-  const bodyLoaded = loadedText.includes("Full instructions for skill 3.");
+  const bodyLoaded = JSON.stringify(loadedRequest.messages).includes("Full instructions for skill 3.");
 
   return {
     skillCount: skills.length,

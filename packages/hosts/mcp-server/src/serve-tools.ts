@@ -1,6 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
-import type { ContentBlock, ExternalToolDecision, JsonObject, JsonValue, RunController, ToolResult } from "@arnilo/prism";
+import {
+  type ContentBlock,
+  type ExternalToolDecision,
+  formatUntrustedToolText,
+  type JsonObject,
+  type JsonValue,
+  type RunController,
+  type ToolResult,
+  UNTRUSTED_EXTERNAL_TRUST,
+} from "@arnilo/prism";
 import { ALL_TOOL_EFFECTS, bridgeTools } from "@arnilo/prism/driver-kit";
 import { type CallToolResult, fromJsonSchema, type JsonSchemaType, McpServer, type McpServerFactory } from "@modelcontextprotocol/server";
 import manifest from "../package.json" with { type: "json" };
@@ -205,7 +214,6 @@ export async function serveTools(run: RunController, options: ServeToolsOptions)
       closeAfterCall = true;
       return errorResult(APPROVAL_PENDING_MESSAGE);
     }
-    if (result.error !== undefined) return errorResult(errorText(result.error));
     return contentResult(result);
   }
 
@@ -270,11 +278,40 @@ export async function serveTools(run: RunController, options: ServeToolsOptions)
     return result;
   }
 
+  /**
+   * Both halves of a result: the text a client reads and, when the value is a JSON object that fits
+   * the byte cap, `structuredContent` for clients that can use the structure. An untrusted result
+   * carries the kernel's envelope instead of the bare blocks, so a client sees what the model sees.
+   */
   function contentResult(result: ToolResult): CallToolResult {
-    const content: CallToolResult["content"] = [];
-    for (const block of result.content ?? []) content.push(blockToContent(block));
-    if (content.length === 0 && result.value !== undefined) content.push({ type: "text", text: clip(stringify(result.value)) });
-    return { content };
+    if (result.error !== undefined && result.error !== null) return errorResult(errorText(result.error));
+    const untrusted = result.metadata?.trust === UNTRUSTED_EXTERNAL_TRUST;
+    const structured = structuredContent(result);
+    const blocks = result.content ?? [];
+    const content: CallToolResult["content"] = untrusted
+      ? [
+          { type: "text", text: clipUntrusted(formatUntrustedToolText(result)) },
+          ...blocks.filter((block) => block.type !== "text").map(blockToContent),
+        ]
+      : blocks.map(blockToContent);
+    if (!untrusted && content.length === 0 && result.value !== undefined)
+      content.push({ type: "text", text: clip(stringify(result.value)) });
+    return { content, ...(structured === undefined ? {} : { structuredContent: structured }) };
+  }
+
+  /** The value passes through only when it is a JSON object within the same byte cap as the text. */
+  function structuredContent(result: ToolResult): unknown {
+    const value = result.value;
+    if (value === undefined || value === null || typeof value !== "object" || Array.isArray(value)) return undefined;
+    return Buffer.byteLength(stringify(value), "utf8") > resultBytes ? undefined : value;
+  }
+
+  /** The envelope keeps its preamble and closing tag; only the body is clipped. */
+  function clipUntrusted(envelope: string): string {
+    if (Buffer.byteLength(envelope, "utf8") <= resultBytes) return envelope;
+    const tail = envelope.slice(envelope.lastIndexOf("\n"));
+    const budget = Math.max(0, resultBytes - Buffer.byteLength(tail, "utf8"));
+    return truncateUtf8(envelope.slice(0, envelope.lastIndexOf("\n")), budget) + tail;
   }
 
   function blockToContent(block: ContentBlock): CallToolResult["content"][number] {

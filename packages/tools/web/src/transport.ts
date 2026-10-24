@@ -11,6 +11,15 @@ export class WebToolError extends Error {
   }
 }
 
+/**
+ * How a request may be retried, chosen by what a provider bills:
+ * - `idempotent`: a GET — retry a connection failure and any 429/5xx.
+ * - `safe-post`: a POST that creates or bills nothing twice on a 429 retry — retry a connection
+ *   failure and a 429, never a 5xx (the request may already have been accepted).
+ * - `never`: retry nothing, so a paid job is never submitted twice.
+ */
+export type WebRetryMode = "idempotent" | "safe-post" | "never";
+
 export interface WebTransport {
   readonly limits: ResolvedWebLimits;
   run<T>(signal: AbortSignal | undefined, operation: (signal: AbortSignal) => Promise<T>): Promise<T>;
@@ -20,6 +29,7 @@ export interface WebTransport {
     url: URL,
     init: RequestInit,
     signal: AbortSignal,
+    options?: { readonly retry?: WebRetryMode },
   ): Promise<{ value: unknown; metadata?: WebProviderMetadata }>;
 }
 
@@ -53,7 +63,8 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
       active++;
       return;
     }
-    if (waiters.length >= limits.maxConcurrency) throw new WebToolError("ERR_PRISM_WEB_LIMIT", "Web operation queue is full");
+    // Past the queue bound a call fails; up to it, a call waits for the next free slot.
+    if (waiters.length >= limits.maxQueued) throw new WebToolError("ERR_PRISM_WEB_LIMIT", "Web operation queue is full");
     await new Promise<void>((resolve, reject) => {
       const start = () => {
         signal.removeEventListener("abort", abort);
@@ -118,7 +129,10 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
         if (acquired) release();
       }
     },
-    async json(_provider, credentialName, url, init, signal) {
+    async json(_provider, credentialName, url, init, signal, request = {}) {
+      const retry = request.retry ?? "idempotent";
+      const mayRetryStatus = (status: number) =>
+        retry === "idempotent" ? status === 429 || status >= 500 : retry === "safe-post" ? status === 429 : false;
       if (url.origin !== origin) throw new WebToolError("ERR_PRISM_WEB_ORIGIN", `${provider} request origin is not allowed`);
       let credential: string | undefined;
       try {
@@ -144,12 +158,14 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
           });
         } catch (error) {
           if (signal.aborted) throw error;
-          if (attempt >= limits.maxRetries) throw new WebToolError("ERR_PRISM_WEB_REQUEST", `${provider} request failed`);
+          // A connection failure produced no response, so no retry mode rules it out except `never`.
+          if (retry === "never" || attempt >= limits.maxRetries)
+            throw new WebToolError("ERR_PRISM_WEB_REQUEST", `${provider} request failed`);
           await sleep(Math.min(250 * 2 ** attempt, limits.maxRateLimitDelayMs), signal);
           continue;
         }
         const metadata = responseMetadata(response);
-        if ((response.status === 429 || response.status >= 500) && attempt < limits.maxRetries) {
+        if (mayRetryStatus(response.status) && attempt < limits.maxRetries) {
           await response.body?.cancel();
           await sleep(Math.min(metadata?.rate?.retryAfterMs ?? 250 * 2 ** attempt, limits.maxRateLimitDelayMs), signal);
           continue;
@@ -240,13 +256,20 @@ async function readBoundedText(response: Response, maxBytes: number, signal: Abo
   }
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
+/** `Retry-After` is either delay-seconds or an HTTP date (RFC 9110 §10.2.3); both become a delay from now. */
+function retryAfterDelayMs(header: string | null): number | undefined {
+  if (!header) return undefined;
+  if (/^\d+(?:\.\d+)?$/u.test(header)) return Number(header) * 1000;
+  const at = Date.parse(header);
+  return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
+}
+
 function responseMetadata(response: Response): WebProviderMetadata | undefined {
   const number = (name: string) => {
     const value = response.headers.get(name);
     return value && /^\d+$/u.test(value) ? Number(value) : undefined;
   };
-  const retry = response.headers.get("retry-after");
-  const retryAfterMs = retry && /^\d+(?:\.\d+)?$/u.test(retry) ? Number(retry) * 1000 : undefined;
+  const retryAfterMs = retryAfterDelayMs(response.headers.get("retry-after"));
   const metadata = {
     requestId: response.headers.get("x-request-id") ?? undefined,
     rate: {

@@ -61,7 +61,9 @@ while text and file ingest keep working.
   missing service is a named tool error, not a silent skip. `wiki_read_page` enforces lexical and
   `realpath` containment. `extractDocument` and `ocrImages` are gone: compressed-PDF, CSV-via-host,
   and image-OCR extraction leave the wiki, and an unsupported format is a named error.
-- **Untrusted content.** Ingested and searched content is labeled untrusted external data.
+- **Untrusted content.** Ingested and searched content is marked `untrusted_external`, so the kernel
+  wraps it in its envelope (`docs/tools.md`); status commands (`wiki-init`, `wiki-lint`,
+  `wiki-refresh`) report the wiki's own state and are not wrapped.
 
 ## Related APIs
 

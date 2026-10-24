@@ -1,12 +1,15 @@
+DEFAULT_FETCH_CHARS	export declare const DEFAULT_FETCH_CHARS = 32000
 DEFAULT_OBSCURA_NAME_PREFIX	export declare const DEFAULT_OBSCURA_NAME_PREFIX = "obscura_"
 DEFAULT_OBSCURA_PROCESS_LIMITS	export declare const DEFAULT_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
 DEFAULT_OBSCURA_SEARCH_PROFILE	export declare const DEFAULT_OBSCURA_SEARCH_PROFILE: ObscuraSearchProfile
 DEFAULT_OBSCURA_SERVER_ID	export declare const DEFAULT_OBSCURA_SERVER_ID = "obscura"
 DEFAULT_OBSCURA_WEB_LIMITS	export declare const DEFAULT_OBSCURA_WEB_LIMITS: ObscuraWebLimits
 DEFAULT_WEB_LIMITS	export declare const DEFAULT_WEB_LIMITS: ResolvedWebLimits
+HARD_FETCH_CHARS	export declare const HARD_FETCH_CHARS = 100000
 HARD_OBSCURA_PROCESS_LIMITS	export declare const HARD_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
 HARD_OBSCURA_WEB_LIMITS	export declare const HARD_OBSCURA_WEB_LIMITS: ObscuraWebLimits
 HARD_WEB_LIMITS	export declare const HARD_WEB_LIMITS: ResolvedWebLimits
+MAX_DOMAIN_CONTROLS	export declare const MAX_DOMAIN_CONTROLS = 10
 ObscuraCdpSession	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
 ObscuraChromium	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
 ObscuraCliRunOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ValidateObscuraUrlOptions } from "./cli.js"
@@ -27,6 +30,10 @@ PlaywrightLocator	export type { PlaywrightBrowser, PlaywrightBrowserContext, Pla
 PlaywrightPage	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
 PlaywrightRequest	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
 PlaywrightRoute	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
+SEARCH_FRESHNESS	export declare const SEARCH_FRESHNESS: readonly SearchFreshness[]
+SEARCH_HIGHLIGHTS_PER_RESULT	export declare const SEARCH_HIGHLIGHTS_PER_RESULT = 2
+SEARCH_HIGHLIGHT_CHARS	export declare const SEARCH_HIGHLIGHT_CHARS = 200
+SEARCH_SNIPPET_CHARS	export declare const SEARCH_SNIPPET_CHARS = 300
 ToolsWebBackend	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
 ToolsWebConfig	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
 ToolsWebFetchConfig	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
@@ -38,32 +45,46 @@ boundedJson	export declare function boundedJson<T>(value: T, maxDepth: number, m
 canonicalUrl	export declare function canonicalUrl(input: string): string
 citation	export declare function citation(provider: WebProvider, inputUrl: string, sourceId?: string): WebCitation
 connectObscuraCdp	export declare function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
+controlsFromArgs	export declare function controlsFromArgs(args: JsonObject): Record<string, unknown>
 createBraveSearch	export declare function createBraveSearch(options: WebAdapterOptions): WebSearchAdapter
 createExaSearch	export declare function createExaSearch(options: WebAdapterOptions): WebSearchAdapter
+createFetchMemo	export declare function createFetchMemo<T>(now?: () => number):
 createFirecrawlExtractor	export declare function createFirecrawlExtractor(options: FirecrawlExtractOptions): WebExtractAdapter
 createFirecrawlFetch	export declare function createFirecrawlFetch(options: FirecrawlFetchOptions): WebFetchAdapter
 createObscuraMcpTools	export declare function createObscuraMcpTools(options: ObscuraMcpToolsOptions): Promise<ObscuraMcpTools>
+createObscuraPageFetcher	export declare function createObscuraPageFetcher(options: ObscuraWebToolsOptions): WebFetchService
 createObscuraWebTools	export declare function createObscuraWebTools(options: ObscuraWebToolsOptions): ObscuraWebTools
 createWebTools	export declare function createWebTools(options: WebToolsOptions): readonly ToolDefinition[]
 createWebTransport	export declare function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions): WebTransport
 default	export default
+domainOperatorsQuery	export declare function domainOperatorsQuery(query: string, controls: SearchControls): string
 endpointFromServeArgs	export declare function endpointFromServeArgs(args: readonly string[]): string
+fetchParameters	export declare function fetchParameters(): JsonObject
+fetchSliceArgs	export declare function fetchSliceArgs(args: JsonObject): FetchSliceArgs
+fetchSliceText	export declare function fetchSliceText(slice: FetchSlice, sourceTruncated?: boolean): string
+fetchSliceValue	export declare function fetchSliceValue<T extends
 isObscuraReadTool	export declare function isObscuraReadTool(name: string): boolean
-normalizeSearchResults	export declare function normalizeSearchResults(provider: "brave" | "exa", _query: string, raw: unknown, maxResults: number, metadata?: WebProviderMetadata): readonly WebSearchResult[]
+normalizeSearchResults	export declare function normalizeSearchResults(provider: "brave" | "exa", _query: string, raw: unknown, maxResults: number): readonly WebSearchResult[]
 object	export declare function object(value: unknown): Record<string, unknown>
 packageName	export declare const packageName = "@arnilo/prism-tools-web"
 providerFacts	export declare function providerFacts(raw: unknown, base?: WebProviderMetadata): WebProviderMetadata | undefined
+renderScrapeResults	export declare function renderScrapeResults(value: unknown): string
+renderSearchResults	export declare function renderSearchResults(value: unknown): string
 resolveObscuraCommand	export declare function resolveObscuraCommand(name: string): string | undefined
 resolveObscuraProcessLimits	export declare function resolveObscuraProcessLimits(input?: Partial<ObscuraProcessLimits>): ObscuraProcessLimits
 resolveObscuraSearchProfile	export declare function resolveObscuraSearchProfile(profile: ObscuraSearchProfile | undefined, maxEvalBytes: number): ObscuraSearchProfile
 resolveObscuraWebLimits	export declare function resolveObscuraWebLimits(input?: Partial<ObscuraWebLimits>): ObscuraWebLimits
 resolveWebLimits	export declare function resolveWebLimits(input?: WebLimits): ResolvedWebLimits
 runObscuraCli	export declare function runObscuraCli(options: ObscuraCliRunOptions): Promise<ObscuraCliRunResult>
+searchControlProperties	export declare function searchControlProperties(supports: ReadonlySet<SearchControl>): JsonObject
+searchControls	export declare function searchControls(supports: ReadonlySet<SearchControl>, input: object): SearchControls
+sliceMarkdown	export declare function sliceMarkdown(markdown: string, args: FetchSliceArgs): FetchSlice
 snapshotWebEvidence	export declare function snapshotWebEvidence(input:
 spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
 text	export declare function text(value: unknown): string | undefined
 toolsWeb	export declare function toolsWeb(config: ToolsWebConfig): PackageInstance
 toolsWebConfigSchema	export declare const toolsWebConfigSchema: JsonSchema
+truncateUtf8Bytes	export declare function truncateUtf8Bytes(text: string, maxBytes: number): string
 type ObscuraMcpTools	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
 type ObscuraMcpToolsOptions	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
 type ObscuraProcessLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_WEB_LIMITS, type ObscuraProcessLimits, type ObscuraWebLimits, resolveObscuraProcessLimits, resolveObscuraWebLimits, } from "./limits.js"

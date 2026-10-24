@@ -78,6 +78,7 @@ const packages: Array<{
   { dir: "packages/integrations/workflows", name: "@arnilo/prism-workflows", sourceExport: true },
   { dir: "packages/drivers/process", name: "@arnilo/prism-driver-process", sourceExport: true },
   { dir: "packages/integrations/delegate", name: "@arnilo/prism-delegate", sourceExport: true },
+  { dir: "packages/integrations/advisor", name: "@arnilo/prism-advisor", sourceExport: true },
   { dir: "packages/context/files", name: "@arnilo/prism-context-files", sourceExport: true },
   { dir: "packages/context/engineering", name: "@arnilo/prism-context-engineering", sourceExport: true },
   { dir: "packages/hosts/channels", name: "@arnilo/prism-channels", sourceExport: true },
@@ -825,10 +826,10 @@ describe("packaging guard", () => {
     assert.equal(truth.counts.publishable, packages.length, "package truth must report every packaged manifest");
   });
 
-  it("0.4 package set — 60 manifests in lockstep, no shims, family roots stay inert", () => {
+  it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 44, "44 active packages including root");
+    assert.equal(names.length, 45, "45 active packages including root");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

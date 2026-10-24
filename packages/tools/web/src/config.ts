@@ -1,5 +1,6 @@
-import type { JsonSchema } from "@arnilo/prism";
+import type { JsonObject, JsonSchema } from "@arnilo/prism";
 
+import type { ObscuraWebLimits } from "./obscura/limits.js";
 import type { WebLimits } from "./types.js";
 
 /** The search/fetch backend the package operates as. */
@@ -19,6 +20,13 @@ export interface ToolsWebObscuraConfig {
   readonly binary?: string;
   /** Register the native `obscura_fetch`/`obscura_scrape` tools. Default `true`. */
   readonly nativeTools?: boolean;
+  /** Bounds for the CLI-backed search/fetch/scrape children; out-of-range values fail setup. */
+  readonly limits?: Partial<ObscuraWebLimits>;
+}
+
+/** Schema that `web_extract` asks the extract backend to fill; validated at setup, not first use. */
+export interface ToolsWebExtractConfig {
+  readonly schema: JsonObject;
 }
 
 /** Validated `packageConfig` for `@arnilo/prism-tools-web`. */
@@ -31,6 +39,8 @@ export interface ToolsWebConfig {
   readonly fetch?: ToolsWebFetchConfig;
   /** Obscura binary settings; only read when `backend` is `"obscura"`. */
   readonly obscura?: ToolsWebObscuraConfig;
+  /** Register `web_extract` over this schema (needs a Firecrawl key: `apiKey`, or `fetch.apiKey`). */
+  readonly extract?: ToolsWebExtractConfig;
   /** Byte, retry, concurrency, and timeout bounds for the HTTP adapters. */
   readonly limits?: WebLimits;
 }
@@ -50,9 +60,21 @@ const limitProperties: Readonly<Record<string, JsonSchema>> = {
   maxRetries: { type: "number", minimum: 0 },
   maxRateLimitDelayMs: { type: "number", minimum: 1 },
   maxConcurrency: { type: "number", minimum: 1 },
+  maxQueued: { type: "number", minimum: 1 },
   maxPollingAttempts: { type: "number", minimum: 1 },
   pollingDelayMs: { type: "number", minimum: 0 },
   timeoutMs: { type: "number", minimum: 1 },
+};
+
+const obscuraLimitProperties: Readonly<Record<string, JsonSchema>> = {
+  maxQueryBytes: { type: "number", minimum: 1 },
+  maxResults: { type: "number", minimum: 1 },
+  maxUrls: { type: "number", minimum: 1 },
+  maxConcurrency: { type: "number", minimum: 1 },
+  maxOutputBytes: { type: "number", minimum: 1 },
+  maxStderrBytes: { type: "number", minimum: 1 },
+  timeoutMs: { type: "number", minimum: 1 },
+  maxEvalBytes: { type: "number", minimum: 1 },
 };
 
 const secretString: JsonSchema = {
@@ -85,7 +107,14 @@ export const toolsWebConfigSchema: JsonSchema = {
       properties: {
         binary: { type: "string", minLength: 1, maxLength: 4096 },
         nativeTools: { type: "boolean", default: true },
+        limits: { type: "object", properties: obscuraLimitProperties },
       },
+    },
+    extract: {
+      type: "object",
+      // Free-form JSON Schema: the kernel subset is checked in setup, naming `extract.schema`.
+      properties: { schema: { type: "object", additionalProperties: true } },
+      required: ["schema"],
     },
     limits: { type: "object", properties: limitProperties },
   },

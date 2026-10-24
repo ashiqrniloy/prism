@@ -95,6 +95,8 @@ test("office tools keep OOXML bytes in a contained filesystem or host artifact s
 
   const parsed = await tool(tools, "office_parse").execute({ kind: "doc", path: "report.docx" }, context);
   assert.equal(parsed.metadata?.trust, "untrusted_external");
+  // No banner text: the kernel wraps untrusted results (UNTRUSTED_EXTERNAL_TRUST) in its envelope.
+  assert.equal(parsed.content, undefined);
   assert.equal((parsed.value as { readonly model: { readonly title?: string } }).model.title, "Quarterly report");
 
   const artifact = await generate.execute({ model: model as unknown as JsonObject, format: "docx", artifact: true }, context);

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HARD_MAX_SKILL_INSTRUCTION_BYTES, PackageLoadError } from "../index.js";
 import { discoverContributions, loadSkillDirectory } from "../node/contribution-discovery.js";
 
 async function makeRoot(prefix: string): Promise<string> {
@@ -113,6 +114,15 @@ describe("discoverContributions", () => {
     await writeFileDeep(`${outside}/SKILL.md`, "---\nname: escaped\n---\nb\n");
     await mkdir(`${root}/.agents/skills`, { recursive: true });
     await symlink(outside, `${root}/.agents/skills/escaped`, "dir");
+
+    const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root });
+
+    assert.equal(found.length, 0);
+  });
+
+  it("skips an oversized SKILL.md instead of failing the scan", async () => {
+    const root = await makeRoot("oversize");
+    await writeFileDeep(`${root}/.agents/skills/big/SKILL.md`, `---\nname: big\n---\n${"x".repeat(HARD_MAX_SKILL_INSTRUCTION_BYTES + 1)}`);
 
     const found = await discoverContributions({ kinds: ["skill"], workspaceRoot: root });
 
@@ -274,7 +284,10 @@ describe("loadSkillDirectory", () => {
     const dir = await makeRoot("skillcap");
     await writeFileDeep(`${dir}/big/SKILL.md`, `---\nname: big\n---\n${"x".repeat(200)}\n`);
 
-    await assert.rejects(loadSkillDirectory(dir, { maxSkillBytes: 100 }), /exceeds 100 byte cap/);
+    await assert.rejects(
+      loadSkillDirectory(dir, { maxSkillBytes: 100 }),
+      (error) => error instanceof PackageLoadError && error.code === "skill_too_large",
+    );
     assert.equal((await loadSkillDirectory(dir)).length, 1);
   });
 

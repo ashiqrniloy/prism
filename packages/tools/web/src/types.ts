@@ -24,7 +24,6 @@ export interface WebSearchResult extends WebCitation {
   readonly highlights?: readonly string[];
   readonly publishedAt?: string;
   readonly retrievedAt: string;
-  readonly metadata?: WebProviderMetadata;
 }
 export interface WebSearchResponse {
   readonly provider: "brave" | "exa";
@@ -36,6 +35,8 @@ export interface WebSearchResponse {
 export interface WebDocument extends WebCitation {
   readonly title?: string;
   readonly markdown: string;
+  /** The page was longer than the fetch limit; `markdown` keeps its head only. */
+  readonly sourceTruncated?: boolean;
   readonly retrievedAt: string;
   readonly metadata?: WebProviderMetadata;
   readonly untrusted: true;
@@ -64,6 +65,8 @@ export interface WebLimits {
   readonly maxRetries?: number;
   readonly maxRateLimitDelayMs?: number;
   readonly maxConcurrency?: number;
+  /** Calls waiting for a slot; only past this many does the transport refuse a new one. */
+  readonly maxQueued?: number;
   readonly maxPollingAttempts?: number;
   readonly pollingDelayMs?: number;
   readonly timeoutMs?: number;
@@ -77,13 +80,33 @@ export interface WebAdapterOptions {
   readonly limits?: WebLimits;
   readonly sleep?: (ms: number, signal: AbortSignal) => Promise<void>;
 }
+export type SearchFreshness = "day" | "week" | "month" | "year";
+/** Structured search controls: the tool schema exposes only what a backend supports. */
+export interface SearchControls {
+  readonly freshness?: SearchFreshness;
+  readonly includeDomains?: readonly string[];
+  readonly excludeDomains?: readonly string[];
+  readonly country?: string;
+  readonly language?: string;
+  readonly offset?: number;
+}
+export type SearchControl = keyof SearchControls;
+export interface WebSearchCall extends SearchControls {
+  readonly count?: number;
+  readonly signal?: AbortSignal;
+}
 export interface WebSearchAdapter {
   readonly provider: "brave" | "exa";
-  search(query: string, options?: { readonly count?: number; readonly signal?: AbortSignal }): Promise<WebSearchResponse>;
+  /** Resolved limits, so `web_search` can state the real `count` maximum. */
+  readonly limits?: WebLimits;
+  /** One table per adapter, read by the tool builder and by the adapter's own validation. */
+  readonly supports: ReadonlySet<SearchControl>;
+  search(query: string, options?: WebSearchCall): Promise<WebSearchResponse>;
 }
 export interface WebFetchAdapter {
   readonly provider: "firecrawl";
-  fetch(url: string, options?: { readonly signal?: AbortSignal }): Promise<WebDocument>;
+  /** `maxBytes` lowers the Markdown kept (`maxMarkdownBytes` is the ceiling) and flags the truncation. */
+  fetch(url: string, options?: { readonly signal?: AbortSignal; readonly maxBytes?: number }): Promise<WebDocument>;
 }
 export interface WebExtractAdapter {
   readonly provider: "firecrawl";

@@ -639,7 +639,7 @@ createCodingCheckTool	export declare function createCodingCheckTool(cwd: string,
 createCodingGoalVerifyWorkflow	export declare function createCodingGoalVerifyWorkflow(options:
 createCodingLifecycleEmitter	export declare function createCodingLifecycleEmitter(options?: CreateCodingLifecycleEmitterOptions): CodingLifecycleEmitter
 createCodingPlanMarkdown	export declare function createCodingPlanMarkdown(input:
-createCodingTargets	export declare function createCodingTargets(root: string, roots: readonly string[], workspace?: WorkspaceService): CodingTargetsFn
+createCodingTargets	export declare function createCodingTargets(root: string, roots: readonly string[], workspace?: WorkspaceService, skills?: () => readonly Skill[]): CodingTargetsFn
 createCodingTools	export declare function createCodingTools(cwd: string, options?: ToolsOptions): readonly ToolDefinition[]
 createDeleteTool	export declare function createDeleteTool(cwd: string, options?: DeleteToolOptions): ToolDefinition
 createDiagnosticsTool	export declare function createDiagnosticsTool(cwd: string, options: DiagnosticsToolOptions): DiagnosticsToolHandle
@@ -771,6 +771,7 @@ recoverSessions	export declare function recoverSessions(host: SessionsHost, reco
 redactRemoteUrl	export declare function redactRemoteUrl(url: string): string
 refuseReadBeforeWrite	export declare function refuseReadBeforeWrite(operation: "write" | "edit", displayPath: string, absolutePath: string, options: ReadBeforeWriteOptions | undefined, force: boolean): string | null
 releaseRecordLease	export declare function releaseRecordLease(input:
+requireIdentity	export declare function requireIdentity(identity: MergeContext["identity"]): asserts identity is
 requireRecord	export declare function requireRecord(host: SessionsHost, sessionId: string, owner?: string): SessionRecord
 resolveAskUserDecisionAnswer	export declare function resolveAskUserDecisionAnswer(answer: AskUserDecisionAnswer | null | undefined, selectionMode: AskUserDecisionSelectionMode, options: readonly AskUserDecisionOption[], gates:
 resolveAskUserDecisionLimits	export declare function resolveAskUserDecisionLimits(options?: Pick<AskUserDecisionToolOptions, "maxOptions" | "maxQuestionBytes" | "maxLabelBytes" | "maxBulletBytes" | "maxCustomTextBytes">): ResolvedAskUserDecisionLimits

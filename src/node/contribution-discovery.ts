@@ -5,7 +5,9 @@ import type { ContributionFileKind, DiscoveredContribution, DiscoveredDeclaratio
 import { parseSkillFile } from "../contribution-parsing.js";
 import type { PermissionPolicy, TrustPolicy } from "../security.js";
 import { assertPermission } from "../security.js";
+import { estimateTextBytes } from "../models/estimate.js";
 import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
+import { PackageLoadError } from "../packages/errors.js";
 import { isPathInsideReal } from "./trust.js";
 
 function isNodeErrorCode(error: unknown, code: string): boolean {
@@ -123,7 +125,9 @@ async function readSkillEntry(
   if (!(await isPathInsideReal(dir, path))) return undefined;
   const text = await readOptionalFile(path);
   if (text === undefined) return undefined;
+  if (Buffer.byteLength(text, "utf8") > HARD_MAX_SKILL_INSTRUCTION_BYTES) return undefined; // oversize: skip, never fail the scan
   const skill = parseSkillFile(text, path);
+  if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) return undefined;
   return { kind: "skill", name: skill.name, origin, path, skill };
 }
 
@@ -193,9 +197,16 @@ export async function loadSkillDirectory(directory: string, options: LoadSkillDi
     const text = await readOptionalFile(path);
     if (text === undefined) continue;
     if (Buffer.byteLength(text, "utf8") > maxBytes) {
-      throw new Error(`Skill file ${path} exceeds ${maxBytes} byte cap`);
+      throw new PackageLoadError("skill_too_large", `Skill ${name}: file exceeds ${maxBytes} byte cap`);
     }
-    skills.push(parseSkillFile(text, path));
+    const skill = parseSkillFile(text, path);
+    if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
+      throw new PackageLoadError(
+        "skill_too_large",
+        `Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes).`,
+      );
+    }
+    skills.push(skill);
   }
   return skills;
 }

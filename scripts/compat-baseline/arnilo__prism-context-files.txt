@@ -1,12 +1,23 @@
 ContextFileLayerOptions	export type { ContextFileLayerOptions, ContextFileLayersResult } from "./layers.js"
 ContextFileLayersResult	export type { ContextFileLayerOptions, ContextFileLayersResult } from "./layers.js"
 ContextFilesConfig	export type { ContextFilesConfig } from "./config.js"
+DEFAULT_NESTED_MAX_FILES	export declare const DEFAULT_NESTED_MAX_FILES = 16
+DEFAULT_NESTED_MAX_FILE_BYTES	export declare const DEFAULT_NESTED_MAX_FILE_BYTES = 16384
+HARD_NESTED_MAX_FILES	export declare const HARD_NESTED_MAX_FILES = 16
+HARD_NESTED_MAX_FILE_BYTES	export declare const HARD_NESTED_MAX_FILE_BYTES = 65536
 InstructionSourceOptions	export type { InstructionSourceOptions } from "./instructions.js"
+agentFileCandidates	export declare function agentFileCandidates(directory: string): readonly [string, string]
+agentsMdCandidates	export declare function agentsMdCandidates(root: string, trustedRoots: readonly string[]): readonly string[]
 contextFiles	export declare function contextFiles(config: ContextFilesConfig): PackageInstance
 contextFilesConfigSchema	export declare const contextFilesConfigSchema: JsonSchema
 default	export default
+installNested	export declare function installNested(prism: PackageAPI<ContextFilesConfig>, plan: NestedPlan, config: ResolvedNestedConfig): void
+planSkillRoots	export declare function planSkillRoots(config: ContextFilesConfig["skills"] | undefined, root: string, globalRoot: string | undefined): readonly SkillRoot[]
+projectNestedInstructions	export declare function projectNestedInstructions(draft: ContextDraft, context: HookContext, prism: PackageAPI<ContextFilesConfig>, plan: NestedPlan, config: ResolvedNestedConfig, insertions: SessionLog<JsonValue>, sessions: AgentState<Map<string, NestedSessionCache>>): Promise<ContextDraft | undefined>
 readContextFileLayers	export declare function readContextFileLayers(options?: ContextFileLayerOptions): Promise<readonly SystemPromptContribution[]>
 readFileMtime	export declare function readFileMtime(path: string): Promise<number | undefined>
+registerDiscoveredSkills	export declare function registerDiscoveredSkills(prism: PackageAPI<ContextFilesConfig>, roots: readonly SkillRoot[], trust: TrustPolicy): Promise<void>
 resolveContextFileLayers	export declare function resolveContextFileLayers(options?: ContextFileLayerOptions): Promise<ContextFileLayersResult>
 resolveInstructionSource	export declare function resolveInstructionSource(contribution: DiscoveredContribution, options?: InstructionSourceOptions): Promise<ContextSource | undefined>
 resolveInstructionSources	export declare function resolveInstructionSources(contributions: readonly DiscoveredContribution[], options?: InstructionSourceOptions): Promise<readonly ContextSource[]>
+resolveNestedConfig	export declare function resolveNestedConfig(value: ContextFilesConfig["nested"]): ResolvedNestedConfig | undefined

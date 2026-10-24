@@ -274,7 +274,14 @@ export type {
   PromptInstruction,
   PromptTemplateOptions,
 } from "./input.js";
-export { assembleProviderInput, createDefaultInputBuilder, EMPTY_TOOL_RESULT_TEXT, renderPromptTemplate } from "./input.js";
+export {
+  assembleProviderInput,
+  createDefaultInputBuilder,
+  EMPTY_TOOL_RESULT_TEXT,
+  formatUntrustedToolText,
+  renderPromptTemplate,
+  UNTRUSTED_EXTERNAL_TRUST,
+} from "./input.js";
 export type {
   ExternalActivity,
   ExternalAskSupport,
@@ -393,6 +400,7 @@ export {
   sessionStoreCapabilities,
   summaryLinkFields,
 } from "./session-stores.js";
+export { selectTranscript, type TranscriptOptions, type TranscriptSlice } from "./agent-session/transcript.js";
 export { createSessionIndex } from "./agent/sessions.js";
 export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js";
 export {
@@ -401,12 +409,8 @@ export {
   DEFAULT_MAX_SKILL_DESCRIPTION_BYTES,
   DEFAULT_MAX_SKILL_INSTRUCTION_BYTES,
   EMPTY_SKILL_DESCRIPTION,
-  HARD_MAX_SKILL_CATALOG_ENTRIES,
-  HARD_MAX_SKILL_DESCRIPTION_BYTES,
   HARD_MAX_SKILL_INSTRUCTION_BYTES,
-  isSkillDisclosureError,
   resolveSkillsDisclosure,
-  SkillDisclosureError,
 } from "./skill-disclosure.js";
 export type {
   CreateLoadSkillToolOptions,

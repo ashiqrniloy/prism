@@ -73,8 +73,9 @@ redactor.
 - Mutating calls are high-risk external mutations: they declare `effects: ["external"]` so the host
   approval hook gates them, and they additionally pass in-tool device admission — so an `approval`
   `auto` mode still cannot bypass `approved: false` or a missing sandbox.
-- Observation results are untrusted external content; screenshot/app-state payloads pass
-  `acceptDeviceChunk` and oversize payloads become `dropped_oversize`.
+- Observation results are marked `untrusted_external`, so the kernel wraps them in its envelope
+  (`docs/tools.md`); screenshot/app-state payloads pass `acceptDeviceChunk` and oversize payloads
+  become `dropped_oversize`.
 - Importing the package is inert: `@arnilo/prism-mcp` is imported dynamically only during `setup`.
 
 ## Example

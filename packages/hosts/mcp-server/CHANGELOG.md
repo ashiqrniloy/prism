@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **`serveTools` returns a tool's value, not only its text (plan 192 Task 3).** A `tools/call` answer now carries the `ToolResult`'s text blocks **and**, when `value` is a JSON object within `limits.resultBytes`, `structuredContent` — until now the value was dropped whenever the tool also authored text, so a caller that reads structure lost it. A result with no text block falls back to a clipped-JSON text block, an error answers `isError: true` with `<code>: <message>`, and an untrusted result answers with the kernel's envelope (`formatUntrustedToolText`) so a vendor agent sees the same bytes the internal loop would; non-text blocks follow the envelope, and `structuredContent` still carries the redacted value. An over-cap value is not structured: the clipped text is the whole answer. The value is the kernel-redacted one, so a secret placeholder survives and no raw secret leaves.
+
 ### Added
 
 - **`examples/serve-tools.ts`: serving a run's tools to an external agent (plan 165 Task 8).** The Phase 14 end-to-end example, offline. Inside one `session.run` an inline `defineDriver` driver binds a `workspace` worktree for the run's session, writes the vendor's MCP configuration into it with `excludeOverlay`, and serves `read`, `edit`, and the permission tool with `serveTools` over `loopback-http` and then `stdio-relay`, driving the scripted `jsonl-stream` CLI as the vendor binary through `--mcp-endpoint`. It shows an allowed `edit` that changes the file in the worktree, a declined `edit` under `@arnilo/prism-approval` in `ask` mode, the permission tool's deny and allow, an unserved name as a JSON-RPC error, a call after `close()` refused, the served calls' `origin` on the run's events, the worktree diff with the overlay excluded, and a conflicting `merge` reported unresolved.

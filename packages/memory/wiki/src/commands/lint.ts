@@ -46,7 +46,7 @@ export function createWikiLintCommand(options: WikiExtensionOptions = {}): Packa
         name: "wiki-lint",
         value: report,
         content: [{ type: "text", text: statusText }],
-        metadata: { trust: "untrusted_external", ok: report.ok },
+        metadata: { ok: report.ok },
       };
     },
   };

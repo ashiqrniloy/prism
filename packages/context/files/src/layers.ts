@@ -13,6 +13,8 @@ export interface ContextFileLayerOptions {
   readonly agentsMdPath?: string;
   /** Multiple `AGENTS.md` override paths, applied in order. */
   readonly agentsMdPaths?: readonly string[];
+  /** Optional per-index fallback for `agentsMdPaths`: used only when that `AGENTS.md` is absent. */
+  readonly agentsMdFallbackPaths?: readonly (string | undefined)[];
   /** Single `SYSTEM.md` override path (still `source: "user"`). */
   readonly systemMdPath?: string;
   /** Multiple `SYSTEM.md` paths, applied in order. */
@@ -38,7 +40,8 @@ export interface ContextFileLayersResult {
  * enforced by `composeSystemPrompt`'s source rank, so input order only breaks ties.
  *
  * No roots and no explicit paths returns `[]` without any filesystem access, so a standalone SDK
- * agent keeps working unchanged. Two reads per file at most: no `readdir`, no scan, no `import()`.
+ * agent keeps working unchanged. Two reads per candidate path at most: no `readdir`, no scan, no
+ * `import()`.
  */
 export async function resolveContextFileLayers(options: ContextFileLayerOptions = {}): Promise<ContextFileLayersResult> {
   const mtimes = new Map<string, number | undefined>();
@@ -79,8 +82,10 @@ export async function resolveContextFileLayers(options: ContextFileLayerOptions 
         ? [join(options.workspaceRoot, "AGENTS.md")]
         : []);
   for (const [index, path] of agentsPaths.entries()) {
+    const fallback = options.agentsMdFallbackPaths?.[index];
+    const chosen = fallback === undefined ? path : await chooseAgentPath(path, fallback, mtimes);
     await read(
-      path,
+      chosen,
       {
         workspaceRoot: options.workspaceRoot,
         trust: options.trust,
@@ -94,6 +99,21 @@ export async function resolveContextFileLayers(options: ContextFileLayerOptions 
   }
 
   return { layers, mtimes };
+}
+
+/** The pair every candidate directory contributes: `AGENTS.md`, with `CLAUDE.md` as fallback. */
+export function agentFileCandidates(directory: string): readonly [string, string] {
+  return [join(directory, "AGENTS.md"), join(directory, "CLAUDE.md")];
+}
+
+/** Prefer `AGENTS.md`; use `CLAUDE.md` only when the primary file is absent. Both mtimes are
+ *  recorded, so a later AGENTS.md creation or a CLAUDE.md edit still invalidates the cache. */
+async function chooseAgentPath(primary: string, fallback: string, mtimes: Map<string, number | undefined>): Promise<string> {
+  const primaryMtime = await mtime(primary);
+  mtimes.set(primary, primaryMtime);
+  if (primaryMtime !== undefined) return primary;
+  mtimes.set(fallback, await mtime(fallback));
+  return fallback;
 }
 
 /** The layers only — the shape a host library wants when it composes the prompt itself. */

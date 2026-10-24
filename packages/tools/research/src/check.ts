@@ -1,4 +1,4 @@
-import type { Message, ToolResult } from "@arnilo/prism";
+import { UNTRUSTED_EXTERNAL_TRUST, type Message, type ToolResult } from "@arnilo/prism";
 
 import type { LedgerEntry, ResearchState } from "./ledger.js";
 
@@ -49,10 +49,11 @@ export function citationDecision(
 
 export function withLedgerLine(result: ToolResult, line: string): ToolResult {
   const note = { type: "text" as const, text: line };
-  // The transcript keeps `value` and drops text content when value is set, so the line has to ride
-  // both or the model never sees the id.
+  // Untrusted results reach the model as their text content (the kernel envelope), so the line rides
+  // the text. Trusted results still drop text when `value` is set, so they keep the copy in `value`.
+  const untrusted = result.metadata?.trust === UNTRUSTED_EXTERNAL_TRUST;
   const value =
-    typeof result.value === "object" && result.value !== null && !Array.isArray(result.value)
+    !untrusted && typeof result.value === "object" && result.value !== null && !Array.isArray(result.value)
       ? { ...result.value, ledger: line }
       : result.value;
   return {

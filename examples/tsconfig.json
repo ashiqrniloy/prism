@@ -50,6 +50,9 @@
       ],
       "@arnilo/prism-delegate": [
         "../packages/integrations/delegate/src/index.ts"
+      ],
+      "@arnilo/prism-advisor": [
+        "../packages/integrations/advisor/src/index.ts"
       ]
     }
   },

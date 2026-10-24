@@ -21,6 +21,7 @@
     "@arnilo/prism": ">=0.13.0 <1.0.0"
   },
   "devDependencies": {
+    "@arnilo/prism-tools-coding": "file:../../tools/coding",
     "@types/node": "^22.20.0",
     "typescript": "^7.0.2"
   },

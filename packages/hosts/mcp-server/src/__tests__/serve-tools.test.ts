@@ -9,14 +9,17 @@ import {
   type AgentEvent,
   createAgent,
   createMemorySessionStore,
+  createSecretRedactor,
   definePackage,
   type EventOrigin,
+  formatUntrustedToolText,
   type HostPort,
   type HostUi,
   type HostUiRequest,
   type HostUiResponse,
   type PackageInstance,
   type RunController,
+  type SecretRedactor,
   type Session,
   type ToolCallHookPayload,
   type ToolDefinition,
@@ -90,6 +93,7 @@ interface ServeSetup {
   readonly origin?: EventOrigin;
   readonly permissionTool?: ServeToolsPermissionTool;
   readonly durable?: boolean;
+  readonly redactor?: SecretRedactor;
 }
 
 /** Runs `body` inside a real session run and surfaces an assertion failure from inside the loop. */
@@ -101,6 +105,7 @@ async function withRun(
     readonly principal?: boolean;
     /** A `snapshot`/`restore` pair makes the loop durable, so `run.ask` can stage a suspension. */
     readonly durable?: boolean;
+    readonly redactor?: SecretRedactor;
   },
   body: (ctx: { run: RunController; events: AgentEvent[]; session: Session; agent: Agent }) => Promise<void>,
 ): Promise<{ events: AgentEvent[]; agent: Agent }> {
@@ -136,6 +141,7 @@ async function withRun(
     ...(setup.principal === false ? {} : { principal: { kind: "user", id: "test-principal" } }),
     ...(setup.tools && setup.tools.length > 0 ? { tools: { add: setup.tools } } : {}),
     ...(setup.host === undefined ? {} : { host: setup.host }),
+    ...(setup.redactor === undefined ? {} : { redactor: setup.redactor }),
   });
   const session = await agent.session({ id: "s", create: true });
   const pump = (async () => {
@@ -173,6 +179,7 @@ async function withServed(setup: ServeSetup, body: (ctx: ServedContext) => Promi
       host: setup.host,
       principal: setup.principal,
       durable: setup.durable,
+      redactor: setup.redactor,
     },
     async ({ run, events, session, agent }) => {
       const broker = await createCallbackBroker(run, { runDir, hookCodec: codec, failClosed: FAIL, timeoutMs: 10_000 });
@@ -795,6 +802,158 @@ describe("serveTools", () => {
         assert.match(String(entries[0]?.toolCallId), /^[0-9a-f-]{36}$/, "a random id when none is given");
         assert.deepEqual(entries[1], { toolName: "echo", toolCallId: "fixed-id", behavior: "allow" });
         assert.doesNotMatch(JSON.stringify(entries), /secret-value/, "the input is never recorded");
+      },
+    );
+  });
+
+  it("served_tool_with_content_and_value_returns_both", async () => {
+    const value = { results: [{ title: "one", url: "https://example.com/1" }] };
+    await withServed(
+      {
+        allow: ["search"],
+        tools: [
+          echoTool({
+            name: "search",
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "search",
+              content: [{ type: "text", text: "one result" }],
+              value,
+            }),
+          }),
+        ],
+        transport: "loopback-http",
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "search", arguments: {} });
+        assert.equal(textOf(result), "one result", "the tool's own text still reaches the client");
+        assert.deepEqual(result.structuredContent, value, "the value is served beside the text");
+        assert.notEqual(result.isError, true);
+      },
+    );
+  });
+
+  it("served_untrusted_tool_text_matches_kernel_envelope", async () => {
+    const value = { url: "https://example.com/page", markdown: "# Page" };
+    await withServed(
+      {
+        allow: ["web"],
+        tools: [
+          echoTool({
+            name: "web",
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "web",
+              content: [{ type: "text", text: "# Page" }],
+              value,
+              metadata: { trust: "untrusted_external", source: value.url },
+            }),
+          }),
+        ],
+        transport: "loopback-http",
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "web", arguments: {} });
+        const expected = formatUntrustedToolText({ name: "web", content: [{ type: "text", text: "# Page" }], value, metadata: { trust: "untrusted_external", source: value.url } });
+        assert.equal(textOf(result), expected, "one envelope, built by the kernel helper");
+        assert.equal((textOf(result).match(/<\/untrusted_external_content>/g) ?? []).length, 1);
+        assert.deepEqual(result.structuredContent, value, "the value is still structured");
+      },
+    );
+  });
+
+  it("served_error_sets_is_error", async () => {
+    await withServed(
+      {
+        allow: ["broken"],
+        tools: [
+          echoTool({
+            name: "broken",
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "broken",
+              error: { code: "ERR_PRISM_TOOL_INPUT", message: "bad argument" },
+            }),
+          }),
+        ],
+        transport: "loopback-http",
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "broken", arguments: {} });
+        assert.equal(result.isError, true);
+        assert.match(textOf(result), /ERR_PRISM_TOOL_INPUT: bad argument/);
+        assert.equal(result.structuredContent, undefined, "an error carries no structure");
+      },
+    );
+  });
+
+  it("served_structured_content_respects_byte_cap", async () => {
+    const value = { body: "y".repeat(512) };
+    await withServed(
+      {
+        allow: ["big"],
+        tools: [
+          echoTool({
+            name: "big",
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "big",
+              content: [{ type: "text", text: "compact" }],
+              value,
+            }),
+          }),
+        ],
+        transport: "loopback-http",
+        limits: { resultBytes: 64 },
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "big", arguments: {} });
+        assert.equal(result.structuredContent, undefined, "an over-cap value is not served structured");
+        assert.equal(textOf(result), "compact");
+      },
+    );
+    await withServed(
+      {
+        allow: ["big"],
+        tools: [
+          echoTool({
+            name: "big",
+            execute: (_args, context) => ({ toolCallId: context.toolCallId, name: "big", value }),
+          }),
+        ],
+        transport: "loopback-http",
+        limits: { resultBytes: 64 },
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "big", arguments: {} });
+        assert.equal(Buffer.byteLength(textOf(result), "utf8"), 64, "the text fallback is clipped to the cap");
+      },
+    );
+  });
+
+  it("served_value_is_redacted_before_it_reaches_the_client", async () => {
+    const secret = "mcp-canary-value-secret";
+    await withServed(
+      {
+        allow: ["leaky"],
+        tools: [
+          echoTool({
+            name: "leaky",
+            execute: (_args, context) => ({
+              toolCallId: context.toolCallId,
+              name: "leaky",
+              content: [{ type: "text", text: `token=${secret}` }],
+              value: { token: secret },
+            }),
+          }),
+        ],
+        transport: "loopback-http",
+        redactor: createSecretRedactor([secret]),
+      },
+      async ({ client }) => {
+        const result = await client.callTool({ name: "leaky", arguments: {} });
+        assert.doesNotMatch(JSON.stringify(result), new RegExp(secret), "no raw secret leaves the server");
+        assert.deepEqual(result.structuredContent, { token: "[REDACTED]" }, "the redacted value is served as it stands");
       },
     );
   });

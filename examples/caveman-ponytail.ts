@@ -1,6 +1,22 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assembleProviderInput, createAgent, createLoadedSkillSet, createLoadSkillTool, createMemorySessionStore, createSessionEntry, createSkillRegistry, createToolRegistry, definePackage, dispatchToolCall, type ProviderRequest, providerDone, resolveActiveSkills, type Skill, toolCallContent } from "@arnilo/prism";
+import {
+  assembleProviderInput,
+  createAgent,
+  createLoadedSkillSet,
+  createLoadSkillTool,
+  createMemorySessionStore,
+  createSessionEntry,
+  createSkillRegistry,
+  createToolRegistry,
+  definePackage,
+  dispatchToolCall,
+  type ProviderRequest,
+  providerDone,
+  resolveActiveSkills,
+  type Skill,
+  toolCallContent,
+} from "@arnilo/prism";
 import { loadSkillDirectory } from "@arnilo/prism/node/contribution-discovery";
 import { mockProvider } from "@arnilo/prism/testing";
 
@@ -113,7 +129,11 @@ export async function demo() {
   const captured: ProviderRequest[] = [];
   const agent = await createAgent({
     model: { provider: "mock", model: "demo" },
-    packages: [personaPackage({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }), personaPackage({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }), mockProvider([[providerDone()]], { onRequest: (request) => captured.push(request) })],
+    packages: [
+      personaPackage({ name: "caveman", skills: [cavemanSkill], store, stateType: "caveman-level" }),
+      personaPackage({ name: "ponytail", skills: [ponytailSkill, auditSkill], store, stateType: "ponytail-mode" }),
+      mockProvider([[providerDone()]], { onRequest: (request) => captured.push(request) }),
+    ],
   });
   await agent.commands.run("ponytail", { mode: "lite" });
   await agent.commands.run("caveman", { mode: "full" });
@@ -123,10 +143,10 @@ export async function demo() {
   const catalogText = messageText(captured[0]!);
   // Progressive disclosure: every active skill appears as a one-line catalog entry, and the
   // bodies only reach the transcript once the skill is loaded (or as the persona mode slice).
-  const catalogLines = catalogText.split("\n").filter((line) => /^Skill /.test(line));
+  const catalogLines = catalogText.split("\n").filter((line) => /^- /.test(line));
   const catalogOnly =
     catalogLines.length === 3 &&
-    ["ponytail", "caveman", "ponytail-audit"].every((name) => catalogLines.some((line) => line.startsWith(`Skill ${name}:`)));
+    ["ponytail", "caveman", "ponytail-audit"].every((name) => catalogLines.some((line) => line.startsWith(`- ${name}:`)));
 
   const injectorText = catalogText;
   const injectorSliceWithoutBody = injectorText.includes("PONYTAIL MODE ACTIVE") && !injectorText.includes(AUDIT_BODY_MARKER);

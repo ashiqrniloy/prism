@@ -123,11 +123,14 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
     });
   };
 
-  const contextFor = (payload: unknown): HookContext => {
+  const contextFor = (
+    payload: unknown,
+    identity?: { readonly sessionId?: string; readonly runId?: string },
+  ): HookContext => {
     const source = isRecord(payload) ? payload : {};
     return {
-      sessionId: typeof source.sessionId === "string" ? source.sessionId : "",
-      runId: typeof source.runId === "string" ? source.runId : "",
+      sessionId: typeof source.sessionId === "string" ? source.sessionId : (identity?.sessionId ?? ""),
+      runId: typeof source.runId === "string" ? source.runId : (identity?.runId ?? ""),
       // Replaced per registration by `viewOf`, which knows the owner; a bare context emits nothing.
       emit: () => undefined,
       reject: (reason: string): HookRejection => ({ __prismHookRejection: redactSecrets(reason, secrets) }),
@@ -239,11 +242,15 @@ export function createHookBus(options: HookBusOptions = {}): HookBus {
       }
     };
 
-    const transform = async <N extends TransformHookName>(name: N, value: HookPayload<N>): Promise<HookTransformResult<N>> => {
+    const transform = async <N extends TransformHookName>(
+      name: N,
+      value: HookPayload<N>,
+      identity?: { readonly sessionId?: string; readonly runId?: string },
+    ): Promise<HookTransformResult<N>> => {
       if (!entry(name)) throw new UnknownHookError(name);
       const list = sorted(name);
       if (list.length === 0) return value as HookTransformResult<N>;
-      const context = contextFor(value);
+      const context = contextFor(value, identity);
       const views = viewsFor();
       let current: unknown = value;
       for (const registration of list) {

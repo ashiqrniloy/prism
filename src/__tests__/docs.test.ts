@@ -1536,6 +1536,9 @@ describe("docs", () => {
         "examples/external-agent.ts",
         "examples/serve-tools.ts",
         "examples/custom-adapter.ts",
+        "examples/delegate.ts",
+        "examples/advisor.ts",
+        "examples/validator.ts",
       ];
       const secret = /(?:sk-[A-Za-z0-9_-]{8,}|AIza[0-9A-Za-z_-]{20,}|ghp_[A-Za-z0-9]{20,})/;
       for (const file of demos) {

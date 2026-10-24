@@ -13,8 +13,8 @@ import type { LoadedSkillBodiesEntry } from "./skill-load.js";
 
 /** The restore surface of a session; `RuntimeAgentSession` implements it. */
 export interface RunRestoreTarget {
-  restoreLoadedSkills(names: readonly string[]): void;
-  restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[]): void;
+  restoreLoadedSkills(names: readonly string[], runId?: string): void;
+  restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[], runId?: string): void;
 }
 
 export interface RunRestoreOptions {
@@ -26,11 +26,12 @@ export interface RunRestoreOptions {
 
 export function restoreRunSessionState(session: RunRestoreTarget, state: StoredAgentRunState, options: RunRestoreOptions): void {
   // Names only; bodies re-resolve from the live registry the next time the model (re)loads them via load_skill.
+  // Resume reuses the suspended run's id, so restored names belong to the current run for re-attach.
   if (options.persistSessionState && state.sessionState?.loadedSkillNames) {
-    session.restoreLoadedSkills(state.sessionState.loadedSkillNames);
+    session.restoreLoadedSkills(state.sessionState.loadedSkillNames, state.runId);
   }
   // Plan 018 Task 6: restore exact instructions so the resumed session renders them without a load_skill round-trip.
   if (options.persistSessionState && options.includeSkillBodies && state.sessionState?.loadedSkillBodies) {
-    session.restoreLoadedSkillBodies(state.sessionState.loadedSkillBodies);
+    session.restoreLoadedSkillBodies(state.sessionState.loadedSkillBodies, state.runId);
   }
 }

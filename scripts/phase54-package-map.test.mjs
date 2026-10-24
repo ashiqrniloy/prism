@@ -57,6 +57,8 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-provider-hyper",
     "@arnilo/prism-provider-laya",
     "@arnilo/prism-provider-typesafe",
+    // Plan 195 Task 5: the Liquid provider adapter.
+    "@arnilo/prism-provider-liquid",
     // Plan 152 Task 7: the credentials-slot keyring package, added after the 0.4 consolidation.
     "@arnilo/prism-credentials-keyring",
     // Plan 153 Task 3: the JSONL session store package, moved out of the root `./node/` subpath.
@@ -101,6 +103,8 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-driver-process",
     "@arnilo/prism-observability",
     "@arnilo/prism-delegate",
+    // Plan 191 Task 8: the advisor package.
+    "@arnilo/prism-advisor",
     "@arnilo/prism-evals",
     "@arnilo/prism-devtools",
     // Plan 174 Task 6: post-0.4 packages that never shipped as a standalone 0.3 package.

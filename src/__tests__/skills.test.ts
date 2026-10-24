@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { assembleProviderInput, createSkillRegistry, resolveActiveSkills, type Skill, type ToolDefinition } from "../index.js";
+import {
+  assembleProviderInput,
+  createSkillRegistry,
+  HARD_MAX_SKILL_INSTRUCTION_BYTES,
+  resolveActiveSkills,
+  type Skill,
+  type ToolDefinition,
+} from "../index.js";
 
 const skill: Skill = {
   name: "brief",
@@ -28,10 +35,14 @@ describe("skill registry and selection", () => {
   });
 
   it("strict mode rejects duplicate skill names", () => {
-    assert.throws(() => createSkillRegistry([skill, skill], { duplicate: "error" }), /Duplicate skill: brief/);
+    // Same name, different body: a conflict. Identical registrations (same path and body) are one skill.
+    const other: Skill = { ...skill, instructions: "Answer at length." };
+    assert.throws(() => createSkillRegistry([skill, other], { duplicate: "error" }), /Duplicate skill: brief/);
     const registry = createSkillRegistry([skill], { duplicate: "error" });
+    registry.register({ ...skill });
+    assert.equal(registry.list().length, 1);
 
-    assert.throws(() => registry.register(skill), /Duplicate skill: brief/);
+    assert.throws(() => registry.register(other), /Duplicate skill: brief/);
   });
 
   it("active skill selection includes only requested skills", () => {
@@ -40,6 +51,13 @@ describe("skill registry and selection", () => {
 
     assert.deepEqual(resolveActiveSkills({ registry, names: ["brief"], tools: [tool] }), [skill]);
     assert.deepEqual(resolveActiveSkills({ registry, tools: [tool] }), []);
+  });
+
+  it("oversized body is rejected at registration", () => {
+    assert.throws(
+      () => createSkillRegistry([{ name: "big", instructions: "x".repeat(HARD_MAX_SKILL_INSTRUCTION_BYTES + 1) }]),
+      /exceed hard cap/,
+    );
   });
 
   it("skill referencing missing tool fails closed", () => {
@@ -69,7 +87,7 @@ describe("skill registry and selection", () => {
       .map((message) => message.content.map((part) => (part.type === "text" ? part.text : "")).join("\n"))
       .join("\n");
 
-    assert.match(text, /Skill brief: \(no description\)/);
+    assert.match(text, /- brief: \(no description\)/);
     assert.doesNotMatch(text, /Answer briefly/);
     assert.doesNotMatch(text, /Do not include/);
   });

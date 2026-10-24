@@ -37,7 +37,11 @@ export function createWebFetchDocumentLoader(options: WebFetchDocumentLoaderOpti
   return {
     async load(uri, loadOptions = {}) {
       const url = publicWebUrl(uri);
-      const document = await options.fetcher.fetch(url, { signal: loadOptions.signal });
+      // The fetch caps the kept Markdown at `maxBytes`, so a large page arrives already bounded.
+      const document = await options.fetcher.fetch(url, {
+        ...(loadOptions.signal ? { signal: loadOptions.signal } : {}),
+        ...(loadOptions.maxBytes ? { maxBytes: loadOptions.maxBytes } : {}),
+      });
       publicWebUrl(document.url);
       if (!document.untrusted || !document.markdown) throw new RagValidationError("web fetcher returned an invalid untrusted document");
       const loaded: LoadedDocument = Object.freeze({

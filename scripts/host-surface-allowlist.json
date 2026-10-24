@@ -73,7 +73,9 @@
     "MAX_SESSION_LINK_ID_LENGTH",
     "SessionListQuery",
     "SessionParentLink",
-    "SteerOptions"
+    "SteerOptions",
+    "formatUntrustedToolText",
+    "UNTRUSTED_EXTERNAL_TRUST"
   ],
   "phase17": [
     "parseSuspendedRunEntry",

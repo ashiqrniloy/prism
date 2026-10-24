@@ -133,6 +133,35 @@ describe("workspace service", () => {
     assert.ok(!exclude.includes("prism-overlay"), "no marked block survives");
   });
 
+  it("worktree_handle_reports_the_parent_branch", async () => {
+    const fx = await fixture();
+    const workspace = await service(fx);
+    const onMain = await workspace.worktree.create();
+    assert.equal(onMain.parentBranch, "main", "the main tree's checked-out branch is recorded");
+    await git(fx.repo, ["checkout", "-q", "-b", "feature"]);
+    const onFeature = await workspace.worktree.create();
+    assert.equal(onFeature.parentBranch, "feature", "the branch at creation time, not at merge time");
+    await onMain.dispose({ force: true });
+    await onFeature.dispose({ force: true });
+  });
+
+  it("commit_records_pending_changes_on_the_branch", async () => {
+    const fx = await fixture();
+    const workspace = await service(fx);
+    const wt = await workspace.worktree.create({ sessionId: "s1" });
+    await writeFile(join(wt.path, "new.txt"), "child work\n");
+    await writeFile(join(wt.path, "a.txt"), "changed\n");
+
+    const { commit } = await workspace.commit(wt.path, { message: "delegate(coder): write the file" });
+    assert.equal((await git(wt.path, ["rev-parse", "HEAD"])).trim(), commit, "the branch advanced to the new commit");
+    assert.equal((await git(wt.path, ["show", `${commit}:new.txt`])).trim(), "child work", "the untracked file is committed");
+    assert.equal(await status(wt.path), "", "the worktree is clean afterwards");
+
+    const again = await workspace.commit(wt.path, { message: "no change" });
+    assert.equal(again.commit, commit, "an unchanged worktree creates no commit");
+    await wt.dispose({ force: true });
+  });
+
   it("worktree_changed_events_come_from_the_service", async () => {
     const fx = await fixture();
     const events: CodingLifecycleEvent[] = [];

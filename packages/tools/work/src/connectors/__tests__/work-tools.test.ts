@@ -185,6 +185,9 @@ describe("createWorkTools", () => {
       ctx(),
     );
     assert.equal((first.value as { status: string }).status, "executed");
+    // No banner text: the kernel wraps untrusted results (UNTRUSTED_EXTERNAL_TRUST) in its envelope.
+    assert.equal(first.content, undefined);
+    assert.equal(first.metadata?.trust, "untrusted_external");
     const second = await send.execute(
       {
         to: "a@contoso.com",

@@ -1,5 +1,7 @@
 import type { Skill, SkillRegistry, ToolDefinition } from "./contracts.js";
 import { assertCanRegister, type DuplicateRegistrationOptions } from "./registry-options.js";
+import { estimateTextBytes } from "./models/estimate.js";
+import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "./skill-disclosure.js";
 
 export interface ResolveActiveSkillsOptions {
   readonly registry: SkillRegistry;
@@ -9,12 +11,26 @@ export interface ResolveActiveSkillsOptions {
 
 export interface SkillRegistryOptions extends DuplicateRegistrationOptions {}
 
+/**
+ * Whether two registrations are the same skill: same name, same source file, same body. A child that
+ * inherits the parent's skills and a package that discovers the same `SKILL.md` re-register one skill,
+ * not two; a same-name skill from another path or with another body is still a conflict.
+ */
+export function isSameSkill(a: Skill, b: Skill): boolean {
+  return a.name === b.name && a.path === b.path && a.instructions === b.instructions;
+}
+
 export function createSkillRegistry(skills: readonly Skill[] = [], options: SkillRegistryOptions = {}): SkillRegistry {
   const byName = new Map<string, Skill>();
 
   const registry: SkillRegistry = {
     register(skill) {
+      const existing = byName.get(skill.name);
+      if (existing && isSameSkill(existing, skill)) return;
       assertCanRegister(byName, skill.name, "skill", skill.name, options.duplicate);
+      if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
+        throw new RangeError(`Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes)`);
+      }
       byName.set(skill.name, skill);
     },
     get(name) {

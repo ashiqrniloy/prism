@@ -106,6 +106,24 @@ describe("@arnilo/prism/provider-kit (anthropic-messages)", () => {
     assert.ok(serialized.includes('"properties":{"a":{},"b":{}}'));
   });
 
+  it("shared_anthropic_body_carries_trailing_tool_result_text", async () => {
+    const withTool: ProviderRequest = {
+      model,
+      messages: [
+        {
+          role: "tool",
+          content: [
+            { type: "tool_result", toolCallId: "call_1", name: "read", result: "file body" },
+            { type: "text", text: "[context-files] nested rule" },
+          ],
+        },
+      ],
+    };
+    const body = await anthropicMessagesBody(withTool, hooks);
+    const content = (body.messages as any[])[0]?.content;
+    assert.equal(content?.[0]?.content, "file body\n[context-files] nested rule");
+  });
+
   it("shared_anthropic_body_emits_resolved_thinking_and_output_config_effort", async () => {
     const body = await anthropicMessagesBody(
       { ...request, options: { compat: { thinking: { type: "adaptive" }, reasoning_effort: "medium" } } },

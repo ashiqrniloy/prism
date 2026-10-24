@@ -69,6 +69,18 @@ describe("openai provider primitives", () => {
     });
   });
 
+  it("serializes a trailing text part after tool_result.result", () => {
+    const message: Message = {
+      role: "tool",
+      content: [
+        { type: "tool_result", toolCallId: "c1", name: "read", result: "file body" },
+        { type: "text", text: "[context-files] nested rule" },
+      ],
+    };
+    assert.equal(serializeToolResultText(message), "file body\n[context-files] nested rule");
+    assert.equal(serializeOpenAIChatMessage(message).content, "file body\n[context-files] nested rule");
+  });
+
   it("serializes sibling tool text when tool_result.result is missing", () => {
     const message: Message = {
       role: "tool",

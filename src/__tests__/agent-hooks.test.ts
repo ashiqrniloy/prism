@@ -204,6 +204,88 @@ describe("agent hooks (4b wiring)", () => {
     assert.ok(denied && denied.type === "tool_result" && denied.error?.code === "hook_denied");
   });
 
+  it("transform_dispatch_carries_run_identity", async () => {
+    // Plan 191 follow-up: a transform payload is often a bare value (messages, a request), so the
+    // dispatch supplies the run identity; a handler can then key per-run state.
+    const seen: { hook: string; sessionId: string; runId: string }[] = [];
+    const record = (hook: string) => (_value: unknown, context: { sessionId: string; runId: string }): void => {
+      seen.push({ hook, sessionId: context.sessionId, runId: context.runId });
+    };
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [textProvider()])],
+      hooks: (hooks) => {
+        hooks.on("run.input", (messages, context) => {
+          record("run.input")(messages, context);
+          return messages;
+        });
+        hooks.on("message.append", (message, context) => {
+          record("message.append")(message, context);
+          return message;
+        });
+        hooks.on("context.build", (draft, context) => {
+          record("context.build")(draft, context);
+          return draft;
+        });
+        hooks.on("model.request", (request, context) => {
+          record("model.request")(request, context);
+          return request;
+        });
+        hooks.on("model.response", (message, context) => {
+          record("model.response")(message, context);
+          return message;
+        });
+      },
+    });
+    const session = await agent.session();
+    const first = await session.run("Hi");
+    const second = await session.run("Again");
+    assert.deepEqual(
+      [...new Set(seen.map((entry) => entry.hook))].sort(),
+      ["context.build", "message.append", "model.request", "model.response", "run.input"],
+    );
+    for (const entry of seen) assert.equal(entry.sessionId, session.id, `${entry.hook} carries the session id`);
+    assert.deepEqual(
+      [...new Set(seen.map((entry) => entry.runId))].sort(),
+      [first.runId, second.runId].sort(),
+      "each dispatch carries its own run's id",
+    );
+    assert.ok(seen.filter((entry) => entry.runId === first.runId).length > 0, "the first run is attributed to itself");
+    assert.ok(!seen.some((entry) => entry.runId === ""), "no transform dispatch falls back to an empty run id");
+  });
+
+  it("steer_run_input_carries_the_run_identity", async () => {
+    const steered: { sessionId: string; runId: string }[] = [];
+    let session: Awaited<ReturnType<typeof agent.session>> | undefined;
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [toolProvider({ id: "c1", name: "poke" })])],
+      tools: {
+        add: [
+          {
+            name: "poke",
+            parameters: { type: "object" },
+            execute: () => {
+              session?.steer("more");
+              return { toolCallId: "c1", name: "poke", value: "poked" };
+            },
+          },
+        ],
+      },
+      hooks: (hooks) =>
+        hooks.on("run.input", (messages, context) => {
+          if (messages.some((message) => message.content.some((block) => block.type === "text" && block.text === "more"))) {
+            steered.push({ sessionId: context.sessionId, runId: context.runId });
+          }
+          return messages;
+        }),
+    });
+    session = await agent.session();
+    const result = await session.run("work");
+    assert.equal(steered.length, 1, "the steer passed run.input once");
+    assert.deepEqual(steered[0], { sessionId: session.id, runId: result.runId });
+  });
+
   it("run_input_transforms_start_messages", async () => {
     const seen: string[] = [];
     const agent = await createAgent({

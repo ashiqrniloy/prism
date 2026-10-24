@@ -222,10 +222,23 @@
         "@arnilo/prism": ">=0.13.0 <1.0.0",
       },
     },
+    "packages/integrations/advisor": {
+      "name": "@arnilo/prism-advisor",
+      "version": "0.13.0",
+      "devDependencies": {
+        "@arnilo/prism-delegate": "file:../delegate",
+        "@types/node": "^22.20.0",
+        "typescript": "^7.0.2",
+      },
+      "peerDependencies": {
+        "@arnilo/prism": ">=0.13.0 <1.0.0",
+      },
+    },
     "packages/integrations/delegate": {
       "name": "@arnilo/prism-delegate",
       "version": "0.13.0",
       "devDependencies": {
+        "@arnilo/prism-tools-coding": "file:../../tools/coding",
         "@types/node": "^22.20.0",
         "typescript": "^7.0.2",
       },
@@ -701,6 +714,8 @@
 
     "@arnilo/prism-acp": ["@arnilo/prism-acp@workspace:packages/hosts/acp"],
 
+    "@arnilo/prism-advisor": ["@arnilo/prism-advisor@workspace:packages/integrations/advisor"],
+
     "@arnilo/prism-ag-ui": ["@arnilo/prism-ag-ui@workspace:packages/hosts/ag-ui"],
 
     "@arnilo/prism-agent": ["@arnilo/prism-agent@workspace:apps/prism-agent"],
@@ -1057,9 +1072,15 @@
 
     "@arnilo/prism-credentials-keyring/@arnilo/prism-provider-hyper": ["@arnilo/prism-provider-hyper@file:packages/providers/hyper", { "devDependencies": { "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0" } }],
 
+    "@arnilo/prism-delegate/@arnilo/prism-tools-coding": ["@arnilo/prism-tools-coding@file:packages/tools/coding", { "dependencies": { "diff": "^9.0.0" }, "devDependencies": { "@arnilo/prism-evals": "file:../../hosts/evals", "@arnilo/prism-workflows": "file:../../integrations/workflows", "@types/diff": "^7.0.2", "@types/node": "^22.20.0", "typescript": "^7.0.2" }, "peerDependencies": { "@arnilo/prism": ">=0.13.0 <1.0.0", "@arnilo/prism-workflows": "^0.13.0", "e2b": "2.49.1" }, "optionalPeers": ["e2b"] }],
+
     "@types/pg/@types/node": ["@types/node@26.6.4", "", { "dependencies": { "undici-types": "~8.9.0" } }, ""],
 
     "bun-types/@types/node": ["@types/node@26.6.4", "", { "dependencies": { "undici-types": "~8.9.0" } }, ""],
+
+    "@arnilo/prism-delegate/@arnilo/prism-tools-coding/@arnilo/prism-evals": ["@arnilo/prism-evals@file:packages/hosts/evals", {}],
+
+    "@arnilo/prism-delegate/@arnilo/prism-tools-coding/@arnilo/prism-workflows": ["@arnilo/prism-workflows@file:packages/integrations/workflows", {}],
 
     "@types/pg/@types/node/undici-types": ["undici-types@8.9.0", "", {}, ""],
 

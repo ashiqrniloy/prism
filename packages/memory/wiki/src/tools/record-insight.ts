@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import type { ToolDefinition } from "@arnilo/prism";
+import { UNTRUSTED_EXTERNAL_TRUST, type ToolDefinition } from "@arnilo/prism";
 import { OKF_TYPE_BY_CATEGORY, prependLog, renderConceptFrontmatter, wikiActor, wikiDate } from "../engine/okf.js";
 import type { WikiExtensionOptions } from "../types.js";
 
@@ -129,7 +129,7 @@ ${content}
             text: `Successfully recorded ${category} "${title}" in \`${wikiRoot}/${folderName}/${fileName}\` and updated index.`,
           },
         ],
-        metadata: { trust: "untrusted_external", path: `${folderName}/${fileName}` },
+        metadata: { trust: UNTRUSTED_EXTERNAL_TRUST, path: `${folderName}/${fileName}` },
       };
     },
   };

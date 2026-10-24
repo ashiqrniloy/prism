@@ -123,7 +123,8 @@ export async function mergeWorktree(context: MergeContext, request: WorkspaceMer
   return { status: "merged", commit };
 }
 
-function requireIdentity(identity: MergeContext["identity"]): asserts identity is { name: string; email: string } {
+/** A merge and a commit both need the repository's configured identity; neither invents one. */
+export function requireIdentity(identity: MergeContext["identity"]): asserts identity is { name: string; email: string } {
   if (identity === undefined) {
     throw new WorkspaceServiceError("workspace_identity_missing", "no commit identity is configured for this repository");
   }

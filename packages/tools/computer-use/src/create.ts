@@ -1,4 +1,5 @@
 import {
+  UNTRUSTED_EXTERNAL_TRUST,
   type JsonObject,
   type RunLimits,
   type SecretRedactor,
@@ -170,6 +171,6 @@ function withTrust(result: ToolResult, redactor: SecretRedactor | undefined): To
   const redacted = redactor?.redact(result) ?? result;
   return {
     ...redacted,
-    metadata: { ...redacted.metadata, trust: "untrusted_external" },
+    metadata: { ...redacted.metadata, trust: UNTRUSTED_EXTERNAL_TRUST },
   };
 }

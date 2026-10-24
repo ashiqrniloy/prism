@@ -3,7 +3,8 @@
  *
  * The kernel's combination rule for `tool.call` is any-deny-wins, so these holds under
  * `approval` `auto`, under a host `allow` hook, and from a custom loop. Reasons name the root
- * and the tool, never file contents. Tools this package did not register are ignored.
+ * and the tool, never file contents. Tools this package did not register are ignored. For
+ * read-effect tools, `targets.roots` also carries each skill directory; mutating tools never do.
  */
 import { realpath } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";

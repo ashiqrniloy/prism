@@ -94,12 +94,15 @@ test("counts match manifests at the truth graph", () => {
     // so publishable is 60, workspace 59, prismFamily 1, capability 37, codeWithPeer 59,
     // and pureManifest 0. Plan 182 Task 2 retires the 17 provider packages, so publishable is 43,
     // workspace 42, provider 4, capability 37, codeWithPeer 42, and pureManifest 0.
-    assert.equal(t.counts.publishable, 43);
-    assert.equal(t.counts.workspace, 42);
-    assert.equal(t.counts.provider, 4);
+    // Plan 195 Task 5 adds the @arnilo/prism-provider-liquid provider package, so provider is 5;
+    // plan 191 Task 8 adds the @arnilo/prism-advisor capability package, so publishable is 45,
+    // workspace 44, capability 38, and codeWithPeer 44.
+    assert.equal(t.counts.publishable, 45);
+    assert.equal(t.counts.workspace, 44);
+    assert.equal(t.counts.provider, 5);
     assert.equal(t.counts.prismFamily, 1);
-    assert.equal(t.counts.capability, 37);
-    assert.equal(t.counts.codeWithPeer, 42);
+    assert.equal(t.counts.capability, 38);
+    assert.equal(t.counts.codeWithPeer, 44);
     assert.equal(t.counts.pureManifest, 0);
   } else if (hasCodingToolsPackage) {
     assert.equal(t.counts.publishable, 17);

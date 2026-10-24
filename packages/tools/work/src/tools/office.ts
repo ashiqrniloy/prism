@@ -1,7 +1,8 @@
 import { Buffer } from "node:buffer";
 import { isAbsolute } from "node:path";
-import type {
-  ArtifactBodyRef,
+import {
+  UNTRUSTED_EXTERNAL_TRUST,
+  type ArtifactBodyRef,
   ArtifactBodyStore,
   JsonObject,
   SecretRedactor,
@@ -206,7 +207,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
             caps: options.caps,
             redactor: options.redactor,
           });
-          return { toolCallId: context.toolCallId, name: "office_parse", value: { model }, metadata: { trust: "untrusted_external" } };
+          return { toolCallId: context.toolCallId, name: "office_parse", value: { model }, metadata: { trust: UNTRUSTED_EXTERNAL_TRUST } };
         } catch (error) {
           return errorResult("office_parse", context, error);
         }
@@ -226,7 +227,7 @@ export function createOfficeTools(options: OfficeToolsOptions = {}): readonly To
             caps: options.caps,
             redactor: options.redactor,
           });
-          return { toolCallId: context.toolCallId, name: "office_import", value: imported, metadata: { trust: "untrusted_external" } };
+          return { toolCallId: context.toolCallId, name: "office_import", value: imported, metadata: { trust: UNTRUSTED_EXTERNAL_TRUST } };
         } catch (error) {
           return errorResult("office_import", context, error);
         }

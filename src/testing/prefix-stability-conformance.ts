@@ -158,10 +158,10 @@ export function scorePrefixStability(requests: readonly ProviderRequest[], optio
 /**
  * Drive a real session through two staggered skill loads and assert that each
  * provider request keeps a byte-identical leading prefix (messages **and** tool
- * schemas) with its predecessor. Progressive disclosure appends a loaded body
- * after the stable prefix, so the shared prefix stays intact; a host that
- * rewrites the context block, the skill catalog, or any leading message per
- * request fails with the offending request pair and the measured fraction.
+ * schemas) with its predecessor. Progressive disclosure returns each loaded body
+ * in its tool result, so the shared prefix stays intact; a host that rewrites the
+ * context block, the skill catalog, or any leading message per request fails with
+ * the offending request pair and the measured fraction.
  * Reports both the provider-visible fraction and the same fraction with the
  * session's tail segments removed; `assertOn` picks which one gates the run.
  * A gap below the minimum is collected as a reset instead of failing in the
@@ -220,9 +220,28 @@ export async function runPrefixStabilityConformance(options: PrefixStabilityConf
   // Guard against a vacuous pass: both bodies must have been disclosed by the end.
   const last = (requests.at(-1)?.messages ?? []).map((message) => JSON.stringify(message)).join("\n");
   for (const [index, skill] of skills.entries()) {
+    const body = bodies[index] ?? "";
     assert.ok(
-      last.includes(bodies[index] ?? ""),
+      last.includes(body),
       `prefix stability conformance: skill ${skill.name} body never reached the provider request — progressive disclosure did not expand it`,
+    );
+    if ((options.skillsDisclosure ?? "progressive") === "progressive") {
+      const hasLoadCall = requests.some((request) =>
+        request.messages.some((message) => message.content.some((block) => block.type === "tool_call" && block.name === "load_skill")),
+      );
+      if (hasLoadCall) {
+        assert.ok(
+          requests.some((request) => request.messages.some((message) => message.role === "tool" && JSON.stringify(message).includes(body))),
+          `prefix stability conformance: skill ${skill.name} body did not ride in its tool result`,
+        );
+      }
+    }
+  }
+  if ((options.skillsDisclosure ?? "progressive") === "progressive") {
+    assert.deepEqual(
+      [...session.tailSegments.keys()].filter((key) => key.startsWith("skill:")),
+      [],
+      "prefix stability conformance: a progressive loaded body was re-appended as a tail segment",
     );
   }
 

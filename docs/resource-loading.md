@@ -100,6 +100,19 @@ console.log(bytes.byteLength, manifest.name, prompt);
 - Do not put resolved credential values, tokens, headers, or executable code in loaded config, manifests, prompts, skills, or metadata.
 - A RAG resource loader is not permission escalation: pass the same host-owned trust/permission context used for any resource load. HTML/PDF parser output and web content are untrusted inert text; compressed/scanned PDFs require a host parser rather than partial fallback.
 
+## SKILL.md frontmatter
+
+`parseSkillFile()` and `parseAgentFile()` read the frontmatter of a `SKILL.md` or agent markdown file with a strict YAML subset: plain and quoted scalars (single-quoted `''` and double-quoted backslash escapes), folded and literal block scalars (`>`, `|`, with `-`/`+` chomping), multi-line plain scalars, nested maps by indentation, block and flow lists, and block lists of maps. Values are always strings, so `true` or `1.0.0` never becomes a boolean or a number. Full-line `#` comments are ignored; anchors, aliases, tags, flow maps, tabs as indentation, and nesting deeper than 8 levels fail with `Malformed frontmatter in <path>: <reason> at line N` instead of being guessed.
+
+Fields Prism reads:
+
+- `name` — the skill or agent name (falls back to the parent directory name).
+- `description` — the catalog description and the agent declaration's description.
+- `toolNames` or `tools` — the tool names a skill requires, as a YAML list.
+- every other key — kept under `metadata`; nested maps stay nested objects.
+
+`allowed-tools`, `disallowed-tools`, `hooks`, and the other Claude Code or Codex fields are metadata only. They never grant permissions: tool visibility and the hard-deny hook remain host-owned, and a skill body's capitalized tool names (`Read`, `Edit`, `Bash`) are instructions, not Prism tool registrations. `parseAgentFile()` also returns the markdown body as `instructions`, and a resumed or discovered file is not more trusted because it parsed.
+
 ## MCP resources
 
 `@arnilo/prism-mcp` keeps remote MCP resources outside `ToolDefinition`. `connectMcpCapabilities().listResources()/readResource()` apply finite item/page/JSON bounds and return untrusted protocol output. Server `resources` are explicit fixed URIs with per-read host authorization. MCP roots are host-consented client callbacks; Prism neither discovers filesystem roots nor widens `ResourceLoader` access.

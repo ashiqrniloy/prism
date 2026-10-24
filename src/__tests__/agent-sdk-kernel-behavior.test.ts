@@ -47,7 +47,7 @@ describe("kernel behavior moved from the agent SDK", () => {
         .flatMap((message) => message.content)
         .map((block) => (block.type === "text" ? block.text : ""))
         .join("\n");
-      assert.match(text, /Skill active-skill: renders in catalog/);
+      assert.match(text, /- active-skill: renders in catalog/);
       assert.equal(text.includes("Active body"), false, "progressive disclosure keeps the body out of the first turn");
       assert.ok(
         requests[0]?.tools?.some((tool) => tool.name === "load_skill"),

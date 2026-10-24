@@ -58,7 +58,7 @@ export function createWikiRefreshCommand(options: WikiExtensionOptions = {}): Pa
             text: `🔄 Refreshed LLM Wiki at \`${res.wikiRoot}\` (Added: ${delta.added.length}, Modified: ${delta.modified.length}, Deleted: ${delta.deleted.length}, Affected entities: ${delta.affectedEntities.length}).`,
           },
         ],
-        metadata: { trust: "untrusted_external", wikiRoot: res.wikiRoot },
+        metadata: { wikiRoot: res.wikiRoot },
       };
     },
   };

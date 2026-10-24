@@ -1120,7 +1120,7 @@ describe("agent session runtime", () => {
       .map((block) => (block.type === "text" ? block.text : ""))
       .join("\n");
     assert.equal(text.includes("selected context"), true);
-    assert.equal(text.includes("Skill brief"), true);
+    assert.equal(text.includes("- brief:"), true);
   });
 
   it("plain-array AgentConfig.skills still activates all configured skills without overrides", async () => {
@@ -1144,7 +1144,7 @@ describe("agent session runtime", () => {
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
-    assert.equal(text.includes("Skill brief"), true);
+    assert.equal(text.includes("- brief:"), true);
   });
 
   it("external agent definition can create runtime agent", async () => {

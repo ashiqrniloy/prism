@@ -14,7 +14,7 @@ import {
   toolCallContent,
   twoTurnProvider,
 } from "@arnilo/prism/testing";
-import toolsCoding, { createCodingTargets, createEditTool, createHardDenyHook } from "../index.js";
+import toolsCoding, { createCodingTargets, createEditTool, createHardDenyHook, createReadTool } from "../index.js";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -250,6 +250,100 @@ describe("tools-coding hard denies", () => {
       best = Math.min(best, performance.now() - started);
     }
     assert.ok(best < 50, `1000 decisions took ${best.toFixed(1)}ms`);
+  });
+
+  it("read_under_skill_dir_outside_root_allowed_and_write_denied", async () => {
+    const root = await tempRoot();
+    const skillDir = join(await tempRoot(), "pdf");
+    await mkdir(join(skillDir, "references"), { recursive: true });
+    const skillPath = join(skillDir, "SKILL.md");
+    await writeFile(skillPath, "---\nname: pdf\ndescription: PDFs\n---\nRead references.");
+    const reference = join(skillDir, "references", "forms.md");
+    await writeFile(reference, "secret reference\n");
+
+    let consume: (() => unknown) | undefined;
+    const probe = definePackage({
+      name: "@test/coding-skill-roots-probe",
+      version: "0.0.1",
+      requires: { api: 1 },
+      setup: (prism) => {
+        consume = () => prism.services.consume("coding.targets");
+      },
+    });
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [toolsCoding({ root }), probe],
+      skills: { add: [{ name: "pdf", instructions: "Use pdf.", path: skillPath }] },
+    });
+    try {
+      const targets = consume?.() as ReturnType<typeof createCodingTargets>;
+      assert.ok(targets);
+      assert.deepEqual(targets("read", { path: reference })?.roots, [root, skillDir]);
+      assert.deepEqual(targets("write", { path: reference })?.roots, [root]);
+      assert.deepEqual(targets("shell", { command: "ls" })?.roots, [root]);
+
+      const deny = createHardDenyHook({ targets, readOnly: false });
+      assert.equal(
+        await deny({ name: "read", args: { path: reference }, effects: ["read"], callId: "c1", sessionId: "s", runId: "r" }),
+        undefined,
+        "a skill reference is readable",
+      );
+      assert.match(
+        denyReason(
+          await deny({
+            name: "write",
+            args: { path: reference, content: "x" },
+            effects: ["write"],
+            callId: "c2",
+            sessionId: "s",
+            runId: "r",
+          }),
+        ),
+        /outside coding roots/,
+      );
+
+      const read = await createReadTool(root).execute({ path: reference }, { sessionId: "s", runId: "r", toolCallId: "c3" });
+      assert.equal(read.error, undefined);
+      assert.match(JSON.stringify(read.content), /secret reference/);
+    } finally {
+      await agent.dispose();
+    }
+  });
+
+  it("skill_dir_symlink_escape_denied", async () => {
+    const root = await tempRoot();
+    const skillDir = join(await tempRoot(), "pdf");
+    await mkdir(join(skillDir, "references"), { recursive: true });
+    const secret = join(await tempRoot(), "secret.txt");
+    await writeFile(secret, "do not read\n");
+    const link = join(skillDir, "references", "leak.md");
+    await symlink(secret, link);
+    const targets = createCodingTargets(root, [], undefined, () => [{ name: "pdf", path: join(skillDir, "SKILL.md") }]);
+    const deny = createHardDenyHook({ targets, readOnly: false });
+    assert.match(
+      denyReason(await deny({ name: "read", args: { path: link }, effects: ["read"], callId: "c", sessionId: "s", runId: "r" })),
+      /outside coding roots/,
+    );
+  });
+
+  it("targets_roots_follow_skill_list_changes", async () => {
+    const root = await tempRoot();
+    const first = await tempRoot();
+    const second = await tempRoot();
+    let skills: readonly { name: string; path: string }[] = [];
+    const targets = createCodingTargets(root, [], undefined, () => skills);
+    assert.deepEqual(targets("read", { path: "a" })?.roots, [root]);
+    skills = [{ name: "one", path: join(first, "SKILL.md") }];
+    assert.deepEqual(targets("read", { path: "a" })?.roots, [root, first]);
+    skills = [...skills, { name: "two", path: join(second, "SKILL.md") }];
+    for (const name of ["read", "glob", "grep", "diagnostics"]) {
+      assert.deepEqual(targets(name, { pattern: "x", path: "a" })?.roots, [root, first, second], name);
+    }
+    for (const name of ["write", "edit", "delete", "move", "shell", "shell_output"]) {
+      assert.deepEqual(targets(name, { path: "a", from: "a", to: "b", command: "ls" })?.roots, [root], name);
+    }
+    skills = [];
+    assert.deepEqual(targets("read", { path: "a" })?.roots, [root]);
   });
 
   it("coding_targets_service_reports_paths", async () => {

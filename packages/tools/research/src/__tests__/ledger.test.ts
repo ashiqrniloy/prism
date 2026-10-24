@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { providerDone, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
+import { UNTRUSTED_EXTERNAL_TRUST } from "@arnilo/prism";
+import { withLedgerLine } from "../check.js";
 import { fetchCall, fetchTool, researchAgent, textTurn, verify, writeTool } from "./helpers.js";
 
 describe("research ledger", () => {
@@ -21,6 +23,32 @@ describe("research ledger", () => {
     } finally {
       await run.dispose();
     }
+  });
+
+  it("ledger_line_reaches_model_for_untrusted_result", () => {
+    // An untrusted result reaches the model as text (the kernel envelope), so the ledger line rides
+    // the text and no longer has to be copied into `value`.
+    const wrapped = withLedgerLine(
+      {
+        toolCallId: "c1",
+        name: "web_fetch",
+        value: { url: "https://a.test/one", markdown: "page" },
+        content: [{ type: "text", text: "page body" }],
+        metadata: { trust: UNTRUSTED_EXTERNAL_TRUST },
+      },
+      "ledger: S1 — https://a.test/one (web:firecrawl:1)",
+    );
+    assert.equal((wrapped.value as { ledger?: unknown }).ledger, undefined);
+    const text = wrapped.content?.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("\n") ?? "";
+    assert.match(text, /ledger: S1/);
+    assert.match(text, /page body/, "the original text is kept ahead of the ledger line");
+
+    // Trusted results keep the copy in `value`, because their text is dropped when a value is set.
+    const trusted = withLedgerLine(
+      { toolCallId: "c2", name: "web_fetch", value: { url: "https://a.test/two" } },
+      "ledger: S2 — https://a.test/two",
+    );
+    assert.equal((trusted.value as { ledger?: string }).ledger, "ledger: S2 — https://a.test/two");
   });
 
   it("ledger_ignores_unlisted_tools", async () => {

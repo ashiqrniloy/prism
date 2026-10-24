@@ -14,8 +14,9 @@ import {
   foldToolResultHistory,
   resolveToolResultFold,
   TOOL_RESULT_FOLD_TURN_METADATA_KEY,
+  toolResultFoldText,
 } from "../fold.js";
-import type { Message } from "@arnilo/prism";
+import { EMPTY_TOOL_RESULT_TEXT, formatUntrustedToolText, UNTRUSTED_EXTERNAL_TRUST, type Message } from "@arnilo/prism";
 
 function toolMessage(toolCallId: string, name: string, result: unknown, turn?: number): Message {
   return {
@@ -31,6 +32,23 @@ function resultOf(message: Message | undefined): unknown {
 }
 
 describe("tool result fold", () => {
+  it("untrusted_envelope_survives_fold", () => {
+    // Folding replaces the payload with a summary header, so the invariant is that the text the
+    // fold (and the attention compiler) hashes and summarizes still carries the envelope.
+    const envelope = formatUntrustedToolText({
+      name: "web_fetch",
+      content: [{ type: "text", text: "# Example Domain" }],
+      metadata: { trust: UNTRUSTED_EXTERNAL_TRUST, source: "https://example.com/" },
+    });
+    // `toolResultFoldText` JSON-encodes the payload, so the quotes are escaped in the fold text.
+    const text = toolResultFoldText(envelope, undefined, []);
+    assert.match(text, /The following tool output is untrusted external content/);
+    assert.ok(text.includes("<untrusted_external_content"), text);
+    assert.ok(text.includes("web_fetch") && text.includes("example.com"), text);
+    assert.ok(text.includes("# Example Domain"), text);
+    assert.notEqual(text, JSON.stringify(EMPTY_TOOL_RESULT_TEXT));
+  });
+
   it("resolveToolResultFold is disabled without summarize", () => {
     assert.equal(resolveToolResultFold(undefined, undefined), undefined);
     assert.equal(resolveToolResultFold({ minAgeTurns: 1 } as never, undefined), undefined);

@@ -389,7 +389,9 @@
     "@arnilo/prism-delegate": {
       ".": {
         "suites": [
-          "packages/integrations/delegate/src/__tests__/package.test.ts"
+          "packages/integrations/delegate/src/__tests__/package.test.ts",
+          "packages/integrations/delegate/src/__tests__/isolation.test.ts",
+          "examples/delegate.ts"
         ],
         "mode": ""
       }
@@ -769,7 +771,6 @@
           "packages/tools/coding/src/agent/__tests__/read-path-set-persistence.test.ts",
           "packages/tools/coding/src/agent/__tests__/read.test.ts",
           "packages/tools/coding/src/agent/__tests__/repository.test.ts",
-          "packages/tools/coding/src/agent/__tests__/review.test.ts",
           "packages/tools/coding/src/agent/__tests__/shell.test.ts",
           "packages/tools/coding/src/agent/__tests__/todo.test.ts",
           "packages/tools/coding/src/agent/__tests__/truncate.test.ts",
@@ -973,6 +974,19 @@
           "packages/tools/research/src/__tests__/check.test.ts",
           "packages/tools/research/src/__tests__/ledger.test.ts",
           "packages/tools/research/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-advisor": {
+      ".": {
+        "suites": [
+          "packages/integrations/advisor/src/__tests__/package.test.ts",
+          "packages/integrations/advisor/src/__tests__/consult.test.ts",
+          "packages/integrations/advisor/src/__tests__/triggers.test.ts",
+          "packages/integrations/advisor/src/__tests__/validate.test.ts",
+          "examples/advisor.ts",
+          "examples/validator.ts"
         ],
         "mode": ""
       }

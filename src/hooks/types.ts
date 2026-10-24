@@ -243,7 +243,16 @@ export interface HookBus {
    */
   remove(id: string): boolean;
   observe<N extends ObserveHookName>(name: N, payload: HookPayload<N>): void;
-  transform<N extends TransformHookName>(name: N, value: HookPayload<N>): Promise<HookTransformResult<N>>;
+  /**
+   * Runs the transform chain. `identity` supplies `context.sessionId`/`context.runId` when the payload
+   * is a bare value (a message, a message list, a request) that carries no run identity of its own,
+   * so a handler can key per-run state. A payload that names them wins over the dispatch identity.
+   */
+  transform<N extends TransformHookName>(
+    name: N,
+    value: HookPayload<N>,
+    identity?: { readonly sessionId?: string; readonly runId?: string },
+  ): Promise<HookTransformResult<N>>;
   decide<N extends DecideHookName>(name: N, payload: HookPayload<N>): Promise<HookDecision<N> | undefined>;
   around<N extends AroundHookName>(
     name: N,

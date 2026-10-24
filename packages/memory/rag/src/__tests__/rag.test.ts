@@ -296,6 +296,25 @@ describe("source lifecycle and document adapters", () => {
     )[0]!;
     assert.equal(record.metadata?.untrusted, true);
     assert.equal((record.metadata?.web as JsonObject)!.citationId, "web:firecrawl:guide");
+    // The loader passes `maxBytes` to the service, so the fetch returns a bounded document.
+    let seen: { signal?: AbortSignal; maxBytes?: number } | undefined;
+    const bounded = createWebFetchDocumentLoader({
+      fetcher: {
+        fetch: async (url, options) => {
+          seen = options;
+          return {
+            citationId: "web:firecrawl:big",
+            provider: "firecrawl",
+            url,
+            markdown: "# Big",
+            retrievedAt: "2026-07-26T00:00:00.000Z",
+            untrusted: true as const,
+          };
+        },
+      },
+    });
+    await bounded.load("https://example.com/big", { maxBytes: 1024 });
+    assert.equal(seen?.maxBytes, 1024);
     await assert.rejects(web.load("file:///etc/passwd"), RagValidationError);
     await assert.rejects(web.load("http://127.0.0.1/private"), RagValidationError);
   });

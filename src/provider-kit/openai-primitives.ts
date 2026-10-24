@@ -52,20 +52,25 @@ export const OMITTED_TOOL_RESULT_IMAGE_NOTE = "[image omitted: the model does no
 export function serializeToolResultText(message: Message): string {
   const result = message.content.find((part): part is Extract<ContentBlock, { type: "tool_result" }> => part.type === "tool_result");
   if (!result) return "";
-  if (result.result !== undefined) {
-    return typeof result.result === "string" ? result.result : JSON.stringify(result.result);
-  }
-  // An error is its message; JSON-escaping it only added backslashes the model had to read.
-  if (result.error) return result.error.message;
-  return message.content
+  // A text part after the tool_result is a provider-view insertion (a nested instruction file), not
+  // part of the result; append it so every codec carries it outside the result envelope.
+  const trailing = message.content
     .filter((part): part is Extract<ContentBlock, { type: "text" }> => part.type === "text")
     .map((part) => part.text)
     .filter(Boolean)
     .join("\n");
+  const prefix =
+    result.result !== undefined
+      ? typeof result.result === "string"
+        ? result.result
+        : JSON.stringify(result.result)
+      : // An error is its message; JSON-escaping it only added backslashes the model had to read.
+        result.error?.message;
+  if (prefix === undefined) return trailing;
+  return trailing ? `${prefix}\n${trailing}` : prefix;
 }
 
 export { serializeOpenAIChatMessage } from "./codecs/openai-chat.js";
-
 
 export function mapOpenAIChatUsage(usage: unknown): Usage | undefined {
   if (!usage || typeof usage !== "object" || Array.isArray(usage)) return undefined;

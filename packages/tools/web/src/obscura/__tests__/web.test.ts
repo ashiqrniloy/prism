@@ -67,6 +67,26 @@ test("queries are URL-encoded; extraction JS stays constant; results normalize w
   assert.equal(value.results[1]!.snippet, "second");
 });
 
+test("obscura_fetch_text_is_sliced", async () => {
+  const toolSet = tools({ env: { ...process.env, OBSCURA_FAKE: "oversize" } });
+  const result = await call(toolSet, "obscura_fetch", { url: "https://example.com/long", dump: "text" });
+  const value = result.value as { content: string; url: string; dump: string };
+  const text = (result.content as readonly { text: string }[])[0]!.text;
+  assert.equal(result.error, undefined);
+  assert.equal(value.dump, "text", "the value keeps the whole structure");
+  assert.ok(value.content.length > 32_000, "the dumped page is longer than one slice");
+  assert.equal(text.length, 32_000, "the model reads one context-sized slice of it");
+  assert.equal(value.content.startsWith(text), true, "the slice is the head of the dump");
+});
+
+test("obscura_scrape_returns_numbered_text", async () => {
+  const toolSet = tools();
+  const result = await call(toolSet, "obscura_scrape", { urls: ["https://example.com/a"] });
+  assert.equal(result.error, undefined);
+  const text = (result.content as readonly { text: string }[])[0]!.text;
+  assert.match(text, /^1\. https:\/\/example\.com\/a\n   \{/u);
+});
+
 test("count caps results and the default profile keeps the query out of JavaScript source", async () => {
   const toolSet = tools();
   const result = await call(toolSet, "web_search", { query: "test", count: 1 });
@@ -143,9 +163,14 @@ test("malformed upstream JSON fails closed", async () => {
   await assert.rejects(call(toolSet, "obscura_scrape", { urls: ["https://a.example.com"] }), /malformed JSON/);
 });
 
-test("oversized output fails closed instead of returning truncated untrusted content", async () => {
+test("oversized output keeps the head and flags sourceTruncated instead of failing", async () => {
   const toolSet = tools({ env: { OBSCURA_FAKE: "oversize" }, limits: { timeoutMs: 5000, maxOutputBytes: 4096 } });
-  await assert.rejects(call(toolSet, "web_fetch", { url: "https://example.com/big" }), /byte cap/);
+  const result = await call(toolSet, "web_fetch", { url: "https://example.com/big", max_chars: 1000 });
+  const value = result.value as { markdown: string; sourceTruncated?: boolean; totalChars: number; truncated: boolean };
+  assert.equal(value.sourceTruncated, true);
+  assert.equal(value.markdown.length, 1000, "a slice of the kept head is still served");
+  assert.equal(value.totalChars, 4096);
+  assert.equal(value.truncated, true);
 });
 
 test("search profile replacement is validated", () => {

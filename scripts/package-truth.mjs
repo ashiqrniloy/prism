@@ -234,6 +234,8 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-driver-process": "capability — generic external-agent process driver with a host-written adapter",
   "@arnilo/prism-delegate":
     "capability — a delegate tool whose child agent inherits a chosen subset of the parent packages, reporting delegate.step package events",
+  "@arnilo/prism-advisor":
+    "capability — a second model's advice as one advise tool and opt-in review consults, plus completion validation by a model or a hidden delegate child",
   "@arnilo/prism-context-files":
     "capability — AGENTS.md / SYSTEM.md layers as one context.build handler, trust-gated and cached per session",
   "@arnilo/prism-context-engineering":

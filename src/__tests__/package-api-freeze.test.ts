@@ -65,6 +65,7 @@ const FROZEN_LOAD_ERROR_CODES: readonly PackageLoadErrorCode[] = [
   "setup_failed",
   "tool_conflict",
   "skill_conflict",
+  "skill_too_large",
   "provider_conflict",
   "command_conflict",
   "unknown_command",

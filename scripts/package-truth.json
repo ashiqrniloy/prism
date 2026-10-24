@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-23T18:33:28.247Z",
+  "generatedAt": "2026-10-24T10:17:55.375Z",
   "root": {
     "name": "@arnilo/prism",
     "version": "0.13.0"
@@ -23,6 +23,7 @@
     "@arnilo/prism-observability": "0.13.0",
     "@arnilo/prism-delegate": "0.13.0",
     "@arnilo/prism-workflows": "0.13.0",
+    "@arnilo/prism-advisor": "0.13.0",
     "@arnilo/prism-memory-compaction": "0.13.0",
     "@arnilo/prism-memory-observational": "0.13.0",
     "@arnilo/prism-memory-core": "0.13.0",
@@ -51,12 +52,12 @@
     "@arnilo/prism-tools-research": "0.13.0"
   },
   "counts": {
-    "publishable": 44,
-    "workspace": 43,
+    "publishable": 45,
+    "workspace": 44,
     "provider": 5,
     "prismFamily": 1,
-    "capability": 37,
-    "codeWithPeer": 43,
+    "capability": 38,
+    "codeWithPeer": 44,
     "pureManifest": 0
   },
   "providers": [
@@ -71,6 +72,7 @@
   ],
   "capability": [
     "@arnilo/prism-acp",
+    "@arnilo/prism-advisor",
     "@arnilo/prism-ag-ui",
     "@arnilo/prism-approval",
     "@arnilo/prism-context-engineering",

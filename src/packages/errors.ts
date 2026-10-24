@@ -32,6 +32,8 @@ export type PackageLoadErrorCode =
   | "tool_conflict"
   /** A skill name is already taken by another package or the host's `AgentConfig.skills`. */
   | "skill_conflict"
+  /** A skill body is over the hard instruction cap; the message names the skill and the cap, never the body. */
+  | "skill_too_large"
   /** A provider id is already registered by another package. */
   | "provider_conflict"
   /** A command name is already registered by another package. */

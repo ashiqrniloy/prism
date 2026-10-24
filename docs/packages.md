@@ -109,7 +109,7 @@ from `{ ...agent.config }` reloads independently.
 | `hooks` | A `HookRegistrar` bound to the package name. Ids are `<package>:<hook>[#id]`. |
 | `slots.<slot>.provide(impl)` | Claims `loop`, `compaction`, `store`, or `credentials`. Needs `slot:<slot>`. `.default` is the kernel default. |
 | `tools.register(tool, { when? })` | Adds a tool. A name taken by another package, `AgentConfig.tools`, or the kernel names `load_skill` / `search_tools` is `tool_conflict`. |
-| `skills.register(skill)` / `skills.addDir(path)` | Adds a skill (`skill_conflict` on a taken name). `addDir` records the path and the loader reads `<dir>/<name>/SKILL.md` after `setup` returns, so a read failure fails that package's setup. |
+| `skills.register(skill)` / `skills.addDir(path)` | Adds a skill (`skill_conflict` on a taken name, `skill_too_large` over the 256 KiB body cap). `addDir` records the path and the loader reads `<dir>/<name>/SKILL.md` after `setup` returns, so a read failure fails that package's setup. |
 | `providers.register(provider)` | Adds a `ModelProvider`, selected by `AgentConfig.model.provider`. This is the only way to give an agent a provider. A duplicate id is `provider_conflict`. |
 | `commands.register(command)` | Adds a `PackageCommand`. A duplicate name is `command_conflict`. |
 | `models.client(ref?)` | Needs `models`. A thin client over the agent's provider resolution: `generate(request)` streams one provider turn. `ref` defaults to `AgentConfig.model`. |
@@ -279,7 +279,7 @@ access. They are not a process sandbox. A call without the capability throws `Pa
 Besides the configuration codes below, `PackageLoadError.code` is one of `definition_invalid`,
 `kernel_api`, `kernel_range`, `missing_package`, `missing_service`, `service_conflict`, `dependency_cycle`,
 `duplicate_package`, `capability_missing`, `setup_failed`, `tool_conflict`, `skill_conflict`,
-`provider_conflict`, `command_conflict`, `unknown_command`, `command_args_invalid`,
+`skill_too_large`, `provider_conflict`, `command_conflict`, `unknown_command`, `command_args_invalid`,
 `unknown_disable_id`, `state_not_json`, `state_too_large`, and `state_not_ready`. A slot conflict stays
 `SlotConflictError`, and a slot assigned to a package that did not provide it is `UnknownSlotOwnerError`. `setup_failed` carries a redacted message and does not keep the raw
 third-party `cause`.
@@ -410,4 +410,4 @@ A rename, addition, or removal fails `src/__tests__/package-api-freeze.test.ts`,
 
 `AgentConfig` package fields: `packages`, `packageConfig`, `disable`.
 
-`PackageLoadError` codes: `config_unknown_key`, `config_invalid`, `secret_literal`, `config_schema_unsupported`, `definition_invalid`, `kernel_api`, `kernel_range`, `missing_package`, `missing_service`, `service_conflict`, `dependency_cycle`, `duplicate_package`, `capability_missing`, `setup_failed`, `tool_conflict`, `skill_conflict`, `provider_conflict`, `command_conflict`, `unknown_command`, `command_args_invalid`, `unknown_disable_id`, `state_not_json`, `state_too_large`, `external_state_limit`, `state_not_ready`, `unknown_package`, `package_disabled`, `self_instance`, `registration_closed`.
+`PackageLoadError` codes: `config_unknown_key`, `config_invalid`, `secret_literal`, `config_schema_unsupported`, `definition_invalid`, `kernel_api`, `kernel_range`, `missing_package`, `missing_service`, `service_conflict`, `dependency_cycle`, `duplicate_package`, `capability_missing`, `setup_failed`, `tool_conflict`, `skill_conflict`, `skill_too_large`, `provider_conflict`, `command_conflict`, `unknown_command`, `command_args_invalid`, `unknown_disable_id`, `state_not_json`, `state_too_large`, `external_state_limit`, `state_not_ready`, `unknown_package`, `package_disabled`, `self_instance`, `registration_closed`.

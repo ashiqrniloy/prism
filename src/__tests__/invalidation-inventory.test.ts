@@ -101,7 +101,10 @@ const briefSkill: Skill = { name: "brief", description: "Be brief", instructions
 
 type InputLayoutName = "cache_aware" | "legacy";
 
-const _contextSlotAssembly = (_blocks?: readonly ContextBlock[], layout: InputLayoutName = "cache_aware"): AssembleProviderInputOptions => ({
+const _contextSlotAssembly = (
+  _blocks?: readonly ContextBlock[],
+  layout: InputLayoutName = "cache_aware",
+): AssembleProviderInputOptions => ({
   model,
   systemInstructions: "Base rules.",
   skills: [briefSkill],
@@ -167,10 +170,10 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
     assert.deepEqual(textsOf(cacheAware.before).slice(0, 3), [
       "System instruction:\nBase rules.",
       "Summary:\nSummary one",
-      "Skill brief: Be brief",
+      "Skills are task-specific instructions. When a task matches a skill below, call load_skill with its name before starting.\n- brief: Be brief",
     ]);
     assert.deepEqual(textsOf(legacy.before).slice(0, 3), [
-      "Skill brief: Be brief",
+      "Skills are task-specific instructions. When a task matches a skill below, call load_skill with its name before starting.\n- brief: Be brief",
       "System instruction:\nBase rules.",
       "Summary:\nSummary one",
     ]);
@@ -227,5 +230,4 @@ describe("invalidation inventory (plan 088 Task 1)", () => {
       "Ask B",
     ]);
   });
-
 });

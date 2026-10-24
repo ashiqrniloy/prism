@@ -1,0 +1,31 @@
+{
+  "repo-create-plan.md": {
+    "name": "create-plan",
+    "description": "Create and maintain numbered phase and implementation plans in `plans/` for the Prism repo. Every task carries acceptance criteria, an evidence-based approach, tests written first, a docs assessment, and the repo's chores built in (kernel/package placement, compat baselines, retirement sweeps, conformance suites, examples, staged docs, backlog handoff), so executing the plan leaves no debt. Use whenever asked to create, write, update, or maintain a plan, including a roadmap phase plan, implementation plan, task breakdown, or plan document. Executing plan tasks is the prism-execution skill."
+  },
+  "repo-find-docs.md": {
+    "name": "find-docs",
+    "description": "Retrieves up-to-date documentation, API references, and code examples for any developer technology. Use this skill whenever the user asks about a specific library, framework, SDK, CLI tool, or cloud service -- even for well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. Your training data may not reflect recent API changes or version updates.\nAlways use for: API syntax questions, configuration options, version migration issues, \"how do I\" questions mentioning a library name, debugging that involves library-specific behavior, setup instructions, and CLI tool usage.\nUse even when you think you know the answer -- do not rely on training data for API details, signatures, or configuration options as they are frequently outdated. Always verify against current docs. Prefer this over web search for library documentation and API details."
+  },
+  "repo-graft.md": {
+    "name": "graft",
+    "description": "This repo is indexed by graft/. For ANY task here, whether understanding how something works, finding where code lives, tracing what calls a symbol or what a change breaks, or scoping an edit, get your context from graft before grepping or reading source files."
+  },
+  "repo-prism-execution.md": {
+    "name": "prism-execution",
+    "description": "Execute work in the Prism repo: the `@arnilo/prism` 0.13.0 SDK kernel, its native packages, host libraries, and the Prism Agent reference host, on the way to the 0.13.0 publish. Use it to implement, fix, or refactor code, execute a plan task (\"do task N\", \"next unchecked task\", \"complete Task 4\"), or change the kernel, packages, providers, tools, memory, stores, host libraries, the reference host, docs, or release plumbing. Do NOT use it to write a new plan document (create-plan) or to look up third-party library docs (find-docs)."
+  },
+  "repo-skill-creator.md": {
+    "name": "skill-creator",
+    "description": "Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations.",
+    "metadata": {
+      "metadata": {
+        "short-description": "Create or update a skill"
+      }
+    }
+  },
+  "repo-typescript-advanced-types.md": {
+    "name": "typescript-advanced-types",
+    "description": "Master TypeScript's advanced type system including generics, conditional types, mapped types, template literals, and utility types for building type-safe applications. Use when implementing complex type logic, creating reusable type utilities, or ensuring compile-time type safety in TypeScript projects."
+  }
+}

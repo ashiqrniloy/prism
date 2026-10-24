@@ -1,24 +1,47 @@
+AGENT_TOOL_NAMES	export declare const AGENT_TOOL_NAMES: Readonly<Record<string, string>>
+DEFAULT_CHILD_INSTRUCTIONS	export declare const DEFAULT_CHILD_INSTRUCTIONS = "Finish with a concise report for the parent: what you did, what you found, files changed, and open issues. The parent sees only this report."
 DEFAULT_CHILD_LIMITS	export declare const DEFAULT_CHILD_LIMITS:
+DEFAULT_CONTEXT_MAX_CHARS	export declare const DEFAULT_CONTEXT_MAX_CHARS = 24000
 DEFAULT_MAX_CONCURRENT	export declare const DEFAULT_MAX_CONCURRENT = 4
+DEFAULT_RESULT_MAX_CHARS	export declare const DEFAULT_RESULT_MAX_CHARS = 12000
 DELEGATE_PACKAGE	export declare const DELEGATE_PACKAGE = "@arnilo/prism-delegate"
+DELEGATE_SERVICE	export declare const DELEGATE_SERVICE = "delegate"
 DelegateError	export declare class DelegateError extends Error
 DelegateStepError	export declare class DelegateStepError extends Error
 HARD_CHILD_LIMITS	export declare const HARD_CHILD_LIMITS:
+HARD_CONTEXT_LAST_TURNS	export declare const HARD_CONTEXT_LAST_TURNS = 50
+HARD_CONTEXT_MAX_CHARS	export declare const HARD_CONTEXT_MAX_CHARS = 120000
 HARD_MAX_CONCURRENT	export declare const HARD_MAX_CONCURRENT = 32
+HARD_MAX_RESULT_MAX_CHARS	export declare const HARD_MAX_RESULT_MAX_CHARS = 64000
+HARD_RETAINED_RESULT_CHARS	export declare const HARD_RETAINED_RESULT_CHARS = 256000
 MAX_DELEGATE_ID_BYTES	export declare const MAX_DELEGATE_ID_BYTES = 256
 MAX_DELEGATE_STEP_BYTES	export declare const MAX_DELEGATE_STEP_BYTES: number
-createDelegateRuntime	export declare function createDelegateRuntime(prism: PackageAPI<DelegateConfig>):
+SUMMARY_INSTRUCTION	export declare const SUMMARY_INSTRUCTION = "Summarize this conversation for a sub-agent: the goal, decisions, facts established, files touched, and open problems. Under 4,000 characters."
+buildSeededContext	export declare function buildSeededContext(input:
+createDelegateRuntime	export declare function createDelegateRuntime(prism: PackageAPI<DelegateConfig>, resolved?: Readonly<Record<string, DelegateChildConfig>>):
+createDelegateService	export declare function createDelegateService(runtime: DelegateRuntime): DelegateService
 createDelegateTools	export declare function createDelegateTools(runtime: DelegateRuntime): readonly ToolDefinition[]
 default	export default
 delegateConfigSchema	export declare const delegateConfigSchema:
 delegateStepData	export declare function delegateStepData(input: DelegateStepInput): JsonValue
-resolveChildLimits	export declare function resolveChildLimits(requested?: DelegateChildLimits, budgetShare?: number): RunLimits
-type DelegateChildConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateChildLimits	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateLifetime	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
-type DelegateReport	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateLifetime, type DelegateReport, delegateConfigSchema } from "./config.js"
+isolationProbe	export declare function isolationProbe(capture:
+mergeMessage	export declare function mergeMessage(child: string, input: string): string
+resolveAgentChildren	export declare function resolveAgentChildren(config: DelegateConfig): ResolvedAgentChildren
+resolveChildContext	export declare function resolveChildContext(config: DelegateContextConfig | undefined): ResolvedContext
+resolveChildLimits	export declare function resolveChildLimits(requested?: DelegateChildLimits): RunLimits
+resolveResultMaxChars	export declare function resolveResultMaxChars(requested: number | undefined): number
+type AgentFileNote	export { AGENT_TOOL_NAMES, type AgentFileNote, resolveAgentChildren } from "./agent-files.js"
+type ContextUsed	export { type ContextUsed, DEFAULT_CONTEXT_MAX_CHARS, HARD_CONTEXT_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, resolveChildContext, SUMMARY_INSTRUCTION } from "./context.js"
+type DelegateChildConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateChildLimits	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateConfig	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateContextConfig	export { type DelegateContextConfig } from "./config.js"
+type DelegateReport	export { type DelegateChildConfig, type DelegateChildLimits, type DelegateConfig, type DelegateReport, delegateConfigSchema } from "./config.js"
+type DelegateService	export { DELEGATE_SERVICE, createDelegateService, type DelegateService } from "./service.js"
 type DelegateStepInput	export { type DelegateStepInput, DelegateStepError, type DelegateStepPhase, delegateStepData } from "./step.js"
 type DelegateStepPhase	export { type DelegateStepInput, DelegateStepError, type DelegateStepPhase, delegateStepData } from "./step.js"
-type DelegationOutcome	export { DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
-type DelegationStatus	export { DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
+type DelegationMerge	export { type DelegationMerge, type IsolationWorkspace, type IsolatedWorktree, mergeMessage } from "./isolation.js"
+type DelegationOutcome	export { DEFAULT_CHILD_INSTRUCTIONS, DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
+type DelegationStatus	export { DEFAULT_CHILD_INSTRUCTIONS, DelegateError, type DelegationOutcome, type DelegationStatus } from "./runtime.js"
+type IsolatedWorktree	export { type DelegationMerge, type IsolationWorkspace, type IsolatedWorktree, mergeMessage } from "./isolation.js"
+type IsolationWorkspace	export { type DelegationMerge, type IsolationWorkspace, type IsolatedWorktree, mergeMessage } from "./isolation.js"

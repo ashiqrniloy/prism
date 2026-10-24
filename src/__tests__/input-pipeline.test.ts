@@ -1,19 +1,41 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
+import { restoreRunSessionState } from "../agent-run-restore.js";
 import {
   assembleProviderInput,
   createDefaultInputBuilder,
   createLoadedSkillSet,
+  createLoadSkillTool,
   createSkillRegistry,
+  createToolRegistry,
+  dispatchToolCall,
   type Message,
   type ResourceLoader,
   renderPromptTemplate,
   resolveActiveSkills,
+  type StoredAgentRunState,
   type ToolDefinition,
   type ToolResult,
+  toolCallContent,
 } from "../index.js";
 
 const text = (message: Message) => message.content.find((part) => part.type === "text")?.text;
+
+function loadedToolMessage(name: string, runId: string, result: string, folded = false): Message {
+  return {
+    role: "tool",
+    content: [{ type: "tool_result", toolCallId: `call_${name}`, name: "load_skill", result }],
+    metadata: { loadedSkill: name, loadedSkillRunId: runId, ...(folded ? { prismFolded: true } : {}) },
+  };
+}
+
+function messagesContaining(messages: readonly Message[], needle: string): number {
+  return messages.filter((message) => JSON.stringify(message).includes(needle)).length;
+}
+
+function skillTailKeys(tailSegments: ReadonlyMap<string, Message>): string[] {
+  return [...tailSegments.keys()].filter((key) => key.startsWith("skill:"));
+}
 
 describe("default input builder", () => {
   it("turns string into user text message", async () => {
@@ -283,7 +305,7 @@ describe("prompt composition", () => {
       skills: [{ name: "brief", description: "Be brief.", instructions: "Full instructions." }],
       skillsDisclosure: "progressive",
     });
-    assert.match(text(request.messages[0]!)!, /Skill brief: Be brief\./);
+    assert.match(text(request.messages[0]!)!, /- brief: Be brief\./);
     assert.doesNotMatch(text(request.messages[0]!)!, /Full instructions/);
   });
 
@@ -359,13 +381,17 @@ describe("prompt composition", () => {
     const loaded = createLoadedSkillSet();
     loaded.add("brief");
     const full = await assembleProviderInput({ ...common, loadedSkills: loaded });
-    const skillIndex = (messages: readonly Message[]) => messages.findIndex((message) => text(message)?.startsWith("Skill brief"));
+    const skillIndex = (messages: readonly Message[]) =>
+      messages.findIndex((message) => {
+        const value = text(message) ?? "";
+        return value.startsWith("Skill brief:") || value.includes("\n- brief:");
+      });
 
     assert.deepEqual(
       JSON.parse(JSON.stringify(catalog.messages.slice(0, skillIndex(catalog.messages)))),
       JSON.parse(JSON.stringify(full.messages.slice(0, skillIndex(full.messages)))),
     );
-    assert.match(text(catalog.messages[skillIndex(catalog.messages)]!)!, /Skill brief: Be brief/);
+    assert.match(text(catalog.messages[skillIndex(catalog.messages)]!)!, /- brief: Be brief/);
     assert.match(text(full.messages[skillIndex(full.messages)]!)!, /Skill brief:\nFull skill body/);
     assert.equal(text(catalog.messages.at(-1)!)!, "Ask");
     assert.equal(text(full.messages.at(-1)!)!, "Ask");
@@ -411,6 +437,195 @@ describe("prompt composition", () => {
       "re-derivation replaces only beta's existing segment",
     );
     assert.equal(tailSegments.size, 2, "reloading a segment never grows the tail");
+  });
+
+  it("does not re-append a loaded body while its tool result is visible", async () => {
+    const loaded = createLoadedSkillSet();
+    loaded.add("alpha", "run-1");
+    const tailSegments = new Map<string, Message>();
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills: [{ name: "alpha", description: "Alpha catalog", instructions: "Alpha body" }],
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      history: [loadedToolMessage("alpha", "run-1", "Skill alpha:\nAlpha body")],
+      runId: "run-1",
+      tailSegments,
+    });
+
+    assert.equal(messagesContaining(request.messages, "Alpha body"), 1, "only the tool result carries the body");
+    assert.deepEqual(skillTailKeys(tailSegments), []);
+  });
+
+  it("re-attaches a loaded body once after compaction removes its tool result", async () => {
+    const loaded = createLoadedSkillSet();
+    loaded.add("alpha", "run-1");
+    const tailSegments = new Map<string, Message>();
+    const common = {
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills: [{ name: "alpha", description: "Alpha catalog", instructions: "Alpha body" }],
+      skillsDisclosure: "progressive" as const,
+      loadedSkills: loaded,
+      runId: "run-1",
+      tailSegments,
+    };
+
+    const first = await assembleProviderInput(common);
+    const second = await assembleProviderInput(common);
+
+    assert.equal(messagesContaining(first.messages, "Alpha body"), 1);
+    assert.equal(messagesContaining(second.messages, "Alpha body"), 1, "the tail segment is stable, not duplicated");
+    assert.deepEqual(skillTailKeys(tailSegments), ["skill:alpha"]);
+  });
+
+  it("re-attaches a body whose tool result was folded even without compaction", async () => {
+    const loaded = createLoadedSkillSet();
+    loaded.add("alpha", "run-1");
+    const tailSegments = new Map<string, Message>();
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills: [{ name: "alpha", description: "Alpha catalog", instructions: "Alpha body" }],
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      history: [loadedToolMessage("alpha", "run-1", "Folded tool result summary", true)],
+      runId: "run-1",
+      tailSegments,
+    });
+
+    assert.equal(messagesContaining(request.messages, "Alpha body"), 1);
+    assert.deepEqual(skillTailKeys(tailSegments), ["skill:alpha"]);
+  });
+
+  it("re-attaches only current-run bodies and names earlier runs in one line", async () => {
+    const loaded = createLoadedSkillSet();
+    loaded.add("alpha", "run-1");
+    loaded.add("beta", "run-2");
+    const tailSegments = new Map<string, Message>();
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills: [
+        { name: "alpha", description: "Alpha catalog", instructions: "Alpha body" },
+        { name: "beta", description: "Beta catalog", instructions: "Beta body" },
+      ],
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      runId: "run-2",
+      tailSegments,
+    });
+
+    assert.equal(messagesContaining(request.messages, "Alpha body"), 0, "an earlier run's body stays unloaded");
+    assert.equal(messagesContaining(request.messages, "Beta body"), 1, "the current run's body re-attaches");
+    assert.ok(request.messages.some((message) => text(message) === "Previously loaded skills (load again if needed): alpha"));
+    assert.equal(loaded.has("alpha"), false);
+    assert.equal(loaded.has("beta"), true);
+  });
+
+  it("loads a previously loaded skill again with its body", async () => {
+    const loaded = createLoadedSkillSet();
+    loaded.add("alpha", "run-1");
+    const registry = createSkillRegistry([{ name: "alpha", description: "Alpha catalog", instructions: "Alpha body" }]);
+    await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills: registry.list(),
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      runId: "run-2",
+      tailSegments: new Map(),
+    });
+    assert.equal(loaded.has("alpha"), false);
+
+    const loadSkill = createLoadSkillTool({ registry });
+    const result = await dispatchToolCall({
+      call: toolCallContent("call_alpha", "load_skill", { name: "alpha" }),
+      registry: createToolRegistry([loadSkill]),
+      context: {
+        sessionId: "s1",
+        runId: "run-2",
+        toolCallId: "call_alpha",
+        metadata: { loadedSkills: loaded, activeSkillNames: ["alpha"], activeTools: [] },
+      },
+    });
+    const value = result.value as { ok: boolean; text: string; alreadyLoaded?: boolean };
+    assert.equal(value.ok, true);
+    assert.equal(value.alreadyLoaded, undefined);
+    assert.match(value.text, /^Loaded skill alpha\./);
+    assert.match(value.text, /Alpha body$/);
+    assert.equal(result.metadata?.loadedSkill, "alpha");
+    assert.equal(loaded.has("alpha"), true);
+  });
+
+  it("sorts and caps the previously loaded names line", async () => {
+    const names = Array.from({ length: 20 }, (_, index) => `s${String(index).padStart(2, "0")}`);
+    const loaded = createLoadedSkillSet();
+    for (const name of names) loaded.add(name, "run-1");
+    const tailSegments = new Map<string, Message>();
+    const request = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills: names.map((name) => ({ name, description: `${name} catalog`, instructions: `${name} body` })),
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      runId: "run-2",
+      tailSegments,
+    });
+
+    assert.ok(
+      request.messages.some(
+        (message) => text(message) === `Previously loaded skills (load again if needed): ${names.slice(0, 16).join(", ")} (+4)`,
+      ),
+    );
+    assert.equal(loaded.list().length, 0);
+  });
+
+  it("restores a compacted transcript body at the tail for the resumed run", async () => {
+    const loaded = createLoadedSkillSet();
+    restoreRunSessionState(
+      {
+        restoreLoadedSkills(names, runId) {
+          for (const name of names) loaded.add(name, runId);
+        },
+        restoreLoadedSkillBodies(bodies, runId) {
+          for (const body of bodies) loaded.add(body.name, runId);
+        },
+      },
+      {
+        runId: "run-resume",
+        sessionState: { loadedSkillBodies: [{ name: "alpha", instructions: "Alpha body" }] },
+      } as unknown as StoredAgentRunState,
+      { persistSessionState: true, includeSkillBodies: true },
+    );
+    const skills = [{ name: "alpha", description: "Alpha catalog", instructions: "Alpha body" }];
+    const visibleTail = new Map<string, Message>();
+    const visible = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills,
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      history: [loadedToolMessage("alpha", "run-resume", "Skill alpha:\nAlpha body")],
+      runId: "run-resume",
+      tailSegments: visibleTail,
+    });
+    assert.equal(messagesContaining(visible.messages, "Alpha body"), 1);
+    assert.deepEqual(skillTailKeys(visibleTail), []);
+
+    const compactedTail = new Map<string, Message>();
+    const compacted = await assembleProviderInput({
+      model: { provider: "mock", model: "demo" },
+      input: "Ask",
+      skills,
+      skillsDisclosure: "progressive",
+      loadedSkills: loaded,
+      runId: "run-resume",
+      tailSegments: compactedTail,
+    });
+    assert.equal(messagesContaining(compacted.messages, "Alpha body"), 1);
+    assert.deepEqual(skillTailKeys(compactedTail), ["skill:alpha"]);
   });
 
   it("moves URI resources into their reusable tail segment", async () => {

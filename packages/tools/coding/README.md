@@ -79,7 +79,8 @@ One `tool.call` decide handler, id `@arnilo/prism-tools-coding:tool.call#hard-de
 `{ deny }` for:
 
 - any path argument of its own tools that resolves, after realpath and symlink resolution, outside
-  `root` ∪ `roots`;
+  `root` ∪ `roots` — except a read-effect call (`read`, `glob`, `grep`, `diagnostics`) may also
+  resolve inside a skill's directory, which is a read-only extra root;
 - a `shell` command matched by a configured deny `commandRules` entry (or a built-in deny pattern);
 - a mutating tool when `readOnly` is set — defence against a host that re-adds a tool.
 
@@ -89,8 +90,17 @@ the root and the tool, never file contents.
 
 The package also provides the `coding.targets` service:
 `targets(name, args, context?) → { paths, roots } | undefined`. `paths` are absolute; `roots` is
-`root` plus `roots`. Unknown tool names return `undefined`. Approval (plan 154 Task 6) reads it
-instead of parsing tool names.
+`root` plus `roots`, and for `read`, `glob`, `grep`, and `diagnostics` also the directory of every
+effective skill that has an absolute `path` (`dirname(skill.path)` from `prism.skills.list()`).
+Unknown tool names return `undefined`. Approval (plan 154 Task 6) reads it instead of parsing tool
+names, so it sees the same skill directories.
+
+Those skill roots are read-only. A mutating tool (`write`, `edit`, `delete`, `move`) never receives
+them, so a write under a skill directory outside the workspace is still hard-denied, and `shell` is
+unaffected. The list is read lazily after setup and the derived directories are cached until the
+list's paths change; a missing or failed list keeps the coding roots. `createCodingTargets` takes an
+optional fourth argument for that source; without it there are no skill roots. A symlink inside a
+skill directory that escapes it is rejected by the same realpath containment as any other path.
 
 A call from a session bound to a worktree reports that worktree as the session's root (see
 [Worktree roots for one session](#worktree-roots-for-one-session)): a relative argument resolves
@@ -123,11 +133,12 @@ await wt.dispose({ force: true });
 
 | member | behavior |
 | --- | --- |
-| `worktree.create({ branch?, base?, sessionId? })` | Adds a linked worktree under `worktreeRoot` on a new branch (default `prism/<short id>`) from `base` (default `HEAD`), locks it with a `prism-workspace:` reason, and returns `{ path, branch, base, sessionId?, dispose }`. `base` is the resolved commit the branch started at. `sessionId` binds the worktree for tool routing (see [Worktree roots for one session](#worktree-roots-for-one-session)); under a sandbox the binding fails with `workspace_sandbox_unsupported`. More than `maxWorktrees` active worktrees fails with `workspace_limit`; a destination outside `worktreeRoot` fails with `workspace_path_escape`. |
+| `worktree.create({ branch?, base?, sessionId? })` | Adds a linked worktree under `worktreeRoot` on a new branch (default `prism/<short id>`) from `base` (default `HEAD`), locks it with a `prism-workspace:` reason, and returns `{ path, branch, base, parentBranch, sessionId?, dispose }`. `base` is the resolved commit the branch started at. `parentBranch` is the main tree's checked-out branch at creation, recorded because `merge` only accepts a branch name; `HEAD` means the main tree was detached. `sessionId` binds the worktree for tool routing (see [Worktree roots for one session](#worktree-roots-for-one-session)); under a sandbox the binding fails with `workspace_sandbox_unsupported`. More than `maxWorktrees` active worktrees fails with `workspace_limit`; a destination outside `worktreeRoot` fails with `workspace_path_escape`. |
 | `worktree.bound(sessionId)` | The active worktree bound to that session, or `undefined`. |
 | `worktree.rebind({ path, sessionId, branch?, base? })` | Re-adopts a worktree a dead process left behind and binds it to `sessionId`, so a resumed workflow node runs in its recorded worktree. It fails closed with `workspace_unknown` unless the path is inside `worktreeRoot`, registered with git, locked with this service's `prism-workspace:` marker, and on `branch` when given. `base` defaults to the merge base of the branch and the main tree's `HEAD`. Idempotent for the same session; counts against `maxWorktrees`; refused under a sandbox. Never creates a worktree. |
 | `diff(path, bounds?)` | `{ changes, truncated }` for tracked changes against the worktree's `base` plus untracked files. Paths are worktree-relative and each entry is the driver kit's `FileActivity` shape. A file whose diff exceeds `maxBytes` is listed with no `diff`; more than `maxFiles` sets `truncated`. Overlay files never appear. |
 | `merge(path, { into, commit? })` | Merges the worktree's branch into `into`. Everything is decided before anything moves: the merge tree is probed with `git merge-tree --write-tree`, so a conflict returns `{ status: "conflict", files }` with both trees, the index, and every ref unchanged. A clean merge returns `{ status: "merged", commit }` and advances `into` with a compare-and-swap; when `into` is checked out somewhere, that worktree is fast-forwarded so its index and files stay consistent. |
+| `commit(path, { message })` | Records the worktree's pending changes (tracked and untracked) on the worktree's own branch, without merging it, and returns `{ commit }`. A clean worktree creates nothing and returns its current tip. Use it before keeping a branch for a person, so the kept branch carries the work and not just its commits. Needs a configured commit identity, like `merge`. |
 | `excludeOverlay(path, files)` | Writes the overlay files into the worktree and excludes them through one marked block in the git common directory's `info/exclude` (the same writer the driver kit's `overlay()` uses). Returns `{ dispose }`. |
 | `dispose({ force? })` | Removes the overlays and their exclude blocks, unlocks and removes the worktree, drops the session binding, and deletes the branch when git considers it fully merged. Refuses a dirty worktree unless `force`, and is idempotent. |
 

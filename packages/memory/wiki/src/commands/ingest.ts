@@ -1,4 +1,4 @@
-import type { PackageCommand } from "@arnilo/prism";
+import { UNTRUSTED_EXTERNAL_TRUST, type PackageCommand } from "@arnilo/prism";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
 import { ingestImageBlock, ingestOptionsFrom, ingestWikiSource, renderIngestBrief } from "../ingest.js";
 import type { WikiExtensionOptions, WikiIngestInput } from "../types.js";
@@ -60,7 +60,8 @@ export function createWikiIngestCommand(options: WikiExtensionOptions = {}): Pac
         value: { ...staged },
         content: image ? [{ type: "text", text: brief }, image] : [{ type: "text", text: brief }],
         metadata: {
-          trust: "untrusted_external",
+          trust: UNTRUSTED_EXTERNAL_TRUST,
+          ...(staged.url ? { source: staged.url } : {}),
           id: staged.id,
           rawDir: staged.rawDir,
           sourcePath: staged.sourcePath,

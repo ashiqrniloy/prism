@@ -6,33 +6,50 @@ import {
   DEFAULT_MAX_SKILL_CATALOG_ENTRIES,
   DEFAULT_MAX_SKILL_DESCRIPTION_BYTES,
   EMPTY_SKILL_DESCRIPTION,
-  HARD_MAX_SKILL_CATALOG_ENTRIES,
-  HARD_MAX_SKILL_DESCRIPTION_BYTES,
-  SkillDisclosureError,
 } from "../index.js";
 import { skillMessages, skillPromptText } from "../skill-disclosure.js";
 
+const PREAMBLE = "Skills are task-specific instructions. When a task matches a skill below, call load_skill with its name before starting.";
+
+function textOf(message: { content: readonly { type: string; text?: string }[] }): string {
+  return message.content.map((part) => (part.type === "text" ? (part.text ?? "") : "")).join("\n");
+}
+
 describe("skill progressive disclosure", () => {
-  it("progressive mode renders catalog name+description without instructions", async () => {
-    const messages = skillMessages([{ name: "brief", description: "Answer briefly.", instructions: "Full body." }]);
+  it("catalog is one message with preamble and one line per skill", () => {
+    const messages = skillMessages([
+      { name: "brief", description: "Answer briefly.", instructions: "Full body." },
+      { name: "verbose", description: "Explain fully.", instructions: "Other body." },
+    ]);
     assert.equal(messages.length, 1);
-    assert.match(messages[0]!.content[0]!.type === "text" ? messages[0]!.content[0]!.text : "", /Skill brief: Answer briefly\./);
-    assert.doesNotMatch(messages[0]!.content[0]!.type === "text" ? messages[0]!.content[0]!.text : "", /Full body/);
+    assert.equal(textOf(messages[0]!), `${PREAMBLE}\n- brief: Answer briefly.\n- verbose: Explain fully.`);
+    assert.doesNotMatch(textOf(messages[0]!), /Full body|Other body/);
   });
 
-  it("empty description uses placeholder", () => {
+  it("empty description uses placeholder in the catalog line", () => {
     const text = skillPromptText({ name: "x", instructions: "body" });
-    assert.equal(text, `Skill x: ${EMPTY_SKILL_DESCRIPTION}`);
+    assert.equal(text, `- x: ${EMPTY_SKILL_DESCRIPTION}`);
   });
 
-  it("loaded skill includes instructions in progressive mode", () => {
+  it("loaded skill includes instructions as a separate body message", () => {
     const loaded = createLoadedSkillSet();
     loaded.add("brief");
     const text = skillPromptText({ name: "brief", description: "d", instructions: "Full body." }, { disclosure: "progressive", loaded });
     assert.equal(text, "Skill brief:\nFull body.");
+
+    const messages = skillMessages(
+      [
+        { name: "brief", description: "d", instructions: "Full body." },
+        { name: "other", description: "Other.", instructions: "Other body." },
+      ],
+      { loaded },
+    );
+    assert.equal(messages.length, 2);
+    assert.equal(textOf(messages[0]!), `${PREAMBLE}\n- other: Other.`);
+    assert.equal(textOf(messages[1]!), "Skill brief:\nFull body.");
   });
 
-  it("eager mode restores full instructions every turn", async () => {
+  it("eager mode renders every body and no catalog block", async () => {
     const request = await assembleProviderInput({
       model: { provider: "mock", model: "demo" },
       input: "Hi",
@@ -41,36 +58,52 @@ describe("skill progressive disclosure", () => {
     });
     const text = request.messages.map((m) => m.content.map((p) => (p.type === "text" ? p.text : "")).join("")).join("\n");
     assert.match(text, /Skill brief:\nBe brief\./);
-    assert.doesNotMatch(text, /Skill brief: Answer briefly\./);
+    assert.doesNotMatch(text, /task-specific instructions/);
+    assert.doesNotMatch(text, /- brief: Answer briefly\./);
   });
 
-  it("oversize description fails closed above hard cap", () => {
-    const huge = "x".repeat(HARD_MAX_SKILL_DESCRIPTION_BYTES + 1);
-    assert.throws(() => skillPromptText({ name: "big", description: huge }), SkillDisclosureError);
-  });
-
-  it("description truncates at default cap", () => {
-    const long = "a".repeat(DEFAULT_MAX_SKILL_DESCRIPTION_BYTES + 100);
+  it("long description truncates without throwing", () => {
+    const long = "a".repeat(DEFAULT_MAX_SKILL_DESCRIPTION_BYTES + 10_000);
     const text = skillPromptText({ name: "trim", description: long });
+    assert.ok(text!.startsWith("- trim: "));
     assert.ok(text!.endsWith("…"));
-    assert.ok(new TextEncoder().encode(text!.replace(/^Skill trim: /, "")).length <= DEFAULT_MAX_SKILL_DESCRIPTION_BYTES + 4);
+    assert.ok(new TextEncoder().encode(text!.replace(/^- trim: /, "")).length <= DEFAULT_MAX_SKILL_DESCRIPTION_BYTES + 4);
   });
 
-  it("catalog entry count truncates at default max", () => {
+  it("catalog entry count truncates at default max and names the unlisted count", () => {
     const skills = Array.from({ length: DEFAULT_MAX_SKILL_CATALOG_ENTRIES + 5 }, (_, i) => ({
       name: `s${i}`,
       description: `d${i}`,
     }));
     const messages = skillMessages(skills);
-    assert.equal(messages.length, DEFAULT_MAX_SKILL_CATALOG_ENTRIES);
+    assert.equal(messages.length, 1);
+    const text = textOf(messages[0]!);
+    assert.equal(text.split("\n").filter((line) => line.startsWith("- s")).length, DEFAULT_MAX_SKILL_CATALOG_ENTRIES);
+    assert.ok(text.endsWith("(5 more skills are installed but not listed.)"));
   });
 
-  it("catalog entry count fails closed above hard max", () => {
-    const skills = Array.from({ length: HARD_MAX_SKILL_CATALOG_ENTRIES + 1 }, (_, i) => ({
-      name: `s${i}`,
-      description: `d${i}`,
-    }));
-    assert.throws(() => skillMessages(skills), SkillDisclosureError);
+  it("catalog over 256 does not throw", () => {
+    const skills = Array.from({ length: 300 }, (_, i) => ({ name: `s${i}`, description: `d${i}` }));
+    const messages = skillMessages(skills);
+    assert.equal(messages.length, 1);
+    assert.ok(textOf(messages[0]!).endsWith("(236 more skills are installed but not listed.)"));
+  });
+
+  it("20-skill catalog costs one message header instead of one per skill", () => {
+    const skills = Array.from({ length: 20 }, (_, i) => ({ name: `s${i}`, description: `description ${i}` }));
+    const messages = skillMessages(skills);
+    assert.equal(messages.length, 1);
+    const oneBlock = Buffer.byteLength(JSON.stringify(messages), "utf8");
+    const perSkill = skills.reduce(
+      (bytes, skill) =>
+        bytes +
+        Buffer.byteLength(
+          JSON.stringify({ role: "system", content: [{ type: "text", text: `Skill ${skill.name}: ${skill.description}` }] }),
+          "utf8",
+        ),
+      0,
+    );
+    assert.ok(oneBlock < perSkill, `${oneBlock} bytes should be below ${perSkill}`);
   });
 
   it("assembleProviderInput progressive default omits instructions", async () => {
@@ -80,7 +113,7 @@ describe("skill progressive disclosure", () => {
       skills: [{ name: "brief", instructions: "Secret body." }],
     });
     const text = request.messages.map((m) => m.content.map((p) => (p.type === "text" ? p.text : "")).join("")).join("\n");
-    assert.match(text, /Skill brief: \(no description\)/);
+    assert.match(text, /- brief: \(no description\)/);
     assert.doesNotMatch(text, /Secret body/);
   });
 
@@ -92,6 +125,6 @@ describe("skill progressive disclosure", () => {
       skillsDisclosure: "progressive",
     });
     const first = request.messages[0]!.content[0]!;
-    assert.match(first.type === "text" ? first.text : "", /Skill brief: Short\./);
+    assert.equal(first.type === "text" ? first.text : "", `${PREAMBLE}\n- brief: Short.`);
   });
 });

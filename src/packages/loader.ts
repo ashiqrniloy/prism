@@ -25,7 +25,9 @@ import { mergeRetry, retryLoop } from "../models/retry.js";
 import { errorToErrorInfo, redactSecrets, type SecretRedactor } from "../redaction.js";
 import { createAgentState, createSessionLog, createSessionState } from "../session/state.js";
 import type { SessionContext } from "../session-context.js";
-import { createSkillRegistry } from "../skills.js";
+import { estimateTextBytes } from "../models/estimate.js";
+import { HARD_MAX_SKILL_INSTRUCTION_BYTES } from "../skill-disclosure.js";
+import { createSkillRegistry, isSameSkill } from "../skills.js";
 import { SLOT_NAMES, type SlotAssignments, type SlotName, type SlotRegistry } from "../slots/index.js";
 import { createToolRegistry } from "../tools.js";
 import type { ModelClient, PackageAPI, PackageCommand, PackageCommandInfo, PackageInstance, SlotRegistrar } from "./api.js";
@@ -517,8 +519,19 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     if (typeof skill !== "object" || skill === null || typeof skill.name !== "string" || skill.name.length === 0) {
       throw new TypeError("skills.register requires a skill with a name");
     }
+    if (typeof skill.instructions === "string" && estimateTextBytes(skill.instructions) > HARD_MAX_SKILL_INSTRUCTION_BYTES) {
+      throw new PackageLoadError(
+        "skill_too_large",
+        `Skill ${skill.name} instructions exceed hard cap (${HARD_MAX_SKILL_INSTRUCTION_BYTES} bytes).`,
+        { package: owner },
+      );
+    }
     const taken = skillOwners.get(skill.name) ?? (listNames(hostConfig.skills?.add).includes(skill.name) ? "the host" : undefined);
     if (taken) {
+      // The same file registered twice (a host `skills.dirs` plus a discovery package, or a child that
+      // inherits both) is one skill. A different path or body under the same name still fails closed.
+      const existing = taken === "the host" ? hostConfig.skills?.add?.find((entry) => entry.name === skill.name) : packageSkills.get(skill.name);
+      if (existing && isSameSkill(existing, skill)) return;
       throw new PackageLoadError("skill_conflict", `Skill ${skill.name} is registered by ${owner} but is already taken by ${taken}.`, {
         package: owner,
       });

@@ -50,6 +50,7 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/hosts/headless", name: "@arnilo/prism-headless" },
   { dir: "packages/hosts/remote", name: "@arnilo/prism-remote" },
   { dir: "packages/integrations/delegate", name: "@arnilo/prism-delegate" },
+  { dir: "packages/integrations/advisor", name: "@arnilo/prism-advisor" },
   { dir: "packages/integrations/observability", name: "@arnilo/prism-observability" },
   { dir: "packages/policy/guardrail-packs", name: "@arnilo/prism-guardrail-packs" },
   { dir: "packages/tools/research", name: "@arnilo/prism-tools-research" },

@@ -11,8 +11,12 @@ import { sqlitePackage } from "./store.js";
 
 const COMPACTION = "@arnilo/prism-memory-compaction";
 
-/** Network and read tools the research worker may run without a prompt. Browser writes stay ask. */
-const ALLOWED = ["web_fetch", "web_search", "web_extract", "rag_search", "cite"] as const;
+/**
+ * Network and read tools the research worker may run without a prompt. Browser writes stay ask.
+ * `web_extract` is not listed: the host configures no extraction schema, so `toolsWeb` never
+ * registers the tool and allow-listing it would only claim a capability that is absent.
+ */
+const ALLOWED = ["web_fetch", "web_search", "rag_search", "cite"] as const;
 
 export async function createResearchWorker(config: HostConfig, deps: HostDeps = {}): Promise<Agent> {
   const repairs = config.maxRepairs ?? 1;

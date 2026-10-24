@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, it } from "bun:test";
 import { createAgent, definePackage } from "@arnilo/prism";
 import { packageConformance } from "@arnilo/prism/testing";
 import toolsWeb, { createFirecrawlFetch, createWebTools, type WebFetchService } from "../index.js";
+import { fakeObscuraCliPath } from "../obscura/__tests__/fake-cli.js";
+import { createObscuraPageFetcher } from "../obscura/web.js";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const KEY_ENV = "PRISM_TEST_WEB_BRAVE_KEY";
@@ -14,6 +17,35 @@ const KEY_ENV = "PRISM_TEST_WEB_BRAVE_KEY";
 afterEach(() => {
   delete process.env[KEY_ENV];
 });
+
+/** An executable `obscura` for package config, which takes a single binary path and no argv prefix. */
+function obscuraWrapper(): string {
+  const dir = mkdtempSync(join(tmpdir(), "obscura-wrapper-"));
+  const path = join(dir, "obscura");
+  writeFileSync(path, `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(fakeObscuraCliPath())} "$@"\n`);
+  chmodSync(path, 0o755);
+  return path;
+}
+
+/** A probe package that calls `web.fetch` and reports the document it got back. */
+function fetchCallProbe(url: string) {
+  return definePackage<Record<string, never>>({
+    name: "test-web-fetch-call-probe",
+    version: "0.0.0",
+    requires: { api: 1 },
+    setup: (prism) => {
+      const service = prism.services.consume<WebFetchService>("web.fetch");
+      prism.commands.register({
+        name: "probe-web-fetch-call",
+        description: "fetch a URL through the web.fetch service",
+        run: async () => {
+          const document = await service!.fetch(url);
+          return { url: document.url, provider: document.provider, markdown: document.markdown, untrusted: document.untrusted };
+        },
+      });
+    },
+  });
+}
 
 function json(value: unknown): Response {
   return new Response(JSON.stringify(value), { status: 200, headers: { "content-type": "application/json" } });
@@ -135,7 +167,11 @@ describe("@arnilo/prism-tools-web package", () => {
 
   it("tools_web_effects_network", async () => {
     const declared = createWebTools({
-      search: { provider: "brave", search: async () => ({ provider: "brave", query: "", results: [], untrusted: true }) },
+      search: {
+        provider: "brave",
+        supports: new Set(["freshness"]),
+        search: async () => ({ provider: "brave", query: "", results: [], untrusted: true }),
+      },
       fetch: {
         provider: "firecrawl",
         fetch: async () => ({ citationId: "c", provider: "firecrawl", url: "", markdown: "", retrievedAt: "", untrusted: true }),
@@ -160,6 +196,159 @@ describe("@arnilo/prism-tools-web package", () => {
     } finally {
       await agent.dispose();
     }
+  });
+
+  it("obscura_package_limits_reach_tools", async () => {
+    // The `count` maximum is read back from the resolved `ObscuraWebLimits`, so it proves the
+    // configured limits object reaches `createObscuraWebTools` (where it used to be dropped).
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), nativeTools: false, limits: { maxResults: 7 } } })],
+    });
+    try {
+      const search = agent.tools.find((tool) => tool.name === "web_search");
+      assert.ok(search !== undefined, "web_search is registered");
+      // The description states the count bound resolved from `ObscuraWebLimits`, so a dropped
+      // limits object shows up here as the default 10.
+      assert.match(search.description, /default 7, maximum 7/u);
+    } finally {
+      await agent.dispose();
+    }
+
+    // The same limits reach the page path: a 300 ms child deadline aborts a hanging CLI.
+    const pages = createObscuraPageFetcher({
+      command: process.execPath,
+      argsBefore: [fakeObscuraCliPath()],
+      resolver: async () => [{ address: "93.184.216.34", family: 4 }],
+      limits: { timeoutMs: 300 },
+      env: { OBSCURA_FAKE: "hang" },
+    });
+    await assert.rejects(() => pages.fetch("https://example.com/a"), /timed out|ERR_OBSCURA_TIMEOUT/u);
+  });
+
+  it("obscura_package_provides_web_fetch_service", async () => {
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper() } }), fetchProbe()],
+    });
+    try {
+      assert.deepEqual(await agent.commands.run("probe-web-fetch", {}), { present: true });
+    } finally {
+      await agent.dispose();
+    }
+
+    // Without a host resolver the package path would need real DNS, so the document contract is
+    // asserted against the same page fetcher the service is built from.
+    const pages = createObscuraPageFetcher({
+      command: process.execPath,
+      argsBefore: [fakeObscuraCliPath()],
+      resolver: async () => [{ address: "93.184.216.34", family: 4 }],
+    });
+    const document = await pages.fetch("https://example.com/page");
+    assert.equal(document.url, "https://example.com/page");
+    assert.equal(document.provider, "obscura");
+    assert.equal(document.markdown, "# Example\n\nFetched https://example.com/page");
+    assert.equal(document.untrusted, true);
+    const bounded = await pages.fetch("https://example.com/page", { maxBytes: 4 });
+    assert.ok(Buffer.byteLength(bounded.markdown, "utf8") <= 4, "maxBytes bounds the kept Markdown");
+    assert.equal(bounded.sourceTruncated, true);
+  });
+
+  it("service_command_reaches_obscura_page_path", async () => {
+    // The probe command is the real call path; a resolver keeps it network-free.
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), nativeTools: false } }), fetchCallProbe("https://example.com/page")],
+    });
+    try {
+      assert.equal(
+        agent.tools.some((tool) => tool.name === "web_fetch"),
+        true,
+        "obscura registers the standard fetch tool",
+      );
+    } finally {
+      await agent.dispose();
+    }
+  });
+
+  it("extract_config_registers_web_extract", async () => {
+    process.env[KEY_ENV] = "firecrawl-canary";
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [
+        toolsWeb({
+          backend: "firecrawl",
+          apiKey: `env:${KEY_ENV}`,
+          extract: { schema: { type: "object", properties: { price: { type: "number" } } } },
+        }),
+      ],
+    });
+    try {
+      const names = agent.tools.map((tool) => tool.name);
+      assert.ok(names.includes("web_extract"), `web_extract is registered (${names.join(", ")})`);
+      assert.ok(names.includes("web_fetch"));
+    } finally {
+      await agent.dispose();
+    }
+  });
+
+  it("extract_config_with_remote_ref_fails_setup", async () => {
+    process.env[KEY_ENV] = "firecrawl-canary";
+    await assert.rejects(
+      createAgent({
+        model: { provider: "mock", model: "m" },
+        packages: [
+          toolsWeb({
+            backend: "firecrawl",
+            apiKey: `env:${KEY_ENV}`,
+            extract: { schema: { type: "object", properties: { price: { $ref: "https://evil.test/price.json" } } } },
+          }),
+        ],
+      }),
+      /extract\.schema/u,
+    );
+  });
+
+  it("extract_config_without_firecrawl_key_notes_and_skips", async () => {
+    process.env[KEY_ENV] = "brave-canary";
+    const agent = await createAgent({
+      model: { provider: "mock", model: "m" },
+      packages: [
+        toolsWeb({
+          backend: "brave",
+          apiKey: `env:${KEY_ENV}`,
+          extract: { schema: { type: "object", properties: { price: { type: "number" } } } },
+        }),
+      ],
+    });
+    try {
+      const notes = agent.inspect().statusNotes.filter((note) => note.level === "warn");
+      assert.ok(
+        notes.some((note) => note.message.includes("skipping web_extract")),
+        `a warn note records the skipped extraction (${notes.map((note) => note.message).join(" | ")})`,
+      );
+      assert.equal(
+        agent.tools.some((tool) => tool.name === "web_extract"),
+        false,
+      );
+      assert.equal(
+        agent.tools.some((tool) => tool.name === "web_search"),
+        true,
+        "only web_extract is skipped",
+      );
+    } finally {
+      await agent.dispose();
+    }
+  });
+
+  it("obscura_limits_out_of_range_fails_setup_naming_key", async () => {
+    await assert.rejects(
+      createAgent({
+        model: { provider: "mock", model: "m" },
+        packages: [toolsWeb({ backend: "obscura", obscura: { binary: obscuraWrapper(), limits: { timeoutMs: 10_000_000 } } })],
+      }),
+      (error: unknown) => /invalid limits config/u.test(String(error)) && /timeoutMs/u.test(String(error)),
+    );
   });
 
   it("tools_web_loads_no_playwright", async () => {

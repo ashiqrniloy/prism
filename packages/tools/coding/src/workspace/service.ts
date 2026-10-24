@@ -39,7 +39,7 @@ import {
 } from "../agent/limits.js";
 import { type FileChange, type WorkspaceDiffBounds, workspaceDiff } from "./diff.js";
 import { WorkspaceServiceError } from "./errors.js";
-import { mergeWorktree, type WorkspaceMergeRequest, type WorkspaceMergeResult } from "./merge.js";
+import { mergeWorktree, requireIdentity, type WorkspaceMergeRequest, type WorkspaceMergeResult } from "./merge.js";
 
 /** One overlay file to write into a worktree, relative to the worktree root. */
 export interface WorkspaceOverlayFile {
@@ -81,6 +81,12 @@ export interface WorkspaceWorktree {
   readonly branch: string;
   /** The commit the branch started at. */
   readonly base: string;
+  /**
+   * The main tree's checked-out branch when this worktree was created. `merge` only accepts a branch
+   * name (it matches `refs/heads/<into>`), so a caller merging this worktree needs it; `HEAD` means the
+   * main tree is on a detached HEAD and nothing can be merged into it.
+   */
+  readonly parentBranch: string;
   readonly sessionId?: string;
   /**
    * Removes this worktree's overlays and exclude blocks, unlocks and removes the worktree, drops
@@ -107,6 +113,12 @@ export interface WorkspaceService {
   diff(path: string, bounds?: Partial<WorkspaceDiffBounds>): Promise<{ changes: readonly FileChange[]; truncated: boolean }>;
   /** Merges the worktree's branch into `into`, reporting conflicts instead of resolving them. */
   merge(path: string, request: WorkspaceMergeRequest): Promise<WorkspaceMergeResult>;
+  /**
+   * Records the worktree's pending changes on its own branch without merging it, so a caller that keeps
+   * the branch for a person keeps the work too. Returns the branch's new tip; an unchanged worktree
+   * returns its current tip and creates no commit.
+   */
+  commit(path: string, request: { message: string }): Promise<{ commit: string }>;
   /** Writes overlay files into the worktree and excludes them through one marked exclude block. */
   excludeOverlay(path: string, files: readonly WorkspaceOverlayFile[]): Promise<WorkspaceOverlay>;
 }
@@ -152,6 +164,7 @@ interface WorktreeRecord {
   readonly path: string;
   readonly branch: string;
   readonly base: string;
+  readonly parentBranch: string;
   readonly sessionId?: string;
   readonly overlays: OverlayRecord[];
   disposed: boolean;
@@ -280,6 +293,7 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
       path: record.path,
       branch: record.branch,
       base: record.base,
+      parentBranch: record.parentBranch,
       ...(record.sessionId === undefined ? {} : { sessionId: record.sessionId }),
       dispose: async (disposeOptions) => await disposeWorktree(record, disposeOptions?.force === true),
     };
@@ -314,6 +328,7 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
       path,
       branch,
       base: entry.head,
+      parentBranch: parentBranchWith(listed.worktrees),
       ...(request.sessionId === undefined ? {} : { sessionId: request.sessionId }),
       overlays: [],
       disposed: false,
@@ -363,12 +378,22 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
       path,
       branch,
       base,
+      parentBranch: parentBranchWith(listed.worktrees),
       sessionId: request.sessionId,
       overlays: [],
       disposed: false,
     };
     records.set(path, record);
     return handle(record);
+  }
+
+  /**
+   * The branch checked out in the main tree (`root`), from the `worktree list` create/rebind already
+   * runs: one branch read for free, no extra git process. `HEAD` reports a detached main tree.
+   */
+  function parentBranchWith(worktrees: readonly GitWorktreeEntry[]): string {
+    const main = worktrees.find((entry) => resolve(entry.path) === root);
+    return main?.branch?.replace(/^refs\/heads\//, "") ?? "HEAD";
   }
 
   function bound(sessionId: string): WorkspaceWorktree | undefined {
@@ -473,7 +498,22 @@ export async function createWorkspaceService(options: WorkspaceServiceOptions): 
     );
   }
 
-  return { worktree: { create, bound, rebind }, diff, merge, excludeOverlay };
+  async function commit(path: string, request: { message: string }): Promise<{ commit: string }> {
+    const record = await assertWorktree(path);
+    const git = await gitFor(record.path);
+    const status = await git.status();
+    if (status.entries.every((entry) => entry.kind === "ignored")) {
+      return { commit: status.branch.oid ?? record.base };
+    }
+    requireIdentity(await configuredIdentity());
+    await git.stageAll();
+    const tree = await git.writeTree();
+    const commit = await git.commitTree({ tree, parents: [record.branch], message: request.message });
+    await git.updateRef({ ref: `refs/heads/${record.branch}`, to: commit, expected: record.branch });
+    return { commit };
+  }
+
+  return { worktree: { create, bound, rebind }, diff, merge, commit, excludeOverlay };
 }
 
 function defaultWorktreeRoot(root: string): string {

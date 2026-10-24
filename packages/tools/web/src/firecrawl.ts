@@ -1,5 +1,6 @@
 import { assertSsrfAllowedUrl, type JsonObject, type JsonValue } from "@arnilo/prism";
 import { citation, object, providerFacts, text } from "./normalize.js";
+import { truncateUtf8Bytes } from "./slice.js";
 import { assertBoundedJson, boundedJson, createWebTransport, WebToolError } from "./transport.js";
 import type {
   FirecrawlExtractOptions,
@@ -25,14 +26,18 @@ export function createFirecrawlFetch(options: FirecrawlFetchOptions): WebFetchAd
           new URL("/v2/scrape", ORIGIN),
           { method: "POST", body: JSON.stringify({ url: url.toString(), formats: ["markdown"] }) },
           signal,
+          // A scrape is billed per page, but a 429 means it was refused, not billed: retry only that.
+          { retry: "safe-post" },
         );
         const root = object(response.value),
           data = object(root.data),
           markdown = text(data.markdown);
         if (root.success !== true || markdown === undefined)
           throw new WebToolError("ERR_PRISM_WEB_RESPONSE", "Firecrawl scrape returned no Markdown");
-        if (Buffer.byteLength(markdown) > transport.limits.maxMarkdownBytes)
-          throw new WebToolError("ERR_PRISM_WEB_LIMIT", "Firecrawl Markdown exceeds byte limit");
+        // A page over the fetch limit is kept up to it and flagged, never failed: the caller pages
+        // through what was kept. `maxBytes` never lifts the limit, it only lowers it.
+        const limit = Math.min(call.maxBytes ?? transport.limits.maxMarkdownBytes, transport.limits.maxMarkdownBytes);
+        const sourceTruncated = Buffer.byteLength(markdown, "utf8") > limit;
         const providerMetadata = providerFacts(response.value, response.metadata),
           metadata = typeof data.metadata === "object" && data.metadata ? (data.metadata as Record<string, unknown>) : {};
         const sourceUrl = text(metadata.sourceURL) ?? url.toString();
@@ -40,7 +45,8 @@ export function createFirecrawlFetch(options: FirecrawlFetchOptions): WebFetchAd
           {
             ...citation("firecrawl", sourceUrl),
             title: text(metadata.title),
-            markdown,
+            markdown: sourceTruncated ? truncateUtf8Bytes(markdown, limit) : markdown,
+            ...(sourceTruncated ? { sourceTruncated: true } : {}),
             retrievedAt: new Date().toISOString(),
             metadata: providerMetadata,
             untrusted: true,
@@ -71,6 +77,8 @@ export function createFirecrawlExtractor(options: FirecrawlExtractOptions): WebE
           new URL("/v2/extract", ORIGIN),
           { method: "POST", body: JSON.stringify({ urls, schema: options.schema }) },
           signal,
+          // Creating an extract job is billed work: never submit it twice.
+          { retry: "never" },
         );
         let root = object(response.value),
           metadata = providerFacts(response.value, response.metadata);
@@ -80,7 +88,10 @@ export function createFirecrawlExtractor(options: FirecrawlExtractOptions): WebE
             throw new WebToolError("ERR_PRISM_WEB_RESPONSE", "Firecrawl extract returned no data or job id");
           for (let poll = 0; poll < transport.limits.maxPollingAttempts; poll++) {
             if (transport.limits.pollingDelayMs) await (options.sleep ?? defaultSleep)(transport.limits.pollingDelayMs, signal);
-            response = await transport.json("firecrawl", "api_key", new URL(`/v2/extract/${id}`, ORIGIN), { method: "GET" }, signal);
+            // Polling a job by id is a GET: safe to retry.
+            response = await transport.json("firecrawl", "api_key", new URL(`/v2/extract/${id}`, ORIGIN), { method: "GET" }, signal, {
+              retry: "idempotent",
+            });
             root = object(response.value);
             metadata = providerFacts(response.value, response.metadata) ?? metadata;
             if (root.status === "failed") throw new WebToolError("ERR_PRISM_WEB_RESPONSE", "Firecrawl extraction failed");

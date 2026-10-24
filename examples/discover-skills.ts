@@ -1,16 +1,15 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ProviderRequest } from "@arnilo/prism";
-import { createAgent, createPathTrustPolicy, providerDone } from "@arnilo/prism";
-import { discoverContributions } from "@arnilo/prism/node/contribution-discovery";
+import { createAgent, providerDone } from "@arnilo/prism";
+import { contextFiles } from "@arnilo/prism-context-files";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createMockProvider } from "@arnilo/prism/testing";
 
-// Workspace contribution discovery, end-to-end with the mock provider.
-// Scans a committed example workspace for a SKILL.md, registers the realized
-// skill, then runs a mock agent with `activeSkills: ["greeter"]` and prints
-// the assembled provider input — proving the skill instructions reached the
-// model request without any network or real credentials.
+// Workspace skill discovery through `@arnilo/prism-context-files`, end-to-end with the mock
+// provider. The package scans the standard project skill roots (`.agents/skills`, `.claude/skills`)
+// for `<name>/SKILL.md`, registers what it finds, and the mock agent renders the instruction from
+// the discovered skill — proving no manual contribution scan or host registration was needed.
 const here = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = join(here, "example-workspace");
 
@@ -18,33 +17,23 @@ export async function demo(): Promise<{
   discoveredSkill: string | undefined;
   skillInstructionInInput: boolean;
 }> {
-  // 1. Discover: scan <workspace>/.agents/skills/<name>/SKILL.md.
-  //    Trust gate fails closed — workspace contributions are never auto-trusted.
-  const trust = createPathTrustPolicy({ trustedRoots: [workspaceRoot] });
-  const discovered = await discoverContributions({
-    kinds: ["skill"],
-    workspaceRoot,
-    trust,
-  });
-
-  // 2. Realized skills come straight off the scanner. Discovery never imports contribution code.
-  const skill = discovered.find((entry) => entry.skill)?.skill;
-
-  // 3. Run: mock provider captures the assembled request so we can prove the
-  //    skill instructions were injected via activeSkills: ["greeter"].
   const captured: ProviderRequest[] = [];
   const provider = createMockProvider([providerDone()], {
     onRequest: (request) => {
       captured.push(request);
     },
   });
-  const session = await (
-    await createAgent({
-      model: { provider: "mock", model: "demo" },
-      packages: [providerPackage("test-provider", [provider])],
-      skills: { add: [skill!] },
-    })
-  ).session();
+  const agent = await createAgent({
+    model: { provider: "mock", model: "demo" },
+    packages: [providerPackage("test-provider", [provider]), contextFiles({ root: workspaceRoot })],
+    // Eager disclosure puts the discovered skill's instructions in the first request; the default
+    // progressive mode would list it and wait for `load_skill`.
+    skills: { disclosure: "eager" },
+  });
+
+  // The skill was registered during package setup, before the first turn.
+  const skill = agent.skills.find((entry) => entry.name === "greeter");
+  const session = await agent.session();
 
   // Fire run() (resolves into closeSubscribers) and drain the event stream in
   // parallel — subscribe() only ends once run completes and closes the stream.
@@ -68,8 +57,7 @@ export async function demo(): Promise<{
 
 // Runnable smoke test: `node examples/discover-skills.ts`. Network-free.
 export async function main(): Promise<void> {
-  const result = await demo();
-  console.log(JSON.stringify(result));
+  console.log(JSON.stringify(await demo()));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

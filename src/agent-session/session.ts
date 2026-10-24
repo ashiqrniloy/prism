@@ -155,8 +155,8 @@ export class RuntimeAgentSession implements Session {
   /** Per-run tool allow-list (Task 21); undefined means the full registered set. */
   activeToolNames?: readonly string[];
   /** Plan 015 Task 4: re-add persisted loaded-skill names (names only; bodies re-resolve on demand). */
-  restoreLoadedSkills(names: readonly string[]): void {
-    for (const name of names) this.loadedSkills.add(name);
+  restoreLoadedSkills(names: readonly string[], runId?: string): void {
+    for (const name of names) this.loadedSkills.add(name, runId);
   }
 
   /** Plan 137 Task 3: loaded skill names currently active in this session. */
@@ -165,10 +165,10 @@ export class RuntimeAgentSession implements Session {
   }
 
   /** Plan 018 Task 6: restore persisted loaded-skill bodies (already validated fail-closed at load). */
-  restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[]): void {
+  restoreLoadedSkillBodies(bodies: readonly LoadedSkillBodiesEntry[], runId?: string): void {
     validateLoadedSkillBodies(bodies);
     this.restoredSkillBodies = bodies;
-    for (const entry of bodies) this.loadedSkills.add(entry.name);
+    for (const entry of bodies) this.loadedSkills.add(entry.name, runId);
   }
 
   private ledgerChain: Promise<void> = Promise.resolve();
@@ -958,7 +958,7 @@ export class RuntimeAgentSession implements Session {
       // Mid-run steer passes the same `run.input` gate as run-start input: a handler that drops the
       // message removes it (it never enters history or the session store) and the run continues, while
       // `ctx.reject(reason)` fails the run closed.
-      const steered = await this.hooks().transform("run.input", [message]);
+      const steered = await this.hooks().transform("run.input", [message], { sessionId: this.id, runId });
       if (steered.length === 0) {
         this.emit({
           type: "package.event",

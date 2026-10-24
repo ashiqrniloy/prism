@@ -10,6 +10,7 @@ import {
   createSecretRedactor,
   definePackage,
   type HostUiRequest,
+  HARD_MAX_SKILL_INSTRUCTION_BYTES,
   type LoopStrategy,
   type PackageCommand,
   type PackageDefinitionInput,
@@ -67,11 +68,17 @@ describe("package tools", () => {
   it("tool_collision_fails_closed", async () => {
     const a = pkg("@acme/a", ({ tools }) => tools.register(tool("net")));
     const b = pkg("@acme/b", ({ tools }) => tools.register(tool("net")));
-    const error = await rejects(createAgent({ model: MODEL, packages: [a, b, providerPackage("test-provider", [textProvider()])] }), "tool_conflict");
+    const error = await rejects(
+      createAgent({ model: MODEL, packages: [a, b, providerPackage("test-provider", [textProvider()])] }),
+      "tool_conflict",
+    );
     assert.equal(error.package, "@acme/b");
     assert.match(error.message, /@acme\/a/);
     // Against the host's tools (`tools.add`; the 0.12 registry input no longer exists).
-    await rejects(createAgent({ model: MODEL, packages: [a, providerPackage("test-provider", [textProvider()])], tools: { add: [tool("net")] } }), "tool_conflict");
+    await rejects(
+      createAgent({ model: MODEL, packages: [a, providerPackage("test-provider", [textProvider()])], tools: { add: [tool("net")] } }),
+      "tool_conflict",
+    );
     // Against the names the kernel generates tools under.
     const shadow = pkg("@acme/shadow", ({ tools }) => tools.register(tool("load_skill")));
     const failure = await rejects(
@@ -85,7 +92,10 @@ describe("package tools", () => {
       tools.register(tool("one"));
       onDispose(() => void events.push("first disposed"));
     });
-    await rejects(createAgent({ model: MODEL, packages: [first, a, b, providerPackage("test-provider", [textProvider()])] }), "tool_conflict");
+    await rejects(
+      createAgent({ model: MODEL, packages: [first, a, b, providerPackage("test-provider", [textProvider()])] }),
+      "tool_conflict",
+    );
     assert.deepEqual(events, ["first disposed"]);
   });
 
@@ -94,7 +104,10 @@ describe("package tools", () => {
     // the kernel no longer generates one, so the name carries no reservation.
     const owner = pkg("@acme/search", ({ tools }) => tools.register(tool("search_tools")));
     const agent = await createAgent({ model: MODEL, packages: [owner, providerPackage("test-provider", [textProvider()])] });
-    assert.ok(agent.inspect().tools.some((entry) => entry.name === "search_tools"), "a package may register the name");
+    assert.ok(
+      agent.inspect().tools.some((entry) => entry.name === "search_tools"),
+      "a package may register the name",
+    );
     await agent.dispose();
   });
 
@@ -105,15 +118,20 @@ describe("package tools", () => {
     let turn = 0;
     const agent = await createAgent({
       model: MODEL,
-      packages: [adds, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c1", "added", {}) };
-          else yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        adds,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c1", "added", {}) };
+              else yield providerTextDelta("done");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     // The shared reader behind dispatch, approval, and the assembler.
     assert.deepEqual(
@@ -168,7 +186,10 @@ describe("package tools", () => {
           { when: (session) => session.id === "A" },
         ),
       );
-      const agent = await createAgent({ model: MODEL, packages: [...owner ? [owner, wired] : [wired], providerPackage("test-provider", [provider])] });
+      const agent = await createAgent({
+        model: MODEL,
+        packages: [...(owner ? [owner, wired] : [wired]), providerPackage("test-provider", [provider])],
+      });
       current = "A";
       await (await agent.session({ id: "A", create: true })).run("go");
       current = "B";
@@ -235,15 +256,20 @@ describe("package tools", () => {
     let turn = 0;
     const agent = await createAgent({
       model: MODEL,
-      packages: [owner, providerPackage("test-provider", [{
-        id: "mock",
-        async *generate() {
-          turn += 1;
-          if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c", "bg", {}) };
-          else yield providerTextDelta("done");
-          yield providerDone();
-        },
-      }])],
+      packages: [
+        owner,
+        providerPackage("test-provider", [
+          {
+            id: "mock",
+            async *generate() {
+              turn += 1;
+              if (turn === 1) yield { type: "tool_call" as const, call: toolCallContent("c", "bg", {}) };
+              else yield providerTextDelta("done");
+              yield providerDone();
+            },
+          },
+        ]),
+      ],
     });
     await (await agent.session()).run("go");
     assert.equal(outcome, "capability_missing", "the package tool's session is bound to a package without `background`");
@@ -256,12 +282,48 @@ describe("package skills and providers", () => {
       skills.register(skill("review"));
       providers.register({ id: "p", async *generate() {} });
     });
-    const twoSkill = pkg("@acme/two", ({ skills }) => skills.register(skill("review")));
+    // A different body under a taken name is a conflict; an identical registration is a no-op.
+    const twoSkill = pkg("@acme/two", ({ skills }) => skills.register({ ...skill("review"), instructions: "another review" }));
     const twoProvider = pkg("@acme/three", ({ providers }) => providers.register({ id: "p", async *generate() {} }));
     const config = { model: MODEL };
     assert.equal((await rejects(createAgent({ ...config, packages: [one, twoSkill] }), "skill_conflict")).package, "@acme/two");
     assert.equal((await rejects(createAgent({ ...config, packages: [one, twoProvider] }), "provider_conflict")).package, "@acme/three");
-    await rejects(createAgent({ ...config, packages: [one], skills: { add: [skill("review")] } }), "skill_conflict");
+    await rejects(createAgent({ ...config, packages: [one], skills: { add: [{ ...skill("review"), instructions: "another review" }] } }), "skill_conflict");
+  });
+
+  it("identical_skill_reregistration_is_noop", async () => {
+    // Two packages discovering the same `SKILL.md` (a child inheriting both, or context-files plus a
+    // host `skills.dirs`) register one skill. Same name with a different body is still a conflict.
+    const shared: Skill = { name: "review", description: "Review.", instructions: "Review the diff.", path: "/repo/.agents/skills/review/SKILL.md" };
+    const one = pkg("@acme/one", ({ skills }) => skills.register(shared));
+    const two = pkg("@acme/two", ({ skills }) => skills.register({ ...shared }));
+    const agent = await createAgent({ model: MODEL, packages: [one, two], skills: { add: [{ ...shared }] } });
+    assert.deepEqual((agent.skills as readonly { name: string }[]).filter((entry) => entry.name === "review").length, 1);
+    await agent.dispose();
+    const differentBody = pkg("@acme/three", ({ skills }) => skills.register({ ...shared, instructions: "Something else." }));
+    await rejects(createAgent({ model: MODEL, packages: [one, differentBody] }), "skill_conflict");
+    const differentPath = pkg("@acme/four", ({ skills }) => skills.register({ ...shared, path: "/elsewhere/SKILL.md" }));
+    await rejects(createAgent({ model: MODEL, packages: [one, differentPath] }), "skill_conflict");
+  });
+
+  it("oversized_skill_body_is_skill_too_large_for_register_and_add", async () => {
+    const big: Skill = {
+      name: "big",
+      description: "Too large.",
+      instructions: "SENSITIVE_BODY".repeat(Math.ceil((HARD_MAX_SKILL_INSTRUCTION_BYTES + 1) / 14)),
+    };
+    const registers = pkg("@acme/big", ({ skills }) => skills.register(big));
+    const registerError = await rejects(createAgent({ model: MODEL, packages: [registers] }), "skill_too_large");
+    assert.match(registerError.message, /big/);
+    assert.match(registerError.message, new RegExp(String(HARD_MAX_SKILL_INSTRUCTION_BYTES)));
+    assert.ok(!registerError.message.includes("SENSITIVE_BODY"), "the body is never echoed");
+
+    const adds = pkg("@acme/big-dir", ({ skills }) => skills.addDir("/skills/big"));
+    const addError = await rejects(
+      createAgentWith({ model: MODEL, packages: [adds] }, { readSkillDir: async () => [big] }),
+      "skill_too_large",
+    );
+    assert.ok(!addError.message.includes("SENSITIVE_BODY"), "the add path never echoes the body");
   });
 
   it("disable_skills_removes_package_and_host_skills", async () => {
@@ -329,11 +391,17 @@ describe("package skills and providers", () => {
       },
     };
     const error = await rejects(
-      createAgentWith({ model: MODEL, packages: [providerPackage("test-provider", [textProvider()]), dirs], redactor: createSecretRedactor([SECRET]) }, failing),
+      createAgentWith(
+        { model: MODEL, packages: [providerPackage("test-provider", [textProvider()]), dirs], redactor: createSecretRedactor([SECRET]) },
+        failing,
+      ),
       "setup_failed",
     );
     assert.equal(error.message.includes(SECRET), false);
-    await createAgentWith({ model: MODEL, packages: [providerPackage("test-provider", [textProvider()]), dirs({}, { optional: true })] }, failing);
+    await createAgentWith(
+      { model: MODEL, packages: [providerPackage("test-provider", [textProvider()]), dirs({}, { optional: true })] },
+      failing,
+    );
   });
 
   it("package_provider_serves_runs_and_models_client", async () => {
@@ -372,7 +440,10 @@ describe("package skills and providers", () => {
     assert.deepEqual(calls, ["served", "served", "served"], "the model's provider answered, not the fixed one");
     // Without the capability the call fails closed.
     const denied = pkg("@acme/nocap", ({ models }) => void models.client());
-    await rejects(createAgent({ model: MODEL, packages: [denied, providerPackage("test-provider", [textProvider()])] }), "capability_missing");
+    await rejects(
+      createAgent({ model: MODEL, packages: [denied, providerPackage("test-provider", [textProvider()])] }),
+      "capability_missing",
+    );
   });
 });
 
@@ -443,7 +514,10 @@ describe("package commands", () => {
     const bad = pkg("@acme/bad", ({ commands }) =>
       commands.register({ name: "x", description: "d", args: { $ref: "#" } as never, run: () => 1 }),
     );
-    await rejects(createAgent({ model: MODEL, packages: [bad, providerPackage("test-provider", [textProvider()])] }), "config_schema_unsupported");
+    await rejects(
+      createAgent({ model: MODEL, packages: [bad, providerPackage("test-provider", [textProvider()])] }),
+      "config_schema_unsupported",
+    );
     // A malformed command is a setup failure.
     const malformed = pkg("@acme/malformed", ({ commands }) => commands.register({ name: "has space", description: "d", run: () => 1 }));
     await rejects(createAgent({ model: MODEL, packages: [malformed, providerPackage("test-provider", [textProvider()])] }), "setup_failed");
@@ -456,21 +530,32 @@ describe("services", () => {
     let late: unknown;
     const agent = await createAgent({
       model: MODEL,
-      packages: [pkg("@acme/user", ({ services }) => void (late = () => services.require("svc")), { requires: { api: 1, services: ["svc"] } }), pkg("@acme/provider", ({ services }) => services.provide("svc", impl)), providerPackage("test-provider", [textProvider()])],
+      packages: [
+        pkg("@acme/user", ({ services }) => void (late = () => services.require("svc")), { requires: { api: 1, services: ["svc"] } }),
+        pkg("@acme/provider", ({ services }) => services.provide("svc", impl)),
+        providerPackage("test-provider", [textProvider()]),
+      ],
     });
     assert.equal((late as () => unknown)(), impl, "visible to an earlier package at call time");
     await agent.dispose();
     await rejects(
       createAgent({
         model: MODEL,
-        packages: [pkg("@a/a", ({ services }) => services.provide("x", 1)), pkg("@b/b", ({ services }) => services.provide("x", 2)), providerPackage("test-provider", [textProvider()])],
+        packages: [
+          pkg("@a/a", ({ services }) => services.provide("x", 1)),
+          pkg("@b/b", ({ services }) => services.provide("x", 2)),
+          providerPackage("test-provider", [textProvider()]),
+        ],
       }),
       "service_conflict",
     );
     await rejects(
       createAgent({
         model: MODEL,
-        packages: [pkg("@a/a", () => {}, { requires: { api: 1, services: ["absent"] } }), providerPackage("test-provider", [textProvider()])],
+        packages: [
+          pkg("@a/a", () => {}, { requires: { api: 1, services: ["absent"] } }),
+          providerPackage("test-provider", [textProvider()]),
+        ],
       }),
       "missing_service",
     );
@@ -488,7 +573,11 @@ describe("disable", () => {
       commands.register({ name: "off", description: "d", run: () => 1 });
       commands.register({ name: "on", description: "d", run: () => 1 });
     });
-    const base = { model: MODEL, packages: [adds, providerPackage("test-provider", [textProvider()])], tools: { add: [tool("host-tool"), tool("host-keep")] } };
+    const base = {
+      model: MODEL,
+      packages: [adds, providerPackage("test-provider", [textProvider()])],
+      tools: { add: [tool("host-tool"), tool("host-keep")] },
+    };
     const agent = await createAgent({
       ...base,
       disable: {
@@ -545,7 +634,11 @@ describe("disable", () => {
 
   it("disable_runs_after_setup_so_a_package_cannot_re_add", async () => {
     const adds = pkg("@acme/adds", ({ tools }) => tools.register(tool("shell")));
-    const agent = await createAgent({ model: MODEL, packages: [adds, providerPackage("test-provider", [textProvider()])], disable: { tools: ["shell"] } });
+    const agent = await createAgent({
+      model: MODEL,
+      packages: [adds, providerPackage("test-provider", [textProvider()])],
+      disable: { tools: ["shell"] },
+    });
     assert.equal(activeTools(agent).tools.length, 0);
     assert.equal(activeTools(agent).registry.get("shell"), undefined);
   });
@@ -613,7 +706,10 @@ describe("credentials", () => {
         },
         { capabilities: ["credentials"] },
       );
-      const error = await rejects(createAgent({ model: MODEL, packages: [failing, providerPackage("test-provider", [textProvider()])] }), "setup_failed");
+      const error = await rejects(
+        createAgent({ model: MODEL, packages: [failing, providerPackage("test-provider", [textProvider()])] }),
+        "setup_failed",
+      );
       assert.equal(JSON.stringify(error).includes(SECRET), false);
       assert.equal(error.message.includes(SECRET), false);
     } finally {
@@ -623,6 +719,9 @@ describe("credentials", () => {
 
   it("credentials_resolve_needs_the_capability", async () => {
     const denied = pkg("@acme/nocap", async ({ credentials }) => void (await credentials.resolve("env:X")));
-    await rejects(createAgent({ model: MODEL, packages: [denied, providerPackage("test-provider", [textProvider()])] }), "capability_missing");
+    await rejects(
+      createAgent({ model: MODEL, packages: [denied, providerPackage("test-provider", [textProvider()])] }),
+      "capability_missing",
+    );
   });
 });

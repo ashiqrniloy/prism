@@ -50,12 +50,12 @@ describe("prefix stability conformance", () => {
     assert.deepEqual(result.resetDetails, []);
   });
 
-  it("splits the provider-visible prefix from the tail-aware cacheable prefix", async () => {
+  it("keeps the provider-visible prefix stable when a skill body arrives in a tool result", async () => {
     const result = await runPrefixStabilityConformance({ host: host(), skills: [firstSkill, secondSkill] });
 
-    // The tail body sits after the turn-2 transcript insert, so the provider-visible fraction of
-    // the turn-1 request dips below 1; dropping the tail recovers the append-only prefix.
-    assert.ok(result.minContinuity < 1, `expected a tail-sized dip, got ${result.minContinuity}`);
+    // Progressive disclosure returns the body in the tool result, so every request is a strict
+    // append of the last one; both metrics stay at 1 with no tail to exclude.
+    assert.equal(result.minContinuity, 1);
     assert.equal(result.cacheableContinuity, 1);
   });
 
@@ -98,8 +98,9 @@ describe("prefix stability conformance", () => {
     );
   });
 
-  it("classifies cloned tail messages by serialized equality", async () => {
+  it("classifies cloned eager tail messages by serialized equality", async () => {
     const cloning = host({
+      instructions: "Stable rules.",
       hooks: (hooks) =>
         hooks.on(
           "context.build",
@@ -110,8 +111,18 @@ describe("prefix stability conformance", () => {
           { id: "clone-each" },
         ),
     });
+    const eagerBody = "Eager tail body: keep it byte-stable. ".repeat(40);
+    const eagerSkills: [Skill, Skill] = [
+      { name: "alpha", description: "Alpha catalog entry", instructions: eagerBody },
+      { name: "beta", description: "Beta catalog entry", instructions: eagerBody },
+    ];
 
-    const result = await runPrefixStabilityConformance({ host: cloning, skills: [firstSkill, secondSkill] });
+    const result = await runPrefixStabilityConformance({
+      host: cloning,
+      skillsDisclosure: "eager",
+      skills: eagerSkills,
+      allowedResets: 3,
+    });
 
     // Identity is lost to the clone; a `1` here proves the value-equality fallback matched the tail
     // (without it the cacheable fraction would equal the tail-sized provider-visible dip).
@@ -191,7 +202,12 @@ describe("prefix stability conformance", () => {
           (draft) => ({
             ...draft,
             messages: draft.messages.filter(
-              (message) => !message.content.some((block) => block.type === "text" && block.text.includes("Alpha body")),
+              (message) =>
+                !message.content.some(
+                  (block) =>
+                    (block.type === "text" && block.text.includes("Alpha body")) ||
+                    (block.type === "tool_result" && JSON.stringify(block).includes("Alpha body")),
+                ),
             ),
           }),
           { id: "catalog-only" },
@@ -325,7 +341,7 @@ describe("scorePrefixStability", () => {
   });
 
   it("does not fabricate 1 when the tail map matches nothing", async () => {
-    const captured = await captureFixture(host(), [firstSkill, secondSkill]);
+    const captured = await captureFixture(host(), [firstSkill, secondSkill], "eager");
     const unrelated = new Map<string, Message>([["nope", text("user", "not a tail")]]);
     const sample = scorePrefixStability(captured.requests, { tailSegments: unrelated });
 

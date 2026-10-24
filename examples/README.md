@@ -72,6 +72,8 @@ node examples/coding-browser-evaluation.ts
 node examples/web-research.ts
 node examples/run-feedback.ts
 node examples/delegate.ts
+node examples/advisor.ts
+node examples/validator.ts
 node examples/working-semantic-memory.ts
 node examples/rag.ts
 node examples/drive-rag-sync.ts
@@ -165,7 +167,9 @@ Each demo prints a single JSON line with its result.
 - `web-research.ts` — network-free host-selected Brave search → Firecrawl Markdown route with fake fetch, stable citation, untrusted marker, and fixed host extraction schema.
 - `web-no-key.ts` — **demo**: a `toolsWeb` package whose `env:` key ref does not resolve registers no `web_*` tool and writes a `warn` status note naming the ref; the run still completes on the coding tools (network-free).
 - `run-feedback.ts` — immutable owned run feedback linked to an evaluation, bounded query, and safe low-cardinality OpenTelemetry projection.
-- `delegate.ts` — **demo**: `@arnilo/prism-delegate` `delegate` tool; the `reviewer` child inherits only `@arnilo/prism-tools-coding` (its tool list proves the subset), the parent gets the child's answer as the tool result, and `delegate.step` events record start and finish (network-free).
+- `delegate.ts` — **demo**: `@arnilo/prism-delegate` `delegate` tool; the `reviewer` child inherits only `@arnilo/prism-tools-coding` (its tool list proves the subset), the parent gets the child's answer as the tool result, and `delegate.step` events record start and finish. The second half runs a `coder` child with `isolation: "worktree"` in a throwaway repository: it writes in its own worktree and the delegate merges its commit into `main` (network-free, needs `git`).
+- `advisor.ts` — **demo**: `@arnilo/prism-advisor` — the parent model calls `advise` once (one model call, no tools, over the branch slice) and gets the advice plus an `[advisor: …]` line; `triggers.beforeFinish` then reviews the final answer, says `revise`, and the run continues with that advice as a steer before a second review says `proceed`. The `advisor.consult` events are printed (network-free).
+- `validator.ts` — **demo**: completion validation with `validate`: the run's task is captured and pinned, the first validator review answers `incomplete` with what is missing (the run continues with that list as a steer), the second answers `complete`, and the host reads `verified` from the last `validator.verdict` event (network-free; the child engine variant uses a hidden `delegate` child with its own tools).
 - `working-semantic-memory.ts` — optional working memory + semantic recall with hash embedder, context injection, and processor update.
 - `long-term-memory.ts` — **demo**: `memory:consolidate` turns an explicit statement into a typed, scored candidate note (`memoryFabric({ promote: {...} })`), a second agent over the same markdown store recalls it, and a third agent rooted in another project at that store sees the shared user preference but not the first project's fact (network-free).
 - `memory-lifecycle.ts` — **demo** (plans 188.4, 188.5): one note's whole life in a single deterministic run — a user preference written in project A and cited in B, a procedure verified in both projects that `maintain()` widens to an `agent` candidate, a project exception that shadows the preference, an unused episode archived by the two strengths and revived through archive search, and a capacity budget that folds duplicates then evicts the weakest note; the scope clock is the store's session counter, so time is sessions, never calendar days. It then drives the three delivery tiers through a real agent: the pinned core in the prefix stays byte-identical across ten quiet turns, a `read` under a path note's glob injects that note in the tail exactly once, and `memory:share` writes a team note after a scripted `host.ui` confirm (network-free, no model call).
@@ -200,7 +204,7 @@ Each demo prints a single JSON line with its result.
 - `system-prompts.ts` — layered system-prompt composition; disabling layers.
 - `system-project-prompts.ts` — **demo**: auto-load `AGENTS.md`/`SYSTEM.md` via
   `@arnilo/prism-context-files` (trust-gated) and prove the composed prompt reaches the provider.
-- `discover-skills.ts` — compile-checked opt-in contribution discovery and registration.
+- `discover-skills.ts` — **demo**: `@arnilo/prism-context-files` discovers and registers the project `SKILL.md` tree, then the discovered instructions reach a mock provider request (network-free).
 - `instruction-injection.ts` — compile-checked host-selected instruction injector wiring.
 - `jsonl-stores-branching.ts` — in-memory store + branching; JSONL persistence.
 - `session-search.ts` — **demo**: workspace-scoped session search — SQLite FTS5 hit pointers (`entryId`/`runId`/`turn`/`score`/snippet), annotation search via `kind`, and the JSONL linear-scan fallback returning the same hits (network-free).

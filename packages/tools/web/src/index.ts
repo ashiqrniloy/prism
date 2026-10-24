@@ -26,14 +26,25 @@
  * ```
  */
 import manifest from "../package.json" with { type: "json" };
-import { assertSsrfAllowedUrl, definePackage, type PackageInstance, type Secret, type ToolDefinition } from "@arnilo/prism";
+import {
+  assertSsrfAllowedUrl,
+  definePackage,
+  type JsonObject,
+  type JsonSchema,
+  type PackageInstance,
+  type Secret,
+  type ToolDefinition,
+  type ToolArgumentValidator,
+  validateJsonSchema,
+} from "@arnilo/prism";
 
 import { createBraveSearch } from "./brave.js";
 import { type ToolsWebConfig, toolsWebConfigSchema } from "./config.js";
 import { createExaSearch } from "./exa.js";
-import { createFirecrawlFetch } from "./firecrawl.js";
+import { createFirecrawlExtractor, createFirecrawlFetch } from "./firecrawl.js";
 import { resolveObscuraCommand } from "./obscura/process.js";
-import { createObscuraWebTools } from "./obscura/web.js";
+import { resolveObscuraWebLimits } from "./obscura/limits.js";
+import { createObscuraPageFetcher, createObscuraWebTools } from "./obscura/web.js";
 import { createWebTools } from "./tools.js";
 import { resolveWebLimits } from "./limits.js";
 import type { WebCredentialSource, WebFetchAdapter, WebFetchService } from "./types.js";
@@ -60,6 +71,37 @@ const BACKENDS: readonly ToolsWebConfig["backend"][] = ["brave", "exa", "firecra
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** One validator, no second implementation: the package validates extraction against the kernel's subset. */
+const schemaValidator: ToolArgumentValidator = {
+  validate: (schema, value) => validateJsonSchema(schema as JsonSchema, value),
+};
+
+/** Compiles the schema now, so an unsupported subset fails setup instead of the first extraction. */
+function checkExtractSchema(schema: JsonObject): JsonObject {
+  try {
+    validateJsonSchema(schema as JsonSchema, {});
+    return schema;
+  } catch (error) {
+    throw new Error(`prism-tools-web: extract.schema is not supported: ${errorMessage(error)}`);
+  }
+}
+
+/** `web_extract` over the configured schema, or nothing when the config asks for no extraction. */
+function extractAdapter(
+  config: ToolsWebConfig["extract"],
+  credentials: WebCredentialSource,
+  limits: ReturnType<typeof resolveWebLimits>,
+  validateUrl: (url: URL) => void,
+) {
+  if (config === undefined) return undefined;
+  const schema = checkExtractSchema(config.schema);
+  try {
+    return createFirecrawlExtractor({ credentials, limits, validateUrl, schema, validator: schemaValidator });
+  } catch (error) {
+    throw new Error(`prism-tools-web: extract.schema is not supported: ${errorMessage(error)}`);
+  }
 }
 
 /** A credential source over a single resolved secret, for the 0.12 adapters. */
@@ -97,8 +139,17 @@ const definition = definePackage<ToolsWebConfig>({
         prism.status.note("warn", `obscura: binary ${JSON.stringify(binary)} is not an executable file`);
         return;
       }
+      let obscuraLimits: ReturnType<typeof resolveObscuraWebLimits> | undefined;
+      try {
+        obscuraLimits = prism.config.obscura?.limits === undefined ? undefined : resolveObscuraWebLimits(prism.config.obscura.limits);
+      } catch (error) {
+        throw new Error(`prism-tools-web: invalid limits config: ${errorMessage(error)}`);
+      }
+      const bounds = obscuraLimits === undefined ? {} : { limits: obscuraLimits };
       const nativeTools = prism.config.obscura?.nativeTools ?? true;
-      tools.push(...createObscuraWebTools({ command, nativeTools }).tools);
+      tools.push(...createObscuraWebTools({ command, nativeTools, ...bounds }).tools);
+      // The same page path the web_fetch tool uses, so wiki and RAG URL ingestion work with Obscura.
+      fetchService = createObscuraPageFetcher({ command, ...bounds });
     } else {
       const apiKeyRef = prism.config.apiKey;
       if (typeof apiKeyRef !== "string" || apiKeyRef.length === 0) {
@@ -117,20 +168,25 @@ const definition = definePackage<ToolsWebConfig>({
         const search = backend === "brave" ? createBraveSearch({ credentials, limits }) : createExaSearch({ credentials, limits });
         const fetchBackend = prism.config.fetch?.backend ?? "firecrawl";
         let fetch: WebFetchAdapter | undefined;
+        let extract: ReturnType<typeof createFirecrawlExtractor> | undefined;
         if (fetchBackend === "firecrawl") {
           const fetchRef = prism.config.fetch?.apiKey;
           const fetchSecret = typeof fetchRef === "string" && fetchRef.length > 0 ? await prism.credentials.resolve(fetchRef) : undefined;
           if (fetchSecret === undefined) {
             prism.status.note("warn", `${backend}: fetch backend firecrawl needs an apiKey ref; registering web_search only`);
+            if (prism.config.extract !== undefined)
+              prism.status.note("warn", `${backend}: extract needs the firecrawl fetch apiKey ref; skipping web_extract`);
           } else {
             fetch = createFirecrawlFetch({ credentials: secretSource(fetchSecret), limits, validateUrl });
+            extract = extractAdapter(prism.config.extract, secretSource(fetchSecret), limits, validateUrl);
           }
         }
-        tools.push(...createWebTools({ search, ...(fetch === undefined ? {} : { fetch }) }));
+        tools.push(...createWebTools({ search, ...(fetch === undefined ? {} : { fetch }), ...(extract === undefined ? {} : { extract }) }));
         if (fetch !== undefined) fetchService = { fetch: (url, options) => fetch.fetch(url, options) };
       } else {
         const fetch = createFirecrawlFetch({ credentials, limits, validateUrl });
-        tools.push(...createWebTools({ fetch }));
+        const extract = extractAdapter(prism.config.extract, credentials, limits, validateUrl);
+        tools.push(...createWebTools({ fetch, ...(extract === undefined ? {} : { extract }) }));
         fetchService = { fetch: (url, options) => fetch.fetch(url, options) };
       }
     }

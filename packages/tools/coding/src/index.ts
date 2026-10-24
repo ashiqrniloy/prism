@@ -249,7 +249,7 @@ const definition = definePackage<ToolsCodingConfig>({
     }
 
     // Approval and the hard-deny hook follow the session's worktree, when it has one.
-    const targets = createCodingTargets(toolRoot, prism.config.roots ?? [], workspaceService);
+    const targets = createCodingTargets(toolRoot, prism.config.roots ?? [], workspaceService, () => prism.skills.list());
     prism.services.provide("coding.targets", targets);
     prism.hooks.on("tool.call", createHardDenyHook({ targets, readOnly, commandRules }), { id: "hard-deny" });
 

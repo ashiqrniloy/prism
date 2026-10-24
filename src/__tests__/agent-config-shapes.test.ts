@@ -72,8 +72,8 @@ test("skills_dirs_and_add_load_and_disclosure_defaults_to_progressive", async ()
   await (await agent.session()).run("hi");
   assert.deepEqual(paths, ["skills"]);
   const serialized = JSON.stringify(seen[0]);
-  assert.ok(serialized.includes("Skill guide: Guide"));
-  assert.ok(serialized.includes("Skill disk: Guide"));
+  assert.ok(serialized.includes("- guide: Guide"));
+  assert.ok(serialized.includes("- disk: Guide"));
   assert.ok(!serialized.includes("SECRET_BODY"));
   assert.ok(seen[0]?.tools?.some((t) => t.name === "load_skill"));
 });
@@ -89,7 +89,7 @@ test("skills_catalog_is_a_named_kernel_context_build_registration", async () => 
     disable: { hooks: ["kernel:context.build"] },
   });
   await (await disabled.session()).run("hi");
-  assert.ok(!JSON.stringify(seen[0]).includes("Skill guide:"));
+  assert.ok(!JSON.stringify(seen[0]).includes("- guide:"));
 });
 
 test("run_tools_only_narrows_and_unknown_name_fails_closed", async () => {

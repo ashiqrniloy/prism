@@ -1,0 +1,46 @@
+ADVICE_JSON_INSTRUCTION	export declare const ADVICE_JSON_INSTRUCTION = "Reply with JSON only, no prose and no code fences:
+ADVISE_DESCRIPTION	export declare const ADVISE_DESCRIPTION = "Ask a second model for advice on your current approach. It sees the recent conversation
+ADVISE_TOOL	export declare const ADVISE_TOOL = "advise"
+AdvisorConfigError	export declare class AdvisorConfigError extends Error
+COMPLETE_JSON_INSTRUCTION	export declare const COMPLETE_JSON_INSTRUCTION = "Reply with JSON only, no prose and no code fences:
+DEFAULT_ADVICE_MAX_CHARS	export declare const DEFAULT_ADVICE_MAX_CHARS = 4000
+DEFAULT_ADVISOR_INSTRUCTIONS	export declare const DEFAULT_ADVISOR_INSTRUCTIONS = "You are a second opinion for another AI agent that is working on a task. Read the conversation and answer its question directly. Point out a wrong approach, a missed requirement, or a risk it has not noticed, and say what to do instead. Be brief: at most a few short paragraphs. You have no tools and cannot act
+DEFAULT_CONTEXT_LAST_TURNS	export declare const DEFAULT_CONTEXT_LAST_TURNS = 6
+DEFAULT_CONTEXT_MAX_CHARS	export declare const DEFAULT_CONTEXT_MAX_CHARS = 24000
+DEFAULT_MAX_CONSULTS_PER_RUN	export declare const DEFAULT_MAX_CONSULTS_PER_RUN = 3
+DEFAULT_MAX_ROUNDS	export declare const DEFAULT_MAX_ROUNDS = 2
+HARD_ADVICE_MAX_CHARS	export declare const HARD_ADVICE_MAX_CHARS = 16000
+HARD_CONTEXT_LAST_TURNS	export declare const HARD_CONTEXT_LAST_TURNS = 50
+HARD_CONTEXT_MAX_CHARS	export declare const HARD_CONTEXT_MAX_CHARS = 120000
+HARD_MAX_CONSULTS_PER_RUN	export declare const HARD_MAX_CONSULTS_PER_RUN = 20
+HARD_MAX_ROUNDS	export declare const HARD_MAX_ROUNDS = 10
+MAX_MISSING_CHARS	export declare const MAX_MISSING_CHARS = 200
+MAX_MISSING_ITEMS	export declare const MAX_MISSING_ITEMS = 5
+advisorConfigSchema	export declare const advisorConfigSchema:
+callKey	export declare function callKey(name: string, args: Readonly<Record<string, JsonValue>>): string
+consultPrompt	export declare function consultPrompt(instructions: string, transcript: string, question: string): string
+createAdviseTool	export declare function createAdviseTool(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime): ToolDefinition
+createConsultLedger	export declare const createConsultLedger: (prism: PackageAPI<AdvisorConfig>, maxConsultsPerRun: number) => ConsultLedger
+createTaskStore	export declare function createTaskStore(prism: PackageAPI<AdvisorConfig>): TaskStore
+default	export default
+eventData	export declare const eventData: (data: Readonly<Record<string, JsonValue | undefined>>) => JsonValue
+generateText	export declare function generateText(client: ModelClient, prompt: string, options:
+messageText	export declare function messageText(message: Message): string
+parseAdviceVerdict	export declare function parseAdviceVerdict(text: string, maxChars: number): AdviceVerdict | undefined
+parseCompletionVerdict	export declare function parseCompletionVerdict(text: string): CompletionVerdict | undefined
+parseJsonObject	export declare function parseJsonObject(text: string): Record<string, unknown> | undefined
+registerBeforeFinish	export declare function registerBeforeFinish(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime): void
+registerBeforeTools	export declare function registerBeforeTools(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime, names: readonly string[]): void
+registerTaskCapture	export declare function registerTaskCapture(prism: PackageAPI<AdvisorConfig>, store: TaskStore): void
+registerValidation	export declare function registerValidation(prism: PackageAPI<AdvisorConfig>, runtime: AdvisorRuntime, config: AdvisorValidateConfig, maxRounds: number, tasks: TaskStore): void
+renderSlice	export declare function renderSlice(slice: TranscriptSlice): string
+resolveContext	export declare function resolveContext(config: AdvisorContextConfig | undefined): ResolvedContext
+resolveLimits	export declare function resolveLimits(config: AdvisorConfig):
+sliceOf	export declare function sliceOf(entries: readonly SessionEntry[] | readonly Message[], context: ResolvedContext, pinned?: readonly Message[]): TranscriptSlice
+type AdviceVerdict	export { type AdviceVerdict, type CompletionVerdict, MAX_MISSING_CHARS, MAX_MISSING_ITEMS, parseAdviceVerdict, parseCompletionVerdict } from "./verdict.js"
+type AdvisorConfig	export { type AdvisorConfig, type AdvisorContextConfig, type AdvisorValidateConfig, advisorConfigSchema, DEFAULT_ADVISOR_INSTRUCTIONS, DEFAULT_ADVICE_MAX_CHARS, DEFAULT_CONTEXT_LAST_TURNS, DEFAULT_CONTEXT_MAX_CHARS, DEFAULT_MAX_CONSULTS_PER_RUN, DEFAULT_MAX_ROUNDS, HARD_ADVICE_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, HARD_CONTEXT_MAX_CHARS, HARD_MAX_CONSULTS_PER_RUN, HARD_MAX_ROUNDS, resolveContext, resolveLimits } from "./config.js"
+type AdvisorContextConfig	export { type AdvisorConfig, type AdvisorContextConfig, type AdvisorValidateConfig, advisorConfigSchema, DEFAULT_ADVISOR_INSTRUCTIONS, DEFAULT_ADVICE_MAX_CHARS, DEFAULT_CONTEXT_LAST_TURNS, DEFAULT_CONTEXT_MAX_CHARS, DEFAULT_MAX_CONSULTS_PER_RUN, DEFAULT_MAX_ROUNDS, HARD_ADVICE_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, HARD_CONTEXT_MAX_CHARS, HARD_MAX_CONSULTS_PER_RUN, HARD_MAX_ROUNDS, resolveContext, resolveLimits } from "./config.js"
+type AdvisorValidateConfig	export { type AdvisorConfig, type AdvisorContextConfig, type AdvisorValidateConfig, advisorConfigSchema, DEFAULT_ADVISOR_INSTRUCTIONS, DEFAULT_ADVICE_MAX_CHARS, DEFAULT_CONTEXT_LAST_TURNS, DEFAULT_CONTEXT_MAX_CHARS, DEFAULT_MAX_CONSULTS_PER_RUN, DEFAULT_MAX_ROUNDS, HARD_ADVICE_MAX_CHARS, HARD_CONTEXT_LAST_TURNS, HARD_CONTEXT_MAX_CHARS, HARD_MAX_CONSULTS_PER_RUN, HARD_MAX_ROUNDS, resolveContext, resolveLimits } from "./config.js"
+type CompletionVerdict	export { type AdviceVerdict, type CompletionVerdict, MAX_MISSING_CHARS, MAX_MISSING_ITEMS, parseAdviceVerdict, parseCompletionVerdict } from "./verdict.js"
+type ValidatorDelegateService	export { type ValidatorDelegateService, type ValidatorVerdict } from "./validate.js"
+type ValidatorVerdict	export { type ValidatorDelegateService, type ValidatorVerdict } from "./validate.js"

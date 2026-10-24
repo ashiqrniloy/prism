@@ -43,6 +43,17 @@ capabilities. The view is built once per owner per session; dispatch builds one 
 call and nothing when no handler is registered. `removeOwner(owner)` removes every registration an
 owner holds, which unwinds and disposes a package.
 
+### `context.sessionId` and `context.runId`
+
+Every handler's context names the session and the run it is serving. A payload that carries them
+(a decide hook such as `turn.before` or `run.end`) supplies them directly; a transform payload is
+often a bare value — a message, a message list, a `ProviderRequest` — so the kernel supplies the run
+identity at dispatch, and `context.runId` is set from the run that is transforming rather than `""`.
+A package can therefore key per-run state on `context.runId` from `run.input`, `message.append`,
+`context.build`, `model.request`, and `model.response`, and reset it on the `run.started`
+event (an observe hook) that opens each run. `context.sessionId`/`context.runId` are
+`""` where no run identity exists (setup, session-level calls, package events).
+
 ### Registration ids and owners
 
 Every registration has the id `<owner>:<hook>[#<id>]`, for example `host:tool.call#net` or

@@ -154,8 +154,6 @@ HARD_MAX_SESSION_SEARCH_LINEAR_ENTRIES	export declare const HARD_MAX_SESSION_SEA
 HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS	export declare const HARD_MAX_SESSION_SEARCH_LINEAR_SESSIONS = 5000
 HARD_MAX_SESSION_SEARCH_QUERY_BYTES	export declare const HARD_MAX_SESSION_SEARCH_QUERY_BYTES: number
 HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES	export declare const HARD_MAX_SESSION_SEARCH_SNIPPET_BYTES: number
-HARD_MAX_SKILL_CATALOG_ENTRIES	export declare const HARD_MAX_SKILL_CATALOG_ENTRIES = 256
-HARD_MAX_SKILL_DESCRIPTION_BYTES	export declare const HARD_MAX_SKILL_DESCRIPTION_BYTES = 4096
 HARD_MAX_SKILL_INSTRUCTION_BYTES	export declare const HARD_MAX_SKILL_INSTRUCTION_BYTES = 262144
 HARD_MAX_SNAPSHOT_CACHE_TTL_MS	export declare const HARD_MAX_SNAPSHOT_CACHE_TTL_MS = 30000
 HARD_MAX_STICKY_DECISIONS	export declare const HARD_MAX_STICKY_DECISIONS = 256
@@ -229,7 +227,7 @@ MAX_EXTERNAL_STATE_BYTES	export declare const MAX_EXTERNAL_STATE_BYTES: number
 MAX_EXTERNAL_STATE_ENTRIES	export declare const MAX_EXTERNAL_STATE_ENTRIES = 10000
 MAX_EXTERNAL_STATE_ENTRY_BYTES	export declare const MAX_EXTERNAL_STATE_ENTRY_BYTES: number
 MAX_GUARDRAIL_CONCURRENCY	export declare const MAX_GUARDRAIL_CONCURRENCY = 16
-MAX_LOAD_SKILL_RESULT_BYTES	export declare const MAX_LOAD_SKILL_RESULT_BYTES = 512
+MAX_LOAD_SKILL_RESULT_BYTES	export declare const MAX_LOAD_SKILL_RESULT_BYTES = 263168
 MAX_PERSISTED_SKILL_BODIES	export declare const MAX_PERSISTED_SKILL_BODIES = 64
 MAX_PERSISTED_SKILL_BODY_BYTES	export declare const MAX_PERSISTED_SKILL_BODY_BYTES = 262144
 MAX_PERSISTED_SKILL_BODY_NAME_CHARS	export declare const MAX_PERSISTED_SKILL_BODY_NAME_CHARS = 256
@@ -345,7 +343,6 @@ SESSION_SEARCH_UNSUPPORTED_CODE	export declare const SESSION_SEARCH_UNSUPPORTED_
 SESSION_SEARCH_WORKSPACE_METADATA_KEY	export declare const SESSION_SEARCH_WORKSPACE_METADATA_KEY: "workspaceRoot"
 SESSION_TITLE_MAX_LENGTH	export declare const SESSION_TITLE_MAX_LENGTH = 80
 SESSION_TITLE_METADATA_KEY	export declare const SESSION_TITLE_METADATA_KEY: "title"
-SKILL_DISCLOSURE_ERROR_CODE	export declare const SKILL_DISCLOSURE_ERROR_CODE: "skill_disclosure_exceeded"
 SKILL_LOAD_ERROR_CODE	export declare const SKILL_LOAD_ERROR_CODE: "skill_load_failed"
 SLOT_NAMES	export declare const SLOT_NAMES: readonly SlotName[]
 STORE_CONFORMANCE_STEPS	export declare const STORE_CONFORMANCE_STEPS: readonly ["append-and-read", "branch-and-fork", "package-state", "package-state-log", "external-state", "suspended-run", "search", "title", "list-and-delete", "session-links", "restart"]
@@ -363,7 +360,6 @@ SessionNotFoundError	export declare class SessionNotFoundError extends Error
 SessionSearchUnsupportedError	export declare class SessionSearchUnsupportedError extends Error
 SessionState	export type { AgentState, SessionLog, SessionState } from "./session/state.js"
 SessionStateStore	export declare class SessionStateStore
-SkillDisclosureError	export declare class SkillDisclosureError extends Error
 SkillLoadError	export declare class SkillLoadError extends Error
 SkillRegistryOptions	export type { ResolveActiveSkillsOptions, SkillRegistryOptions } from "./skills.js"
 SkillRenderContext	export type { LoadedSkillSet, SkillRenderContext, SkillsDisclosure } from "./skill-disclosure.js"
@@ -430,6 +426,7 @@ TrustRequest	export type { PermissionDecision, PermissionPolicy, PermissionReque
 TurnBeforeDecision	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 TurnBeforePayload	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 UNSUPPORTED_STORE_CAPABILITY_CODE	export declare const UNSUPPORTED_STORE_CAPABILITY_CODE: "unsupported_store_capability"
+UNTRUSTED_EXTERNAL_TRUST	export declare const UNTRUSTED_EXTERNAL_TRUST = "untrusted_external"
 UnknownHookError	export declare class UnknownHookError extends Error
 UnknownSlotError	export declare class UnknownSlotError extends Error
 UnknownSlotOwnerError	export declare class UnknownSlotOwnerError extends Error
@@ -638,6 +635,7 @@ executeSystemOneLiveScenarios	export declare function executeSystemOneLiveScenar
 externalAgentSpecSchema	export declare function externalAgentSpecSchema(vendor?: JsonSchema): JsonSchema
 filterTools	export declare function filterTools(tools: readonly ToolDefinition[], filter?: ToolFilterInput): readonly ToolDefinition[]
 finalAssistantMessage	export declare function finalAssistantMessage(history: readonly Message[]):
+formatUntrustedToolText	export declare function formatUntrustedToolText(result: Pick<ToolResult, "name" | "content" | "value" | "metadata">): string
 frozenCopy	export declare function frozenCopy(value: JsonObject): JsonObject
 generateProviderTurn	export declare function generateProviderTurn(session: SessionHost, request: ProviderRequest, runId: string, signal: AbortSignal, secrets?: readonly (string | undefined)[], turn?: number, attempt?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
 generateWithRetry	export declare function generateWithRetry(session: SessionHost, request: ProviderRequest, runId: string, options: ResolvedRunOptions, signal: AbortSignal, requestSecrets?: readonly (string | undefined)[], turn?: number, recordUsage?: (usage: Usage | undefined, turn: number, attempt: number) => Promise<Usage | undefined>, toolResults?: readonly ToolResult[]): Promise<ProviderTurnResult>
@@ -675,13 +673,13 @@ isRelayAnswer	export declare function isRelayAnswer(value: unknown): value is Re
 isRelayDescriptor	export declare function isRelayDescriptor(value: unknown): value is RelayDescriptor
 isRelayMcpFrame	export declare function isRelayMcpFrame(value: unknown): value is RelayMcpFrame
 isRetryableSystemOneStatus	export declare function isRetryableSystemOneStatus(status: number): boolean
+isSameSkill	export declare function isSameSkill(a: Skill, b: Skill): boolean
 isSessionAppendConflict	export declare function isSessionAppendConflict(error: unknown): error is SessionAppendConflictError
 isSessionEntryKind	export declare function isSessionEntryKind(value: unknown): value is SessionEntryKind
 isSessionMetadataConflict	export declare function isSessionMetadataConflict(error: unknown): error is SessionMetadataConflictError
 isSessionNotFound	export declare function isSessionNotFound(error: unknown): error is SessionNotFoundError
 isSessionScopedHookId	export declare function isSessionScopedHookId(id: string): boolean
 isSessionSearchUnsupported	export declare function isSessionSearchUnsupported(error: unknown): error is SessionSearchUnsupportedError
-isSkillDisclosureError	export declare function isSkillDisclosureError(error: unknown): error is SkillDisclosureError
 isSkillLoadError	export declare function isSkillLoadError(error: unknown): error is SkillLoadError
 isSteerSoftInterrupt	export declare function isSteerSoftInterrupt(error: unknown): boolean
 isSupportedThinkingLevel	export declare function isSupportedThinkingLevel(model: Pick<ModelConfig, "provider" | "compat" | "capabilities">, level: unknown): boolean
@@ -896,6 +894,7 @@ searchLinearSessions	export declare function searchLinearSessions(bySession: Map
 secretRefProperty	export declare function secretRefProperty(ref?: string, description?: string): JsonSchema
 selectRunTools	export declare function selectRunTools(listed: readonly ToolDefinition[], requested: readonly string[] | undefined, checkpoint?: readonly string[]):
 selectSkillsForPrompt	export declare function selectSkillsForPrompt(skills: readonly Skill[], context?: SkillRenderContext): readonly Skill[]
+selectTranscript	export declare function selectTranscript(entries: readonly SessionEntry[] | readonly Message[], options: TranscriptOptions): TranscriptSlice
 serializeOpenAIChatMessage	export declare function serializeOpenAIChatMessage(message: Message, optionsOrCapabilities?: OpenAIChatCodecOptions | ModelCapabilities, modelOrPreserve?: ModelConfig | boolean): JsonObject
 serializeOpenAIChatStructuredOutput	export declare function serializeOpenAIChatStructuredOutput(options: StructuredOutputOptions): JsonObject
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
@@ -1059,6 +1058,8 @@ type SystemOneScoreQuestion	export { SystemOneAbortedError, type SystemOneAnswer
 type SystemOneState	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
 type SystemOneUsage	export { SystemOneAbortedError, type SystemOneAnswer, SystemOneAuthError, type SystemOneBody, type SystemOneChoiceAnswer, type SystemOneChoiceQuestion, type SystemOneClientOptions, SystemOneError, type SystemOneInstructions, SystemOneInvalidRequestError, type SystemOneNoulAnswer, type SystemOneNoulQuestion, type SystemOneQuestion, type SystemOneResponse, SystemOneRetryExhaustedError, type SystemOneScoreAnswer, type SystemOneScoreQuestion, type SystemOneState, type SystemOneUsage, } from "./syste
 type ToolDispatchContext	export { dispatchableToolCalls, dispatchToolCallsInOrder, type ToolDispatchContext, throwIfAborted } from "./dispatch.js"
+type TranscriptOptions	export { selectTranscript, type TranscriptOptions, type TranscriptSlice } from "./agent-session/transcript.js"
+type TranscriptSlice	export { selectTranscript, type TranscriptOptions, type TranscriptSlice } from "./agent-session/transcript.js"
 type VerifyIssue	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
 type VerifyOptions	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"
 type VerifyResult	export { assignSlot, configure, type ListedManifest, type ListedPackage, list, type MaintainLocation, type MaintainOptions, setEnabled, type VerifyIssue, type VerifyOptions, type VerifyResult, verify, } from "./maintain.js"

@@ -305,9 +305,10 @@ describe("createOpenApiTools execute", () => {
     assert.equal(headers0?.authorization, "Bearer s3cret");
     assert.equal(calls[0].init.redirect, "manual");
     assert.deepEqual(result.value, { status: 200, body: { id: 1 } });
-    const block = result.content?.[0];
-    assert.equal(block?.type, "text");
-    assert.match(block?.text ?? "", /UNTRUSTED/);
+    // No banner text: the kernel wraps the result (UNTRUSTED_EXTERNAL_TRUST) in its envelope.
+    assert.equal(result.content, undefined);
+    assert.equal(result.metadata?.trust, "untrusted_external");
+    assert.equal(result.metadata?.source, "https://api.example.com/customers/{id}");
 
     const post = await tools[1].execute({ body: { name: "Ada" } }, context());
     assert.equal(calls[1].url, "https://api.example.com/customers");
@@ -326,7 +327,7 @@ describe("createOpenApiTools execute", () => {
     });
     const result = await tools[0].execute({ id: "1" }, context());
     assert.doesNotMatch(JSON.stringify(result.value), /s3cret/);
-    assert.doesNotMatch(JSON.stringify(result.content), /s3cret/);
+    assert.doesNotMatch(JSON.stringify(result.metadata), /s3cret/);
   });
 
   it("bounds hostile response bodies", async () => {

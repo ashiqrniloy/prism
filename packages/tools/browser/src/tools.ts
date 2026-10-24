@@ -3,6 +3,7 @@
  * All tools are statically exclusive; the manager also serializes per-run.
  */
 import {
+  UNTRUSTED_EXTERNAL_TRUST,
   type ContentBlock,
   type JsonObject,
   type ToolCapabilityKind,
@@ -176,7 +177,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
             },
           ],
           value: result,
-          metadata: { trust: "untrusted_external", pageId: result.pageId },
+          metadata: { trust: UNTRUSTED_EXTERNAL_TRUST, pageId: result.pageId },
         };
       } catch (error) {
         return errorResult("browser_open", toolCallId, messageOf(error));
@@ -220,7 +221,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
           content: [{ type: "text", text: header }],
           value: result,
           metadata: {
-            trust: "untrusted_external",
+            trust: UNTRUSTED_EXTERNAL_TRUST,
             snapshotId: result.snapshotId,
             pageId: result.pageId,
             truncated: result.truncated,
@@ -320,7 +321,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
           content,
           value: result,
           metadata: {
-            trust: "untrusted_external",
+            trust: UNTRUSTED_EXTERNAL_TRUST,
             action: result.action,
             pageId: result.pageId,
             effect: classified.effect,
@@ -408,7 +409,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
           content: [{ type: "text", text: lines.join("\n") }],
           value: result,
           metadata: {
-            trust: "untrusted_external",
+            trust: UNTRUSTED_EXTERNAL_TRUST,
             pageId: result.pageId,
             ...(result.truncated ? { truncated: true } : {}),
             ...(result.exception !== undefined ? { exception: true } : {}),
@@ -463,7 +464,7 @@ export function createBrowserTools(options: BrowserToolsOptions = {}): ToolDefin
           name: "browser_observe",
           content: [{ type: "text", text: lines.join("\n") }],
           value: result,
-          metadata: { trust: "untrusted_external", pageId: result.pageId, truncated: result.truncated },
+          metadata: { trust: UNTRUSTED_EXTERNAL_TRUST, pageId: result.pageId, truncated: result.truncated },
         };
       } catch (error) {
         return errorResult("browser_observe", toolCallId, messageOf(error));

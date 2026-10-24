@@ -23,6 +23,7 @@
 
 ### Changed
 
+- **Skill directories are read-only extra roots for read-effect coding tools (plan 190 Task 6).** `coding.targets` now reports `dirname(skill.path)` for every effective skill with an absolute path, but only for `read`, `glob`, `grep`, and `diagnostics`. A skill's `references/` file outside the workspace is therefore readable without adding a root that would also grant writes, and approval sees the same read-only roots. `write`, `edit`, `delete`, `move`, and `shell` keep the coding roots, so a write under a skill directory is still hard-denied. The skill list is read lazily after setup and the derived directories are cached until its paths change. `createCodingTargets` gains an optional fourth argument, `() => readonly Skill[]`; without it behavior is unchanged. No kernel change; `CodingTargets.roots` and the function's signature are the additive package surface.
 
 - **Schemas describe only what the model controls (plan 189 Task 7).** `write` and `edit` include `force` — and the read-before-write sentence in their description — only when the tool was created with `requireReadBeforeWrite`; without the guard `force` is an unknown key and the description is silent about it. `ask_user_decision`'s `pros`/`cons` are optional 0–3 string arrays (were exactly 3), `AskUserDecisionOption.pros`/`.cons` are `readonly string[]`, and a 4-bullet list still fails. Guard behavior when enabled is unchanged.
 

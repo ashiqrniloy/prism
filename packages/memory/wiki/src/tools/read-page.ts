@@ -1,6 +1,6 @@
 import { readFile, realpath } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import type { ToolDefinition } from "@arnilo/prism";
+import { UNTRUSTED_EXTERNAL_TRUST, type ToolDefinition } from "@arnilo/prism";
 import type { WikiExtensionOptions } from "../types.js";
 
 export const WIKI_READ_PAGE_TOOL_NAME = "wiki_read_page";
@@ -63,7 +63,7 @@ export function createWikiReadPageTool(options: WikiExtensionOptions = {}): Tool
                 text: `Page not found: ${sanitizedRelPath}`,
               },
             ],
-            metadata: { trust: "untrusted_external", pagePath: sanitizedRelPath, found: false },
+            metadata: { trust: UNTRUSTED_EXTERNAL_TRUST, pagePath: sanitizedRelPath, found: false },
           };
         }
         throw error;
@@ -89,7 +89,7 @@ export function createWikiReadPageTool(options: WikiExtensionOptions = {}): Tool
             text: content,
           },
         ],
-        metadata: { trust: "untrusted_external", pagePath: sanitizedRelPath },
+        metadata: { trust: UNTRUSTED_EXTERNAL_TRUST, pagePath: sanitizedRelPath },
       };
     },
   };

@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import {
   createAgent,
   createLoadedSkillSet,
@@ -8,6 +8,8 @@ import {
   createToolRegistry,
   dispatchToolCall,
   HARD_MAX_SKILL_INSTRUCTION_BYTES,
+  MAX_LOAD_SKILL_RESULT_BYTES,
+  type Message,
   type ProviderRequest,
   providerDone,
   resolveSkillLoad,
@@ -15,8 +17,8 @@ import {
   type ToolDefinition,
   toolCallContent,
 } from "../index.js";
-import { skillPromptText } from "../skill-disclosure.js";
 import { providerPackage } from "../provider-kit/index.js";
+import { skillPromptText } from "../skill-disclosure.js";
 
 describe("skill load", () => {
   it("resolveSkillLoad succeeds for active registry skill", () => {
@@ -37,7 +39,15 @@ describe("skill load", () => {
   });
 
   it("oversized body fails closed", () => {
-    const registry = createSkillRegistry([{ name: "big", instructions: "x".repeat(HARD_MAX_SKILL_INSTRUCTION_BYTES + 1) }]);
+    const big = { name: "big", instructions: "x".repeat(HARD_MAX_SKILL_INSTRUCTION_BYTES + 1) };
+    // A registry that predates the registration guard must still fail at the load boundary.
+    const registry = {
+      register() {},
+      get: () => big,
+      resolve: () => big,
+      list: () => [big],
+      unregister: () => false,
+    };
     assert.throws(() => resolveSkillLoad({ registry, name: "big", activeSkillNames: ["big"] }), SkillLoadError);
   });
 
@@ -105,10 +115,9 @@ describe("skill load", () => {
     assert.equal(loadedB.has("brief"), false);
   });
 
-  it("agent session load_skill includes instructions on subsequent provider turn", async () => {
+  it("agent session load_skill returns the body in the tool result, not a later tail", async () => {
     const requests: ProviderRequest[] = [];
     const registry = createSkillRegistry([{ name: "brief", description: "Answer briefly.", instructions: "Be very brief." }]);
-    const _loadSkill = createLoadSkillTool({ registry });
     const provider = {
       id: "mock",
       async *generate(request: ProviderRequest) {
@@ -126,22 +135,62 @@ describe("skill load", () => {
       skills: { add: registry.list() },
     });
 
-    await (await agent.session()).run("Hi", { limits: { maxToolRounds: 1 } });
+    const session = await agent.session();
+    await session.run("Hi", { limits: { maxToolRounds: 1 } });
 
     assert.equal(requests.length, 2);
     const firstText = requests[0]!.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
+    const secondJson = JSON.stringify(requests[1]?.messages ?? []);
     const secondText = requests[1]!.messages
       .flatMap((m) => m.content)
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("\n");
-    assert.match(firstText, /Skill brief: Answer briefly\./);
+    assert.match(firstText, /- brief: Answer briefly\./);
     assert.doesNotMatch(firstText, /Be very brief/);
-    assert.match(secondText, /Skill brief: Answer briefly\./, "catalog stays in its original prefix slot");
-    assert.match(secondText, /Skill brief:\nBe very brief\./);
-    assert.deepEqual(requests[1]?.messages.at(-1)?.content[0], { type: "text", text: "Skill brief:\nBe very brief." });
+    assert.match(secondText, /- brief: Answer briefly\./, "catalog stays in its original prefix slot");
+    assert.match(secondJson, /Be very brief/, "the body rides in the turn's tool result");
+    const toolMessage = requests[1]?.messages.at(-1);
+    assert.equal(toolMessage?.role, "tool");
+    assert.equal(toolMessage?.metadata?.loadedSkill, "brief");
+    assert.ok(typeof toolMessage?.metadata?.loadedSkillRunId === "string");
+    assert.ok(!(session as unknown as { tailSegments: ReadonlyMap<string, unknown> }).tailSegments.has("skill:brief"));
+  });
+
+  it("loading an already-loaded skill is a normal result, not a failure", async () => {
+    const registry = createSkillRegistry([{ name: "brief", instructions: "Be brief." }]);
+    const loaded = createLoadedSkillSet();
+    const loadSkill = createLoadSkillTool({ registry, loaded, tools: [] });
+    const toolRegistry = createToolRegistry([loadSkill]);
+    const context = {
+      sessionId: "s1",
+      runId: "r1",
+      metadata: { loadedSkills: loaded, activeSkillNames: ["brief"], activeTools: [] },
+    };
+    const first = await dispatchToolCall({
+      call: toolCallContent("call_1", "load_skill", { name: "brief" }),
+      registry: toolRegistry,
+      context: { ...context, toolCallId: "call_1" },
+    });
+    const second = await dispatchToolCall({
+      call: toolCallContent("call_2", "load_skill", { name: "brief" }),
+      registry: toolRegistry,
+      context: { ...context, toolCallId: "call_2" },
+    });
+    assert.equal((first.value as { ok: boolean }).ok, true);
+    assert.equal(first.metadata?.loadedSkill, "brief");
+    assert.equal(first.metadata?.loadedSkillRunId, "r1");
+    assert.equal(second.error, undefined);
+    assert.deepEqual(second.value, {
+      ok: true,
+      name: "brief",
+      text: "Skill brief is already loaded; its instructions are earlier in this conversation.",
+      alreadyLoaded: true,
+    });
+    assert.equal(second.metadata, undefined, "an already-loaded result carries no fresh body marker");
+    assert.deepEqual(loaded.entries?.(), [{ name: "brief", runId: "r1" }]);
   });
 
   it("skillPromptText reflects loaded set after tool success", () => {
@@ -154,7 +203,7 @@ describe("skill load", () => {
     assert.equal(text, "Skill brief:\nLong body.");
   });
 
-  it("load_skill success text includes directory when path is present and stays <= 512 bytes", async () => {
+  it("load_skill success text includes directory when path is present and stays within the result bound", async () => {
     const registry = createSkillRegistry([
       { name: "with-path", description: "Has path.", instructions: "Body.", path: "/repo/skills/with-path/SKILL.md" },
     ]);
@@ -172,10 +221,15 @@ describe("skill load", () => {
     });
     const val = result.value as { ok: boolean; name: string; text: string };
     assert.equal(val.ok, true);
-    assert.equal(val.text, "Loaded skill with-path for this session. Skill directory: /repo/skills/with-path");
-    assert.ok(Buffer.byteLength(val.text, "utf8") <= 512);
+    assert.equal(
+      val.text,
+      "Loaded skill with-path. Skill directory: /repo/skills/with-path. Paths in these instructions are relative to it.\n\nBody.",
+    );
+    assert.equal(result.metadata?.loadedSkill, "with-path");
+    assert.equal(result.metadata?.loadedSkillRunId, "r1");
+    assert.ok(Buffer.byteLength(val.text, "utf8") <= MAX_LOAD_SKILL_RESULT_BYTES);
 
-    // Also test with a very long path that gets capped at 512 bytes
+    // A long path stays within the body+header bound
     const longDir = "/very/long/".repeat(60);
     const registryLong = createSkillRegistry([
       { name: "long-path", description: "Long.", instructions: "Body.", path: `${longDir}SKILL.md` },
@@ -195,6 +249,47 @@ describe("skill load", () => {
     const valLong = resultLong.value as { ok: boolean; name: string; text: string };
     assert.equal(valLong.ok, true);
     assert.ok(valLong.text.includes("Skill directory:"));
-    assert.ok(Buffer.byteLength(valLong.text, "utf8") <= 512);
+    assert.ok(Buffer.byteLength(valLong.text, "utf8") <= MAX_LOAD_SKILL_RESULT_BYTES);
+  });
+
+  it("sends a loaded body in the tool result once and keeps the tail empty on later turns", async () => {
+    const requests: ProviderRequest[] = [];
+    const registry = createSkillRegistry([{ name: "brief", description: "Answer briefly.", instructions: "Be very brief." }]);
+    const provider = {
+      id: "mock",
+      async *generate(request: ProviderRequest) {
+        requests.push(request);
+        if (requests.length === 2) {
+          yield { type: "tool_call" as const, call: toolCallContent("call_1", "load_skill", { name: "brief" }) };
+        } else {
+          yield providerDone();
+        }
+      },
+    };
+    const agent = await createAgent({
+      model: { provider: "mock", model: "demo" },
+      packages: [providerPackage("test-provider", [provider])],
+      skills: { add: registry.list() },
+    });
+    const session = await agent.session();
+    const tailSkillsAfterTurn: string[][] = [];
+    for (let turn = 1; turn <= 10; turn += 1) {
+      const result = await session.run(`Turn ${turn}`, { limits: { maxToolRounds: 1 } });
+      assert.equal(result.status, "completed", `turn ${turn}: ${result.error?.message ?? result.status}`);
+      const tails = (session as unknown as { tailSegments: ReadonlyMap<string, Message> }).tailSegments;
+      tailSkillsAfterTurn.push([...tails.keys()].filter((key) => key.startsWith("skill:")));
+    }
+
+    assert.equal(requests.length, 11, "one completion per turn plus the load round");
+    const bodyRequests = requests.map((request) => JSON.stringify(request.messages).includes("Be very brief"));
+    assert.equal(bodyRequests[0], false, "turn 1 has only the catalog");
+    assert.equal(bodyRequests[1], false, "the load request precedes the body");
+    for (let index = 2; index < bodyRequests.length; index += 1) {
+      assert.equal(bodyRequests[index], true, `request ${index + 1} still carries the transcript body`);
+    }
+    assert.ok(
+      tailSkillsAfterTurn.every((keys) => keys.length === 0),
+      `expected no loaded body tail on any turn, got ${JSON.stringify(tailSkillsAfterTurn)}`,
+    );
   });
 });

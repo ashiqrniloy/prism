@@ -17,7 +17,7 @@ Create one agent per configured model/tool/package composition, then create sess
 | `model?: ModelRef` | `"provider/model"` (split on the first `/`) or a `ModelSpec`. Parsed once by `createAgent`; `agent.config.model` is the parsed `ModelSpec`. Required unless the `loop` slot's strategy declares `usesModel: false`; otherwise `createAgent` rejects with `model_required`. There is no default model or provider. See [models.md](models.md). |
 | `principal?: Principal` | Optional opaque host principal (`kind`, `id`, `displayName?`). No default identity is created. |
 | `tools?: { add?: readonly ToolDefinition[] }` | Host tools. A duplicate name (including the kernel's `load_skill`/`search_tools`) fails the run closed. |
-| `skills?: { dirs?; add?; disclosure? }` | Host skills. `dirs` reads through the same reader as `PackageAPI.skills.addDir`; `disclosure` defaults to `progressive`. |
+| `skills?: { dirs?; add?; disclosure? }` | Host skills. `dirs` reads through the same reader as `PackageAPI.skills.addDir`; `disclosure` defaults to `progressive`. A name already taken by a skill with the same `path` and the same `instructions` is a no-op; a different path or body is `skill_conflict`. |
 | `packages` | Explicit package instances; installed packages are not automatically loaded. |
 | `hooks` | Host registrations on the agent's hook bus. |
 | `host` | Optional host ports, including `HostUi`. |
@@ -29,8 +29,32 @@ Create one agent per configured model/tool/package composition, then create sess
 
 Every configured skill is active (roadmap §2.3 has no per-run skill narrowing). Progressive
 disclosure renders a name+description catalog and registers `load_skill`; `eager` renders every
-body each turn and registers no `load_skill`. The catalog is a named `kernel:context.build`
+body each turn and registers no `load_skill`. The progressive catalog is one system message:
+`Skills are task-specific instructions. When a task matches a skill below, call load_skill with its
+name before starting.` followed by one `- <name>: <description>` line per skill. Descriptions are
+truncated at 512 bytes and only the first 64 skills are listed, ending with
+`(N more skills are installed but not listed.)`, so a large description or catalog never fails a
+run. A skill body over the 256 KiB hard cap is rejected when it is registered (`skill_too_large`)
+or skipped by directory discovery instead. The catalog is a named `kernel:context.build`
 registration: `inspect().hooks` lists it, and `disable.hooks: ["kernel:context.build"]` removes it.
+
+The same rule covers all three registration paths (`skills.add`, `skills.dirs`, and a package's
+`skills.register`): discovering one `SKILL.md` twice — a host directory plus a discovery package such
+as `@arnilo/prism-context-files`, or a delegate child that inherits both — registers one skill, while
+reusing a name with another body still fails closed.
+
+In progressive mode `load_skill` returns the header plus the full instructions as its tool result,
+once. Later turns carry that result as part of the transcript, so the body sits in the cached prefix
+instead of being re-appended to every request. Loading the same skill again is a normal result
+(`Skill <name> is already loaded; its instructions are earlier in this conversation.`), not a
+failure.
+
+After compaction drops the tool result, only skills loaded in the current run get their body
+re-attached at the tail. Earlier-run skills leave the loaded set and are named in one line,
+`Previously loaded skills (load again if needed): a, b` (sorted, at most 16 names plus `(+N)`); a
+later `load_skill` returns their full body again. A run resumed from a checkpoint belongs to the
+checkpoint's run, so its restored bodies re-attach as current. The cost is one body copy per load,
+plus one re-attach after a compaction for current-run skills only.
 
 `RunOptions.tools.only` narrows the tool set for one run; an unknown name fails closed, and a
 durable resume intersects the list with the checkpointed grant (the stored wire field keeps the
@@ -146,6 +170,31 @@ The session store is always the resolved `store` slot: a direct `slots.store`, a
 call, never per run, and a slot conflict fails agent creation closed. `AgentConfig.store`,
 `SessionOptions.store` and the per-session store constructors were removed with no alias; a
 config that still carries `store` rejects with a `TypeError` naming `slots.store`.
+
+### Handing a conversation to another agent
+
+`selectTranscript(entries, options)` is the kernel's one way to cut a branch down to something another
+agent, provider, or tool set can read. It accepts branch entries or live `Message[]`
+(`RunEndPayload.history`), walks the branch the way `rebuildSessionContext` does (a compaction entry's
+summary replaces what it covers), and keeps only messages and summaries: `package_state`, `custom`,
+`event`, `suspended_run`, `metadata`, and `label` entries never travel.
+
+```ts
+const slice = selectTranscript(await session.entries(), { lastTurns: 6, maxChars: 24_000 });
+// { summaries, pinned, messages, turns, omittedTurns, truncated }
+```
+
+- **Portable by construction.** Each message keeps its role (`user` or `assistant`) and text only. A tool
+  call becomes `[tool_call <name> <JSON args, first 200 chars>]` in its assistant message; a tool result
+  becomes `[tool_result <name>: <text, first maxToolChars chars (default 2,000)>]` in a user-role message.
+  Thinking blocks, signatures, and provider metadata are dropped; images become `[image omitted]`.
+  An assistant tool call with no result is dropped, so an in-flight call never reaches a consumer as an
+  unmatched `tool_use`. Consecutive same-role messages merge.
+- **Bounds.** Turns (a turn starts at a `user` message) are taken newest first: up to `lastTurns`, or all
+  of them, until `maxChars` is reached. A newest turn that alone exceeds `maxChars` is cut from its oldest
+  end and sets `truncated`. Summaries count toward `maxChars` and are cut last.
+- **`pinned`** messages are rendered by the same rules and always included: charged against `maxChars`
+  first and cut last, and a pinned message that also falls inside the selected turns is not repeated.
 
 ### When `session.opened` fires
 

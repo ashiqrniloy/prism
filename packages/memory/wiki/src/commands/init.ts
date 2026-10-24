@@ -95,7 +95,7 @@ export function createWikiInitCommand(options: WikiExtensionOptions = {}): Packa
             text: `✅ Initialized LLM Wiki at \`${res.wikiRoot}\` (Profile: \`${res.profile}\`, Compiled entities: ${res.compiledEntities}). Skills deployed to \`.agents/skills/\`.`,
           },
         ],
-        metadata: { trust: "untrusted_external", wikiRoot: res.wikiRoot },
+        metadata: { wikiRoot: res.wikiRoot },
       };
     },
   };

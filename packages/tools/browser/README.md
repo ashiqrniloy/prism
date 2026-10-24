@@ -75,7 +75,8 @@ touches no gated `PackageAPI` member.
 - Egress is fail-closed: without `containedProxy` every external request is denied. Playwright
   routing is defense in depth — production DNS/private egress is a host firewall/proxy.
 - Uploads require absolute paths under `uploadRoots`; downloads quarantine with SHA-256/MIME
-  metadata until a host `approveRelease` callback. Snapshots/page text are untrusted external data.
+  metadata until a host `approveRelease` callback. Snapshots/page text are marked `untrusted_external`,
+  so the kernel wraps them in its envelope (`docs/tools.md`).
 - Missing peer or failed launch is a status note and an inert package, never a throw.
 
 ## Example

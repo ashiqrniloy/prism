@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { ToolDefinition } from "@arnilo/prism";
+import { UNTRUSTED_EXTERNAL_TRUST, type ToolDefinition } from "@arnilo/prism";
 import { loadManifest } from "../manifest.js";
 import { Context7Hydrator } from "../search/context7-hydrator.js";
 import { QmdClient } from "../search/qmd-client.js";
@@ -70,7 +70,7 @@ export function createWikiSearchTool(options: WikiExtensionOptions = {}): ToolDe
           },
         ],
         metadata: {
-          trust: "untrusted_external",
+          trust: UNTRUSTED_EXTERNAL_TRUST,
           wikiRoot,
           mode,
           isQmdBacked: true,
