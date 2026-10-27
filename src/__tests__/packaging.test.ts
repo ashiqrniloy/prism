@@ -93,7 +93,9 @@ const packages: Array<{
   { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper", sourceExport: true },
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya", sourceExport: true },
   { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid", sourceExport: true },
+  { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex", sourceExport: true },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go", sourceExport: true },
+  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter", sourceExport: true },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe", sourceExport: true },
   // Pure-manifest family/profile packages (no dist/exports/peer): ship README + changelog + manifest.
   { dir: "packages/tools/work", name: "@arnilo/prism-tools-work", sourceExport: true, isSubpaths: true },
@@ -443,13 +445,23 @@ describe("packaging guard", () => {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort();
-    assert.deepEqual(providerDirs, ["hyper", "laya", "liquid", "opencode-go", "typesafe"]);
+    // A provider is shipped when it has a manifest. Plan 204 Task 4 lands the sign-in client under
+    // packages/providers/openai-codex/src before the shell exists; Task 5 adds the manifest, and this
+    // list grows with it.
+    const shipped = providerDirs.filter((name) => existsSync(join(repoRoot, "packages/providers", name, "package.json")));
+    assert.deepEqual(shipped, ["hyper", "laya", "liquid", "openai-codex", "opencode-go", "openrouter", "typesafe"]);
+    for (const vendor of providerDirs.filter((name) => !shipped.includes(name)))
+      assert.equal(
+        existsSync(join(repoRoot, "packages/providers", vendor, "src/index.ts")),
+        false,
+        `${vendor} has no manifest, so it may not expose a provider entry point`,
+      );
 
     const liveMatrix = JSON.parse(readFileSync(join(repoRoot, "scripts/live-matrix.json"), "utf8")) as {
       suites: Array<{ id: string; status: string }>;
     };
 
-    for (const vendor of providerDirs) {
+    for (const vendor of shipped) {
       const pkgDir = join(repoRoot, "packages/providers", vendor);
       const pkgName = `@arnilo/prism-provider-${vendor}`;
       const entry = packages.find((pkg) => pkg.name === pkgName);
@@ -829,7 +841,7 @@ describe("packaging guard", () => {
   it("0.4 package set — 61 manifests in lockstep, no shims, family roots stay inert", () => {
     const root = readPkg(".");
     const names = packages.map((pkg) => pkg.name).sort();
-    assert.equal(names.length, 45, "45 active packages including root");
+    assert.equal(names.length, 47, "47 active packages including root (OpenRouter and OpenAI Codex restored)");
     assert.ok(names.includes("@arnilo/prism-tools-work"), "work package must be present");
     assert.ok(!names.includes("@arnilo/prism-office"), "office package must be absent");
     // Plan 140 Task 1: the SDK is on its own version line (0.1.x).

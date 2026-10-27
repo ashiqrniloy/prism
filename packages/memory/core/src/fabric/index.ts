@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, opendir, readFile, rename, rm, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { MemoryValidationError } from "../errors.js";
 import { type MemoryLimitsInput, resolveMemoryLimits } from "../limits.js";
 import { recordBlocked } from "../lineage.js";
-import { MemoryValidationError } from "../errors.js";
 import { createSqliteMemoryStores, type SqliteMemoryStores } from "../sqlite/index.js";
 import type {
   MemoryScope,
@@ -36,8 +36,8 @@ import {
   noteRelPath,
   noteTitle,
   provenanceActor,
-  scopeDirectory,
   STATE_FILE,
+  scopeDirectory,
   stateRelPath,
   WORKING_DIRECTORY,
   workingRelPath,
@@ -46,6 +46,7 @@ import { createWriteLock } from "./lock.js";
 import {
   type IndexEntry,
   type LogEntry,
+  type NoteClassifier,
   parseLogFile,
   parseNoteFile,
   parseWorkingFile,
@@ -53,9 +54,11 @@ import {
   renderLogFile,
   renderNoteFile,
   renderWorkingFile,
+  unreadableReason,
 } from "./okf.js";
 
 export { noteRelPath } from "./layout.js";
+
 import {
   atomicWriteFile,
   deserializeGeneration,
@@ -79,9 +82,21 @@ export interface CreateMarkdownMemoryStoresOptions {
   readonly dimensions?: number;
   /** Reconcile batching caps; defaults to the shared memory limits. */
   readonly limits?: MemoryLimitsInput;
+  /**
+   * Names why a parsed note cannot be read by the package that owns its metadata, or returns `undefined`.
+   * A note with `fabric.v` above 1 is always unreadable without this. An unreadable note is indexed and
+   * counted, its file is never rewritten, renamed or moved by this store, and its text stays in the index.
+   */
+  readonly classifyNote?: NoteClassifier;
 }
 
-export interface MarkdownReconcileReport {
+/** Notes the index holds but this version cannot read, by reason. */
+export interface MarkdownUnreadableCounts {
+  readonly unreadable: number;
+  readonly unreadableReasons: Readonly<Record<string, number>>;
+}
+
+export interface MarkdownReconcileReport extends MarkdownUnreadableCounts {
   readonly indexed: number;
   readonly removed: number;
   readonly malformed: number;
@@ -97,6 +112,8 @@ export interface MarkdownMemoryStores {
   close(): Promise<void>;
   /** Full pass: re-index every file, ignoring the cached mtime/size. */
   rebuild(options?: { readonly signal?: AbortSignal }): Promise<MarkdownReconcileReport>;
+  /** Notes the index holds but this version cannot read, by reason, from the last pass. */
+  unreadable(): MarkdownUnreadableCounts;
   /** Incremental pass: only new or changed files, plus externally removed ones. */
   reconcile(options?: { readonly signal?: AbortSignal }): Promise<MarkdownReconcileReport>;
   /**
@@ -172,6 +189,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
   const lock = createWriteLock(root);
   const indexPath = options.index?.path !== undefined ? resolve(root, options.index.path) : join(root, INDEX_DB_FILE);
   const fileMapPath = join(root, FILE_MAP_FILE);
+  const classifyNote = options.classifyNote;
 
   let force = !existsSync(indexPath);
   let sqlite: SqliteMemoryStores;
@@ -264,6 +282,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     content: string,
   ): IndexedFile {
     const flags = fabricFlags(record);
+    const unreadable = unreadableReason(record);
     return {
       path: relPath,
       id: record.id,
@@ -276,7 +295,19 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       description: noteDescription(record.text),
       dir: archived ? `archive/${directoryForKind(kind)}` : directoryForKind(kind),
       ...(flags.length === 0 ? {} : { flags }),
+      ...(unreadable === undefined ? {} : { unreadable }),
     };
+  }
+
+  function unreadableCounts(): MarkdownUnreadableCounts {
+    const unreadableReasons: Record<string, number> = {};
+    let unreadable = 0;
+    for (const entry of Object.values(fileMap)) {
+      if (entry.unreadable === undefined) continue;
+      unreadable += 1;
+      unreadableReasons[entry.unreadable] = (unreadableReasons[entry.unreadable] ?? 0) + 1;
+    }
+    return { unreadable, unreadableReasons };
   }
 
   async function regenerateIndex(): Promise<void> {
@@ -328,6 +359,8 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     let rel = base(false);
     const occupant = fileMap[rel];
     if ((occupant && occupant.id !== record.id) || (!occupant && existsSync(join(root, rel)))) rel = base(true);
+    // A note a newer version wrote stays where it is: this store never renames what it cannot read.
+    if (existing && unreadableReason(record) !== undefined) rel = existing.path;
     const content = renderNoteFile(record);
     if (existing && existing.path !== rel) {
       const to = join(root, rel);
@@ -346,14 +379,25 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
     const newlyFlagged = flags.length > 0 && !sameFlags(flags, existing?.flags);
     const auditVerb = typeof record.metadata?.auditVerb === "string" ? record.metadata.auditVerb : undefined;
     if (!existing)
-      logs.push({ date: today, verb: auditVerb ?? (newlyFlagged ? "flagged" : "created"), id: record.id, ...(by === undefined ? {} : { by }) });
+      logs.push({
+        date: today,
+        verb: auditVerb ?? (newlyFlagged ? "flagged" : "created"),
+        id: record.id,
+        ...(by === undefined ? {} : { by }),
+      });
     else if (current !== content)
-      logs.push({ date: today, verb: auditVerb ?? (newlyFlagged ? "flagged" : "updated"), id: record.id, ...(by === undefined ? {} : { by }) });
+      logs.push({
+        date: today,
+        verb: auditVerb ?? (newlyFlagged ? "flagged" : "updated"),
+        id: record.id,
+        ...(by === undefined ? {} : { by }),
+      });
   }
 
   async function repositionFile(scope: Required<MemoryScope>, id: string): Promise<void> {
     const existing = findFileById(id);
     if (!existing) return;
+    if (existing.unreadable !== undefined) return;
     const record = (await sqlite.vectorStore.getByIds(scope, [id]))[0];
     if (!record || isIndexOnlyKind(fabricKind(record))) {
       if (!record) {
@@ -417,7 +461,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
         if (!forceFull && known && known.mtimeMs === info.mtimeMs && known.size === info.size) continue;
         try {
           const content = await readFile(abs, "utf8");
-          const record = parseNoteFile(content, rel);
+          const record = parseNoteFile(content, rel, classifyNote);
           await sqlite.vectorStore.upsert(
             [record.embedding.length === 0 && record.embedderId !== undefined ? withoutEmbedderId(record) : record],
             {
@@ -457,7 +501,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       await writeFileMap(fileMapPath, fileMap);
       await appendLog(logs);
       await regenerateIndex();
-      return report;
+      return { ...report, ...unreadableCounts() };
     });
   }
 
@@ -677,6 +721,7 @@ export async function createMarkdownMemoryStores(options: CreateMarkdownMemorySt
       await lock.drain();
       sqlite.close();
     },
+    unreadable: unreadableCounts,
     rebuild: (rebuildOptions = {}) => reconcileInternal(true, rebuildOptions.signal),
     reconcile: (reconcileOptions = {}) => reconcileInternal(false, reconcileOptions.signal),
     async updateResourceFile(scope, name, update) {

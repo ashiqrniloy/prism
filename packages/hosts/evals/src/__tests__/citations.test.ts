@@ -36,7 +36,7 @@ test("citation integrity scorer is invariant 0 on revoked ACL / forged hash even
   });
   assert.equal(revoked.score, 0);
   assert.equal(revoked.reason, "revoked_acl");
-  assert.equal(revoked.metadata?.invariant, true);
+  assert.equal(integrity.invariant, true);
 
   const forged = await integrity.score({
     result,
@@ -66,5 +66,5 @@ test("citation integrity scorer is invariant 0 on revoked ACL / forged hash even
     }),
   });
   assert.equal(report.aggregate.invariantsPassed, false);
-  assert.throws(() => assertEvaluationThreshold(report, { minimumMean: 0.4 }), EvalThresholdError);
+  assert.throws(() => assertEvaluationThreshold(report, { minimumMacroMean: 0.4 }), EvalThresholdError);
 });

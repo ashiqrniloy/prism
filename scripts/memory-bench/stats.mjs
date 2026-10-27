@@ -1,17 +1,8 @@
 import { improvementDelta, METRIC_VERSION, metricDefinition, metricValue } from "./metrics.mjs";
 
-/** Two-sided exact binomial McNemar, including the no-discordance case. */
-export function mcnemar(aOnly, bOnly) {
-  const n = aOnly + bOnly;
-  if (!n) return 1;
-  let logTerm = -n * Math.log(2),
-    sum = 0;
-  for (let k = 0; k <= Math.min(aOnly, bOnly); k++) {
-    sum += Math.exp(logTerm);
-    logTerm += Math.log(n - k) - Math.log(k + 1);
-  }
-  return Math.min(1, 2 * sum);
-}
+import { mcnemarExact as mcnemar } from "@arnilo/prism-evals";
+export { mcnemar };
+
 function randomSource(seed) {
   if (!Number.isSafeInteger(seed)) throw new Error("Statistics requires an integer seed");
   let state = seed >>> 0;

@@ -69,6 +69,21 @@ describe("retry policy", () => {
     assert.equal(isTransientErrorInfo({ message: "temporary unavailable" }), true);
   });
 
+  it("a quota 429 is never retried while a rate limited 429 still is", async () => {
+    const policy = createDefaultRetryPolicy({ maxAttempts: 3, baseDelayMs: 1 });
+    const quota = {
+      message: "openai-codex: 429 subscription_sharing_usage_limit_exceeded",
+      code: 429,
+      failureClass: "quota" as const,
+    };
+    assert.equal(isTransientErrorInfo(quota), false, "quota is a plan state, not congestion");
+    assert.deepEqual(await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: quota }), { retry: false });
+
+    const limited = { message: "429 rate limit", code: 429, failureClass: "rate_limited" as const };
+    assert.equal(isTransientErrorInfo(limited), true, "an ordinary 429 keeps backing off");
+    assert.equal((await policy.decide({ sessionId: "s1", runId: "r1", attempt: 1, error: limited })).retry, true);
+  });
+
   it("provider error preserves safe error code for retry without leaking secrets", () => {
     const event = providerError(Object.assign(new Error("failed token-123"), { code: 429 }), ["token-123"]);
     const info = errorToErrorInfo({ message: "timeout token-123", code: "ETIMEDOUT" }, ["token-123"]);

@@ -1,5 +1,5 @@
-import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
+import assert from "node:assert/strict";
 import type { AgentEventRecord, OwnershipScope, PersistencePage, ProductionPersistenceStore, RunRecord } from "@arnilo/prism";
 import { createSecretRedactor, type RunFeedbackStore } from "@arnilo/prism";
 import { createMemoryRunFeedbackStore } from "@arnilo/prism-store-codecs";
@@ -75,9 +75,12 @@ describe("datasetFromRuns", () => {
         assistantEvent("e4", "run_b", "s1", "answer B"),
       ],
     );
-    const before = defineDataset({ id: "d", version: "1", items: [] });
+    const before = defineDataset({ id: "d", version: "1", items: [], canary: "curation-canary", metadata: { origin: "test" } });
     const result = await datasetFromRuns({ runIds: ["run_b", "run_a"], dataset: before, store: fake, ownership: OWN });
     assert.equal(result.added, 2);
+    assert.equal(result.dataset.canary, "curation-canary");
+    assert.deepEqual(result.dataset.metadata, { canary: "curation-canary", origin: "test" });
+    assert.notEqual(result.dataset.contentHash, before.contentHash);
     assert.deepEqual(result.skipped, []);
     assert.equal(result.version, "2");
     assert.deepEqual(
@@ -85,6 +88,7 @@ describe("datasetFromRuns", () => {
       ["run_a", "run_b"],
     );
     assert.deepEqual((result.dataset.items[0].input as { content: readonly unknown[] }).content, [{ type: "text", text: "question" }]);
+    assert.equal(result.dataset.items[0].label?.source, "curated");
     assert.equal(result.dataset.items[0].expected, undefined); // no feedback configured → no fabricated expected
     assert.equal((result.dataset.items[0].metadata as { output: string }).output, "answer A");
     assert.equal(Object.isFrozen(result.dataset), true);
@@ -134,6 +138,79 @@ describe("datasetFromRuns", () => {
     assert.equal(skip.get("run_foreign"), "ownership mismatch");
     assert.equal(skip.get("run_empty"), "empty output");
     assert.equal(skip.get("s_none"), "missing run");
+  });
+
+  it("recurating_existing_run_skips_not_throws", async () => {
+    const fake = store(
+      [run("run_old", "s1"), run("run_new", "s1")],
+      [
+        userEvent("e1", "run_old", "s1"),
+        assistantEvent("e2", "run_old", "s1", "old answer"),
+        userEvent("e3", "run_new", "s1"),
+        assistantEvent("e4", "run_new", "s1", "new answer"),
+      ],
+    );
+    // The run was already curated in a previous version: the same ids come back around.
+    const before = defineDataset({ id: "d", version: "3", items: [{ id: "run_old", input: "old", expected: "old" }] });
+    const result = await datasetFromRuns({ runIds: ["run_old", "run_new"], dataset: before, store: fake, ownership: OWN });
+    assert.equal(result.added, 1);
+    assert.equal(result.version, "4");
+    assert.deepEqual(
+      result.dataset.items.map((item) => item.id),
+      ["run_old", "run_new"],
+      "the existing item is not replaced or duplicated",
+    );
+    assert.deepEqual((result.dataset.items[0] as { input: unknown }).input, "old", "the curated label survives recap");
+    assert.deepEqual(result.skipped, [{ id: "run_old", reason: "already in dataset" }]);
+  });
+
+  it("recurating only existing runs leaves dataset and version unchanged", async () => {
+    const fake = store([run("run_old", "s1")], [userEvent("e1", "run_old", "s1"), assistantEvent("e2", "run_old", "s1", "answer")]);
+    const before = defineDataset({ id: "d", version: "3", items: [{ id: "run_old", input: "old", expected: "old" }] });
+    const result = await datasetFromRuns({ runIds: ["run_old"], dataset: before, store: fake, ownership: OWN });
+    assert.equal(result.dataset, before, "the same immutable dataset comes back");
+    assert.equal(result.version, "3");
+    assert.equal(result.added, 0);
+    assert.deepEqual(result.skipped, [{ id: "run_old", reason: "already in dataset" }]);
+  });
+
+  it("skips a custom toItem id that collides with an existing item", async () => {
+    const fake = store([run("run_1", "s1")], [userEvent("e1", "run_1", "s1"), assistantEvent("e2", "run_1", "s1", "answer")]);
+    const before = defineDataset({ id: "d", version: "1", items: [{ id: "shared", input: "old" }] });
+    const result = await datasetFromRuns({
+      runIds: ["run_1"],
+      dataset: before,
+      store: fake,
+      ownership: OWN,
+      toItem: () => ({ id: "shared", input: "new" }),
+    });
+    assert.equal(result.added, 0);
+    assert.equal(result.dataset, before);
+    assert.deepEqual(result.skipped, [{ id: "shared", reason: "already in dataset" }]);
+  });
+
+  it("non_numeric_version_increments_cleanly", async () => {
+    const fake = store(
+      [run("run_1", "s1"), run("run_2", "s1")],
+      [
+        userEvent("e1", "run_1", "s1"),
+        assistantEvent("e2", "run_1", "s1", "one"),
+        userEvent("e3", "run_2", "s1"),
+        assistantEvent("e4", "run_2", "s1", "two"),
+      ],
+    );
+    const curate = async (version: string) =>
+      await datasetFromRuns({
+        runIds: ["run_1"],
+        dataset: defineDataset({ id: "d", version, items: [] }),
+        store: fake,
+        ownership: OWN,
+      });
+    assert.equal((await curate("v1")).version, "v1.1");
+    assert.equal((await curate("v1.1")).version, "v1.2");
+    assert.equal((await curate("v1.9")).version, "v1.10");
+    assert.equal((await curate("2026-10-26")).version, "2026-10-26.1");
+    assert.equal((await curate("1")).version, "2");
   });
 
   it("leaves the prior dataset version untouched", async () => {
@@ -215,6 +292,8 @@ describe("datasetFromRuns feedback-to-expected mapping", () => {
     assert.equal(result.added, 2);
     assert.equal(queries, 1); // one bounded feedback query per batch
     const byId = new Map(result.dataset.items.map((item) => [item.id, item]));
+    assert.equal(byId.get("run_1")?.label?.source, "human");
+    assert.equal(byId.get("run_2")?.label?.source, "curated");
     assert.equal(byId.get("run_1")?.expected, "correct gold"); // latest feedback record wins
     assert.equal(byId.get("run_2")?.expected, undefined); // feedback-absent → omitted, not fabricated
   });

@@ -141,7 +141,7 @@ function statusCommand(deps: MemoryCommandDeps): PackageCommand {
           messageTokens: deps.config.observer.messageTokens,
           observationTokens: deps.config.reflector.observationTokens,
           targetTokens: deps.config.dropper.targetTokens,
-          compactAfterTokens: deps.config.context.compactAfterTokens,
+          compactAt: deps.config.context.compactAt,
         },
         inFlight: status.inFlight,
         ...(status.lastError === undefined ? {} : { lastError: status.lastError }),

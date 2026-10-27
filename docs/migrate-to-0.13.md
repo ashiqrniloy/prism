@@ -71,7 +71,7 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 
 | 0.12 package | 0.13 package(s) |
 | --- | --- |
-| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, liquid, opencode-go, typesafe, laya}` (the 17 other 0.3 vendors are not shipped in 0.13.0; write a package on `@arnilo/prism/provider-kit`) |
+| `@arnilo/prism-providers` | `@arnilo/prism-provider-{hyper, liquid, openai-codex, opencode-go, openrouter, typesafe, laya}` (the 16 other 0.3 vendors are not shipped in 0.13.0; for a ChatGPT plan use `openai-codex`, otherwise write a package on `@arnilo/prism/provider-kit`) |
 | `@arnilo/prism-core` | the kernel `@arnilo/prism` plus the native packages below |
 | `@arnilo/prism-coding-tools` | `@arnilo/prism-tools-coding`, `@arnilo/prism-tools-openapi`, `@arnilo/prism-tools-computer-use`, `@arnilo/prism-approval`, `@arnilo/prism-devtools` |
 | `@arnilo/prism-web-tools` | `@arnilo/prism-tools-web`, `@arnilo/prism-tools-browser` |
@@ -109,6 +109,7 @@ The 0.12 config fields and registries are removed, not aliased. Each maps to a h
 | `CommandDefinition`, `CommandExecutionContext`, `CommandDrivers`, `CommandWorkflowRun`, `CommandResult` | `PackageCommand` / `PackageCommandContext` — a package registers `{ name, description, args?, run(args, { session, host, agent }) }`, and the host-driver seam (`startRun`, `startWorkflow`, `steer`) is gone |
 | `SpeechProvider`, `TranscriptionProvider`, `BatchJobsProvider`, `ModerationProvider`, `RealtimeSession`, `VideoGenerationProvider` | deleted from kernel; implement vendor-specific APIs in provider or host packages |
 | Subpaths `./node/config`, `./node/settings`, `./node/agent-definitions`, `./node/contribution-discovery`, `./testing/agent-event-source-conformance`, `./testing/persistence-schema`, `./testing/feedback` | deleted; `./provider-kit`, `./driver-kit`, `./manifest`, and `./testing` remain |
+| Memory internals that were never documented: prompts, `DEFAULT_*` / `MAX_*` / `MIN_*` / `HARD_*` tuning constants, scoring and eviction helpers, the lifecycle / directory / core builders, the observational workers, settings, flush, commands and compactor, and core's cursor codecs and directory scan (`@arnilo/prism-memory-fabric`, `-core`, `-observational` roots) | no longer exported; the stable set is listed under `## Compatibility` in each package README |
 
 ## Retired interception mechanisms → hooks
 

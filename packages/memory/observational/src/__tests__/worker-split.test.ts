@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { ModelProvider, SessionEntry } from "@arnilo/prism";
 import { providerDone } from "@arnilo/prism";
-import { DEFAULT_OBSERVER_INSTRUCTION, type MemoryObservation, runObserver } from "../index.js";
+import { type MemoryObservation } from "../index.js";
+import { DEFAULT_OBSERVER_INSTRUCTION, runObserver } from "../workers/observer.js";
 import { clientFor, memoryModel } from "./helpers.js";
 
 const source: SessionEntry = {

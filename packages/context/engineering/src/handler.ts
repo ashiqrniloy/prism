@@ -26,8 +26,8 @@ import { AttentionBudgetError, compileAttention, type AttentionCompilation, type
 import type { AttentionCompiler } from "./attention-types.js";
 import { applyDraftBudget, ContextBudgetError } from "./budget.js";
 import type { ContextEngineeringConfig, ResolvedContextEngineeringConfig } from "./config.js";
-import { foldToolResultHistory, resolveToolResultFold, type ResolvedToolResultFoldOptions, type ToolResultFoldInput } from "./fold.js";
-import { readActivatedNames, readAttentionState, readLedger, writeFrontier } from "./state.js";
+import { foldToolResultHistory, planToolResultFoldBatch, resolveToolResultFold, type ResolvedToolResultFoldOptions, type ToolResultFoldInput } from "./fold.js";
+import { readActivatedNames, readAttentionState, readFoldFrontier, readLedger, writeFoldFrontier, writeFrontier } from "./state.js";
 import type { SearchToolsWiring } from "./search-tools.js";
 import { selectDisclosedTools } from "./tool-search.js";
 
@@ -39,6 +39,8 @@ export interface ContextEngineeringHandlerDeps {
   readonly config: ResolvedContextEngineeringConfig;
   /** Sticky frontier, one value per session. */
   readonly frontierState: SessionState<JsonObject>;
+  /** Batch fold frontier (cleared tool-call ids), its own key and value. */
+  readonly foldFrontierState: SessionState<JsonObject>;
   /** Folded bodies, one append per newly summarized result. */
   readonly foldLog: SessionLog<JsonValue>;
   /** Activated tool names, one value per session. */
@@ -67,14 +69,23 @@ export function createContextEngineeringHandler(deps: ContextEngineeringHandlerD
       : undefined;
 
     // --- Stage 1: fold old tool results. Provider view only; the store keeps the full result.
+    // Batch mode (clearAtLeastTokens > 0) folds already-cleared rows every request, and pending
+    // rows only once their combined size covers a cache miss, so the prefix moves in batches.
+    const cleared = fold && fold.clearAtLeastTokens > 0 ? readFoldFrontier(deps.foldFrontierState.get(session)) : undefined;
+    const selection =
+      fold && cleared ? planToolResultFoldBatch(draft.messages, fold, { turn, clearedToolCallIds: cleared }) : undefined;
     const foldedRows: readonly Message[] = fold
       ? await foldToolResultHistory(draft.messages, fold, {
           sessionId: session.id,
           runId: context.runId,
           turn,
           ...(context.signal ? { signal: context.signal } : {}),
+          ...(selection ? { restrictToToolCallIds: selection.foldToolCallIds } : {}),
         })
       : draft.messages;
+    if (selection && selection.advance.length > 0) {
+      await deps.foldFrontierState.set(session, writeFoldFrontier([...cleared!, ...selection.advance]));
+    }
     // The fold returns a new array even when it replaced nothing, so compare row identity: a turn
     // that folded nothing must report "no change" and keep the controller's fast path.
     const folded = sameRows(draft.messages, foldedRows) ? draft.messages : foldedRows;

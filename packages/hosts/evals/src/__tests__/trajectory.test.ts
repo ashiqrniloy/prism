@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import type { Agent, RunResult, } from "@arnilo/prism";
+import type { Agent, RunResult, ToolInfo } from "@arnilo/prism";
 import type { ExecutionStep, ExecutionTimeline } from "../types.js";
 import { defineDataset } from "../dataset.js";
 import { runExperiment } from "../experiment.js";
@@ -46,9 +46,9 @@ function makeTimeline(steps: ExecutionStep[], overrides: Partial<ExecutionTimeli
   };
 }
 
-function makeToolStep(order: number, name: string, input?: unknown): ExecutionStep {
+function makeToolStep(order: number, name: string, input?: unknown, toolCallId?: string): ExecutionStep {
   return {
-    id: `tool-${order}`,
+    id: toolCallId ? `tool:${toolCallId}` : `tool-${order}`,
     kind: "tool",
     name,
     order,
@@ -56,6 +56,26 @@ function makeToolStep(order: number, name: string, input?: unknown): ExecutionSt
     startedAt: "2026-01-01T00:00:00.000Z",
     finishedAt: "2026-01-01T00:00:00.100Z",
     ...(input !== undefined ? { input } : {}),
+    ...(toolCallId ? { metadata: { toolCallId } } : {}),
+  };
+}
+
+/** A settled approval step, as plan 197 Task 2 projects `decision.resolved`. */
+function makeApprovalStep(
+  order: number,
+  status: "approved" | "denied" | "suspended",
+  toolCallId?: string,
+  extra: Partial<ExecutionStep> = {},
+): ExecutionStep {
+  return {
+    id: `hitl:${order}`,
+    kind: "hitl",
+    name: "approval",
+    order,
+    status,
+    startedAt: "2026-01-01T00:00:00.000Z",
+    metadata: { ...(toolCallId ? { toolCallId } : {}), via: "inline" },
+    ...extra,
   };
 }
 
@@ -185,18 +205,18 @@ test("good answer after forbidden tool -> invariant 0; aggregate fails threshold
       scoredCount: 2,
       skippedCount: 0,
       failedCount: 0,
-      meanScore: 0.5, // (1.0 + 0.0) / 2
-      scoresByScorer: {
-        text_quality: { count: 1, mean: 1.0 },
-        no_forbidden_tool: { count: 1, mean: 0.0 },
+      macroMean: 0.5, // (1.0 + 0.0) / 2
+      scorers: {
+        text_quality: { items: 1, records: 1, mean: 1.0, passRate: 1, method: "single_item" as const },
+        no_forbidden_tool: { items: 1, records: 1, mean: 0.0, passRate: 0, method: "single_item" as const },
       },
       invariantsPassed: false,
     },
   };
 
-  // Threshold check must fail because the hard invariant failed, even if minimumMean is lower
+  // Threshold check must fail because the hard invariant failed, even if minimumMacroMean is lower
   assert.throws(
-    () => assertEvaluationThreshold(mockReport, { minimumMean: 0.4 }),
+    () => assertEvaluationThreshold(mockReport, { minimumMacroMean: 0.4 }),
     (err: unknown) => {
       assert.ok(err instanceof EvalThresholdError);
       assert.ok(err.message.includes("hard invariant failed"));
@@ -221,17 +241,10 @@ test("required ordering; missing/stale approval-before-effect -> 0", async () =>
   assert.equal(resUnapproved.score, 0);
   assert.ok(resUnapproved.reason?.includes("without prior approval"));
 
-  // 2. Approved: HITL step appears before the effect
+  // 2. Approved: an `approved` HITL step for the same tool call precedes the effect
   const approvedTimeline = makeTimeline([
-    {
-      id: "hitl-0",
-      kind: "hitl",
-      name: "manager_review",
-      order: 0,
-      status: "succeeded",
-      startedAt: "2026-01-01T00:00:00.000Z",
-    },
-    makeToolStep(1, "execute_refund", { amount: 50 }),
+    makeApprovalStep(0, "approved", "c1"),
+    makeToolStep(1, "execute_refund", { amount: 50 }, "c1"),
   ]);
   const resApproved = await approvalScorer.score({
     result: makeRunResult(),
@@ -241,15 +254,8 @@ test("required ordering; missing/stale approval-before-effect -> 0", async () =>
 
   // 3. Stale/Late approval: approval appears AFTER the effect
   const lateApprovalTimeline = makeTimeline([
-    makeToolStep(0, "execute_refund", { amount: 50 }),
-    {
-      id: "hitl-1",
-      kind: "hitl",
-      name: "manager_review",
-      order: 1,
-      status: "succeeded",
-      startedAt: "2026-01-01T00:00:01.000Z",
-    },
+    makeToolStep(0, "execute_refund", { amount: 50 }, "c1"),
+    makeApprovalStep(1, "approved", "c1"),
   ]);
   const resLate = await approvalScorer.score({
     result: makeRunResult(),
@@ -388,7 +394,7 @@ test("default timeline: off experiment JSON comparable to pre-change fixture", a
   assert.equal(report.status, "succeeded");
   assert.equal(report.items.length, 1);
   assert.equal(report.evaluations.length, 1);
-  assert.equal(report.aggregate.meanScore, 1);
+  assert.equal(report.aggregate.macroMean, 1);
   // Evaluated without needing a timeline
   assert.equal(report.aggregate.invariantsPassed, undefined);
 });
@@ -495,4 +501,118 @@ test("error class scorer flags denied error codes", async () => {
   });
   assert.equal(resDenied.score, 0);
   assert.ok(resDenied.reason?.includes("ERR_SECURITY_DENIED"));
+});
+
+test("error class scores zero without a timeline instead of passing", async () => {
+  const errorScorer = createErrorClassScorer();
+  const missing = await errorScorer.score({ result: makeRunResult() });
+  assert.equal(missing.score, 0, "no evidence is not a pass");
+  assert.match(missing.reason ?? "", /no timeline/);
+  assert.deepEqual(errorScorer.requires, ["timeline"]);
+  assert.equal(errorScorer.invariant, false, "a general error check is not a deny-list invariant");
+});
+
+test("hard checks declare invariance statically", () => {
+  assert.equal(createNoLoopScorer().invariant, true);
+  assert.equal(createErrorClassScorer({ deny: ["ERR_DENIED"] }).invariant, true);
+  assert.equal(createErrorClassScorer().invariant, false, "any-failure is a quality signal, not a deny-list rule");
+  assert.equal(createToolCallMatchScorer({ mode: "superset", expected: [], deny: ["drop_database"] }).invariant, true);
+  assert.equal(createToolCallMatchScorer({ mode: "unordered", expected: [] }).invariant, false);
+  assert.equal(createToolCallMatchScorer({ mode: "unordered", expected: [], invariant: true }).invariant, true);
+  assert.equal(createStepBudgetScorer({ maxTurns: 2 }).invariant, undefined);
+  assert.equal(createSchemaScorer({ schema: {} }).invariant, undefined);
+});
+
+// ─── Approval-before-effect correlation (plan 197 Task 3) ────────────────────
+
+function toolInfo(name: string, effects: readonly ("read" | "write" | "execute" | "network" | "external")[]): ToolInfo {
+  return { name, description: name, effects, package: "host" };
+}
+
+test("approval_denied_on_resume_fails_effect", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("write_record", ["write"])] });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeApprovalStep(0, "denied", "c1"), makeToolStep(1, "write_record", {}, "c1")]),
+  });
+  assert.equal(res.score, 0);
+  assert.match(res.reason ?? "", /denied/);
+  assert.equal(scorer.invariant, true);
+});
+
+test("approval_for_other_call_does_not_cover_effect", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("write_record", ["write"])] });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeApprovalStep(0, "approved", "c1"), makeToolStep(1, "write_record", {}, "c2")]),
+  });
+  assert.equal(res.score, 0);
+  assert.equal(res.metadata?.toolCallId, "c2");
+});
+
+test("guardrail_allow_is_not_approval", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("write_record", ["write"])] });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([
+      { id: "g", kind: "guardrail", name: "policy", order: 0, status: "succeeded", startedAt: "2026-01-01T00:00:00.000Z" },
+      makeToolStep(1, "write_record", {}, "c1"),
+    ]),
+  });
+  assert.equal(res.score, 0);
+  assert.match(res.reason ?? "", /without prior approval/);
+});
+
+test("inline_approved_effect_passes", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("write_record", ["write"])] });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeApprovalStep(0, "approved", "c1"), makeToolStep(1, "write_record", {}, "c1")]),
+  });
+  assert.equal(res.score, 1);
+});
+
+test("read_only_tool_needs_no_approval_when_tools_given", async () => {
+  const scorer = createApprovalBeforeEffectScorer({
+    tools: [toolInfo("search", ["read"]), toolInfo("write_record", ["write"])],
+  });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeToolStep(0, "search", { q: "x" })]),
+  });
+  assert.equal(res.score, 1);
+});
+
+test("unknown_tool_counts_as_effectful", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("search", ["read"])] });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeToolStep(0, "mail.send", {})]),
+  });
+  assert.equal(res.score, 0);
+  assert.equal(res.metadata?.unapprovedTool, "mail.send");
+});
+
+test("approval_only_covered_without_tools_checks_every_tool", async () => {
+  const scorer = createApprovalBeforeEffectScorer();
+  const ok = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeApprovalStep(0, "approved", "c1"), makeToolStep(1, "search", {}, "c1")]),
+  });
+  assert.equal(ok.score, 1);
+  const bad = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeToolStep(0, "search", {}, "c1")]),
+  });
+  assert.equal(bad.score, 0);
+});
+
+test("approval_still_suspended_fails_effect", async () => {
+  const scorer = createApprovalBeforeEffectScorer({ tools: [toolInfo("write_record", ["write"])] });
+  const res = await scorer.score({
+    result: makeRunResult(),
+    timeline: makeTimeline([makeApprovalStep(0, "suspended", "c1"), makeToolStep(1, "write_record", {}, "c1")]),
+  });
+  assert.equal(res.score, 0);
+  assert.match(res.reason ?? "", /still suspended/);
 });

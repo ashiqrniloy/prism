@@ -224,3 +224,20 @@ test("calibration_does_not_promote_sparse_or_unaudited_bins_to_defaults", () => 
   );
   assert.equal(audited.defaultEligible, true);
 });
+
+test("bench_fabric_x_tools_is_the_preset", async () => {
+  const { resolveMemoryFabricConfig } = await import("@arnilo/prism-memory-fabric");
+  const { BENCH_SCOPES } = await import("./bench-scope.mjs");
+  // The 188.10 Task 9 `fabric-x-tools` arm as it was spelled before the preset existed.
+  const accepted = { retrieval: "lexical", inject: { query: "task", kinds: ["exchange"] }, scopes: BENCH_SCOPES, exchanges: {} };
+  for (const config of ["fabric-x", "fabric-x-tools"]) {
+    const arm = memoryConfigs({ config }).fabric;
+    assert.equal(arm.preset, "conversational", `${config} is expressed as the preset`);
+    const { preset, ...resolved } = resolveMemoryFabricConfig(arm);
+    assert.equal(preset.name, "conversational");
+    assert.deepEqual(resolved, resolveMemoryFabricConfig(accepted), `${config} resolves to the accepted arm`);
+  }
+  // An ablation of one nested key starts from the preset's field, as the arm did before the preset.
+  const ablated = memoryConfigs({ config: "fabric-x-tools", ablate: ["fabric.inject.budgetTokens=1200"] }).fabric;
+  assert.deepEqual(ablated.inject, { query: "task", kinds: ["exchange"], budgetTokens: 1200 });
+});

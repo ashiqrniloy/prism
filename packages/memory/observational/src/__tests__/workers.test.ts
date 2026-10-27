@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import type { ModelProvider, Message, ProviderEvent, ProviderRequest, SessionEntry, ToolDefinition } from "@arnilo/prism";
 import { providerDone, providerTextDelta, providerThinkingDelta, providerToolCall, toolCallContent } from "@arnilo/prism";
 import { ObservationalMemoryError, ObservationalMemoryLimitError } from "../errors.js";
-import { type MemoryObservation, runDropper, runObserver, runReflector } from "../index.js";
+import { type MemoryObservation } from "../index.js";
+import { runDropper } from "../workers/dropper.js";
+import { runObserver } from "../workers/observer.js";
+import { runReflector } from "../workers/reflector.js";
 import { runMemoryWorkerLoop } from "../worker-loop.js";
 import { clientFor } from "./helpers.js";
 

@@ -102,6 +102,12 @@ console.log(error.message);
 
 ### Subscription OAuth eligibility
 
+A package that refreshes tokens at request time persists the rotated record through
+`PackageAPI.credentials.store`/`delete`, gated by the `credentials:write` capability. The kernel refuses
+`env:` refs (`CredentialRefNotWritableError`, `credential_ref_unsupported`) and a slot with no write support
+(`CredentialStoreUnavailableError`, `credential_store_unavailable`), and adds every written value to the
+agent's secret set. See [Packages](packages.md).
+
 First-party subscription OAuth is explicit and host-invoked: OpenAI Codex (`createOpenAICodexOAuthProvider()`) and xAI SuperGrok / X Premium (`createXaiOAuthProvider()`). Hosts own login UI and may use `createOAuthCredentialStoreAdapter()` for deliberately selected durable storage. Do not import `~/.grok` or grok-cli auth files.
 
 Anthropic and Google provider packages are API-key-only. Do not scrape or import Claude Code/Gemini CLI credential files, setup tokens, environment values, or browser sessions, and do not route a user's Claude.ai/Gemini subscription through Prism. Anthropic states that developers building products must use Claude Console API keys or a supported cloud provider and may not offer Claude.ai login or route Free/Pro/Max credentials ([legal and compliance](https://docs.anthropic.com/en/docs/claude-code/legal-and-compliance)). Gemini CLI states that third-party software using its OAuth to access backend services violates applicable terms; its FAQ names Vertex AI or Google AI Studio API keys as the supported third-party path ([terms](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/tos-privacy.md), [FAQ](https://github.com/google-gemini/gemini-cli/blob/main/docs/resources/faq.md)).
@@ -122,7 +128,7 @@ A future provider-local OAuth adapter needs published permission for third-party
 
 ## Related APIs
 
-- [Public contracts](packages.md): `CredentialRequest`, `Credential`, `CredentialResolver`, `CredentialResolverSource`, `OAuthLoginCallbacks`, `OAuthCredentials`, `OAuthProvider`, and `ErrorInfo`.
+- [Public contracts](packages.md): `CredentialRequest`, `Credential`, `CredentialResolver`, `CredentialResolverSource`, `OAuthCredentials`, and `ErrorInfo`.
 - [Provider layer](provider-kit.md): `providerError()` uses `errorToErrorInfo()` for redacted provider error events.
 - [LLM compaction package](../packages/memory/compaction/README.md): resolves optional summary-provider credentials per compaction call and redacts exact known values.
 - OpenAI-compatible provider: resolves API keys per request and redacts known values from adapter errors.

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { caseConclusionsNotProcedures, createMemory, createMemoryFabric, createMemoryWorkingStore } from "../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../index.js";
+import { caseConclusionsNotProcedures } from "../invariants.js";
 
 /**
  * 072-style invariant fixture, hermetic (hash embedder, in-memory stores, no provider).
@@ -33,7 +34,6 @@ test("072 invariant: a case conclusion promoted into a procedure scores 0", asyn
   const promoted = (await fabric.recall("4711 03:12", { kinds: ["procedure"] })).hits.map((hit) => hit.content);
   const invariant = caseConclusionsNotProcedures({ procedures: promoted }, caseTokens);
   assert.equal(promoted.length, 2);
-  assert.equal(invariant.metadata.invariant, true);
   assert.equal(invariant.score, 0);
 
   // The split is enforced by kind, not by the query: untyped recall never surfaces a procedure,

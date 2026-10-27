@@ -14,7 +14,7 @@ import {
 import type { ModelJudgeOptions, Scorer } from "./types.js";
 import { validateScoreResult } from "./util.js";
 
-function bounded(value: number | undefined, fallback: number, hard: number, name: string): number {
+export function bounded(value: number | undefined, fallback: number, hard: number, name: string): number {
   const selected = value ?? fallback;
   if (!Number.isInteger(selected) || selected < 1 || selected > hard) {
     throw new EvalError(`${name} must be an integer in [1, ${hard}]`, "ERR_PRISM_EVAL_JUDGE_BOUNDS");
@@ -49,17 +49,20 @@ export function createModelJudge<TInput = unknown, TExpected = unknown>(
         input.signal?.addEventListener("abort", abort, { once: true });
         try {
           input.signal?.throwIfAborted();
-          const target = input.target
+          const projected = input.target
             ? { ...input.target, ...(input.timeline && !input.target.timeline ? { timeline: input.timeline } : {}) }
             : { result: input.result, ...(input.timeline ? { timeline: input.timeline } : {}) };
-          if (Buffer.byteLength(JSON.stringify({ target, item: input.item })) > maxInputBytes) {
+          // The run text and the item are raw here; the judge prompt is the boundary, so redact first.
+          const target = input.redactor ? input.redactor.redact(projected) : projected;
+          const item = input.redactor && input.item ? input.redactor.redact(input.item) : input.item;
+          if (Buffer.byteLength(JSON.stringify({ target, item })) > maxInputBytes) {
             throw new EvalError("model judge input byte limit exceeded", "ERR_PRISM_EVAL_JUDGE_BOUNDS");
           }
           const request = options.judge({
             rubric: options.rubric,
             rubricVersion: options.rubricVersion,
             target,
-            item: input.item,
+            item,
             signal: controller.signal,
           });
           const aborted = new Promise<never>((_, reject) =>

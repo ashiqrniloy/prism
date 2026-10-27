@@ -48,6 +48,9 @@ optional: with no config the compactor summarizes with the session's own model.
 - Claims the `compaction` slot through `prism.slots.compaction.provide`. A host's direct
   `AgentConfig.slots.compaction` assignment still wins, and `AgentConfig.compaction` keeps sizing the
   cut (`keepRecentEntries`, `maxSummaryChars`, `secrets`).
+- With `trigger` set, registers the session's `compaction.when` vote: `{ compact: true }` past the
+  gate and `{ compact: false }` below it, so the kernel's `compaction.thresholdEntries` fallback —
+  which only runs on unanimous abstention — cannot override the package's gate.
 - Calls the model through `prism.models.client(config.model ?? ctx.session.model)`, so the summary
   rides the agent's provider resolution, retry policy, and credentials slot. It never takes a
   provider or a key as config.

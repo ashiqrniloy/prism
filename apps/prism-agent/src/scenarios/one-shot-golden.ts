@@ -27,9 +27,9 @@ export async function oneShotGolden(root: string): Promise<readonly string[]> {
   mkdirSync(workspace, { recursive: true });
   const config: HostConfig = {
     models: {
-      orchestrator: { provider: "mock", model: "m" },
-      coding: { provider: "mock", model: "m" },
-      research: { provider: "mock", model: "m" },
+      orchestrator: { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
+      coding: { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
+      research: { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
     },
     storePath: join(root, "sessions.db"),
     workspace,

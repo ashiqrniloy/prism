@@ -100,6 +100,7 @@ const PROVIDER_STOP_REASONS: Readonly<Record<string, ProviderStopReason>> = Obje
   unexpected_tool_call: "provider_error",
   // OpenAI Responses (status / `incomplete_details.reason`).
   completed: "end_turn",
+  max_output_tokens: "max_output_tokens",
   failed: "provider_error",
   cancelled: "abort",
   canceled: "abort",

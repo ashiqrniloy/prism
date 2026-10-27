@@ -17,7 +17,8 @@ import { createHashEmbedder } from "@arnilo/prism-memory-core";
 import { createMarkdownMemoryStores } from "@arnilo/prism-memory-core/fabric";
 import { type MemoryFabricConfig, resolveMemoryFabricConfig } from "../config.js";
 import { createExchangeArchive, exchangeNoteId, exchangePairs } from "../exchanges.js";
-import memoryFabric, { createMemory, createMemoryFabric, projectResourceId, resolveProjectIdentity } from "../index.js";
+import memoryFabric, { createMemory, createMemoryFabric } from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
 const dirs: string[] = [];
 afterEach(async () => {

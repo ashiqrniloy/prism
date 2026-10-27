@@ -9,6 +9,7 @@ import {
   assertTenantScopedQueryIsolation,
   createPersistenceMigrationContract,
   runFeedbackConformance,
+  evaluationStoreConformance,
 } from "@arnilo/prism-store-codecs";
 import { Pool } from "pg";
 import {
@@ -73,6 +74,56 @@ describeIntegration("createPostgresPersistence integration", () => {
       },
       { exerciseReopen: true, exerciseTenantIsolation: true },
     );
+  });
+
+  it("migration_upgrades_existing_database_with_evaluations", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    await createPostgresPersistence({ pool, schema });
+    await pool.query(`DROP TABLE ${qualifyTable(schema, "prism_evaluations")}; DROP TABLE ${qualifyTable(schema, "prism_experiment_reports")};
+      DELETE FROM ${qualifyTable(schema, "prism_migrations")} WHERE name = '011_evaluations'`);
+    await pool.query(
+      `INSERT INTO ${qualifyTable(schema, "prism_sessions")} (id, created_at, updated_at) VALUES ('old', '2026-01-01', '2026-01-01')`,
+    );
+    const before = await pool.query(`SELECT name, checksum FROM ${qualifyTable(schema, "prism_migrations")} ORDER BY version`);
+    const store = await createPostgresPersistence({ pool, schema });
+    assert.equal((await store.querySessions({ id: "old" })).items.length, 1);
+    assert.deepEqual(
+      (
+        await pool.query(
+          `SELECT name, checksum FROM ${qualifyTable(schema, "prism_migrations")} WHERE name != '011_evaluations' ORDER BY version`,
+        )
+      ).rows,
+      before.rows,
+    );
+    await store.evaluations.append({
+      id: "eval",
+      scorerId: "quality",
+      status: "scored",
+      score: 1,
+      sampled: true,
+      sessionId: "old",
+      createdAt: "2026-10-27T00:00:00Z",
+    });
+    await store.append({ id: "entry", sessionId: "old", kind: "label", timestamp: "2026-10-27T00:00:00Z", label: "old" });
+    assert.equal(await store.deleteSession("old"), true);
+    assert.deepEqual((await store.evaluations.query()).items, []);
+  });
+
+  it("postgres_evaluation_store_conformance", async () => {
+    const pool = createPool();
+    const schema = uniqueSchema();
+    const store = await createPostgresPersistence({ pool, schema });
+    await evaluationStoreConformance(() => store);
+    const reopened = await createPostgresPersistence({ pool, schema });
+    assert.equal(
+      (await reopened.evaluations.query({ tenantId: "eval-tenant", accountId: "eval-account", userId: "eval-user" })).items.length,
+      4,
+    );
+    const plan = await pool.query(`EXPLAIN SELECT * FROM ${qualifyTable(schema, "prism_evaluations")}
+      WHERE tenant_id = 'eval-tenant' AND account_id = 'eval-account' AND user_id = 'eval-user'
+      ORDER BY created_at, id LIMIT 10`);
+    assert.match(plan.rows.map((row) => row["QUERY PLAN"]).join("\n"), /prism_evaluations_owner_created_idx/);
   });
 
   it("persists ownership-scoped run feedback across instances", async () => {
@@ -264,15 +315,15 @@ describeIntegration("createPostgresPersistence integration", () => {
       namespace: "workflow",
       key: "wf/run",
       ownerId: "worker-a",
-      ttlMs: 20,
+      ttlMs: 3000,
       tenantId: "tenant-a",
     });
     assert.ok(claim1);
     assert.equal(
-      await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 20, tenantId: "tenant-a" }),
+      await second.leases.tryAcquireLease({ namespace: "workflow", key: "wf/run", ownerId: "worker-b", ttlMs: 3000, tenantId: "tenant-a" }),
       null,
     );
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, Math.max(0, Date.parse(claim1.expiresAt) - Date.now()) + 30));
     const claim2 = await second.leases.tryAcquireLease({
       namespace: "workflow",
       key: "wf/run",
@@ -300,6 +351,7 @@ describeIntegration("createPostgresPersistence integration", () => {
       "008_session_version",
       "009_run_prompt_version",
       "010_session_links",
+      "011_evaluations",
     ]);
 
     const reopened = await createPostgresPersistence({ pool, schema });
@@ -678,8 +730,8 @@ describeIntegration("createPostgresPersistence integration", () => {
     ]);
     const persistence = await createPostgresPersistence({ pool, schema });
     const migrations = await persistence.queryMigrations({});
-    // Migration 010_session_links landed after this test was written; the count is the real set.
-    assert.equal(migrations.items.length, 10);
+    // Every canonical migration is applied once, even under concurrent setup.
+    assert.equal(migrations.items.length, 11);
     await persistence.close();
   });
 

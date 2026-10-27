@@ -58,11 +58,9 @@ function gateInput(overrides: Partial<ResolveShouldCompactInput> = {}): ResolveS
 const compactionEntries = (entries: readonly SessionEntry[]) => entries.filter((entry) => entry.kind === "compaction");
 
 describe("resolveShouldCompact", () => {
-  it("uses the legacy gates when no trigger is configured", async () => {
+  it("uses the entry gate when no trigger is configured", async () => {
     assert.equal(await resolveShouldCompact({ thresholdEntries: 3 }, gateInput()), false, "at the threshold is not over it");
     assert.equal(await resolveShouldCompact({ thresholdEntries: 2 }, gateInput()), true);
-    assert.equal(await resolveShouldCompact({ compactAfterTokens: 900 }, gateInput()), true, "the token gate is inclusive");
-    assert.equal(await resolveShouldCompact({ compactAfterTokens: 901 }, gateInput()), false);
     assert.equal(await resolveShouldCompact({}, gateInput()), false);
   });
 
@@ -80,7 +78,7 @@ describe("resolveShouldCompact", () => {
       },
     });
 
-    assert.equal(await resolveShouldCompact({ trigger: { type: "threshold_entries", entries: 2 }, compactAfterTokens: 1 }, counting), true);
+    assert.equal(await resolveShouldCompact({ trigger: { type: "threshold_entries", entries: 2 } }, counting), true);
     assert.equal(estimates + caps, 0, "a count trigger never pays for the token gates");
     assert.equal(
       await resolveShouldCompact({ trigger: { type: "custom", shouldCompact: (context) => context.entryCount > 2 } }, counting),
@@ -168,7 +166,7 @@ function whenTrigger(trigger: CompactionTrigger, sessionModel: ModelConfig = mod
             signal: context.signal,
           },
         );
-        return compact ? { compact: true } : undefined;
+        return compact ? { compact: true } : { compact: false };
       },
       { id: "compaction-trigger" },
     );
@@ -395,12 +393,12 @@ describe("compaction.when hook", () => {
     assert.equal(compactionEntries(await session.entries()).length, 1, "a handler alone can trigger auto-compaction");
   });
 
-  it("compaction_when_replaces_the_config_trigger", async () => {
+  it("compaction_when_abstain_falls_back_to_the_config_trigger", async () => {
     const { provider } = recordingProvider();
     const agent = await createAgent({
       model,
       packages: [providerPackage("test-provider", [provider])],
-      // The configured trigger would compact immediately; the registered handler owns the decision.
+      // The configured trigger compacts immediately; an abstaining handler does not suppress it.
       compaction: { thresholdEntries: 0, keepRecentEntries: 1 },
       hooks: (hooks) => hooks.on("compaction.when", () => undefined),
     });
@@ -408,7 +406,22 @@ describe("compaction.when hook", () => {
 
     await session.run("first");
 
-    assert.equal(compactionEntries(await session.entries()).length, 0, "an abstaining handler suppresses the configured trigger");
+    assert.equal(compactionEntries(await session.entries()).length, 1, "an abstaining handler defers to the configured trigger");
+  });
+
+  it("compaction_when_false_vetoes_the_config_trigger", async () => {
+    const { provider } = recordingProvider();
+    const agent = await createAgent({
+      model,
+      packages: [providerPackage("test-provider", [provider])],
+      compaction: { thresholdEntries: 0, keepRecentEntries: 1 },
+      hooks: (hooks) => hooks.on("compaction.when", () => ({ compact: false })),
+    });
+    const session = await agent.session();
+
+    await session.run("first");
+
+    assert.equal(compactionEntries(await session.entries()).length, 0, "a false vote suppresses the configured trigger");
   });
 
   it("compaction_when_throw_fails_closed", async () => {

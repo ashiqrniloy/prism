@@ -21,8 +21,8 @@ Every agent is one `createAgent` call with a package list. The host code for eac
 | Agent | Source | Why it has these packages |
 | --- | --- | --- |
 | orchestrator | [`src/host/orchestrator.ts`](src/host/orchestrator.ts) | `workflows` for the graph, `delegate` for a research child, and one `definePackage` that registers the host's `build` command |
-| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, and both memory packages |
-| research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `memory-rag`, and `tools-research` (the citation ledger and `run.end` check) |
+| coding | [`src/host/coding.ts`](src/host/coding.ts) | `tools-coding` to edit the workspace, `approval` to gate writes, `context-files` and `hooks-json` for repo context, `context-engineering` for fold/accounting, and both memory packages |
+| research | [`src/host/research.ts`](src/host/research.ts) | `tools-web`, `tools-browser`, `memory-rag`, `tools-research` (the citation ledger and `run.end` check), and the same fold/accounting with a 20% block cap |
 | external | [`src/host/external.ts`](src/host/external.ts) | a host-owned adapter over `driver-process`, for a vendor CLI the host does not control |
 | remote | [`src/host/remote.ts`](src/host/remote.ts) | `connectAgent`, reaching a worker served from a second process |
 
@@ -91,6 +91,57 @@ Config is refs, paths, and modes only ([`src/host/config.ts`](src/host/config.ts
 ```
 
 `web.apiKey` is a reference (`env:` or `keyring:`), never a literal. The host passes a literal through so the package's own ref-only check rejects it — the config loader does not re-implement that check.
+
+`web` accepts every `tools-web` backend name (`brave`, `exa`, `firecrawl`, `obscura`, `native`, `searxng`,
+`tavily`, `kagi`), plus `searxngOrigin` for a self-hosted instance, and three optional blocks passed
+straight to the package:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `web.fetch` | `{ backend?: "native" \| "firecrawl" \| "off", apiKey?: ref }` | The fetch half when `backend` is a keyed search backend. Unset means the package default, the keyless `native` backend, so the research worker can read what it searches for. |
+| `web.domains` | `{ allow?: string[], block?: string[] }` | Host-enforced hostname permission for search results and every fetch path. This is the host's policy, not a model argument: the research worker cannot widen it. |
+| `web.cache` | `{ ttlSeconds: number, maxEntries?: number, maxBytes?: number }` | Opt-in per-session page cache. Off unless present; entries are dropped when the session closes and never persisted. |
+
+The config loader validates types and unknown keys and leaves range checks to the package, which
+fails the package load with a field-naming error. The research worker's approval allow-list stays
+`web_fetch`, `web_search`, `rag_search`, `cite`, and Obscura's native `obscura_fetch`/`obscura_scrape`
+stay unregistered (`nativeTools: false`), so a host that configures Obscura gets the same two web
+tools as every other backend.
+
+## Memory
+
+`memory: "conversational"` (off by default) installs `@arnilo/prism-memory-fabric` on the research and
+coding workers with the conversational preset. The preset archives each completed exchange verbatim,
+injects recalled exchanges for the turn's task, enables `memory.recall`/`memory.read`, and makes no
+write-path model or embedding call; retrieval is lexical. `memory.recall` and `memory.read` join the
+research worker's prompt-free allow-list; `memory.forget` and the other writes still ask.
+
+The markdown store lives under `<dirname(storePath)>/memory`, inside the host's data directory, and
+the fabric jails it to that `tools.root`. Exchanges are shared by every session on one store: the
+fabric takes its tenant from `scopes.tenantId` (default `prism`) and its user scope from a fixed
+`user` resource id, not from the session principal. A host that serves several principals therefore
+keeps one store, and one tenant, per principal. The option is a storage decision, which is why the
+default is off; plan 202 owns the safety verdict.
+
+## Context management
+
+Both workers size their gates from one table, [`src/host/context-budgets.ts`](src/host/context-budgets.ts).
+A key is `provider/model`; the number is the effective input budget measured by plan 194 Task 6, and
+the entry's comment names its evidence file.
+
+| Model | Measured budget | Fold batch (`clearAtLeastTokens`) | Compaction trigger | OM `compactAt` |
+| --- | ---: | ---: | --- | --- |
+| `opencode-go/mimo-v2.5` | 96,000 | 9,600 (10%) | `threshold_tokens` 96,000 | `{ ratio: 0.6, maxTokens: 96,000 }` |
+
+An unlisted model gets `input_ratio` 0.6 of its input cap, the package's 4,096-token fold batch, and
+one `info` status note per agent. The coding worker uses the `coding` compaction profile; the research
+worker uses `default` and caps injected blocks at 20% of the input cap. Add a measured row before a
+release pins a new model.
+
+The fold rewrites old tool results only when the pending batch reaches `clearAtLeastTokens`, so the
+provider prefix holds between batches. Cost: one cache miss per fold batch and one per compaction
+(the compaction slot's summary call, or the kernel's deterministic compactor); requests between
+those points reuse the prefix.
 
 ## The workflow graph
 
@@ -261,3 +312,29 @@ The same leg runs in `release:gate` after the client-neutrality check, and `run-
 | secrets | a credential ref never reaches the event stream, and a literal is rejected by the package |
 
 **The gap log.** A seam the host needs and the SDK lacks is never worked around. It is either added to the SDK inside the task that found it, or recorded in the Phase 12 plan's `## Gap log` table with the disposition `fixed in <file> (<test>)` or `backlog: <title> — <reason>`. Phase 12 is not done while a row is open, and a grep over `apps/prism-agent/` must find no workaround (a type-erasing `any` cast, a reach into package internals, or reimplemented package logic). The log is currently empty: every Phase 12 scenario is expressible with what the SDK ships.
+
+## Gating a host release on evals
+
+`evals/dataset.ts` and `src/evals/suite.ts` evaluate the coding and research workers with `@arnilo/prism-evals` across 12 items (`dev` and `heldout` splits, `trials: 4`, `timeline: "metadata"`), scoring `approval_before_effect` (using `agent.tools`), `citation_integrity`, `createStateMatchScorer` over the workspace files, and `task_success` (including `web_fetch` prompt-injection items built from `createInjectionDataset`).
+
+```ts
+import { assertEvaluationThreshold } from "@arnilo/prism-evals";
+import { loadHostEvalBaseline, reconstructReportFromRecord, runHostEvalSuite } from "./src/evals/suite.js";
+
+const baseline = loadHostEvalBaseline();
+const report = await runHostEvalSuite();
+
+assertEvaluationThreshold(report, {
+  requireInvariants: true,
+  minimumPassHatK: {
+    task_success: { k: 4, minimum: 0.9 },
+    state_match: { k: 4, minimum: 0.9 },
+  },
+  maximumRegression: {
+    baseline: reconstructReportFromRecord(baseline),
+    delta: 0.05,
+  },
+});
+```
+
+`src/__tests__/evals.test.ts` checks invariants, `pass^4`, dataset content-hash parity, and regression against `evals/baseline.json` on every `bun run test` and `bun run release:gate` run without rewriting the baseline. To update `evals/baseline.json` deliberately after a dataset or scorer change, run `bun run --filter @arnilo/prism-agent eval:baseline`. The opt-in `release/eval-gate` row in `scripts/live-matrix.json` runs the `heldout` split against Hyper (`PRISM_LIVE_EVAL_GATE_MANUAL=1`) under a 2M input-token ceiling and appends the `ExperimentReportRecord` to the SQLite experiment store.

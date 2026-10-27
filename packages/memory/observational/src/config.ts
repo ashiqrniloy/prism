@@ -1,8 +1,14 @@
-import { assertCompactionTrigger, type CompactionTrigger, type JsonSchema, type ModelRef } from "@arnilo/prism";
+import {
+  assertCompactionTrigger,
+  type CompactionTrigger,
+  type JsonSchema,
+  type ModelConfig,
+  type ModelRef,
+  resolveInputCap,
+} from "@arnilo/prism";
 
 import {
   DEFAULT_MAX_TASK_STATE_BYTES,
-  HARD_MAX_TASK_STATE_BYTES,
   DEFAULT_MAX_WORKER_ARGUMENT_BYTES,
   DEFAULT_MAX_WORKER_ERROR_BYTES,
   DEFAULT_MAX_WORKER_MESSAGE_BYTES,
@@ -10,6 +16,7 @@ import {
   DEFAULT_MAX_WORKER_TOOL_CALLS,
   DEFAULT_MAX_WORKER_TOOL_CALLS_PER_TURN,
   DEFAULT_MAX_WORKER_TURNS,
+  HARD_MAX_TASK_STATE_BYTES,
   HARD_MAX_WORKER_ARGUMENT_BYTES,
   HARD_MAX_WORKER_ERROR_BYTES,
   HARD_MAX_WORKER_MESSAGE_BYTES,
@@ -24,13 +31,21 @@ export const DEFAULT_OBSERVER_MESSAGE_TOKENS = 10_000;
 export const DEFAULT_REFLECTOR_OBSERVATION_TOKENS = 20_000;
 export const DEFAULT_DROPPER_TARGET_TOKENS = 20_000;
 export const DEFAULT_CONTEXT_RECENT_MESSAGES = 8;
-export const DEFAULT_COMPACT_AFTER_TOKENS = 81_000;
+export const DEFAULT_COMPACT_AT_RATIO = 0.6;
 
 /** Internal render bounds: the pool the folded payload keeps, and the recall page size. */
 export const OBSERVATIONS_POOL_MAX_TOKENS = 20_000;
 export const OBSERVATIONS_POOL_TARGET_TOKENS = 10_000;
 
 export type MemoryObservationalDropperPolicy = "model" | "lowest-relevance";
+
+/** Relative compaction gate: `ratio` of the model's input cap, capped by `maxTokens` when set. */
+export interface MemoryObservationalCompactAt {
+  /** Share of the model's input cap. Default `0.6`. */
+  readonly ratio?: number;
+  /** Absolute cap on the resolved threshold. Required when the model declares no window. */
+  readonly maxTokens?: number;
+}
 
 export interface MemoryObservationalWorkerConfig {
   /**
@@ -65,11 +80,14 @@ export interface MemoryObservationalConfig {
   readonly context?: {
     /** Recent messages the compaction cut keeps verbatim. Default 8. */
     readonly recentMessages?: number;
-    /** Estimated input tokens that request compaction. Default 81_000. Ignored when `trigger` is set. */
-    readonly compactAfterTokens?: number;
     /**
-     * Replaces the token gate with a `CompactionTrigger` (the JSON-safe kinds: `custom` is a function
-     * and not a config value). Omitted, the gate stays `compactAfterTokens`.
+     * Request compaction at this share of the model's input cap, capped by `maxTokens`. Default
+     * `{ ratio: 0.6 }`. A model that declares no window uses `maxTokens` and fails without it.
+     */
+    readonly compactAt?: MemoryObservationalCompactAt;
+    /**
+     * Replaces the ratio gate with a `CompactionTrigger` (the JSON-safe kinds: `custom` is a function
+     * and not a config value). Omitted, the gate stays `compactAt`.
      */
     readonly trigger?: CompactionTrigger;
   };
@@ -79,7 +97,7 @@ export interface MemoryObservationalConfig {
   readonly recall?: boolean;
 }
 
-export const memoryObservationalConfigSchema: JsonSchema = {
+const observationalConfigSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -162,11 +180,24 @@ export const memoryObservationalConfigSchema: JsonSchema = {
           default: DEFAULT_CONTEXT_RECENT_MESSAGES,
           description: "Recent messages the compaction cut keeps verbatim.",
         },
-        compactAfterTokens: {
-          type: "integer",
-          minimum: 1,
-          default: DEFAULT_COMPACT_AFTER_TOKENS,
-          description: "Estimated input tokens that request compaction. Ignored when trigger is set.",
+        compactAt: {
+          type: "object",
+          additionalProperties: false,
+          description: "Request compaction at ratio of the model's input cap, capped by maxTokens.",
+          properties: {
+            ratio: {
+              type: "number",
+              minimum: 0,
+              maximum: 1,
+              default: DEFAULT_COMPACT_AT_RATIO,
+              description: "Share of the model's input cap. Default 0.6.",
+            },
+            maxTokens: {
+              type: "integer",
+              minimum: 1,
+              description: "Absolute cap on the threshold. Required when the model declares no window.",
+            },
+          },
         },
         trigger: {
           description: 'Replaces the token gate, e.g. { "type": "threshold_entries", "entries": 50 }.',
@@ -272,6 +303,54 @@ export const memoryObservationalConfigSchema: JsonSchema = {
   },
 };
 
+/**
+ * Config fields whose value is a tuning default: a budget, cap, threshold or ratio. Their value may
+ * change in a minor version. Every other field is `contract` (README `## Compatibility`).
+ */
+const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
+  "observer.messageTokens",
+  "reflector.observationTokens",
+  "dropper.targetTokens",
+  "context.recentMessages",
+  "context.compactAt.ratio",
+  "context.compactAt.maxTokens",
+  "context.trigger.entries",
+  "context.trigger.tokens",
+  "context.trigger.ratio",
+  "worker.maxTaskStateBytes",
+  "worker.maxTurns",
+  "worker.maxToolCallsPerTurn",
+  "worker.maxToolCalls",
+  "worker.maxArgumentBytes",
+  "worker.maxResultBytes",
+  "worker.maxMessageBytes",
+  "worker.maxErrorBytes",
+]);
+
+/** Tag every field with its stability tier; `validateJsonSchema` ignores the extension keyword. */
+function withStability(schema: JsonSchema, tuning: ReadonlySet<string>, path = ""): JsonSchema {
+  const properties = schema.properties;
+  const tagged: JsonSchema = properties
+    ? {
+        ...schema,
+        properties: Object.fromEntries(
+          Object.entries(properties).map(([key, child]) => {
+            const childPath = path ? `${path}.${key}` : key;
+            return [
+              key,
+              { ...withStability(child, tuning, childPath), "x-prism-stability": tuning.has(childPath) ? "tuning" : "contract" },
+            ];
+          }),
+        ),
+      }
+    : schema;
+  if (schema.anyOf) return { ...tagged, anyOf: schema.anyOf.map((branch) => withStability(branch, tuning, path)) };
+  if (schema.oneOf) return { ...tagged, oneOf: schema.oneOf.map((branch) => withStability(branch, tuning, path)) };
+  return tagged;
+}
+
+export const memoryObservationalConfigSchema: JsonSchema = withStability(observationalConfigSchema, TUNING_CONFIG_FIELDS);
+
 /** {@link MemoryObservationalConfig} with every default applied, so `setup` reads one shape. */
 export interface ResolvedMemoryObservationalConfig {
   readonly enabled: boolean;
@@ -279,8 +358,13 @@ export interface ResolvedMemoryObservationalConfig {
   readonly observer: { readonly model?: ModelRef; readonly messageTokens: number };
   readonly reflector: { readonly model?: ModelRef; readonly observationTokens: number };
   readonly dropper: { readonly model?: ModelRef; readonly targetTokens: number; readonly policy: MemoryObservationalDropperPolicy };
-  readonly context: { readonly recentMessages: number; readonly compactAfterTokens: number; readonly trigger?: CompactionTrigger };
+  readonly context: { readonly recentMessages: number; readonly compactAt: ResolvedCompactAt; readonly trigger?: CompactionTrigger };
   readonly worker: MemoryWorkerLimitOptions;
+}
+
+export interface ResolvedCompactAt {
+  readonly ratio: number;
+  readonly maxTokens?: number;
 }
 
 export function resolveMemoryObservationalConfig(config: MemoryObservationalConfig = {}): ResolvedMemoryObservationalConfig {
@@ -308,10 +392,42 @@ export function resolveMemoryObservationalConfig(config: MemoryObservationalConf
     },
     context: {
       recentMessages: config.context?.recentMessages ?? DEFAULT_CONTEXT_RECENT_MESSAGES,
-      compactAfterTokens: config.context?.compactAfterTokens ?? DEFAULT_COMPACT_AFTER_TOKENS,
+      compactAt: resolveCompactAt(config.context?.compactAt),
       // Validated at config time: an unknown kind or a bad threshold fails the load, not the run.
       ...(config.context?.trigger === undefined ? {} : { trigger: assertCompactionTrigger(config.context.trigger) }),
     },
     worker: { ...config.worker },
   };
+}
+
+function resolveCompactAt(value: MemoryObservationalCompactAt | undefined): ResolvedCompactAt {
+  const ratio = value?.ratio ?? DEFAULT_COMPACT_AT_RATIO;
+  if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1) {
+    throw new TypeError("context.compactAt.ratio must be a number in (0, 1]");
+  }
+  if (value?.maxTokens !== undefined && (!Number.isSafeInteger(value.maxTokens) || value.maxTokens < 1)) {
+    throw new TypeError("context.compactAt.maxTokens must be a positive safe integer");
+  }
+  return { ratio, ...(value?.maxTokens === undefined ? {} : { maxTokens: value.maxTokens }) };
+}
+
+/**
+ * The token threshold the gate compares against. A model with a window uses
+ * `min(ratio × input cap, maxTokens)`; without one it uses `maxTokens` or fails at load.
+ */
+export function resolveCompactAtThreshold(compactAt: ResolvedCompactAt, model?: Pick<ModelConfig, "limits">): number {
+  let cap: number | undefined;
+  try {
+    cap = resolveInputCap(undefined, model);
+  } catch {
+    cap = undefined;
+  }
+  if (cap === undefined) {
+    if (compactAt.maxTokens === undefined) {
+      throw new TypeError("context.compactAt.maxTokens is required when the model declares no context window");
+    }
+    return compactAt.maxTokens;
+  }
+  const ratioThreshold = cap * compactAt.ratio;
+  return compactAt.maxTokens === undefined ? ratioThreshold : Math.min(ratioThreshold, compactAt.maxTokens);
 }

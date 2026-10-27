@@ -1135,4 +1135,4 @@ export async function createPostgresVectorStore(
 }
 
 export { buildMemoryDdl, buildVectorSearchDdl, DEFAULT_MEMORY_SCHEMA, DEFAULT_VECTOR_TABLE } from "./postgres-ddl.js";
-export { qualifyTable, quoteIdentifier, validateIdentifier } from "./postgres-identifiers.js";
+export { qualifyTable, quoteIdentifier } from "./postgres-identifiers.js";

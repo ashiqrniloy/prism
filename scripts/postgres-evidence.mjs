@@ -25,6 +25,8 @@ const RESULT = /^(?:@arnilo\/prism-(?:core|store-postgres|memory-fabric|channels
 const SUMMARY = /^(?:(@arnilo\/prism-(?:core|store-postgres|memory-fabric|channels) test:postgres): )?Ran (\d+) tests? across (\d+) files?\./gm;
 // Plan 153 Task 5: the session-store integrations moved to the store package, so its leg owns them.
 const REQUIRED_POSTGRES_CASES = [
+  "postgres_evaluation_store_conformance",
+  "migration_upgrades_existing_database_with_evaluations",
   "scopes ordinary and leaf entry queries to the owning session",
   "filters and keyset-paginates branch entry queries",
   "keeps session activity monotonic across run, usage, and event writes",

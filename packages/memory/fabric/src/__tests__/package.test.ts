@@ -18,7 +18,8 @@ import {
 import { createHashEmbedder, type Embedder } from "@arnilo/prism-memory-core";
 import { contextEngineering } from "../../../../context/engineering/src/index.js";
 
-import memoryFabric, { type MemoryFabricConfig, projectResourceId, resolveProjectIdentity } from "../index.js";
+import memoryFabric, { type MemoryFabricConfig } from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 import { parseProjectFile } from "../scope/identity.js";
 
 /** The default project resource: the test process cwd is inside the repo, so identity is stable. */

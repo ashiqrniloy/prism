@@ -1,0 +1,234 @@
+{
+  "piVersion": "1.4.0",
+  "model": "gpt-6.1-sol",
+  "sessionId": "cache-parity-fixture-204",
+  "reasoningItem": {
+    "type": "reasoning",
+    "id": "rs_fixture",
+    "encrypted_content": "fixture-encrypted-content",
+    "summary": [
+      {
+        "type": "summary_text",
+        "text": "Read the fixture first."
+      }
+    ]
+  },
+  "requests": [
+    {
+      "url": "https://api.openai.com/v1/responses",
+      "headers": {
+        "session_id": "cache-parity-fixture-204",
+        "x-client-request-id": "cache-parity-fixture-204"
+      },
+      "body": {
+        "model": "gpt-6.1-sol",
+        "input": [
+          {
+            "role": "developer",
+            "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          }
+        ],
+        "stream": true,
+        "prompt_cache_key": "cache-parity-fixture-204",
+        "store": false,
+        "tools": [
+          {
+            "type": "function",
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          },
+          {
+            "type": "function",
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ],
+        "reasoning": {
+          "effort": "medium",
+          "summary": "auto"
+        },
+        "include": [
+          "reasoning.encrypted_content"
+        ]
+      }
+    },
+    {
+      "url": "https://api.openai.com/v1/responses",
+      "headers": {
+        "session_id": "cache-parity-fixture-204",
+        "x-client-request-id": "cache-parity-fixture-204"
+      },
+      "body": {
+        "model": "gpt-6.1-sol",
+        "input": [
+          {
+            "role": "developer",
+            "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_fixture",
+            "encrypted_content": "fixture-encrypted-content",
+            "summary": [
+              {
+                "type": "summary_text",
+                "text": "Read the fixture first."
+              }
+            ]
+          },
+          {
+            "type": "function_call",
+            "call_id": "call_read",
+            "name": "read",
+            "arguments": "{}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_read",
+            "output": "export const answer = 42;"
+          }
+        ],
+        "stream": true,
+        "prompt_cache_key": "cache-parity-fixture-204",
+        "store": false,
+        "tools": [
+          {
+            "type": "function",
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          },
+          {
+            "type": "function",
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ],
+        "reasoning": {
+          "effort": "medium",
+          "summary": "auto"
+        },
+        "include": [
+          "reasoning.encrypted_content"
+        ]
+      }
+    },
+    {
+      "url": "https://api.openai.com/v1/responses",
+      "headers": {
+        "session_id": "cache-parity-fixture-204",
+        "x-client-request-id": "cache-parity-fixture-204"
+      },
+      "body": {
+        "model": "gpt-6.1-sol",
+        "input": [
+          {
+            "role": "developer",
+            "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Inspect fixture.js."
+              }
+            ]
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_fixture",
+            "encrypted_content": "fixture-encrypted-content",
+            "summary": [
+              {
+                "type": "summary_text",
+                "text": "Read the fixture first."
+              }
+            ]
+          },
+          {
+            "type": "function_call",
+            "call_id": "call_read",
+            "name": "read",
+            "arguments": "{}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_read",
+            "output": "export const answer = 42;"
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "input_text",
+                "text": "Confirm the fixture. Reply OK."
+              }
+            ]
+          }
+        ],
+        "stream": true,
+        "prompt_cache_key": "cache-parity-fixture-204",
+        "store": false,
+        "tools": [
+          {
+            "type": "function",
+            "name": "read",
+            "description": "Read a fixture file",
+            "parameters": {
+              "type": "object"
+            }
+          },
+          {
+            "type": "function",
+            "name": "test",
+            "description": "Check fixture tests",
+            "parameters": {
+              "type": "object"
+            }
+          }
+        ],
+        "reasoning": {
+          "effort": "medium",
+          "summary": "auto"
+        },
+        "include": [
+          "reasoning.encrypted_content"
+        ]
+      }
+    }
+  ],
+  "longSessionId": {
+    "sessionId": "cache-parity-fixture-204-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "promptCacheKey": "cache-parity-fixture-204-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}

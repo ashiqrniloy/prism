@@ -1,7 +1,7 @@
 {
   "name": "@arnilo/prism-tools-web",
   "version": "0.13.0",
-  "description": "First-party web search and fetch tools for Prism: Brave/Exa search, Firecrawl fetch/extract, and host-installed Obscura, with declared network effects and a web.fetch service.",
+  "description": "First-party web search and fetch tools for Prism: keyless native fetch plus Brave/Exa/SearXNG/Tavily/Kagi search, Firecrawl fetch/extract, and host-installed Obscura, with a host domain policy, an optional per-session cache, and a web.fetch service.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -31,8 +31,14 @@
       "optional": true
     }
   },
+  "dependencies": {
+    "@mozilla/readability": "0.6.0",
+    "linkedom": "0.18.14",
+    "turndown": "7.2.4"
+  },
   "devDependencies": {
     "@types/node": "^22.20.0",
+    "@types/turndown": "5.0.6",
     "playwright-core": "1.63.0",
     "typescript": "^7.0.2"
   },
@@ -58,7 +64,10 @@
     "firecrawl",
     "obscura",
     "agent",
-    "package"
+    "package",
+    "searxng",
+    "tavily",
+    "kagi"
   ],
   "sideEffects": false,
   "publishConfig": {

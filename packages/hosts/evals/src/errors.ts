@@ -16,8 +16,8 @@ export class EvalScoreError extends EvalError {
 }
 
 export class EvalDatasetError extends EvalError {
-  constructor(message: string, options?: { readonly cause?: unknown }) {
-    super(message, "ERR_PRISM_EVAL_DATASET", options);
+  constructor(message: string, options?: { readonly cause?: unknown; readonly code?: "ERR_PRISM_EVAL_HELDOUT" }) {
+    super(message, options?.code ?? "ERR_PRISM_EVAL_DATASET", options);
     this.name = "EvalDatasetError";
   }
 }

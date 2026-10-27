@@ -128,6 +128,9 @@ export function createSqlitePersistenceLifecycle(db: Database): PersistenceLifec
       const delEvents = db.prepare("DELETE FROM prism_agent_events WHERE session_id = ?");
       const delToolCalls = db.prepare("DELETE FROM prism_tool_calls WHERE session_id = ?");
       const delUsage = db.prepare("DELETE FROM prism_usage WHERE session_id = ?");
+      const delEvaluations = db.prepare(
+        "DELETE FROM prism_evaluations WHERE session_id = ?1 OR run_id IN (SELECT id FROM prism_runs WHERE session_id = ?1)",
+      );
       const delRuns = db.prepare("DELETE FROM prism_runs WHERE session_id = ?");
       const delBranches = db.prepare("DELETE FROM prism_branches WHERE session_id = ?");
       const delSearch = db.prepare("DELETE FROM prism_session_search_fts WHERE session_id = ?");
@@ -143,6 +146,7 @@ export function createSqlitePersistenceLifecycle(db: Database): PersistenceLifec
         delEvents.run(id);
         delToolCalls.run(id);
         delUsage.run(id);
+        delEvaluations.run(id);
         delRuns.run(id);
         delBranches.run(id);
         delSearch.run(id);

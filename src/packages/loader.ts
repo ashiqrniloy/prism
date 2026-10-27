@@ -19,6 +19,7 @@ import { EmbeddingsError, modelSupportsEmbeddings } from "../contracts-core/embe
 import type { HookBus, HookRegistrar } from "../hooks/index.js";
 import type { HostPort, HostUiRequest, HostUiRequestKind, HostUiResponse, HostUiSecretRequest, HostUiTerminalRequest, Logger } from "../host/types.js";
 import { BUILTIN_PROVIDER_ID, createBuiltinProvider } from "../models/builtin.js";
+import { CredentialRefNotWritableError, CredentialStoreUnavailableError } from "../credentials/errors.js";
 import { normalizeStopReason } from "../models/events.js";
 import { parseModelRef } from "../models/ref.js";
 import { mergeRetry, retryLoop } from "../models/retry.js";
@@ -592,6 +593,30 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
     return secret;
   };
 
+  /**
+   * The credentials slot's write path (`credentials:write`). The `env:` refusal comes first, so it is the
+   * same answer whatever the slot declares; the slot then enforces its own writable scheme. A written
+   * value joins `secrets` exactly as a resolved one does.
+   */
+  const writeCredentialRef = async (
+    owner: string,
+    op: "store" | "delete",
+    ref: string,
+    secret?: Secret,
+  ): Promise<void> => {
+    if (ref.startsWith("env:")) throw new CredentialRefNotWritableError(ref);
+    const assigned = (options.slotAssignments ?? {}) as Partial<Record<SlotName, unknown>>;
+    const resolver = slots.resolve("credentials", assigned.credentials as never);
+    if (op === "store") {
+      if (!resolver.store) throw new CredentialStoreUnavailableError(ref);
+      await resolver.store(ref, secret as Secret, { package: owner });
+      if (secret?.value && !secrets.includes(secret.value)) secrets.push(secret.value);
+      return;
+    }
+    if (!resolver.delete) throw new CredentialStoreUnavailableError(ref);
+    await resolver.delete(ref, { package: owner });
+  };
+
   /** The agent's one provider resolution, shared by runs, `models.client` and `agent.models.resolve`: the model's provider id picks from the registry (the built-in first, then packages in load order). */
   const resolveProvider = (model: ModelConfig): ModelProvider => {
     const provider = providerEntries.get(model.provider)?.provider;
@@ -803,6 +828,20 @@ export async function loadPackages(options: LoadPackagesOptions): Promise<Loaded
           requireCapability(name, entry.capabilities, "credentials", "credentials.resolve");
           return resolveCredentialRef(ref, { package: name });
         },
+        ...(entry.capabilities.has("credentials:write")
+          ? {
+              async store(ref: string, secret: Secret) {
+                requireCapability(name, entry.capabilities, "credentials", "credentials.store");
+                requireCapability(name, entry.capabilities, "credentials:write", "credentials.store");
+                await writeCredentialRef(name, "store", ref, secret);
+              },
+              async delete(ref: string) {
+                requireCapability(name, entry.capabilities, "credentials", "credentials.delete");
+                requireCapability(name, entry.capabilities, "credentials:write", "credentials.delete");
+                await writeCredentialRef(name, "delete", ref);
+              },
+            }
+          : {}),
       },
       state: {
         session(key, initial) {

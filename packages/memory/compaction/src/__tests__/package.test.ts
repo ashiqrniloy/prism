@@ -128,16 +128,19 @@ describe("memory compaction package", () => {
     assert.equal(compactionData(await session.entries()).strategy, "llm-compaction", "the token gate compacted the branch");
   });
 
-  it("memory_compaction_auto_trigger_abstains_below_the_gate", async () => {
+  it("memory_compaction_auto_trigger_declines_below_the_gate", async () => {
+    // The package votes `false` below its gate, so the host's `thresholdEntries` fallback (which would
+    // fire immediately here) cannot override it.
     const session = await (
       await createAgent({
         model,
+        compaction: { thresholdEntries: 0 },
         packages: [definition({ trigger: { type: "threshold_tokens", tokens: 1_000_000 } }), mockProvider([reply()])],
       })
     ).session({ id: "s1", create: true });
     await session.run("old");
 
     const kinds = (await session.entries()).map((entry) => entry.kind);
-    assert.equal(kinds.includes("compaction"), false, "an abstaining handler means no compaction");
+    assert.equal(kinds.includes("compaction"), false, "a false vote below the gate overrides the host fallback");
   });
 });

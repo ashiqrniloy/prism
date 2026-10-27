@@ -10,13 +10,8 @@ import {
   createHashEmbedder,
 } from "@arnilo/prism-memory-core";
 
-import {
-  createMemory,
-  memoryFabricConfigSchema,
-  projectResourceId,
-  resolveMemoryFabricConfig,
-  resolveProjectIdentity,
-} from "../index.js";
+import { createMemory, memoryFabricConfigSchema, resolveMemoryFabricConfig } from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 import { createMemoryFabric } from "../create.js";
 import { createScopedMemoryPolicy } from "../scoped/policy.js";
 

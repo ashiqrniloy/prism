@@ -1,0 +1,22 @@
+{
+  "meta": { "id": "req-kagi-1", "node": "kagi", "ms": 118 },
+  "data": {
+    "search": [
+      {
+        "t": 0,
+        "url": "https://example.org/kagi-one",
+        "title": "Kagi One",
+        "snippet": "First Kagi snippet",
+        "time": "2026-10-03T00:00:00Z"
+      },
+      {
+        "t": 1,
+        "url": "https://example.org/kagi-two",
+        "title": "Kagi Two",
+        "snippet": "Second Kagi snippet",
+        "time": null
+      }
+    ],
+    "infobox": []
+  }
+}

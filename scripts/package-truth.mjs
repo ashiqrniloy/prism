@@ -252,7 +252,7 @@ export const PACKAGE_NOTES = {
   "@arnilo/prism-tools-browser":
     "capability — six exclusive Playwright browser tools with declared effects, fail-closed egress policy, and artifact quarantine",
   "@arnilo/prism-tools-web":
-    "capability — Brave/Exa search, Firecrawl fetch/extract, and host-installed Obscura with declared network effects and a web.fetch service",
+    "capability — keyless native fetch plus Brave/Exa/SearXNG/Tavily/Kagi search, Firecrawl fetch/extract, and host-installed Obscura, with a host domain policy, an optional per-session cache, and a web.fetch service",
   "@arnilo/prism-tools-research": "capability — research skills, a per-session source ledger, cite, and a bounded run.end citation check",
   "@arnilo/prism-tools-openapi":
     "capability — compile allow-listed OpenAPI 3.1 operations into bounded tools with pinned origins, per-method effects, and ref-only header credentials",

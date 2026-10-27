@@ -161,6 +161,33 @@ await (await agent.session()).run("Clean up tmp/scratch.txt"); // one confirm re
 - [Driver kit](drivers.md): the `terminal` request a profile's sign-in sends to the host, and the `unavailable` fallback
   that names the login command.
 
+### Provider login
+
+A provider that signs in with OAuth declares it as an `AuthMethod`; the host runs it, because nothing in the kernel
+constructs an `AuthContext`. Build one from the host's UI and a writable credentials slot, then call `login`:
+
+```ts
+import type { Secret } from "@arnilo/prism";
+import { createKeyringCredentialResolver } from "@arnilo/prism-credentials-keyring";
+
+const resolver = createKeyringCredentialResolver({ store }); // the store the host opened
+const credentials = {
+  store: (ref: string, secret: Secret) => resolver.store!(ref, secret, {}),
+  delete: (ref: string) => resolver.delete!(ref, {}),
+};
+const provider = agent.models.resolve("openai-codex/gpt-6.1-sol").provider;
+for (const method of provider.auth ?? []) {
+  if (method.kind !== "oauth") continue;
+  // open-url sends the person to the provider; input takes a pasted callback URL back.
+  await method.login({ host: { ui }, credentials });
+}
+```
+
+The login reads the current record through the same slot on its own, so the host passes only what a login cannot
+invent: `host.ui` and the store/delete handle. What a host shows is the provider's URL, never a token; a host that
+answers `open-url` or `input` `unavailable` is refused, and the provider stays signed out rather than storing a
+partial grant.
+
 ### Remote UI binding
 
 `remoteHostUi()` from `@arnilo/prism-remote` returns a `HostUi`. Pass the same object to the served agent's `host.ui` and to `serveAgent(agent, { hostUi: ui, transport })`. A connected client's local `host.ui` answers requests. Without a client, or when it disconnects, the remote UI answers `unavailable`, driving the existing kernel ask and elicitation suspension paths. Other package requests fail closed under their own contracts; the transport does not add suspension to them. Durable recovery after a server restart requires a persistent store on the served agent. See the [remote host library](../packages/hosts/remote/README.md).

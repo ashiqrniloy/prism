@@ -453,3 +453,7 @@ export * from "./query-semantics.js";
 export * from "./run-feedback.js";
 export * from "./search.js";
 export * from "./util.js";
+
+export * from "./evaluations.js";
+
+export * from "./evaluation-conformance.js";

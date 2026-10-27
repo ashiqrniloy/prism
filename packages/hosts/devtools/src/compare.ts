@@ -20,7 +20,8 @@ export interface InspectorSummarySlice {
 }
 
 export interface InspectorAggregateSlice {
-  readonly meanScore?: number;
+  readonly macroMean?: number;
+  readonly scorers?: Readonly<Record<string, { readonly mean: number; readonly ci95?: { readonly low: number; readonly high: number } }>>;
   readonly invariantsPassed?: boolean;
 }
 
@@ -49,8 +50,19 @@ export function compareInspectorRuns(left: InspectorCompareSide, right: Inspecto
     right,
     latencyWinner: numericWinner(left.summary.durationMs, right.summary.durationMs, "lower"),
     costWinner: numericWinner(left.summary.cost?.amount, right.summary.cost?.amount, "lower"),
-    qualityWinner: invariantBlocked ? "invariant_blocked" : numericWinner(left.aggregate?.meanScore, right.aggregate?.meanScore, "higher"),
+    qualityWinner: invariantBlocked ? "invariant_blocked" : qualityWinner(left.aggregate, right.aggregate),
   };
+}
+
+function qualityWinner(left?: InspectorAggregateSlice, right?: InspectorAggregateSlice): InspectorCompareWinner {
+  const winner = numericWinner(left?.macroMean, right?.macroMean, "higher");
+  const ids = Object.keys(left?.scorers ?? {});
+  if (!ids.length || ids.length !== Object.keys(right?.scorers ?? {}).length) return winner;
+  const pairs = ids.map(id => [left?.scorers?.[id]?.ci95, right?.scorers?.[id]?.ci95] as const);
+  if (pairs.some(([a, b]) => !a || !b)) return winner;
+  // A macro winner needs every scorer's interval to support the same direction.
+  return pairs.every(([a, b]) => winner === "left" ? a!.low > b!.high : winner === "right" && b!.low > a!.high)
+    ? winner : "tie";
 }
 
 export function parseInspectorCompareBody(text: string): InspectorComparison {
@@ -118,11 +130,25 @@ function asAggregate(value: unknown): InspectorAggregateSlice | undefined {
   if (value === undefined) return undefined;
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const a = value as Record<string, unknown>;
-  const meanScore = a.meanScore === undefined ? undefined : finiteUnit(a.meanScore) ? (a.meanScore as number) : undefined;
+  const macroMean = a.macroMean === undefined ? undefined : finiteUnit(a.macroMean) ? (a.macroMean as number) : undefined;
   const invariantsPassed = typeof a.invariantsPassed === "boolean" ? a.invariantsPassed : undefined;
-  if (meanScore === undefined && invariantsPassed === undefined) return undefined;
+  let scorers: InspectorAggregateSlice["scorers"];
+  if (a.scorers && typeof a.scorers === "object" && !Array.isArray(a.scorers)) {
+    const entries = Object.entries(a.scorers).map(([id, value]) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+      const raw = value as Record<string, unknown>;
+      if (!finiteUnit(raw.mean)) return undefined;
+      const interval = raw.ci95 as { low?: unknown; high?: unknown } | undefined;
+      if (interval !== undefined && (!interval || !finiteUnit(interval.low) || !finiteUnit(interval.high) || interval.low > interval.high)) return undefined;
+      return [id, { mean: raw.mean, ...(interval ? { ci95: { low: interval.low as number, high: interval.high as number } } : {}) }] as const;
+    });
+    if (entries.some(entry => entry === undefined)) throw new DevtoolsError("invalid scorer statistics", "ERR_PRISM_DEVTOOLS_REQUEST", 400);
+    scorers = Object.fromEntries(entries as NonNullable<typeof entries[number]>[]);
+  }
+  if (macroMean === undefined && invariantsPassed === undefined && scorers === undefined) return undefined;
   return {
-    ...(meanScore === undefined ? {} : { meanScore }),
+    ...(macroMean === undefined ? {} : { macroMean }),
+    ...(scorers === undefined ? {} : { scorers }),
     ...(invariantsPassed === undefined ? {} : { invariantsPassed }),
   };
 }

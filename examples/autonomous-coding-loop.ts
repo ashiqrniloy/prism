@@ -142,7 +142,7 @@ async function buildRuntime(store: SessionStore) {
         // out of the demo; the dropper's budget must be at least the reflector's gate.
         reflector: { model: { provider: "memory", model: "worker" }, observationTokens: 999_999 },
         dropper: { targetTokens: 999_999 },
-        context: { recentMessages: 4, compactAfterTokens: 999_999 },
+        context: { recentMessages: 4, compactAt: { maxTokens: 999_999 } },
         worker: { maxTurns: 1 },
       }),
     ],

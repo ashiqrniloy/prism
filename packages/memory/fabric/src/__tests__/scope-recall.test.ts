@@ -7,13 +7,8 @@ import type { ContextDraft, HookContext, SessionEntry } from "@arnilo/prism";
 import { createMemoryVectorStore, type Memory, type VectorStore, type WorkingMemoryStore } from "@arnilo/prism-memory-core";
 import { createFabricContext } from "../context.js";
 import { createFabricDirectory, renderFabricDirectory } from "../directory.js";
-import {
-  createFabricLifecycle,
-  createMemory,
-  createMemoryFabric,
-  createMemoryWorkingStore,
-  type MemoryFabricScopeBinding,
-} from "../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore, type MemoryFabricScopeBinding } from "../index.js";
+import { createFabricLifecycle } from "../lifecycle/index.js";
 import { createTouchedPathTracker } from "../scope/touched-paths.js";
 
 const dirs: string[] = [];

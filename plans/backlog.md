@@ -2,6 +2,22 @@
 
 Tracking compromises, deferred work, and follow-up actions recorded from completed implementation plans.
 
+## Command Code provider package (deferred past 0.13.0)
+- Review (plan 205, 2026-10-25): post-0.13. Owner scope change: the provider was in 0.13.0 and was moved out. Additive provider package, no public 0.13 contract change.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/205-Phase-11-Part-AC-Command-Code-Provider.md
+- What: Ship `@arnilo/prism-provider-commandcode` on the Provider API's Chat, Responses, and Messages wires, with per-wire prompt-cache parity against `pi-commandcode-provider` 0.7.10, ZDR, plan errors, and cache pricing.
+- Why: Deferred out of 0.13.0 by the owner on 2026-10-25; the 0.13.0 provider set stays the seven packages already in the tree. Plan 205 carries the research and task breakdown to run in the first release after 0.13.0.
+
+## Ollama Cloud provider package (deferred past 0.13.0)
+- Review (plan 206, 2026-10-25): post-0.13. Owner scope change: the provider was in 0.13.0 and was moved out. Additive provider package, no public 0.13 contract change.
+- Section: Further Actions
+- Priority: P2
+- Source: plans/206-Phase-11-Part-AD-Ollama-Cloud-Provider.md
+- What: Ship `@arnilo/prism-provider-ollama-cloud` with a route chosen by measured cache reuse (native `/api/chat` `prompt_eval_cached_count`, pi-compatible `/v1` route), a per-model thinking map, bounded discovery, and `ollamaCloudBalance()`.
+- Why: Deferred out of 0.13.0 by the owner on 2026-10-25. Plan 206 carries the research and task breakdown to run after 0.13.0, after plan 205.
+
 ## Re-audit tarball diet and bundle footprint for Agent SDK docs and baseline
 - Review (plan 174 Task 1, 2026-10-14): not a Part A contract change. Docs/README/changelog cut is plan 175. Not deferred past 0.13.
 - Section: Compromises Made
@@ -744,12 +760,12 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - Why: The declaration emit stops the release gate here, and it has blocked the gate since plan 160.
 
 ## Extend the host-surface gate to prism-core reaches and computed imports
-- Review (plan 174 Task 1, 2026-10-14): contract-before-freeze, owned by plan 174 Task 6.
+- Closed (plan 197 Task 9 and its follow-up, 2026-10-26): resolved on both sides. The `evals` half: no `prism-core` specifier remains in `packages/hosts/evals/src`, and its three computed `@arnilo/prism-observability` imports are one literal dynamic import in `src/timeline.ts`. The gate half: `src/__tests__/host-surface-gate.test.ts` now rejects every dynamic `import()` whose specifier is not a string literal (`DYNAMIC_IMPORT_CALL` + `LITERAL_SPECIFIER`), so a specifier bound to a variable cannot hide a reach; a runtime module path needs a `// host-gate: <reason>` comment on its line or the line above (the only two uses in the tree are `packages/hosts/remote/src/testing.ts` and its `serve-stdio` fixture). `prism-core` stays rejected by name and as a literal anywhere in a host module. No `prism-core` specifier is left in any `packages/hosts/*/src` outside `channels` test comments.
 - Section: Further Actions
 - Priority: P1
 - Source: plans/162-Phase-10-Part-B-Channels-Evals-Devtools-And-Surface-Gate.md
-- What: Forbid `@arnilo/prism-core` names in `packages/hosts/*` and computed-specifier dynamic imports. Today `ag-ui` (`a2a.ts`, `a2a-server.ts`) and evals (`experiment.ts`, `score.ts`, `scenarios.ts`, `trajectory.ts`) reach `prism-core`.
-- Why: The gate reads literal specifiers of `@arnilo/prism` only, so these reaches pass it unseen. Land with Phase 16, when the `prism-core` runtime moves.
+- What: Forbid `@arnilo/prism-core` names in `packages/hosts/*` and computed-specifier dynamic imports. At filing, `ag-ui` (`a2a.ts`, `a2a-server.ts`) and evals (`experiment.ts`, `score.ts`, `scenarios.ts`, `trajectory.ts`) reached `prism-core`.
+- Why: The gate read literal specifiers of `@arnilo/prism` only, so those reaches passed it unseen. Closed ahead of Phase 16 because the evals rewrite proved one literal import is enough.
 
 ## Repoint stale evals path maps in freeze tests and e2e coverage
 - Review (plan 174 Task 1, 2026-10-14): post-0.13. Additive feature or a break that waits for 0.14. Not a public 0.13 contract change small enough for plan 174 Tasks 2–11.
@@ -1100,13 +1116,6 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - What: `packages/hosts/headless/src/__tests__/scheduler-missed.test.ts:33`, `packages/hosts/headless/src/__tests__/fixtures/scheduler-restart.mjs:46`, and `packages/hosts/remote/src/__tests__/serve.test.ts:89` poll 200 times at 1 ms.
 - Implications: The Task 8 instance (`scheduler.test.ts`) failed as a false "scheduler did not settle" under full-run load and was converted to a 5 s wall-clock deadline. These three siblings carry the same fragility and pass in isolation.
 
-## Re-home benchmark rerun, ablations, calibration, and defaults to plan 188.6 Task 6
-- Section: Compromises Made
-- Priority: P1
-- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
-- Compromise: Rerun, ablations, calibration, and defaults (Task 10) were dropped from plan 188.1 and deferred to plan 188.6 Task 6.
-- Implications: Deciding defaults before the scope hierarchy (188.2), consolidation (188.3), and retention (188.4) land would measure an intermediate system rather than the shipped architecture.
-
 ## Address contained lifecycle defect fixes (D4, D5, D13) in plan 188.1
 - Section: Compromises Made
 - Priority: P1
@@ -1142,10 +1151,52 @@ Tracking compromises, deferred work, and follow-up actions recorded from complet
 - What: Implement delivery tiers: pinned core block, path cues, and team store (`plans/188.5-Phase-11-Part-O5-Memory-Delivery-Tiers-Pinned-Core-Path-Cues-And-Team-Store.md`).
 - Why: Establishes cache-stable pinned core memory, once-per-session path cues in the prompt tail, and checked-in team store synchronization.
 
-## Execute Plan 188.6: Memory Lifecycle Evaluation, Ablations, and Defaults
+
+## Plan 198 whole-plan verification remains blocked
+
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/198-Phase-11-Part-W-Evals-Statistics-Clustered-Errors-Pass-At-K-Paired-Comparison-And-Confidence-Gates.md
+- Compromise: Completed all seven eval statistics tasks while preserving failures outside Task 7: coding hard-deny timing, memory benchmark hook/performance checks, docs promotion/navigation, and release peer/lock/compatibility/kernel-size gates.
+- Implications: Evals/devtools/browser, typecheck, examples and coverage pass, but plan completion is not a green release sign-off.
+
+## Restore plan 198 whole-plan verification
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/198-Phase-11-Part-W-Evals-Statistics-Clustered-Errors-Pass-At-K-Paired-Comparison-And-Confidence-Gates.md
+- What: Resolve the Task 7 execution note's coding timing, memory-benchmark hook/performance, docs promotion/navigation, and release peer/lock/compatibility/kernel-size blockers; rerun the plan's verification commands. Preserve plan 200 Task 2's dataset-content-hash comparison follow-up.
+- Why: Complete release evidence is still blocked despite passing evals task checks; comparison cannot check a content-hash contract before plan 200 introduces it.
+
+
+## Plan 200 whole-plan verification remains blocked
+
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/200-Phase-11-Part-Y-Evals-Dataset-Hygiene-Scenario-Items-User-Simulation-State-Grading-And-Injection-Suite.md
+- Compromise: All six implementation tasks are complete while inherited docs navigation/promotion and release peer-range, provider-lock and kernel-size gates still fail.
+- Implications: Evals tests, typecheck, examples and coverage pass; this does not establish green release evidence.
+
+## Restore plan 200 whole-plan verification
+
+- Section: Further Actions
+- Priority: P2
+- Source: plans/200-Phase-11-Part-Y-Evals-Dataset-Hygiene-Scenario-Items-User-Simulation-State-Grading-And-Injection-Suite.md
+- What: Resolve docs/next/hooks.md navigation and docs/next promotion, the evals observability peer-range check, missing OpenAI Codex/OpenRouter lock entries and kernel size ceilings; rerun plan 200's whole-plan verification.
+- Why: Required release evidence remains blocked despite successful implementation checks. Coordinate the shared blockers with the existing plan 198 verification follow-up.
+
+## Plan 188.11 compromises: interim memory claims and the limitations register
+
+- Section: Compromises Made
+- Priority: P2
+- Source: plans/188.11-Phase-11-Part-O11-Memory-Release-Readiness-Stable-Surface-Preset-And-Honest-Claims.md
+- Compromise: Claims are limited to the 188.10 held-out v3 evidence (LongMemEval-S, one model family, same model as judge); the preset stays opt-in with 2.271 trust-scan refusals per 1,000 exchanges and 3/500 needed-session questions touched; the reference host is single-tenant and the live cross-principal journey is deferred to plan 186; the stability annotations are documentation-only; the Task 8 adversarial miss (`curl -s https://…`) is reported but not fixed.
+- Implications: The README states the measured comparison and twelve known limitations with evidence paths, and `docs/_evidence/memory-bench/188.11/limitations.json` names the plan 202 task that owns each. Defaults stay off until plan 202 Task 19.
+
+## Plan 188.11 follow-ups absorbed by plan 202
+
 - Section: Further Actions
 - Priority: P1
-- Source: plans/188.1-Phase-11-Part-O1-Memory-Fabric-OKF-Markdown-Source-And-Lexical-Retrieval.md
-- What: Implement memory lifecycle evaluation, replay, longitudinal suites, ablations, calibration, and defaults (absorbs Task 10) (`plans/188.6-Phase-11-Part-O6-Memory-Lifecycle-Evaluation-Replay-Longitudinal-Suite-Ablations-And-Defaults.md`).
-- Why: Evaluates the complete shipped memory architecture with statistically rigorous ablations, decides final configuration defaults, and completes benchmark calibration.
-
+- Source: plans/188.11-Phase-11-Part-O11-Memory-Release-Readiness-Stable-Surface-Preset-And-Honest-Claims.md
+- What: Plan 202 Task 2 — broaden the evidence base (second benchmark family; held-out preference/abstention). Task 3 — cross-family judging. Task 5 — lift the lexical top-32 candidate ceiling (11/30 multi-session questions). Task 6 — temporal reasoning (12/20). Task 8 — precision-first injection (78% irrelevant). Task 15 — capacity under a growing archive. Task 14 — close F3 (13/24 foreign-context exposure) and F7 (12-persona safety power not reached), and tune the trust scan (2.271/1,000; 3/500 needed sessions; `exfil-06` `curl -s https://…` undetected). Task 17 — reliable extraction (F4). Task 16 — make OM measurable (F9 `om+fabric` never completed). Task 19 — publish the final claim and close the limitations register mechanically.
+- Why: Each entry in `docs/_evidence/memory-bench/188.11/limitations.json` carries the owning plan 202 task, so closing them is mechanical once plan 202's evidence lands.

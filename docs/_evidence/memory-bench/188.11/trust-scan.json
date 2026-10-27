@@ -1,0 +1,85 @@
+{
+  "plan": "188.11 Task 8",
+  "generatedAt": "2026-10-27T11:50:59.262Z",
+  "modelCalls": 0,
+  "threshold": {
+    "enforced": false,
+    "falseRefusalPer1000": 1,
+    "exceeded": true
+  },
+  "datasets": {
+    "longmemeval-s": {
+      "questions": 500,
+      "neededQuestions": 500,
+      "neededSessionRefusedQuestions": 3,
+      "exchanges": 99090,
+      "refusedExchanges": 225,
+      "refusedPer1000": 2.271,
+      "refusedByClass": {
+        "prompt-injection": 32,
+        "exfil": 10,
+        "invisible-unicode": 183,
+        "secret": 0
+      },
+      "refusedByClassPer1000": {
+        "prompt-injection": 0.323,
+        "exfil": 0.101,
+        "invisible-unicode": 1.847,
+        "secret": 0
+      }
+    },
+    "locomo": {
+      "questions": 1986,
+      "neededQuestions": 0,
+      "neededSessionRefusedQuestions": 0,
+      "exchanges": 324,
+      "refusedExchanges": 0,
+      "refusedPer1000": 0,
+      "refusedByClass": {
+        "prompt-injection": 0,
+        "exfil": 0,
+        "invisible-unicode": 0,
+        "secret": 0
+      },
+      "refusedByClassPer1000": {
+        "prompt-injection": 0,
+        "exfil": 0,
+        "invisible-unicode": 0,
+        "secret": 0
+      }
+    }
+  },
+  "adversarial": {
+    "items": 34,
+    "detected": 33,
+    "recall": 0.9706,
+    "byClass": {
+      "prompt-injection": {
+        "total": 10,
+        "detected": 10,
+        "missedIds": [],
+        "recall": 1
+      },
+      "exfil": {
+        "total": 8,
+        "detected": 7,
+        "missedIds": [
+          "exfil-06"
+        ],
+        "recall": 0.875
+      },
+      "invisible-unicode": {
+        "total": 8,
+        "detected": 8,
+        "missedIds": [],
+        "recall": 1
+      },
+      "secret": {
+        "total": 8,
+        "detected": 8,
+        "missedIds": [],
+        "recall": 1
+      }
+    }
+  }
+}

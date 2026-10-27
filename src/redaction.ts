@@ -208,6 +208,7 @@ function readProviderFailureClass(error: unknown): ProviderFailureClass | undefi
     value === "rate_limited" ||
     value === "transient" ||
     value === "permanent" ||
+    value === "context_overflow" ||
     value === "unknown"
     ? value
     : undefined;

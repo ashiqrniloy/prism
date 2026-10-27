@@ -234,6 +234,31 @@ describe("hook bus", () => {
     });
   });
 
+  it("decide compaction.when: any veto wins when nobody asks to compact", async () => {
+    const hooks = bus();
+    hooks.on("compaction.when", () => undefined);
+    hooks.on("compaction.when", () => ({ compact: false }));
+    assert.deepEqual(await hooks.decide("compaction.when", { sessionId: "s1", runId: "r1", messages: [], entryCount: 0 }), {
+      compact: false,
+    });
+  });
+
+  it("decide compaction.when: every abstention yields no decision", async () => {
+    const hooks = bus();
+    hooks.on("compaction.when", () => undefined);
+    hooks.on("compaction.when", () => undefined);
+    assert.equal(await hooks.decide("compaction.when", { sessionId: "s1", runId: "r1", messages: [], entryCount: 0 }), undefined);
+  });
+
+  it("decide compaction.when: true beats false regardless of order", async () => {
+    const hooks = bus();
+    hooks.on("compaction.when", () => ({ compact: true }));
+    hooks.on("compaction.when", () => ({ compact: false }));
+    assert.deepEqual(await hooks.decide("compaction.when", { sessionId: "s1", runId: "r1", messages: [], entryCount: 0 }), {
+      compact: true,
+    });
+  });
+
   it("around nests highest priority outermost", async () => {
     const order: string[] = [];
     const hooks = bus();

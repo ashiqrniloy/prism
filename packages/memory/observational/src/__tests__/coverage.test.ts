@@ -1,17 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { SessionEntry } from "@arnilo/prism";
-import {
-  eligibleObservationSources,
-  eligibleObservationTokenCount,
-  foldObservationalMemoryLedger,
-  isEligibleObservationSourceEntry,
-  type MemoryObservation,
-  OBSERVATIONS_RECORDED,
-  observationsUncoveredByReflection,
-  REFLECTIONS_RECORDED,
-  unscannedEntries,
-} from "../index.js";
+import { foldObservationalMemoryLedger, isEligibleObservationSourceEntry, type MemoryObservation, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "../index.js";
+import { eligibleObservationSources, eligibleObservationTokenCount, observationsUncoveredByReflection, unscannedEntries } from "../coverage-helpers.js";
 
 const obs: MemoryObservation = {
   id: "aaaaaaaaaaaa",

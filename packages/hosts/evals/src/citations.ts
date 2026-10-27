@@ -20,24 +20,26 @@ export function createCitationIntegrityScorer<TInput = unknown, TExpected = unkn
   return defineScorer({
     id: options?.id ?? "citation_integrity",
     description: "citation source/hash/span/ACL integrity; semantic support is ignored",
+    requires: ["environment"],
+    invariant: true,
     score(input) {
       const env = input.environment as { citations?: readonly CitationIntegrityItem[] } | undefined;
       const items = env?.citations;
       if (!Array.isArray(items)) {
-        return { score: 0, reason: "no citation environment", metadata: { invariant: true } };
+        return { score: 0, reason: "no citation environment" };
       }
       for (const item of items) {
         if (!item?.citation) {
-          return { score: 0, reason: "missing_source", metadata: { invariant: true } };
+          return { score: 0, reason: "missing_source" };
         }
         const result = checkCitationIntegrity(item.citation, item.live, {
           ...(item.boundRevision === undefined ? {} : { boundRevision: item.boundRevision }),
         });
         if (!result.ok) {
-          return { score: 0, reason: result.reason, metadata: { invariant: true, reason: result.reason } };
+          return { score: 0, reason: result.reason };
         }
       }
-      return { score: 1, metadata: { invariant: true } };
+      return { score: 1 };
     },
   });
 }

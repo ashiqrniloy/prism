@@ -11,12 +11,26 @@
  * metadata field survive, only `path` changes. Nothing is re-embedded, nothing is re-scored, and no
  * `_lineage` field is invented (the walk stays for records that really are derived).
  */
-import { MemoryScopeError, MemoryValidationError } from "@arnilo/prism-memory-core";
-import { HARD_INVALIDATION_BATCH } from "@arnilo/prism-memory-core";
-import type { DeletionPropagationContext, DeletionPropagationHandler, DeletionPropagationStore } from "@arnilo/prism-memory-core";
-import type { RepointContext, RepointHandler, RepointStore } from "@arnilo/prism-memory-core";
-import type { MemoryInvalidationReason, MemoryScope, MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-core";
-import { assertNotAborted, requireScope } from "@arnilo/prism-memory-core";
+
+import type {
+  DeletionPropagationContext,
+  DeletionPropagationHandler,
+  DeletionPropagationStore,
+  MemoryInvalidationReason,
+  MemoryScope,
+  MemoryVectorRecord,
+  RepointContext,
+  RepointHandler,
+  RepointStore,
+  VectorStore,
+} from "@arnilo/prism-memory-core";
+import {
+  assertNotAborted,
+  HARD_INVALIDATION_BATCH,
+  MemoryScopeError,
+  MemoryValidationError,
+  requireScope,
+} from "@arnilo/prism-memory-core";
 import {
   encodeMemoryNoteMetadata,
   MEMORY_NOTE_METADATA_KEY,
@@ -108,6 +122,7 @@ export function createFabricRepointHandler(options: {
           ...record.metadata,
           [MEMORY_NOTE_METADATA_KEY]: encodeMemoryNoteMetadata({
             ...noteFields(note),
+            ...(note.unknown === undefined ? {} : { unknown: note.unknown }),
             ...(note.scope === undefined ? {} : { scope: note.scope }),
             kind: note.kind,
             path: to,

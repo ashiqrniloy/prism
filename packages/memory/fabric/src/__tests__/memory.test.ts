@@ -11,7 +11,8 @@ import {
   resolveRecallScoring,
   validateAgainstJsonSchema,
 } from "@arnilo/prism-memory-core";
-import { createPostgresMemoryStores, validateIdentifier } from "@arnilo/prism-memory-core/postgres";
+import { createPostgresMemoryStores } from "@arnilo/prism-memory-core/postgres";
+import { validateIdentifier } from "../../../core/src/postgres/postgres-identifiers.js";
 import { createMemory, createMemoryWorkingStore, packageName, runMemoryConformance } from "../index.js";
 import type { MemoryVectorRecord } from "@arnilo/prism-memory-core";
 

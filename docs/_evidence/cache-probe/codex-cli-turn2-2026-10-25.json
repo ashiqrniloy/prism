@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "provider": "codex-cli",
+  "harness": "codex-cli 0.164.0",
+  "model": "gpt-6.1-sol",
+  "route": "private chatgpt.com/backend-api/codex (chatgpt auth mode); no proxy, so the request bodies were not captured",
+  "measuredOn": "2026-10-25",
+  "method": {
+    "turn1": "codex exec --json -m gpt-6.1-sol -s read-only --skip-git-repo-check -c model_reasoning_effort='low' -c model_reasoning_summary='none' '<prompt>'",
+    "turn2": "codex exec resume <thread_id> --json --skip-git-repo-check -c model_reasoning_effort='low' -c model_reasoning_summary='none' 'Turn 2. Reply with the single word OK.'",
+    "numbers": "JSONL event token_count.info.last_token_usage (per turn). turn.completed.usage is the session total, so it must not be used per turn.",
+    "promptShape": "'Reference material, ignore its content.' + N words of generated padding + 'Turn 1. Reply with the single word OK.'; no tools were invoked, matching the shape of scripts/cache-parity/provider-probe.mjs."
+  },
+  "runs": [
+    {
+      "id": "no-pad",
+      "addedPrefixTokens": 0,
+      "turn1": {
+        "inputTokens": 17887,
+        "cacheReadTokens": 12288
+      },
+      "turn2": {
+        "inputTokens": 20972,
+        "cacheReadTokens": 17664
+      },
+      "turn2CacheReadShareOfInput": 0.8423,
+      "turn2ReuseOfPriorPrompt": 0.9875
+    },
+    {
+      "id": "pad-665",
+      "addedPrefixTokens": 665,
+      "turn1": {
+        "inputTokens": 18552,
+        "cacheReadTokens": 12288
+      },
+      "turn2": {
+        "inputTokens": 19260,
+        "cacheReadTokens": 12288
+      },
+      "turn2CacheReadShareOfInput": 0.6381,
+      "turn2ReuseOfPriorPrompt": 0.6623
+    },
+    {
+      "id": "pad-12552",
+      "addedPrefixTokens": 12552,
+      "turn1": {
+        "inputTokens": 24840,
+        "cacheReadTokens": 12288
+      },
+      "turn2": {
+        "inputTokens": 25548,
+        "cacheReadTokens": 12288
+      },
+      "turn2CacheReadShareOfInput": 0.481,
+      "turn2ReuseOfPriorPrompt": 0.4947
+    },
+    {
+      "id": "pad-30066-single-turn",
+      "addedPrefixTokens": 30066,
+      "turn1": {
+        "inputTokens": 42354,
+        "cacheReadTokens": 12288
+      }
+    }
+  ],
+  "prismComparison": {
+    "evidence": "openai-codex-gpt-6.1-sol-2026-10-25.json",
+    "turn2": {
+      "inputTokens": 8352,
+      "cacheReadTokens": 8192
+    },
+    "turn2CacheReadShareOfInput": 0.9809,
+    "turn2ReuseOfPriorPrompt": 0.9828,
+    "perTurnInputGrowth": 18
+  },
+  "reading": [
+    "Codex CLI reuses only a 12288-token block of its own fixed harness once the first prompt carries any user content: turn 2 reads 12288 of the prior 18552 or 24840 tokens. With no user padding at all it reused 17664 of the prior 17887.",
+    "That collapse reproduces at two pad sizes (665 and 12552 tokens), so it is a property of the CLI on this route, not a one-off. It is not explained by the bodies: chatgpt-mode traffic was not proxied, so whether the harness tail or the user message differs byte-wise between turns is unverified.",
+    "Prism, on the same model and account, reuses 8192 of its 8334-token prefix across turns regardless of the new turn's size (9809 cached of all input) and grows input by 18 tokens per turn where codex grows by 708-3085.",
+    "Fairness note: codex's 12288 is a permanent server-side harness cache shared across runs, so its very first request already starts 69% offset while Prism's first request starts at 0. This is a per-turn steady-state comparison on the same conversation shape, not a cold-start one."
+  ],
+  "status": "measured"
+}

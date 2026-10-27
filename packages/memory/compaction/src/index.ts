@@ -52,8 +52,9 @@ const definition = definePackage<MemoryCompactionConfig>({
     );
     prism.slots.compaction.provide(coding ? keepLatestPlanTurn(compactor) : compactor);
 
-    // The auto trigger, when the host asks for one: a registered `compaction.when` handler is the
-    // whole decision, so the kernel's `compaction.thresholdEntries` fallback stays out of the way.
+    // The auto trigger, when the host asks for one: the package votes on `compaction.when`, and
+    // declines (`false`) below the gate so the kernel's `compaction.thresholdEntries` fallback — which
+    // only runs when every handler abstains — stays out of the way.
     if (!config.trigger) return;
     prism.hooks.on("compaction.when", async (payload, context) => {
       const session = context.session;
@@ -69,7 +70,7 @@ const definition = definePackage<MemoryCompactionConfig>({
           signal: context.signal,
         },
       );
-      return compact ? { compact: true } : undefined;
+      return compact ? { compact: true } : { compact: false };
     });
   },
 });

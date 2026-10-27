@@ -3,7 +3,8 @@
 ## What it does
 
 `@arnilo/prism/provider-kit` is the wire code that model providers share: bounded HTTP and SSE reading, the
-routed-provider builder (`createRoutedProvider`), protocol codecs (`openai-chat`, `anthropic-messages`),
+routed-provider builder (`createRoutedProvider`), protocol codecs (`openai-chat`, `anthropic-messages`,
+`openai-responses`),
 System One client helpers, JSON-schema and media helpers, package helpers (`defineProviderPackage`, `providerPackageInstance`),
 and the provider conformance suite. It holds no vendor catalog, endpoint, or credential default: the protocol wire mappings
 it carries are named for their protocol and are configured through route declarations and codec options.
@@ -41,7 +42,7 @@ A routed provider is configured with `createRoutedProvider(options)`:
 - `id`: Provider ID string.
 - `baseUrl`: Base URL string.
 - `apiKey`: Direct secret string, `CredentialValueSource`, or request-time resolver.
-- `routes`: Record of route definitions keyed by route name (`RoutedProviderRoute`). Each route declares `path`, `format` (`"openai-chat" | "anthropic-messages"`), `auth`, optional `codec` options, `affinity`, and optional `require`.
+- `routes`: Record of route definitions keyed by route name (`RoutedProviderRoute`). Each route declares `path`, `format` (`"openai-chat" | "anthropic-messages" | "openai-responses"`), `auth`, optional `codec` options, `affinity`, and optional `require`.
 - `fetch`: Optional custom or replay `fetch` implementation.
 
 ## Outputs / response / events
@@ -54,6 +55,20 @@ A provider's `generate(request)` returns an `AsyncIterable<ProviderEvent>` yield
 - `error`: Terminal event with sanitized error code and message.
 
 `providerConformance` and `assertRecordedStreamConforms` verify that streams strictly produce terminal events without secret leaks or out-of-order events.
+
+### Stream errors
+
+Gateways answer HTTP 200 and then stream a terminal error frame. The OpenAI Chat codec treats both shapes as one
+terminal `error` and never emits `done` after them:
+
+- a top-level `error` object (OpenRouter: `{"error": {"code": 400, "message": "...", "metadata": {"error_type": "..."}}}`),
+- a choice with `finish_reason: "error"`.
+
+The error carries the status as `code`, the redacted `metadata.error_type` and message, and the
+`classifyProviderFailure` class. Status 429 is `rate_limited` (`quota` on daily-limit text), 502/503
+`transient`, and 400/402 `permanent`; a 400/413 frame whose message matches the overflow patterns (or 422, as
+SystemOne answers) classifies `context_overflow`. Before any output that class drives the one compact-and-retry
+recovery; after output started it fails the run with `ContextOverflowError`.
 
 ## Tool results on the wire
 
@@ -155,6 +170,8 @@ const configSchema: JsonSchema = {
 - Resolves credentials exactly once per request via `resolveApiKey` / `apiKey` (either a direct string, `CredentialValueSource`, or request resolver).
 - Enforces header precedence: provider-owned auth and `content-type` headers are applied after caller headers, preventing caller header hijacking (`assertProviderOwnedHeadersWin`).
 - Enforces bounded error extraction with secret redaction (`assertNoSecretLeak`).
+- `routes[x].mapUsage(usage, chunk)`: per-route usage mapping; the second argument is the decoded SSE chunk, so a
+  route can read usage fields that only exist on the chunk (cost telemetry, request ids).
 
 ```ts
 import type { CredentialValueSource, ModelProvider } from "@arnilo/prism";
@@ -190,11 +207,37 @@ export function createAcmeProvider(options: { apiKey: CredentialValueSource; bas
 ### 3. Codec options
 
 Each route binds a wire protocol codec:
+- **OpenAI Responses (`openai-responses`)**:
+  - `store` (default `false`): the wire `store` flag. A stateless request also forces
+    `include: ["reasoning.encrypted_content"]`, so the next turn can replay reasoning it was never allowed to keep.
+  - `stream` (default `true`): the wire `stream` flag.
+  - `include`: extra `include` values; merged with the encrypted-reasoning include when `store` is false.
+  - `omitFields`: body keys deleted **after** construction, so a model's `parameters` or a caller's `extra` cannot
+    re-add a field the route refuses. `OPENAI_RESPONSES_UNSUPPORTED_FIELDS` is the measured list of 14.
+  - `promptCacheKeyMax` (default `64`): `prompt_cache_key` is `options.cacheKey ?? options.sessionId`, truncated to
+    this many characters.
+  - `reasoningSummary`: the `reasoning.summary` value; absent means the model's compat decides.
+  - `imageInput`, `strictCompletion`, `stripOwnedCompat`, `transformBody`: as in the Chat codec.
+
+  The body never sets `previous_response_id`: the HTTP route is stateless, so a stored response is not resumed even
+  when a caller supplies a continuation or the compat key. `max_output_tokens` passes through from
+  `parameters.max_output_tokens` (or the portable `maxTokens`); a value under
+  `OPENAI_RESPONSES_MIN_OUTPUT_TOKENS` (16) throws `ResponsesMaxOutputTokensError` locally rather than failing at the
+  provider.
 - **OpenAI Chat (`openai-chat`)**:
   - `reasoningReplay`: Controls how previous thinking content is replayed to the model:
     - `"reasoning_content"`: emitted as OpenAI-compatible `reasoning_content` field on assistant messages.
+    - `"reasoning_details"`: replayed as `assistant.reasoning_details` entries, unchanged and in order (the entries
+      the stream produced, stored as each thinking block's `data`; a coalesced block's `signature` holds the list).
     - `"fold"`: folded into `content` as `<thought>...</thought>`.
     - `"drop"`: omitted from the message payload.
+  - `cacheControl: "anthropic-blocks"` (Chat wire): stamps `cache_control: {type: "ephemeral"}` (plus `ttl: "1h"`
+    when the model declares `cache.longRetention` and the request asks for long retention) at the breakpoints
+    resolved by `resolvePromptCachePlan`. Default breakpoints match pi: `system_prompt`, `tools`, `last_message`;
+    a string `content` becomes a one-part array and markers land only on non-empty text parts. Absent means no
+    markers.
+  - `cacheControlOnTools: true`: also marks the last tool definition, only for gateways that cache tool
+    definitions.
   - `imageInput`:
     - `"capability-gated"` (default): throws `ProviderRequirementError` (`requirement: "images"`) if images are sent to a model without `image_input` capability.
     - `"always"`: passes image content parts through regardless of declared model capabilities.
@@ -341,6 +384,10 @@ Prism decision models (such as `@arnilo/prism-provider-typesafe` and `@arnilo/pr
 - **Key-required vs key-optional**: Cloud hosted providers (e.g. TypeSafe Jev) declare `keyRequired: true` (missing key emits `status.note("warn", ...)`); local/self-hosted providers (e.g. Laya) declare `keyRequired: false` (missing key notes nothing and outgoing requests omit `Authorization` headers).
 - **`systemOneConformance(options)`**: Comprehensive conformance test covering tool rejections, schema rendering, 401/422 status mapping, malformed success responses, single credential resolution per request, secret redaction, and wire fixture replay. It also covers `decisions()`: raw answers with probabilities intact, the omitted/forwarded `images` field, custom paths, decide-side 401/422 mapping, and one credential resolution per call.
 
+## Provider failure classes
+
+`classifyProviderFailure(error)` (also stamped by `httpStatusError` and `providerHttpError`) reads the wire evidence only and returns `ErrorInfo.failureClass`: `auth` (401/403), `quota`/`rate_limited` (429, split by body), `context_overflow` (400/413/422 whose bounded body matches `context_length_exceeded`, `maximum context length`, `context window exceeds limit`, or `prompt is too long`), `transient` (5xx and transient network codes), `permanent` (any other 4xx), and `unknown`. The class is advisory: the retry policy still decides from status codes, and only `context_overflow` has kernel behavior — one compaction-and-retry in [loops](loop.md). A route whose overflow body is not distinguishable falls back to the session's estimate-versus-window check, not to a status-only rule.
+
 ## Shared surface inventory
 
 | Group | Exports |
@@ -415,6 +462,10 @@ handles request serialization and SSE event parsing for providers implementing t
   - De-duplicates target message indices before enforcing `maxBreakpoints` (e.g., if multiple breakpoints point to the same message index, they consume only 1 slot towards `maxBreakpoints`).
   - When tool definition caching is enabled (`hasTools: true`), message breakpoints are clamped to `maxBreakpoints - 1` (defaulting to 3 message breakpoints when max is 4).
 - Empty-block safety: `applyCacheControl` inspects blocks in reverse order (looking back up to 20 blocks) to place markers strictly on non-empty content blocks, skipping empty strings, whitespace-only text, and empty tool results.
+- Chat-wire adapter: with `cacheControl: "anthropic-blocks"`, `openAIChatBody` runs the same `resolvePromptCachePlan`
+  over the messages it serializes and stamps the marker on each planned message's last non-empty text part, plus the
+  last tool when `cacheControlOnTools` is set. There is no second planner: the Anthropic field (`system`, `tools`) and
+  the Chat field (`messages[].content[]`, `tools[]`) get the same plan.
 - `affinity` on routed providers and codecs:
   - Both `createRoutedProvider` and individual codecs (`openai-chat`, `anthropic-messages`) accept route affinity hooks: `routes[x].affinity?: (request: ProviderRequest) => Record<string, string>`.
   - Route affinity headers (e.g., `sanitizeCacheKey(modelSpec.options?.promptCache?.key)`) are merged into outgoing request headers after caller headers and before provider-owned auth/content-type headers, allowing sticky routing to the same backend node.
@@ -424,7 +475,7 @@ handles request serialization and SSE event parsing for providers implementing t
 `@arnilo/prism/provider-kit` exports offline replay fixtures and stream conformance verification:
 
 - `replayFetch(exchanges)`: returns a `fetch` implementation that serves recorded exchanges in strict order. It asserts the request path matches `exchange.path` (and optional `method`), failing fast on unexpected paths or if requests exceed the recorded exchange count. Responses preserve the status, content-type header, and raw response body.
-- `assertRecordedStreamConforms({ provider, request, recording, expect })`: runs `assertProviderStreamConforms` on the provider stream, verifying terminal event ordering (`done` or `error`), expected text content, and usage metrics against the recorded exchange. For HTTP status >= 400 recordings, it verifies the provider stream terminates with an `error` event.
+- `assertRecordedStreamConforms({ provider, request, recording, expect })`: runs `assertProviderStreamConforms` on the provider stream, verifying terminal event ordering (`done` or `error`), expected text content, and usage metrics against the recorded exchange. For HTTP status >= 400 recordings, and for 200 recordings whose body carries an error frame, it verifies the provider stream terminates with an `error` event.
 - `providerConformance(factory, options?)`: runs comprehensive provider conformance checks. When `recordings` (a directory path, string path, or file/directory `URL`) is supplied, it discovers recorded scenarios (such as `text`, `tool-loop`, `thinking`, `cache`, `error`), reconstructs realistic multi-turn requests from recorded payloads, and replays each scenario through `replayFetch` with signature tracking:
   - Verifies event ordering and terminal `done` or `error` events.
   - Verifies tool call delta reconstruction and complete argument parsing.
@@ -478,10 +529,42 @@ Every provider package in `packages/providers/<vendor>` is enforced by the suppo
 - `docs/packages.md`: `definePackage`, `providerPackage`, and the `providers` registrar.
 - `packages/providers/<vendor>/src/index.ts`: the 5 provider packages built on the surface above.
 
+## OpenAI Responses codec
+
+The OpenAI Responses codec in `@arnilo/prism/provider-kit` (`src/provider-kit/codecs/openai-responses.ts`) handles
+request serialization and SSE event parsing for the `/responses` protocol (OpenAI and any gateway that speaks it):
+
+- `openAIResponsesBody(request, options)`: builds the JSON payload. The first system message becomes `instructions`;
+  later system content becomes `developer` input items, never `role: "system"`. User and assistant messages become
+  `input_text`/`output_text` items with `input_image` parts; assistant `tool_call` blocks become `function_call` items
+  and `tool` messages become `function_call_output` items. Function tools are flat (`name`/`parameters` on the tool
+  object), structured output lands on `text.format` as a bare `json_schema`, and thinking becomes
+  `reasoning: { effort, summary }` with the effort snapped to the model's declared levels.
+- Encrypted reasoning round-trips: an `output_item.done` reasoning item is stored as a `thinking` block whose `data`
+  is `{ provider, item }`. A replay sends the item's `id`, `encrypted_content`, and `summary` back byte-for-byte, and
+  only to the provider that produced it — a block stamped with another provider id is dropped rather than sent.
+- `openAIResponsesEvents(body, options)`: parses the documented stream sequence
+  (`response.created → in_progress → output_item.added → content_part.added → output_text.delta… → response.metadata →
+  output_text.done → content_part.done → output_item.done → response.completed`). Text and reasoning-summary deltas
+  stream as they arrive; `function_call` items and their argument deltas reconstruct one tool call; `response.completed`
+  yields usage (`input_tokens` is already inclusive, `input_tokens_details.cached_tokens` becomes `cacheReadTokens`,
+  reasoning tokens ride in `metadata.reasoningTokens`) and then `done` with the mapped stop reason;
+  `response.incomplete` maps `incomplete_details.reason` (`max_output_tokens`, `content_filter`).
+- A `response.failed` or `error` frame is terminal and classified: its `code` and `param` stay in the message, and an
+  overflow payload (`context_length_exceeded` or the shared overflow strings) is reported with status 400 so
+  `classifyProviderFailure` marks it `context_overflow` — which is what drives the one compact-and-retry before output
+  and `ContextOverflowError` after it. A stream that ends without `response.completed`/`response.incomplete` is an
+  error.
+- `providerConformance({ recordings })` replays Responses recordings: terminal event order, tool reconstruction, the
+  usage invariant, and the encrypted-reasoning round trip (a replayed reasoning item without `encrypted_content`
+  fails the run).
+
 ## Removed
 
 - The historical subpaths `@arnilo/prism/providers/{openai-compatible,transport,openai,schema,media}` and `@arnilo/prism/testing/provider-conformance` are gone.
 - OpenAI Responses: `createOpenAIResponsesProvider`, `resolveOpenAIReasoning`, `applyOpenAIResponsesStructuredOutput`, `serializeOpenAIResponsesStructuredOutput`, and Responses media helpers `openAIAudioFormat`, `serializeOpenAIResponsesInputFile`, `serializeOpenAIResponsesInputAudio`.
+  Responses itself came back in a new shape: the provider factory stays removed, and `openai-responses` is a
+  **route format** on `createRoutedProvider` with its own codec.
 - OpenAI uploads, prompt cache, and thinking: `createOpenAIFileUploadManager`, `promptCacheKey`, `promptCacheRetention`, `promptCacheOptions`, `applyPromptCacheBreakpoints`, `openAIThinkingLevels`, `openAIDefaultEffort`, `openAICompatThinkingExtra`, `declaredThinkingLevelsFor`.
 - OAuth and device-code: `oauthCredentialsToSecret`, `secretToOAuthCredentials`, `refreshOAuthCredential`, `revokeOAuthCredential`, `pollDeviceCodeToken`, `redactOAuthError`, `abortableSleep`, `throwIfAborted` (from provider-kit).
 - Image generation and model discovery: `ImageGenerationError`, `assertImageGenerationSupported`, `modelSupportsImageGeneration`, `runImageGenerationConformance`, `ModelDiscoveryError`, `createOpenAiCompatibleModelDiscovery`, `createCachedModelDiscovery`, `createFakeModelDiscovery`, `runModelDiscoveryConformance`, `assertModelsListValid`, `failDiscoveryOnStatus`, `mergeModelCatalog`, `resolveDiscoveryBearerToken`.

@@ -48,6 +48,7 @@ export async function remoteConformance(
   factory: RemoteConformanceFactory,
   options: RemoteConformanceOptions = {},
 ): Promise<RemoteConformanceResult> {
+  // host-gate: the conformance factory module path is supplied by the caller at runtime.
   const create: RemoteAgentFactory = (await import(factory.module)).create;
   assert.equal(typeof create, "function", "factory module must export create");
   const legs: RemoteConformanceLeg[] = [];

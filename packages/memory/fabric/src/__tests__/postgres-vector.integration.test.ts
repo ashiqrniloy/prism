@@ -9,8 +9,8 @@ import {
   createPostgresMemoryStores,
   createPostgresVectorStore,
   queryPostgres,
-  validateIdentifier,
 } from "@arnilo/prism-memory-core/postgres";
+import { validateIdentifier } from "../../../core/src/postgres/postgres-identifiers.js";
 import { createMemory } from "@arnilo/prism-memory-fabric";
 
 const postgresUrl = process.env.PRISM_TEST_POSTGRES_URL;

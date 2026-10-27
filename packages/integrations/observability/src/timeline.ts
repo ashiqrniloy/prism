@@ -167,6 +167,8 @@ interface FoldState {
   currentTurnStep?: MutableStep;
   currentProviderStep?: MutableStep;
   activeTools: Map<string, MutableStep>;
+  /** Approval steps by `toolCallId`, so `decision.resolved` can settle the step `run.suspended` opened. */
+  decisionSteps: Map<string, MutableStep>;
   order: number;
   runId: string;
   sessionId?: string;
@@ -209,6 +211,7 @@ function createFoldState(options: TimelineProjectionOptions = {}): FoldState {
   return {
     steps: [],
     activeTools: new Map(),
+    decisionSteps: new Map(),
     order: 0,
     runId: "",
     status: "running",
@@ -308,19 +311,72 @@ function foldAgentEvent(state: FoldState, event: AgentEvent): void {
       closeTurnStep(state);
       if (state.runStep) state.runStep.status = "suspended";
       state.status = "suspended";
-      addStep(state, {
-        id: `hitl:${event.runId}:${state.order}`,
-        parentId: state.runStep?.id,
-        kind: "hitl",
-        name: event.interruption.reason ?? "suspended",
-        order: state.order++,
-        status: "suspended",
-        startedAt: now(),
-      });
+      const interruption = event.interruption;
+      const pending = interruption.pendingDecisions ?? [];
+      if (!pending.some((decision) => decision.toolCallId)) {
+        addStep(state, {
+          id: `hitl:${event.runId}:${state.order}`,
+          parentId: state.runStep?.id,
+          kind: "hitl",
+          name: interruption.reason ?? "suspended",
+          order: state.order++,
+          status: "suspended",
+          startedAt: now(),
+        });
+        return;
+      }
+      // One step per gated call, keyed by `toolCallId` so the settled decision lands on it.
+      for (const decision of pending) {
+        const toolCallId = decision.toolCallId;
+        if (!toolCallId) continue;
+        const toolName = decision.scope.toolName ?? interruption.toolName;
+        const guardrail = decision.guardrail ?? interruption.guardrail;
+        const step = addStep(state, {
+          id: `hitl:${event.runId}:${state.order}`,
+          parentId: state.runStep?.id,
+          kind: "hitl",
+          name: toolName ?? interruption.reason ?? "suspended",
+          order: state.order++,
+          status: "suspended",
+          startedAt: now(),
+          metadata: {
+            toolCallId,
+            approvalId: decision.approvalId,
+            ...(toolName ? { toolName } : {}),
+            ...(guardrail ? { guardrail } : {}),
+          },
+        });
+        state.decisionSteps.set(toolCallId, step);
+      }
       return;
     }
     case "decision.resolved": {
       if (state.runStep) state.runStep.status = "succeeded";
+      const finished = now();
+      for (const decision of event.decisions) {
+        const status = decision.outcome === "allow" ? "approved" : "denied";
+        const step = state.decisionSteps.get(decision.toolCallId);
+        if (!step) {
+          // Inline (and durable-resume) decisions settle before this timeline saw the suspension.
+          addStep(state, {
+            id: `hitl:${event.runId}:${state.order}`,
+            parentId: state.runStep?.id,
+            kind: "hitl",
+            name: "approval",
+            order: state.order++,
+            status,
+            startedAt: finished,
+            finishedAt: finished,
+            durationMs: 0,
+            metadata: { toolCallId: decision.toolCallId, via: event.via },
+          });
+          continue;
+        }
+        step.status = status;
+        step.finishedAt = finished;
+        step.durationMs = durationMs(step.startedAt, finished);
+        step.metadata = { ...step.metadata, via: event.via };
+      }
       return;
     }
     case "turn.started": {

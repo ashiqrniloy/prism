@@ -2,8 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The `compaction.when` handler abstains (`undefined`) below `attention.compactRatio` instead of owning the decision (plan 194 Task 2), so a host trigger or the kernel `thresholdEntries` fallback still fires; past the ratio it asks for compaction as before.
+- The fold stub now names the tool, the call id, and the original payload size and tells the model it may re-run the tool (plan 194 Task 4); the attention compiler's own stub is unchanged.
 ### Added
 
+- `accounting` and `context.accounted` (plan 194 Task 5): one estimate pass per provider request with per-source counts (system, instructions, skills, history, tool results, folded, input, prefix blocks, tail blocks), counts and source names only. Any configured stage emits the event.
+- `blocks.maxShare` (plan 194 Task 5): caps injected prefix and tail context blocks at a fraction of the model input cap, dropping whole blocks by lowest priority then latest-added and reporting each drop. Mutually exclusive with `budget`; the system prompt and instruction layers are never counted or dropped.
+- `fold.clearAtLeastTokens`, `fold.keepLast` and `fold.excludeTools` (plan 194 Task 4): cache-aware fold batching with a per-session cleared-id frontier, so the provider prefix moves once per batch instead of once per turn. `0` keeps the previous per-turn behavior.
 - `assertToolDisclosureConforms` and `ToolDisclosureConformanceOptions` (plan 158 Task 8): the tool-disclosure conformance helper moves here with the activation tool it asserts (the kernel's `@arnilo/prism/testing/tool-conformance` keeps the dispatch/validation probes). The package now also exports its own `ToolSearchState` type rather than reading the kernel's.
 
 

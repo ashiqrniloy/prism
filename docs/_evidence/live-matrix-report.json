@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-18T12:02:12.305Z",
-  "envFile": "/home/arn/.config/prism/live.env",
-  "strict": false,
+  "generatedAt": "2026-10-25T17:54:17.453Z",
+  "envFile": null,
+  "strict": true,
   "dryRun": false,
-  "filter": "providers/opencode-go",
+  "filter": "providers/openai-codex",
   "totals": {
     "ran": 1,
     "skipped": 0,
@@ -12,31 +12,26 @@
     "planned": 0
   },
   "coverage": {
-    "ok": false,
-    "total": 74,
-    "covered": 70,
+    "ok": true,
+    "total": 80,
+    "covered": 76,
     "pending": 4,
     "mode": "baseline"
   },
   "results": [
     {
-      "id": "providers/opencode-go",
-      "package": "@arnilo/prism-provider-opencode-go",
+      "id": "providers/openai-codex",
+      "package": "@arnilo/prism-provider-openai-codex",
       "status": "ran",
       "reason": null,
       "exitCode": 0,
-      "durationMs": 83687,
+      "durationMs": 27183,
       "command": "bun test --timeout=0 src/__tests__/live.test.ts",
-      "cwd": "packages/providers/opencode-go",
+      "cwd": "packages/providers/openai-codex",
       "models": [
         {
-          "env": "PRISM_LIVE_OPENCODE_GO_CHAT_MODEL",
-          "value": "mimo-v2.5",
-          "wired": true
-        },
-        {
-          "env": "PRISM_LIVE_OPENCODE_GO_MESSAGES_MODEL",
-          "value": "qwen3.6-plus",
+          "env": "PRISM_LIVE_OPENAI_CODEX_MODEL",
+          "value": "gpt-6.1-sol",
           "wired": true
         }
       ],

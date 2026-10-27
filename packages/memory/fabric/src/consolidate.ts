@@ -84,6 +84,7 @@ export function mergeNoteMetadata(existing: MemoryNoteMetadata, incoming: Memory
   return {
     v: 1,
     kind: incoming.kind,
+    ...(existing.unknown === undefined ? {} : { unknown: existing.unknown }),
     ...(tRef === undefined ? {} : { tRef }),
     ...(validFrom === undefined ? {} : { validFrom }),
     ...(incoming.validTo === undefined ? {} : { validTo: incoming.validTo }),

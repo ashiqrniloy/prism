@@ -1,26 +1,43 @@
+DEFAULT_CACHE_MAX_BYTES	export declare const DEFAULT_CACHE_MAX_BYTES: number
+DEFAULT_CACHE_MAX_ENTRIES	export declare const DEFAULT_CACHE_MAX_ENTRIES = 64
 DEFAULT_FETCH_CHARS	export declare const DEFAULT_FETCH_CHARS = 32000
+DEFAULT_MAX_REDIRECTS	export declare const DEFAULT_MAX_REDIRECTS = 5
 DEFAULT_OBSCURA_NAME_PREFIX	export declare const DEFAULT_OBSCURA_NAME_PREFIX = "obscura_"
 DEFAULT_OBSCURA_PROCESS_LIMITS	export declare const DEFAULT_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
 DEFAULT_OBSCURA_SEARCH_PROFILE	export declare const DEFAULT_OBSCURA_SEARCH_PROFILE: ObscuraSearchProfile
 DEFAULT_OBSCURA_SERVER_ID	export declare const DEFAULT_OBSCURA_SERVER_ID = "obscura"
 DEFAULT_OBSCURA_WEB_LIMITS	export declare const DEFAULT_OBSCURA_WEB_LIMITS: ObscuraWebLimits
+DEFAULT_PROMPT_INPUT_CHARS	export declare const DEFAULT_PROMPT_INPUT_CHARS = 100000
+DEFAULT_PROMPT_OUTPUT_TOKENS	export declare const DEFAULT_PROMPT_OUTPUT_TOKENS = 1024
 DEFAULT_WEB_LIMITS	export declare const DEFAULT_WEB_LIMITS: ResolvedWebLimits
+HARD_CACHE_MAX_BYTES	export declare const HARD_CACHE_MAX_BYTES: number
+HARD_CACHE_MAX_ENTRIES	export declare const HARD_CACHE_MAX_ENTRIES = 4096
+HARD_CACHE_TTL_SECONDS	export declare const HARD_CACHE_TTL_SECONDS = 86400
 HARD_FETCH_CHARS	export declare const HARD_FETCH_CHARS = 100000
+HARD_MAX_REDIRECTS	export declare const HARD_MAX_REDIRECTS = 10
 HARD_OBSCURA_PROCESS_LIMITS	export declare const HARD_OBSCURA_PROCESS_LIMITS: ObscuraProcessLimits
 HARD_OBSCURA_WEB_LIMITS	export declare const HARD_OBSCURA_WEB_LIMITS: ObscuraWebLimits
+HARD_PROMPT_INPUT_CHARS	export declare const HARD_PROMPT_INPUT_CHARS = 1000000
+HARD_PROMPT_OUTPUT_TOKENS	export declare const HARD_PROMPT_OUTPUT_TOKENS = 32768
 HARD_WEB_LIMITS	export declare const HARD_WEB_LIMITS: ResolvedWebLimits
 MAX_DOMAIN_CONTROLS	export declare const MAX_DOMAIN_CONTROLS = 10
+MEMO_MAX_ENTRIES	export declare const MEMO_MAX_ENTRIES = 8
+MEMO_TTL_SECONDS	export declare const MEMO_TTL_SECONDS = 600
+OBSCURA_GUARDED_VERSION	export declare const OBSCURA_GUARDED_VERSION = "0.1.8"
 ObscuraCdpSession	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
 ObscuraChromium	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
-ObscuraCliRunOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ValidateObscuraUrlOptions } from "./cli.js"
-ObscuraCliRunResult	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ValidateObscuraUrlOptions } from "./cli.js"
+ObscuraCliRunOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
+ObscuraCliRunResult	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
 ObscuraCloseOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
 ObscuraError	export declare class ObscuraError extends Error
 ObscuraExit	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
 ObscuraMcpError	export declare class ObscuraMcpError extends Error
 ObscuraPlaywright	export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js"
 ObscuraProcessOptions	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
+ObscuraVersionProbe	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
+ObscuraVersionProbeOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
 OwnedObscuraProcess	export type { ObscuraCloseOptions, ObscuraExit, ObscuraProcessOptions, OwnedObscuraProcess, } from "./types.js"
+PROMPT_SYSTEM_PROMPT	export declare const PROMPT_SYSTEM_PROMPT: string
 PlaywrightBrowser	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
 PlaywrightBrowserContext	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
 PlaywrightCdpSession	export type { PlaywrightBrowser, PlaywrightBrowserContext, PlaywrightCdpSession, PlaywrightDialog, PlaywrightDownload, PlaywrightLocator, PlaywrightPage, PlaywrightRequest, PlaywrightRoute, } from "./playwright.js"
@@ -34,11 +51,15 @@ SEARCH_FRESHNESS	export declare const SEARCH_FRESHNESS: readonly SearchFreshness
 SEARCH_HIGHLIGHTS_PER_RESULT	export declare const SEARCH_HIGHLIGHTS_PER_RESULT = 2
 SEARCH_HIGHLIGHT_CHARS	export declare const SEARCH_HIGHLIGHT_CHARS = 200
 SEARCH_SNIPPET_CHARS	export declare const SEARCH_SNIPPET_CHARS = 300
-ToolsWebBackend	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
-ToolsWebConfig	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
-ToolsWebFetchConfig	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
-ToolsWebObscuraConfig	export type { ToolsWebBackend, ToolsWebConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, } from "./config.js"
-ValidateObscuraUrlOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ValidateObscuraUrlOptions } from "./cli.js"
+ToolsWebBackend	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ToolsWebCacheConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ToolsWebConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ToolsWebDomainsConfig	export type { ToolsWebDomainsConfig } from "./domains.js"
+ToolsWebFetchConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ToolsWebObscuraConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ToolsWebPromptConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ToolsWebSearxngConfig	export type { ToolsWebBackend, ToolsWebCacheConfig, ToolsWebConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig, ToolsWebObscuraConfig, ToolsWebPromptConfig, ToolsWebSearxngConfig, } from "./config.js"
+ValidateObscuraUrlOptions	export type { ObscuraCliRunOptions, ObscuraCliRunResult, ObscuraVersionProbe, ObscuraVersionProbeOptions, ValidateObscuraUrlOptions, } from "./cli.js"
 WebToolError	export declare class WebToolError extends Error
 assertBoundedJson	export declare function assertBoundedJson(value: unknown, maxDepth: number, maxProperties: number, maxBytes: number): asserts value is JsonValue
 boundedJson	export declare function boundedJson<T>(value: T, maxDepth: number, maxProperties: number, maxBytes: number): T
@@ -46,38 +67,50 @@ canonicalUrl	export declare function canonicalUrl(input: string): string
 citation	export declare function citation(provider: WebProvider, inputUrl: string, sourceId?: string): WebCitation
 connectObscuraCdp	export declare function connectObscuraCdp(options: ConnectObscuraCdpOptions): Promise<ObscuraCdpSession>
 controlsFromArgs	export declare function controlsFromArgs(args: JsonObject): Record<string, unknown>
+convertHtml	export declare function convertHtml(html: string, sourceUrl: string): Promise<HtmlConversion>
 createBraveSearch	export declare function createBraveSearch(options: WebAdapterOptions): WebSearchAdapter
+createDomainPolicy	export declare function createDomainPolicy(config: ToolsWebDomainsConfig): DomainPolicy
 createExaSearch	export declare function createExaSearch(options: WebAdapterOptions): WebSearchAdapter
-createFetchMemo	export declare function createFetchMemo<T>(now?: () => number):
+createFetchCache	export declare function createFetchCache(config: ResolvedFetchCache, now?: () => number): FetchCache
 createFirecrawlExtractor	export declare function createFirecrawlExtractor(options: FirecrawlExtractOptions): WebExtractAdapter
 createFirecrawlFetch	export declare function createFirecrawlFetch(options: FirecrawlFetchOptions): WebFetchAdapter
+createKagiSearch	export declare function createKagiSearch(options: WebAdapterOptions): WebSearchAdapter
+createNativeFetch	export declare function createNativeFetch(options: NativeFetchOptions): WebFetchAdapter
 createObscuraMcpTools	export declare function createObscuraMcpTools(options: ObscuraMcpToolsOptions): Promise<ObscuraMcpTools>
 createObscuraPageFetcher	export declare function createObscuraPageFetcher(options: ObscuraWebToolsOptions): WebFetchService
 createObscuraWebTools	export declare function createObscuraWebTools(options: ObscuraWebToolsOptions): ObscuraWebTools
+createPromptFetch	export declare function createPromptFetch(client: ModelClient, options:
+createSearxngSearch	export declare function createSearxngSearch(options: SearxngSearchOptions): WebSearchAdapter
+createTavilySearch	export declare function createTavilySearch(options: WebAdapterOptions): WebSearchAdapter
 createWebTools	export declare function createWebTools(options: WebToolsOptions): readonly ToolDefinition[]
-createWebTransport	export declare function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions): WebTransport
+createWebTransport	export declare function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions, transport?: WebTransportOptions): WebTransport
+decodeBody	export declare function decodeBody(bytes: Uint8Array, contentType: string | null): string
 default	export default
 domainOperatorsQuery	export declare function domainOperatorsQuery(query: string, controls: SearchControls): string
 endpointFromServeArgs	export declare function endpointFromServeArgs(args: readonly string[]): string
-fetchParameters	export declare function fetchParameters(): JsonObject
+fetchParameters	export declare function fetchParameters(cached?: boolean, prompt?: boolean): JsonObject
 fetchSliceArgs	export declare function fetchSliceArgs(args: JsonObject): FetchSliceArgs
-fetchSliceText	export declare function fetchSliceText(slice: FetchSlice, sourceTruncated?: boolean): string
+fetchSliceText	export declare function fetchSliceText(slice: FetchSlice, sourceTruncated?: boolean, cachedAgeMs?: number): string
 fetchSliceValue	export declare function fetchSliceValue<T extends
 isObscuraReadTool	export declare function isObscuraReadTool(name: string): boolean
-normalizeSearchResults	export declare function normalizeSearchResults(provider: "brave" | "exa", _query: string, raw: unknown, maxResults: number): readonly WebSearchResult[]
+normalizeSearchResults	export declare function normalizeSearchResults(provider: WebSearchProvider, _query: string, raw: unknown, maxResults: number): readonly WebSearchResult[]
 object	export declare function object(value: unknown): Record<string, unknown>
+obscuraVersionIsGuarded	export declare function obscuraVersionIsGuarded(version: string | undefined): boolean
 packageName	export declare const packageName = "@arnilo/prism-tools-web"
+parseObscuraVersion	export declare function parseObscuraVersion(output: string): string | undefined
+probeObscuraVersion	export declare function probeObscuraVersion(options: ObscuraVersionProbeOptions): Promise<ObscuraVersionProbe>
 providerFacts	export declare function providerFacts(raw: unknown, base?: WebProviderMetadata): WebProviderMetadata | undefined
 renderScrapeResults	export declare function renderScrapeResults(value: unknown): string
 renderSearchResults	export declare function renderSearchResults(value: unknown): string
+resolveFetchCache	export declare function resolveFetchCache(config: ToolsWebCacheConfig | undefined): ResolvedFetchCache
 resolveObscuraCommand	export declare function resolveObscuraCommand(name: string): string | undefined
 resolveObscuraProcessLimits	export declare function resolveObscuraProcessLimits(input?: Partial<ObscuraProcessLimits>): ObscuraProcessLimits
 resolveObscuraSearchProfile	export declare function resolveObscuraSearchProfile(profile: ObscuraSearchProfile | undefined, maxEvalBytes: number): ObscuraSearchProfile
 resolveObscuraWebLimits	export declare function resolveObscuraWebLimits(input?: Partial<ObscuraWebLimits>): ObscuraWebLimits
 resolveWebLimits	export declare function resolveWebLimits(input?: WebLimits): ResolvedWebLimits
 runObscuraCli	export declare function runObscuraCli(options: ObscuraCliRunOptions): Promise<ObscuraCliRunResult>
-searchControlProperties	export declare function searchControlProperties(supports: ReadonlySet<SearchControl>): JsonObject
-searchControls	export declare function searchControls(supports: ReadonlySet<SearchControl>, input: object): SearchControls
+searchControlProperties	export declare function searchControlProperties(supports: ReadonlySet<SearchControl>, values?: WebSearchControlValues): JsonObject
+searchControls	export declare function searchControls(supports: ReadonlySet<SearchControl>, input: object, values?: WebSearchControlValues): SearchControls
 sliceMarkdown	export declare function sliceMarkdown(markdown: string, args: FetchSliceArgs): FetchSlice
 snapshotWebEvidence	export declare function snapshotWebEvidence(input:
 spawnObscuraProcess	export declare function spawnObscuraProcess(options: ObscuraProcessOptions): OwnedObscuraProcess
@@ -85,6 +118,7 @@ text	export declare function text(value: unknown): string | undefined
 toolsWeb	export declare function toolsWeb(config: ToolsWebConfig): PackageInstance
 toolsWebConfigSchema	export declare const toolsWebConfigSchema: JsonSchema
 truncateUtf8Bytes	export declare function truncateUtf8Bytes(text: string, maxBytes: number): string
+tryCanonicalUrl	export declare function tryCanonicalUrl(url: string): string | undefined
 type ObscuraMcpTools	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
 type ObscuraMcpToolsOptions	export { createObscuraMcpTools, DEFAULT_OBSCURA_NAME_PREFIX, DEFAULT_OBSCURA_SERVER_ID, ObscuraMcpError, type ObscuraMcpTools, type ObscuraMcpToolsOptions, } from "./mcp.js"
 type ObscuraProcessLimits	export { DEFAULT_OBSCURA_PROCESS_LIMITS, DEFAULT_OBSCURA_WEB_LIMITS, HARD_OBSCURA_PROCESS_LIMITS, HARD_OBSCURA_WEB_LIMITS, type ObscuraProcessLimits, type ObscuraWebLimits, resolveObscuraProcessLimits, resolveObscuraWebLimits, } from "./limits.js"
@@ -95,3 +129,5 @@ type ObscuraWebToolsOptions	export { createObscuraWebTools, type ObscuraWebTools
 validateObscuraCommand	export declare function validateObscuraCommand(options: ObscuraProcessOptions, limits: ObscuraProcessLimits): void
 validateObscuraEndpoint	export declare function validateObscuraEndpoint(raw: string, allowRemote: boolean): URL
 validateObscuraWebUrl	export declare function validateObscuraWebUrl(input: string, options?: readonly string[] | ValidateObscuraUrlOptions): Promise<string>
+withFetchCache	export declare function withFetchCache<T extends
+withOutputBudget	export declare function withOutputBudget(model: ModelConfig, maxTokens: number): ModelConfig

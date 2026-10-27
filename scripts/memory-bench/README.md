@@ -5,6 +5,7 @@ live test during `bun run test`; the offline smoke needs only Bun.
 
 ```sh
 timeout 60 bun scripts/memory-bench/run.mjs --offline
+timeout 900 bun scripts/memory-bench/trust-scan-audit.mjs --output docs/_evidence/memory-bench/188.11/trust-scan.json
 timeout 300 bun test --timeout=0 scripts/memory-bench/run.test.mjs
 
 # Live benchmark tooling, isolated from all Prism packages:
@@ -721,7 +722,7 @@ comparison in the supplied family. Declare families before inspecting results;
 separate CLI calls constitute separate families. The 95% CIs are pointwise,
 without multiplicity adjustment.
 
-`stats.mjs` exports dependency-free pure functions:
+`stats.mjs` exports pure functions; its `mcnemar` export reuses `mcnemarExact` from the workspace `@arnilo/prism-evals` package:
 
 - `clusterBootstrap(items, { cluster, metric, iterations, seed })` resamples whole
   clusters with replacement and returns `{ estimate, ci95 }`. `metric(row)` is a

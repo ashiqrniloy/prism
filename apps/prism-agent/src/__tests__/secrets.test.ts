@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { mockProvider, providerDone } from "@arnilo/prism/testing";
 import { createResearchWorker, type HostConfig, HostStartError, loadHostConfig, startAgent } from "../host/index.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 const PLANTED = "planted-secret-value-9f3a";
 const LITERAL = "sk-planted-literal-9f3a";
 

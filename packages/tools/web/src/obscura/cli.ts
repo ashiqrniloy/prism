@@ -129,6 +129,65 @@ export async function runObscuraCli(options: ObscuraCliRunOptions): Promise<Obsc
   });
 }
 
+/** First Obscura release whose HTTP client re-validates every redirect hop and resolves through `SsrfGuardResolver`. */
+export const OBSCURA_GUARDED_VERSION = "0.1.8";
+
+/**
+ * Leading semver of an `obscura --version` line, or `undefined` when it is missing or a source build
+ * (`0.1.0-dev+<sha>`), which cannot be assumed to carry the per-hop guard.
+ */
+export function parseObscuraVersion(output: string): string | undefined {
+  const line = output
+    .split(/\r?\n/u)
+    .map((part) => part.trim())
+    .find((part) => /\b\d+\.\d+\.\d+\b/u.test(part));
+  if (line === undefined || /-dev(?![\w])/iu.test(line)) return undefined;
+  const match = line.match(/\b(\d+)\.(\d+)\.(\d+)\b/u);
+  return match === null ? undefined : `${match[1]}.${match[2]}.${match[3]}`;
+}
+
+/** True when `version` is at least {@link OBSCURA_GUARDED_VERSION}. */
+export function obscuraVersionIsGuarded(version: string | undefined): boolean {
+  if (version === undefined) return false;
+  const [major = 0, minor = 0, patch = 0] = version.split(".").map(Number);
+  return major > 0 || minor > 1 || (minor === 1 && patch >= 8);
+}
+
+export interface ObscuraVersionProbeOptions {
+  readonly command: string;
+  readonly argsBefore?: readonly string[];
+  readonly env?: Readonly<Record<string, string>>;
+  readonly cwd?: string;
+  readonly signal?: AbortSignal;
+  readonly timeoutMs?: number;
+}
+
+export interface ObscuraVersionProbe {
+  readonly version?: string;
+  /** False when the probe failed, the output was unparseable, or the version predates the guard. */
+  readonly guarded: boolean;
+}
+
+/** One bounded `obscura --version` run per package setup; any failure is a "not guarded" result. */
+export async function probeObscuraVersion(options: ObscuraVersionProbeOptions): Promise<ObscuraVersionProbe> {
+  try {
+    const run = await runObscuraCli({
+      command: options.command,
+      ...(options.argsBefore === undefined ? {} : { argsBefore: options.argsBefore }),
+      ...(options.env === undefined ? {} : { env: options.env }),
+      ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+      args: ["--version"],
+      timeoutMs: options.timeoutMs ?? 5_000,
+      maxOutputBytes: 64 * 1024,
+    });
+    const version = parseObscuraVersion(run.stdout.trim() === "" ? run.stderr : run.stdout);
+    return { ...(version === undefined ? {} : { version }), guarded: obscuraVersionIsGuarded(version) };
+  } catch {
+    return { guarded: false };
+  }
+}
+
 export interface ValidateObscuraUrlOptions {
   readonly allowedHostnames?: readonly string[];
   readonly resolver?: MediaHostnameResolver;

@@ -19,6 +19,11 @@ await session.run("Plan the migration and keep the retry budget small.");
 await agent.commands.run("om:view", {}, { session });  // the rendered ledger
 ```
 
+**No completed benchmark arm and no live quality evidence in 0.13.0.** The observational-memory arm
+of the 188.7 campaign was a one-question probe, the 12-persona lifecycle safety set was not reached,
+and the `om+fabric` arm never completed. Quality, safety and cross-family evidence for OM are plan
+202 Task 16 (with the shared safety suite in Task 14); nothing below claims a measured quality result.
+
 ## Cost, security, and failure behavior
 
 Off by default. With the toggle off, the `context.build`, `turn.completed`, and `compaction.when`
@@ -32,7 +37,7 @@ With the toggle on:
 | Reflection pass | in the same pass, once unreflected observations reach `reflector.observationTokens` | one reflector call, one ledger record |
 | Drop pass | after the reflection step (even if it records nothing), once the active pool exceeds `dropper.targetTokens` | one dropper call (or none with `policy: "lowest-relevance"`), one ledger record |
 | Context block | after foreign compaction only | pinned ledger in memory; one entry scan and log write per compaction, awaited before the next request; one reconciliation scan on reopen |
-| Compaction | first at the token/trigger gate; then once per observation pass that advances coverage when OM owns the slot | the ledger already in memory, no model call |
+| Compaction | first at the `compactAt`/`trigger` gate; then once per observation pass that advances coverage when OM owns the slot | the ledger already in memory, no model call |
 
 One pass runs per session at a time; a request while one is in flight is skipped, not queued.
 
@@ -69,7 +74,7 @@ defaults below.
 | `dropper.targetTokens` | `20000` | Active-observation token budget the dropper approaches |
 | `dropper.policy` | `"model"` | `"model"` asks the dropper model; `"lowest-relevance"` drops deterministically |
 | `context.recentMessages` | `8` | Recent messages the compaction cut keeps verbatim |
-| `context.compactAfterTokens` | `81000` | Estimated input tokens that request the first own compaction, or compaction with a foreign owner |
+| `context.compactAt` | `{ "ratio": 0.6 }` | Requests compaction at `ratio` of the model's input cap, capped by `maxTokens`. A model with no declared window uses `maxTokens` and fails config validation without it. Ignored when `trigger` is set |
 | `worker.maxTaskStateBytes` | `2048` | Maximum UTF-8 text bytes in the replaced task state and rendered task section (hard ceiling 65536) |
 | `worker.*` | see `limits.ts` | Worker loop ceilings (`maxTurns`, `maxToolCalls`, byte caps) |
 | `recall` | `true` | Expose the `recall` tool while the session's toggle is on |
@@ -96,7 +101,7 @@ package holds no credential.
 - **`turn.completed`**: starts `session.background("om.observe", …)`. A failing pass fails only that
   background task (`background.failed`, error redacted), records `lastError`, and leaves the ledger
   unchanged; the run is unaffected.
-- **`compaction.when`**: uses the configured gate initially and for foreign owners; after an own compaction, advancing observation coverage also requests compaction.
+- **`compaction.when`**: while the toggle is on, votes `{ compact: true }` past its gate (`min(ratio × model input cap, maxTokens)`) and `{ compact: false }` below it, so the kernel's `thresholdEntries` fallback does not override OM; with the toggle off it abstains (`undefined`) and the host's trigger still fires.
 - **`compaction` slot**: summarizes from the ledger instead of the raw transcript. With the toggle off
   for the session it delegates to `prism.slots.compaction.default`.
 - **`om.status` event**: `{ enabled, contextMode, observations, reflections, inFlight, lastError? }` on toggle,
@@ -173,8 +178,8 @@ The last three fields are arrays of strings (at most 32 each). All text shares t
 `worker.maxTaskStateBytes` cap and is truncated safely on UTF-8 boundaries. The observer records it
 when the task changes and lists assumptions not confirmed by the user under `openQuestions`.
 Each record carries the supplied source entry ids; folding keeps only the latest task state.
-Custom callers of `runObserver` receive these ledger records through `onRecord`; the package persists
-them automatically, and the observation array return value stays unchanged.
+The observer worker reports these ledger records through `onRecord`; the package persists them
+automatically, and the observation array return value stays unchanged.
 
 The block asks the agent to cite memory ids and carries `metadata: { source: "om", itemIds: [...] }`
 for the items actually rendered, in display order. Reflections appear first, observations by source
@@ -198,3 +203,86 @@ Open questions:
 Next steps:
 - Test staging
 ```
+
+## Compatibility
+
+At API level 1 a host can rely on the export names and signatures in [Stable exports](#stable-exports), the command
+and tool names below, the ledger and state record names, and the `contract` config fields, for the whole `0.13.x` line
+and every later minor version (the same promise plan 185 Task 5 makes for the kernel).
+
+### Stable
+
+- **Exports.** The names in [Stable exports](#stable-exports); `src/__tests__/root-exports.test.ts` freezes the barrel.
+- **Commands and tools.** `om`, `om:model`, `om:status` and `om:view`, with their argument shapes, and the `recall`
+  tool (its name is the package option, default `recall`). A host may name them in approval and policy rules. Their
+  descriptions may change; the names do not.
+- **Records.** The ledger record names (`OBSERVATIONS_RECORDED`, `REFLECTIONS_RECORDED`, `TASK_STATE_RECORDED`), and
+  the ledger and state formats: a record this version cannot validate is skipped, never rewritten or deleted.
+- **Config.** Every field marked `contract` in [Config stability](#config-stability). A contract field is never removed
+  or renamed, and a new field is optional.
+
+### May change in a minor version
+
+- The value of every config field marked `tuning` in [Config stability](#config-stability).
+- Prompt text, worker behaviour, thresholds, token budgets and the rendered memory format.
+
+### Needs a new name or an explicit opt-in
+
+- A new required service (a provider key, a model call on a path that makes none today).
+- A change to what a default observes, drops or stores.
+- A new capability an implementation must provide instead of an optional member.
+
+### Config stability
+
+Every field is `contract` (shape and meaning frozen at API level 1) or `tuning` (its value may change in a minor
+version). `@arnilo/prism-memory-fabric`'s `stability.test.ts` checks this table against
+`memoryObservationalConfigSchema`.
+
+| field | tier |
+| --- | --- |
+| `enabled` | contract |
+| `observer` | contract |
+| `observer.model` | contract |
+| `observer.messageTokens` | tuning |
+| `reflector` | contract |
+| `reflector.model` | contract |
+| `reflector.observationTokens` | tuning |
+| `dropper` | contract |
+| `dropper.model` | contract |
+| `dropper.targetTokens` | tuning |
+| `dropper.policy` | contract |
+| `context` | contract |
+| `context.recentMessages` | tuning |
+| `context.compactAt` | contract |
+| `context.compactAt.ratio` | tuning |
+| `context.compactAt.maxTokens` | tuning |
+| `context.trigger` | contract |
+| `context.trigger.type` | contract |
+| `context.trigger.entries` | tuning |
+| `context.trigger.tokens` | tuning |
+| `context.trigger.ratio` | tuning |
+| `worker` | contract |
+| `worker.maxTaskStateBytes` | tuning |
+| `worker.maxTurns` | tuning |
+| `worker.maxToolCallsPerTurn` | tuning |
+| `worker.maxToolCalls` | tuning |
+| `worker.maxArgumentBytes` | tuning |
+| `worker.maxResultBytes` | tuning |
+| `worker.maxMessageBytes` | tuning |
+| `worker.maxErrorBytes` | tuning |
+| `recall` | contract |
+
+### Stable exports
+
+`src/__tests__/root-exports.test.ts` freezes the root barrel. Adding or removing a name is a deliberate API decision.
+
+- **Stable (API level 1).** The default package definition, `memoryObservationalConfigSchema`,
+  `resolveMemoryObservationalConfig`, the ledger record names (`OBSERVATIONS_RECORDED`, `REFLECTIONS_RECORDED`,
+  `TASK_STATE_RECORDED`), `foldObservationalMemoryLedger`, `activeObservations`, `activeReflections`,
+  `buildObservationalMemoryContextBlocks`, `createMemoryId`, and the config, ledger and record types.
+- **Memory-package shared helpers — no host promise.** The type guards, worker-limit helpers, token estimates,
+  `runMemoryWorkerLoop`, `recallObservationalMemoryBranchPage` and the other names `memory-fabric` imports. A host
+  should not. They may change in a minor version.
+- **Not exported.** The observer, reflector and dropper workers and their prompts, tuning constants, the settings
+  family, flush, commands, the recall tool and the compactor. The commands and the `recall` tool are reached through
+  the package, not through imports.

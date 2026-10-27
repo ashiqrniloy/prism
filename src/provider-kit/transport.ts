@@ -29,16 +29,37 @@ export type ProviderTransportErrorCode =
   | "response_body_shape";
 
 const QUOTA_BODY = /quota|usage[\s_-]*limit|insufficient[\s_-]*(?:quota|credit|balance)|billing[\s_-]*(?:limit|quota)/i;
+/** Bodies the supported routes answer when the request does not fit the model's context window. */
+const CONTEXT_OVERFLOW_BODY = /context_length_exceeded|maximum context length|context window exceeds limit|prompt is too long/i;
+/** 400/413 are the generic overflow statuses; SystemOne answers 422 for an invalid request. */
+const CONTEXT_OVERFLOW_STATUSES = new Set([400, 413, 422]);
 const TRANSIENT_NETWORK_CODES = new Set(["ECONNRESET", "ECONNREFUSED", "EAI_AGAIN", "ENETUNREACH", "ETIMEDOUT", "UND_ERR_CONNECT_TIMEOUT"]);
+
+/**
+ * Whether a failure body/message says the request did not fit the model's context window. One
+ * spelling for the classifier and for codecs that only see a stream frame (a Responses
+ * `response.failed` never carries an HTTP status).
+ */
+export function isContextOverflowMessage(message: string): boolean {
+  return CONTEXT_OVERFLOW_BODY.test(message);
+}
 
 /** Maps already-captured provider transport evidence to advisory outcome metadata. */
 export function classifyProviderFailure(error: unknown): ProviderFailureClass {
   const status = readHttpStatus(error);
   if (status === 401 || status === 403) return "auth";
   if (status === 429) return QUOTA_BODY.test(errorMessage(error)) ? "quota" : "rate_limited";
+  // Body evidence wins over the generic status rule: every supported route has a distinct overflow
+  // string (recorded from OpenCode Go in plan 194 Task 1), and a 413 body is never retried anyway.
+  if (status !== undefined && CONTEXT_OVERFLOW_STATUSES.has(status) && isContextOverflowMessage(errorMessage(error))) {
+    return "context_overflow";
+  }
   if (status !== undefined) return status >= 500 ? "transient" : status >= 400 ? "permanent" : "unknown";
   const cause = readField(error, "cause");
   if (isTransientNetworkCode(readField(error, "code")) || isTransientNetworkCode(readField(cause, "code"))) return "transient";
+  // A stream can report a quota with no status at all: the measured Sign in with ChatGPT usage limit is a
+  // 200 response whose error frame says so (plan 204 Task 9). Quota is never retried, so say it here.
+  if (QUOTA_BODY.test(errorMessage(error))) return "quota";
   return "unknown";
 }
 

@@ -8,5 +8,5 @@
       "bun": ["./src/bun-module.d.ts"]
     }
   },
-  "include": ["src/**/*", "bin/**/*"]
+  "include": ["src/**/*", "bin/**/*", "evals/**/*"]
 }

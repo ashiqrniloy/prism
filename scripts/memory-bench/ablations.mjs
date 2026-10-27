@@ -1,6 +1,7 @@
 import { validateJsonSchema } from "@arnilo/prism";
 import { memoryFabricConfigSchema, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
 import { memoryObservationalConfigSchema, resolveMemoryObservationalConfig } from "@arnilo/prism-memory-observational";
+import { presetFields } from "../../packages/memory/fabric/src/config.ts";
 import { BENCH_SCOPES } from "./bench-scope.mjs";
 import { parseVariantSpecs, VARIANT_PATHS } from "./variants.mjs";
 
@@ -103,15 +104,18 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
   if (options.config?.startsWith("fabric-x") && fabric) {
     const agentic = options.config === "fabric-xc-agentic";
     const exchangesOnly = options.config.startsWith("fabric-x") && !options.config.startsWith("fabric-xc");
-    fabric.exchanges = {};
-    fabric.inject = agentic
-      ? false
-      : (structuredClone(policy.inject) ?? {
-          query: "task",
-          kinds: exchangesOnly ? ["exchange"] : ["fact", "exchange"],
-        });
-    // The write side builds balances of fact+exchange only for xc; x has no extractor to call.
-    if (!exchangesOnly) fabric.promote = {};
+    if (exchangesOnly) {
+      // Plan 188.11 Task 3: the x and x-tools arms are the conversational preset. Only what the arm
+      // adds to it is explicit; `inject` stays the preset's unless a policy replaces it.
+      fabric.preset = "conversational";
+      delete fabric.inject;
+      if (policy.inject !== undefined) fabric.inject = structuredClone(policy.inject);
+    } else {
+      fabric.exchanges = {};
+      fabric.inject = agentic ? false : (structuredClone(policy.inject) ?? { query: "task", kinds: ["fact", "exchange"] });
+      // The write side builds balances of fact+exchange only for xc; x has no extractor to call.
+      fabric.promote = {};
+    }
   }
   // The extractor budget reaches only an arm that promotes: adding `promote` to `fabric-x` would
   // give an LLM-free write side a model call.
@@ -145,6 +149,11 @@ export function memoryConfigs(options, { lifecycle = false, policy = {} } = {}) 
     const [arm, ...keys] = path.split(".");
     let target = configs[arm];
     if (!target) throw new Error("MemoryBenchAblation: setting does not belong to selected arm");
+    // An explicit field replaces the preset's whole value, so an ablation of one nested key starts from the preset's field.
+    if (arm === "fabric" && fabric.preset !== undefined && fabric[keys[0]] === undefined) {
+      const inherited = presetFields(fabric.preset)[keys[0]];
+      if (inherited !== undefined) fabric[keys[0]] = inherited;
+    }
     if (options.config === "fabric-agentic" && path.startsWith("fabric.inject"))
       throw new Error("MemoryBenchAblation: agentic arm fixes injection off");
     let value;

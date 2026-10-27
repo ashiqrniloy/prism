@@ -33,15 +33,15 @@ const { createPostgresVectorStore } = await import("@arnilo/prism-memory-core/po
 | --- | --- | --- |
 | Contracts | `Memory`, `Embedder`, `VectorStore`, `WorkingMemoryStore`, `MemoryScope`, `MemoryVectorRecord`, `MemoryLimits` | The types every memory package implements or consumes. |
 | Embeddings | `createHashEmbedder`, `embedBatched`, `HashEmbedderOptions` | The deterministic hash embedder (tests and offline hosts) and bounded batching over any `Embedder`. |
-| Vector stores | `createMemoryVectorStore`, `createInMemoryVectorStore`, `selectAdjacentRecords`, `tokenizeLexical` | The in-memory vector store with lexical and vector queries. |
-| Lexical analysis | `lexicalTerms`, `stemLexical`, `lexicalCoverage`, `lexicalMatches`, `lexicalDice`, `lexicalKeys`, `recordLexicalTerms`, `lexicalTermString` | The one analyzer every lexical leg uses: Unicode letter/number terms, stopwords dropped, conservative English stemming. Index, query, and coverage use the same terms. |
-| Postgres (`./postgres`) | `createPostgresVectorStore`, `createPostgresMemoryStores`, `queryPostgres`, `buildMemoryDdl`, `buildVectorSearchDdl`, `qualifyTable`, `quoteIdentifier`, `validateIdentifier` | The `pg`-backed vector and memory stores, DDL builders, and identifier validation. `pg` loads only here. |
+| Vector stores | `createMemoryVectorStore`, `selectAdjacentRecords`, `tokenizeLexical` | The in-memory vector store with lexical and vector queries. |
+| Lexical analysis | `lexicalTerms`, `stemLexical`, `lexicalCoverage`, `lexicalMatches`, `lexicalDice` | The one analyzer every lexical leg uses: Unicode letter/number terms, stopwords dropped, conservative English stemming. Index, query, and coverage use the same terms. |
+| Postgres (`./postgres`) | `createPostgresVectorStore`, `createPostgresMemoryStores`, `queryPostgres`, `buildMemoryDdl`, `buildVectorSearchDdl`, `qualifyTable`, `quoteIdentifier` | The `pg`-backed vector and memory stores and DDL builders. `pg` loads only here. |
 | SQLite (`./sqlite`) | `createSqliteMemoryStores`, `buildSqliteMemoryDdl`, `SqliteMemoryStoresOptions`, `SqliteMemoryStores` | Durable vector and working memory using Bun SQLite, exact cosine, and FTS5 BM25 over analyzed terms, with note keys weighted 3× the body. Schema version 2. The driver loads only when constructing the stores. |
 | Markdown (`./fabric`) | `createMarkdownMemoryStores`, `CreateMarkdownMemoryStoresOptions`, `MarkdownMemoryStores`, `MarkdownReconcileReport` | OKF v0.2 markdown files as the canonical store with a derived, rebuildable SQLite index. Notes are human-readable and greppable under `<tenant>/<resource>/<kind-dir>/` (`facts`, `preferences`, `procedures`, `episodes`); control state lives in `.state.json`; `reconcile()`/`rebuild()` re-derive the index, and `updateResourceFile()` writes a resource-level file such as `project.md` under the store lock. |
-| Lineage and deletion | `stampLineage`, `parseLineage`, `invalidateAcrossLayers`, `recordBlocked`, `listInvalidatedIds`, `revokedIdsAbsent`, `createDeletionPropagator` | Append-only invalidation records, layer ordering, and the deletion propagator over `DeletionPropagationHandler`s. |
-| Repointing | `repointSource`, `applySourceRenames`, `HARD_REPOINT_RECORDS` | Move or rename an indexed source without re-embedding. |
-| Scoring | `resolveRecallScoring`, `rerankRecallHits`, `clampImportance`, `deriveEntryImportance`, `recencyOf` | Composite recall scoring (similarity, recency, importance) with the documented tie-break. |
-| Limits and validation | `resolveMemoryLimits`, `HARD_*` caps, `estimateTokens`, `validateAgainstJsonSchema`, `mergeJsonObjects`, `assertFiniteVector`, `assertRecordEmbedding` | The shared caps, token estimate, and JSON validation the packages bound their inputs with. |
+| Lineage and deletion | `stampLineage`, `recordBlocked`, `listInvalidatedIds`, `revokedIdsAbsent`, `createDeletionPropagator` | Append-only invalidation records, layer ordering, and the deletion propagator over `DeletionPropagationHandler`s. |
+| Repointing | `repointSource`, `applySourceRenames` | Move or rename an indexed source without re-embedding. |
+| Scoring | `resolveRecallScoring`, `rerankRecallHits`, `deriveEntryImportance` | Composite recall scoring (similarity, recency, importance) with the documented tie-break. |
+| Limits and validation | `resolveMemoryLimits`, `HARD_TOP_K_CAP`, `estimateTokens`, `validateAgainstJsonSchema`, `mergeJsonObjects`, `assertFiniteVector` | The shared caps, token estimate, and JSON validation the packages bound their inputs with. |
 | Errors | `MemoryError`, `MemoryValidationError`, `MemoryLimitError`, `MemoryScopeError`, `MemoryConflictError`, `MemoryAbortError` | The one error family every memory package throws. |
 
 ## Cost, security, and failure behavior
@@ -76,7 +76,7 @@ A record may carry `embedding: []` (and no `embedderId`): a lexical-only record.
 accept it, skip it in the vector leg, and return `[]` for a vector query with an empty embedding.
 Every `lexicalQuery` matches any analyzed query term (OR) and sets `coverage`, the share of the
 query's terms the record's text and keys contain, in [0,1]. Keys are the fabric note's keywords,
-tags, context, and path (`lexicalKeys`). SQLite ranks by BM25 with keys weighted 3× the body;
+tags, context, and path. SQLite ranks by BM25 with keys weighted 3× the body;
 Postgres ranks by `ts_rank` over its english `tsvector` of the text only; the in-memory store ranks
 by coverage. The Postgres store allows a NULL embedding column for lexical-only rows.
 
@@ -193,6 +193,66 @@ reconciles in bounded batches; a missing or corrupt index is rebuilt from files 
 
 Every path resolves under `root` with a `realpath` check, files are written `0o600` and directories
 `0o700`, and `log.md` never contains note text. Legal-hold notes refuse `forget` and keep their files.
+
+### Notes written by a newer version
+
+A note file whose `prism.metadata.fabric.v` is above 1 is **unreadable** to this version. The store indexes it
+(so its id resolves and an explicit delete works) but never parses it further: the whole file is kept in
+`metadata.okf.raw`, every writer re-emits those exact bytes, and the file is not rewritten, renamed, moved,
+archived or evicted by reconcile, rebuild, a tombstone, `memory:export` or `memory:import`. The package that owns
+the metadata can add reasons through `classifyNote(record)` (the fabric adds `invalid-fabric`).
+`stores.reconcile()` and `stores.rebuild()` report `unreadable` and `unreadableReasons`, and
+`stores.unreadable()` returns the same counts. A store whose `.index-files.json` predates this version learns
+which files are unreadable on the next `rebuild()`.
+
+Top-level frontmatter keys this version does not know are kept in `metadata.okf.extra` and written back on every
+render, so a readable note edited by a newer version keeps them through a touch, an edit or an import.
+
+## Compatibility
+
+At API level 1 the export names and signatures in [Stable exports](#stable-exports), the `VectorStore` and
+`Embedder` contracts, the DDL builders and the note-file rule below are frozen for the whole `0.13.x` line and every
+later minor version (the same promise plan 185 Task 5 makes for the kernel).
+
+- `VectorStore` requires exactly `upsert`, `query` and `delete`. Every later capability is an optional method or a
+  declared flag (`lexicalModes`, `authorization`, `lineage`, `scopeCounter` are the existing pattern), never a new
+  required member, so a store written against 0.13.0 keeps working. A consumer that needs an optional method names it
+  when it is absent (`MemoryScopeError: … requires a getByThread-capable vector store`; the fabric turns a missing
+  `scanMetadata` into a setup status note and a `no_scan` maintenance result) instead of acting on nothing.
+- `Embedder` is `id`, `dimensions`, `embed`, and the optional `available` probe. Nothing is added to it.
+- A note file is read by one rule: an unknown key is kept, an unreadable note is kept as written (above), and nothing
+  deletes what it cannot read. Only an explicit `memory.forget` or a store-level delete by id removes it.
+
+`src/__tests__/store-contract.test.ts` pins both interfaces at the type level.
+
+### May change in a minor version
+
+- The memory-package shared helpers listed under [Stable exports](#stable-exports); they exist for sibling packages,
+  not for a host.
+- Scoring, ranking, limits, cursor encodings and internal constants.
+
+### Needs a new name or an explicit opt-in
+
+- A new required `VectorStore` or `Embedder` member, or a new export name. A capability is added as an optional member
+  or a declared flag, never by changing an existing required one.
+- A change to the note file format that older versions could not keep as written.
+
+### Stable exports
+
+`src/__tests__/root-exports.test.ts` freezes the barrels. Adding or removing a name is a deliberate API decision.
+
+- **Stable (API level 1).** From the root: the six error classes (`MemoryError`, `MemoryAbortError`,
+  `MemoryConflictError`, `MemoryLimitError`, `MemoryScopeError`, `MemoryValidationError`), `createHashEmbedder`,
+  `createMemoryVectorStore`, `createDeletionPropagator`, `listInvalidatedIds`, `revokedIdsAbsent`, `repointSource`,
+  `applySourceRenames`, and every contract type. From the subpaths: `createMarkdownMemoryStores` (`./fabric`),
+  `createSqliteMemoryStores` and `buildSqliteMemoryDdl` (`./sqlite`), and the Postgres stores, DDL builders,
+  `qualifyTable`, `quoteIdentifier`, `queryPostgres`, `DEFAULT_MEMORY_SCHEMA` and `DEFAULT_VECTOR_TABLE` (`./postgres`).
+- **Memory-package shared helpers — no host promise.** The rest of the root (`assert*`, `lexical*`, `fuseRankings`,
+  `redactJson`, `scopeKey`, `stampLineage`, `resolveMemoryLimits`, `HARD_TOP_K_CAP`, and so on) exists because
+  `memory-fabric`, `memory-rag`, `memory-wiki` and `memory-compaction` import it. A host should not. They may change in
+  a minor version.
+- **Not exported.** Tuning constants (`DEFAULT_*`, `HARD_*` other than the three above), cursor codecs, directory
+  scanning, lineage parsing and the Postgres identifier validator are package-internal.
 
 ## License
 

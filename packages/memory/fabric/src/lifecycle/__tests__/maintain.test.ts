@@ -9,7 +9,8 @@ import { createSessionEntry, type ModelClient, providerDone, providerToolCall, t
 import { createMemoryVectorStore, type Memory, type VectorStore } from "@arnilo/prism-memory-core";
 import { resolveLifecycleConfig } from "../../config.js";
 import { createMemoryFabric } from "../../create.js";
-import { createMemory, createMemoryWorkingStore, type MemoryFabricScopeBinding, resolvePromoteConfig } from "../../index.js";
+import { createMemory, createMemoryWorkingStore, type MemoryFabricScopeBinding } from "../../index.js";
+import { resolvePromoteConfig } from "../../promote.js";
 import { encodeMemoryNoteMetadata, type MemoryNoteMetadata, parseMemoryNoteMetadata } from "../../types.js";
 
 const PROJECT_A = "projects/alpha--11111111";

@@ -1,22 +1,15 @@
 OPENROUTER_DEFAULT_API_KEY_REF	export declare const OPENROUTER_DEFAULT_API_KEY_REF = "env:OPENROUTER_API_KEY"
-OPENROUTER_SESSION_ID_MAX_LENGTH	export declare const OPENROUTER_SESSION_ID_MAX_LENGTH = 256
-applyOpenRouterCacheControl	export declare function applyOpenRouterCacheControl(request: ProviderRequest): readonly Message[]
+OPENROUTER_DEFAULT_BASE_URL	export declare const OPENROUTER_DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 createOpenRouterProvider	export declare function createOpenRouterProvider(options?: OpenRouterProviderOptions): ModelProvider
 default	export default
-defineOpenRouterModel	export declare function defineOpenRouterModel(config: OpenRouterModelConfig): ModelConfig
 listOpenRouterModels	export declare function listOpenRouterModels(options?: ListOpenRouterModelsOptions): Promise<ModelConfig[]>
+mapOpenRouterHttpError	export declare function mapOpenRouterHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
 mapOpenRouterModel	export declare function mapOpenRouterModel(entry: OpenRouterModelEntry, options?:
-openRouterBody	export declare function openRouterBody(request: ProviderRequest, sessionId?: string | undefined): JsonObject
-openRouterCacheEnabled	export declare function openRouterCacheEnabled(request: ProviderRequest): boolean
-openRouterEvents	export declare function openRouterEvents(body: ReadableStream<Uint8Array>, signal?: AbortSignal): AsyncIterable<ProviderEvent>
-openRouterPreserveThinking	export declare function openRouterPreserveThinking(request: ProviderRequest): boolean
-openRouterSessionId	export declare function openRouterSessionId(options: ProviderRequestOptions | undefined): string | undefined
-openRouterTopLevelCacheControl	export declare function openRouterTopLevelCacheControl(request: ProviderRequest): JsonObject | undefined
-openRouterUsage	export declare function openRouterUsage(usage: OpenRouterUsage | undefined): Usage | undefined
+mapOpenRouterUsage	export declare function mapOpenRouterUsage(raw: unknown, chunk?: JsonObject): Usage | undefined
+openRouterModels	export declare const openRouterModels: readonly ModelConfig[]
 openrouter	export declare function openrouter(options?: OpenRouterProviderPackageOptions & OpenRouterProviderConfig): PackageInstance
-resolveOpenRouterReasoning	export declare function resolveOpenRouterReasoning(model: ModelConfig, options: ProviderRequestOptions | undefined): JsonObject | undefined
-stripOpenRouterOwnedCompat	export declare function stripOpenRouterOwnedCompat(compat: JsonObject | undefined): JsonObject | undefined
-type ListOpenRouterModelsOptions	export { type ListOpenRouterModelsOptions, listOpenRouterModels, mapOpenRouterModel, type OpenRouterModelEntry, } from "./models.js"
-type OpenRouterModelConfig	export { defineOpenRouterModel, type OpenRouterModelConfig } from "./model.js"
-type OpenRouterModelEntry	export { type ListOpenRouterModelsOptions, listOpenRouterModels, mapOpenRouterModel, type OpenRouterModelEntry, } from "./models.js"
-type OpenRouterProviderOptions	export { createOpenRouterProvider, type OpenRouterProviderOptions, openRouterBody, openRouterEvents } from "./provider.js"
+openrouterSession	export declare function openrouterSession(request: ProviderRequest): Record<string, string>
+type ListOpenRouterModelsOptions	export { listOpenRouterModels, mapOpenRouterModel, openRouterModels, OPENROUTER_DEFAULT_BASE_URL, type ListOpenRouterModelsOptions, type OpenRouterModelEntry, } from "./models.js"
+type OpenRouterModelEntry	export { listOpenRouterModels, mapOpenRouterModel, openRouterModels, OPENROUTER_DEFAULT_BASE_URL, type ListOpenRouterModelsOptions, type OpenRouterModelEntry, } from "./models.js"
+type OpenRouterProviderOptions	export { createOpenRouterProvider, mapOpenRouterHttpError, mapOpenRouterUsage, openrouterSession, type OpenRouterProviderOptions, type OpenRouterRouting, } from "./provider.js"
+type OpenRouterRouting	export { createOpenRouterProvider, mapOpenRouterHttpError, mapOpenRouterUsage, openrouterSession, type OpenRouterProviderOptions, type OpenRouterRouting, } from "./provider.js"

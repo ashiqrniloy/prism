@@ -31,9 +31,10 @@ export interface MemoryCompactionConfig {
    * is not a config value: a host that needs one registers its own handler). Omitted: no handler is
    * registered and the kernel's `compaction.thresholdEntries` fallback owns the decision.
    *
-   * When set, the package registers it as the session's `compaction.when` handler, and a registered
-   * handler is the whole decision. An `input_ratio` gate needs the model's input cap: a model that
-   * declares none fails loudly, so a host running such a model sets `threshold_tokens` instead.
+   * When set, the package registers it as the session's `compaction.when` vote: the package asks for
+   * compaction past the gate and declines (`{ compact: false }`) below it, so the kernel fallback
+   * cannot override it. An `input_ratio` gate needs the model's input cap: a model that declares
+   * none fails loudly, so a host running such a model sets `threshold_tokens` instead.
    */
   readonly trigger?: CompactionTrigger;
 }

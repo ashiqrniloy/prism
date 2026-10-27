@@ -161,23 +161,23 @@ describe("prism new package", () => {
 
   it("new_provider_package_scaffolds_provider_skeleton", async () => {
     const { root, home } = await project();
-    const created = await run(["new", "package", "--provider", "@acme/prism-provider-vertex"], root, home);
+    const created = await run(["new", "package", "--provider", "@acme/prism-provider-acme"], root, home);
     assert.equal(created.code, 0, created.err);
-    const dir = join(root, "prism-provider-vertex");
+    const dir = join(root, "prism-provider-acme");
     const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
-    assert.equal(pkg.name, "@acme/prism-provider-vertex");
+    assert.equal(pkg.name, "@acme/prism-provider-acme");
     assert.deepEqual(pkg.exports, { ".": "./src/index.ts" });
     const source = await readFile(join(dir, "src", "index.ts"), "utf8");
     assert.match(source, /defineProviderPackage/);
     assert.match(source, /secretRefProperty/);
-    assert.match(source, /VERTEX_DEFAULT_API_KEY_REF/);
+    assert.match(source, /ACME_DEFAULT_API_KEY_REF/);
     assert.equal(source.includes("{{"), false);
 
     const providerSource = await readFile(join(dir, "src", "provider.ts"), "utf8");
     assert.match(providerSource, /createRoutedProvider/);
 
     const modelsSource = await readFile(join(dir, "src", "models.ts"), "utf8");
-    assert.match(modelsSource, /vertexModels/);
+    assert.match(modelsSource, /acmeModels/);
 
     assert.ok(existsSync(join(dir, "src", "__tests__", "wire", "README.md")));
     assert.ok(existsSync(join(dir, "src", "__tests__", "live.test.ts")));

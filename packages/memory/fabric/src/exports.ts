@@ -1,96 +1,25 @@
-export { DEFAULT_CONSOLIDATION_THRESHOLD } from "./consolidate.js";
-export { createFabricCitationTracker, type FabricCitationTracker } from "./context.js";
+// The fabric's public library surface (plan 188.11 Task 5). Prompts, tuning constants, scoring and
+// eviction helpers, and the lifecycle/directory/core builders stay inside the package; importers
+// that need them (tests, `scripts/memory-bench`) use a relative source path. The root barrel in
+// `index.ts` adds the package definition, `memoryFabric`, the config surface and `createMemory`.
 export { createMemoryFabric } from "./create.js";
+export type { FabricCoreScope } from "./delivery/core.js";
+export type { MemoryFabricDirectoryConfig, ResolvedFabricDirectoryOptions } from "./directory.js";
+export type { ConsolidationExtractionReason } from "./consolidation/extract.js";
+export type { PromotionWeights } from "./consolidation/score.js";
+export type { ResolvedFabricCuesOptions } from "./delivery/cues.js";
+export type { ResolvedMemoryFabricStore, ResolvedMergeConfig, ResolvedWidenConfig } from "./config.js";
 export {
-  type CreateFabricCoreOptions,
-  createFabricCore,
-  DEFAULT_CORE_OPTIONS,
-  type FabricCore,
-  type FabricCoreBlock,
-  type FabricCoreScope,
-  type FabricCoreScopeBinding,
-  HARD_CORE_TOKENS,
-  type MemoryFabricCoreConfig,
-  type ResolvedFabricCoreOptions,
-  resolveFabricCoreOptions,
-} from "./delivery/core.js";
-export {
-  type CreateFabricDirectoryOptions,
-  createFabricDirectory,
-  DEFAULT_DIRECTORY_OPTIONS,
-  type FabricDirectory,
-  type FabricDirectoryHandle,
-  type FabricDirectorySnapshot,
-  HARD_DIRECTORY_FILES,
-  HARD_DIRECTORY_TOKENS,
-  HARD_DIRECTORY_TOPICS,
-  type MemoryFabricDirectoryConfig,
-  type ResolvedFabricDirectoryOptions,
-  renderFabricDirectory,
-} from "./directory.js";
-export { DEFAULT_FABRIC_MAX_FILE_BYTES, HARD_FABRIC_MAX_FILE_BYTES } from "./files.js";
-export { caseConclusionsNotProcedures } from "./invariants.js";
-export {
-  type ActiveNoteOptions,
-  ARCHIVE_SEARCH_COVERAGE,
   type ArchiveConfig,
-  type ArchiveDecisionOptions,
-  appendUseEvent,
   type CapacityLimits,
-  type CapacityNote,
-  type CapacityUsage,
-  capacityForLevel,
-  capacityUsage,
-  createFabricLifecycle,
-  createScopeClock,
-  DEFAULT_ARCHIVE_CONFIG,
-  DEFAULT_CAPACITY,
-  DEFAULT_DUPLICATE_DICE,
-  DEFAULT_EPISODE_MIN_CLUSTER,
-  DEFAULT_VERIFY_AFTER_SESSIONS,
-  type DuplicateGroup,
-  describeNote,
-  duplicateGroups,
-  EPISODE_MERGE_SYSTEM,
-  EPISODE_MERGE_TOOL,
-  type EpisodeCluster,
-  episodeClusters,
-  evictionOrder,
-  type FabricLifecycle,
-  HARD_VERIFY_AFTER_SESSIONS,
-  type InspectNoteInput,
-  inspectNote,
-  isActiveNote,
-  isMemoryNoteStatus,
-  type LifecycleDecisionView,
-  type LifecycleEvidence,
-  type LifecycleNoteView,
-  MAX_ARCHIVE_BELOW,
-  MAX_ARCHIVED_HITS,
-  MAX_DUPLICATE_DICE,
-  MAX_EPISODE_CLUSTER,
-  MAX_EPISODE_SUMMARY_CHARS,
-  MAX_FABRIC_CAPACITY_NOTES,
-  MAX_FABRIC_CAPACITY_TOKENS,
-  MAX_GRACE_SESSIONS,
-  MAX_USE_EVENTS,
   type MemoryNoteStatus,
   type MemoryNoteUseEvent,
-  MIN_DUPLICATE_DICE,
-  mergedMetadata,
-  normalizeNoteStatus,
-  overCapacity,
+  type MemoryNoteDecay,
   type RecordUsesOptions,
-  readScopeClockState,
-  readUseEvents,
   SCOPE_CLOCK_COUNTER,
-  type ScopeClock,
-  type ScopeClockSessionState,
-  type ScopeClockTick,
-  shouldArchive,
-  summarizeEpisodeCluster,
+  type StorageWeights,
+  type StrengthWeights,
 } from "./lifecycle/index.js";
-export { DEFAULT_LINKER_TOP_K, HARD_MAX_FABRIC_LINK_TOP_K } from "./links.js";
 export {
   type ExportMemoryOkfOptions,
   type ExportMemoryOkfResult,
@@ -100,33 +29,12 @@ export {
   importMemoryOkf,
   type MemoryOkfStores,
 } from "./okf-bundle.js";
-export {
-  DEFAULT_PROMOTE_MIN_TURNS_BETWEEN,
-  type FabricConsolidationReport,
-  type FabricNoteCensus,
-  type FabricPromoteState,
-  HARD_PROMOTE_MAX_OUTPUT_TOKENS,
-  HARD_PROMOTE_MIN_TURNS_BETWEEN,
-  type MemoryFabricPromoteConfig,
-  MIN_PROMOTE_MAX_OUTPUT_TOKENS,
-  memoryFabricPromoteSchema,
-  readPromoteState,
-  resolvePromoteConfig,
-} from "./promote.js";
-export { DEFAULT_MEMORY_FABRIC_PROVIDER_NAME, registerMemoryFabricContext } from "./provider.js";
-export { createFabricRepointHandler } from "./repoint.js";
-export { DEFAULT_CONVERSATION_SEARCH_TOP_K } from "./search.js";
+export type { FabricConsolidationReport, MemoryFabricPromoteConfig, ResolvedPromoteConfig } from "./promote.js";
+export type { ScopePriors } from "./scope/recall.js";
 export {
   type CreateMemoryFabricOptions,
-  DEFAULT_RECALL_KINDS,
   encodeMemoryNoteMetadata,
   type FabricScopeLevel,
-  isMemoryNoteKind,
-  isMemoryNoteValidAt,
-  MEMORY_FABRIC_WORKING_KEY,
-  MEMORY_NOTE_KINDS,
-  MEMORY_NOTE_METADATA_KEY,
-  MEMORY_NOTE_SCOPES,
   type MemoryFabric,
   type MemoryFabricConsolidateOptions,
   type MemoryFabricConsolidateResult,
@@ -152,13 +60,13 @@ export {
   type MemoryFabricToolsOptions,
   type MemoryFabricWriteOptions,
   type MemoryNote,
-  type MemoryNoteFields,
   type MemoryNoteHit,
   type MemoryNoteKind,
   type MemoryNoteLink,
   type MemoryNoteMetadata,
   type MemoryNotePromotion,
+  type MemoryNotePromotionStamp,
+  type MemoryNoteProvenance,
   type MemoryNoteScope,
   parseMemoryNoteMetadata,
 } from "./types.js";
-export { type MemoryFabricSettings, resolveMemoryFabricSettings } from "./workers.js";

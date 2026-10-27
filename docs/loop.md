@@ -158,7 +158,8 @@ A loop that drives an external agent never calls `turn()`; it reports what the a
   concurrent rounds only increment the counter.
 - `origin` (an `EventOrigin`) is passed to the `tool.call` payload and stamped on that call's `tool.started`/`tool.completed`
   events. Absent means "this agent, executed by Prism".
-- `compaction.when` fires at the existing auto-compaction check point. While a handler is registered it owns the decision; the configured `trigger`/`thresholdEntries` decides only when no handler is registered.
+- `compaction.when` fires at the existing auto-compaction check point. Handlers vote `true` (compact), `false` (veto), or `undefined` (abstain); the configured `trigger`/`thresholdEntries` decides only when every registered handler abstains or none is registered.
+- A provider rejection for size recovers once inside the same turn. `classifyProviderFailure` stamps `context_overflow` from the route's body (`context_length_exceeded`, `maximum context length`, `context window exceeds limit`, `prompt is too long` on 400/413/422); a route with no distinguishable body still recovers when its 400/413/422 arrives while our estimated input exceeds the model's declared window. The session then compacts through the `compaction` slot with `trigger: "overflow"` (the provider already decided, so `compaction.when` is not consulted), rebuilds the request through `context.build`/`model.request`, and retries the call once. `maxTurns` is not charged again, and the rejected attempt records no projected usage. A second overflow, an overflow after output started, or a failing compaction fails the run with `ContextOverflowError` (`code: "context_overflow"`), whose message carries the estimated input and the declared window — never prompt text.
 
 ## Security and performance notes
 
@@ -166,6 +167,7 @@ A loop that drives an external agent never calls `turn()`; it reports what the a
 - With no hooks registered, `turn` adds no provider request, store write, or per-turn allocation
   beyond the wrapper object.
 - A `turn.before` stop leaves a resumable state; the run ends cleanly, not as a failure.
+- Overflow recovery costs nothing unless a provider rejects: then one compaction (the slot owner's cost) plus one retried model call.
 
 ## Related APIs
 

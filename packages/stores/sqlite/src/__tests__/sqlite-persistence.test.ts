@@ -261,6 +261,7 @@ describe("createSqlitePersistence", () => {
       "008_session_version",
       "009_run_prompt_version",
       "010_session_links",
+      "011_evaluations",
     ]);
     first.close();
 
@@ -330,7 +331,7 @@ describe("createSqlitePersistence", () => {
     for (const column of ["agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"]) {
       db.exec(`ALTER TABLE prism_sessions DROP COLUMN ${column}`);
     }
-    db.prepare("DELETE FROM prism_migrations WHERE name = '010_session_links'").run();
+    db.prepare("DELETE FROM prism_migrations WHERE CAST(version AS INTEGER) >= 10").run();
     const now = new Date().toISOString();
     db.prepare("INSERT INTO prism_sessions (id, created_at, updated_at, version) VALUES ('old', ?, ?, 1)").run(now, now);
     db.prepare("INSERT INTO prism_session_entries (id, session_id, timestamp, kind) VALUES ('old-1', 'old', ?, 'label')").run(now);
@@ -389,7 +390,7 @@ describe("createSqlitePersistence", () => {
     assert.throws(() => createSqlitePersistence({ filename, database: db }), /missing required index/);
     assert.equal(
       (db.prepare("SELECT COUNT(*) AS count FROM prism_migrations WHERE checksum IS NULL").get() as { count: number }).count,
-      10,
+      11,
     );
     db.close();
   });

@@ -24,6 +24,13 @@ const agent = await createAgent({
 });
 ```
 
+For a conversational assistant, one line selects the measured configuration (see
+[Conversational preset](#conversational-preset); it archives exchange text, which is a storage decision):
+
+```ts
+packages: [memoryFabric({ preset: "conversational", tools: { root: "./memory" } })],
+```
+
 Add `retrieval: "hybrid"` and an embeddings package (`@arnilo/prism-memory-rag`) for the optional
 vector leg:
 
@@ -104,8 +111,8 @@ uncallable by a session where it is off.
 The default makes no model calls. Same normalized text updates a same-kind note in place;
 different text keeps both notes and adds a `similar` link when the active mode's similarity meets
 `consolidate.threshold` (default `0.85`): term-set Dice between the two notes in lexical mode,
-pre-fusion cosine in hybrid mode. The Dice reading of `0.85` is provisional until plan 188.6
-calibrates it on labelled duplicate pairs. File notes continue to refresh the same path in place;
+pre-fusion cosine in hybrid mode. The Dice reading of `0.85` is a tuning default
+and may change in a minor version. File notes continue to refresh the same path in place;
 different paths remain separate. Recall explain rows include the stored links.
 
 Retirement requires an explicit `supersedes` id or an opt-in model decision. Explicit supersession
@@ -276,8 +283,8 @@ score = explicit + correction + outcome·0.5 + recurrence·0.5 + generality·0.5
 ```
 
 A note is accepted when `score ≥ minScore` (default 0.5). The weights (`promote.weights`) and
-`minScore` are **provisional until plan 188.6 calibrates them** against paired evidence; the default
-weights are exported as `DEFAULT_PROMOTION_WEIGHTS`.
+`minScore` are **tuning defaults** that may change in a minor version; the default weights live in
+`promote.ts`.
 
 | Signal | Meaning |
 | --- | --- |
@@ -305,6 +312,7 @@ and reported as `{ path, reason }` instead of trusted.
 
 ```ts
 memoryFabric({
+  preset: "conversational", // default none; expands first, explicit fields below replace the preset's value
   enabled: true, // default
   retrieval: "lexical", // default; "hybrid" adds the embeddings leg
   semantic: true, // default; whether indexed notes are available
@@ -337,7 +345,7 @@ memoryFabric({
   // Verification by use across separate sessions (a citation is a use, a retrieval is not).
   lifecycle: {
     verifyAfterSessions: 2,
-    // Retrieval-strength decay per kind; higher forgets faster. Provisional until plan 188.6.
+    // Retrieval-strength decay per kind; higher forgets faster. Tuning defaults.
     decay: { episode: 0.8, fact: 0.4, procedure: 0.4, preference: 0.2, exchange: 0.5 },
     // Storage-strength coefficients of `explicit + sessions·log(1+useSessions) + helpful − harmful + outcome`.
     storageWeights: { explicit: 1, sessions: 0.5, helpful: 0.5, harmful: 1, outcome: 0.5 },
@@ -345,7 +353,7 @@ memoryFabric({
     recall: { retrieval: 0.05, storage: 0.05 },
     // Archive needs both strengths below the threshold, past the grace window.
     archive: { retrievalBelow: -2, storageBelow: 1, graceSessions: 10 },
-    // Per-scope budgets; a path note spends the project budget. Provisional until plan 188.6.
+    // Per-scope budgets; a path note spends the project budget. Tuning defaults.
     capacity: { user: { notes: 200, tokens: 20_000 }, agent: { notes: 200, tokens: 20_000 }, project: { notes: 500, tokens: 60_000 } },
     // Duplicates always fold; episode clusters only when `episodes` is set (one model call each).
     merge: { duplicateDice: 0.8, episodes: { minCluster: 5, model: "hyper/<id>" } },
@@ -356,7 +364,7 @@ memoryFabric({
   // Off by default. An object enables session consolidation and its extractor pass.
   promote: {
     model: "hyper/<id>", // default: the agent's model
-    minScore: 0.5, // provisional until plan 188.6
+    minScore: 0.5, // tuning default
     minTurnsBetween: 8,
     maxCandidates: 48,
     derivableFrom: ["AGENTS.md", "README.md", "package.json", "CLAUDE.md"],
@@ -657,7 +665,13 @@ assistant: Noted; I will treat Monday as the launch date.
   module additionally *refuses* a turn it would rewrite rather than storing altered history. The
   text is passed through `scanScopedMemoryContent` first, and a refusal (prompt injection,
   exfiltration, invisible Unicode) is counted and reported through `prism.status.note`, never
-  stored.
+  stored. The offline 188.11 audit (plan 188.11 Task 8; `docs/_evidence/memory-bench/188.11/trust-scan.md`)
+  scanned 99,090 LongMemEval-S exchanges and refused 2.271 per 1,000 (32 injection, 10 exfiltration,
+  183 invisible Unicode, 0 secret); 3 of 500 questions had a refused exchange in a needed session.
+  LoCoMo refused 0 of 324. The 34-item adversarial fixture was detected at 33/34 (injection 10/10,
+  exfiltration 7/8, invisible Unicode 8/8, secret 8/8). That false-refusal rate is above the
+  1-per-1,000 line and touches needed sessions, so the conversational preset stays opt-in and plan
+  202 owns its safety gate.
 
 `memory:archive` back-fills the session: it archives every completed exchange not yet archived
 (idempotent by the session entry ids), and reports `archived`, `skipped`, and `parts`. It is the
@@ -674,23 +688,53 @@ then exchanges, each group in time order**, and selection stays by rank; a fact 
 linked exchange only when `exchange` is among the requested kinds, so naming kinds is also how a
 caller asks for the detail.`memory.recall` with `kinds: ["fact"]` returns the fact alone.
 
-### Recommended conversational profile
+### Conversational preset
 
-The exchange archive plus passive injection plus the read tools is the configuration that passed a
-live held-out acceptance for conversational recall, and it is **opt-in**: the measured arm archives
-exchange text, which is a storage decision no quality result should make for a host on its own.
+One line selects the configuration that passed a live held-out acceptance for conversational recall.
+It is **opt-in**: the measured arm archives exchange text (user text and assistant replies, verbatim),
+which is a storage decision no quality result should make for a host on its own. Exchanges pass the
+trust scan and any configured redactor first (see the security note above), and no secret field is
+involved.
 
 ```ts
-fabric({
+memoryFabric({ preset: "conversational", tools: { root: "./memory" } })
+```
+
+The preset expands, before any other resolution, to exactly:
+
+```ts
+{
   exchanges: {},                                   // archive every completed turn
   inject: { query: "task", kinds: ["exchange"] },  // passive block: the best exchanges, by rank
   semantic: true,                                  // leaves memory.recall / memory.read visible
   promote: false,                                  // no extractor call, so no per-session model cost
-})
+}
 ```
 
-Measured on 100 unused LongMemEval-S ids (2026-10-23, `mimo-v2.5`, temperature 0), against the same
-store with the tools hidden and against a whole-history prompt:
+**Merge rule.** An explicitly given top-level field replaces the preset's value for that field. Nested
+objects are not deep-merged: `inject: { budgetTokens: 2000 }` drops the preset's `query` and `kinds`.
+A field equal to the preset's value is not an override. Overriding a preset field, including turning
+the archive off with `exchanges: false`, is allowed and emits one `prism.status.note` naming the
+fields. An unknown preset name fails config validation (`MemoryValidationError` from
+`resolveMemoryFabricConfig`).
+
+**Traceability.** `memory:status` reports `preset: "conversational"` and `presetRevision: 1`
+(`CONVERSATIONAL_PRESET_REVISION`), and the same pair is written to a status note at setup, so
+`agent.inspect()` shows the revision next to the package config's `preset`.
+
+**The contract.** What `conversational` promises at API level 1:
+
+- it stores verbatim exchanges, makes **no write-path generative model call**, calls a decision model
+  only when the host names one (a `decisions` model, plan 202 Task 12), and needs no embeddings
+  service;
+- a later revision may change ranking, budgets, delivery format, tool descriptions and read-path
+  behaviour, so the host line does not change to adopt an improvement;
+- adding a write-path generative model call, a new stored kind, or a required service needs a **new
+  preset name** or an explicit opt-in field. The `decision` kind therefore arrives with a new preset,
+  `coding` (plan 202 Task 11), not as a change to `conversational`.
+
+Measured on 100 unused LongMemEval-S held-out v3 ids (2026-10-23, `mimo-v2.5` at temperature 0; the
+same model judged), against the same store with the tools hidden and against a whole-history prompt:
 
 | | Passive only | Passive + tools | Whole history |
 | --- | ---: | ---: | ---: |
@@ -699,12 +743,47 @@ store with the tools hidden and against a whole-history prompt:
 | Input tokens per question | 6,378 | 29,669 | 112,955 |
 | Tool calls per question | 0 | 1.5 | 0 |
 
-Passive-plus-tools is a full-context substitute at 26% of the tokens, and the gain comes from the
-agent pulling rounds the block cut (evidence coverage 0.63 → 0.83), not from a larger injection. The
-price is the extra steps: about 3.5k injected tokens per turn and 1.5 tool calls per question, with
-2% of questions hitting the eight-turn limit. Facts (`promote`) were not needed for this result; the
-`fabric-xc` arm that extracts them was not selected. Full evidence:
-`docs/_evidence/memory-bench/188.10/README.md`.
+Passive plus the read tools is non-inferior to whole-history context on LongMemEval-S held-out v3 at
+about a quarter of the input tokens: 76/100 against 69/100, a paired +0.07 (95% CI -0.03..0.17)
+inside the 3-point non-inferiority margin, at 29,669 tokens per question against 112,955 (26%),
+1.5 tool calls per question, and 2% of questions hitting the eight-turn limit. Passive injection
+alone scores below whole-history context (49/100 against 69/100); the read tools are required, and
+the gain comes from the agent pulling rounds the block cut (evidence coverage 0.63 → 0.83), not from
+a larger injection. Facts (`promote`) were not needed for this result; the `fabric-xc` arm that
+extracts them was not selected. Full evidence: `docs/_evidence/memory-bench/188.10/README.md`.
+
+### Known limitations
+
+- **One benchmark family.** The verdict is LongMemEval-S only; no other suite or model family has a
+  held-out v3 result. Evidence: `docs/_evidence/memory-bench/188.10/README.md`.
+- **Preference and abstention had no held-out ids.** Both stay development-only, so the preset has
+  no held-out quality claim for them. Evidence: `scripts/memory-bench/heldout-v3.json`.
+- **The judge and the answerer were the same model.** `mimo-v2.5` answered and judged, so judge
+  leniency is unquantified; cross-family judging is plan 202 Task 3. Evidence:
+  `docs/_evidence/memory-bench/188.10/README.md`.
+- **Retrieval is lexical only, and the candidate pool has a measured ceiling.** 11 of 30 multi-session
+  questions have a needed round outside the top-32 candidates. Evidence:
+  `docs/_evidence/memory-bench/188.10/ms-diagnostics-x.json`.
+- **Temporal reasoning is 12/20.** It improved from 7/20 but remains the weakest scored ability.
+  Evidence: `docs/_evidence/memory-bench/188.10/README.md`.
+- **About 78% of injected blocks were judged irrelevant** (0.777). The tools compensate; the block
+  itself is noisy. Evidence: `docs/_evidence/memory-bench/188.10/README.md`.
+- **Capacity limits against a growing exchange archive are unmeasured.** No long-run or eviction
+  campaign covered an archive that fills the configured capacity. Evidence: plan 202 Task 15.
+- **F3: foreign-context exposure in the lifecycle suite.** The completed paid arm exposed foreign
+  context in 13/24 sessions while labelled cross-project leakage stayed 0. Evidence:
+  `docs/_evidence/memory-bench/188.7/findings.json` (F3).
+- **F4: fact extraction reliability has no completed paid arm.** The schema/repair fix is
+  offline-proven only, and `om+fabric` extraction stopped early. Evidence:
+  `docs/_evidence/memory-bench/188.7/findings.json` (F4).
+- **F7: the lifecycle safety power target was not reached.** Only one persona completed both arms,
+  so no safety or power claim is possible. Evidence:
+  `docs/_evidence/memory-bench/188.7/findings.json` (F7).
+- **F9: the `om+fabric` arm never completed.** It stopped after two questions, so the combined path
+  has no completed paid evidence. Evidence: `docs/_evidence/memory-bench/188.7/findings.json` (F9).
+- **The exchange archive gates refuse real history.** The offline audit measured 2.271 refusals per
+  1,000 LongMemEval-S exchanges, touching 3 of 500 needed-session questions; adversarial detection
+  was 33/34. Evidence: `docs/_evidence/memory-bench/188.11/trust-scan.md`.
 
 ## Memory directory
 
@@ -1038,6 +1117,23 @@ grants are not exported.
 The `memory:export { dir }` and `memory:import { dir, mode }` commands resolve `dir` inside `tools.root`,
 refuse without it, and refuse a path that escapes it or overlaps the live `notes` directory.
 
+### Notes written by a newer version
+
+The team store is shared across agents and versions, so the reader never destroys what it cannot understand.
+A note whose `fabric.v` is above 1, or whose `fabric` object carries a field this version refuses, is
+**unreadable**: it is excluded from recall, injection, the directory, the core block and `memory.read`
+(`not_found`), so a crafted future-version note cannot reach the model or skip the trust scan by being
+unparseable, and it is never rewritten, renamed, moved, archived or evicted. `memory:export` and `memory:import`
+carry its file byte for byte, `memory:import --mode replace` does not delete it, and `memory.replace` refuses it
+with reason `unreadable`. `memory.forget` by id still deletes it, because that is an explicit request.
+`memory:reindex` and `memory:status` report `unreadable` and `unreadableReasons` (`version>1`, `invalid-fabric`);
+`memory:status` counts every scope of the markdown store.
+
+A readable (`v: 1`) note keeps unknown keys under `fabric` and unknown top-level frontmatter keys through a recall
+touch, `memory.replace`, `memory:maintain` and `memory:import`. Only a store that writes OKF files
+(`tools.root`) can hold a top-level frontmatter key; on SQLite or Postgres the unknown `fabric` keys are kept in
+the row.
+
 ## Tools
 
 | Tool | Effects | Needs |
@@ -1048,6 +1144,9 @@ refuse without it, and refuse a path that escapes it or overlaps the live `notes
 | `memory.replace` | `edit` | block, file path, or note id |
 | `memory.recall` | `read` | — |
 | `memory.forget` | `write` | — |
+
+These six names and their effects are **stable at API level 1**: a host may reference them in approval and policy
+rules. Their descriptions may change in a minor version; the names and effects do not (see `## Compatibility`).
 
 `memory.read` accepts exactly one of `path`, `id`, or `ids` (1–8). A note read returns each note in
 full with its header — id, scope, kind, date, and the note's path — through the same scope, consent,
@@ -1113,7 +1212,7 @@ working prefix, the directory, and the semantic tail — is marked
 instructions.
 The `minSimilarity` floor (default `0.2`) is applied to the active mode's similarity: query-term
 coverage in lexical mode (calibrated in plan 188.1 Task 2) or pre-fusion vector cosine in hybrid
-mode (provisional until plan 188.6). A hybrid opt-in host gets one status note naming the embedder and floor. Empty results
+mode (a tuning default). A hybrid opt-in host gets one status note naming the embedder and floor. Empty results
 inject nothing; the recall tool says `no match in any kind`.
 
 `memory.recall` is the agent's detail channel: one call returns at most **1,200 rendered tokens**
@@ -1216,3 +1315,206 @@ The fixture-only `runScopedMemoryEval` accepts `fixtures.recallSmoke` and report
 checks seeded note ids; it is a synthetic recall smoke check, not a public dataset
 benchmark. The pinned, opt-in memory benchmark lives in
 [`scripts/memory-bench`](../../../scripts/memory-bench/README.md).
+
+## Compatibility
+
+At API level 1 a host can rely on the names, signatures, config fields, tool names, command names, note files and
+preset contracts written here for the whole `0.13.x` line and every later minor version (the same promise plan 185
+Task 5 makes for the kernel). Everything else is an implementation detail.
+
+### Stable
+
+- **Exports.** The names in [Stable exports](#stable-exports) and their signatures. `src/__tests__/root-exports.test.ts`
+  freezes the barrel.
+- **Tools.** The six names in [Tools](#tools) with their `effects`; a host may name them in approval and policy rules.
+  `memory.view` and `memory.read` stay `read`, `memory.insert` and `memory.replace` stay `edit`, `memory.recall`
+  stays `read`, and `memory.forget` stays `write`. Tool descriptions may change; the names and effects do not.
+- **Commands.** `memory`, `memory:reindex`, `memory:export`, `memory:import`, `memory:archive`, `memory:consolidate`,
+  `memory:maintain`, `memory:status`, `memory:share` and `memory:lifecycle`, with their argument shapes; a new command
+  is additive.
+- **Config.** Every field marked `contract` in [Config stability](#config-stability). A contract field is never removed
+  or renamed, and a new field is optional.
+- **Notes.** The rule in [Notes written by a newer version](#notes-written-by-a-newer-version): an unknown key is kept,
+  an unreadable note is kept as written, and only an explicit `memory.forget` or a store delete by id removes one.
+- **Presets.** The preset names and their contracts; `conversational` is described in
+  [Conversational preset](#conversational-preset), and `CONVERSATIONAL_PRESET_REVISION` names the revision a
+  measurement ran on. A new preset name is additive.
+
+### May change in a minor version
+
+- The value of every config field marked `tuning` in [Config stability](#config-stability), including a default that
+  is also documented in `## Config`.
+- Ranking and scoring, injection budgets, the delivery format, prompt text, tool descriptions, and a preset's contents
+  inside its contract (a change to those bumps `CONVERSATIONAL_PRESET_REVISION`).
+- Anything classified "Not exported" under [Stable exports](#stable-exports).
+
+### Needs a new name or an explicit opt-in
+
+- A new stored kind (a `memory.*` kind beyond `fact`, `file`, `procedure`, `episode`, `working` and `exchange`).
+- A new write-path model call, or any change to what a default stores.
+- A new required service (an embedder, a database, a provider key).
+- A new capability a store or embedder author must implement instead of an optional method or declared flag.
+
+### Config stability
+
+Every field is `contract` (shape and meaning frozen at API level 1) or `tuning` (its value may change in a minor
+version). `packages/memory/fabric/src/__tests__/stability.test.ts` checks this table against
+`memoryFabricConfigSchema`; a field without a tier, or a tier that disagrees with the table, fails the test.
+
+| field | tier |
+| --- | --- |
+| `preset` | contract |
+| `enabled` | contract |
+| `retrieval` | contract |
+| `inject` | contract |
+| `inject.minSimilarity` | tuning |
+| `inject.topK` | tuning |
+| `inject.budgetTokens` | tuning |
+| `inject.query` | contract |
+| `inject.kinds` | contract |
+| `semantic` | contract |
+| `directory` | contract |
+| `directory.maxTopics` | tuning |
+| `directory.maxFiles` | tuning |
+| `directory.maxTokens` | tuning |
+| `core` | contract |
+| `core.maxTokens` | tuning |
+| `core.scopes` | contract |
+| `cues` | contract |
+| `cues.budgetTokens` | tuning |
+| `cues.maxPerTurn` | tuning |
+| `team` | contract |
+| `team.dir` | contract |
+| `team.write` | contract |
+| `scopes` | contract |
+| `scopes.tenantId` | contract |
+| `scopes.priors` | tuning |
+| `scopes.priors.path` | tuning |
+| `scopes.priors.project` | tuning |
+| `scopes.priors.team` | tuning |
+| `scopes.priors.agent` | tuning |
+| `scopes.priors.user` | tuning |
+| `scopes.user` | contract |
+| `scopes.agent` | contract |
+| `scopes.project` | contract |
+| `scopes.project.root` | contract |
+| `scopes.project.id` | contract |
+| `store` | contract |
+| `store.markdown` | contract |
+| `store.markdown.dir` | contract |
+| `store.sqlite` | contract |
+| `store.sqlite.path` | contract |
+| `store.postgres` | contract |
+| `store.postgres.connection` | contract |
+| `store.postgres.schema` | contract |
+| `store.postgres.table` | contract |
+| `tools` | contract |
+| `tools.root` | contract |
+| `tools.maxFileBytes` | tuning |
+| `scoped` | contract |
+| `scoped.scopeRoot` | contract |
+| `scoped.policy` | contract |
+| `scoped.policy.promotion` | contract |
+| `scoped.policy.promotion.reuseThreshold` | tuning |
+| `scoped.policy.decay` | contract |
+| `scoped.policy.activation` | contract |
+| `scoped.policy.activation.topK` | tuning |
+| `scoped.policy.activation.minSimilarity` | tuning |
+| `scoped.policy.facts` | contract |
+| `scoped.policy.facts.block` | contract |
+| `scoped.policy.facts.maxChars` | tuning |
+| `scoped.policy.approval` | contract |
+| `scoped.policy.approval.default` | contract |
+| `workingMemoryTemplate` | contract |
+| `limits` | contract |
+| `limits.maxEntryTextChars` | tuning |
+| `limits.maxWorkingMemoryBytes` | tuning |
+| `limits.maxVectorDimensions` | tuning |
+| `limits.rebuildBatchSize` | tuning |
+| `limits.rebuildMs` | tuning |
+| `consolidate` | contract |
+| `consolidate.threshold` | tuning |
+| `consolidate.decider` | contract |
+| `consolidate.model` | contract |
+| `linker` | contract |
+| `linker.enabled` | contract |
+| `linker.topK` | tuning |
+| `evolution` | contract |
+| `evolution.enabled` | contract |
+| `evolution.maxPatches` | tuning |
+| `passive` | contract |
+| `exchanges` | contract |
+| `exchanges.enabled` | contract |
+| `lifecycle` | contract |
+| `lifecycle.verifyAfterSessions` | tuning |
+| `lifecycle.decay` | contract |
+| `lifecycle.decay.episode` | tuning |
+| `lifecycle.decay.fact` | tuning |
+| `lifecycle.decay.preference` | tuning |
+| `lifecycle.decay.procedure` | tuning |
+| `lifecycle.decay.exchange` | tuning |
+| `lifecycle.storageWeights` | contract |
+| `lifecycle.storageWeights.explicit` | tuning |
+| `lifecycle.storageWeights.sessions` | tuning |
+| `lifecycle.storageWeights.helpful` | tuning |
+| `lifecycle.storageWeights.harmful` | tuning |
+| `lifecycle.storageWeights.outcome` | tuning |
+| `lifecycle.recall` | contract |
+| `lifecycle.recall.retrieval` | tuning |
+| `lifecycle.recall.storage` | tuning |
+| `lifecycle.archive` | contract |
+| `lifecycle.archive.retrievalBelow` | tuning |
+| `lifecycle.archive.storageBelow` | tuning |
+| `lifecycle.archive.graceSessions` | tuning |
+| `lifecycle.capacity` | contract |
+| `lifecycle.capacity.user` | contract |
+| `lifecycle.capacity.user.notes` | tuning |
+| `lifecycle.capacity.user.tokens` | tuning |
+| `lifecycle.capacity.agent` | contract |
+| `lifecycle.capacity.agent.notes` | tuning |
+| `lifecycle.capacity.agent.tokens` | tuning |
+| `lifecycle.capacity.project` | contract |
+| `lifecycle.capacity.project.notes` | tuning |
+| `lifecycle.capacity.project.tokens` | tuning |
+| `lifecycle.merge` | contract |
+| `lifecycle.merge.duplicateDice` | tuning |
+| `lifecycle.merge.episodes` | contract |
+| `lifecycle.merge.episodes.minCluster` | tuning |
+| `lifecycle.merge.episodes.model` | contract |
+| `lifecycle.widen` | contract |
+| `lifecycle.widen.minProjects` | tuning |
+| `lifecycle.widen.minSiblings` | tuning |
+| `lifecycle.widen.contradictionsToSupersede` | tuning |
+| `promote` | contract |
+| `promote.model` | contract |
+| `promote.minScore` | tuning |
+| `promote.weights` | tuning |
+| `promote.weights.explicit` | tuning |
+| `promote.weights.correction` | tuning |
+| `promote.weights.outcome` | tuning |
+| `promote.weights.recurrence` | tuning |
+| `promote.weights.generality` | tuning |
+| `promote.weights.ephemerality` | tuning |
+| `promote.weights.derivability` | tuning |
+| `promote.weights.duplicate` | tuning |
+| `promote.maxCandidates` | tuning |
+| `promote.minTurnsBetween` | tuning |
+| `promote.derivableFrom` | contract |
+| `promote.maxOutputTokens` | tuning |
+| `promote.thinkingLevel` | contract |
+| `workerLimits` | tuning |
+
+### Stable exports
+
+`src/__tests__/root-exports.test.ts` freezes the root barrel. Adding or removing a name is a deliberate API decision.
+
+- **Stable (API level 1).** The default package definition and `memoryFabric`, `createMemory`, `createMemoryFabric`,
+  `createMemoryWorkingStore`, `createScopedMemoryPolicy`, `memoryFabricConfigSchema`, `resolveMemoryFabricConfig`,
+  `resolveLifecycleConfig`, `parseMemoryNoteMetadata`, `encodeMemoryNoteMetadata`, `exportMemoryOkf`,
+  `importMemoryOkf`, `runMemoryConformance`, `runScopedMemoryEval`, `SCOPE_CLOCK_COUNTER` (a store's
+  `scopeCounter` name), `CONVERSATIONAL_PRESET_REVISION`, `packageName`, and the config, status, report, note and
+  store-adjacent types.
+- **Not exported.** Prompts (`EPISODE_MERGE_SYSTEM` and the consolidation extractor prompts), tuning constants
+  (`DEFAULT_*`, `MAX_*`, `MIN_*`, `HARD_*`), scoring and eviction helpers (`evictionOrder`, `shouldArchive`,
+  `isActiveNote`, `capacityUsage`), and the lifecycle, directory and core-block builders. They change with ranking and
+  budget work and carry no promise.

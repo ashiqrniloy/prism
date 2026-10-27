@@ -5,15 +5,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { providerDone, providerToolCall, toolCallContent, validateJsonSchema } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore, MemoryValidationError } from "@arnilo/prism-memory-core";
-import {
-  createMemory,
-  createMemoryFabric,
-  createScopeClock,
-  isMemoryNoteValidAt,
-  memoryFabricConfigSchema,
-  parseMemoryNoteMetadata,
-  resolveMemoryFabricConfig,
-} from "@arnilo/prism-memory-fabric";
+import { createMemory, createMemoryFabric, memoryFabricConfigSchema, parseMemoryNoteMetadata, resolveMemoryFabricConfig } from "@arnilo/prism-memory-fabric";
+import { createScopeClock } from "../../../packages/memory/fabric/src/lifecycle/clock.ts";
+import { isMemoryNoteValidAt } from "../../../packages/memory/fabric/src/types.ts";
 import { foldObservationalMemoryLedger } from "@arnilo/prism-memory-observational";
 import { parseVariantSpecs } from "../variants.mjs";
 import { args, CACHE, hash, loadLedgers, validateLedger } from "./io.mjs";

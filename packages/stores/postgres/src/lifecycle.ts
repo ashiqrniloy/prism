@@ -141,6 +141,10 @@ export function createPostgresPersistenceLifecycle(pool: Pool, schema: string): 
         await pool.query(`DELETE FROM ${events} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${toolCalls} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${usage} WHERE session_id = $1`, [id]);
+        await pool.query(
+          `DELETE FROM ${qualifyTable(schema, "prism_evaluations")} WHERE session_id = $1 OR run_id IN (SELECT id FROM ${runs} WHERE session_id = $1)`,
+          [id],
+        );
         await pool.query(`DELETE FROM ${runs} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${branches} WHERE session_id = $1`, [id]);
         await pool.query(`DELETE FROM ${search} WHERE session_id = $1`, [id]);

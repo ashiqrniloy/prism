@@ -15,6 +15,7 @@ import {
   buildMigration008Ddl,
   buildMigration009Ddl,
   buildMigration010Ddl,
+  buildMigration011Ddl,
 } from "../ddl.js";
 import { MIGRATION_LOCK_NAMESPACE, quoteIdentifier, schemaAdvisoryLockKey, validateIdentifier } from "../identifiers.js";
 
@@ -55,7 +56,8 @@ describe("postgres ddl", () => {
       buildMigration007Ddl("prism") +
       buildMigration008Ddl("prism") +
       buildMigration009Ddl("prism") +
-      buildMigration010Ddl("prism");
+      buildMigration010Ddl("prism") +
+      buildMigration011Ddl("prism");
     for (const table of ADAPTER_TABLE_NAMES) {
       assert.match(ddl, new RegExp(`CREATE TABLE IF NOT EXISTS "prism"."${table}"`, "m"));
     }

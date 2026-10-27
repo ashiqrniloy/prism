@@ -69,6 +69,39 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  context-rot:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.filter == 'release/context-rot' }}
+    environment: live-canaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+      - name: install and build
+        run: bun ci && bun run build
+      - name: release/context-rot Hyper (manual only)
+        env:
+          HYPER_API_KEY: ${{ secrets.HYPER_API_KEY }}
+          PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL: ${{ vars.PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL || 'deepseek-v4-pro-0813' }}
+        run: timeout 14400 bun scripts/context-rot/run.mjs --provider hyper --model "$PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL"
+      - name: release/context-rot OpenCode Go (manual only)
+        if: always()
+        env:
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL: ${{ vars.PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL || 'mimo-v2.5' }}
+        run: timeout 14400 bun scripts/context-rot/run.mjs --provider opencode-go --model "$PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: context-rot-${{ github.run_id }}
+          path: docs/_evidence/context-rot/
+          if-no-files-found: warn
+          retention-days: 30
+
   memory-bench:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.filter == 'release/memory-bench' }}
     environment: live-canaries

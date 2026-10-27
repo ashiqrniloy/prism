@@ -8,7 +8,11 @@ const ROOT_VERSION = JSON.parse(readFileSync(new URL("../../package.json", impor
 // Plan 066 lockstep bump: all manifests carry the 0.5.1 cut.
 const PROVIDER_TARBALL_SAMPLE = "arnilo-prism-provider-hyper";
 
-import { afterAll as after, beforeAll as before, describe, it } from "bun:test";
+import { afterAll as after, beforeAll as before, describe, it, setDefaultTimeout } from "bun:test";
+
+// 47 manifests x one `npm pack` each no longer fits the 5 s default hook budget.
+setDefaultTimeout(180_000);
+
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -62,7 +66,9 @@ const packages: Array<{ dir: string; name: string; isCore?: boolean; isSubpaths?
   { dir: "packages/providers/hyper", name: "@arnilo/prism-provider-hyper" },
   { dir: "packages/providers/laya", name: "@arnilo/prism-provider-laya" },
   { dir: "packages/providers/liquid", name: "@arnilo/prism-provider-liquid" },
+  { dir: "packages/providers/openai-codex", name: "@arnilo/prism-provider-openai-codex" },
   { dir: "packages/providers/opencode-go", name: "@arnilo/prism-provider-opencode-go" },
+  { dir: "packages/providers/openrouter", name: "@arnilo/prism-provider-openrouter" },
   { dir: "packages/providers/typesafe", name: "@arnilo/prism-provider-typesafe" },
   // Pure-manifest family/profile packages (no dist/exports): pack + install, but skip dynamic-import.
   { dir: "packages/tools/work", name: "@arnilo/prism-tools-work", isSubpaths: true },
@@ -187,7 +193,9 @@ before(() => {
     "@arnilo/prism-provider-hyper",
     "@arnilo/prism-provider-laya",
     "@arnilo/prism-provider-liquid",
+    "@arnilo/prism-provider-openai-codex",
     "@arnilo/prism-provider-opencode-go",
+    "@arnilo/prism-provider-openrouter",
     "@arnilo/prism-provider-typesafe",
     "@arnilo/prism-tools-work",
     "@arnilo/prism-tools-work/connectors",
@@ -341,7 +349,8 @@ import { createMemoryRunFeedbackStore } from "@arnilo/prism-store-codecs";
 import { createMockProvider } from "@arnilo/prism/testing";
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createHyperProvider } from "@arnilo/prism-provider-hyper";
-import { appendEvaluationFeedback, createMemoryEvaluationStore, defineScorer, scoreRun } from "@arnilo/prism-evals";
+import { appendEvaluationFeedback, defineScorer, scoreRun } from "@arnilo/prism-evals";
+import { createMemoryEvaluationStore } from "@arnilo/prism-store-codecs";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createMemory } from "@arnilo/prism-memory-fabric";
 import { chunkMarkdown, indexChunks, retrieveContext } from "@arnilo/prism-memory-rag";

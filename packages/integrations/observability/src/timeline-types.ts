@@ -45,7 +45,17 @@ export type ExecutionStepKind =
   | "loop_iteration"
   | "nested_workflow";
 
-export type ExecutionStepStatus = "running" | "succeeded" | "failed" | "blocked" | "skipped" | "suspended" | "denied" | "aborted";
+/** `approved` and `denied` are terminal outcomes of a `hitl` step: the decision a host settled for one gated tool call. */
+export type ExecutionStepStatus =
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "blocked"
+  | "skipped"
+  | "suspended"
+  | "approved"
+  | "denied"
+  | "aborted";
 
 // ─── Origin ───────────────────────────────────────────────────────────────────
 

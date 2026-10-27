@@ -59,6 +59,7 @@
     "JsonSchema",
     "validateJsonSchema",
     "ToolCapabilityKind",
+    "ToolInfo",
     "ToolDefinition",
     "ExternalToolDecision",
     "RunController",
@@ -75,7 +76,14 @@
     "SessionParentLink",
     "SteerOptions",
     "formatUntrustedToolText",
-    "UNTRUSTED_EXTERNAL_TRUST"
+    "UNTRUSTED_EXTERNAL_TRUST",
+    "EvaluationRecord",
+    "EvaluationStatus",
+    "EvaluationStore",
+    "ExperimentReportRecord",
+    "ExperimentReportStore",
+    "ModelConfig",
+    "RunFeedbackQuery"
   ],
   "phase17": [
     "parseSuspendedRunEntry",

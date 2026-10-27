@@ -194,7 +194,7 @@ describe("package-owned fold state", () => {
     const stubOf = (request: ProviderRequest | undefined) => toolResultText(request?.messages ?? [], "c1");
     const stubBefore = stubOf(requests.at(-1));
     assert.equal(summaries, 1, "one summary call for the folded row");
-    assert.match(String(stubBefore), /Tool result big_read \[c1\]: /);
+    assert.match(String(stubBefore), /\[folded: big_read \[c1\], [\d,]+ bytes/);
     await firstSession.close();
     await first.dispose();
 

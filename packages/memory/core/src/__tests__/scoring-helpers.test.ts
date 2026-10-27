@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "bun:test";
-import { clampImportance, rerankRecallHits, resolveRecallScoring, withTailContext } from "../index.js";
+import { rerankRecallHits, resolveRecallScoring, withTailContext } from "../index.js";
+import { clampImportance } from "../scoring.js";
 import type { MemoryVectorHit } from "../index.js";
 
 test("unrated importance is neutral half; accessed recency falls back to creation", () => {

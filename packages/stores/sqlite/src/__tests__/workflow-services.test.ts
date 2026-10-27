@@ -63,7 +63,7 @@ describe("sqlite store workflow services", () => {
 
   it("sqlite_leases_pass_conformance", async () => {
     const path = await tempDb();
-    await leaseConformance(() => createSqlitePersistence({ filename: path }).leases);
+    await leaseConformance(() => createSqlitePersistence({ filename: path }).leases, { ttlMs: 3000 });
   });
 
   it("sqlite_services_share_store_handle", () => {

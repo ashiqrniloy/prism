@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import type { HostConfig } from "../host/index.js";
 import { headlessApprovalSuspendsThenChannelResumes, type HeadlessApprovalResult } from "../scenarios/headless-approval.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 let root: string;
 let result: HeadlessApprovalResult;

@@ -1,6 +1,6 @@
 # Prism Roadmap — SDK kernel and native packages
 
-Updated: **2026-10-17** (adds Phase 18, decision models as first-class model calls: `capabilities.decisions`, `ModelProvider.decisions?()`, `PackageAPI.models.decisions`, System One image input and configurable path, and `@arnilo/prism-provider-liquid`; owner decision 2026-10-17 puts Jev, d1-ultra, Laya, and d1-3B in 0.13.0. Previously **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
+Updated: **2026-10-25** (scope change: **Command Code and Ollama Cloud do not ship in 0.13.0**. The owner deferred both to the first release after 0.13.0, so the 0.13.0 provider set stays the seven packages already in the tree. Plans 205 and 206 keep their research and task breakdown but leave the release path. Previously **2026-10-25** (adds `openrouter` and `openai-codex` to the Phase 5 provider set and the §2.9 catalog — owner decisions 2026-10-24, republishing `@arnilo/prism-provider-openrouter` at 0.13.0, and 2026-10-25, adding `@arnilo/prism-provider-openai-codex` on OpenAI's sanctioned Sign in with ChatGPT flow — adds `credentials:write` so a package can persist and rotate its own grant, and requires every provider package shipped from now on to carry a prompt-cache-parity cell (plan 184)). Previously **2026-10-17** (adds Phase 18, decision models as first-class model calls: `capabilities.decisions`, `ModelProvider.decisions?()`, `PackageAPI.models.decisions`, System One image input and configurable path, and `@arnilo/prism-provider-liquid`; owner decision 2026-10-17 puts Jev, d1-ultra, Laya, and d1-3B in 0.13.0. Previously **2026-10-10** (Prism is always embedded by a host and ships no agent product; Prism Code is replaced by Prism Agent, an unpublished reference host that proves the SDK before the freeze: §2.13, Phase 12, which now runs before Phase 11; 0.13.0 ships the coding and research domain packs; adds Phase 17, headless host libraries for remote agents, `HostUi` routing, and scheduling; re-scopes Phases 13–16 to a generic implementation: Prism ships the driver kit, a generic process driver, the tool bridge, and workflows; a host writes or installs an adapter for each vendor coding agent, and Prism ships no vendor adapter. See [Phases 13–16](#phases-1316--external-agents-and-orchestration)). Previously **2026-10-04** (adds custom agents run on vendor coding agents — Claude Code, Codex, Antigravity CLI — driven as unmodified binaries under the user's own subscription where the vendor permits it, and multi-agent orchestration: §2.12 and Phases 13–16, all shipping in 0.13.0; version target set to 0.13.0 everywhere)
 
 Shipped baseline: `@arnilo/prism` **0.12.1** and the 0.12.1 family packages. `@arnilo/prism-agent-sdk` **0.1.0** is published. Its unreleased in-tree Phase 1 work (plan 142) is covered under [In-flight work](#in-flight-work). `@arnilo/prism-code` **0.4.1** is the terminal lab; it is deleted, and Prism Agent, an unpublished reference host, takes over its proving role (Phase 12).
 
@@ -595,10 +595,10 @@ Native packages are ordinary packages. None is installed by default.
 
 | Package | What it does | Mechanisms | Built from (0.12.1) |
 | --- | --- | --- | --- |
-| `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages) | `providers.register`, credentials | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
+| `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid, openrouter, openai-codex}` | One vendor each: wire adapter, model catalog and discovery, auth methods, OAuth over `host.ui` (other providers are host-written on `@arnilo/prism/provider-kit` or external packages) | `providers.register`, credentials; `openai-codex` also `credentials:write` | `prism-providers` subpaths; `prism-code` `providers.ts`, `oauth.ts` |
 | `@arnilo/prism-credentials-keyring` | OS keyring and encrypted credential store | `credentials` slot | `prism-core/credentials`, `prism-code` `credentials.ts` |
 | `@arnilo/prism-tools-coding` | fs, edit, grep, shell, sandbox, execution policy, git, checks, todo with a continuation stop hook, `ask_user`; the `workspace` service (worktree create/dispose, bounded `diff`, merge with conflicts reported; §2.12.14) | tools, `tool.call` hard denies, `run.end`, `host.ui`, `services.provide("workspace")` | `prism-coding-tools/agent`, `/security`, `createCodingWorkspaceLifecycle` |
-| `@arnilo/prism-tools-web` | search and fetch: Brave, Exa, Firecrawl, Obscura | tools, `services.provide("web.fetch")` | `web-tools` |
+| `@arnilo/prism-tools-web` | search and fetch: Brave, Exa, Firecrawl, Obscura, native (keyless), SearXNG, Tavily, Kagi | tools, `services.provide("web.fetch")` | `web-tools` |
 | `@arnilo/prism-tools-browser` | Playwright browser automation | tools | `web-tools/browser` |
 | `@arnilo/prism-tools-work` | Office documents, sheets, diagrams, document reader, M365/Google connectors | tools, skills | `prism-work` |
 | `@arnilo/prism-tools-computer-use` | Linux desktop control | tools, `tool.call` | `prism-coding-tools/computer-use-linux` |
@@ -1790,8 +1790,8 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
   - usage and stop-reason normalization
   - the built-in `openai-compatible` provider
 - **Subpaths:** `@arnilo/prism/provider-kit` (SSE, HTTP transport, OpenAI-compatible wire mapping, provider conformance) and the mock provider in `/testing`.
-- **Credentials slot:** `env:` default resolver; OAuth token persistence through the slot.
-- **Provider packages:** ship `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid}` (owner decision 2026-10-17, adding `liquid` to the 2026-10-16 list; others build on `@arnilo/prism/provider-kit`). OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
+- **Credentials slot:** `env:` default resolver; OAuth token persistence through the slot; `credentials:write` lets a package store and delete through a writable slot, which is how the OpenAI Codex provider keeps its rotating Sign in with ChatGPT grant (`keyring:openai-codex`) without a host-managed token file.
+- **Provider packages:** ship `@arnilo/prism-provider-{hyper, opencode-go, typesafe, laya, liquid, openrouter, openai-codex}` (owner decisions 2026-10-17, adding `liquid` to the 2026-10-16 list; 2026-10-24, adding `openrouter`; and 2026-10-25, adding `openai-codex`, which signs a ChatGPT plan in through OpenAI's sanctioned dynamic-registration flow and uses the public `api.openai.com/v1/responses` route, not the Codex CLI's private backend; others build on `@arnilo/prism/provider-kit`). **Command Code and Ollama Cloud are not in this set:** on 2026-10-25 the owner moved both to the release after 0.13.0, so plans 205 and 206 are off the release path. OAuth flows use `host.ui` (`open-url`, `input`) and never open a browser themselves.
 - **`@arnilo/prism-credentials-keyring`.**
 - **Examples:**
   - an OpenAI-compatible endpoint with no packages
@@ -1841,8 +1841,10 @@ Each phase lists its goal, why it exists, its scope, and its done criteria. Exec
   - durable-effect identity enforcement against `principal`
 - **`approval`:** modes over `effects` and roots, via `host.ui` confirm or suspension.
 - **`tools-web`:**
-  - backends selected by config
+  - backends selected by config: Brave, Exa, Firecrawl, Obscura, native (keyless), SearXNG, Tavily, Kagi
+  - a keyless native fetch (`web_fetch`) by default, so a search-only key can still read results
   - a missing key or binary gives a status note and no tools, not a failure
+  - host domain policy, an opt-in per-session fetch cache, and an opt-in question-focused `prompt`
   - provides `web.fetch`
 - **`tools-browser`, `tools-work`, `tools-computer-use`, `tools-openapi`.**
 - **`context-files`:** AGENTS.md / SYSTEM.md layers with a trust policy; no home-directory scan unless configured.
@@ -2474,6 +2476,7 @@ These five acceptance criteria stay in force for the truth suite (`scripts/phase
 - A first-party agent product or standalone agent binary. Prism is always embedded by a host. Prism Agent is a private reference host for testing and proof, never published and not an API (§2.13).
 - A TUI in the reference host. Manual interactive testing goes through ACP clients. A terminal client, if one is built, is a separate `@arnilo/prism-devtools` client of `serveAgent` (§2.13.3).
 - Domain packs beyond coding and research in 0.13.0. `tools-media` is a candidate after 0.13.0 (§2.13.5).
+- The Command Code and Ollama Cloud provider packages in 0.13.0. The owner deferred both to the first release after 0.13.0 on 2026-10-25; plans 205 and 206 stay `planned` off the release path.
 - A god config that names every package's options. Package config belongs to packages.
 - Compatibility aliases for 0.12 configuration.
 - Vendor adapters for specific coding agents (Claude Code, Codex, the Antigravity CLI, or any other). Hosts write or install them on `prism-driver-process`. Prism ships the adapter contract, the generic driver, conformance, an authoring guide, and offline reference adapters as examples (Phase 15).

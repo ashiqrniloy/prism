@@ -1,7 +1,7 @@
 import type { ModelClient, ModelConfig, ModelProvider } from "@arnilo/prism";
 
 /** The default worker model a scripted provider answers on. */
-export const memoryModel: ModelConfig = { provider: "mock", model: "memory" };
+export const memoryModel: ModelConfig = { provider: "mock", model: "memory", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 /**
  * A scripted `ModelProvider` as the `ModelClient` the workers take. The workers never resolve a

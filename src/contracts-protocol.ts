@@ -348,6 +348,8 @@ export type AgentEventPayload =
       readonly runId?: string;
       readonly summary?: string;
       readonly entriesCompacted?: number;
+      /** Who asked: the configured auto trigger, a manual compact, or overflow recovery. */
+      readonly trigger?: import("./contracts-core/compaction.js").CompactionReason | string;
       /** Redacted; present when compaction failed (the former `compaction_failed`). */
       readonly error?: ErrorInfo;
     }

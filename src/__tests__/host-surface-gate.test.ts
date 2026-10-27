@@ -28,6 +28,9 @@ const RETIRED_FAMILY = "@arnilo/" + "prism-core";
 const FROM_CLAUSE = /\b(?:import|export)\s+(?:type\s+)?([^'"`;]*?)\s*from\s*["']([^"']+)["']/g;
 // Side-effect `import "x"`, and dynamic `import("x")` including the type form `import("x").Name`.
 const BARE_OR_DYNAMIC = /\bimport\s*\(?\s*["']([^"']+)["'](?:\s*\))?(?:\s*\.\s*([A-Za-z_$][\w$]*))?/g;
+// Any dynamic `import(...)` call with its argument, so a non-literal specifier can be rejected.
+const DYNAMIC_IMPORT_CALL = /\bimport\s*\(([^()]*)\)/g;
+const LITERAL_SPECIFIER = /^["'][^"']+["']$/;
 const CREATE_AGENT_CALL = /\bcreateAgent\s*\(/g;
 // A spread whose operand is an agent: `...agent`, `...this.agent`, `...prismAgent`.
 const AGENT_SPREAD = /\.\.\.\s*(?:[\w$]+\.)*(?:agent|[\w$]*Agent)\s*[,})]/g;
@@ -106,6 +109,7 @@ function scanHostSurface(root: string, allowed: Set<string>): Scan {
     usedRootNames: new Set(),
   };
   for (const mod of modules) {
+    const lines = mod.text.split("\n");
     const specs: Array<{ spec: string; clause?: string; member?: string; index: number }> = [];
     for (const m of mod.text.matchAll(FROM_CLAUSE)) specs.push({ spec: m[2]!, clause: m[1], index: m.index! });
     for (const m of mod.text.matchAll(BARE_OR_DYNAMIC)) specs.push({ spec: m[1]!, member: m[2], index: m.index! });
@@ -143,13 +147,17 @@ function scanHostSurface(root: string, allowed: Set<string>): Scan {
     if (mod.text.includes(RETIRED_FAMILY)) {
       scan.importViolations.push(`${mod.rel}:1 names ${RETIRED_FAMILY}, a retired 0.12 family package`);
     }
-    for (const m of mod.text.matchAll(/\bimport\s*\(/g)) {
-      const rest = mod.text.slice(m.index! + m[0].length);
-      const end = rest.indexOf(")");
-      const arg = end < 0 ? rest : rest.slice(0, end);
-      if (arg.includes("+") || arg.includes("`")) {
-        scan.importViolations.push(`${mod.rel}:${lineOf(mod.text, m.index!)} uses a computed import specifier`);
-      }
+    for (const m of mod.text.matchAll(DYNAMIC_IMPORT_CALL)) {
+      const arg = (m[1] ?? "").trim();
+      if (LITERAL_SPECIFIER.test(arg)) continue;
+      // The one justified exception: a module path the host receives at runtime (a conformance
+      // factory, a CLI argument). It must say so, with a reason, on its own line or the line above.
+      const line = mod.text.slice(0, m.index!).split("\n").length;
+      const marker = [lines[line - 1] ?? "", lines[line - 2] ?? ""].some((source) => /\/\/\s*host-gate:\s*\S/.test(source));
+      if (marker) continue;
+      scan.importViolations.push(
+        `${mod.rel}:${lineOf(mod.text, m.index!)} uses a computed import specifier: import(${arg.slice(0, 60)}) — use a string literal, or a "// host-gate: <reason>" comment for a runtime module path`,
+      );
     }
     for (const m of mod.text.matchAll(CREATE_AGENT_CALL)) {
       if (!mod.bin) scan.constructViolations.push(`${mod.rel}:${lineOf(mod.text, m.index!)} calls createAgent outside a bin`);
@@ -216,7 +224,7 @@ describe("host surface gate", () => {
     );
   });
 
-  it("host_surface_rejects_prism_core_and_computed_imports", () => {
+  it("host_surface_rejects_prism_core_and_non_literal_import_specifiers", () => {
     const fixture = mkdtempSync(join(tmpdir(), "prism-host-gate-"));
     const probe = join(fixture, "packages", "hosts", "probe", "src");
     try {
@@ -230,6 +238,18 @@ describe("host surface gate", () => {
         `const pkg = "${RETIRED_FAMILY}/validation/json-schema";\nexport const load = () => import(pkg);\n`,
       );
       writeFileSync(join(probe, "computed.ts"), 'export const load = () => import("@arnilo/" + "prism-workflows");\n');
+      // A package specifier hidden behind a bound variable: no retired-family name in the import call itself.
+      writeFileSync(join(probe, "indirect.ts"), 'const pkg = "@arnilo/prism-observability";\nexport const load = () => import(pkg);\n');
+      // The sanctioned exception: a runtime module path, declared with a reason on the line above.
+      writeFileSync(
+        join(probe, "runtime.ts"),
+        "export const load = (modulePath: string) => () =>\n  // host-gate: the factory module path is supplied by the caller\n  import(modulePath);\n",
+      );
+      // A marker with no reason is not a marker.
+      writeFileSync(
+        join(probe, "unreasoned.ts"),
+        "export const load = (modulePath: string) => () =>\n  // host-gate:\n  import(modulePath);\n",
+      );
       const scan = scanHostSurface(fixture, new Set());
       assert.ok(
         scan.importViolations.some((violation) => violation.includes("static.ts")),
@@ -242,6 +262,19 @@ describe("host surface gate", () => {
       assert.ok(
         scan.importViolations.some((violation) => violation.includes("computed.ts") && violation.includes("computed import specifier")),
         `a concatenated import specifier must fail:\n${scan.importViolations.join("\n")}`,
+      );
+      assert.ok(
+        scan.importViolations.some((violation) => violation.includes("indirect.ts") && violation.includes("computed import specifier")),
+        `a specifier bound to a variable must fail:\n${scan.importViolations.join("\n")}`,
+      );
+      assert.deepEqual(
+        scan.importViolations.filter((violation) => violation.includes("runtime.ts")),
+        [],
+        `a declared runtime module path must pass:\n${scan.importViolations.join("\n")}`,
+      );
+      assert.ok(
+        scan.importViolations.some((violation) => violation.includes("unreasoned.ts") && violation.includes("computed import specifier")),
+        `a host-gate marker without a reason must fail:\n${scan.importViolations.join("\n")}`,
       );
     } finally {
       rmSync(fixture, { recursive: true, force: true });

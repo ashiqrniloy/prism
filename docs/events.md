@@ -70,7 +70,7 @@ A driver loop reports vendor activity through `run.observe`. Tool activity emits
 | `decision.pending` | `{ decisions }` | An `ask` was staged for suspension. Carries redacted `PendingDecision` records — hashes and scopes, never raw arguments. |
 | `decision.resolved` | `{ decisions, via }` | The staged batch settled: `via: "inline"` for a host answer, `"resume"` for a later `resume(decisions)`. Each entry is `{ toolCallId, outcome }`. |
 | `compaction.started` | `{}` | Compaction began. |
-| `compaction.completed` | `{ summary?, entriesCompacted?, error? }` | Compaction finished, or failed with a redacted `error`. |
+| `compaction.completed` | `{ summary?, entriesCompacted?, trigger?, error? }` | Compaction finished, or failed with a redacted `error`. `trigger` is `"manual"`, `"auto"`, or `"overflow"` (context-overflow recovery). |
 | `background.started` | `{ package?, name, taskId }` | A `SessionContext.background` task started. |
 | `background.completed` | `{ package?, name, taskId, durationMs }` | The task finished. |
 | `background.failed` | `{ package?, name, taskId, reason, error? }` | The task failed or `close()` aborted it. |

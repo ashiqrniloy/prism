@@ -6,7 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHashEmbedder, MemoryValidationError } from "@arnilo/prism-memory-core";
 import { createMemory, createMemoryFabric } from "../../index.js";
-import { createScopedMemoryHealthCommand, createScopedMemoryPolicy, runScopedMemoryEval } from "../index.js";
+import { createScopedMemoryPolicy, runScopedMemoryEval } from "../index.js";
+import { createScopedMemoryHealthCommand } from "../eval/runner.js";
 
 function loadFixture(name: string): unknown {
   const candidates = [

@@ -81,11 +81,11 @@ describe("inspector eval comparison", () => {
     const comparison = compareInspectorRuns(
       {
         summary: { durationMs: 50, errorCount: 0, toolCallCount: 1, status: "succeeded", cost: { amount: 0.9, currency: "USD" } },
-        aggregate: { meanScore: 0.99, invariantsPassed: false },
+        aggregate: { macroMean: 0.99, invariantsPassed: false },
       },
       {
         summary: { durationMs: 80, errorCount: 0, toolCallCount: 0, status: "succeeded", cost: { amount: 0.2, currency: "USD" } },
-        aggregate: { meanScore: 0.4, invariantsPassed: true },
+        aggregate: { macroMean: 0.4, invariantsPassed: true },
       },
     );
     assert.equal(comparison.qualityWinner, "invariant_blocked");
@@ -109,12 +109,12 @@ describe("inspector eval comparison", () => {
           // `transcript` is not comparison metadata: the parser drops it, so the secret never echoes back.
           left: {
             summary: { durationMs: 100, errorCount: 0, toolCallCount: 1, status: "completed" },
-            aggregate: { meanScore: 0.2, invariantsPassed: true },
+            aggregate: { macroMean: 0.2, invariantsPassed: true },
             transcript: secret,
           },
           right: {
             summary: { durationMs: 110, errorCount: 0, toolCallCount: 0, status: "succeeded", cost: { amount: 0.01, currency: "USD" } },
-            aggregate: { meanScore: 0.9, invariantsPassed: false },
+            aggregate: { macroMean: 0.9, invariantsPassed: false },
           },
         }),
       });
@@ -150,7 +150,7 @@ describe("host-journey gates over plan 072 evals", () => {
       timeline: timeline([tool(0, "drop_database")]),
     });
     assert.equal(scored.score, 0);
-    assert.equal(scored.metadata?.invariant, true);
+    assert.equal(forbidden.invariant, true, "the declaration, not returned metadata, marks the gate");
   });
 
   it("required ordering, missing approval, revoked ACL, and uncertain effect fail closed", async () => {
@@ -175,13 +175,37 @@ describe("host-journey gates over plan 072 evals", () => {
       (
         await approval.score({
           result: result(),
+          timeline: timeline([tool(0, "write_record")]),
+        })
+      ).score,
+      0,
+      "a decision with no tool call id cannot approve a call",
+    );
+    // An `approved` step correlating on the call id passes; one for another call does not.
+    assert.equal(
+      (
+        await approval.score({
+          result: result(),
           timeline: timeline([
-            { id: "h", kind: "hitl", name: "approve", order: 0, status: "succeeded", startedAt: "2026-01-01T00:00:00.000Z" },
-            tool(1, "write_record"),
+            { id: "h", kind: "hitl", name: "approve", order: 0, status: "approved", startedAt: "2026-01-01T00:00:00.000Z", metadata: { toolCallId: "c1", via: "inline" } },
+            tool(1, "write_record", "succeeded", { id: "tool:c1", metadata: { toolCallId: "c1" } }),
           ]),
         })
       ).score,
       1,
+    );
+    assert.equal(
+      (
+        await approval.score({
+          result: result(),
+          timeline: timeline([
+            { id: "h", kind: "hitl", name: "approve", order: 0, status: "approved", startedAt: "2026-01-01T00:00:00.000Z", metadata: { toolCallId: "c1" } },
+            tool(1, "write_record", "succeeded", { id: "tool:c2", metadata: { toolCallId: "c2" } }),
+          ]),
+        })
+      ).score,
+      0,
+      "approval of c1 does not cover c2",
     );
 
     const acl = createErrorClassScorer({ deny: ["acl_revoked"] });
@@ -265,6 +289,7 @@ describe("host-journey gates over plan 072 evals", () => {
       policyRevision: "policy-1",
       runtimeRevision: "0.7.0",
       datasetVersion: "1.0.0",
+      datasetContentHash: defineDataset({ id: "manifest", items: [] }).contentHash,
     });
     assert.throws(() => validateEvalManifest({ runtimeRevision: "", datasetVersion: "1" }));
     assert.throws(() =>
@@ -303,6 +328,7 @@ function countingAgent(onRun: () => void): Agent {
     async session() {
       return {
         id: "s",
+        async *subscribe() {},
         async run() {
           onRun();
           return { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] } as RunResult;
@@ -335,7 +361,8 @@ describe("host-activity packs on true 072 primitives", () => {
     });
     assert.equal(runs, 3);
     assert.equal(report.trials?.sampleCount, 3);
-    assert.equal(report.trials?.uncertaintyMethod, "standard_error");
+    assert.equal(report.items[0]?.trials.length, 3);
+    assert.equal(report.aggregate.cost?.costComplete, false);
   });
 
   it("denyTools skips execute; unknownEffect is not success", async () => {
@@ -363,6 +390,7 @@ describe("host-activity packs on true 072 primitives", () => {
       scorers: [
         defineScorer({
           id: "drop-not-succeeded",
+          invariant: true,
           score: ({ timeline, result }) => {
             const steps = timeline?.steps.filter((s) => s.kind === "tool" && s.name === "drop_database") ?? [];
             const toolResults = result.messages.flatMap((m) => m.content).filter((b) => b.type === "tool_result");
@@ -370,7 +398,7 @@ describe("host-activity packs on true 072 primitives", () => {
               steps.length > 0
                 ? steps.every((s) => s.status !== "succeeded")
                 : toolResults.length > 0 && toolResults.some((r) => r.error !== undefined);
-            return { score: ok ? 1 : 0, metadata: { invariant: true } };
+            return { score: ok ? 1 : 0 };
           },
         }),
       ],
@@ -404,9 +432,10 @@ describe("host-activity packs on true 072 primitives", () => {
       scorers: [
         defineScorer({
           id: "effect-success",
+          invariant: true,
           score: ({ timeline }) => {
             const tools = timeline?.steps.filter((s) => s.kind === "tool") ?? [];
-            return { score: tools.some((s) => s.status === "succeeded") ? 1 : 0, metadata: { invariant: true } };
+            return { score: tools.some((s) => s.status === "succeeded") ? 1 : 0 };
           },
         }),
       ],
@@ -451,7 +480,7 @@ describe("host-activity packs on true 072 primitives", () => {
               kind: "hitl",
               name: "approve",
               order: 0,
-              status: "succeeded",
+              status: "approved",
               startedAt: "2026-01-01T00:00:00.000Z",
               metadata: { draftRevision: 1 },
             },
@@ -471,7 +500,7 @@ describe("host-activity packs on true 072 primitives", () => {
               kind: "hitl",
               name: "approve",
               order: 0,
-              status: "succeeded",
+              status: "approved",
               startedAt: "2026-01-01T00:00:00.000Z",
               metadata: { draftRevision: 1 },
             },
@@ -505,10 +534,8 @@ describe("host-activity packs on true 072 primitives", () => {
       await writeFile(fixture, "ok\n");
       const oracle = defineScorer({
         id: "test-oracle",
-        score: ({ environment }) => ({
-          score: (environment as { testsPassed?: boolean } | undefined)?.testsPassed ? 1 : 0,
-          metadata: { invariant: true },
-        }),
+        invariant: true,
+        score: ({ environment }) => ({ score: (environment as { testsPassed?: boolean } | undefined)?.testsPassed ? 1 : 0 }),
       });
       const agent = await createAgent({
         model: { provider: "mock", model: "offline" },
@@ -534,4 +561,19 @@ describe("host-activity packs on true 072 primitives", () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+});
+
+
+it("devtools_quality_winner_uses_ci_overlap", () => {
+  const side = (mean: number, low: number, high: number) => ({
+    summary: { durationMs: 1, errorCount: 0, toolCallCount: 0, status: "succeeded" },
+    aggregate: { macroMean: mean, scorers: { s: { mean, ci95: { low, high } } } },
+  });
+  const left = side(.8, .6, .9), right = side(.7, .5, .85);
+  assert.equal(compareInspectorRuns(left, right).qualityWinner, "tie");
+  assert.equal(parseInspectorCompareBody(JSON.stringify({ left, right })).qualityWinner, "tie");
+  assert.equal(compareInspectorRuns(left, side(.3, .2, .4)).qualityWinner, "left");
+  assert.equal(compareInspectorRuns(side(.3, .2, .4), left).qualityWinner, "right");
+  assert.equal(compareInspectorRuns(left, { ...right, aggregate: { macroMean: .7 } }).qualityWinner, "left");
+  assert.throws(() => parseInspectorCompareBody(JSON.stringify({ left, right: side(.7, .9, .2) })));
 });

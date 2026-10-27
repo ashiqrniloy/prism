@@ -62,8 +62,16 @@ function combine(name: DecideHookName, values: readonly unknown[], payload?: unk
         (value) =>
           isRecord(value) && isRecord(value.continue) && typeof value.continue.reason === "string" && value.continue.reason.length > 0,
       );
-    case "any-compact":
-      return values.find((value) => isRecord(value) && value.compact === true);
+    case "any-compact": {
+      // Tri-state vote: any `true` wins, else any `false` vetoes, else everyone abstained.
+      let veto = false;
+      for (const value of values) {
+        if (!isRecord(value)) continue;
+        if (value.compact === true) return { compact: true };
+        if (value.compact === false) veto = true;
+      }
+      return veto ? { compact: false } : undefined;
+    }
     case "tool-call": {
       let ask: unknown;
       let respond: unknown;

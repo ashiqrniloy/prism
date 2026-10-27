@@ -92,3 +92,19 @@ and the listing/delete/title legs), the run-ledger conformance, and the migratio
 real server.
 
 - Session links (`SessionOptions.parent` / `actor`): migration `010_session_links` adds nullable, indexed `agent_id`, `workflow_run_id`, `delegation_id`, `actor_kind`, `actor_agent`, and `actor_vendor` columns to `prism_sessions` (beside `parent_session_id`). The session's first `metadata` entry stays the source of truth and `append` mirrors it into the row in the same transaction. `listSessions` and `searchSessions` filter on the columns. Existing databases migrate forward without data loss and list old sessions with absent links.
+
+## Durable evaluations
+
+`createPostgresPersistence` returns `evaluations` and `experiments`. Migration
+`011_evaluations` adds `prism_evaluations` and `prism_experiment_reports` in place,
+with owner/created and dataset indexes, plus evaluation run, experiment, session,
+and scorer indexes. Each append is one insert (one row per evaluation or experiment
+summary), validated and capped at 1 MiB by `@arnilo/prism-store-codecs`.
+`evaluationRedactor` is a code-only factory option for reasons, errors and metadata.
+
+Queries match all three ownership fields exactly; omitted fields match only absent
+fields, so an unscoped query sees only unowned records. Queries default to 100 rows
+(maximum 1,000); use the returned opaque `nextCursor` for the next page.
+`experiments.latest({ datasetId, ...ownership, manifestMatch })` returns the newest
+matching content-free summary. Session deletion and retention remove associated
+evaluations; experiment summaries remain independent of session lifetime.

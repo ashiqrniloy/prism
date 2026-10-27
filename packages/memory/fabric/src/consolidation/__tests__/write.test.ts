@@ -4,15 +4,8 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHashEmbedder, type Memory } from "@arnilo/prism-memory-core";
-import {
-  createMemory,
-  createMemoryFabric,
-  encodeMemoryNoteMetadata,
-  MEMORY_NOTE_METADATA_KEY,
-  type MemoryFabric,
-  type MemoryFabricScopeBinding,
-  parseMemoryNoteMetadata,
-} from "../../index.js";
+import { createMemory, createMemoryFabric, encodeMemoryNoteMetadata, type MemoryFabric, type MemoryFabricScopeBinding, parseMemoryNoteMetadata } from "../../index.js";
+import { MEMORY_NOTE_METADATA_KEY } from "../../types.js";
 import type { ExtractedNote } from "../extract.js";
 import type { ConsolidationCandidate } from "../gather.js";
 import { scorePromotion } from "../score.js";

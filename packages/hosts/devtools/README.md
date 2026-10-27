@@ -46,6 +46,8 @@ bin binds loopback only; a remote bind is a programmatic `serveDevtools(agent, {
 | `GET /api/events?session=` | server-sent events: `agent` for `agent.subscribe()`, and `session` for the session's `subscribe()` |
 | `POST /api/compare` | `{ left, right }` metadata compared: winners and the invariant block |
 
+Quality compares `aggregate.macroMean`. When both sides supply the same scorer ids and every scorer has `ci95: { low, high }`, a winner requires every interval to support that direction without overlap; overlap (including touching bounds) or conflicting directions gives `tie`. Missing intervals fall back to means. A failed invariant still blocks quality winners.
+
 Unknown sessions answer 404 with `ERR_PRISM_DEVTOOLS_NOT_FOUND`. A malformed query answers 400 with
 `ERR_PRISM_DEVTOOLS_QUERY`. Errors never carry an internal message.
 

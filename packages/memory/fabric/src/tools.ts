@@ -25,6 +25,7 @@ import {
   noteFields,
   parseMemoryNoteMetadata,
   stampProvenance,
+  unreadableNoteReason,
 } from "./types.js";
 
 /** Everything the tools call back into; all of it comes from the fabric closure. */
@@ -492,7 +493,15 @@ export function createMemoryFabricTools(deps: MemoryFabricToolDeps): (options?: 
           } else if (typeof args.id === "string") {
             if (!indexedNotesAvailable()) return indexedNotesUnavailable(replaceName, context);
             noteMemory = (await deps.noteMemory?.(args.id, context.signal)) ?? deps.memory;
-            content = (await noteMemory.getEntry(args.id, options))?.text;
+            const entry = await noteMemory.getEntry(args.id, options);
+            if (entry !== undefined && unreadableNoteReason(entry.metadata) !== undefined)
+              return fail(
+                replaceName,
+                context,
+                "unreadable",
+                "This note was written by a newer version of memory and cannot be edited here.",
+              );
+            content = entry?.text;
           } else throw new MemoryValidationError("target must be a string");
           const index = content?.indexOf(args.old) ?? -1;
           if (index < 0 || content === undefined) return fail(replaceName, context, "not_found", "No matching text found.");

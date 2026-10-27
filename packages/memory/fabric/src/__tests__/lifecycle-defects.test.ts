@@ -3,14 +3,9 @@ import assert from "node:assert/strict";
 import type { ContextDraft, HookContext, Session, SessionEntry } from "@arnilo/prism";
 import { createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { createFabricContext } from "../context.js";
-import {
-  createFabricDirectory,
-  createFabricLifecycle,
-  createMemoryFabric,
-  DEFAULT_DIRECTORY_OPTIONS,
-  parseMemoryNoteMetadata,
-  renderFabricDirectory,
-} from "../exports.js";
+import { createFabricDirectory, DEFAULT_DIRECTORY_OPTIONS, renderFabricDirectory } from "../directory.js";
+import { createMemoryFabric, parseMemoryNoteMetadata } from "../exports.js";
+import { createFabricLifecycle } from "../lifecycle/index.js";
 import { createMemory } from "../memory.js";
 
 const _DAY = 86_400_000;

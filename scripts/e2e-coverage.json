@@ -292,14 +292,24 @@
     "@arnilo/prism-evals": {
       ".": {
         "suites": [
+          "examples/eval-judges.ts",
+          "examples/eval-injection.ts",
+          "packages/hosts/evals/src/__tests__/calibration.test.ts",
           "packages/hosts/evals/src/__tests__/citation-integrity.test.ts",
           "packages/hosts/evals/src/__tests__/citations.test.ts",
+          "packages/hosts/evals/src/__tests__/compare-experiments.test.ts",
           "packages/hosts/evals/src/__tests__/curate.test.ts",
           "packages/hosts/evals/src/__tests__/erp-invariants.test.ts",
           "packages/hosts/evals/src/__tests__/evals.test.ts",
           "packages/hosts/evals/src/__tests__/guardrail-pack-scenarios.test.ts",
+          "packages/hosts/evals/src/__tests__/judges.test.ts",
+          "packages/hosts/evals/src/__tests__/injection.test.ts",
           "packages/hosts/evals/src/__tests__/scenarios.test.ts",
-          "packages/hosts/evals/src/__tests__/trajectory.test.ts"
+          "packages/hosts/evals/src/__tests__/state-match.test.ts",
+          "packages/hosts/evals/src/__tests__/user-simulator.test.ts",
+          "packages/hosts/evals/src/__tests__/stats.test.ts",
+          "packages/hosts/evals/src/__tests__/trajectory.test.ts",
+          "packages/hosts/evals/src/__tests__/report-record.test.ts"
         ],
         "mode": ""
       }
@@ -430,6 +440,19 @@
           "packages/integrations/workflows/src/__tests__/checkpoint-conformance.test.ts",
           "packages/integrations/workflows/src/__tests__/checkpoints.test.ts",
           "packages/integrations/workflows/src/__tests__/lease-conformance.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-advisor": {
+      ".": {
+        "suites": [
+          "packages/integrations/advisor/src/__tests__/package.test.ts",
+          "packages/integrations/advisor/src/__tests__/consult.test.ts",
+          "packages/integrations/advisor/src/__tests__/triggers.test.ts",
+          "packages/integrations/advisor/src/__tests__/validate.test.ts",
+          "examples/advisor.ts",
+          "examples/validator.ts"
         ],
         "mode": ""
       }
@@ -683,6 +706,25 @@
         "mode": ""
       }
     },
+    "@arnilo/prism-provider-openai-codex": {
+      ".": {
+        "suites": [
+          "packages/providers/openai-codex/src/__tests__/live.test.ts",
+          "packages/providers/openai-codex/src/__tests__/oauth.test.ts",
+          "packages/providers/openai-codex/src/__tests__/package.test.ts"
+        ],
+        "mode": ""
+      }
+    },
+    "@arnilo/prism-provider-openrouter": {
+      ".": {
+        "suites": [
+          "packages/providers/openrouter/src/__tests__/openrouter.test.ts",
+          "packages/providers/openrouter/src/__tests__/live.test.ts"
+        ],
+        "mode": ""
+      }
+    },
     "@arnilo/prism-store-jsonl": {
       ".": {
         "suites": [
@@ -698,7 +740,8 @@
       ".": {
         "suites": [
           "packages/stores/codecs/src/__tests__/parity.test.ts",
-          "scripts/e2e-full-surface.test.mjs"
+          "scripts/e2e-full-surface.test.mjs",
+          "packages/stores/codecs/src/__tests__/evaluations.test.ts"
         ],
         "mode": ""
       }
@@ -711,7 +754,8 @@
           "packages/stores/sqlite/src/__tests__/state-concurrency-conformance.test.ts",
           "scripts/e2e-full-surface.test.mjs",
           "examples/sqlite-resume.ts",
-          "examples/durable-approval.ts"
+          "examples/durable-approval.ts",
+          "packages/stores/sqlite/src/__tests__/evaluations.test.ts"
         ],
         "mode": ""
       }
@@ -974,19 +1018,6 @@
           "packages/tools/research/src/__tests__/check.test.ts",
           "packages/tools/research/src/__tests__/ledger.test.ts",
           "packages/tools/research/src/__tests__/package.test.ts"
-        ],
-        "mode": ""
-      }
-    },
-    "@arnilo/prism-advisor": {
-      ".": {
-        "suites": [
-          "packages/integrations/advisor/src/__tests__/package.test.ts",
-          "packages/integrations/advisor/src/__tests__/consult.test.ts",
-          "packages/integrations/advisor/src/__tests__/triggers.test.ts",
-          "packages/integrations/advisor/src/__tests__/validate.test.ts",
-          "examples/advisor.ts",
-          "examples/validator.ts"
         ],
         "mode": ""
       }

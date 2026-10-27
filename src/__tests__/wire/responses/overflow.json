@@ -1,0 +1,23 @@
+{
+  "method": "POST",
+  "path": "/responses",
+  "requestBody": {
+    "model": "gpt-test",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "an over-long prompt"
+          }
+        ]
+      }
+    ],
+    "stream": true,
+    "store": false
+  },
+  "status": 400,
+  "contentType": "application/json",
+  "responseBody": "{\"error\":{\"message\":\"Your input exceeds the context window of this model.\",\"type\":\"invalid_request_error\",\"param\":\"input\",\"code\":\"context_length_exceeded\"}}"
+}

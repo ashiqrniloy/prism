@@ -140,6 +140,7 @@ export function createErpInvariantScorers(): readonly Scorer<unknown, unknown>[]
     defineScorer<unknown, unknown>({
       id: spec.id,
       description: spec.description,
+      invariant: true,
       score: ({ result }) => {
         const facts = parseFacts(result.text);
         const block = facts[spec.factsKey];

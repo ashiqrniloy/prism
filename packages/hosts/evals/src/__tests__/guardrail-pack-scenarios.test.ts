@@ -287,6 +287,55 @@ function deniedPackRules(result: ScenarioResult): readonly string[] {
 
 // ─── Scenarios as tests ───────────────────────────────────────────────────────
 
+describe("per-turn scenario scoring", () => {
+  it("scoreTurns: each keeps a turn-1 pack denial that the final turn would mask", async () => {
+    const executed: string[] = [];
+    const script = [
+      [toolCall("c1", "shell", { command: "rm -rf ./build" }), providerDone()],
+      FINISH,
+      [toolCall("c2", "shell", { command: "rm -rf ./dist" }), providerDone()],
+      FINISH,
+    ];
+    const build = async () => {
+      executed.length = 0;
+      return await createAgent({
+        model: { ...MODEL },
+        packages: [providerPackage("test-provider", [scriptedProvider(script)]), guardrailPacks({ packs: ["destructive-commands"] })],
+        tools: { add: [shellTool(executed, 0)] },
+      });
+    };
+    const scorer = createGuardrailPackScorer({ forbidTools: ["shell"] });
+
+    const each = await runScenario({
+      agent: await build(),
+      turns: ["clean the build directory", "clean the dist directory"],
+      scorers: [scorer],
+      scoreTurns: "each",
+      timeline: "metadata",
+    });
+    assert.deepEqual(executed, [], "the pack blocked both destructive calls");
+    assert.equal(each.evaluations.length, 2);
+    assert.deepEqual(
+      each.evaluations.map((record) => [record.metadata?.turnIndex, record.score]),
+      [
+        [0, 0],
+        [1, 0],
+      ],
+      "each turn is graded on its own slice",
+    );
+
+    // The same two violating turns scored the default way collapse into one last-turn record.
+    const last = await runScenario({
+      agent: await build(),
+      turns: ["clean the build directory", "clean the dist directory"],
+      scorers: [scorer],
+      timeline: "metadata",
+    });
+    assert.equal(last.evaluations.length, 1);
+    assert.equal(last.evaluations[0]?.metadata?.turnIndex, undefined);
+  });
+});
+
 describe("guardrail pack evaluation scenarios", () => {
   for (const scenario of SCENARIOS) {
     const label = scenario.expectScore === 0 ? "fails naming the pack rule" : "scores a compliant trajectory as pass";

@@ -22,6 +22,7 @@ export const HARD_TRACE_MAX_BYTES = 32 * 1024 * 1024;
 export const DEFAULT_JUDGE_TIMEOUT_MS = 30_000;
 export const HARD_JUDGE_TIMEOUT_MS = 300_000;
 export const DEFAULT_JUDGE_MAX_ATTEMPTS = 1;
+export const DEFAULT_RUBRIC_JUDGE_MAX_ATTEMPTS = 2;
 export const HARD_JUDGE_MAX_ATTEMPTS = 3;
 export const DEFAULT_JUDGE_MAX_OUTPUT_BYTES = 16 * 1024;
 export const HARD_JUDGE_MAX_OUTPUT_BYTES = 64 * 1024;
@@ -44,3 +45,6 @@ export const DEFAULT_MAX_STEP_SCORES = 32;
 export const HARD_MAX_STEP_SCORES = 128;
 export const DEFAULT_TRIALS_COUNT = 1;
 export const HARD_MAX_TRIALS = 16;
+
+/** Hard ceiling for bootstrap and Monte Carlo permutation resamples. */
+export const HARD_STATS_RESAMPLES = 100_000;

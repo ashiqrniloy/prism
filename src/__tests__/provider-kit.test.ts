@@ -92,15 +92,20 @@ describe("provider-kit", () => {
       "DEFAULT_OWNED_COMPAT_KEYS",
       "DEFAULT_PROVIDER_MEDIA_ITEM_BYTES",
       "DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES",
+      "DEFAULT_RESPONSES_PROMPT_CACHE_KEY_MAX",
       "DEFAULT_SYSTEMONE_BOOLEAN_THRESHOLD",
       "DEFAULT_SYSTEMONE_MAX_RETRIES",
       "DEFAULT_SYSTEMONE_PATH",
       "MAX_SYSTEMONE_CHOICE_OPTIONS",
       "MAX_SYSTEMONE_QUESTIONS",
       "MAX_SYSTEMONE_SCORE_LEVELS",
+      "OMITTED_TOOL_RESULT_IMAGE_NOTE",
+      "OPENAI_RESPONSES_MIN_OUTPUT_TOKENS",
+      "OPENAI_RESPONSES_UNSUPPORTED_FIELDS",
       "ProviderRequirementError",
       "ProviderTransportError",
       "RETRYABLE_STATUSES",
+      "ResponsesMaxOutputTokensError",
       "StructuredOutputError",
       "SystemOneAbortedError",
       "SystemOneAuthError",
@@ -138,6 +143,7 @@ describe("provider-kit", () => {
       "assertUsageAccounting",
       "baseUrlProperty",
       "buildOpenAIChatBody",
+      "buildOpenAIResponsesBody",
       "bytesToBase64",
       "cacheHitRate",
       "cacheSavings",
@@ -154,8 +160,9 @@ describe("provider-kit", () => {
       "defaultProviderFilename",
       "defineProviderPackage",
       "httpStatusError",
-      "isPdfMediaType",
+      "isContextOverflowMessage",
       "isLoopbackHost",
+      "isPdfMediaType",
       "isPlaintextRemote",
       "isRetryableSystemOneStatus",
       "isSupportedThinkingLevel",
@@ -163,8 +170,8 @@ describe("provider-kit", () => {
       "isSystemOneResponse",
       "isThinkingLevel",
       "mapCacheRetention",
-      "OMITTED_TOOL_RESULT_IMAGE_NOTE",
       "mapOpenAIChatUsage",
+      "mapOpenAIResponsesUsage",
       "mapSystemOneUsage",
       "mediaFingerprint",
       "mergeProviderRequestOptions",
@@ -176,12 +183,14 @@ describe("provider-kit", () => {
       "normalizeUsage",
       "openAIChatBody",
       "openAIChatEvents",
+      "openAIResponsesBody",
+      "openAIResponsesEvents",
       "optionalRefSource",
       "parseErrorBody",
       "parseJsonObjectArguments",
       "parseRetryAfterMs",
-      "plaintextRemoteOrigin",
       "parseThinkingLevel",
+      "plaintextRemoteOrigin",
       "postSystemOne",
       "preserveThinking",
       "providerConformance",
@@ -197,9 +206,9 @@ describe("provider-kit", () => {
       "reasoningEffort",
       "reasoningObject",
       "refSource",
-      "replayFetch",
       "rejectProviderMediaBlock",
       "renderSystemOneOutput",
+      "replayFetch",
       "resolveBreakpoint",
       "resolvePreserveThinking",
       "resolvePromptCachePlan",
@@ -216,6 +225,7 @@ describe("provider-kit", () => {
       "serializeOpenAIChatStructuredOutput",
       "serializeOpenAITool",
       "serializePdfDocumentWireBlock",
+      "serializeResponsesTool",
       "serializeToolResultText",
       "snapThinkingLevel",
       "stripOwnedCompat",
@@ -302,10 +312,11 @@ describe("provider-kit", () => {
         .replace(/\/\*[\s\S]*?\*\//g, "")
         .replace(/^\s*\/\/.*$/gm, "")
         .replace(/\/\/.*$/gm, "");
-    for (const file of readdirSync("src/provider-kit", { withFileTypes: true }).filter(
-      (entry) => entry.isFile() && entry.name.endsWith(".ts"),
-    )) {
-      let source = stripComments(readFileSync(join("src/provider-kit", file.name), "utf8"));
+    // Plan 204 Task 3: the walk descends into `codecs/`, so a route format cannot hide a vendor
+    // name one directory below the files the check used to read.
+    for (const path of sourceFiles("src/provider-kit")) {
+      const file = { name: path.slice("src/provider-kit/".length) };
+      let source = stripComments(readFileSync(path, "utf8"));
       // thinking.ts keeps two pre-move wire tokens: the `google` family id and the
       // neuralwatt provider-id fallback. They are family inference, not a vendor import.
       if (file.name === "thinking.ts") source = source.replace(/\bgoogle\b/g, "").replace(/\bneuralwatt\b/g, "");

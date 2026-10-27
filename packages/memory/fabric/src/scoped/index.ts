@@ -8,6 +8,5 @@ export {
   type ScopedMemoryReviewResult,
   type ScopedMemoryReviewer,
 } from "./policy.js";
-export { createScopedMemoryHealthCommand, runScopedMemoryEval } from "./eval/runner.js";
+export { runScopedMemoryEval } from "./eval/runner.js";
 export type { ScopedMemoryRecallResult } from "./read-policy.js";
-export { scanScopedMemoryContent } from "./trust.js";

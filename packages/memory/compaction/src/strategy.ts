@@ -87,7 +87,7 @@ export function createLlmCompactor(options: LlmCompactorOptions): Compactor {
             parentId,
             kind: "compaction",
             summary: combined,
-            data: redactedCompactionData({ ...prep.data, strategy: name }, secrets),
+            data: redactedCompactionData({ ...prep.data, strategy: name, ...(context.trigger ? { trigger: context.trigger } : {}) }, secrets),
           }),
         ],
       } satisfies CompactionResult;

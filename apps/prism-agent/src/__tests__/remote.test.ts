@@ -9,7 +9,7 @@ import { REMOTE_WORKER_BIN } from "../host/remote.js";
 import { remoteApprovalThroughLocalHostUi } from "../scenarios/remote-approval-through-local-host-ui.js";
 import { REMOTE_ENDPOINT, remoteProcessKill, remoteWorkerAttribution } from "../scenarios/remote-worker-attribution.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 function config(root: string): HostConfig {
   return {

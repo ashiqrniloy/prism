@@ -23,7 +23,7 @@ import {
 import { reconstructToolCallDeltas } from "../models/events.js";
 import { SECRET_REF } from "../packages/schema.js";
 import { canonicalizeJsonSchema } from "./schema.js";
-import { type RecordedExchange, replayFetch } from "./wire-replay.js";
+import { type RecordedExchange, recordingHasErrorFrame, replayFetch } from "./wire-replay.js";
 
 export interface ProviderStreamConformanceOptions {
   readonly provider: ModelProvider;
@@ -282,9 +282,12 @@ function requestFromWire(
 
   const route = requestPath?.includes("messages")
     ? "anthropic"
-    : requestPath?.includes("chat")
-      ? "openai"
-      : undefined;
+    : requestPath?.includes("responses")
+      ? "responses"
+      : requestPath?.includes("chat")
+        ? "openai"
+        : undefined;
+  const responsesWire = route === "responses";
 
   const modelConfig: ModelConfig = foundModel
     ? {
@@ -298,7 +301,102 @@ function requestFromWire(
       };
 
   const messages: Message[] = [];
-  const rawMessages = Array.isArray(obj.messages) ? obj.messages : [];
+
+  if (responsesWire) {
+    if (typeof obj.instructions === "string" && obj.instructions) {
+      messages.push({ role: "system", content: [{ type: "text", text: obj.instructions }] });
+    }
+    const rawInput = Array.isArray(obj.input)
+      ? obj.input
+      : typeof obj.input === "string"
+        ? [{ role: "user", content: obj.input }]
+        : [];
+    for (const raw of rawInput) {
+      const item = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : undefined;
+      if (!item) continue;
+
+      if (typeof item.type === "string" && item.type !== "message") {
+        // A function call and its output replay as the tool call and the tool result they are.
+        if (item.type === "function_call") {
+          let args: JsonObject = {};
+          try {
+            args = typeof item.arguments === "string" ? (JSON.parse(item.arguments) as JsonObject) : {};
+          } catch {}
+          messages.push({
+            role: "assistant",
+            content: [
+              {
+                type: "tool_call",
+                id: typeof item.call_id === "string" ? item.call_id : "call_1",
+                name: typeof item.name === "string" ? item.name : "tool",
+                arguments: args,
+              },
+            ],
+          });
+        } else if (item.type === "function_call_output") {
+          let parsedResult: unknown = item.output;
+          try {
+            parsedResult = typeof item.output === "string" ? JSON.parse(item.output) : item.output;
+          } catch {}
+          messages.push({
+            role: "tool",
+            content: [
+              {
+                type: "tool_result",
+                name: "tool",
+                toolCallId: typeof item.call_id === "string" ? item.call_id : "",
+                result: parsedResult,
+              },
+            ],
+          });
+        } else if (item.type === "reasoning") {
+          // Replay the recorded reasoning item exactly as the codec would: `data` carries the
+          // provider-bound payload, so the encrypted round trip is exercised, not skipped.
+          const summary = Array.isArray(item.summary)
+            ? item.summary
+                .map((part) => (part && typeof part === "object" ? (part as Record<string, unknown>).text : undefined))
+                .filter((text): text is string => typeof text === "string")
+                .join("")
+            : "";
+          messages.push({
+            role: "assistant",
+            content: [
+              {
+                type: "thinking",
+                text: summary,
+                redacted: true,
+                data: JSON.stringify({ provider: providerId, item }),
+              },
+            ],
+          });
+        }
+        continue;
+      }
+
+      const content: ContentBlock[] = [];
+      const rawContent = item.content;
+      if (typeof rawContent === "string") {
+        content.push({ type: "text", text: rawContent });
+      } else if (Array.isArray(rawContent)) {
+        for (const part of rawContent) {
+          if (!part || typeof part !== "object") continue;
+          const p = part as Record<string, unknown>;
+          if (p.type === "input_text" || p.type === "output_text" || p.type === "text") {
+            content.push({ type: "text", text: typeof p.text === "string" ? p.text : "" });
+          } else if (p.type === "input_image" && typeof p.image_url === "string") {
+            content.push({ type: "image", url: p.image_url });
+          }
+        }
+      }
+      const role = typeof item.role === "string" ? item.role : "user";
+      messages.push({
+        role: role === "assistant" ? "assistant" : role === "system" || role === "developer" ? "system" : "user",
+        content: content.length > 0 ? content : [{ type: "text", text: "" }],
+      });
+    }
+  }
+
+  const rawMessages = responsesWire ? [] : Array.isArray(obj.messages) ? obj.messages : [];
 
   for (const raw of rawMessages) {
     if (!raw || typeof raw !== "object") continue;
@@ -522,6 +620,18 @@ export async function providerConformance(
         try {
           const bodyStr = typeof init.body === "string" ? init.body : new TextDecoder().decode(init.body as ArrayBufferView);
           const parsedBody = JSON.parse(bodyStr);
+          if (parsedBody && Array.isArray(parsedBody.input)) {
+            for (const item of parsedBody.input) {
+              if (item && typeof item === "object" && (item as { type?: unknown }).type === "reasoning") {
+                const encrypted = (item as { encrypted_content?: unknown }).encrypted_content;
+                if (typeof encrypted !== "string" || encrypted.trim() === "") {
+                  throw new Error(
+                    `conformance_fails_on_unencrypted_reasoning_replay: replayed reasoning item without encrypted_content in scenario "${scenarioName}"`,
+                  );
+                }
+              }
+            }
+          }
           if (parsedBody && Array.isArray(parsedBody.messages)) {
             for (const msg of parsedBody.messages) {
               if (msg.role === "assistant" && Array.isArray(msg.content)) {
@@ -538,7 +648,11 @@ export async function providerConformance(
             }
           }
         } catch (err) {
-          if (err instanceof Error && err.message.includes("conformance_fails_on_unsigned_thinking_replay")) {
+          if (
+            err instanceof Error &&
+            (err.message.includes("conformance_fails_on_unsigned_thinking_replay") ||
+              err.message.includes("conformance_fails_on_unencrypted_reasoning_replay"))
+          ) {
             throw err;
           }
         }
@@ -599,7 +713,7 @@ export async function providerConformance(
         throw new Error(`Provider stream terminal event must be last in scenario "${scenarioName}" turn ${turnIdx + 1}`);
       }
 
-      if (exchange.status !== undefined && exchange.status >= 400) {
+      if ((exchange.status !== undefined && exchange.status >= 400) || recordingHasErrorFrame(exchange.responseBody)) {
         if (terminal.type !== "error") {
           throw new Error(`Expected error event for HTTP status ${exchange.status} in scenario "${scenarioName}"`);
         }

@@ -23,7 +23,8 @@ import {
 } from "@arnilo/prism/testing";
 import type { MemoryVectorRecord, VectorStore } from "@arnilo/prism-memory-core";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import memoryFabric, { createMemory, createMemoryFabric, createMemoryWorkingStore, resolveProjectIdentity } from "../../index.js";
+import memoryFabric, { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../../index.js";
+import { resolveProjectIdentity } from "../../scope/identity.js";
 import { DEFAULT_SCOPE_PRIORS } from "../../scope/recall.js";
 import { createMemoryFabricTools } from "../../tools.js";
 import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, type MemoryFabric } from "../../types.js";

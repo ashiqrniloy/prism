@@ -20,6 +20,8 @@ export interface PostgresPersistenceOptions {
   readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">;
   /** Redacts feedback comments/tags/metadata before durable storage. */
   readonly feedbackRedactor?: SecretRedactor;
+  /** Redacts evaluation reasons/errors/metadata and experiment metadata before storage. */
+  readonly evaluationRedactor?: SecretRedactor;
   /** Bounds durable event pages, subscriptions, polling, and retention operations. */
   readonly eventSource?: AgentEventSourceOptions;
   /** Stable HMAC secret shared by replicas that resume durable event cursors. */

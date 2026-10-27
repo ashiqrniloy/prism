@@ -27,11 +27,17 @@ import {
 } from "./attention.js";
 
 export const ATTENTION_STATE_KEY = "contextEngineering.attention";
+/** Cache-aware fold batch frontier (plan 194 Task 4): the tool-call ids already cleared. */
+export const FOLD_FRONTIER_KEY = "contextEngineering.foldFrontier";
 export const FOLD_LOG_KEY = "contextEngineering.folds";
 export const ACTIVATED_TOOLS_KEY = "contextEngineering.activated";
 
 /** Newest folded bodies kept in the rebuilt ledger; older ones are re-summarized on demand. */
 export const MAX_LEDGER_BODIES = 64;
+
+/** Newest cleared tool-call ids kept in the fold frontier. An evicted id re-folds to the same
+ *  bytes on the next advance (the stub is derived from the stored result), so eviction is safe. */
+export const MAX_FOLD_FRONTIER_IDS = 4_096;
 
 export interface AttentionSessionState {
   readonly frontier: AttentionStickyFrontier;
@@ -74,6 +80,19 @@ export function readAttentionState(frontierValue: JsonValue, logEntries: readonl
 }
 
 /** The names-only activated set: persisted as an array so a reopened session keeps its activations. */
+/** Read the batch frontier; a malformed or absent value restores nothing (fail closed). */
+export function readFoldFrontier(value: JsonValue | undefined): ReadonlySet<string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return new Set();
+  const record = value as { readonly folded?: unknown };
+  if (!Array.isArray(record.folded) || record.folded.length > MAX_FOLD_FRONTIER_IDS) return new Set();
+  if (record.folded.some((id) => typeof id !== "string" || id.length === 0 || id.length > 256)) return new Set();
+  return new Set(record.folded as string[]);
+}
+
+export function writeFoldFrontier(ids: Iterable<string>): JsonObject {
+  return { folded: [...ids].slice(-MAX_FOLD_FRONTIER_IDS) };
+}
+
 export function readActivatedNames(value: JsonValue): readonly string[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   const record = value as { readonly activated?: unknown };

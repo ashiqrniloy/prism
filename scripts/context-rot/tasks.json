@@ -1,0 +1,252 @@
+{
+  "version": 1,
+  "description": "30 deterministic self-graded tasks for the 0.13 context-rot curve. Facts for needle tasks are stated at session start; no judge model is used.",
+  "coding": [
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "testName": "sumRange",
+      "prompt": "In the workspace, fix only the sumRange function in src/bugs.js so it sums the integers from 1 through n inclusive. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-reverse-words",
+      "kind": "coding",
+      "testName": "reverseWords",
+      "prompt": "In the workspace, fix only the reverseWords function in src/bugs.js so it reverses the order of the words but keeps each word spelled normally. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-unique-sorted",
+      "kind": "coding",
+      "testName": "uniqueSorted",
+      "prompt": "In the workspace, fix only the uniqueSorted function in src/bugs.js so it removes duplicate values and returns the result in ascending order. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-chunk-tail",
+      "kind": "coding",
+      "testName": "chunk",
+      "prompt": "In the workspace, fix only the chunk function in src/bugs.js so the final short chunk is included. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-key-values",
+      "kind": "coding",
+      "testName": "parseKeyValues",
+      "prompt": "In the workspace, fix only the parseKeyValues function in src/bugs.js so it parses lines in the form key=value. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-clamp",
+      "kind": "coding",
+      "testName": "clamp",
+      "prompt": "In the workspace, fix only the clamp function in src/bugs.js so the value is bounded by min and max. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-count-vowels",
+      "kind": "coding",
+      "testName": "countVowels",
+      "prompt": "In the workspace, fix only the countVowels function in src/bugs.js so it counts a, e, i, o and u and does not count y. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-flatten-one",
+      "kind": "coding",
+      "testName": "flattenOne",
+      "prompt": "In the workspace, fix only the flattenOne function in src/bugs.js so it flattens exactly one array level. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-format-cents",
+      "kind": "coding",
+      "testName": "formatCents",
+      "prompt": "In the workspace, fix only the formatCents function in src/bugs.js so the cents part is always two digits. Do not edit any test. Use the tools, then reply DONE."
+    },
+    {
+      "id": "coding-binary-search",
+      "kind": "coding",
+      "testName": "binarySearch",
+      "prompt": "In the workspace, fix only the binarySearch function in src/bugs.js so it searches the whole array and returns -1 when the target is absent. Do not edit any test. Use the tools, then reply DONE."
+    }
+  ],
+  "needle": [
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "fact": "The spare key is kept under the blue ceramic pot.",
+      "question": "Where would I look for the backup access item? Reply with the location only.",
+      "answer": "under the blue ceramic pot"
+    },
+    {
+      "id": "needle-flight-time",
+      "kind": "needle",
+      "fact": "Mira's flight leaves at 06:15 from gate C7.",
+      "question": "At what hour does she depart? Reply with the time only.",
+      "answer": "06:15"
+    },
+    {
+      "id": "needle-budget",
+      "kind": "needle",
+      "fact": "The quarterly budget was set to 74,300 credits.",
+      "question": "How much money was allocated for the period? Reply with the amount only.",
+      "answer": "74,300 credits"
+    },
+    {
+      "id": "needle-rotate",
+      "kind": "needle",
+      "fact": "The archive password rotates every ninth day.",
+      "question": "How often does the secret change? Reply with the interval only.",
+      "answer": "every ninth day"
+    },
+    {
+      "id": "needle-repair",
+      "kind": "needle",
+      "fact": "The nearest repair shop is two blocks east of the fountain.",
+      "question": "Where should I take the broken item? Reply with the location only.",
+      "answer": "two blocks east of the fountain"
+    },
+    {
+      "id": "needle-seeds",
+      "kind": "needle",
+      "fact": "The experiment used a sample of 1,280 seeds.",
+      "question": "How many items were in the trial? Reply with the number only.",
+      "answer": "1,280"
+    },
+    {
+      "id": "needle-trail",
+      "kind": "needle",
+      "fact": "The northern trail closes after the first heavy snowfall.",
+      "question": "When does that route become unavailable? Reply with the condition only.",
+      "answer": "after the first heavy snowfall"
+    },
+    {
+      "id": "needle-room",
+      "kind": "needle",
+      "fact": "Dr. Okafor's office is on the fourth floor, room 412.",
+      "question": "Which room is the physician in? Reply with the room number only.",
+      "answer": "412"
+    },
+    {
+      "id": "needle-backup",
+      "kind": "needle",
+      "fact": "The backup runs at 22:45 every second Friday.",
+      "question": "When is the next copy made? Reply with the schedule only.",
+      "answer": "22:45 every second Friday"
+    },
+    {
+      "id": "needle-price",
+      "kind": "needle",
+      "fact": "The replacement part costs 37 dollars and 50 cents.",
+      "question": "What is the price? Reply with the amount only.",
+      "answer": "37.50"
+    }
+  ],
+  "tools": [
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "question": "In the workspace, read data/records.json, add {\"id\":\"b\",\"name\":\"Grace\"}, sort by id, and write the array back to the same file. Use tools. Then reply DONE.",
+      "setup": {
+        "data/records.json": "[{\"id\":\"a\",\"name\":\"Ada\"}]"
+      },
+      "expect": {
+        "data/records.json": "[{\"id\":\"a\",\"name\":\"Ada\"},{\"id\":\"b\",\"name\":\"Grace\"}]"
+      }
+    },
+    {
+      "id": "tools-add-delta",
+      "kind": "tools",
+      "question": "Read data/state.json and data/delta.txt, add the integer from delta.txt to count, and write state.json. Use tools. Then reply DONE.",
+      "setup": {
+        "data/state.json": "{\"count\":3}",
+        "data/delta.txt": "7\n"
+      },
+      "expect": {
+        "data/state.json": "{\"count\":10}"
+      }
+    },
+    {
+      "id": "tools-config-edit",
+      "kind": "tools",
+      "question": "Read data/config.json, remove the debug field, set retries to 5, and write the object back. Use tools. Then reply DONE.",
+      "setup": {
+        "data/config.json": "{\"retries\":2,\"mode\":\"fast\",\"debug\":true}"
+      },
+      "expect": {
+        "data/config.json": "{\"retries\":5,\"mode\":\"fast\"}"
+      }
+    },
+    {
+      "id": "tools-append-note",
+      "kind": "tools",
+      "question": "Read data/notes.md, append a line containing gamma, and write the file back. Keep the existing lines. Use tools. Then reply DONE.",
+      "setup": {
+        "data/notes.md": "alpha\nbeta\n"
+      },
+      "expect": {
+        "data/notes.md": "alpha\nbeta\ngamma\n"
+      }
+    },
+    {
+      "id": "tools-dedupe",
+      "kind": "tools",
+      "question": "Read data/items.json, keep one item per id using the last occurrence, sort by id, and write the array back. Use tools. Then reply DONE.",
+      "setup": {
+        "data/items.json": "[{\"id\":\"a\",\"v\":1},{\"id\":\"b\",\"v\":2},{\"id\":\"a\",\"v\":3}]"
+      },
+      "expect": {
+        "data/items.json": "[{\"id\":\"a\",\"v\":3},{\"id\":\"b\",\"v\":2}]"
+      }
+    },
+    {
+      "id": "tools-update-person",
+      "kind": "tools",
+      "question": "Read data/people.json, change bob's age to 42, add cid with age 25, and write the object back. Use tools. Then reply DONE.",
+      "setup": {
+        "data/people.json": "{\"ann\":{\"age\":30},\"bob\":{\"age\":41}}"
+      },
+      "expect": {
+        "data/people.json": "{\"ann\":{\"age\":30},\"bob\":{\"age\":42},\"cid\":{\"age\":25}}"
+      }
+    },
+    {
+      "id": "tools-sort-unique",
+      "kind": "tools",
+      "question": "Read data/numbers.txt, remove duplicate lines, sort the remaining integers ascending, and write one per line. Use tools. Then reply DONE.",
+      "setup": {
+        "data/numbers.txt": "5\n2\n9\n2\n"
+      },
+      "expect": {
+        "data/numbers.txt": "2\n5\n9\n"
+      }
+    },
+    {
+      "id": "tools-filter-orders",
+      "kind": "tools",
+      "question": "Read data/orders.json, keep only orders whose status is shipped, and write the array back. Use tools. Then reply DONE.",
+      "setup": {
+        "data/orders.json": "[{\"id\":1,\"status\":\"shipped\"},{\"id\":2,\"status\":\"held\"},{\"id\":3,\"status\":\"shipped\"}]"
+      },
+      "expect": {
+        "data/orders.json": "[{\"id\":1,\"status\":\"shipped\"},{\"id\":3,\"status\":\"shipped\"}]"
+      }
+    },
+    {
+      "id": "tools-nested-settings",
+      "kind": "tools",
+      "question": "Read data/settings.json, set server.host to new, append 8080 to server.ports, and write the object back. Use tools. Then reply DONE.",
+      "setup": {
+        "data/settings.json": "{\"server\":{\"host\":\"old\",\"ports\":[80,443]}}"
+      },
+      "expect": {
+        "data/settings.json": "{\"server\":{\"host\":\"new\",\"ports\":[80,443,8080]}}"
+      }
+    },
+    {
+      "id": "tools-merge-json",
+      "kind": "tools",
+      "question": "Read data/left.json and data/right.json, merge them into one object where right wins on conflicts, and write the result to data/merged.json. Use tools. Then reply DONE.",
+      "setup": {
+        "data/left.json": "{\"a\":1,\"b\":2}",
+        "data/right.json": "{\"b\":3,\"c\":4}"
+      },
+      "expect": {
+        "data/merged.json": "{\"a\":1,\"b\":3,\"c\":4}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "one-benchmark-family",
+    "statement": "The preset verdict is LongMemEval-S only; no other suite or model family has a held-out v3 result.",
+    "evidence": "docs/_evidence/memory-bench/188.10/README.md",
+    "plan202Task": 2
+  },
+  {
+    "id": "no-heldout-preference-or-abstention",
+    "statement": "Preference and abstention had no unused held-out ids, so both remain development-only with no held-out quality claim.",
+    "evidence": "scripts/memory-bench/heldout-v3.json",
+    "plan202Task": 2
+  },
+  {
+    "id": "judge-equals-answerer",
+    "statement": "The answerer and the judge were the same model (mimo-v2.5), so judge leniency is unquantified.",
+    "evidence": "docs/_evidence/memory-bench/188.10/README.md",
+    "plan202Task": 3
+  },
+  {
+    "id": "lexical-candidate-ceiling",
+    "statement": "Retrieval is lexical only and 11 of 30 multi-session questions have a needed round outside the top-32 candidates.",
+    "evidence": "docs/_evidence/memory-bench/188.10/ms-diagnostics-x.json",
+    "plan202Task": 5
+  },
+  {
+    "id": "temporal-reasoning-12-of-20",
+    "statement": "Temporal reasoning scored 12/20, the weakest scored ability.",
+    "evidence": "docs/_evidence/memory-bench/188.10/README.md",
+    "plan202Task": 6
+  },
+  {
+    "id": "irrelevant-injection-78-percent",
+    "statement": "About 78% of injected blocks were judged irrelevant (0.777); the read tools compensate.",
+    "evidence": "docs/_evidence/memory-bench/188.10/README.md",
+    "plan202Task": 8
+  },
+  {
+    "id": "capacity-with-growing-archive",
+    "statement": "The interaction of capacity limits with a growing exchange archive is unmeasured; no long-run or eviction campaign covered a filled store.",
+    "evidence": "plans/202-Phase-11-Part-O12-Memory-Robustness-And-Recall-Beyond-Full-Context.md",
+    "plan202Task": 15
+  },
+  {
+    "id": "F3-foreign-context-exposure",
+    "statement": "The completed paid lifecycle arm exposed foreign context in 13/24 sessions while labelled cross-project leakage stayed 0.",
+    "evidence": "docs/_evidence/memory-bench/188.7/findings.json",
+    "plan202Task": 14
+  },
+  {
+    "id": "F4-fact-extraction-reliability",
+    "statement": "Fact extraction has no completed paid arm; the schema/repair fix is offline-proven only.",
+    "evidence": "docs/_evidence/memory-bench/188.7/findings.json",
+    "plan202Task": 17
+  },
+  {
+    "id": "F7-lifecycle-safety-power",
+    "statement": "The lifecycle safety power target was not reached: only one persona completed both arms.",
+    "evidence": "docs/_evidence/memory-bench/188.7/findings.json",
+    "plan202Task": 14
+  },
+  {
+    "id": "F9-om-fabric-arm-incomplete",
+    "statement": "The om+fabric arm never completed (stopped after two questions), so the combined path has no completed paid evidence.",
+    "evidence": "docs/_evidence/memory-bench/188.7/findings.json",
+    "plan202Task": 16
+  },
+  {
+    "id": "trust-scan-refusal-rates",
+    "statement": "The exchange archive gates refuse real history: 2.271 refusals per 1,000 LongMemEval-S exchanges, touching 3 of 500 needed-session questions; adversarial detection was 33/34.",
+    "evidence": "docs/_evidence/memory-bench/188.11/trust-scan.md",
+    "plan202Task": 14
+  }
+]

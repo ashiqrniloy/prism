@@ -261,12 +261,12 @@ export function explainRecord(
 export function revokedIdsAbsent(
   environment: { readonly injectedIds?: readonly string[] } | undefined,
   deniedIds: readonly string[],
-): { readonly score: number; readonly metadata: { readonly invariant: true } } {
+): { readonly score: number } {
   const injected = new Set(environment?.injectedIds ?? []);
   for (const id of deniedIds) {
-    if (injected.has(id)) return { score: 0, metadata: { invariant: true } };
+    if (injected.has(id)) return { score: 0 };
   }
-  return { score: 1, metadata: { invariant: true } };
+  return { score: 1 };
 }
 
 /**

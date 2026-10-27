@@ -16,7 +16,7 @@
       },
       "context": {
         "recentMessages": 8,
-        "compactAfterTokens": 81000
+        "compactAt": { "ratio": 0.6 }
       },
       "worker": {}
     },

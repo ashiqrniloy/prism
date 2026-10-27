@@ -17,14 +17,8 @@ import {
 } from "@arnilo/prism";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import { fitInjection } from "../../excerpt.js";
-import {
-  createMemory,
-  createMemoryFabric,
-  createMemoryWorkingStore,
-  type MemoryFabric,
-  parseMemoryNoteMetadata,
-  resolvePromoteConfig,
-} from "../../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore, type MemoryFabric, parseMemoryNoteMetadata } from "../../index.js";
+import { resolvePromoteConfig } from "../../promote.js";
 import type { MemoryNoteHit } from "../../types.js";
 import { CONSOLIDATION_EXTRACT_SYSTEM, CONSOLIDATION_EXTRACT_SYSTEM_PROJECT, EXTRACT_NOTE_KINDS } from "../prompts.js";
 

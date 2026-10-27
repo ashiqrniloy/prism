@@ -96,6 +96,8 @@ interface HarnessOptions {
   readonly systemPrompt?: { readonly id: string; readonly mode: "replace"; readonly text: string };
   /** Package events reach observe hooks, the way a host sees them. */
   readonly events?: AgentEvent[];
+  /** Host compaction options, so a test can prove which vote wins against the kernel fallback. */
+  readonly compaction?: { readonly thresholdEntries?: number };
 }
 
 async function harness(options: HarnessOptions = {}) {
@@ -105,6 +107,7 @@ async function harness(options: HarnessOptions = {}) {
     model: { provider: "mock", model: "main" },
     packages: [provider, contextEngineering(options.config ?? {}), ...(options.extraPackages ?? [])],
     ...(options.tools?.length ? { tools: { add: [...options.tools] } } : {}),
+    ...(options.compaction ? { compaction: options.compaction } : {}),
     ...(options.systemPrompt === undefined ? {} : { systemPrompt: options.systemPrompt }),
     ...(options.events
       ? {
@@ -136,6 +139,10 @@ function handlerDeps(
     frontierState: {
       get: (session: SessionContext) => (values.get(session.id) ?? {}) as JsonObject,
       set: async (session: SessionContext, value: JsonObject) => void values.set(session.id, value),
+    },
+    foldFrontierState: {
+      get: (session: SessionContext) => (values.get(`foldFrontier:${session.id}`) ?? {}) as JsonObject,
+      set: async (session: SessionContext, value: JsonObject) => void values.set(`foldFrontier:${session.id}`, value),
     },
     foldLog: {
       entries: (session: SessionContext) => logs.get(session.id) ?? [],
@@ -244,7 +251,7 @@ describe("@arnilo/prism-context-engineering package (plan 158 Task 7)", () => {
     await session.run("and again");
 
     const sent = JSON.stringify(requests.at(-1)?.messages ?? []);
-    assert.ok(sent.includes("Tool result big_read [c1]:"), "the provider view carries the folded stub");
+    assert.ok(sent.includes("[folded: big_read [c1],"), "the provider view carries the folded stub");
     assert.equal(sent.includes("PAYLOAD-SENTINEL"), false, "the payload left the provider view");
 
     const stored = JSON.stringify(await session.messages());
@@ -311,6 +318,22 @@ describe("@arnilo/prism-context-engineering package (plan 158 Task 7)", () => {
 
     const kinds = (await session.entries()).map((entry) => entry.kind);
     assert.equal(kinds.includes("compaction"), true, "the attention gate asked for compaction past compactRatio");
+    await agent.dispose();
+  });
+
+  it("context_engineering_below_ratio_abstains_and_host_trigger_fires", async () => {
+    // Attention is an extra reason to compact, never a veto: below `compactRatio` it abstains, so the
+    // host's `thresholdEntries` fallback still decides.
+    const { agent } = await harness({
+      config: { attention: { maxInputTokens: 10_000, triggerRatio: 0.8, compactRatio: 0.9 } },
+      compaction: { thresholdEntries: 0 },
+      script: [reply("first"), reply("summary"), reply("second")],
+    });
+    const session = await agent.session({ id: "s1", create: true });
+    await session.run("short");
+
+    const kinds = (await session.entries()).map((entry) => entry.kind);
+    assert.equal(kinds.includes("compaction"), true, "the host trigger fires when attention abstains");
     await agent.dispose();
   });
 

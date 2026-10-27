@@ -74,9 +74,7 @@ export function replayFetch(
     const contentType =
       exchange.contentType ??
       exchange.headers?.["content-type"] ??
-      (typeof exchange.responseBody === "string" && exchange.responseBody.startsWith("data:")
-        ? "text/event-stream"
-        : "application/json");
+      (typeof exchange.responseBody === "string" && exchange.responseBody.startsWith("data:") ? "text/event-stream" : "application/json");
 
     const responseHeaders = new Headers();
     responseHeaders.set("content-type", contentType);
@@ -94,9 +92,7 @@ export function replayFetch(
  * Asserts that a provider stream replaying recorded fixtures conforms to the provider protocol.
  * Verifies terminal event ordering, expected text, and usage accounting against the recorded exchange.
  */
-export async function assertRecordedStreamConforms(
-  options: RecordedStreamConformanceOptions,
-): Promise<readonly ProviderEvent[]> {
+export async function assertRecordedStreamConforms(options: RecordedStreamConformanceOptions): Promise<readonly ProviderEvent[]> {
   const recording = Array.isArray(options.recording) ? options.recording[0] : options.recording;
   const events = await assertProviderStreamConforms({
     provider: options.provider,
@@ -104,12 +100,41 @@ export async function assertRecordedStreamConforms(
     expect: options.expect,
   });
 
-  if (recording && recording.status !== undefined && recording.status >= 400) {
-    const terminal = events.at(-1);
-    if (!terminal || terminal.type !== "error") {
-      throw new Error(`Provider stream expected to end with error event for recorded status ${recording.status}`);
+  const statusError = recording?.status !== undefined && recording.status >= 400;
+  const errorFrame = recording ? !statusError && recordingHasErrorFrame(recording.responseBody) : false;
+  if (statusError || errorFrame) {
+    if (events.at(-1)?.type !== "error") {
+      throw new Error(
+        `Provider stream expected to end with error event for recorded ${errorFrame ? "error frame" : `status ${recording!.status}`}`,
+      );
     }
   }
 
   return events;
+}
+
+/** Whether a recorded (successful-status) body carries a terminal error frame. */
+export function recordingHasErrorFrame(body: string): boolean {
+  for (const line of body.split("\n")) {
+    if (!line.startsWith("data:")) continue;
+    const data = line.slice(5).trim();
+    if (!data || data === "[DONE]") continue;
+    let frame:
+      | {
+          readonly type?: string;
+          readonly error?: unknown;
+          readonly choices?: readonly { readonly finish_reason?: string | null }[];
+        }
+      | undefined;
+    try {
+      frame = JSON.parse(data) as typeof frame;
+    } catch {
+      continue;
+    }
+    // Chat frames carry a top-level `error` or an `error` finish reason; a Responses stream
+    // reports the same thing as a typed `error`/`response.failed` frame.
+    if (frame?.type === "error" || frame?.type === "response.failed") return true;
+    if (frame?.error || frame?.choices?.some((choice) => choice?.finish_reason === "error")) return true;
+  }
+  return false;
 }

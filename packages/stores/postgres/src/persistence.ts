@@ -1,5 +1,9 @@
 import { createRequire } from "node:module";
 import {
+  type EvaluationQuery,
+  type EvaluationStore,
+  type ExperimentReportQuery,
+  type ExperimentReportStore,
   type AgentDefinitionQuery,
   type AgentEventQuery,
   type AgentEventRecord,
@@ -42,6 +46,9 @@ import {
   type UsageRecord,
 } from "@arnilo/prism";
 import {
+  prepareEvaluationRecord,
+  prepareExperimentReportRecord,
+  EvaluationStoreError,
   canonicalSessionTimestamp,
   clipSearchSnippet,
   createSessionRowMappers,
@@ -116,6 +123,8 @@ export interface PostgresPersistence extends SessionStore, RunLedger, Production
   readonly events: AgentEventSource;
   readonly leases: LeaseStore;
   readonly feedback: RunFeedbackStore;
+  readonly evaluations: EvaluationStore;
+  readonly experiments: ExperimentReportStore;
   readonly lifecycle: import("@arnilo/prism-store-codecs").PersistenceLifecycleStore;
   readonly metadata: Readonly<{
     readonly kind: "postgres";
@@ -185,6 +194,164 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
       [sessionId, activityAt, activityAt],
     );
   }
+
+  const evaluations: EvaluationStore = {
+    async append(input) {
+      const record = prepareEvaluationRecord(input, { redactor: options.evaluationRedactor });
+      await pool.query(
+        `INSERT INTO ${qualifyTable(schema, "prism_evaluations")} (id, tenant_id, account_id, user_id, scorer_id, session_id, run_id, experiment_id, dataset_id, item_id, status, created_at, record) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [
+          record.id,
+          record.tenantId ?? null,
+          record.accountId ?? null,
+          record.userId ?? null,
+          record.scorerId ?? null,
+          record.sessionId ?? null,
+          record.runId ?? null,
+          record.experimentId ?? null,
+          record.datasetId ?? null,
+          record.itemId ?? null,
+          record.status,
+          new Date(record.createdAt).toISOString(),
+          JSON.stringify(record),
+        ],
+      );
+    },
+    async query(query: EvaluationQuery = {}) {
+      query.signal?.throwIfAborted();
+      const limit = query.limit ?? 100;
+      if (
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > 1000 ||
+        (query.order !== undefined && query.order !== "asc" && query.order !== "desc")
+      ) {
+        throw new EvaluationStoreError("Invalid evaluation page limit or order");
+      }
+      const filters: string[] = [];
+      const params: unknown[] = [];
+      for (const [column, value] of [
+        ["tenant_id", query.tenantId],
+        ["account_id", query.accountId],
+        ["user_id", query.userId],
+      ] as const) {
+        if (value === undefined) filters.push(`${column} IS NULL`);
+        else {
+          params.push(value);
+          filters.push(`${column} = $${params.length}`);
+        }
+      }
+      for (const [key, column] of [
+        ["id", "id"],
+        ["scorerId", "scorer_id"],
+        ["sessionId", "session_id"],
+        ["runId", "run_id"],
+        ["experimentId", "experiment_id"],
+        ["datasetId", "dataset_id"],
+        ["itemId", "item_id"],
+      ] as const) {
+        if (query[key] !== undefined) {
+          params.push(query[key]);
+          filters.push(`${column} = $${params.length}`);
+        }
+      }
+      if (query.status !== undefined) {
+        const statuses = Array.isArray(query.status) ? query.status : [query.status];
+        if (!statuses.length) filters.push("1 = 0");
+        else {
+          const placeholders = statuses.map((status) => {
+            params.push(status);
+            return `$${params.length}`;
+          });
+          filters.push(`status IN (${placeholders.join(", ")})`);
+        }
+      }
+      return await queryTable(
+        pool,
+        qualifyTable(schema, "prism_evaluations"),
+        { cursor: query.cursor, order: query.order, limit },
+        filters,
+        (row) => prepareEvaluationRecord(JSON.parse(String(row.record))),
+        params,
+      );
+    },
+  };
+
+  const experiments: ExperimentReportStore = {
+    async append(input) {
+      const record = prepareExperimentReportRecord(input, { redactor: options.evaluationRedactor });
+      await pool.query(
+        `INSERT INTO ${qualifyTable(schema, "prism_experiment_reports")} (id, tenant_id, account_id, user_id, dataset_id, dataset_version, dataset_content_hash, created_at, record) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          record.id,
+          record.tenantId ?? null,
+          record.accountId ?? null,
+          record.userId ?? null,
+          record.datasetId ?? null,
+          record.datasetVersion ?? null,
+          record.datasetContentHash ?? null,
+          new Date(record.createdAt).toISOString(),
+          JSON.stringify(record),
+        ],
+      );
+    },
+    async query(query: ExperimentReportQuery = {}) {
+      query.signal?.throwIfAborted();
+      const limit = query.limit ?? 100;
+      if (
+        !Number.isSafeInteger(limit) ||
+        limit < 1 ||
+        limit > 1000 ||
+        (query.order !== undefined && query.order !== "asc" && query.order !== "desc")
+      ) {
+        throw new EvaluationStoreError("Invalid evaluation page limit or order");
+      }
+      const filters: string[] = [];
+      const params: unknown[] = [];
+      for (const [column, value] of [
+        ["tenant_id", query.tenantId],
+        ["account_id", query.accountId],
+        ["user_id", query.userId],
+      ] as const) {
+        if (value === undefined) filters.push(`${column} IS NULL`);
+        else {
+          params.push(value);
+          filters.push(`${column} = $${params.length}`);
+        }
+      }
+      for (const [key, column] of [
+        ["id", "id"],
+        ["datasetId", "dataset_id"],
+        ["datasetVersion", "dataset_version"],
+        ["datasetContentHash", "dataset_content_hash"],
+      ] as const) {
+        if (query[key] !== undefined) {
+          params.push(query[key]);
+          filters.push(`${column} = $${params.length}`);
+        }
+      }
+      for (const [key, value] of Object.entries(query.manifestMatch ?? {})) {
+        if (value === undefined) {
+          filters.push("1 = 0");
+          continue;
+        }
+        params.push(key, value);
+        filters.push(`record::jsonb->'manifest'->>$${params.length - 1} = $${params.length}`);
+      }
+      return await queryTable(
+        pool,
+        qualifyTable(schema, "prism_experiment_reports"),
+        { cursor: query.cursor, order: query.order, limit },
+        filters,
+        (row) => prepareExperimentReportRecord(JSON.parse(String(row.record))),
+        params,
+      );
+    },
+    async latest(query) {
+      if (typeof query.datasetId !== "string" || !query.datasetId.trim()) throw new EvaluationStoreError("Dataset id required");
+      return (await experiments.query({ ...query, cursor: undefined, order: "desc", limit: 1 })).items[0];
+    },
+  };
 
   const feedback: RunFeedbackStore = {
     async append(input) {
@@ -320,6 +487,8 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
     events: eventSource,
     leases: createPostgresLeaseStore(pool, schema),
     feedback,
+    evaluations,
+    experiments,
     lifecycle: createPostgresPersistenceLifecycle(pool, schema),
     metadata: { kind: "postgres", multiProcess: true, driver: "pg", schema },
 
@@ -650,6 +819,7 @@ export async function createPostgresPersistence(options: PostgresPersistenceOpti
           `DELETE FROM ${qualifyTable(schema, "prism_agent_event_streams")} WHERE session_id = $1`,
           `DELETE FROM ${toolCalls} WHERE session_id = $1`,
           `DELETE FROM ${usage} WHERE session_id = $1`,
+          `DELETE FROM ${qualifyTable(schema, "prism_evaluations")} WHERE session_id = $1 OR run_id IN (SELECT id FROM ${runs} WHERE session_id = $1)`,
           `DELETE FROM ${runs} WHERE session_id = $1`,
           `DELETE FROM ${sessions} WHERE id = $1`,
         ]) {

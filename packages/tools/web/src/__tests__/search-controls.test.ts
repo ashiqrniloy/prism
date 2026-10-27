@@ -77,7 +77,7 @@ describe("search controls", () => {
     const url = new URL(
       DEFAULT_OBSCURA_SEARCH_PROFILE.searchUrl("bun site:bun.sh", { freshness: "day", country: "de", language: "de" }),
     );
-    assert.equal(url.origin, "https://duckduckgo.com");
+    assert.equal(url.origin, "https://html.duckduckgo.com");
     assert.equal(url.searchParams.get("q"), "bun site:bun.sh");
     assert.equal(url.searchParams.get("df"), "d");
     assert.equal(url.searchParams.get("kl"), "de-de", "DDG's kl is a region-language pair");

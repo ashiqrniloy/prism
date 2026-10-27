@@ -50,6 +50,30 @@ test("secret scan skips local credential files by name and still rejects every o
   }
 });
 
+test("secret scan rejects a Sign in with ChatGPT client ID and a compact JWS", async () => {
+  const root = mkdtempSync(join(tmpdir(), "prism-secret-scan-siwc-"));
+  try {
+    const clientId = `oaiapp${"_"}${"a".repeat(32)}`;
+    const jws = ["eyJhbGciOiJSUzI1NiJ9", "eyJzdWIiOiJ1c2VyLTEyMyJ9", "c2lnbmF0dXJlLXBsYWNlaG9sZGVy"].join(".");
+    writeFileSync(join(root, "record.json"), JSON.stringify({ clientId }));
+    await assert.rejects(
+      () => scanSecrets([root]),
+      (error) => error.message.includes("openai-client-id") && !error.message.includes(clientId),
+    );
+
+    writeFileSync(join(root, "record.json"), JSON.stringify({ clientId: "dynamic_agent_client", idToken: jws }));
+    await assert.rejects(
+      () => scanSecrets([root]),
+      (error) => error.message.includes("jwt") && !error.message.includes(jws),
+    );
+
+    writeFileSync(join(root, "record.json"), JSON.stringify({ clientId: "dynamic_agent_client", note: "no token here" }));
+    assert.equal((await scanSecrets([root])).findings, 0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("every skipped local credential name is gitignored in this repo", () => {
   const repoRoot = join(import.meta.dirname, "..");
   for (const name of ["scripts/live.env", "scripts/example.local.env"])

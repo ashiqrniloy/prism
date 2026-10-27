@@ -1,0 +1,113 @@
+[
+  {
+    "method": "POST",
+    "path": "/v1/responses",
+    "requestBody": {
+      "model": "gpt-6.1-sol",
+      "store": false,
+      "stream": true,
+      "input": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "What is the weather in Vienna? Use the tool."
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get the weather for a city",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "city"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_0fc824e5da4c051b016addf9d7680087d080bb6b7efa3d2b9a\",\"object\":\"response\",\"created_at\":1792932311,\"status\":\"in_progress\",\"access_programs\":{\"cyber\":\"standard\"},\"background\":false,\"completed_at\":null,\"error\":null,\"frequency_penalty\":0,\"incomplete_details\":null,\"instructions\":null,\"max_output_tokens\":null,\"max_tool_calls\":null,\"model\":\"gpt-6-luna\",\"moderation\":null,\"output\":[],\"parallel_tool_calls\":true,\"presence_penalty\":0,\"previous_response_id\":null,\"prompt_cache_key\":\"a966d8ea-823d-484e-b379-276593c88e66\",\"prompt_cache_retention\":\"24h\",\"reasoning\":{\"context\":\"all_turns\",\"effort\":\"medium\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":\"user-9xXLKjvGNVvKccKlF90ccd0S\",\"service_tier\":\"auto\",\"store\":false,\"temperature\":1,\"text\":{\"format\":{\"type\":\"text\"},\"verbosity\":\"medium\"},\"tool_choice\":\"auto\",\"tool_usage\":{\"image_gen\":{\"input_tokens\":0,\"input_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"total_tokens\":0},\"web_search\":{\"num_requests\":0}},\"tools\":[{\"type\":\"function\",\"description\":\"Get the weather for a city\",\"name\":\"get_weather\",\"output_schema\":null,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}],\"top_logprobs\":0,\"top_p\":0.98,\"truncation\":\"disabled\",\"usage\":null,\"user\":null,\"metadata\":{}},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_0fc824e5da4c051b016addf9d7680087d080bb6b7efa3d2b9a\",\"object\":\"response\",\"created_at\":1792932311,\"status\":\"in_progress\",\"access_programs\":{\"cyber\":\"standard\"},\"background\":false,\"completed_at\":null,\"error\":null,\"frequency_penalty\":0,\"incomplete_details\":null,\"instructions\":null,\"max_output_tokens\":null,\"max_tool_calls\":null,\"model\":\"gpt-6-luna\",\"moderation\":null,\"output\":[],\"parallel_tool_calls\":true,\"presence_penalty\":0,\"previous_response_id\":null,\"prompt_cache_key\":\"a966d8ea-823d-484e-b379-276593c88e66\",\"prompt_cache_retention\":\"24h\",\"reasoning\":{\"context\":\"all_turns\",\"effort\":\"medium\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":\"user-9xXLKjvGNVvKccKlF90ccd0S\",\"service_tier\":\"auto\",\"store\":false,\"temperature\":1,\"text\":{\"format\":{\"type\":\"text\"},\"verbosity\":\"medium\"},\"tool_choice\":\"auto\",\"tool_usage\":{\"image_gen\":{\"input_tokens\":0,\"input_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"total_tokens\":0},\"web_search\":{\"num_requests\":0}},\"tools\":[{\"type\":\"function\",\"description\":\"Get the weather for a city\",\"name\":\"get_weather\",\"output_schema\":null,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}],\"top_logprobs\":0,\"top_p\":0.98,\"truncation\":\"disabled\",\"usage\":null,\"user\":null,\"metadata\":{}},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"type\":\"function_call\",\"status\":\"in_progress\",\"arguments\":\"\",\"call_id\":\"call_pUbIpvBUS0BKJ2CsMQUP0nHB\",\"name\":\"get_weather\"},\"output_index\":0,\"sequence_number\":2}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{\\\"\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"obfuscation\":\"YeDtpAEuSz7FZb\",\"output_index\":0,\"sequence_number\":3}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"city\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"obfuscation\":\"uq6SSkey9MiZ\",\"output_index\":0,\"sequence_number\":4}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"\\\":\\\"\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"obfuscation\":\"usyFfSsS3gQAj\",\"output_index\":0,\"sequence_number\":5}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"Vien\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"obfuscation\":\"JyHVes59a3eq\",\"output_index\":0,\"sequence_number\":6}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"na\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"obfuscation\":\"RR9hs2lcaC4QPd\",\"output_index\":0,\"sequence_number\":7}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"\\\"}\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"obfuscation\":\"GFPVdKjerXLWKB\",\"output_index\":0,\"sequence_number\":8}\n\ndata: {\"type\":\"response.metadata\",\"response_id\":\"resp_0fc824e5da4c051b016addf9d7680087d080bb6b7efa3d2b9a\",\"sequence_number\":9,\"metadata\":{\"openai_chatgpt_moderation_metadata\":{\"prompt\":{\"omnimod\":{\"protection_type\":\"omnimod\",\"outputs\":[{\"results\":[{\"category_flags\":{\"A1\":false,\"A2\":false,\"A3\":false,\"C1\":false,\"C11\":false,\"C2\":false,\"E1\":false,\"E2\":false,\"E3\":false,\"H1\":false,\"H2\":false,\"H3\":false,\"JB1\":false,\"K1\":false,\"K2\":false,\"K3\":false,\"K4\":false,\"P1\":false,\"P2\":false,\"P3\":false,\"P4\":false,\"PD1\":false,\"PD4\":false,\"S1\":false,\"S3+\":false,\"S4\":false,\"SH\":false,\"TXT-C3\":false,\"TXT-C4\":false,\"V1\":false,\"V2+\":false,\"V4+\":false,\"REFUSED\":false,\"CBRN-B1+\":false,\"IMG-C1\":false,\"IMG-C11\":false,\"IMG-C2\":false,\"IMG-S1\":false,\"IMG-SH\":false,\"IMG-V1\":false,\"IMG-V2+\":false,\"IMG-V4+\":false}}],\"is_blocked\":false}]}},\"generation\":{},\"tool_call\":{},\"tool_response\":{}}}}\n\ndata: {\"type\":\"response.function_call_arguments.done\",\"arguments\":\"{\\\"city\\\":\\\"Vienna\\\"}\",\"item_id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"output_index\":0,\"sequence_number\":10}\n\ndata: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\",\"type\":\"function_call\",\"status\":\"completed\",\"arguments\":\"{\\\"city\\\":\\\"Vienna\\\"}\",\"call_id\":\"call_pUbIpvBUS0BKJ2CsMQUP0nHB\",\"name\":\"get_weather\"},\"output_index\":0,\"sequence_number\":11}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_0fc824e5da4c051b016addf9d7680087d080bb6b7efa3d2b9a\",\"object\":\"response\",\"created_at\":1792932311,\"status\":\"completed\",\"access_programs\":{\"cyber\":\"standard\"},\"background\":false,\"completed_at\":1792932312,\"error\":null,\"frequency_penalty\":0,\"incomplete_details\":null,\"instructions\":null,\"max_output_tokens\":null,\"max_tool_calls\":null,\"model\":\"gpt-6-luna\",\"moderation\":null,\"output\":[],\"parallel_tool_calls\":true,\"presence_penalty\":0,\"previous_response_id\":null,\"prompt_cache_key\":\"a966d8ea-823d-484e-b379-276593c88e66\",\"prompt_cache_retention\":\"24h\",\"reasoning\":{\"context\":\"all_turns\",\"effort\":\"medium\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":\"user-9xXLKjvGNVvKccKlF90ccd0S\",\"service_tier\":\"default\",\"store\":false,\"temperature\":1,\"text\":{\"format\":{\"type\":\"text\"},\"verbosity\":\"medium\"},\"tool_choice\":\"auto\",\"tool_usage\":{\"image_gen\":{\"input_tokens\":0,\"input_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"total_tokens\":0},\"web_search\":{\"num_requests\":0}},\"tools\":[{\"type\":\"function\",\"description\":\"Get the weather for a city\",\"name\":\"get_weather\",\"output_schema\":null,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}],\"top_logprobs\":0,\"top_p\":0.98,\"truncation\":\"disabled\",\"usage\":{\"attribution\":{\"items\":{\"msg_0fc824e5da4c051b016addf9d7787c87d0b22205d0f2d98b88\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"content\":[{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":15,\"output_tokens\":0}],\"input_tokens\":15,\"output_tokens\":0},\"fc_0fc824e5da4c051b016addf9d86e4887d089e643c514309f83\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":2,\"output_tokens\":19}},\"request_fields\":{\"tools\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":37,\"output_tokens\":0}}},\"input_tokens\":54,\"input_tokens_details\":{\"cache_write_tokens\":0,\"cached_tokens\":0},\"output_tokens\":19,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":73},\"user\":null,\"metadata\":{}},\"sequence_number\":12}\n\ndata: [DONE]\n\n"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/responses",
+    "requestBody": {
+      "model": "gpt-6.1-sol",
+      "store": false,
+      "stream": true,
+      "input": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "What is the weather in Vienna? Use the tool."
+            }
+          ]
+        },
+        {
+          "type": "function_call",
+          "call_id": "call_pUbIpvBUS0BKJ2CsMQUP0nHB",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Vienna\"}"
+        },
+        {
+          "type": "function_call_output",
+          "call_id": "call_pUbIpvBUS0BKJ2CsMQUP0nHB",
+          "output": "{\"tempC\":21,\"conditions\":\"sunny\"}"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get the weather for a city",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "city"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_032bb27686da959c016addf9d9d54087d09778c5f142e19dee\",\"object\":\"response\",\"created_at\":1792932313,\"status\":\"in_progress\",\"access_programs\":{\"cyber\":\"standard\"},\"background\":false,\"completed_at\":null,\"error\":null,\"frequency_penalty\":0,\"incomplete_details\":null,\"instructions\":null,\"max_output_tokens\":null,\"max_tool_calls\":null,\"model\":\"gpt-6-luna\",\"moderation\":null,\"output\":[],\"parallel_tool_calls\":true,\"presence_penalty\":0,\"previous_response_id\":null,\"prompt_cache_key\":\"e5415169-a426-4204-a58d-ebaec26835cf\",\"prompt_cache_retention\":\"24h\",\"reasoning\":{\"context\":\"all_turns\",\"effort\":\"medium\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":\"user-9xXLKjvGNVvKccKlF90ccd0S\",\"service_tier\":\"auto\",\"store\":false,\"temperature\":1,\"text\":{\"format\":{\"type\":\"text\"},\"verbosity\":\"medium\"},\"tool_choice\":\"auto\",\"tool_usage\":{\"image_gen\":{\"input_tokens\":0,\"input_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"total_tokens\":0},\"web_search\":{\"num_requests\":0}},\"tools\":[{\"type\":\"function\",\"description\":\"Get the weather for a city\",\"name\":\"get_weather\",\"output_schema\":null,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}],\"top_logprobs\":0,\"top_p\":0.98,\"truncation\":\"disabled\",\"usage\":null,\"user\":null,\"metadata\":{}},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_032bb27686da959c016addf9d9d54087d09778c5f142e19dee\",\"object\":\"response\",\"created_at\":1792932313,\"status\":\"in_progress\",\"access_programs\":{\"cyber\":\"standard\"},\"background\":false,\"completed_at\":null,\"error\":null,\"frequency_penalty\":0,\"incomplete_details\":null,\"instructions\":null,\"max_output_tokens\":null,\"max_tool_calls\":null,\"model\":\"gpt-6-luna\",\"moderation\":null,\"output\":[],\"parallel_tool_calls\":true,\"presence_penalty\":0,\"previous_response_id\":null,\"prompt_cache_key\":\"e5415169-a426-4204-a58d-ebaec26835cf\",\"prompt_cache_retention\":\"24h\",\"reasoning\":{\"context\":\"all_turns\",\"effort\":\"medium\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":\"user-9xXLKjvGNVvKccKlF90ccd0S\",\"service_tier\":\"auto\",\"store\":false,\"temperature\":1,\"text\":{\"format\":{\"type\":\"text\"},\"verbosity\":\"medium\"},\"tool_choice\":\"auto\",\"tool_usage\":{\"image_gen\":{\"input_tokens\":0,\"input_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"total_tokens\":0},\"web_search\":{\"num_requests\":0}},\"tools\":[{\"type\":\"function\",\"description\":\"Get the weather for a city\",\"name\":\"get_weather\",\"output_schema\":null,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}],\"top_logprobs\":0,\"top_p\":0.98,\"truncation\":\"disabled\",\"usage\":null,\"user\":null,\"metadata\":{}},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"type\":\"message\",\"status\":\"in_progress\",\"content\":[],\"phase\":\"final_answer\",\"role\":\"assistant\"},\"output_index\":0,\"sequence_number\":2}\n\ndata: {\"type\":\"response.content_part.added\",\"content_index\":0,\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"output_index\":0,\"part\":{\"type\":\"output_text\",\"annotations\":[],\"logprobs\":[],\"text\":\"\"},\"sequence_number\":3}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\"Vien\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"IGmrHHt0RUBp\",\"output_index\":0,\"sequence_number\":4}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\"na\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"9hrAkH55bqxDOr\",\"output_index\":0,\"sequence_number\":5}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\" is\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"j5FlBbgsaTWaO\",\"output_index\":0,\"sequence_number\":6}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\" sunny\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"dWDfCe4BLK\",\"output_index\":0,\"sequence_number\":7}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\" and\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"xPMcndhhaMLi\",\"output_index\":0,\"sequence_number\":8}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\" \",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"8uVlMU1tzrkOyr8\",\"output_index\":0,\"sequence_number\":9}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\"21\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"bGQisnJItQOGjW\",\"output_index\":0,\"sequence_number\":10}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\"\\u00b0C\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"EWifPn55ypSblZ\",\"output_index\":0,\"sequence_number\":11}\n\ndata: {\"type\":\"response.output_text.delta\",\"content_index\":0,\"delta\":\".\",\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"obfuscation\":\"U8mC66kHilsmqEu\",\"output_index\":0,\"sequence_number\":12}\n\ndata: {\"type\":\"response.metadata\",\"response_id\":\"resp_032bb27686da959c016addf9d9d54087d09778c5f142e19dee\",\"sequence_number\":13,\"metadata\":{\"openai_chatgpt_moderation_metadata\":{\"prompt\":{\"omnimod\":{\"protection_type\":\"omnimod\",\"outputs\":[{\"results\":[{\"category_flags\":{\"A1\":false,\"A2\":false,\"A3\":false,\"C1\":false,\"C11\":false,\"C2\":false,\"E1\":false,\"E2\":false,\"E3\":false,\"H1\":false,\"H2\":false,\"H3\":false,\"JB1\":false,\"K1\":false,\"K2\":false,\"K3\":false,\"K4\":false,\"P1\":false,\"P2\":false,\"P3\":false,\"P4\":false,\"PD1\":false,\"PD4\":false,\"S1\":false,\"S3+\":false,\"S4\":false,\"SH\":false,\"TXT-C3\":false,\"TXT-C4\":false,\"V1\":false,\"V2+\":false,\"V4+\":false,\"REFUSED\":false,\"CBRN-B1+\":false,\"IMG-C1\":false,\"IMG-C11\":false,\"IMG-C2\":false,\"IMG-S1\":false,\"IMG-SH\":false,\"IMG-V1\":false,\"IMG-V2+\":false,\"IMG-V4+\":false}}],\"is_blocked\":false}]}},\"generation\":{},\"tool_call\":{},\"tool_response\":{}}}}\n\ndata: {\"type\":\"response.output_text.done\",\"content_index\":0,\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"logprobs\":[],\"output_index\":0,\"sequence_number\":14,\"text\":\"Vienna is sunny and 21\\u00b0C.\"}\n\ndata: {\"type\":\"response.content_part.done\",\"content_index\":0,\"item_id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"output_index\":0,\"part\":{\"type\":\"output_text\",\"annotations\":[],\"logprobs\":[],\"text\":\"Vienna is sunny and 21\\u00b0C.\"},\"sequence_number\":15}\n\ndata: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\",\"type\":\"message\",\"status\":\"completed\",\"content\":[{\"type\":\"output_text\",\"annotations\":[],\"logprobs\":[],\"text\":\"Vienna is sunny and 21\\u00b0C.\"}],\"phase\":\"final_answer\",\"role\":\"assistant\"},\"output_index\":0,\"sequence_number\":16}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_032bb27686da959c016addf9d9d54087d09778c5f142e19dee\",\"object\":\"response\",\"created_at\":1792932313,\"status\":\"completed\",\"access_programs\":{\"cyber\":\"standard\"},\"background\":false,\"completed_at\":1792932314,\"error\":null,\"frequency_penalty\":0,\"incomplete_details\":null,\"instructions\":null,\"max_output_tokens\":null,\"max_tool_calls\":null,\"model\":\"gpt-6-luna\",\"moderation\":null,\"output\":[],\"parallel_tool_calls\":true,\"presence_penalty\":0,\"previous_response_id\":null,\"prompt_cache_key\":\"e5415169-a426-4204-a58d-ebaec26835cf\",\"prompt_cache_retention\":\"24h\",\"reasoning\":{\"context\":\"all_turns\",\"effort\":\"medium\",\"mode\":\"standard\",\"summary\":\"detailed\"},\"safety_identifier\":\"user-9xXLKjvGNVvKccKlF90ccd0S\",\"service_tier\":\"default\",\"store\":false,\"temperature\":1,\"text\":{\"format\":{\"type\":\"text\"},\"verbosity\":\"medium\"},\"tool_choice\":\"auto\",\"tool_usage\":{\"image_gen\":{\"input_tokens\":0,\"input_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"output_tokens\":0,\"output_tokens_details\":{\"image_tokens\":0,\"text_tokens\":0},\"total_tokens\":0},\"web_search\":{\"num_requests\":0}},\"tools\":[{\"type\":\"function\",\"description\":\"Get the weather for a city\",\"name\":\"get_weather\",\"output_schema\":null,\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"],\"additionalProperties\":false},\"strict\":true}],\"top_logprobs\":0,\"top_p\":0.98,\"truncation\":\"disabled\",\"usage\":{\"attribution\":{\"items\":{\"msg_032bb27686da959c016addf9d9e07c87d0a59f62ac7a85a584\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"content\":[{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":15,\"output_tokens\":0}],\"input_tokens\":15,\"output_tokens\":0},\"fc_032bb27686da959c016addf9d9e0b087d0a48c5feed5f40f99\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":21,\"output_tokens\":0},\"fc_032bb27686da959c016addf9d9e0dc87d086fb4c3b19cac3d9\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"content\":[{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":20,\"output_tokens\":0}],\"input_tokens\":20,\"output_tokens\":0},\"msg_032bb27686da959c016addf9da99c887d08dea340df201d3dc\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"content\":[{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":2,\"output_tokens\":13}],\"input_tokens\":2,\"output_tokens\":13}},\"request_fields\":{\"tools\":{\"cache_write_tokens\":0,\"cached_tokens\":0,\"input_tokens\":37,\"output_tokens\":0}}},\"input_tokens\":95,\"input_tokens_details\":{\"cache_write_tokens\":0,\"cached_tokens\":0},\"output_tokens\":13,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":108},\"user\":null,\"metadata\":{}},\"sequence_number\":17}\n\ndata: [DONE]\n\n"
+  }
+]

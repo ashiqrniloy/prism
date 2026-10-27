@@ -466,8 +466,23 @@ export interface ResolvedFabricExchangesOptions {
   readonly scope: "user" | "agent" | "project";
 }
 
+/** The preset names. A later name is additive; each one is a written contract (README `## Conversational preset`). */
+export type MemoryFabricPresetName = "conversational";
+
+/**
+ * Bumped when a preset's contents change inside its contract (ranking, budgets, delivery, read path).
+ * `memory:status` and the setup status note report it, so a measurement is attributable to a revision.
+ */
+export const CONVERSATIONAL_PRESET_REVISION = 1;
+
 /** Validated `packageConfig` for `@arnilo/prism-memory-fabric`. */
 export interface MemoryFabricConfig {
+  /**
+   * A named, measured configuration (plan 188.11 Task 3). It expands before any other resolution; an
+   * explicitly given top-level field replaces the preset's value for that field (no deep merge).
+   * Default none: the fields below keep their own defaults.
+   */
+  readonly preset?: MemoryFabricPresetName;
   /** Whether the fabric's tools are enabled for a session. Default `true` (installing is the opt-in). */
   readonly enabled?: boolean;
   /**
@@ -544,6 +559,8 @@ export type ResolvedMemoryFabricStore =
 
 /** {@link MemoryFabricConfig} with every default applied, so `setup` reads one shape. */
 export interface ResolvedMemoryFabricConfig {
+  /** The preset this config expanded, with its revision; absent when none was named. */
+  readonly preset?: { readonly name: MemoryFabricPresetName; readonly revision: number; readonly overridden: readonly string[] };
   readonly enabled: boolean;
   readonly retrieval: "lexical" | "hybrid";
   readonly semantic: boolean;
@@ -604,10 +621,11 @@ const flagOrObject = (properties: Readonly<Record<string, JsonSchema>>): JsonSch
 });
 
 /** The config schema. A literal secret fails validation; the `x-prism-secret` marker is enforced by the loader. */
-export const memoryFabricConfigSchema: JsonSchema = {
+const fabricConfigSchema: JsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    preset: { enum: ["conversational"] },
     enabled: { type: "boolean", default: true },
     retrieval: { enum: ["lexical", "hybrid"], default: "lexical" },
     inject: {
@@ -810,7 +828,157 @@ export const memoryFabricConfigSchema: JsonSchema = {
   },
 };
 
+/**
+ * Config fields whose value is a tuning default: ranking, scoring, budgets, caps, thresholds and
+ * weights. Their value may change in a minor version. Every other field is `contract` — its shape
+ * and meaning are frozen at API level 1 (README `## Compatibility`).
+ */
+const TUNING_CONFIG_FIELDS: ReadonlySet<string> = new Set([
+  "inject.minSimilarity",
+  "inject.topK",
+  "inject.budgetTokens",
+  "directory.maxTopics",
+  "directory.maxFiles",
+  "directory.maxTokens",
+  "core.maxTokens",
+  "cues.budgetTokens",
+  "cues.maxPerTurn",
+  "scopes.priors",
+  "scopes.priors.path",
+  "scopes.priors.project",
+  "scopes.priors.team",
+  "scopes.priors.agent",
+  "scopes.priors.user",
+  "tools.maxFileBytes",
+  "scoped.policy.promotion.reuseThreshold",
+  "scoped.policy.activation.topK",
+  "scoped.policy.activation.minSimilarity",
+  "scoped.policy.facts.maxChars",
+  "limits.maxEntryTextChars",
+  "limits.maxWorkingMemoryBytes",
+  "limits.maxVectorDimensions",
+  "limits.rebuildBatchSize",
+  "limits.rebuildMs",
+  "consolidate.threshold",
+  "linker.topK",
+  "evolution.maxPatches",
+  "lifecycle.verifyAfterSessions",
+  "lifecycle.decay.episode",
+  "lifecycle.decay.fact",
+  "lifecycle.decay.preference",
+  "lifecycle.decay.procedure",
+  "lifecycle.decay.exchange",
+  "lifecycle.storageWeights.explicit",
+  "lifecycle.storageWeights.sessions",
+  "lifecycle.storageWeights.helpful",
+  "lifecycle.storageWeights.harmful",
+  "lifecycle.storageWeights.outcome",
+  "lifecycle.recall.retrieval",
+  "lifecycle.recall.storage",
+  "lifecycle.archive.retrievalBelow",
+  "lifecycle.archive.storageBelow",
+  "lifecycle.archive.graceSessions",
+  "lifecycle.capacity.user.notes",
+  "lifecycle.capacity.user.tokens",
+  "lifecycle.capacity.agent.notes",
+  "lifecycle.capacity.agent.tokens",
+  "lifecycle.capacity.project.notes",
+  "lifecycle.capacity.project.tokens",
+  "lifecycle.merge.duplicateDice",
+  "lifecycle.merge.episodes.minCluster",
+  "lifecycle.widen.minProjects",
+  "lifecycle.widen.minSiblings",
+  "lifecycle.widen.contradictionsToSupersede",
+  "promote.minScore",
+  "promote.weights",
+  "promote.weights.explicit",
+  "promote.weights.correction",
+  "promote.weights.outcome",
+  "promote.weights.recurrence",
+  "promote.weights.generality",
+  "promote.weights.ephemerality",
+  "promote.weights.derivability",
+  "promote.weights.duplicate",
+  "promote.maxCandidates",
+  "promote.minTurnsBetween",
+  "promote.maxOutputTokens",
+  "workerLimits",
+]);
+
+/** Tag every field with its stability tier; `validateJsonSchema` ignores the extension keyword. */
+function withStability(schema: JsonSchema, tuning: ReadonlySet<string>, path = ""): JsonSchema {
+  const properties = schema.properties;
+  const tagged: JsonSchema = properties
+    ? {
+        ...schema,
+        properties: Object.fromEntries(
+          Object.entries(properties).map(([key, child]) => {
+            const childPath = path ? `${path}.${key}` : key;
+            return [
+              key,
+              { ...withStability(child, tuning, childPath), "x-prism-stability": tuning.has(childPath) ? "tuning" : "contract" },
+            ];
+          }),
+        ),
+      }
+    : schema;
+  if (schema.anyOf) return { ...tagged, anyOf: schema.anyOf.map((branch) => withStability(branch, tuning, path)) };
+  if (schema.oneOf) return { ...tagged, oneOf: schema.oneOf.map((branch) => withStability(branch, tuning, path)) };
+  return tagged;
+}
+
+/** The config schema. A literal secret fails validation; the `x-prism-secret` marker is enforced by the loader. */
+export const memoryFabricConfigSchema: JsonSchema = withStability(fabricConfigSchema, TUNING_CONFIG_FIELDS);
+
+/**
+ * The presets, frozen. `conversational` is exactly the 188.10 Task 9 `x-tools` arm: verbatim exchanges,
+ * passive delivery of exchanges only, no consolidation. Top-level keys only; see {@link expandPreset}.
+ */
+const PRESETS: Readonly<Record<MemoryFabricPresetName, Readonly<MemoryFabricConfig>>> = Object.freeze({
+  conversational: Object.freeze({
+    exchanges: Object.freeze({}),
+    inject: Object.freeze({ query: "task", kinds: Object.freeze(["exchange"] as const) }),
+    semantic: true,
+    promote: false,
+  }),
+});
+
+const PRESET_REVISIONS: Readonly<Record<MemoryFabricPresetName, number>> = { conversational: CONVERSATIONAL_PRESET_REVISION };
+
+/** The preset's own fields, cloned so a caller may mutate them (the bench ablations do). */
+export function presetFields(name: MemoryFabricPresetName): MemoryFabricConfig {
+  return structuredClone(PRESETS[name]);
+}
+
+/**
+ * Replace every top-level preset field the host did not give. A field given explicitly wins whole:
+ * `inject` is not deep-merged. Returns the merged config and the preset fields the host changed.
+ */
+function expandPreset(config: MemoryFabricConfig): {
+  config: MemoryFabricConfig;
+  preset?: NonNullable<ResolvedMemoryFabricConfig["preset"]>;
+} {
+  if (config.preset === undefined) return { config };
+  const name = config.preset;
+  if (!Object.hasOwn(PRESETS, name)) throw new MemoryValidationError(`preset must be one of ${Object.keys(PRESETS).join(", ")}`);
+  const fields = presetFields(name);
+  // The loader applies schema defaults before this runs, so a given value equal to the preset's is not an override.
+  const given = config as Record<string, unknown>;
+  const overridden = Object.entries(fields)
+    .filter(([key, value]) => given[key] !== undefined && JSON.stringify(given[key]) !== JSON.stringify(value))
+    .map(([key]) => key);
+  return {
+    config: { ...fields, ...config },
+    preset: { name, revision: PRESET_REVISIONS[name], overridden },
+  };
+}
+
 export function resolveMemoryFabricConfig(config: MemoryFabricConfig = {}): ResolvedMemoryFabricConfig {
+  const expanded = expandPreset(config);
+  return resolveExpandedConfig(expanded.config, expanded.preset);
+}
+
+function resolveExpandedConfig(config: MemoryFabricConfig, preset: ResolvedMemoryFabricConfig["preset"]): ResolvedMemoryFabricConfig {
   const input = config.store ?? (config.tools?.root ? "markdown" : "memory");
   const insideRoot = (value: string, label: string): string => {
     if (!config.tools?.root) throw new MemoryValidationError(`${label} requires tools.root`);
@@ -829,6 +997,7 @@ export function resolveMemoryFabricConfig(config: MemoryFabricConfig = {}): Reso
   else store = input;
   const resolvedScopes = resolveScopes(config);
   return {
+    ...(preset === undefined ? {} : { preset }),
     enabled: config.enabled !== false,
     retrieval: config.retrieval ?? "lexical",
     semantic: config.semantic !== false,

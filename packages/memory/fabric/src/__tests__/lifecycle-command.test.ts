@@ -10,13 +10,8 @@ import { describe, it } from "bun:test";
 import { createAgent, createMemorySessionStore, type JsonObject, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
-import memoryFabric, {
-  createMemory,
-  createMemoryWorkingStore,
-  encodeMemoryNoteMetadata,
-  projectResourceId,
-  resolveProjectIdentity,
-} from "../index.js";
+import memoryFabric, { createMemory, createMemoryWorkingStore, encodeMemoryNoteMetadata } from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
 /** One seeded note: a verified procedure, used once, in a project twenty sessions old. */
 async function seed(index: string, project: string): Promise<void> {

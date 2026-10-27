@@ -1,0 +1,633 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-24T19:08:51.784Z",
+  "provider": "opencode-go",
+  "model": "mimo-v2.5",
+  "mode": "live",
+  "modelWindow": 1000000,
+  "lengths": [
+    0,
+    16000,
+    32000,
+    64000,
+    96000
+  ],
+  "repeats": 1,
+  "taskCount": 3,
+  "configs": [
+    "none",
+    "fold"
+  ],
+  "arms": [
+    {
+      "length": 0,
+      "fold": "none",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 21394,
+      "cacheReadTokens": 12672,
+      "cacheReadRatio": 0.5923156025053753,
+      "outputTokens": 2720,
+      "calls": 10
+    },
+    {
+      "length": 0,
+      "fold": "fold",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 9794,
+      "cacheReadTokens": 5760,
+      "cacheReadRatio": 0.5881151725546253,
+      "outputTokens": 973,
+      "calls": 9
+    },
+    {
+      "length": 16000,
+      "fold": "none",
+      "runs": 3,
+      "correct": 2,
+      "accuracy": 0.6666666666666666,
+      "interval": [
+        0.2076549551264879,
+        0.9385096847238394
+      ],
+      "inputTokens": 179657,
+      "cacheReadTokens": 154368,
+      "cacheReadRatio": 0.8592373244571601,
+      "outputTokens": 1750,
+      "calls": 9
+    },
+    {
+      "length": 16000,
+      "fold": "fold",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 205428,
+      "cacheReadTokens": 198912,
+      "cacheReadRatio": 0.9682808575267247,
+      "outputTokens": 2406,
+      "calls": 10
+    },
+    {
+      "length": 32000,
+      "fold": "none",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 313684,
+      "cacheReadTokens": 292352,
+      "cacheReadRatio": 0.9319952563726552,
+      "outputTokens": 848,
+      "calls": 9
+    },
+    {
+      "length": 32000,
+      "fold": "fold",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 241489,
+      "cacheReadTokens": 230144,
+      "cacheReadRatio": 0.9530206344802454,
+      "outputTokens": 1601,
+      "calls": 9
+    },
+    {
+      "length": 64000,
+      "fold": "none",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 813493,
+      "cacheReadTokens": 769664,
+      "cacheReadRatio": 0.9461224620248729,
+      "outputTokens": 1665,
+      "calls": 11
+    },
+    {
+      "length": 64000,
+      "fold": "fold",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 398144,
+      "cacheReadTokens": 369024,
+      "cacheReadRatio": 0.9268606333386915,
+      "outputTokens": 860,
+      "calls": 9
+    },
+    {
+      "length": 96000,
+      "fold": "none",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 1271767,
+      "cacheReadTokens": 1228032,
+      "cacheReadRatio": 0.9656108390923809,
+      "outputTokens": 1332,
+      "calls": 12
+    },
+    {
+      "length": 96000,
+      "fold": "fold",
+      "runs": 3,
+      "correct": 3,
+      "accuracy": 1,
+      "interval": [
+        0.43849391955098227,
+        1
+      ],
+      "inputTokens": 655699,
+      "cacheReadTokens": 626944,
+      "cacheReadRatio": 0.9561460365198056,
+      "outputTokens": 2300,
+      "calls": 11
+    }
+  ],
+  "effectiveInputBudget": 96000,
+  "foldEffectiveInputBudget": 96000,
+  "usage": {
+    "inputTokens": 4110549,
+    "cacheReadTokens": 3887872,
+    "outputTokens": 16455,
+    "calls": 99,
+    "complete": true
+  },
+  "billedEstimate": {
+    "amount": 0.046668221600000004,
+    "currency": "USD",
+    "estimate": true,
+    "unit": "per_million_tokens"
+  },
+  "results": [
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 0,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 18420,
+        "cacheReadTokens": 10624,
+        "outputTokens": 2397,
+        "calls": 5
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 0,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 6854,
+        "cacheReadTokens": 3584,
+        "outputTokens": 690,
+        "calls": 4
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 0,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 38,
+        "cacheReadTokens": 0,
+        "outputTokens": 29,
+        "calls": 1
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 0,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 38,
+        "cacheReadTokens": 0,
+        "outputTokens": 30,
+        "calls": 1
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 0,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 2936,
+        "cacheReadTokens": 2048,
+        "outputTokens": 294,
+        "calls": 4
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 0,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 2902,
+        "cacheReadTokens": 2176,
+        "outputTokens": 253,
+        "calls": 4
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 16000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 102203,
+        "cacheReadTokens": 99200,
+        "outputTokens": 1136,
+        "calls": 5
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 16000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 129047,
+        "cacheReadTokens": 122880,
+        "outputTokens": 2209,
+        "calls": 6
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 16000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 18706,
+        "cacheReadTokens": 0,
+        "outputTokens": 50,
+        "calls": 1
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 16000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 18706,
+        "cacheReadTokens": 18688,
+        "outputTokens": 54,
+        "calls": 1
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 16000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 0,
+      "usage": {
+        "inputTokens": 58748,
+        "cacheReadTokens": 55168,
+        "outputTokens": 564,
+        "calls": 3
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 16000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 57675,
+        "cacheReadTokens": 57344,
+        "outputTokens": 143,
+        "calls": 3
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 32000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 178571,
+        "cacheReadTokens": 174720,
+        "outputTokens": 649,
+        "calls": 5
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 32000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 111378,
+        "cacheReadTokens": 106112,
+        "outputTokens": 1155,
+        "calls": 4
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 32000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 33402,
+        "cacheReadTokens": 16384,
+        "outputTokens": 87,
+        "calls": 1
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 32000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 25554,
+        "cacheReadTokens": 20480,
+        "outputTokens": 210,
+        "calls": 1
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 32000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 101711,
+        "cacheReadTokens": 101248,
+        "outputTokens": 112,
+        "calls": 3
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 32000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 104557,
+        "cacheReadTokens": 103552,
+        "outputTokens": 236,
+        "calls": 4
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 64000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 447482,
+        "cacheReadTokens": 444416,
+        "outputTokens": 1282,
+        "calls": 6
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 64000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 178347,
+        "cacheReadTokens": 175104,
+        "outputTokens": 617,
+        "calls": 4
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 64000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 72651,
+        "cacheReadTokens": 33280,
+        "outputTokens": 125,
+        "calls": 1
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 64000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 45282,
+        "cacheReadTokens": 20480,
+        "outputTokens": 63,
+        "calls": 1
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 64000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 293360,
+        "cacheReadTokens": 291968,
+        "outputTokens": 258,
+        "calls": 4
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 64000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 174515,
+        "cacheReadTokens": 173440,
+        "outputTokens": 180,
+        "calls": 4
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 96000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 535531,
+        "cacheReadTokens": 531584,
+        "outputTokens": 1044,
+        "calls": 5
+      }
+    },
+    {
+      "id": "coding-sum-range",
+      "kind": "coding",
+      "length": 96000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 366292,
+        "cacheReadTokens": 358784,
+        "outputTokens": 2035,
+        "calls": 6
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 96000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 104591,
+        "cacheReadTokens": 72576,
+        "outputTokens": 36,
+        "calls": 1
+      }
+    },
+    {
+      "id": "needle-spare-key",
+      "kind": "needle",
+      "length": 96000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 57400,
+        "cacheReadTokens": 36864,
+        "outputTokens": 45,
+        "calls": 1
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 96000,
+      "fold": "none",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 631645,
+        "cacheReadTokens": 623872,
+        "outputTokens": 252,
+        "calls": 6
+      }
+    },
+    {
+      "id": "tools-add-record",
+      "kind": "tools",
+      "length": 96000,
+      "fold": "fold",
+      "repeat": 0,
+      "score": 1,
+      "usage": {
+        "inputTokens": 232007,
+        "cacheReadTokens": 231296,
+        "outputTokens": 220,
+        "calls": 4
+      }
+    }
+  ],
+  "limitations": [
+    "Deterministic self-graded tasks; no model judge.",
+    "History is pinned public-repo tool output, not the task's own workspace.",
+    "A task may be answered after the configured turn cap; failed tool use is scored zero.",
+    "Pilot run: 3 of 30 tasks. The release matrix uses all 30 at three repeats."
+  ],
+  "status": "completed",
+  "history": {
+    "source": "expressjs/express",
+    "commit": "1c6f1b0fe4000977b9a7b4f34097e4d527dd9824",
+    "sha256": "aadc004d85e8b9c9959e8281a89913d336bda069dadc423a4900fb8fb125789b",
+    "files": 213
+  }
+}

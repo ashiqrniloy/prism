@@ -12,6 +12,10 @@ const patterns = [
   ["npm-token", new RegExp("npm" + "_[A-Za-z0-9]{30,}")],
   ["slack-token", new RegExp("xo" + "[abprs]-[A-Za-z0-9-]{20,}")],
   ["openai-key", new RegExp("(?:^|[^A-Za-z0-9_-])sk" + "-[A-Za-z0-9]{20,}")],
+  // Sign in with ChatGPT: an issued client ID, and a compact JWS (access token, ID token, or an
+  // encrypted reasoning blob) — plan 204 Task 5. Recorded wire fixtures must carry neither.
+  ["openai-client-id", new RegExp("oaiapp" + "_[A-Za-z0-9]{12,}")],
+  ["jwt", /eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/],
 ];
 const ignored = new Set([".git", "node_modules", "coverage", "graft"]);
 // Local credential files are the one place real keys are meant to live: `.gitignore`

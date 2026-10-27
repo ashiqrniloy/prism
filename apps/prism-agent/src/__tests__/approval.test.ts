@@ -8,7 +8,7 @@ import { mockProvider, providerDone } from "@arnilo/prism/testing";
 import { createOrchestrator, type HostConfig, sessionIndex } from "../host/index.js";
 import { approvalGatesCoding } from "../scenarios/approval-gates-coding.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 function config(root: string): HostConfig {
   return {

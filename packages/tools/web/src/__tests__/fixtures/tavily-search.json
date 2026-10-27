@@ -1,0 +1,19 @@
+{
+  "query": "prism agent",
+  "response_time": 0.42,
+  "results": [
+    {
+      "title": "Tavily One",
+      "url": "https://example.org/tavily-one",
+      "content": "First Tavily snippet",
+      "score": 0.93,
+      "published_date": "2026-10-02"
+    },
+    {
+      "title": "Tavily Two",
+      "url": "https://example.org/tavily-two",
+      "content": "Second Tavily snippet",
+      "score": 0.61
+    }
+  ]
+}

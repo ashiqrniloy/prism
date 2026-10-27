@@ -55,6 +55,7 @@ test("llm_compaction_strategy_builds_provider_request_and_returns_compaction_ent
   assert.equal(result.entries?.[0]?.kind, "compaction");
   assert.equal(result.entries?.[0]?.parentId, "u3");
   assert.equal((result.entries?.[0]?.data as { strategy?: string })!.strategy, "llm-compaction");
+  assert.equal((result.entries?.[0]?.data as { trigger?: string })!.trigger, "manual", "the context trigger is stamped");
   assert.equal(request?.model.parameters?.maxTokens, 80);
   assert.equal(request?.options?.sessionId, "s1");
   assert.equal(request?.options?.cacheKey, "s1");

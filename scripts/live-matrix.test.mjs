@@ -4,11 +4,12 @@
  * (missing credential => skip, never fail), and model-selection entries.
  * Registered in the root `bun run test` chain.
  */
+
+import { test } from "bun:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "bun:test";
 import { loadMatrix, parseEnvFile, REPO_ROOT, resolveSuiteState, runLiveMatrix, validateMatrix } from "./live-matrix.mjs";
 
 const matrix = loadMatrix();
@@ -60,16 +61,11 @@ test("model selection: every provider suite reads its PRISM_LIVE_*_MODEL overrid
       if (isProvider) assert.equal(m.wired, true, `${suite.id}: ${m.env} must be wired after the Task 4 retrofit`);
     }
   }
-  assert.equal(providerSuites, 4, "all supported provider adapters have matrix entries");
+  assert.equal(providerSuites, 8, "all supported provider adapters have matrix entries");
   const hyperModel = matrix.suites.find((s) => s.id === "providers/hyper").model[0];
   assert.equal(hyperModel.env, "PRISM_LIVE_HYPER_CHAT_MODEL");
   assert.equal(hyperModel.wired, true);
-  for (const id of [
-    "providers/hyper",
-    "providers/opencode-go",
-    "providers/typesafe",
-    "providers/laya",
-  ]) {
+  for (const id of ["providers/hyper", "providers/opencode-go", "providers/typesafe", "providers/laya"]) {
     assert.equal(matrix.suites.find((s) => s.id === id).status, "active", `${id} is active`);
   }
 });

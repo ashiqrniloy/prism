@@ -11,9 +11,6 @@ import { WebToolError } from "./transport.js";
 
 export const DEFAULT_FETCH_CHARS = 32_000;
 export const HARD_FETCH_CHARS = 100_000;
-/** One slice's worth of page kept per session, so paging a page does not refetch it. */
-const MEMO_ENTRIES = 8;
-const MEMO_TTL_MS = 10 * 60_000;
 
 export interface FetchSlice {
   /** The slice, without the header lines. */
@@ -34,13 +31,15 @@ export interface FetchSliceArgs {
 }
 
 /** The `web_fetch` parameters: a URL plus the slice window. Every fetch backend registers this. */
-export function fetchParameters(): JsonObject {
+export function fetchParameters(cached = false, prompt = false): JsonObject {
   return {
     type: "object",
     properties: {
       url: { type: "string", format: "uri" },
       max_chars: { type: "integer", minimum: 1, maximum: HARD_FETCH_CHARS, default: DEFAULT_FETCH_CHARS },
       offset: { type: "integer", minimum: 0, default: 0 },
+      ...(cached ? { refresh: { type: "boolean", description: "Fetch the page again instead of reusing this session's cached copy" } } : {}),
+      ...(prompt ? { prompt: { type: "string", minLength: 1, maxLength: 4_000, description: "A question for the configured model to answer from this page" } } : {}),
     },
     required: ["url"],
     additionalProperties: false,
@@ -89,8 +88,10 @@ export function sliceMarkdown(markdown: string, args: FetchSliceArgs): FetchSlic
 }
 
 /** The model-visible text: which characters these are, how to continue, then the slice. */
-export function fetchSliceText(slice: FetchSlice, sourceTruncated = false): string {
+export function fetchSliceText(slice: FetchSlice, sourceTruncated = false, cachedAgeMs?: number): string {
   const lines = [`Showing characters ${slice.offset}–${slice.end} of ${slice.totalChars}.`];
+  if (cachedAgeMs !== undefined)
+    lines.push(`This page was cached ${formatAge(cachedAgeMs)} ago; pass refresh: true to fetch it again.`);
   if (slice.nextOffset !== undefined) lines.push(`Call web_fetch again with offset=${slice.nextOffset} for more.`);
   if (sourceTruncated) lines.push(`The page exceeded the fetch limit and was cut at ${slice.totalChars} characters.`);
   return `${lines.join("\n")}\n\n${slice.markdown}`;
@@ -114,36 +115,13 @@ export function truncateUtf8Bytes(text: string, maxBytes: number): string {
   return bytes.subarray(0, end).toString("utf8");
 }
 
-/**
- * Short-lived page memo for one tool instance, keyed by session and URL: paging a page costs one
- * fetch, and one session's page never answers another session's call.
- */
-export function createFetchMemo<T>(
-  now: () => number = Date.now,
-): { get(sessionId: string, url: string): T | undefined; set(sessionId: string, url: string, value: T): void } {
-  const entries = new Map<string, { readonly at: number; readonly value: T }>();
-  const key = (sessionId: string, url: string) => `${sessionId}\u0000${url}`;
-  return {
-    get(sessionId, url) {
-      const id = key(sessionId, url);
-      const hit = entries.get(id);
-      if (hit === undefined) return undefined;
-      if (now() - hit.at > MEMO_TTL_MS) {
-        entries.delete(id);
-        return undefined;
-      }
-      return hit.value;
-    },
-    set(sessionId, url, value) {
-      const id = key(sessionId, url);
-      entries.delete(id);
-      entries.set(id, { at: now(), value });
-      for (const oldest of entries.keys()) {
-        if (entries.size <= MEMO_ENTRIES) break;
-        entries.delete(oldest);
-      }
-    },
-  };
+/** One compact age for the cache header: `42s`, `3m`, `2h`. */
+function formatAge(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / 1_000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.round(minutes / 60)}h`;
 }
 
 function isHighSurrogate(code: number): boolean {

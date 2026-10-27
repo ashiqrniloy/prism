@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "provider": "openrouter",
+  "model": "recursive/flint-v1.0:free",
+  "affinity": false,
+  "requestedTurns": 4,
+  "requests": 4,
+  "stablePrefixTokens": 8403,
+  "stablePrefixTokensSource": "reported-first-request",
+  "minimumPrefixTokens": 8192,
+  "outputTokensLimit": 128,
+  "turns": [
+    {
+      "turn": 1,
+      "inputTokens": 8403,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "stablePrefixTokens": 8403,
+      "latencyMs": 1789.7333360000002
+    },
+    {
+      "turn": 2,
+      "inputTokens": 8413,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "stablePrefixTokens": 8403,
+      "latencyMs": 1556.9164299999998
+    },
+    {
+      "turn": 3,
+      "inputTokens": 8423,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "stablePrefixTokens": 8403,
+      "latencyMs": 1683.9564129999999
+    },
+    {
+      "turn": 4,
+      "inputTokens": 8433,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 0,
+      "stablePrefixTokens": 8403,
+      "latencyMs": 1405.3806320000003
+    }
+  ],
+  "status": "measured",
+  "reuse": 0
+}

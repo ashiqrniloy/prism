@@ -70,6 +70,7 @@ export interface PostgresStoreOptions {
   readonly poolConfig?: Omit<PoolConfig, "connectionString" | "max">;
   readonly skipMigrations?: boolean;
   readonly feedbackRedactor?: SecretRedactor;
+  readonly evaluationRedactor?: SecretRedactor;
   readonly eventSource?: AgentEventSourceOptions;
   readonly eventCursorSecret?: string | Uint8Array;
 }

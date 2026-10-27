@@ -13,7 +13,7 @@ no slot, and changes nothing on its own. Nothing in the kernel imports it.
 bun add @arnilo/prism-store-codecs
 ```
 
-A host needs it only when it imports a SQL store package directly; `@arnilo/prism-store-sqlite`
+Hosts and evals also use its evaluation codecs and memory stores; `@arnilo/prism-store-sqlite`
 and `@arnilo/prism-store-postgres` depend on it themselves.
 
 ## Usage
@@ -43,7 +43,7 @@ Nothing on an agent. It now also owns `prepareRunFeedback`, the in-memory feedba
 
 ## Cost, security, and failure behavior
 
-- **No I/O and no state.** Every function is pure; the package opens no database and holds no client.
+- **No I/O.** Codecs are pure; the optional memory stores hold detached, frozen records. The package opens no database and holds no client.
 - **Bounded search fields.** `entrySearchFields` caps the indexed message body at 64 KiB and
   `clipSearchSnippet` caps snippets at the contract's byte limit, so a huge message cannot inflate the
   FTS index or a search page.
@@ -57,3 +57,25 @@ Nothing on an agent. It now also owns `prepareRunFeedback`, the in-memory feedba
 ## License
 
 MIT
+
+## Evaluation records and experiment summaries
+
+`prepareEvaluationRecord` and `prepareExperimentReportRecord` validate and freeze JSON snapshots,
+apply an optional `{ redactor }` to content/metadata, and cap each row at 1 MiB.
+`HARD_EVALUATION_RECORD_BYTES` and `HARD_EXPERIMENT_REPORT_BYTES` expose these fixed ceilings.
+Evaluation ids, statuses, timestamps, scores and sampled flags are validated; experiment means
+must be finite scores in [0, 1]. Aggregate text is limited to statistic methods and currency labels.
+`EvaluationStoreError.code` distinguishes store validation (`ERR_PRISM_EVAL_STORE`), evaluation size
+(`ERR_PRISM_EVAL_STORE_BOUNDS`), and summary size (`ERR_PRISM_EVAL_REPORT_BOUNDS`) failures.
+
+`createMemoryEvaluationStore(initial = [], options = {})` and
+`createMemoryExperimentReportStore(initial = [], options = {})` use these codecs for initial rows
+and appends, reject duplicate ids, and enforce exact ownership on every query. Optional ownership
+supports isolated unowned records; omitted owner fields never act as wildcards. Queries sort by
+`createdAt` then `id`, support ascending/descending cursor pages (default 100, hard 1,000), and
+honor abort signals. Experiment `latest({ datasetId, ...ownership, manifestMatch? })` returns the
+newest matching summary, or `undefined`. Summary `metadata` is capped/redacted when explicitly
+provided; evals' converter excludes per-record metadata and content.
+
+`evaluationStoreConformance(factory)` exercises both evaluation and experiment capabilities
+against the same ownership, filter, pagination, duplicate, bounds and summary contract.

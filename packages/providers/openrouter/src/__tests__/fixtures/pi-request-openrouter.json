@@ -1,0 +1,397 @@
+{
+  "provenance": "source-derived offline with pi-ai 1.4.0 stream and fake fetch; not a live capture",
+  "sessionId": "cache-parity-fixture-203",
+  "models": [
+    {
+      "model": "anthropic/claude-haiku-4.5",
+      "requests": [
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools.",
+                  "cache_control": {
+                    "type": "ephemeral"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Inspect fixture.js.",
+                  "cache_control": {
+                    "type": "ephemeral"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "read",
+                "description": "Read a fixture file",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "test",
+                "description": "Check fixture tests",
+                "parameters": {
+                  "type": "object"
+                }
+              },
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        },
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools.",
+                  "cache_control": {
+                    "type": "ephemeral"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": "Inspect fixture.js."
+            },
+            {
+              "role": "assistant",
+              "content": null,
+              "tool_calls": [
+                {
+                  "id": "call_read",
+                  "type": "function",
+                  "function": {
+                    "name": "read",
+                    "arguments": "{}"
+                  }
+                }
+              ],
+              "reasoning_details": [
+                {
+                  "type": "reasoning.text",
+                  "text": "Read the fixture first.",
+                  "signature": "fixture-signature",
+                  "format": "unknown",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "export const answer = 42;",
+                  "cache_control": {
+                    "type": "ephemeral"
+                  }
+                }
+              ],
+              "tool_call_id": "call_read"
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "read",
+                "description": "Read a fixture file",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "test",
+                "description": "Check fixture tests",
+                "parameters": {
+                  "type": "object"
+                }
+              },
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        },
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools.",
+                  "cache_control": {
+                    "type": "ephemeral"
+                  }
+                }
+              ]
+            },
+            {
+              "role": "user",
+              "content": "Inspect fixture.js."
+            },
+            {
+              "role": "assistant",
+              "content": null,
+              "tool_calls": [
+                {
+                  "id": "call_read",
+                  "type": "function",
+                  "function": {
+                    "name": "read",
+                    "arguments": "{}"
+                  }
+                }
+              ],
+              "reasoning_details": [
+                {
+                  "type": "reasoning.text",
+                  "text": "Read the fixture first.",
+                  "signature": "fixture-signature",
+                  "format": "unknown",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "export const answer = 42;",
+              "tool_call_id": "call_read"
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Confirm the fixture. Reply OK.",
+                  "cache_control": {
+                    "type": "ephemeral"
+                  }
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "read",
+                "description": "Read a fixture file",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "test",
+                "description": "Check fixture tests",
+                "parameters": {
+                  "type": "object"
+                }
+              },
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "model": "google/gemma-4-31b-it:free",
+      "requests": [
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+            },
+            {
+              "role": "user",
+              "content": "Inspect fixture.js."
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "read",
+                "description": "Read a fixture file",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "test",
+                "description": "Check fixture tests",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+            },
+            {
+              "role": "user",
+              "content": "Inspect fixture.js."
+            },
+            {
+              "role": "assistant",
+              "content": null,
+              "tool_calls": [
+                {
+                  "id": "call_read",
+                  "type": "function",
+                  "function": {
+                    "name": "read",
+                    "arguments": "{}"
+                  }
+                }
+              ],
+              "reasoning_details": [
+                {
+                  "type": "reasoning.text",
+                  "text": "Read the fixture first.",
+                  "signature": "fixture-signature",
+                  "format": "unknown",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "export const answer = 42;",
+              "tool_call_id": "call_read"
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "read",
+                "description": "Read a fixture file",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "test",
+                "description": "Check fixture tests",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are reviewing a tiny coding fixture. Keep tools and prior history unchanged. Reply OK; do not call tools."
+            },
+            {
+              "role": "user",
+              "content": "Inspect fixture.js."
+            },
+            {
+              "role": "assistant",
+              "content": null,
+              "tool_calls": [
+                {
+                  "id": "call_read",
+                  "type": "function",
+                  "function": {
+                    "name": "read",
+                    "arguments": "{}"
+                  }
+                }
+              ],
+              "reasoning_details": [
+                {
+                  "type": "reasoning.text",
+                  "text": "Read the fixture first.",
+                  "signature": "fixture-signature",
+                  "format": "unknown",
+                  "index": 0
+                }
+              ]
+            },
+            {
+              "role": "tool",
+              "content": "export const answer = 42;",
+              "tool_call_id": "call_read"
+            },
+            {
+              "role": "user",
+              "content": "Confirm the fixture. Reply OK."
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "read",
+                "description": "Read a fixture file",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            },
+            {
+              "type": "function",
+              "function": {
+                "name": "test",
+                "description": "Check fixture tests",
+                "parameters": {
+                  "type": "object"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

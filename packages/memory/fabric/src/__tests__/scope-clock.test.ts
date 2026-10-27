@@ -9,7 +9,8 @@ import { join } from "node:path";
 import { describe, it } from "bun:test";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
-import memoryFabric, { projectResourceId, resolveProjectIdentity } from "../index.js";
+import memoryFabric from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
 describe("Scope clock (plan 188.4 Task 2)", () => {
   it("scope_clock_counts_once_per_session_and_survives_restore", async () => {

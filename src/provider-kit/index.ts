@@ -1,5 +1,6 @@
 export * from "./codecs/anthropic-messages.js";
 export * from "./codecs/openai-chat.js";
+export * from "./codecs/openai-responses.js";
 export { serializeOpenAIChatMessage } from "./codecs/openai-chat.js";
 export * from "./routed-provider.js";
 export * from "./cache-helpers.js";
@@ -20,4 +21,4 @@ export * from "./systemone-provider.js";
 export * from "./systemone-schema.js";
 export * from "./transport.js";
 export * from "./usage.js";
-export * from "./wire-replay.js";
+export { replayFetch, assertRecordedStreamConforms, type RecordedExchange, type RecordedStreamConformanceOptions } from "./wire-replay.js";

@@ -1,6 +1,6 @@
 import type { JsonObject } from "@arnilo/prism";
 import { WebToolError } from "./transport.js";
-import type { SearchControl, SearchControls, SearchFreshness } from "./types.js";
+import type { SearchControl, SearchControls, SearchFreshness, WebSearchControlValues } from "./types.js";
 
 /** A search accepts at most this many domains on each side. */
 export const MAX_DOMAIN_CONTROLS = 10;
@@ -25,7 +25,11 @@ const CODE_2 = /^[a-z]{2}$/iu;
  * backend cannot honor fails loudly, naming the argument — silently ignoring it would make results
  * look filtered when they are not.
  */
-export function searchControls(supports: ReadonlySet<SearchControl>, input: object): SearchControls {
+export function searchControls(
+  supports: ReadonlySet<SearchControl>,
+  input: object,
+  values: WebSearchControlValues = {},
+): SearchControls {
   const provided = input as Record<string, unknown>;
   const controls: { -readonly [K in keyof SearchControls]: SearchControls[K] } = {};
   for (const control of Object.keys(ARGUMENT) as SearchControl[]) {
@@ -34,11 +38,13 @@ export function searchControls(supports: ReadonlySet<SearchControl>, input: obje
     const argument = ARGUMENT[control];
     if (!supports.has(control)) throw invalid(`${argument} is not supported by this search backend`);
     switch (control) {
-      case "freshness":
-        if (!SEARCH_FRESHNESS.includes(value as SearchFreshness))
-          throw invalid(`freshness must be one of ${SEARCH_FRESHNESS.join(", ")}`);
+      case "freshness": {
+        // A backend may support `freshness` without every value; the narrowed set is what it honors.
+        const allowed = values.freshness ?? SEARCH_FRESHNESS;
+        if (!allowed.includes(value as SearchFreshness)) throw invalid(`freshness must be one of ${allowed.join(", ")}`);
         controls.freshness = value as SearchFreshness;
         break;
+      }
       case "includeDomains":
       case "excludeDomains":
         controls[control] = domains(value, argument);
@@ -73,12 +79,19 @@ export function controlsFromArgs(args: JsonObject): Record<string, unknown> {
 }
 
 /** The `web_search` schema properties for one backend, in the model's snake_case spelling. */
-export function searchControlProperties(supports: ReadonlySet<SearchControl>): JsonObject {
+export function searchControlProperties(
+  supports: ReadonlySet<SearchControl>,
+  values: WebSearchControlValues = {},
+): JsonObject {
   const properties: Record<string, JsonObject> = {};
   const entry = (control: SearchControl, schema: JsonObject): void => {
     if (supports.has(control)) properties[ARGUMENT[control]] = schema;
   };
-  entry("freshness", { type: "string", enum: [...SEARCH_FRESHNESS], description: "Only results published in this window" });
+  entry("freshness", {
+    type: "string",
+    enum: [...(values.freshness ?? SEARCH_FRESHNESS)],
+    description: "Only results published in this window",
+  });
   entry("includeDomains", {
     type: "array",
     items: { type: "string" },

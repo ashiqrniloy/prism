@@ -677,6 +677,62 @@ export interface MemoryNoteMetadata {
   readonly promotion?: MemoryNotePromotionStamp;
   /** Write provenance; stored top-level (next to `status`), not under the fabric key. */
   readonly generated?: MemoryNoteProvenance;
+  /**
+   * Keys under the fabric object this version does not know (written by a newer minor version). They are
+   * carried through every rewrite and never shown to the model; `noteFields` omits them.
+   */
+  readonly unknown?: JsonObject;
+}
+
+/** Every key {@link parseMemoryNoteMetadata} reads from the fabric object; anything else is carried as `unknown`. */
+export const MEMORY_NOTE_FABRIC_KEYS: ReadonlySet<string> = new Set([
+  "v",
+  "kind",
+  "tRef",
+  "validFrom",
+  "validTo",
+  "keywords",
+  "tags",
+  "context",
+  "links",
+  "sourceEntryIds",
+  "supersedes",
+  "promotedFrom",
+  "uses",
+  "useSessions",
+  "retrievals",
+  "helpful",
+  "harmful",
+  "lastSession",
+  "path",
+  "contentHash",
+  "scope",
+  "appliesTo",
+  "key",
+  "flags",
+  "archivedAt",
+  "archivedFrom",
+  "pinned",
+  "created",
+  "reconsolidate",
+  "overrides",
+  "consolidatedAt",
+  "mergedInto",
+  "widenedTo",
+  "contradictedIn",
+  "promotion",
+]);
+
+/**
+ * Why a fabric note cannot be read by this version, or `undefined` when it can (or is not a fabric note).
+ * `version>1` is a note a newer version wrote; `invalid-fabric` is any other field this parser refuses.
+ */
+export function unreadableNoteReason(metadata: JsonObject | undefined): "version>1" | "invalid-fabric" | undefined {
+  const raw = metadata?.[MEMORY_NOTE_METADATA_KEY];
+  if (raw === undefined || raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  if (parseMemoryNoteMetadata(metadata) !== undefined) return undefined;
+  const version = (raw as Record<string, unknown>).v;
+  return typeof version === "number" && version > 1 ? "version>1" : "invalid-fabric";
 }
 
 export function isMemoryNoteKind(value: unknown): value is MemoryNoteKind {
@@ -816,9 +872,11 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
     }
     links = parsedLinks;
   }
+  const unknown = Object.fromEntries(Object.entries(record).filter(([key]) => !MEMORY_NOTE_FABRIC_KEYS.has(key))) as JsonObject;
   return {
     v: 1,
     kind: record.kind,
+    ...(Object.keys(unknown).length === 0 ? {} : { unknown }),
     ...(record.tRef === undefined ? {} : { tRef: record.tRef as string }),
     ...(record.validFrom === undefined ? {} : { validFrom: record.validFrom as string }),
     ...(record.validTo === undefined ? {} : { validTo: record.validTo as string }),
@@ -859,10 +917,11 @@ export function parseMemoryNoteMetadata(metadata: JsonObject | undefined): Memor
 
 /** JSON-safe form of the fabric fields; `undefined` fields are dropped. */
 export function encodeMemoryNoteMetadata(fields: Omit<MemoryNoteMetadata, "v">): JsonObject {
-  const encoded: Record<string, unknown> = { v: 1, kind: fields.kind };
+  // Unknown keys go first so a known key can never be shadowed by one a newer version wrote.
+  const encoded: Record<string, unknown> = { ...fields.unknown, v: 1, kind: fields.kind };
   for (const [key, value] of Object.entries(fields)) {
     // `status` and `generated` live top-level on record metadata, not under the fabric key.
-    if (key !== "kind" && key !== "status" && key !== "generated" && value !== undefined) encoded[key] = value;
+    if (key !== "kind" && key !== "status" && key !== "generated" && key !== "unknown" && value !== undefined) encoded[key] = value;
   }
   return encoded as JsonObject;
 }
@@ -885,7 +944,7 @@ export type MemoryNoteFields = Omit<MemoryNoteMetadata, "v" | "kind" | "lastSess
 };
 
 export function noteFields(metadata: MemoryNoteMetadata): MemoryNoteFields {
-  const { v: _v, kind: _kind, lastSession: _lastSession, scope, ...fields } = metadata;
+  const { v: _v, kind: _kind, lastSession: _lastSession, unknown: _unknown, scope, ...fields } = metadata;
   return { ...fields, ...(scope === undefined ? {} : { level: scope }) };
 }
 

@@ -9,7 +9,11 @@
 
 ### Changed
 
-- `context.trigger` replaces the token gate (plan 157 Task 5): set it to a JSON-safe `CompactionTrigger` and the package's `compaction.when` handler composes `resolveShouldCompact` with it instead of comparing `context.compactAfterTokens`. `om:model` also accepts `reset: true` (clear the stored worker refs so the session model is used again) and `om:status` reports the effective `observer`/`reflector` refs. The model-ref config keys now accept a model object as well as a `"provider/model"` string (the outer schema node stays open so the `anyOf` branch validates the keys).
+- Export surface (plan 188.11 Task 5): the root exports the config schema, the ledger record names and folds, `buildObservationalMemoryContextBlocks`, `createMemoryId`, and the shared helpers `memory-fabric` imports. The observer, reflector and dropper workers and their prompts, the settings family, flush, commands, the recall tool, the compactor and every `DEFAULT_*` / `HARD_*` / `OM_*` constant are no longer exported. `root-exports.test.ts` freezes the set.
+
+- **`context.compactAt` replaces `context.compactAfterTokens` (plan 194 Task 7).** The gate is relative now: `{ ratio?: number; maxTokens?: number }`, default `{ ratio: 0.6 }`, resolved as `min(ratio × resolveInputCap(model), maxTokens)`. A model with no declared window uses `maxTokens`; without it the gate fails with a field-naming error. The legacy settings surface (`ObservationalMemoryContextSettings`, `defaultObservationalMemorySettings`, `resolveObservationalMemorySettings`) carries the same shape, and `om:status` reports `thresholds.compactAt`. `DEFAULT_COMPACT_AFTER_TOKENS` is removed; `DEFAULT_COMPACT_AT_RATIO`, `resolveCompactAtThreshold`, `MemoryObservationalCompactAt` and `ResolvedCompactAt` are exported.
+
+- `context.trigger` replaces the token gate (plan 157 Task 5): set it to a JSON-safe `CompactionTrigger` and the package's `compaction.when` handler composes `resolveShouldCompact` with it instead of comparing `context.compactAfterTokens`. While on, the handler also votes `{ compact: false }` below its gate (plan 194 Task 2), so the host's `thresholdEntries` fallback cannot override OM; with the toggle off it abstains. `om:model` also accepts `reset: true` (clear the stored worker refs so the session model is used again) and `om:status` reports the effective `observer`/`reflector` refs. The model-ref config keys now accept a model object as well as a `"provider/model"` string (the outer schema node stays open so the `anyOf` branch validates the keys).
 
 ### Added
 
@@ -35,6 +39,8 @@
   fork carries the ledger up to the fork point.
 
 ### Changed
+
+- **`context.compactAt` replaces `context.compactAfterTokens` (plan 194 Task 7).** The gate is relative now: `{ ratio?: number; maxTokens?: number }`, default `{ ratio: 0.6 }`, resolved as `min(ratio × resolveInputCap(model), maxTokens)`. A model with no declared window uses `maxTokens`; without it the gate fails with a field-naming error. The legacy settings surface (`ObservationalMemoryContextSettings`, `defaultObservationalMemorySettings`, `resolveObservationalMemorySettings`) carries the same shape, and `om:status` reports `thresholds.compactAt`. `DEFAULT_COMPACT_AFTER_TOKENS` is removed; `DEFAULT_COMPACT_AT_RATIO`, `resolveCompactAtThreshold`, `MemoryObservationalCompactAt` and `ResolvedCompactAt` are exported.
 
 - The worker loop takes a `ModelClient` instead of a `ModelProvider` + `ModelConfig` + credential:
   the model call, its provider, and its key are the kernel's (`prism.models.client`). The per-call

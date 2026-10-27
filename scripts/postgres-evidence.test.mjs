@@ -61,13 +61,15 @@ test("the wrapper is wired into the bun chain: URL gate first, workspace legs, t
 
 // Plan 153 Task 5: the session-store integrations run in the store package's leg.
 const postgresRegressions = [
+  "postgres_evaluation_store_conformance",
+  "migration_upgrades_existing_database_with_evaluations",
   "scopes ordinary and leaf entry queries to the owning session",
   "filters and keyset-paginates branch entry queries",
   "keeps session activity monotonic across run, usage, and event writes",
 ].map((name) => `@arnilo/prism-store-postgres test:postgres: (pass) createPostgresPersistence integration > ${name} [1ms]`);
 const liveCapture = [
   ...postgresRegressions,
-  "@arnilo/prism-store-postgres test:postgres: Ran 3 tests across 1 file. [1ms]",
+  "@arnilo/prism-store-postgres test:postgres: Ran 5 tests across 1 file. [1ms]",
   "@arnilo/prism-channels test:postgres: (pass) channels integration [1ms]",
   "@arnilo/prism-channels test:postgres: Ran 1 test across 1 file. [1ms]",
   "(pass) process conformance [1ms]",
@@ -76,8 +78,8 @@ const liveCapture = [
 const makeDocument = (output) => evidenceDocument({ gitHead: "0".repeat(40), captured: "2026-09-25T00:00:00.000Z", output });
 
 test("service evidence counts every leg and requires live PostgreSQL regression cases", () => {
-  assert.deepEqual(parseReport(liveCapture), { tests: 5, pass: 5, fail: 0 });
-  assert.equal(makeDocument(liveCapture).counts.pass, 5);
+  assert.deepEqual(parseReport(liveCapture), { tests: 7, pass: 7, fail: 0 });
+  assert.equal(makeDocument(liveCapture).counts.pass, 7);
   for (const regression of postgresRegressions) {
     assert.throws(
       () => makeDocument(liveCapture.replace(regression, regression.replace("(pass)", "(skip)"))),

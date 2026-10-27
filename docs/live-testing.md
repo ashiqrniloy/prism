@@ -57,14 +57,17 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `providers/opencode-go` | active | `PRISM_LIVE_PROVIDER_TESTS` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_OPENCODE_GO_CHAT_MODEL` (default `mimo-v2.5`), `PRISM_LIVE_OPENCODE_GO_MESSAGES_MODEL` (default `qwen3.6-plus`) | OpenCode Go key; dual-route tier-1 live scenarios (chat & messages). | ~10 requests across both routes incl. prefix cache probe; sub-cent. |
 | `providers/typesafe` | active | `PRISM_LIVE_PROVIDER_TESTS` + `TYPESAFE_API_KEY` | `PRISM_LIVE_TYPESAFE_MODEL` (default `jev-latest`) | TypeSafe key; System One tier-1 live scenarios (decision model), including one raw decide call with noul/choice/score answers. | ~4 requests; sub-cent. |
 | `providers/laya` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_LIVE_LAYA` | `PRISM_LIVE_LAYA_MODEL` (default `laya`) | Local laya-serve instance on loopback (default http://127.0.0.1:8000); System One tier-1 live scenarios, including one raw decide call with noul/choice/score answers. | ~4 requests; local server, free. |
+| `providers/openrouter` | active | `PRISM_LIVE_PROVIDER_TESTS` + `OPENROUTER_API_KEY`; optional: `PRISM_LIVE_OPENROUTER_PAID` | `PRISM_LIVE_OPENROUTER_MODEL` (default `recursive/flint-v1.0:free`), `PRISM_LIVE_OPENROUTER_CACHE_MODEL` (default `anthropic/claude-haiku-4.5`) | Pinned free model: text, tools, structured output, abort, leak scan. Paid Anthropic cache only with separate opt-in and spend approval. | ~6 free requests (5 scenarios + catalog discovery) plus up to 4 paid when opted in (currently 2); paid cache under $0.05/run, defaults off. |
 | `providers/liquid` | active | `PRISM_LIVE_PROVIDER_TESTS` + `LIQUID_API_KEY` | `PRISM_LIVE_LIQUID_MODELS` (default `d1.1,d1-ultra`) | Liquid key; hosted System One tier-1 live scenarios for d1.1 and d1-ultra, plus one image decide call on d1.1. | ~10 requests (5 per model) + 1 image request; d1.1 $0.02/MTok input, d1-ultra $0.042/MTok, output free; sub-cent. |
 | `providers/liquid-local` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_LIVE_LLAMA_SERVER_URL` | `PRISM_LIVE_LIQUID_LOCAL_MODEL` (default `d1-3B`) | Local llama-server (build b11480 or later) on loopback serving LiquidAI/d1-3B-GGUF:Q8_0; System One tier-1 live scenarios plus one image decide call. | ~5 requests; local server, free. |
+| `providers/openai-codex` | active | `PRISM_LIVE_PROVIDER_TESTS` + `PRISM_TEST_KEYCHAIN`; optional: `PRISM_LIVE_OPENAI_CODEX_CREDENTIAL` | `PRISM_LIVE_OPENAI_CODEX_MODEL` (default `gpt-6.1-sol`) | Sign in with ChatGPT grant from the OS keyring on the stateless Responses route; tier-1 live scenarios incl. prefix cache probe, plus the plan-203 cache probe through the same credential ref. | ~10 requests against ChatGPT plan usage; the cache probe is a separate 4-request run (plus one catalog call) with `bun scripts/cache-parity/provider-probe.mjs --provider openai-codex --model gpt-6.1-sol --credential keyring:openai-codex --turns 4`. |
 | `web-tools/brave` | active | `PRISM_LIVE_WEB` + `PRISM_BRAVE_SEARCH_TOKEN` | — | Brave Search token, least-privilege plan; 1 result per query. | 1 search request. |
 | `web-tools/exa` | active | `PRISM_LIVE_WEB` + `PRISM_EXA_API_KEY` | — | Exa key; 1 result per query. | 1 search request. |
 | `web-tools/firecrawl` | active | `PRISM_LIVE_WEB` + `PRISM_FIRECRAWL_API_KEY` | — | Firecrawl key; bounded 64 KiB markdown fetch. | 1 fetch request. |
 | `tools-browser/browser-live` | active | any of: `PRISM_LIVE_PLAYWRIGHT` / `PRISM_TEST_PLAYWRIGHT` | — | Real Chromium, no secret; needs Playwright browsers installed. | Local browser session, no API spend. |
 | `web-tools/obscura-live` | active | `PRISM_LIVE_OBSCURA` + `PRISM_OBSCURA_BIN` | — | Local obscura CLI binary; suite fails closed if flag set without binary. | Local process, no API spend. |
-| `memory/observational-live` | planned | `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS` + `OPENAI_API_KEY` | `PRISM_LIVE_OPENAI_MODEL` (not wired yet) | Reuses the OpenAI key as the compaction worker provider. | A few small summarization requests. |
+| `memory/observational-live` | planned | `PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_OPENCODE_GO_CHAT_MODEL` (not wired yet) | Compaction worker over the shipped OpenCode Go provider (plan 182 deleted the OpenAI provider this row named). | A few small summarization requests. |
+| `memory/fabric-conversational-live` | planned | any of: `HYPER_API_KEY` / `OPENCODE_GO_API_KEY` | — | Conversational preset across sessions: session A states a fact, session B recalls it through injection or memory.recall, principal C sees none of it (plan 186 Task 3 scenario 11). | ≤ 6 requests, ≤ 20k input tokens. |
 | `memory/compaction-llm-live` | active | `PRISM_LIVE_COMPACTION_TESTS` | — | Stub leg today: live summary-provider checks are wired by plans/064 Task 6 (provider key + model env TBD there). The compactor now calls through `prism.models.client`, so the leg would reuse the agent's provider. | n/a until wired. |
 | `work/libreoffice-golden` | active | `PRISM_TEST_LIBREOFFICE` | — | Local LibreOffice binary renders golden documents; no secret. | Local process, no API spend. |
 | `work/drawio-live` | active | any of: `PRISM_LIVE_DRAWIO_URL` / `PRISM_TEST_DRAWIO_URL` | — | Operator-hosted drawio export service URL (not a secret). | 1-2 export requests to your own service. |
@@ -91,7 +94,9 @@ Set only the rows you want to run; everything else skips. Least-privilege scope 
 | `provider-kit/conformance` | active | — (hermetic leg) | — | Thinking coverage: first-party reasoning catalog models declare capabilities.thinkingLevels + a compat.thinkingFamily stamp and emit a legal effort field on the wire. | free |
 | `channels/telegram-live` | active | `PRISM_LIVE_TELEGRAM` + `TELEGRAM_BOT_TOKEN`; optional: `PRISM_LIVE_TELEGRAM_CHAT_ID` | — | Operator-owned Telegram bot token. getMe + 1s poll; send only if PRISM_LIVE_TELEGRAM_CHAT_ID names a chat you operate. Never creates contacts. | 1 getMe + 1 getWebhookInfo (+ optional 1 sendMessage). |
 | `channels/signal-live` | active | `PRISM_LIVE_SIGNAL` + `PRISM_LIVE_SIGNAL_SOCKET` + `PRISM_LIVE_SIGNAL_ACCOUNT` + `PRISM_LIVE_SIGNAL_TERMS_VERSION`; optional: `PRISM_LIVE_SIGNAL_RECIPIENT_UUID` | — | Existing private signal-cli v0.14.8 Unix socket and account you already operate. Never registers or links. Send only to PRISM_LIVE_SIGNAL_RECIPIENT_UUID. | 1 subscribeReceive + health (+ optional 1 send). |
+| `release/context-rot` | active | `HYPER_API_KEY` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL` (default `deepseek-v4-pro-0813`), `PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL` (default `mimo-v2.5`) | Manual-only context-rot curve: 30 deterministic agent-shaped tasks after pinned stale tool history at 0/16k/32k/64k/96k tokens, with and without context-engineering fold batch mode, for one model each on Hyper and OpenCode Go. | About 45M input tokens per model at defaults (900 requests, mostly cache reads); --max-input-tokens defaults to 50M per model and leaves a partial report. Requires HYPER_API_KEY and OPENCODE_GO_API_KEY in the live-canaries environment. |
 | `release/memory-bench` | active | `PRISM_LIVE_MEMORY_BENCH_MANUAL` + `OPENCODE_GO_API_KEY` | `PRISM_LIVE_MEMORY_BENCH_MODEL` (default `mimo-v2.5`) | Manual-only pinned memory benchmark; full context, OM, fabric, fabric-agentic and OM+fabric over LongMemEval-S, LoCoMo (comparison only), MemoryAgentBench-CR and the lifecycle suite. | One durable campaign journal with a finite ceiling; 12M per LongMemEval arm, 2M per lifecycle arm, 5M elsewhere, plus one-question overshoot; includes workers, judges, retries and warm-cache replays. Every attempt keeps its reservation until a matched report reconciles it; --manifest is dry-run. Never scheduled. |
+| `release/eval-gate` | active | `PRISM_LIVE_EVAL_GATE_MANUAL` + `HYPER_API_KEY` | `PRISM_LIVE_EVAL_GATE_MODEL` (default `deepseek-v4-pro-0813`) | Manual-only reference-host evaluation gate on Hyper over the heldout split (coding approval, denied write, research citations, and web_fetch prompt injection) with trials: 4 and regression comparison against the last stored live report. | 4 heldout items x 4 trials (~32 provider turns); hard ceiling of 2M input tokens enforced by the test. Never scheduled. |
 <!-- generated:live-matrix:end -->
 
 ## Strict CI workflow
@@ -104,6 +109,44 @@ The scheduled [`live-canaries` workflow](../.github/workflows/live-canaries.yml)
 - Suite costs are bounded and recorded per row; provider model defaults are the cheapest cost-bounded models that satisfy each probe.
 - Per-suite `PRISM_LIVE_SUITE_TIMEOUT_MS` kill timers and opt-in `PRISM_LIVE_CONCURRENCY` parallelism keep a stuck wire from stalling the run.
 - Packaging tests run under `scripts/with-build-lock.mjs` so parallel suites never race the TypeScript build.
+
+## OAuth providers
+
+A provider whose grant is a Sign in with ChatGPT record keeps it in the OS keyring, not in `live.env`: the
+record rotates on every refresh, so an environment copy would be stale by the second run. `openai-codex` is
+the first such suite (`requires: PRISM_LIVE_PROVIDER_TESTS` + `PRISM_TEST_KEYCHAIN`; the ref itself is the
+optional `PRISM_LIVE_OPENAI_CODEX_CREDENTIAL`, default `keyring:openai-codex`).
+
+```sh
+# sign in (prints the URL and opens it; the loopback callback finishes it)
+bun scripts/provider-login.mjs --provider openai-codex --app-name "Prism live tests"
+
+bun scripts/provider-login.mjs --provider openai-codex --status   # presence, expiry, scope, fingerprints
+bun scripts/provider-login.mjs --provider openai-codex --check    # one Responses request, refreshes if due
+bun scripts/provider-login.mjs --provider openai-codex --expire   # force a refresh on the next request
+bun scripts/provider-login.mjs --provider openai-codex --logout   # revoke; keep the issued client
+PRISM_LIVE_PROVIDER_TESTS=1 PRISM_TEST_KEYCHAIN=1 PRISM_LIVE_STRICT=1 \
+  PRISM_LIVE_FILTER=providers/openai-codex bun run test:live
+```
+
+The script is a terminal `HostUi`: it prints the provider's authorization URL, opens it, accepts a pasted
+callback URL when the loopback listener cannot complete, and never prints a token, code, verifier, or client
+ID. `--status` reports fingerprints, not values, so two runs can be compared without disclosing the grant.
+
+- **Sign-out keeps the registration.** `--logout` revokes the refresh grant and stores the issued client and
+  this host's ID with no token, so signing in again reuses them instead of registering a second client. The
+  record is a `custom`-typed marker, not a bearer secret, so a request before the next sign-in fails with a
+  sign-in error rather than sending something.
+- **A refresh is proven by two processes.** `--expire` moves `expires` into the past; the next request (in
+  any process) refreshes, persists the rotated record, and a second process then reads it unchanged.
+- **Importing a grant** (`--import <file> --service <name> --ref keyring:<name>`) validates a v1 record,
+  keeps the local host's own host ID, and stores it in that namespace — used to prove a second machine's
+  keyring can hold its own identity. Clean up such a copy with `--forget` (deletes without revoking the
+  shared grant); never `--logout` a copy.
+- **Quota is not retryable, including in a stream.** A Sign in with ChatGPT usage limit arrives as a `200`
+  response whose stream carries an `error` frame; it is classified `quota` and is never retried, so a run
+  stops instead of burning the allowance again. Small requests can still succeed while a large one is
+  refused — the account has a five-hour plan window.
 
 ## Decision bench
 
@@ -120,6 +163,70 @@ bun scripts/decision-bench.mjs                  # full default list (liquid-loca
 - `llama-server` rows read `PRISM_LIVE_LLAMA_SERVER_URL`, or `PRISM_LIVE_LLAMA_SERVER_Q8_URL` / `_Q4_URL` when both quants are served side by side. The report records the build (`PRISM_LIVE_LLAMA_SERVER_BUILD` or `llama-server --version`) and the GGUF hash when `PRISM_LIVE_D1_GGUF_SHA256` is set.
 - Output: accuracy, ECE, Brier, p50/p95 latency, option-reversal flip rate, input-token cost, plus the hosted-vs-local agreement rate, written to `docs/_evidence/decision-bench-<date>.md`.
 - The metric math is pinned by `scripts/__tests__/decision-bench-metrics.test.mjs`.
+
+## Provider cache probe
+
+The manual-only `scripts/cache-parity/provider-probe.mjs` replays a fixed coding
+transcript through **only the named provider package**, without launching an
+agent harness or pi. It never runs in `release:gate` or starts automatically.
+Offline pi lever equivalence is not measured cache parity.
+
+After approving the model and spend, put credentials and opt-in flags in a
+private `live.env` (mode `0600`). `PRISM_LIVE_ENV_FILE` selects it; otherwise the
+probe checks `scripts/live.env`, then `~/.config/prism/live.env`. Existing env
+values take precedence. Do not put a key in arguments or paste one in a command.
+
+```sh
+# private live.env: OPENROUTER_API_KEY, PRISM_LIVE_PROVIDER_TESTS=1,
+# PRISM_LIVE_CACHE_PARITY=1, PRISM_LIVE_OPENROUTER_PAID=1
+# Run only after explicit authorization for this paid model.
+timeout 600 bun scripts/cache-parity/provider-probe.mjs \
+  --provider openrouter --model anthropic/claude-haiku-4.5 --turns 4
+
+# Separately authorized pinned implicit-cache model; measure its no-header baseline:
+timeout 600 bun scripts/cache-parity/provider-probe.mjs \
+  --provider openrouter --model recursive/flint-v1.0:free --turns 4 --without-session
+```
+
+- **Cost:** `--turns` generation requests (default 4; range 2–20), plus one
+  catalog-discovery operation. OpenRouter discovery is one GET; other providers
+  may need additional discovery calls. No retries. Each generation has a 128
+  output-token cap and a 60-second signal. Comparing header-on and header-off
+  requires two invocations: **8 generation requests** at defaults, plus catalog
+  discovery. A failed or undersized first prompt stops before further spend.
+  All flags default off; paid OpenRouter additionally needs its paid flag.
+- **Prefix:** at least 8192 space-separated padding words plus fixed system,
+  two tools, tool-call/result history and an anchor message. A declared
+  `cache.minCacheableTokens` raises this target (up to 65536). The first request
+  must actually report at least that many inclusive input tokens; an estimate
+  does not count. This exceeds Haiku 4.5's 4096-token minimum. Later requests
+  preserve that whole transcript and append a small deterministic suffix;
+  generated responses are deliberately not inserted. Offline fixture thinking
+  signatures are removed from live history, never replayed as real upstream data.
+  One fresh run identifier
+  salts the prefix, with one stable session/cache key across turns. Explicit
+  block-cache boundaries stay on system, last tool and the anchor message.
+- **Reuse:** `Σ cacheReadTokens(turn ≥ 2) / Σ stablePrefixTokens(turn ≥ 2)`.
+  `stablePrefixTokens` is the provider-reported first request's full prompt,
+  repeated as the denominator for each warm turn—not a characters/token guess.
+  Cached suffixes can make the result slightly greater than 1; it is not capped.
+  Missing/estimated input counts, missing cache-read fields or a first prefix
+  below minimum yield `unmeasurable` with a reason. Explicit zero reads mean
+  measured zero. Missing writes stay `null`, never invented as zero.
+- **Evidence:** `docs/_evidence/cache-probe/<provider>-<model>-<date>.json`
+  (model slashes become hyphens), with per-turn inclusive input/read/write
+  counts and full-stream `latencyMs`. `--without-session` omits both affinity
+  options and writes a separate `-without-session-<date>.json`. It is an
+  independent cold-prefix run, not proof that headers caused a cache hit.
+  Same-model/mode/day reruns replace that report; archive it before rerunning
+  when preserving a campaign. Evidence contains metrics only, is written
+  atomically with mode `0600`, and passes known-key and `scan-secrets` checks.
+  Raw provider errors, response text, keys and headers are never persisted.
+- **Interpretation:** select a pinned tool-capable model, never
+  `openrouter/free` or `openrouter/auto`. Paid Anthropic reuse ≥ 0.9 on warm
+  turns and pinned implicit-cache reuse > 0 require authorized live evidence;
+  the script reports measurements, never declares harness parity. If the
+  upstream omits cache counts, preserve `unmeasurable` and its reason.
 
 ## Extension and configuration notes
 

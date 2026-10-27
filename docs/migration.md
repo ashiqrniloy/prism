@@ -283,6 +283,17 @@ What you leave behind and why:
 
 Prism 0.0.5 persistence adapters automatically apply additive schema step `002_usage_scope`, then `003_run_feedback`. Migration 003 creates immutable owned run/trace feedback with a run FK, cascade deletion, JSON tag/scorer/evaluation ID lists, and owner/run/trace cursor indexes. Existing rows are unchanged. Custom adapters may omit optional `ProductionPersistenceStore.feedback`; adopters implement `RunFeedbackStore` append/query/delete semantics and must verify exact linked-run ownership before insert.
 
+Plan 201 adds optional `ProductionPersistenceStore.evaluations?: EvaluationStore` and
+`experiments?: ExperimentReportStore`. The evaluation contracts and experiment summary contracts
+are kernel types from `@arnilo/prism`; import memory implementations from
+`@arnilo/prism-store-codecs`. This replaces evals' former type and memory-store exports without
+aliases. Queries match all ownership fields exactly; unscoped queries see only unowned records.
+Experiment summaries are capped at 1 MiB and retain numeric aggregate statistics and item scorer
+means, without item input/output, reasons, or record metadata. `experiments.latest` finds the newest
+matching dataset/owner and optional manifest fields. SQL adapters may omit these capabilities until
+they implement the tables; existing adapters remain structurally valid.
+
+
 See [Database persistence](../packages/stores/sqlite/README.md) for the full reference schema, indexes, conditional-append transaction pattern, retention, and NoSQL mapping; [Session stores](../packages/stores/jsonl/README.md) for the `SessionStore` contract and branch helpers; [Session stores and branching](agent.md) for branch semantics; [Runs and usage ledger](events.md) for the `RunLedger` record shapes and ordering rules.
 
 ### Migration 2 — permissive capability defaults → explicit capability activation

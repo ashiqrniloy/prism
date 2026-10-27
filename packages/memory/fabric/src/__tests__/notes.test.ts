@@ -10,7 +10,8 @@ import {
 } from "@arnilo/prism-memory-observational";
 import { MemoryValidationError } from "@arnilo/prism-memory-core";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
-import { createMemory, createMemoryFabric, createMemoryWorkingStore, MEMORY_FABRIC_WORKING_KEY, parseMemoryNoteMetadata } from "../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore, parseMemoryNoteMetadata } from "../index.js";
+import { MEMORY_FABRIC_WORKING_KEY } from "../types.js";
 
 const scope = { tenantId: "t1", resourceId: "u1", threadId: "th1" };
 

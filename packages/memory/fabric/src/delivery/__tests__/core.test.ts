@@ -20,7 +20,8 @@ import {
 import { createMemoryVectorStore, type VectorStore } from "@arnilo/prism-memory-core";
 import { resolveLifecycleConfig } from "../../config.js";
 import { createFabricContext } from "../../context.js";
-import { createMemory, createMemoryFabric, createMemoryWorkingStore, resolvePromoteConfig } from "../../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "../../index.js";
+import { resolvePromoteConfig } from "../../promote.js";
 import { createFabricLifecycle } from "../../lifecycle/index.js";
 import { encodeMemoryNoteMetadata, type MemoryNoteMetadata } from "../../types.js";
 import {

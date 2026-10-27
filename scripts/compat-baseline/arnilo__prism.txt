@@ -52,11 +52,14 @@ ConfigLoadContext	export type { ConfigLayer, ConfigLoadContext, ConfigProvider }
 ConfigProvider	export type { ConfigLayer, ConfigLoadContext, ConfigProvider } from "./config.js"
 ContextDraft	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
 ContextMeter	export type { ApprovalOutcome, CompactionTrigger, CompactionTriggerContext, ContextMeter, Decision, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNestedRun, RunLimitCounters, RunLimitName, StickyDecision, TokenEstimate, TokenEstimateConfidence, ToolCallAuthority, ToolCapabilityKind, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotenc
+ContextOverflowError	export declare class ContextOverflowError extends Error
 ContextSource	export type { ContextSource } from "./context-build.js"
 CreateLoadSkillToolOptions	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 CreateMemorySessionStoreOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CreateSessionEntryOptions	export type { CreateMemorySessionStoreOptions, CreateSessionEntryOptions, MemorySessionSearchMode, SessionBranch, SessionBranchOptions, SessionContextSnapshot, } from "./session-stores.js"
 CredentialRecord	export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js"
+CredentialRefNotWritableError	export declare class CredentialRefNotWritableError extends Error
+CredentialStoreUnavailableError	export declare class CredentialStoreUnavailableError extends Error
 CredentialUnavailableError	export declare class CredentialUnavailableError extends Error
 CredentialValueSource	export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js"
 DEFAULT_BACKGROUND_SETTLE_MS	export declare const DEFAULT_BACKGROUND_SETTLE_MS = 5000
@@ -96,6 +99,7 @@ DEFAULT_MEDIA_FETCH_TIMEOUT_MS	export declare const DEFAULT_MEDIA_FETCH_TIMEOUT_
 DEFAULT_OWNED_COMPAT_KEYS	export declare const DEFAULT_OWNED_COMPAT_KEYS: readonly ["route", "thinking", "reasoning", "reasoning_effort", "reasoningEffort", "preserveThinking", "preserve_thinking", "output_config", "thinkingFamily", "effortLevels"]
 DEFAULT_PROVIDER_MEDIA_ITEM_BYTES	export declare const DEFAULT_PROVIDER_MEDIA_ITEM_BYTES = 10000000
 DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES	export declare const DEFAULT_PROVIDER_UPLOAD_CACHE_ENTRIES = 32
+DEFAULT_RESPONSES_PROMPT_CACHE_KEY_MAX	export declare const DEFAULT_RESPONSES_PROMPT_CACHE_KEY_MAX = 64
 DEFAULT_RUN_LIMITS	export declare const DEFAULT_RUN_LIMITS: Readonly<
 DEFAULT_SESSION_LIST_LIMIT	export declare const DEFAULT_SESSION_LIST_LIMIT = 20
 DEFAULT_SESSION_SEARCH_LIMIT	export declare const DEFAULT_SESSION_SEARCH_LIMIT = 20
@@ -125,7 +129,14 @@ EMPTY_VENDOR_SCHEMA	export declare const EMPTY_VENDOR_SCHEMA: JsonSchema
 EXTERNAL_ACTIVITY_EVENTS	export declare const EXTERNAL_ACTIVITY_EVENTS:
 EXTERNAL_AGENT_SPEC_KEYS	export declare const EXTERNAL_AGENT_SPEC_KEYS: readonly ["name", "systemPrompt", "model", "effort", "prismTools", "builtinTools", "skills", "subagents", "profile", "isolation", "limits", "vendor"]
 EmbeddingsError	export declare class EmbeddingsError extends Error
+EvaluationQuery	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
+EvaluationRecord	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
+EvaluationStatus	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
+EvaluationStore	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
 EventSubscriber	export declare class EventSubscriber implements AsyncIterable<AgentEvent>, AsyncIterator<AgentEvent>
+ExperimentReportQuery	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
+ExperimentReportRecord	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
+ExperimentReportStore	export type { EvaluationRecord, EvaluationStatus, EvaluationQuery, EvaluationStore, ExperimentReportRecord, ExperimentReportQuery, ExperimentReportStore, } from "./contracts-core/persistence.js"
 ExternalActivity	export type { ExternalActivity, ExternalAskSupport, ExternalToolDecision, ExternalToolRequest, LoopStrategy, RunController, RunEndResult, RunTurnOptions, RunTurnResult, } from "./loop/index.js"
 ExternalAskSupport	export type { ExternalActivity, ExternalAskSupport, ExternalToolDecision, ExternalToolRequest, LoopStrategy, RunController, RunEndResult, RunTurnOptions, RunTurnResult, } from "./loop/index.js"
 ExternalStateData	export type { ExternalStateData, ExternalStateHandle } from "./session/external-state.js"
@@ -268,6 +279,8 @@ NestedRunOutcome	export type { ApprovalOutcome, CompactionTrigger, CompactionTri
 NestedRunRef	export type { ApprovalOutcome, CompactionTrigger, CompactionTriggerContext, ContextMeter, Decision, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNestedRun, RunLimitCounters, RunLimitName, StickyDecision, TokenEstimate, TokenEstimateConfidence, ToolCallAuthority, ToolCapabilityKind, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotenc
 OBSERVE_HOOK_NAMES	export declare const OBSERVE_HOOK_NAMES: readonly ObserveHookName[]
 OMITTED_TOOL_RESULT_IMAGE_NOTE	export declare const OMITTED_TOOL_RESULT_IMAGE_NOTE = "[image omitted: the model does not accept images]"
+OPENAI_RESPONSES_MIN_OUTPUT_TOKENS	export declare const OPENAI_RESPONSES_MIN_OUTPUT_TOKENS = 16
+OPENAI_RESPONSES_UNSUPPORTED_FIELDS	export declare const OPENAI_RESPONSES_UNSUPPORTED_FIELDS: readonly ["background", "conversation", "max_tool_calls", "metadata", "moderation", "multi_agent", "prompt", "prompt_cache_retention", "safety_identifier", "temperature", "top_logprobs", "top_p", "truncation", "user"]
 OWNERSHIP_SCOPE_KEYS	export declare const OWNERSHIP_SCOPE_KEYS: readonly ["tenantId", "accountId", "userId"]
 OWNERSHIP_WIDEN_CODE	export declare const OWNERSHIP_WIDEN_CODE: "ERR_PRISM_OWNERSHIP_WIDEN"
 ObserveHook	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
@@ -298,6 +311,7 @@ PermissionRequest	export type { PermissionDecision, PermissionPolicy, Permission
 Principal	export type { Principal } from "./contracts-core/principal.js"
 PromptInstruction	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
 PromptTemplateOptions	export type { AgentInput, AssembleProviderInputOptions, DefaultInputBuildContext, DefaultInputBuilder, InputAttachment, PromptInstruction, PromptTemplateOptions, } from "./input.js"
+ProviderOverflowRecovery	export declare class ProviderOverflowRecovery extends Error
 ProviderRegistry	export type { ProviderRegistry, ProviderRegistryOptions } from "./models/providers.js"
 ProviderRegistryOptions	export type { ProviderRegistry, ProviderRegistryOptions } from "./models/providers.js"
 ProviderRequirementError	export declare class ProviderRequirementError extends Error
@@ -317,6 +331,7 @@ ResolveShouldCompactInput	export type { ApprovalOutcome, CompactionTrigger, Comp
 ResolveShouldCompactOptions	export type { ApprovalOutcome, CompactionTrigger, CompactionTriggerContext, ContextMeter, Decision, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNestedRun, RunLimitCounters, RunLimitName, StickyDecision, TokenEstimate, TokenEstimateConfidence, ToolCallAuthority, ToolCapabilityKind, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotenc
 ResolveSkillLoadOptions	export type { CreateLoadSkillToolOptions, LoadedSkillBodiesEntry, ResolveSkillLoadOptions, } from "./skill-load.js"
 ResolvedMediaContent	export type { AudioContent, DocumentContent, FileContent, MediaContentBlock, MediaContentBounds, MediaHostAddress, MediaHostnameResolver, MediaMimePolicy, MediaUrlRequest, MediaUrlRequester, ModelInputCapability, ResolvedMediaContent, ResolveMediaContentOptions, SsrfPolicy, } from "./content.js"
+ResponsesMaxOutputTokensError	export declare class ResponsesMaxOutputTokensError extends Error
 ResumeNestedRun	export type { ApprovalOutcome, CompactionTrigger, CompactionTriggerContext, ContextMeter, Decision, DecisionScope, ModelFamily, NestedRunApproval, NestedRunOutcome, NestedRunRef, PendingDecision, PendingDecisionKind, ProviderResolver, ResolveShouldCompactInput, ResolveShouldCompactOptions, ResumeNestedRun, RunLimitCounters, RunLimitName, StickyDecision, TokenEstimate, TokenEstimateConfidence, ToolCallAuthority, ToolCapabilityKind, ToolEffectClassifier, ToolEffectDeclaration, ToolEffectIdempotenc
 RunController	export type { ExternalActivity, ExternalAskSupport, ExternalToolDecision, ExternalToolRequest, LoopStrategy, RunController, RunEndResult, RunTurnOptions, RunTurnResult, } from "./loop/index.js"
 RunEndDecision	export type { AroundHook, AroundHookName, CompactionWhenDecision, CompactionWhenPayload, ContextDraft, DecideHook, DecideHookName, HookBus, HookBusOptions, HookCatalog, HookContext, HookDecision, HookHandler, HookKind, HookKindOf, HookName, HookOptions, HookPayload, HookRegistrar, HookRegistrationInfo, HookRejection, HookResult, HookTransformResult, ModelRequestTransformResult, NamedHookCatalog, NamedHookName, ObserveHook, ObserveHookName, RunEndDecision, RunEndPayload, ToolCallDecision, ToolCal
@@ -445,8 +460,10 @@ anthropicMessagesBody	export declare function anthropicMessagesBody(request: Pro
 anthropicMessagesEvents	export declare function anthropicMessagesEvents(body: ReadableStream<Uint8Array>, signalOrOptions?: AbortSignal | AnthropicMessagesEventsOptions): AsyncIterable<ProviderEvent>
 applyCacheControl	export declare function applyCacheControl(messages: readonly Message[], breakpoints: readonly PromptCacheBreakpoint[], options?: ApplyCacheControlOptions): readonly CacheControlledMessage[]
 applyDefaultProviderRequestOptions	export declare function applyDefaultProviderRequestOptions(request: ProviderRequest, ctx?: ApplyDefaultProviderRequestOptionsContext): ProviderRequest
+applyDraft	export declare function applyDraft(request: ProviderRequest, draft: ContextDraft): ProviderRequest
 applyNestedRun	export declare function applyNestedRun(session: SessionHost, input:
 applyOpenAIChatStructuredOutput	export declare function applyOpenAIChatStructuredOutput(body: Record<string, unknown>, structuredOutput?: StructuredOutputOptions): void
+applyRequestTransforms	export declare function applyRequestTransforms(hooks: HookBus, scope:
 applyRestoredSkillBodies	export declare function applyRestoredSkillBodies(skills: readonly Skill[], bodies: readonly LoadedSkillBodiesEntry[]): readonly Skill[]
 applyThinkingLevel	export declare function applyThinkingLevel(options: ProviderRequestOptions | undefined, level: ThinkingLevel | string, family?: ThinkingCompatFamily): ProviderRequestOptions
 applyThinkingLevelForModel	export declare function applyThinkingLevelForModel(options: ProviderRequestOptions | undefined, level: ThinkingLevel | string, model: Pick<ModelConfig, "provider" | "compat" | "capabilities">): ProviderRequestOptions
@@ -518,6 +535,7 @@ bridgeAbort	export declare function bridgeAbort(signal: AbortSignal | undefined,
 bridgeTools	export declare function bridgeTools(run: RunController, names: readonly string[], options: BridgeToolsOptions): ToolBridge
 buildChildEnv	export declare function buildChildEnv(options?: ChildEnvOptions): Record<string, string>
 buildOpenAIChatBody	export declare const buildOpenAIChatBody: typeof openAIChatBody
+buildOpenAIResponsesBody	export declare const buildOpenAIResponsesBody: typeof openAIResponsesBody
 buildPendingDecision	export declare function buildPendingDecision(session: SessionHost, call: ToolCallContent, approvalId: string, registry: ToolRegistry, runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): PendingDecision
 bytesToBase64	export declare function bytesToBase64(bytes: Uint8Array): string
 cacheHitRate	export declare function cacheHitRate(usage: Usage | undefined): number | undefined
@@ -541,6 +559,7 @@ composeSystemPrompt	export declare function composeSystemPrompt(contributions?: 
 configure	export declare function configure(name: string, patch: JsonObject, options: MaintainOptions): Promise<void>
 contentBlockInputModality	export declare function contentBlockInputModality(block: ContentBlock): ModelInputCapability | undefined
 contextMessages	export declare function contextMessages(context: readonly ContextBlock[] | undefined): Message[]
+contextOverflowMessage	export declare function contextOverflowMessage(counts: ContextOverflowCounts): string
 createAgent	export declare function createAgent(config: AgentConfig): Promise<Agent>
 createAgentState	export declare function createAgentState<T>(key: string, initial: T): AgentState<T> &
 createAgentWith	export declare function createAgentWith(input: AgentConfig, internals: CreateAgentInternals): Promise<Agent>
@@ -615,6 +634,7 @@ dispatchAndCollect	export declare function dispatchAndCollect(probe: ToolDispatc
 dispatchToolCall	export declare function dispatchToolCall(options: DispatchToolCallOptions): Promise<ToolResult>
 dispatchToolCallsInOrder	export declare function dispatchToolCallsInOrder(calls: readonly ToolCallContent[], ctx: ToolDispatchContext): Promise<readonly ToolResult[]>
 dispatchableToolCalls	export declare function dispatchableToolCalls(calls: readonly ToolCallContent[]): readonly ToolCallContent[]
+draftFromRequest	export declare function draftFromRequest(request: ProviderRequest): ContextDraft
 driverConformance	export declare function driverConformance(driver: DriverDefinition<any>, options: DriverConformanceOptions): Promise<DriverConformanceResult>
 driverPackage	export declare function driverPackage<Extra extends object = Readonly<Record<string, never>>>(definition: DriverDefinition<Extra>): PackageDefinition<DriverConfig<Extra>>
 echoTool	export declare function echoTool(onExecute?: () => void): ToolDefinition
@@ -657,6 +677,7 @@ isAllowedByCidr	export declare function isAllowedByCidr(hostname: string, allowe
 isBlockedIp	export declare function isBlockedIp(hostname: string): boolean
 isCapability	export declare function isCapability(value: unknown): value is Capability
 isCompactionEntryData	export declare function isCompactionEntryData(value: unknown): value is CompactionEntryData
+isContextOverflowMessage	export declare function isContextOverflowMessage(message: string): boolean
 isDurableLoop	export declare function isDurableLoop(loop: import("../loop/index.js").LoopStrategy): boolean
 isFlushableRunLedger	export declare function isFlushableRunLedger(ledger: RunLedger): ledger is FlushableRunLedger
 isInside	export declare function isInside(base: string, target: string): boolean
@@ -719,6 +740,7 @@ manifestUsage	export declare const manifestUsage: string
 mapCacheRetention	export declare function mapCacheRetention(retention: CacheRetention | undefined, model: ModelConfig): "short" | "long" | undefined
 mapDiff	export declare function mapDiff(unifiedDiff: string): FileActivity[]
 mapOpenAIChatUsage	export declare function mapOpenAIChatUsage(usage: unknown): Usage | undefined
+mapOpenAIResponsesUsage	export declare function mapOpenAIResponsesUsage(usage: unknown): Usage | undefined
 mapPlan	export declare function mapPlan(entries: readonly
 mapProviderStopReason	export declare function mapProviderStopReason(native: string | null | undefined): ProviderStopReason
 mapSystemOneUsage	export declare function mapSystemOneUsage(usage: SystemOneUsage | undefined): Usage | undefined
@@ -754,6 +776,8 @@ normalizeThinkingLevel	export declare function normalizeThinkingLevel(level: str
 normalizeUsage	export declare function normalizeUsage(raw: RawUsageInput | undefined): Usage | undefined
 openAIChatBody	export declare function openAIChatBody(request: ProviderRequest, options?: OpenAIChatCodecOptions): JsonObject
 openAIChatEvents	export declare function openAIChatEvents(body: ReadableStream<Uint8Array>, options?: OpenAIChatEventsOptions): AsyncIterable<ProviderEvent>
+openAIResponsesBody	export declare function openAIResponsesBody(request: ProviderRequest, options?: OpenAIResponsesCodecOptions): JsonObject
+openAIResponsesEvents	export declare function openAIResponsesEvents(body: ReadableStream<Uint8Array>, options?: OpenAIResponsesEventsOptions): AsyncIterable<ProviderEvent>
 optionalRefSource	export declare function optionalRefSource(resolve: (ref: string) => Promise<Secret | undefined>, ref: string): () => Promise<string | undefined>
 packageConformance	export declare function packageConformance(input: PackageInput, options?: PackageConformanceOptions): Promise<PackageConformanceResult>
 packageEventFor	export declare function packageEventFor(owner: string, sessionId: string, runId: string, name: string, data: JsonValue): AgentEvent
@@ -816,6 +840,7 @@ reconstructMissingToolCalls	export declare function reconstructMissingToolCalls(
 reconstructToolCallDeltas	export declare function reconstructToolCallDeltas(events: readonly ProviderEvent[]): readonly ToolCallContent[]
 recordFixtures	export declare const recordFixtures:
 recordProviderUsage	export declare function recordProviderUsage(ctx: RoundContext, turnUsage: Usage | undefined, turn: number, attempt: number, request?: ProviderRequest): Promise<Usage | undefined>
+recordingHasErrorFrame	export declare function recordingHasErrorFrame(body: string): boolean
 redactAgentEvent	export declare function redactAgentEvent(event: AgentEvent, redactor?: SecretRedactor): AgentEvent
 redactMessage	export declare function redactMessage(message: Message, redactor?: SecretRedactor): Message
 redactProviderRequest	export declare function redactProviderRequest(request: ProviderRequest, redactor?: SecretRedactor): ProviderRequest
@@ -899,6 +924,7 @@ serializeOpenAIChatMessage	export declare function serializeOpenAIChatMessage(me
 serializeOpenAIChatStructuredOutput	export declare function serializeOpenAIChatStructuredOutput(options: StructuredOutputOptions): JsonObject
 serializeOpenAITool	export declare function serializeOpenAITool(tool: ToolDefinition): JsonObject
 serializePdfDocumentWireBlock	export declare function serializePdfDocumentWireBlock(options:
+serializeResponsesTool	export declare function serializeResponsesTool(tool:
 serializeToolResultText	export declare function serializeToolResultText(message: Message): string
 sessionLinksMatch	export declare function sessionLinksMatch(links: SessionLinks | undefined, filter: SessionLinkFilter): boolean
 sessionLinksOf	export declare function sessionLinksOf(entries: readonly SessionEntry[]): SessionLinks | undefined
@@ -1010,7 +1036,9 @@ type ProviderLiveScenarioResult	export { runProviderLiveScenarios, runSystemOneL
 type ProviderLiveScenariosExecutionResult	export { runProviderLiveScenarios, runSystemOneLiveScenarios, executeProviderLiveScenarios, executeSystemOneLiveScenarios, checkLayaServerReachable, DEFAULT_LIVE_CACHE_PREFIX, LIVE_WEATHER_TOOL, type ProviderLiveScenariosOptions, type SystemOneLiveScenariosOptions, type LiveRouteConfig, type LiveRouteInput, type LiveRouteName, type ProviderLiveScenarioResult, type ProviderLiveScenariosExecutionResult, type SystemOneLiveScenarioResult, type SystemOneLiveScenariosExecutionResult, } from "./provide
 type ProviderLiveScenariosOptions	export { runProviderLiveScenarios, runSystemOneLiveScenarios, executeProviderLiveScenarios, executeSystemOneLiveScenarios, checkLayaServerReachable, DEFAULT_LIVE_CACHE_PREFIX, LIVE_WEATHER_TOOL, type ProviderLiveScenariosOptions, type SystemOneLiveScenariosOptions, type LiveRouteConfig, type LiveRouteInput, type LiveRouteName, type ProviderLiveScenarioResult, type ProviderLiveScenariosExecutionResult, type SystemOneLiveScenarioResult, type SystemOneLiveScenariosExecutionResult, } from "./provide
 type RecordFixtureOptions	export { recordFixtures, type RecordedFixture, type RecordFixtureOptions } from "./record-fixtures.js"
+type RecordedExchange	export { replayFetch, assertRecordedStreamConforms, type RecordedExchange, type RecordedStreamConformanceOptions } from "./wire-replay.js"
 type RecordedFixture	export { recordFixtures, type RecordedFixture, type RecordFixtureOptions } from "./record-fixtures.js"
+type RecordedStreamConformanceOptions	export { replayFetch, assertRecordedStreamConforms, type RecordedExchange, type RecordedStreamConformanceOptions } from "./wire-replay.js"
 type ResolvedManifestEntry	export { type MergedManifest, type MergeSources, mergeManifestScopes, type ResolvedManifestEntry } from "./merge.js"
 type ResolvedPackageConfig	export { type PackageConfigDefinition, type PackageConfigLayers, type PackageConfigSource, type ResolvedPackageConfig, resolvePackageConfig, } from "./config.js"
 type RunControllerInternals	export { type AskRequest, type AskResolution, createRunController, type RunControllerInternals } from "./run-controller.js"

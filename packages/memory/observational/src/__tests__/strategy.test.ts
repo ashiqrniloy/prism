@@ -2,14 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import { createAgent, createMemorySessionStore, createSessionEntry, providerDone, providerTextDelta, type SessionEntry } from "@arnilo/prism";
 import { assertCompactorConforms } from "@arnilo/prism/testing/compaction-conformance";
-import {
-  createObservationalMemoryCompactor,
-  FOLDED_MEMORY,
-  type MemoryObservation,
-  type MemoryReflection,
-  OBSERVATIONS_RECORDED,
-  REFLECTIONS_RECORDED,
-} from "../index.js";
+import { type MemoryObservation, type MemoryReflection, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED } from "../index.js";
+import { createObservationalMemoryCompactor } from "../strategy.js";
+import { FOLDED_MEMORY } from "../types.js";
 import { mockProvider } from "@arnilo/prism/testing";
 
 const model = { provider: "mock", model: "demo" };

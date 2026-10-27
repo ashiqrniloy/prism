@@ -12,6 +12,7 @@ import { join } from "node:path";
 import type { RunResult } from "@arnilo/prism";
 import {
   assertEvaluationThreshold,
+  wilsonInterval,
   defineDataset,
   defineScorer,
   type ExperimentReport,
@@ -65,9 +66,9 @@ function toReport(evaluations: ExperimentReport["evaluations"]): ExperimentRepor
       scoredCount: scored.length,
       skippedCount: 0,
       failedCount: evaluations.filter((e) => e.status === "failed").length,
-      meanScore: mean,
-      scoresByScorer: {
-        "browser-adversarial-outcome": { count: scored.length, mean },
+      macroMean: mean,
+      scorers: {
+        "browser-adversarial-outcome": { items: scored.length, records: scored.length, mean: mean ?? 0, passRate: scored.filter(e => e.score === 1).length / scored.length, method: "wilson" as const, ci95: wilsonInterval(scored.filter(e => e.score === 1).length, scored.length) },
       },
     },
   };
@@ -356,7 +357,7 @@ describe("browser adversarial eval fixtures", () => {
       JSON.stringify(evaluations.map((e) => ({ id: e.itemId, status: e.status, score: e.score, reason: e.reason }))),
     );
     const report = toReport(evaluations);
-    assertEvaluationThreshold(report, { minimumMean: 1, maximumFailures: 0 });
+    assertEvaluationThreshold(report, { minimumMacroMean: 1, maximumFailures: 0 });
     const serialized = serializeEvaluationReport(report);
     assert.ok(serialized.includes("browser-adversarial"));
   });

@@ -1,11 +1,25 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "bun:test";
+import { parseHTML } from "linkedom";
+import { citation } from "../../normalize.js";
 import { DEFAULT_OBSCURA_SEARCH_PROFILE } from "../search-profile.js";
 import { createObscuraWebTools } from "../web.js";
 import { fakeObscuraCliPath } from "./fake-cli.js";
 
 const EXEC = process.execPath;
 const FAKE = fakeObscuraCliPath();
+const DDG_FIXTURE = readFileSync(new URL("../../__tests__/fixtures/duckduckgo-html-search.html", import.meta.url), "utf8");
+
+/** Run the profile's constant expression in linkedom, the way Obscura's `--eval` would in the page. */
+function extractFrom(html = DDG_FIXTURE) {
+  const { document } = parseHTML(html);
+  const run = new Function("document", "location", `return (${DEFAULT_OBSCURA_SEARCH_PROFILE.extractionJs});`);
+  return JSON.parse(run(document, { href: "https://html.duckduckgo.com/html/?q=bun" }) as string) as {
+    blocked: boolean;
+    results: Array<{ url: string; title: string; snippet: string }>;
+  };
+}
 
 function tools(overrides: Record<string, unknown> = {}) {
   return createObscuraWebTools({
@@ -89,11 +103,11 @@ test("obscura_scrape_returns_numbered_text", async () => {
 
 test("count caps results and the default profile keeps the query out of JavaScript source", async () => {
   const toolSet = tools();
-  const result = await call(toolSet, "web_search", { query: "test", count: 1 });
+  const result = await call(toolSet, "web_search", { query: "qzx9unique", count: 1 });
   const value = result.value as { results: unknown[] };
   assert.equal(value.results.length, 1);
   // The profile's extraction JS is a constant string — the query appears only in the URL.
-  assert.ok(!DEFAULT_OBSCURA_SEARCH_PROFILE.extractionJs.includes("test"));
+  assert.ok(!DEFAULT_OBSCURA_SEARCH_PROFILE.extractionJs.includes("qzx9unique"));
 });
 
 test("web_fetch returns bounded Markdown with citation metadata", async () => {
@@ -192,6 +206,51 @@ test("search profile replacement is validated", () => {
       }),
     /exceeds/,
   );
+});
+
+test("default_profile_decodes_uddg_links", () => {
+  const page = extractFrom();
+  assert.equal(page.blocked, false);
+  assert.deepEqual(
+    page.results.map((r) => r.url),
+    ["https://bun.sh/docs/", "https://example.com/plain", "javascript:alert(1)"],
+  );
+  assert.equal(page.results[0]!.title, "Bun documentation");
+  assert.match(page.results[0]!.snippet, /all-in-one JavaScript runtime/);
+});
+
+test("default_profile_skips_ads", () => {
+  const page = extractFrom();
+  assert.ok(!page.results.some((r) => r.url.includes("ads.example.com")), "sponsored rows never reach the model");
+  assert.ok(!page.results.some((r) => r.title.includes("Sponsored")));
+});
+
+test("default_profile_detects_the_challenge_page", () => {
+  const page = extractFrom(
+    '<html><body><div class="anomaly-modal"><div class="anomaly-modal__title">Unfortunately, bots use DuckDuckGo too</div></div></body></html>',
+  );
+  assert.equal(page.blocked, true);
+  assert.deepEqual(page.results, []);
+});
+
+test("uddg_non_http_target_is_dropped", () => {
+  const unsafe = extractFrom().results.find((r) => r.url.startsWith("javascript:"));
+  assert.ok(unsafe, "the expression decodes the uddg target");
+  assert.throws(() => citation("obscura", unsafe!.url), "citation refuses a non-http(s) target");
+});
+
+test("obscura_search_empty_fails_loudly", async () => {
+  const toolSet = tools({ env: { ...process.env, OBSCURA_FAKE_SEARCH: "empty" } });
+  await assert.rejects(call(toolSet, "web_search", { query: "bun" }), (error: { code?: string; message: string }) => {
+    assert.equal(error.code, "ERR_OBSCURA_SEARCH_EMPTY");
+    assert.match(error.message, /no results; the search page may have blocked automated access/);
+    return true;
+  });
+});
+
+test("obscura_search_challenge_page_fails_loudly", async () => {
+  const toolSet = tools({ env: { ...process.env, OBSCURA_FAKE_SEARCH: "challenge" } });
+  await assert.rejects(call(toolSet, "web_search", { query: "bun" }), /ERR_OBSCURA_SEARCH_EMPTY|no results/u);
 });
 
 test("obscura_search truth: package never exposes a tool named browser_search", () => {

@@ -1,9 +1,11 @@
 import type {
   ContentBlock,
   JsonObject,
+  JsonValue,
   Message,
   ModelCapabilities,
   ModelConfig,
+  PromptCacheBreakpoint,
   ProviderEvent,
   ProviderRequest,
   StructuredOutputOptions,
@@ -12,6 +14,7 @@ import type {
 } from "../../contracts.js";
 import {
   mapProviderStopReason,
+  providerContentDelta,
   providerDone,
   providerError,
   providerTextDelta,
@@ -21,6 +24,7 @@ import {
   providerUsage,
   toolCallFromArgumentsText,
 } from "../../models/events.js";
+import { type CacheControlValue, resolvePromptCachePlan } from "../cache-helpers.js";
 import { assertStructuredOutputRequestSupported } from "../structured-output.js";
 import { httpStatusError, ProviderTransportError, readSseEvents } from "../transport.js";
 import {
@@ -70,10 +74,24 @@ export interface OpenAIChatCodecOptions {
   /**
    * How historical thinking blocks are replayed on the wire:
    * - "reasoning_content": emitted as top-level `reasoning_content` on assistant messages (needed for reasoning continuity on gateways)
+   * - "reasoning_details": emitted as `assistant.reasoning_details` entries, unchanged and in order
    * - "fold": folded into `content` as text (default)
    * - "drop": dropped completely from the wire message
    */
-  readonly reasoningReplay?: "reasoning_content" | "fold" | "drop";
+  readonly reasoningReplay?: "reasoning_content" | "fold" | "drop" | "reasoning_details";
+
+  /**
+   * Anthropic-style `cache_control` blocks on the Chat wire (gateway pattern, pi's
+   * `cacheControlFormat: "anthropic"`):
+   * - "anthropic-blocks": stamp `{type: "ephemeral"}` at the `resolvePromptCachePlan` breakpoints
+   *
+   * Absent means no markers are emitted. Default breakpoints match pi's placement:
+   * `system_prompt`, `tools`, `last_message`.
+   */
+  readonly cacheControl?: "anthropic-blocks";
+
+  /** Mark the last tool definition too; only gateways that cache tool definitions accept it. */
+  readonly cacheControlOnTools?: boolean;
 
   /**
    * How image input capability is enforced:
@@ -135,7 +153,7 @@ export interface OpenAIChatEventsOptions {
   readonly strictCompletion?: boolean;
   /** Emit the final stream usage on the `done` event. */
   readonly doneUsage?: boolean;
-  readonly mapUsage?: (usage: unknown) => Usage | undefined;
+  readonly mapUsage?: (usage: unknown, chunk?: JsonObject) => Usage | undefined;
   /** Handle an SSE comment line (text after `:`), e.g. `: energy` / `: cost` telemetry. */
   readonly onComment?: (text: string) => ProviderEvent | undefined;
   /** Secrets to redact from stream error messages. */
@@ -161,6 +179,12 @@ export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCode
   const resolvedReasoning = (options.reasoningObject ?? resolveReasoningObject)(request);
 
   const messages: JsonObject[] = [];
+  const sourceMessages = options.mapMessages?.(request) ?? request.messages;
+  const cachePlan = chatCachePlan(request, sourceMessages, options);
+  /** Stamps the plan's `cache_control` marker on a serialized message's last non-empty text part. */
+  const stampMessage = (message: JsonObject, index: number): JsonObject =>
+    cachePlan.messageIndices.has(index) ? stampCacheControl(message, cachePlan.cacheControl) : message;
+
   // A `role: "tool"` message cannot carry an image, so images ride in one follow-up user message
   // placed after the whole round's tool replies (the vendor requires those to stay contiguous).
   const pendingImages: { readonly label: string; readonly parts: JsonObject[] }[] = [];
@@ -173,19 +197,22 @@ export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCode
     pendingImages.length = 0;
   };
 
-  for (const [index, message] of (options.mapMessages?.(request) ?? request.messages).entries()) {
+  for (const [index, message] of sourceMessages.entries()) {
     if (message.role !== "tool") flushToolImages();
     if (options.serializeMessage) {
-      messages.push(options.serializeMessage(message, request));
+      messages.push(stampMessage(options.serializeMessage(message, request), index));
       continue;
     }
     assertOpenAIChatMessage(message, `messages[${index}]`);
     messages.push(
-      serializeOpenAIChatMessageWithCodec(message, request.model, {
-        preserveThinking: preserve,
-        reasoningReplay,
-        imageInput,
-      }),
+      stampMessage(
+        serializeOpenAIChatMessageWithCodec(message, request.model, {
+          preserveThinking: preserve,
+          reasoningReplay,
+          imageInput,
+        }),
+        index,
+      ),
     );
     const images = toolResultImages(message, request.model, imageInput);
     if (images.length > 0) {
@@ -220,10 +247,15 @@ export function openAIChatBody(request: ProviderRequest, options: OpenAIChatCode
     }
   }
 
+  const tools = request.tools?.map(serializeOpenAITool);
+  if (cachePlan.markTools && options.cacheControlOnTools && tools?.length) {
+    tools[tools.length - 1] = { ...tools[tools.length - 1], cache_control: cachePlan.cacheControl as unknown as JsonValue };
+  }
+
   const body: Record<string, unknown> = {
     model: request.model.model,
     messages,
-    tools: request.tools?.map(serializeOpenAITool),
+    tools,
     stream: true,
     stream_options: { include_usage: true },
     ...parameters,
@@ -306,7 +338,7 @@ function serializeOpenAIChatMessageWithCodec(
   model: ModelConfig,
   codecOpts: {
     readonly preserveThinking: boolean;
-    readonly reasoningReplay: "reasoning_content" | "fold" | "drop";
+    readonly reasoningReplay: "reasoning_content" | "fold" | "drop" | "reasoning_details";
     readonly imageInput: "capability-gated" | "always";
   },
 ): JsonObject {
@@ -326,6 +358,8 @@ function serializeOpenAIChatMessageWithCodec(
     codecOpts.reasoningReplay === "reasoning_content" && codecOpts.preserveThinking && thinkingParts.length > 0
       ? thinkingParts.map((part) => part.text).join("")
       : undefined;
+  const reasoningDetails =
+    codecOpts.reasoningReplay === "reasoning_details" && codecOpts.preserveThinking ? replayReasoningDetails(thinkingParts) : undefined;
 
   if (message.role === "assistant") {
     const toolCalls = message.content.filter((part): part is Extract<ContentBlock, { type: "tool_call" }> => part.type === "tool_call");
@@ -345,6 +379,7 @@ function serializeOpenAIChatMessageWithCodec(
           function: { name: call.name, arguments: JSON.stringify(call.arguments) },
         })),
         reasoning_content: reasoningContent,
+        reasoning_details: reasoningDetails,
       });
     }
   }
@@ -379,6 +414,7 @@ function serializeOpenAIChatMessageWithCodec(
       role: message.role,
       content: content[0]!.text,
       reasoning_content: reasoningContent,
+      reasoning_details: reasoningDetails,
     });
   }
 
@@ -386,6 +422,7 @@ function serializeOpenAIChatMessageWithCodec(
     role: message.role,
     content: content.length > 0 ? content : reasoningContent ? null : "",
     reasoning_content: reasoningContent,
+    reasoning_details: reasoningDetails,
   });
 }
 
@@ -403,6 +440,8 @@ export async function* openAIChatEvents(
   let sawFinishReason = false;
   let finishReason: string | undefined;
   const secrets = options.secrets ?? [];
+  const reasoningDetails: ReasoningDetail[] = [];
+  let sawReasoningDetails = false;
 
   for await (const sseEvent of readSseEvents(body, { signal: options.signal })) {
     if (options.onComment && sseEvent.comments?.length) {
@@ -425,21 +464,41 @@ export async function* openAIChatEvents(
       yield providerError(error, secrets);
       return;
     }
-    const mapped = (options.mapUsage ?? mapOpenAIChatUsage)(parsed.usage);
+    const mapped = (options.mapUsage ?? mapOpenAIChatUsage)(parsed.usage, parsed as unknown as JsonObject);
     if (mapped) {
       usage = mapped;
       yield providerUsage(mapped);
     }
 
+    // A top-level error frame (gateways answer 200 + an error body) is terminal: the run must fail,
+    // never report a partial answer as done.
+    if (parsed.error) {
+      yield streamErrorEvent(parsed.error, secrets);
+      return;
+    }
+
     for (const choice of parsed.choices ?? []) {
+      if (choice.finish_reason === "error") {
+        yield streamErrorEvent(undefined, secrets);
+        return;
+      }
       if (choice.finish_reason) {
         sawFinishReason = true;
         finishReason = choice.finish_reason;
       }
       const delta = choice.delta ?? {};
       if (typeof delta.content === "string" && delta.content) yield providerTextDelta(delta.content);
+      // Details arrive first: when a gateway sends both, the entries own the thinking text, so
+      // `delta.reasoning` never duplicates it.
+      let sawDetails = false;
+      for (const detail of delta.reasoning_details ?? []) {
+        if (!isReasoningDetail(detail)) continue;
+        sawDetails = true;
+        sawReasoningDetails = true;
+        mergeReasoningDetail(reasoningDetails, detail);
+      }
       const thinking = delta.reasoning ?? delta.reasoning_content;
-      if (typeof thinking === "string" && thinking) {
+      if (!sawDetails && !sawReasoningDetails && typeof thinking === "string" && thinking) {
         yield providerThinkingDelta(thinking);
       }
       for (const tool of delta.tool_calls ?? []) {
@@ -476,6 +535,19 @@ export async function* openAIChatEvents(
     );
     return;
   }
+  // Each merged entry becomes one discrete thinking block; `data` carries its replay JSON and
+  // `signature` the ordered list, which survives session coalescing of adjacent blocks.
+  const detailList = reasoningDetails.map((entry) => entry as unknown as JsonValue);
+  for (const entry of reasoningDetails) {
+    const type = entry.type;
+    yield providerContentDelta({
+      type: "thinking",
+      text: type === "reasoning.summary" ? (entry.summary ?? "") : type === "reasoning.text" ? (entry.text ?? "") : "",
+      ...(type === "reasoning.encrypted" ? { redacted: true } : {}),
+      data: JSON.stringify(entry),
+      signature: JSON.stringify(detailList),
+    });
+  }
   for (const call of tools.values()) {
     yield providerToolCall(toolCallFromArgumentsText(call.id!, call.name!, call.argumentsText));
   }
@@ -492,6 +564,7 @@ interface ToolAccumulator {
 }
 
 interface OpenAIStreamChunk {
+  readonly error?: JsonObject;
   readonly choices?: readonly {
     readonly finish_reason?: string | null;
     readonly delta?: {
@@ -499,6 +572,8 @@ interface OpenAIStreamChunk {
       readonly reasoning_content?: string;
       /** Newer alias of `reasoning_content` used by some gateways. */
       readonly reasoning?: string;
+      /** Gateway replay data: logical entries streamed as deltas. */
+      readonly reasoning_details?: readonly unknown[];
       readonly tool_calls?: readonly {
         readonly index?: number;
         readonly id?: string;
@@ -507,6 +582,149 @@ interface OpenAIStreamChunk {
     };
   }[];
   readonly usage?: unknown;
+}
+
+interface ReasoningDetail {
+  type?: string;
+  text?: string;
+  summary?: string;
+  data?: string;
+  signature?: string;
+  id?: string;
+  index?: number;
+  format?: string;
+}
+
+/** pi's entry validation: a malformed entry is skipped rather than replayed as garbage. */
+function isReasoningDetail(value: unknown): value is ReasoningDetail {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const detail = value as ReasoningDetail;
+  if (detail.index !== undefined && typeof detail.index !== "number") return false;
+  if (detail.id !== undefined && typeof detail.id !== "string") return false;
+  if (detail.format !== undefined && typeof detail.format !== "string") return false;
+  switch (detail.type) {
+    case "reasoning.summary":
+      return typeof detail.summary === "string";
+    case "reasoning.encrypted":
+      return typeof detail.data === "string";
+    case "reasoning.text":
+      return typeof detail.text === "string" && (detail.signature === undefined || typeof detail.signature === "string");
+    default:
+      return false;
+  }
+}
+
+/** Consecutive text/summary deltas merge into one logical entry; encrypted entries stay discrete. */
+function mergeReasoningDetail(details: ReasoningDetail[], detail: ReasoningDetail): void {
+  const last = details[details.length - 1];
+  if (detail.type === "reasoning.text" && last?.type === "reasoning.text") {
+    last.text = `${last.text ?? ""}${detail.text ?? ""}`;
+    last.signature ||= detail.signature;
+    fillDetailFields(last, detail);
+    return;
+  }
+  if (detail.type === "reasoning.summary" && last?.type === "reasoning.summary") {
+    last.summary = `${last.summary ?? ""}${detail.summary ?? ""}`;
+    fillDetailFields(last, detail);
+    return;
+  }
+  details.push({ ...detail });
+}
+
+function fillDetailFields(target: ReasoningDetail, source: ReasoningDetail): void {
+  target.id ??= source.id;
+  target.format ||= source.format;
+  target.index ??= source.index;
+}
+
+/** Replays stored entries in order; falls back to the coalesced block's `signature` list. */
+function replayReasoningDetails(parts: readonly Extract<ContentBlock, { type: "thinking" }>[]): JsonObject[] | undefined {
+  const details: JsonObject[] = [];
+  for (const part of parts) {
+    const parsed = part.data ? parseJson(part.data) : undefined;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) details.push(parsed as JsonObject);
+  }
+  if (details.length > 0) return details;
+  for (let index = parts.length - 1; index >= 0; index--) {
+    const signature = parts[index]?.signature;
+    const parsed = signature ? parseJson(signature) : undefined;
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is JsonObject => Boolean(item) && typeof item === "object" && !Array.isArray(item));
+    }
+  }
+  return undefined;
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The Chat wire's 200-with-error-body frame: status `code`, redacted `metadata.error_type` and
+ * message, and the classification both the retry policy and plan 194's overflow recovery read.
+ */
+function streamErrorEvent(error: JsonObject | undefined, secrets: readonly (string | undefined)[]): ProviderEvent {
+  const metadata = (error?.metadata ?? {}) as JsonObject;
+  const rawCode = error?.code;
+  const status =
+    typeof rawCode === "number" ? rawCode : typeof rawCode === "string" && /^\d{3}$/.test(rawCode) ? Number(rawCode) : undefined;
+  const errorType = typeof metadata.error_type === "string" ? metadata.error_type : undefined;
+  const detail = typeof error?.message === "string" ? error.message : "stream reported a terminal error";
+  const failure = new Error(errorType ? `${errorType}: ${detail}` : detail) as Error & { code?: number };
+  if (status !== undefined) failure.code = status;
+  return providerError(failure, secrets);
+}
+
+/** pi's Chat-wire placement for Anthropic-style markers, used when the request names none. */
+const DEFAULT_CHAT_CACHE_BREAKPOINTS: readonly PromptCacheBreakpoint[] = [
+  { location: "system_prompt" },
+  { location: "tools" },
+  { location: "last_message" },
+];
+
+function chatCachePlan(
+  request: ProviderRequest,
+  messages: readonly Message[],
+  options: OpenAIChatCodecOptions,
+): { readonly messageIndices: ReadonlySet<number>; readonly markTools: boolean; readonly cacheControl: CacheControlValue } {
+  const disabled: { messageIndices: ReadonlySet<number>; markTools: boolean; cacheControl: CacheControlValue } = {
+    messageIndices: new Set<number>(),
+    markTools: false,
+    cacheControl: { type: "ephemeral" },
+  };
+  if (options.cacheControl !== "anthropic-blocks") return disabled;
+  const retention = request.options?.cacheRetention ?? request.options?.cache?.retention;
+  if (retention === "none" || request.model.cache?.kind === "none") return disabled;
+  const ttl = retention === "long" && request.model.cache?.longRetention !== false ? "1h" : undefined;
+  return resolvePromptCachePlan(messages, request.options?.cache?.breakpoints ?? DEFAULT_CHAT_CACHE_BREAKPOINTS, {
+    ...(ttl ? { ttl } : {}),
+    maxBreakpoints: request.model.cache?.maxBreakpoints ?? 4,
+    hasTools: Boolean(request.tools?.length),
+  });
+}
+
+/** Stamps a marker on the message's last non-empty text part, turning a string `content` into one part. */
+function stampCacheControl(message: JsonObject, cacheControl: CacheControlValue): JsonObject {
+  const content = message.content;
+  if (typeof content === "string") {
+    return content.trim()
+      ? { ...message, content: [{ type: "text", text: content, cache_control: cacheControl as unknown as JsonValue }] }
+      : message;
+  }
+  if (!Array.isArray(content)) return message;
+  const parts = [...content];
+  for (let index = parts.length - 1; index >= 0; index--) {
+    const part = parts[index] as JsonObject;
+    if (part?.type === "text" && typeof part.text === "string" && part.text.trim()) {
+      parts[index] = { ...part, cache_control: cacheControl as unknown as JsonValue };
+      return { ...message, content: parts };
+    }
+  }
+  return message;
 }
 
 function cleanObject(value: Record<string, unknown>): JsonObject {

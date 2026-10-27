@@ -100,7 +100,7 @@ describe("tool result fold", () => {
       resolveToolResultFold({ summarize: () => "folded" }, undefined)!,
       { sessionId: "s", runId: "r", turn: 3 + DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS },
     );
-    assert.match(String(resultOf(folded[0])), /Tool result lookup \[call_5\]: folded/);
+    assert.match(String(resultOf(folded[0])), /\[folded: lookup \[call_5\], [\d,]+ bytes — re-run the tool to see it again\] folded/);
     assert.equal(String(resultOf(folded[1])).includes("Tool result"), false, "the fresh row is protected by the age gate");
     assert.equal(resultOf(folded[2]), "tiny", "the small row is protected by the byte gate");
   });

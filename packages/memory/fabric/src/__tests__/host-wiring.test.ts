@@ -11,7 +11,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
-import { createFabricRepointHandler, createMemory, createMemoryFabric, createMemoryWorkingStore } from "@arnilo/prism-memory-fabric";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore } from "@arnilo/prism-memory-fabric";
+import { createFabricRepointHandler } from "../repoint.js";
 import {
   createDeletionPropagator,
   createHashEmbedder,

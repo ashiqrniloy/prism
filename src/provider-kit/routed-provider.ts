@@ -1,38 +1,29 @@
-import type {
-  JsonObject,
-  ModelProvider,
-  ProviderEvent,
-  ProviderRequest,
-  Usage,
-} from "../contracts.js";
+import type { JsonObject, ModelProvider, ProviderEvent, ProviderRequest, Usage } from "../contracts.js";
 import { providerError } from "../models/events.js";
 import { type CredentialValueSource, resolveCredentialValue } from "../credentials/index.js";
 import { trimTrailingSlashes } from "../trim-trailing-slashes.js";
 import { httpStatusError, readBoundedResponseText } from "./transport.js";
 import { ProviderRequirementError } from "./provider-request-policy.js";
-import {
-  type AnthropicMessagesRouteHooks,
-  anthropicMessagesBody,
-  anthropicMessagesEvents,
-} from "./codecs/anthropic-messages.js";
-import {
-  type OpenAIChatCodecOptions,
-  openAIChatBody,
-  openAIChatEvents,
-} from "./codecs/openai-chat.js";
+import { type AnthropicMessagesRouteHooks, anthropicMessagesBody, anthropicMessagesEvents } from "./codecs/anthropic-messages.js";
+import { type OpenAIChatCodecOptions, openAIChatBody, openAIChatEvents } from "./codecs/openai-chat.js";
+import { type OpenAIResponsesCodecOptions, openAIResponsesBody, openAIResponsesEvents } from "./codecs/openai-responses.js";
 
 /** Route definition for a multi-route or single-route provider. */
-export interface RoutedProviderRoute<
-  TFormat extends "openai-chat" | "anthropic-messages" = "openai-chat" | "anthropic-messages",
-> {
+export type RoutedProviderFormat = "openai-chat" | "anthropic-messages" | "openai-responses";
+
+export interface RoutedProviderRoute<TFormat extends RoutedProviderFormat = RoutedProviderFormat> {
   readonly format: TFormat;
   readonly path: string;
   readonly auth?: "bearer" | "x-api-key+bearer" | "api-key" | "none";
   readonly headers?: (request: ProviderRequest) => Record<string, string>;
   readonly affinity?: (request: ProviderRequest) => Record<string, string>;
-  readonly codec?: TFormat extends "openai-chat" ? OpenAIChatCodecOptions : AnthropicMessagesRouteHooks;
+  readonly codec?: TFormat extends "openai-chat"
+    ? OpenAIChatCodecOptions
+    : TFormat extends "openai-responses"
+      ? OpenAIResponsesCodecOptions
+      : AnthropicMessagesRouteHooks;
   readonly mapHttpError?: (response: Response, bodyText: string, secrets: readonly (string | undefined)[]) => Error;
-  readonly mapUsage?: (usage: unknown) => Usage | undefined;
+  readonly mapUsage?: (usage: unknown, chunk?: JsonObject) => Usage | undefined;
   /** Custom URL builder overriding `${baseUrl}${path}`. */
   readonly url?: (request: ProviderRequest, baseUrl: string) => string;
 }
@@ -55,7 +46,7 @@ export interface RoutedProviderOptions {
   readonly extraHeaders?: (request: ProviderRequest) => Record<string, string>;
   readonly requestFailedPrefix?: string;
   readonly mapHttpError?: (response: Response, bodyText: string, secrets: readonly (string | undefined)[]) => Error;
-  readonly mapUsage?: (usage: unknown) => Usage | undefined;
+  readonly mapUsage?: (usage: unknown, chunk?: JsonObject) => Usage | undefined;
   readonly secrets?: (request: ProviderRequest) => readonly (string | undefined)[];
 }
 
@@ -79,7 +70,7 @@ export async function resolveProviderApiKey(
 
 /**
  * Creates a ModelProvider that dispatches across protocol routes (OpenAI Chat,
- * Anthropic Messages) based on model/request configuration.
+ * Anthropic Messages, OpenAI Responses) based on model/request configuration.
  */
 export function createRoutedProvider(options: RoutedProviderOptions): ModelProvider {
   const providerId = options.id ?? "routed-provider";
@@ -95,20 +86,17 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
       if (options.require?.sessionId) {
         const sessionId = request.options?.sessionId;
         if (!sessionId || typeof sessionId !== "string" || !sessionId.trim()) {
-          throw new ProviderRequirementError(
-            `Provider '${providerId}' requires session correlation (options.sessionId)`,
-            { providerId, requirement: "sessionId" },
-          );
+          throw new ProviderRequirementError(`Provider '${providerId}' requires session correlation (options.sessionId)`, {
+            providerId,
+            requirement: "sessionId",
+          });
         }
       }
 
       // 3. Route selection
       const routeKeys = Object.keys(options.routes);
       if (routeKeys.length === 0) {
-        throw new ProviderRequirementError(
-          `Provider '${providerId}' has no routes configured`,
-          { providerId, requirement: "route" },
-        );
+        throw new ProviderRequirementError(`Provider '${providerId}' has no routes configured`, { providerId, requirement: "route" });
       }
 
       let routeKey: string;
@@ -125,10 +113,10 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
 
       const route = options.routes[routeKey];
       if (!route) {
-        throw new ProviderRequirementError(
-          `Unknown route '${routeKey}' for provider '${providerId}'`,
-          { providerId, requirement: "route" },
-        );
+        throw new ProviderRequirementError(`Unknown route '${routeKey}' for provider '${providerId}'`, {
+          providerId,
+          requirement: "route",
+        });
       }
 
       let apiKey: string | undefined;
@@ -148,11 +136,13 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
           body = await anthropicMessagesBody(request, route.codec as AnthropicMessagesRouteHooks | undefined);
         } else if (route.format === "openai-chat") {
           body = openAIChatBody(request, route.codec as OpenAIChatCodecOptions | undefined);
+        } else if (route.format === "openai-responses") {
+          body = openAIResponsesBody(request, route.codec as OpenAIResponsesCodecOptions | undefined);
         } else {
-          throw new ProviderRequirementError(
-            `Unsupported route format '${(route as any).format}' for route '${routeKey}'`,
-            { providerId, requirement: "route" },
-          );
+          throw new ProviderRequirementError(`Unsupported route format '${(route as any).format}' for route '${routeKey}'`, {
+            providerId,
+            requirement: "route",
+          });
         }
 
         // 6. Header assembly
@@ -220,9 +210,7 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
         }
 
         // 7. Determine request URL
-        const url = route.url
-          ? route.url(request, baseUrl)
-          : `${baseUrl}${route.path.startsWith("/") ? "" : "/"}${route.path}`;
+        const url = route.url ? route.url(request, baseUrl) : `${baseUrl}${route.path.startsWith("/") ? "" : "/"}${route.path}`;
 
         // 8. Fetch
         const fetchImpl = options.fetch ?? fetch;
@@ -258,6 +246,15 @@ export function createRoutedProvider(options: RoutedProviderOptions): ModelProvi
             signal: request.signal,
             secrets,
             mapUsage,
+          });
+        } else if (route.format === "openai-responses") {
+          const codec = route.codec as OpenAIResponsesCodecOptions | undefined;
+          yield* openAIResponsesEvents(response.body, {
+            signal: request.signal,
+            provider: providerId,
+            strictCompletion: codec?.strictCompletion ?? true,
+            mapUsage,
+            secrets,
           });
         } else {
           const codec = route.codec as OpenAIChatCodecOptions | undefined;

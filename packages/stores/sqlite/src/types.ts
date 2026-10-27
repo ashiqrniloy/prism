@@ -17,6 +17,8 @@ export interface SqlitePersistenceOptions {
   readonly skipMigrations?: boolean;
   /** Redacts feedback comments/tags/metadata before durable storage. */
   readonly feedbackRedactor?: SecretRedactor;
+  /** Redacts evaluation reasons/errors/metadata and experiment metadata before storage. */
+  readonly evaluationRedactor?: SecretRedactor;
   /** Existing open database handle (advanced). Caller owns lifecycle when set. */
   readonly database?: Database;
 }

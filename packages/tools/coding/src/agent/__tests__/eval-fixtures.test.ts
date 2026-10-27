@@ -14,6 +14,7 @@ import { join } from "node:path";
 import type { RunResult, ToolExecutionContext, ToolResult } from "@arnilo/prism";
 import {
   assertEvaluationThreshold,
+  wilsonInterval,
   defineDataset,
   defineScorer,
   type ExperimentReport,
@@ -114,9 +115,9 @@ function toReport(evaluations: ExperimentReport["evaluations"]): ExperimentRepor
       scoredCount: scored.length,
       skippedCount: 0,
       failedCount: evaluations.filter((e) => e.status === "failed").length,
-      meanScore: mean,
-      scoresByScorer: {
-        "coding-adversarial-outcome": { count: scored.length, mean },
+      macroMean: mean,
+      scorers: {
+        "coding-adversarial-outcome": { items: scored.length, records: scored.length, mean: mean ?? 0, passRate: scored.filter(e => e.score === 1).length / scored.length, method: "wilson" as const, ci95: wilsonInterval(scored.filter(e => e.score === 1).length, scored.length) },
       },
     },
   };
@@ -351,7 +352,7 @@ describe("coding adversarial eval fixtures", () => {
       JSON.stringify(evaluations.map((e) => ({ id: e.itemId, status: e.status, score: e.score, reason: e.reason }))),
     );
     const report = toReport(evaluations);
-    assertEvaluationThreshold(report, { minimumMean: 1, maximumFailures: 0 });
+    assertEvaluationThreshold(report, { minimumMacroMean: 1, maximumFailures: 0 });
     const serialized = serializeEvaluationReport(report, { secrets: ["SECRET_CANARY"] });
     assert.ok(serialized.includes("coding-adversarial"));
     assert.ok(!serialized.includes("SECRET_CANARY"));

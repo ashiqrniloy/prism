@@ -33,7 +33,9 @@
  */
 import manifest from "../package.json" with { type: "json" };
 import type { JsonObject, JsonValue, ModelClient, ModelRef, PackageAPI, PackageInstance, SessionContext } from "@arnilo/prism";
-import { definePackage } from "@arnilo/prism";
+import { definePackage, resolveInputCap } from "@arnilo/prism";
+
+import { accountRequest } from "./accounting.js";
 
 import { attentionTriggerState, createAttentionCompiler, evaluateAttentionTrigger } from "./attention.js";
 import type { AttentionCompiler } from "./attention-types.js";
@@ -41,7 +43,15 @@ import { type ContextEngineeringConfig, contextEngineeringConfigSchema, isEmptyC
 import { createModelSummarize, truncateSummarize, type ToolResultFoldInput } from "./fold.js";
 import { CONTEXT_ENGINEERING_PRIORITY, createContextEngineeringHandler } from "./handler.js";
 import { createSearchToolsWiring, type MutableToolSearchState, type SearchToolsWiring } from "./search-tools.js";
-import { ACTIVATED_TOOLS_KEY, ATTENTION_STATE_KEY, FOLD_LOG_KEY, initialAttentionState, writeActivatedNames } from "./state.js";
+import {
+  ACTIVATED_TOOLS_KEY,
+  ATTENTION_STATE_KEY,
+  FOLD_FRONTIER_KEY,
+  FOLD_LOG_KEY,
+  initialAttentionState,
+  writeActivatedNames,
+  writeFoldFrontier,
+} from "./state.js";
 
 const PACKAGE = "@arnilo/prism-context-engineering";
 const COMPILER_MEMO_KEY = "contextEngineering.compilers";
@@ -85,6 +95,7 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
   if (isEmptyContextEngineeringConfig(config)) return;
 
   const frontierState = prism.state.session<JsonObject>(ATTENTION_STATE_KEY, initialAttentionState());
+  const foldFrontierState = prism.state.session<JsonObject>(FOLD_FRONTIER_KEY, writeFoldFrontier([]));
   const foldLog = prism.state.log<JsonValue>(FOLD_LOG_KEY);
   const activatedState = prism.state.session<JsonObject>(ACTIVATED_TOOLS_KEY, writeActivatedNames([]));
   const compilers = prism.state.agent<Map<string, AttentionCompiler>>(COMPILER_MEMO_KEY, new Map());
@@ -125,6 +136,7 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
       prism,
       config,
       frontierState,
+      foldFrontierState,
       foldLog,
       activatedState,
       summarizeFor,
@@ -135,6 +147,20 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
   );
 
   if (searchTools) prism.tools.register(searchTools.tool);
+
+  prism.hooks.on(
+    "model.request",
+    (request, context) => {
+      const accounted = accountRequest(request, {
+        inputCapTokens: inputCapOf(context.session),
+        ...(config.blocks ? { maxShare: config.blocks.maxShare } : {}),
+      });
+      prism.events.emit("context.accounted", accounted.event as unknown as JsonValue);
+      return accounted.request === request ? undefined : accounted.request;
+    },
+    // Last among default-priority transforms, so the measurement sees the final request bytes.
+    { id: "context-engineering-accounting", priority: 1_000 },
+  );
 
   if (config.attention) {
     // Compaction fires past `compactRatio`, the ratio the attention gate folds *below*, so a
@@ -149,6 +175,15 @@ function install(prism: PackageAPI<ContextEngineeringConfig>): void {
       }));
       return decision.shouldFold ? { compact: true } : undefined;
     });
+  }
+}
+
+/** The model's input cap; `0` when it declares no window (the share cap then does nothing). */
+function inputCapOf(session: SessionContext | undefined): number {
+  try {
+    return resolveInputCap({}, session?.model);
+  } catch {
+    return 0;
   }
 }
 

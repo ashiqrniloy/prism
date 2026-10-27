@@ -21,9 +21,18 @@ test.skipIf(!(process.env.PRISM_LIVE_OBSCURA && bin))("live: Obscura-backed web_
   const result = await search.execute({ query: "obscura headless browser" } as never, ctx);
   const value = result.value as { results: Array<{ url: string }> };
   console.log(`web_search returned ${value.results.length} results`);
-  if (value.results.length > 0) {
-    const fetch = toolSet.tools.find((tool) => tool.name === "web_fetch")!;
-    const fetched = await fetch.execute({ url: value.results[0]!.url } as never, ctx);
-    console.log(`web_fetch markdown bytes: ${(fetched.value as { markdown: string }).markdown.length}`);
+  if (!Array.isArray(value.results) || value.results.length === 0) {
+    throw new Error("live web_search returned no results — the DuckDuckGo profile or the page markup regressed");
   }
+  for (const row of value.results) {
+    const host = new URL(row.url).hostname;
+    if (host === "duckduckgo.com" || host.endsWith(".duckduckgo.com")) {
+      throw new Error(`live web_search returned an undecoded DuckDuckGo redirect host: ${row.url}`);
+    }
+  }
+  const fetch = toolSet.tools.find((tool) => tool.name === "web_fetch")!;
+  const fetched = await fetch.execute({ url: value.results[0]!.url } as never, ctx);
+  const markdown = (fetched.value as { markdown: string }).markdown;
+  console.log(`web_fetch markdown bytes: ${markdown.length}`);
+  if (markdown.trim().length === 0) throw new Error("live web_fetch of the first result returned no Markdown");
 });

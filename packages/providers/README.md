@@ -1,8 +1,8 @@
 # Provider packages
 
 Each vendor ships as its own package here: `packages/providers/<vendor>/` →
-`@arnilo/prism-provider-<vendor>`. All 21 first-party adapters live here; there is no provider
-family umbrella package.
+`@arnilo/prism-provider-<vendor>`. The seven shipped adapters are Hyper, Laya, Liquid, OpenAI Codex,
+OpenCode Go, OpenRouter, and Typesafe; there is no provider family umbrella package.
 
 A provider package is a `definePackage` definition plus a named factory, both built on the shared
 surface in `@arnilo/prism/provider-kit` (`defineProviderPackage`, `providerPackageInstance`,

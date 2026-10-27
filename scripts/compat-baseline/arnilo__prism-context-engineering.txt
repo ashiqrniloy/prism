@@ -12,6 +12,8 @@ DEFAULT_ATTENTION_RESERVE_TOKENS	export declare const DEFAULT_ATTENTION_RESERVE_
 DEFAULT_ATTENTION_THINKING_KEEP_TURNS	export declare const DEFAULT_ATTENTION_THINKING_KEEP_TURNS = 1
 DEFAULT_ATTENTION_TRIGGER_RATIO	export declare const DEFAULT_ATTENTION_TRIGGER_RATIO = 0.75
 DEFAULT_ATTENTION_TRUNCATION_THRESHOLD	export declare const DEFAULT_ATTENTION_TRUNCATION_THRESHOLD = 2
+DEFAULT_FOLD_CLEAR_AT_LEAST_TOKENS	export declare const DEFAULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0
+DEFAULT_FOLD_KEEP_LAST	export declare const DEFAULT_FOLD_KEEP_LAST = 3
 DEFAULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_FOLD_MAX_SUMMARY_BYTES = 512
 DEFAULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_FOLD_MIN_AGE_TURNS = 2
 DEFAULT_FOLD_MIN_BYTES	export declare const DEFAULT_FOLD_MIN_BYTES = 4096
@@ -19,10 +21,13 @@ DEFAULT_FOLD_SUMMARY_INSTRUCTION	export declare const DEFAULT_FOLD_SUMMARY_INSTR
 DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS	export declare const DEFAULT_MAX_CONTEXT_BUDGET_OMISSIONS = 256
 DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const DEFAULT_MAX_TOOLS_SEARCH_QUERY_BYTES = 4096
 DEFAULT_TOOLS_SEARCH_TOP_K	export declare const DEFAULT_TOOLS_SEARCH_TOP_K = 16
+DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS	export declare const DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0
+DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST	export declare const DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST = 3
 DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512
 DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2
 DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES	export declare const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4096
 DEFAULT_TOOL_SEARCH_TOP_K	export declare const DEFAULT_TOOL_SEARCH_TOP_K = 16
+FOLD_FRONTIER_KEY	export declare const FOLD_FRONTIER_KEY = "contextEngineering.foldFrontier"
 FOLD_LOG_KEY	export declare const FOLD_LOG_KEY = "contextEngineering.folds"
 HARD_MAX_CONTEXT_BUDGET_BYTES	export declare const HARD_MAX_CONTEXT_BUDGET_BYTES: number
 HARD_MAX_CONTEXT_BUDGET_OMISSIONS	export declare const HARD_MAX_CONTEXT_BUDGET_OMISSIONS = 1024
@@ -31,11 +36,13 @@ HARD_MAX_TOOLS_INDEX	export declare const HARD_MAX_TOOLS_INDEX = 1024
 HARD_MAX_TOOLS_SEARCH_QUERY_BYTES	export declare const HARD_MAX_TOOLS_SEARCH_QUERY_BYTES = 65536
 HARD_MAX_TOOLS_SEARCH_TOP_K	export declare const HARD_MAX_TOOLS_SEARCH_TOP_K = 64
 HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES	export declare const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4096
+MAX_FOLD_FRONTIER_IDS	export declare const MAX_FOLD_FRONTIER_IDS = 4096
 MAX_LEDGER_BODIES	export declare const MAX_LEDGER_BODIES = 64
 SEARCH_TOOLS_TOOL_NAME	export declare const SEARCH_TOOLS_TOOL_NAME = "search_tools"
 TOOL_DISCLOSURE_ERROR_CODE	export declare const TOOL_DISCLOSURE_ERROR_CODE: "tool_disclosure_exceeded"
 TOOL_RESULT_FOLD_TURN_METADATA_KEY	export declare const TOOL_RESULT_FOLD_TURN_METADATA_KEY: "prismToolResultTurn"
 ToolDisclosureError	export declare class ToolDisclosureError extends Error
+accountRequest	export declare function accountRequest(request: ProviderRequest, options: AccountRequestOptions): AccountedRequest
 applyDraftBudget	export declare function applyDraftBudget(options: ApplyDraftBudgetOptions): ApplyDraftBudgetResult
 assertToolDisclosureConforms	export declare function assertToolDisclosureConforms(options: ToolDisclosureConformanceOptions): void
 attentionTriggerState	export declare function attentionTriggerState(compiler: Pick<AttentionCompiler, "inputCap" | "runInputBudget">, turn:
@@ -59,6 +66,7 @@ default	export default
 evaluateAttentionTrigger	export declare function evaluateAttentionTrigger(axes: readonly AttentionTrigger[], state: AttentionTriggerState): AttentionTriggerDecision
 foldToolResultHistory	export declare function foldToolResultHistory(history: readonly Message[], options: ResolvedToolResultFoldOptions, context: FoldToolResultsContext): Promise<readonly Message[]>
 foldedToolResultHeader	export declare function foldedToolResultHeader(toolName: string, toolCallId: string, summary: string): string
+foldedToolResultStub	export declare function foldedToolResultStub(toolName: string, toolCallId: string, summary: string, originalBytes: number): string
 formatFoldedToolResult	export declare function formatFoldedToolResult(summary: string): string
 inferToolResultTurns	export declare function inferToolResultTurns(history: readonly Message[]): readonly number[]
 initialAttentionState	export declare function initialAttentionState(): JsonObject
@@ -70,8 +78,10 @@ measureBudgetCost	export declare function measureBudgetCost(options:
 measureDraftCost	export declare function measureDraftCost(options:
 packageName	export declare const packageName = "@arnilo/prism-context-engineering"
 parseAttentionStickyFrontier	export declare function parseAttentionStickyFrontier(value: unknown): PersistedAttentionStickyFrontier | undefined
+planToolResultFoldBatch	export declare function planToolResultFoldBatch(history: readonly Message[], options: ResolvedToolResultFoldOptions, context:
 readActivatedNames	export declare function readActivatedNames(value: JsonValue): readonly string[]
 readAttentionState	export declare function readAttentionState(frontierValue: JsonValue, logEntries: readonly JsonValue[]): AttentionSessionState
+readFoldFrontier	export declare function readFoldFrontier(value: JsonValue | undefined): ReadonlySet<string>
 readFrontier	export declare function readFrontier(value: JsonValue): AttentionStickyFrontier
 readLedger	export declare function readLedger(entries: readonly JsonValue[]): AttentionFoldLedger
 resolveAttentionReserveTokens	export declare function resolveAttentionReserveTokens(value: unknown): number
@@ -89,4 +99,5 @@ serializeAttentionStickyFrontier	export declare function serializeAttentionStick
 toolResultFoldText	export declare function toolResultFoldText(result: unknown, error: unknown, extra?: readonly
 truncateSummarize	export declare function truncateSummarize(input: ToolResultFoldInput): string
 writeActivatedNames	export declare function writeActivatedNames(names: readonly string[]): JsonObject
+writeFoldFrontier	export declare function writeFoldFrontier(ids: Iterable<string>): JsonObject
 writeFrontier	export declare function writeFrontier(frontier: AttentionStickyFrontier): JsonObject

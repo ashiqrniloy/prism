@@ -1,6 +1,5 @@
-import type { AppendRunFeedbackInput, RunFeedbackRecord, RunFeedbackStore } from "@arnilo/prism";
+import type { AppendRunFeedbackInput, EvaluationRecord, EvaluationStore, RunFeedbackRecord, RunFeedbackStore } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
-import type { EvaluationRecord, EvaluationStore } from "./types.js";
 
 export interface AppendEvaluationFeedbackInput {
   readonly feedbackStore: RunFeedbackStore;

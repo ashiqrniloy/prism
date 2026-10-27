@@ -1,0 +1,119 @@
+[
+  {
+    "method": "POST",
+    "path": "/responses",
+    "requestBody": {
+      "model": "gpt-test",
+      "input": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "What is the weather in Vienna? Use the tool."
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get the weather for a city",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "city"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "stream": true,
+      "store": false,
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_tool1\",\"object\":\"response\",\"status\":\"in_progress\",\"model\":\"gpt-test\",\"output\":[],\"store\":false,\"usage\":null},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_tool1\",\"object\":\"response\",\"status\":\"in_progress\"},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"fc_1\",\"type\":\"function_call\",\"status\":\"in_progress\",\"arguments\":\"\",\"call_id\":\"call_1\",\"name\":\"get_weather\"},\"output_index\":0,\"sequence_number\":2}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"{\\\"ci\",\"item_id\":\"fc_1\",\"output_index\":0,\"sequence_number\":3}\n\ndata: {\"type\":\"response.function_call_arguments.delta\",\"delta\":\"ty\\\":\\\"Vienna\\\"}\",\"item_id\":\"fc_1\",\"output_index\":0,\"sequence_number\":4}\n\ndata: {\"type\":\"response.metadata\",\"response_id\":\"resp_tool1\",\"sequence_number\":5,\"metadata\":{}}\n\ndata: {\"type\":\"response.function_call_arguments.done\",\"arguments\":\"{\\\"city\\\":\\\"Vienna\\\"}\",\"item_id\":\"fc_1\",\"output_index\":0,\"sequence_number\":6}\n\ndata: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"fc_1\",\"type\":\"function_call\",\"status\":\"completed\",\"arguments\":\"{\\\"city\\\":\\\"Vienna\\\"}\",\"call_id\":\"call_1\",\"name\":\"get_weather\"},\"output_index\":0,\"sequence_number\":7}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_tool1\",\"object\":\"response\",\"status\":\"completed\",\"usage\":{\"input_tokens\":54,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens\":19,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":73},\"output\":[]}}\n\n"
+  },
+  {
+    "method": "POST",
+    "path": "/responses",
+    "requestBody": {
+      "model": "gpt-test",
+      "input": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "What is the weather in Vienna? Use the tool."
+            }
+          ]
+        },
+        {
+          "type": "reasoning",
+          "id": "rs_1",
+          "encrypted_content": "gAAAAABsyntheticencryptedpayload-from-plan-204-task-1",
+          "summary": []
+        },
+        {
+          "type": "function_call",
+          "call_id": "call_1",
+          "name": "get_weather",
+          "arguments": "{\"city\":\"Vienna\"}"
+        },
+        {
+          "type": "function_call_output",
+          "call_id": "call_1",
+          "output": "{\"tempC\":21,\"conditions\":\"sunny\"}"
+        }
+      ],
+      "tools": [
+        {
+          "type": "function",
+          "name": "get_weather",
+          "description": "Get the weather for a city",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "city"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "tool_choice": "auto",
+      "reasoning": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "stream": true,
+      "store": false,
+      "include": [
+        "reasoning.encrypted_content"
+      ]
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_tool2\",\"object\":\"response\",\"status\":\"in_progress\",\"model\":\"gpt-test\",\"output\":[],\"store\":false,\"usage\":null},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_tool2\",\"object\":\"response\",\"status\":\"in_progress\"},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"msg_tool2\",\"type\":\"message\",\"status\":\"in_progress\",\"role\":\"assistant\",\"content\":[]},\"output_index\":0,\"sequence_number\":2}\n\ndata: {\"type\":\"response.content_part.added\",\"item_id\":\"msg_tool2\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\"},\"sequence_number\":3}\n\ndata: {\"type\":\"response.output_text.delta\",\"item_id\":\"msg_tool2\",\"output_index\":0,\"content_index\":0,\"delta\":\"Vienna is sunny and 21C.\",\"sequence_number\":4}\n\ndata: {\"type\":\"response.metadata\",\"response_id\":\"resp_tool2\",\"sequence_number\":5,\"metadata\":{}}\n\ndata: {\"type\":\"response.output_text.done\",\"item_id\":\"msg_tool2\",\"output_index\":0,\"content_index\":0,\"text\":\"Vienna is sunny and 21C.\",\"sequence_number\":6}\n\ndata: {\"type\":\"response.content_part.done\",\"item_id\":\"msg_tool2\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"Vienna is sunny and 21C.\"},\"sequence_number\":7}\n\ndata: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_tool2\",\"type\":\"message\",\"status\":\"completed\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"Vienna is sunny and 21C.\"}]},\"output_index\":0,\"sequence_number\":8}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_tool2\",\"object\":\"response\",\"status\":\"completed\",\"usage\":{\"input_tokens\":95,\"input_tokens_details\":{\"cached_tokens\":64},\"output_tokens\":13,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":108},\"output\":[]}}\n\n"
+  }
+]

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Prism fetch fixture</title>
+    <script>document.body.textContent = "script did not run";</script>
+  </head>
+  <body>
+    <header><nav><a href="/">Home</a> <a href="/pricing">Pricing</a></nav></header>
+    <main>
+      <article>
+        <h1>Bun 1.4 release notes</h1>
+        <p>Bun 1.4 adds <a href="/docs/runtime">a faster runtime</a> and a smaller install.</p>
+        <p>Read the <a href="https://bun.sh/blog">announcement</a> or the <a href="javascript:alert(1)">draft</a>.</p>
+        <h2>Upgrading</h2>
+        <p>Run <code>bun upgrade</code> to switch.</p>
+        <pre><code>const ready = await Bun.build({ entrypoints: ["src/index.ts"] });</code></pre>
+        <p><img src="/images/bun.png" alt="Bun" /></p>
+      </article>
+    </main>
+    <footer>Copyright Prism footer text</footer>
+  </body>
+</html>

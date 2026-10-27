@@ -36,7 +36,7 @@ const records = [
 const entries = (data: readonly unknown[]): SessionEntry[] =>
   data.map((value, index) => ({ id: `e${index}`, sessionId: "s", timestamp: "2026-01-01", kind: "custom", data: value }));
 const done: ModelClient = {
-  model: { provider: "mock", model: "m" },
+  model: { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
   async *generate() {
     yield providerDone();
   },

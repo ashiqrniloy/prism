@@ -10,7 +10,15 @@ export interface JsonObject {
   readonly [key: string]: JsonValue;
 }
 
-export type ProviderFailureClass = "quota" | "auth" | "rate_limited" | "transient" | "permanent" | "unknown";
+export type ProviderFailureClass =
+  | "quota"
+  | "auth"
+  | "rate_limited"
+  | "transient"
+  | "permanent"
+  /** The request did not fit the model's context window; the session may compact and retry once. */
+  | "context_overflow"
+  | "unknown";
 
 export interface ErrorInfo {
   readonly name?: string;

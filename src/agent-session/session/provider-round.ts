@@ -19,6 +19,7 @@ import type {
   UsageRecord,
 } from "../../contracts.js";
 import { createProviderTurnMetadata, readProviderHttpStatus } from "../../observability.js";
+import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
 import { normalizeStopReason, providerError, providerToolCallDeltaContent } from "../../models/events.js";
 import { errorToErrorInfo, redactRunLedgerRecord, redactSecrets } from "../../redaction.js";
 import { mergeRetry, retryLoop } from "../../models/retry.js";
@@ -190,6 +191,33 @@ function usageMissingFailure(turn: number): ProviderTurnFailure {
   );
 }
 
+/** Statuses a provider may answer when the request is bigger than the model's window. */
+const OVERFLOW_STATUSES = new Set([400, 413, 422]);
+
+/**
+ * Overflow evidence for one failed attempt: the route's body already classified it, or (for a route
+ * whose body is not distinguishable, plan 194 Task 1) a 400/413/422 while our own estimate exceeds
+ * the model's declared window. Estimates are advisory, exactly like usage estimates.
+ */
+function contextOverflowEvidence(
+  request: ProviderRequest,
+  info: import("../../contracts.js").ErrorInfo,
+): { estimatedTokens: number; windowTokens?: number } | undefined {
+  const estimate = () => {
+    const tokens = estimateMessageTokens(request.messages, request.model.model);
+    const extras = estimateRequestExtrasTokens(request.tools, request.context, (text) =>
+      estimateTextTokensForFamily(text, request.model.model),
+    );
+    return tokens.tokens + extras;
+  };
+  const windowTokens = resolveTurnInputCap(request.model);
+  if (info.failureClass === "context_overflow") return { estimatedTokens: estimate(), ...(windowTokens === undefined ? {} : { windowTokens }) };
+  const status = readProviderHttpStatus(info);
+  if (windowTokens === undefined || status === undefined || !OVERFLOW_STATUSES.has(status)) return undefined;
+  const estimatedTokens = estimate();
+  return estimatedTokens > windowTokens ? { estimatedTokens, windowTokens } : undefined;
+}
+
 export async function generateWithRetry(
   session: SessionHost,
   request: ProviderRequest,
@@ -208,7 +236,7 @@ export async function generateWithRetry(
     sessionId: session.id,
     runId,
     signal,
-    passthrough: (error) => isSteerSoftInterrupt(error),
+    passthrough: (error) => isSteerSoftInterrupt(error) || error instanceof ProviderOverflowRecovery || error instanceof ContextOverflowError,
     classify(error) {
       const failure = error instanceof ProviderTurnFailure ? error : undefined;
       return {
@@ -370,6 +398,10 @@ export async function generateProviderTurn(
     }
     const latencyMs = Math.round(performance.now() - startedAt);
     const info = error instanceof ProviderTurnFailure ? redactSecrets(error.info, secrets) : providerError(error, secrets).error;
+    const overflow = contextOverflowEvidence(request, info);
+    // A rejected request was never processed: do not project (or bill) an estimate for it. The retry
+    // records the call that actually ran; a provider that did report usage keeps it.
+    if (overflow && usage === undefined) usageRecorded = true;
     await recordTurnUsage();
     session.emit({
       type: "turn.completed",
@@ -386,6 +418,11 @@ export async function generateProviderTurn(
       usage: effectiveUsage,
       error: info,
     });
+    if (overflow) {
+      const counts = { ...overflow, ...(started ? { started: true } : {}) };
+      if (started) throw new ContextOverflowError(contextOverflowMessage(counts), counts, info);
+      throw new ProviderOverflowRecovery(info, counts);
+    }
     if (error instanceof ProviderTurnFailure) throw error;
     throw new ProviderTurnFailure(info, started);
   } finally {

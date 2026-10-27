@@ -43,3 +43,6 @@ dist-bin/
 
 # Consented memory-bench recordings and extractor cache (never commit).
 /.cache/
+
+# context-rot task workspaces (temporary fixture copies)
+scripts/context-rot/.work/

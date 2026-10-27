@@ -15,6 +15,7 @@
  * so a host can keep using the algorithms after the kernel surface is gone.
  */
 
+export * from "./accounting.js";
 export * from "./attention.js";
 export * from "./attention-types.js";
 export * from "./budget.js";

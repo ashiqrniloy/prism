@@ -34,6 +34,8 @@ export interface IndexedFile {
   readonly dir: string;
   /** Trust-scan flags from the last indexed version; lets the store log a `flagged` transition. */
   readonly flags?: readonly string[];
+  /** Why this version cannot read the note (for example `version>1`); the file is kept as written. */
+  readonly unreadable?: string;
 }
 
 export type FileMap = Record<string, IndexedFile>;

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "provider": "openai-codex",
+  "model": "gpt-6.1-sol",
+  "affinity": true,
+  "requestedTurns": 4,
+  "requests": 4,
+  "stablePrefixTokens": 8336,
+  "stablePrefixTokensSource": "reported-first-request",
+  "minimumPrefixTokens": 8192,
+  "outputTokensLimit": 128,
+  "turns": [
+    {
+      "turn": 1,
+      "inputTokens": 8336,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 3611.18488
+    },
+    {
+      "turn": 2,
+      "inputTokens": 8354,
+      "cacheReadTokens": 8192,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 4483.839949
+    },
+    {
+      "turn": 3,
+      "inputTokens": 8372,
+      "cacheReadTokens": 8192,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 3032.934203999999
+    },
+    {
+      "turn": 4,
+      "inputTokens": 8390,
+      "cacheReadTokens": 8192,
+      "cacheWriteTokens": null,
+      "stablePrefixTokens": 8336,
+      "latencyMs": 5483.491343
+    }
+  ],
+  "status": "measured",
+  "reuse": 0.982725527831094
+}

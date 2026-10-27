@@ -1,15 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import type { SessionEntry } from "@arnilo/prism";
-import {
-  type MemoryObservation,
-  type MemoryReflection,
-  OBSERVATIONS_DROPPED,
-  OBSERVATIONS_RECORDED,
-  REFLECTIONS_RECORDED,
-  recallObservationalMemory,
-  recallObservationalMemoryBranchPage,
-} from "../index.js";
+import { type MemoryObservation, type MemoryReflection, OBSERVATIONS_RECORDED, REFLECTIONS_RECORDED, recallObservationalMemoryBranchPage } from "../index.js";
+import { OBSERVATIONS_DROPPED } from "../types.js";
+import { recallObservationalMemory } from "../recall.js";
 
 const source: SessionEntry = {
   id: "m1",

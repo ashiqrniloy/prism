@@ -450,6 +450,8 @@ export const ADAPTER_TABLE_NAMES = [
   "prism_tool_calls",
   "prism_usage",
   "prism_run_feedback",
+  "prism_evaluations",
+  "prism_experiment_reports",
   "prism_retention_policies",
   "prism_legal_holds",
   "prism_tenant_quotas",
@@ -484,6 +486,15 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_usage_session_recorded_idx",
   "prism_usage_session_scope_recorded_idx",
   "prism_run_feedback_owner_created_idx",
+  "prism_evaluations_owner_created_idx",
+  "prism_evaluations_run_created_idx",
+  "prism_evaluations_experiment_created_idx",
+  "prism_evaluations_dataset_created_idx",
+  "prism_evaluations_session_created_idx",
+  "prism_evaluations_scorer_created_idx",
+  "prism_experiment_reports_owner_created_idx",
+  "prism_experiment_reports_dataset_created_idx",
+
   "prism_run_feedback_run_created_idx",
   "prism_run_feedback_trace_created_idx",
   "prism_agent_definitions_name_version_idx",
@@ -492,3 +503,38 @@ export const ADAPTER_INDEX_NAMES = [
   "prism_tenant_quotas_owner_kind_idx",
   "prism_migrations_name_version_idx",
 ] as const;
+
+export function buildMigration011Ddl(schema: string): string {
+  return `
+CREATE TABLE IF NOT EXISTS ${qualifyTable(schema, "prism_evaluations")} (
+  id TEXT PRIMARY KEY NOT NULL,
+  tenant_id TEXT, account_id TEXT, user_id TEXT,
+  scorer_id TEXT NOT NULL,
+  session_id TEXT,
+  run_id TEXT,
+  experiment_id TEXT,
+  dataset_id TEXT,
+  item_id TEXT,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  record TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS prism_evaluations_owner_created_idx ON ${qualifyTable(schema, "prism_evaluations")} (tenant_id, account_id, user_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_evaluations_run_created_idx ON ${qualifyTable(schema, "prism_evaluations")} (run_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_evaluations_experiment_created_idx ON ${qualifyTable(schema, "prism_evaluations")} (experiment_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_evaluations_dataset_created_idx ON ${qualifyTable(schema, "prism_evaluations")} (dataset_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_evaluations_session_created_idx ON ${qualifyTable(schema, "prism_evaluations")} (session_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_evaluations_scorer_created_idx ON ${qualifyTable(schema, "prism_evaluations")} (scorer_id, created_at, id);
+CREATE TABLE IF NOT EXISTS ${qualifyTable(schema, "prism_experiment_reports")} (
+  id TEXT PRIMARY KEY NOT NULL,
+  tenant_id TEXT, account_id TEXT, user_id TEXT,
+  dataset_id TEXT NOT NULL,
+  dataset_version TEXT,
+  dataset_content_hash TEXT,
+  created_at TEXT NOT NULL,
+  record TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS prism_experiment_reports_owner_created_idx ON ${qualifyTable(schema, "prism_experiment_reports")} (tenant_id, account_id, user_id, created_at, id);
+CREATE INDEX IF NOT EXISTS prism_experiment_reports_dataset_created_idx ON ${qualifyTable(schema, "prism_experiment_reports")} (dataset_id, created_at, id);
+`;
+}

@@ -2,15 +2,12 @@ import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { providerDone, providerToolCall, toolCallContent, type SessionEntry, type ProviderRequest, type JsonObject } from "@arnilo/prism";
 import { clientFor } from "./helpers.js";
-import {
-  runObserver,
-  runReflector,
-  serializeSourceEntries,
-  foldObservationalMemoryLedger,
-  renderObservationalMemory,
-  observationalMemoryBlock,
-  type MemoryObservation,
-} from "../index.js";
+import { foldObservationalMemoryLedger, type MemoryObservation } from "../index.js";
+import { runObserver } from "../workers/observer.js";
+import { runReflector } from "../workers/reflector.js";
+import { serializeSourceEntries } from "../serialize.js";
+import { renderObservationalMemory } from "../render.js";
+import { observationalMemoryBlock } from "../context.js";
 
 const first: SessionEntry = {
   id: "m1",
@@ -170,7 +167,8 @@ it("task_state_recall_withholds_revoked_sources_and_render_preserves_tail", asyn
 });
 
 it("flush_persists_supersession_and_latest_task_state_without_extra_model_call", async () => {
-  const { createObservationalFlush, resolveMemoryObservationalConfig, activeObservations } = await import("../index.js");
+  const { resolveMemoryObservationalConfig, activeObservations } = await import("../index.js");
+  const { createObservationalFlush } = await import("../flush.js");
   const data: import("@arnilo/prism").JsonValue[] = [JSON.parse(JSON.stringify({ type: "om.observations.recorded", observations: [old] }))];
   let calls = 0;
   const session = { id: "s", entries: async () => [first, last] } as unknown as import("@arnilo/prism").SessionContext;

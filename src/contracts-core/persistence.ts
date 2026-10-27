@@ -12,7 +12,7 @@ import type {
   UsageScope,
 } from "../contracts-protocol.js";
 import type { AgentDefinition } from "./agent.js";
-import type { JsonObject } from "./content.js";
+import type { ErrorInfo, JsonObject, Usage } from "./content.js";
 import type { SessionBranchRead, SessionEntry, SessionEntryKind, SessionStore } from "./session.js";
 
 export interface StoreFactory {
@@ -125,6 +125,114 @@ export interface RunFeedbackStore {
   append(input: AppendRunFeedbackInput): Promise<RunFeedbackRecord>;
   query(query: RunFeedbackQuery): Promise<PersistencePage<RunFeedbackRecord>>;
   delete(input: DeleteRunFeedbackInput): Promise<boolean>;
+}
+
+export type EvaluationStatus = "scored" | "skipped" | "failed";
+
+/** Persisted evaluation row linked to run/session/trace IDs. */
+export interface EvaluationRecord extends OwnershipScope {
+  readonly id: string;
+  readonly scorerId: string;
+  readonly status: EvaluationStatus;
+  readonly score?: number;
+  readonly reason?: string;
+  readonly sampled: boolean;
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly traceId?: string;
+  readonly datasetId?: string;
+  readonly itemId?: string;
+  readonly experimentId?: string;
+  readonly stepId?: string;
+  readonly nodeId?: string;
+  readonly error?: ErrorInfo;
+  readonly createdAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Cursor-paginated evaluation query. */
+export interface EvaluationQuery extends PersistenceQuery, OwnershipScope {
+  readonly id?: string;
+  readonly scorerId?: string;
+  readonly sessionId?: string;
+  readonly runId?: string;
+  readonly experimentId?: string;
+  readonly datasetId?: string;
+  readonly itemId?: string;
+  readonly status?: EvaluationStatus | readonly EvaluationStatus[];
+  readonly signal?: AbortSignal;
+}
+
+/** Persistence seam for evaluation records. */
+export interface EvaluationStore {
+  append(record: EvaluationRecord): Promise<void> | void;
+  query(query?: EvaluationQuery): Promise<PersistencePage<EvaluationRecord>>;
+}
+
+/** Content-free experiment summary, bounded by the store codec to 1 MiB. */
+export interface ExperimentReportRecord extends OwnershipScope {
+  readonly id: string;
+  readonly datasetId: string;
+  readonly datasetVersion?: string;
+  readonly datasetContentHash?: string;
+  readonly manifest?: {
+    readonly promptId?: string;
+    readonly promptVersion?: string;
+    readonly toolFingerprint?: string;
+    readonly skillsRevision?: string;
+    readonly model?: string;
+    readonly policyRevision?: string;
+    readonly runtimeRevision: string;
+    readonly datasetVersion: string;
+    readonly datasetContentHash?: string;
+  };
+  /** Numeric aggregate statistics only; no item content, reasons, or record metadata. */
+  readonly aggregate: {
+    readonly itemCount: number;
+    readonly scoredCount: number;
+    readonly skippedCount: number;
+    readonly failedCount: number;
+    readonly macroMean?: number;
+    readonly scorers: Readonly<Record<string, {
+      readonly items: number;
+      readonly records: number;
+      readonly mean: number;
+      readonly passRate: number;
+      readonly passAtK?: Readonly<Record<number, number>>;
+      readonly passHatK?: Readonly<Record<number, number>>;
+      readonly passKCounts?: Readonly<Record<number, { readonly items: number; readonly excludedItems: number }>>;
+      readonly se?: number;
+      readonly ci95?: { readonly low: number; readonly high: number };
+      readonly judgeAgreement?: number;
+      readonly method: "single_item" | "wilson" | "cluster_bootstrap";
+    }>>;
+    readonly cost?: Omit<Usage, "metadata" | "confidence"> & {
+      readonly costComplete: boolean;
+      readonly meanPerItem: Omit<Usage, "metadata" | "confidence"> & { readonly durationMs?: number };
+      readonly durationMs?: { readonly p50: number; readonly p95: number };
+    };
+    readonly byTag?: Readonly<Record<string, { readonly scorers: ExperimentReportRecord["aggregate"]["scorers"] }>>;
+    readonly invariantsPassed?: boolean;
+  };
+  readonly itemMeans: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  readonly createdAt: string;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/** Manifest matching compares each supplied field by exact value. Ownership is always exact. */
+export interface ExperimentReportQuery extends PersistenceQuery, OwnershipScope {
+  readonly id?: string;
+  readonly datasetId?: string;
+  readonly datasetVersion?: string;
+  readonly datasetContentHash?: string;
+  readonly manifestMatch?: Partial<NonNullable<ExperimentReportRecord["manifest"]>>;
+  readonly signal?: AbortSignal;
+}
+
+export interface ExperimentReportStore {
+  append(record: ExperimentReportRecord): Promise<void> | void;
+  query(query?: ExperimentReportQuery): Promise<PersistencePage<ExperimentReportRecord>>;
+  latest(query: ExperimentReportQuery & { readonly datasetId: string }): Promise<ExperimentReportRecord | undefined>;
 }
 
 /** Stored agent definition version. Does not include provider credentials/resolvers/provider instances. */
@@ -296,6 +404,8 @@ export interface ProductionPersistenceStore {
   readonly name?: string;
   /** Optional immutable run/trace feedback storage capability. */
   readonly feedback?: RunFeedbackStore;
+  readonly evaluations?: EvaluationStore;
+  readonly experiments?: ExperimentReportStore;
   /** Optional durable, cross-replica-capable event source. */
   readonly events?: AgentEventSource;
   querySessions(query: SessionQuery): Promise<PersistencePage<SessionRecord>>;

@@ -1,0 +1,27 @@
+{
+  "method": "POST",
+  "path": "/responses",
+  "requestBody": {
+    "model": "gpt-test",
+    "instructions": "You are a terse probe assistant.",
+    "input": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Say hello."
+          }
+        ]
+      }
+    ],
+    "stream": true,
+    "store": false,
+    "include": [
+      "reasoning.encrypted_content"
+    ]
+  },
+  "status": 200,
+  "contentType": "text/event-stream",
+  "responseBody": "data: {\"type\":\"response.created\",\"response\":{\"id\":\"resp_text\",\"object\":\"response\",\"status\":\"in_progress\",\"model\":\"gpt-test\",\"output\":[],\"store\":false,\"usage\":null},\"sequence_number\":0}\n\ndata: {\"type\":\"response.in_progress\",\"response\":{\"id\":\"resp_text\",\"object\":\"response\",\"status\":\"in_progress\"},\"sequence_number\":1}\n\ndata: {\"type\":\"response.output_item.added\",\"item\":{\"id\":\"msg_text\",\"type\":\"message\",\"status\":\"in_progress\",\"role\":\"assistant\",\"content\":[]},\"output_index\":0,\"sequence_number\":2}\n\ndata: {\"type\":\"response.content_part.added\",\"item_id\":\"msg_text\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\"},\"sequence_number\":3}\n\ndata: {\"type\":\"response.output_text.delta\",\"item_id\":\"msg_text\",\"output_index\":0,\"content_index\":0,\"delta\":\"Hello\",\"sequence_number\":4}\n\ndata: {\"type\":\"response.output_text.delta\",\"item_id\":\"msg_text\",\"output_index\":0,\"content_index\":0,\"delta\":\", world!\",\"sequence_number\":5}\n\ndata: {\"type\":\"response.metadata\",\"response_id\":\"resp_text\",\"sequence_number\":6,\"metadata\":{}}\n\ndata: {\"type\":\"response.output_text.done\",\"item_id\":\"msg_text\",\"output_index\":0,\"content_index\":0,\"text\":\"Hello, world!\",\"sequence_number\":7}\n\ndata: {\"type\":\"response.content_part.done\",\"item_id\":\"msg_text\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"Hello, world!\"},\"sequence_number\":8}\n\ndata: {\"type\":\"response.output_item.done\",\"item\":{\"id\":\"msg_text\",\"type\":\"message\",\"status\":\"completed\",\"role\":\"assistant\",\"content\":[{\"type\":\"output_text\",\"text\":\"Hello, world!\"}]},\"output_index\":0,\"sequence_number\":9}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_text\",\"object\":\"response\",\"status\":\"completed\",\"usage\":{\"input_tokens\":13,\"input_tokens_details\":{\"cached_tokens\":0},\"output_tokens\":8,\"output_tokens_details\":{\"reasoning_tokens\":0},\"total_tokens\":21},\"output\":[]}}\n\n"
+}

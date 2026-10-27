@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryVectorStore, lexicalCoverage, lexicalDice, lexicalKeys, lexicalTerms, stemLexical } from "../index.js";
+import { createMemoryVectorStore, lexicalCoverage, lexicalDice, lexicalTerms, stemLexical } from "../index.js";
+import { lexicalKeys } from "../lexical.js";
 
 test("lexical_terms_stem_and_drop_stopwords", () => {
   expect([...lexicalTerms("Running the deploys and the Classes, quickly")]).toEqual(["run", "deploy", "class", "quick"]);

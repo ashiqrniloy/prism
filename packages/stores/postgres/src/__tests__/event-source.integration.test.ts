@@ -116,12 +116,13 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const index = qualifyTable(valueSchema, "prism_agent_events_run_sequence_idx");
     const retentionIndex = qualifyTable(valueSchema, "prism_agent_events_owner_timestamp_sequence_idx");
     const events = qualifyTable(valueSchema, "prism_agent_events");
-    await valuePool.query(`DELETE FROM ${migrations} WHERE name IN ($1, $2, $3, $4, $5)`, [
+    await valuePool.query(`DELETE FROM ${migrations} WHERE name IN ($1, $2, $3, $4, $5, $6)`, [
       "006_agent_event_source",
       "007_agent_event_retention_index",
       "008_session_version",
       "009_run_prompt_version",
       "010_session_links",
+      "011_evaluations",
     ]);
     await valuePool.query(`DROP TABLE ${streams}`);
     await valuePool.query(`DROP INDEX ${index}`);
@@ -149,12 +150,13 @@ describeIntegration("PostgreSQL durable agent event source", () => {
     const index = qualifyTable(valueSchema, "prism_agent_events_run_sequence_idx");
     const retentionIndex = qualifyTable(valueSchema, "prism_agent_events_owner_timestamp_sequence_idx");
     const events = qualifyTable(valueSchema, "prism_agent_events");
-    await valuePool.query(`DELETE FROM ${migrations} WHERE name IN ($1, $2, $3, $4, $5)`, [
+    await valuePool.query(`DELETE FROM ${migrations} WHERE name IN ($1, $2, $3, $4, $5, $6)`, [
       "006_agent_event_source",
       "007_agent_event_retention_index",
       "008_session_version",
       "009_run_prompt_version",
       "010_session_links",
+      "011_evaluations",
     ]);
     await valuePool.query(`DROP TABLE ${streams}`);
     await valuePool.query(`DROP INDEX ${index}`);

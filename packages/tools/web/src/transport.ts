@@ -1,4 +1,4 @@
-import { type JsonValue, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
+import { isLoopbackHostname, type JsonValue, redactSecrets, resolveCredentialValue } from "@arnilo/prism";
 import { resolveWebLimits } from "./limits.js";
 import type { ResolvedWebLimits, WebAdapterOptions, WebProvider, WebProviderMetadata } from "./types.js";
 
@@ -33,7 +33,20 @@ export interface WebTransport {
   ): Promise<{ value: unknown; metadata?: WebProviderMetadata }>;
 }
 
-export function createWebTransport(provider: WebProvider, apiOrigin: string, options: WebAdapterOptions): WebTransport {
+/** How a transport authenticates and whether it may reach a plaintext loopback origin. */
+export interface WebTransportOptions {
+  /** Accept an `http://` origin only when its hostname is loopback (SearXNG on the same machine). */
+  readonly allowLoopback?: boolean;
+  /** `bearer` (default), `bot` (`Authorization: Bot <key>`, Kagi v1), or `none` (a keyless backend). */
+  readonly auth?: "bearer" | "bot" | "none";
+}
+
+export function createWebTransport(
+  provider: WebProvider,
+  apiOrigin: string,
+  options: WebAdapterOptions,
+  transport: WebTransportOptions = {},
+): WebTransport {
   const limits = resolveWebLimits(options.limits),
     origin = new URL(apiOrigin).origin;
   const allowed = (options.allowedOrigins ?? [origin]).map((value) => {
@@ -43,8 +56,10 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
     } catch {
       throw new WebToolError("ERR_PRISM_WEB_ORIGIN", "Provider API origin is invalid");
     }
+    // Plaintext is allowed only where it cannot leave the machine: an explicitly opted-in loopback origin.
+    const loopback = parsed.protocol === "http:" && transport.allowLoopback === true && isLoopbackHostname(parsed.hostname);
     if (
-      parsed.protocol !== "https:" ||
+      (!loopback && parsed.protocol !== "https:") ||
       parsed.username ||
       parsed.password ||
       parsed.pathname !== "/" ||
@@ -52,7 +67,7 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
       parsed.hash ||
       value !== parsed.origin
     )
-      throw new WebToolError("ERR_PRISM_WEB_ORIGIN", "Provider API origins must be exact HTTPS origins");
+      throw new WebToolError("ERR_PRISM_WEB_ORIGIN", "Provider API origins must be exact HTTPS origins (loopback HTTP only with allowLoopback)");
     return parsed.origin;
   });
   if (!allowed.includes(origin)) throw new WebToolError("ERR_PRISM_WEB_ORIGIN", `Required ${provider} API origin is not allowed`);
@@ -135,12 +150,14 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
         retry === "idempotent" ? status === 429 || status >= 500 : retry === "safe-post" ? status === 429 : false;
       if (url.origin !== origin) throw new WebToolError("ERR_PRISM_WEB_ORIGIN", `${provider} request origin is not allowed`);
       let credential: string | undefined;
-      try {
-        credential = await resolveCredentialValue(options.credentials, { provider, name: credentialName });
-      } catch {
-        throw new WebToolError("ERR_PRISM_WEB_CREDENTIAL", `${provider} credential resolution failed`);
+      if (transport.auth !== "none") {
+        try {
+          credential = await resolveCredentialValue(options.credentials, { provider, name: credentialName });
+        } catch {
+          throw new WebToolError("ERR_PRISM_WEB_CREDENTIAL", `${provider} credential resolution failed`);
+        }
+        if (!credential) throw new WebToolError("ERR_PRISM_WEB_CREDENTIAL", `${provider} credential is unavailable`);
       }
-      if (!credential) throw new WebToolError("ERR_PRISM_WEB_CREDENTIAL", `${provider} credential is unavailable`);
       const requestBytes = typeof init.body === "string" ? Buffer.byteLength(init.body) : 0;
       if (requestBytes > limits.maxRequestBytes) throw new WebToolError("ERR_PRISM_WEB_LIMIT", "Web request exceeds byte limit");
       for (let attempt = 0; ; attempt++) {
@@ -153,7 +170,13 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
             headers: {
               "content-type": "application/json",
               ...init.headers,
-              ...(provider === "brave" ? { "x-subscription-token": credential } : { authorization: `Bearer ${credential}` }),
+              ...(credential === undefined
+                ? {}
+                : transport.auth === "bot"
+                  ? { authorization: `Bot ${credential}` }
+                  : provider === "brave"
+                    ? { "x-subscription-token": credential }
+                    : { authorization: `Bearer ${credential}` }),
             },
           });
         } catch (error) {
@@ -176,7 +199,7 @@ export function createWebTransport(provider: WebProvider, apiOrigin: string, opt
         }
         const text = await readBoundedText(response, limits.maxResponseBytes, signal);
         try {
-          const value: unknown = redactSecrets(JSON.parse(text), [credential]);
+          const value: unknown = redactSecrets(JSON.parse(text), credential === undefined ? [] : [credential]);
           assertBoundedJson(value, limits.maxJsonDepth, limits.maxJsonProperties, limits.maxResponseBytes);
           return { value, metadata };
         } catch (error) {

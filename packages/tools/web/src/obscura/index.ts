@@ -1,8 +1,21 @@
 export type { ObscuraCdpSession, ObscuraChromium, ObscuraPlaywright } from "./cdp.js";
 export { connectObscuraCdp, endpointFromServeArgs, validateObscuraEndpoint } from "./cdp.js";
 export { isObscuraReadTool } from "./classify.js";
-export type { ObscuraCliRunOptions, ObscuraCliRunResult, ValidateObscuraUrlOptions } from "./cli.js";
-export { runObscuraCli, validateObscuraWebUrl } from "./cli.js";
+export type {
+  ObscuraCliRunOptions,
+  ObscuraCliRunResult,
+  ObscuraVersionProbe,
+  ObscuraVersionProbeOptions,
+  ValidateObscuraUrlOptions,
+} from "./cli.js";
+export {
+  OBSCURA_GUARDED_VERSION,
+  obscuraVersionIsGuarded,
+  parseObscuraVersion,
+  probeObscuraVersion,
+  runObscuraCli,
+  validateObscuraWebUrl,
+} from "./cli.js";
 export { ObscuraError } from "./errors.js";
 export {
   DEFAULT_OBSCURA_PROCESS_LIMITS,

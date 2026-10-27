@@ -427,3 +427,26 @@ test("telemetry field policy errors drop the attribute and never echo the value"
   const attrs = memory.spans.flatMap((span) => Object.entries(span.attributes));
   assert.ok(!JSON.stringify(attrs).includes("secret-value"), "no value may reach the sink on policy error");
 });
+
+
+test("observability_emits_gen_ai_evaluation_result through the structural sink after a run settles", () => {
+  const memory = createInMemoryTelemetry();
+  const instrumentation = createOpenTelemetryInstrumentation({ tracer: memory.tracer, meter: memory.meter });
+  const sink = { handleEvaluation: (evaluation: import("../instrumentation.js").EvaluationTelemetry) => instrumentation.handleEvaluation(evaluation) };
+  instrumentation.handleAgentEvent({ type: "run.started", sessionId: "session", runId: "run" });
+  instrumentation.handleAgentEvent({ type: "run.completed", sessionId: "session", status: "completed", runId: "run" });
+  for (const status of ["scored", "skipped", "failed"] as const) {
+    sink.handleEvaluation({ runId: "run", name: "quality", status, ...(status === "scored" ? { score: 0.75 } : {}), hasReason: status !== "failed" });
+  }
+  const spans = memory.spans.filter(span => span.name === "gen_ai.evaluation.result");
+  assert.equal(spans.length, 3);
+  assert.ok(spans.every(span => span.ended));
+  assert.deepEqual(spans.map(span => span.attributes), ["scored", "skipped", "failed"].map(status => ({
+    "prism.run_id": "run",
+    "gen_ai.evaluation.name": "quality",
+    "prism.evaluation.status": status,
+    "prism.evaluation.has_reason": status !== "failed",
+    ...(status === "scored" ? { "gen_ai.evaluation.score.value": 0.75 } : {}),
+  })));
+  assert.doesNotMatch(JSON.stringify(spans), /explanation|reason_text|metadata|error/);
+});

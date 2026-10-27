@@ -15,8 +15,6 @@ import type {
   InputAssemblyLayout,
   ModelCacheCapabilities,
   ModelProvider,
-  OAuthLoginCallbacks,
-  OAuthProvider,
   PackageCommand,
   PromptCacheHints,
   PromptCacheKind,
@@ -127,21 +125,16 @@ describe("public contracts", () => {
     assert.equal(await credentials.resolve("env:demo", {}), undefined);
   });
 
-  it("host can type OAuth and credentials slot contracts", async () => {
-    const callbacks: OAuthLoginCallbacks = { onPrompt: () => "device" };
-    const oauth: OAuthProvider = {
-      id: "mock-oauth",
-      login: () => ({ access: "access-token", refresh: "refresh-token" }),
-      refresh: (credentials) => ({ ...credentials, access: "refreshed-token" }),
-      getCredential: (credentials) => (credentials.access ? { type: "bearer", value: credentials.access } : undefined),
-    };
+  it("host can type the credentials slot contract", async () => {
     const resolver: CredentialResolver = {
       resolve: (ref) => (ref === "env:DEMO_API_KEY" ? { type: "api_key", value: "demo-key" } : undefined),
+      store: (ref, secret) => void stored.push([ref, secret.value]),
     };
+    const stored: Array<[string, string]> = [];
 
-    assert.equal(await callbacks.onPrompt?.("mode?"), "device");
-    assert.equal((await oauth.login()).access, "access-token");
     assert.equal((await resolver.resolve("env:DEMO_API_KEY", {}))?.value, "demo-key");
+    await resolver.store?.("keyring:demo", { type: "api_key", value: "demo-key" }, {});
+    assert.deepEqual(stored, [["keyring:demo", "demo-key"]]);
   });
 
   it("host can type layered system prompt contracts", () => {

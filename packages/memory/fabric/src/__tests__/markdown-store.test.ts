@@ -15,7 +15,8 @@ import { join } from "node:path";
 import { createAgent, type JsonObject, type ProviderEvent, type ProviderRequest } from "@arnilo/prism";
 import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCallContent } from "@arnilo/prism/testing";
 
-import memoryFabric, { projectResourceId, resolveProjectIdentity, type MemoryFabricConfig } from "../index.js";
+import memoryFabric, { type MemoryFabricConfig } from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
 /** The default project resource: the test process cwd is inside the repo, so identity is stable. */
 const PROJECT_RESOURCE = projectResourceId(resolveProjectIdentity(process.cwd()));

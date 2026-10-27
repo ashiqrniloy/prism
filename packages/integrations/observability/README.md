@@ -44,7 +44,27 @@ When an event carries `origin`, every span it opens also carries `prism.origin.a
 
 The timeline projectors stamp each step with `origin` and add `byOrigin`: steps grouped by agent, then sub-agent. A group with `executedBy: "external"` has `observed: true`: Prism watched that work, it did not execute it.
 
+A host decision on a gated tool call is a `hitl` step. `run.suspended` opens one step per pending decision, `status: "suspended"`, with `metadata.toolCallId`, `toolName`, and `guardrail`; `decision.resolved` settles each matching step to `approved` or `denied` and records `metadata.via` (`inline` or `resume`). A decision whose suspension this timeline never saw — an inline answer, or a durable resume over a fresh timeline — adds a settled step before the tool runs. Decision steps carry the call id, the outcome, and `via` only, never the tool arguments.
+
 `handleDelegation` takes the delegation lifecycle (`started` / `finished` / `error` / `rejected`) with the child's `origin` and opens one `prism.agent.delegate` child span under the parent run, attributed with the same `ORIGIN_ATTRIBUTES`.
+
+## Evaluation telemetry
+
+A host holding a `createOpenTelemetryInstrumentation()` instance can connect evals with
+this structural adapter (no helper or exporter registration is needed):
+
+```ts
+import type { EvaluationTelemetry } from "@arnilo/prism-observability";
+const telemetry = { handleEvaluation: (e: EvaluationTelemetry) => instrumentation.handleEvaluation(e) };
+// Pass telemetry to scoreRun, scoreRunLive, runExperiment, or runScenario.
+```
+
+`handleEvaluation` emits `gen_ai.evaluation.result` with the evaluation name, status,
+optional numeric score, and `hasReason` only. Reasons and model content never become
+attributes. If the run has ended, it emits a finished standalone span; metrics use only
+status labels. A simulator failure before a run uses its evaluation record id for standalone
+correlation. Package setup keeps its instrumentation private: use a host-held instance for
+this adapter. This does not register an SDK/exporter or require a kernel event.
 
 ## Cost
 

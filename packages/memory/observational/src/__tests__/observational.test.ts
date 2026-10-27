@@ -16,7 +16,7 @@ import { providerPackage } from "@arnilo/prism/provider-kit";
 import { packageConformance } from "@arnilo/prism/testing";
 import memoryObservational, { type MemoryObservationalConfig } from "../index.js";
 
-const MODEL = { provider: "main", model: "main-model" };
+const MODEL = { provider: "main", model: "main-model", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 const SECRET = "om-secret-value";
 /** Observer runs on every non-empty tail; the reflector threshold is out of reach unless a test lowers it. */
 const CONFIG: MemoryObservationalConfig = { observer: { model: "observer/om-model", messageTokens: 1 } };
@@ -154,7 +154,11 @@ describe("observational memory package", () => {
     await session.run("one");
     await settle();
     assert.deepEqual(state.models, ["om-model", "om-model"], "the observer answers on its own model");
-    assert.deepEqual(requests.at(-1)?.model, { provider: "main", model: "main-model" }, "the run stays on the session model");
+    assert.deepEqual(
+      requests.at(-1)?.model,
+      { provider: "main", model: "main-model", limits: { contextWindow: 64_000, maxOutputTokens: 0 } },
+      "the run stays on the session model",
+    );
     await session.close();
   });
 

@@ -4,10 +4,11 @@
 
 ### Changed
 
-- `trigger` (plan 157 Task 5): set it to a JSON-safe `CompactionTrigger` and the package registers it as the session's `compaction.when` handler, so the auto gate travels with the package instead of the host. Omitted, no handler is registered and the kernel's `compaction.thresholdEntries` fallback owns the decision. The model-ref config key now accepts a model object as well as a `"provider/model"` string (the outer schema node stays open so the `anyOf` branch validates the keys).
+- `trigger` (plan 157 Task 5): set it to a JSON-safe `CompactionTrigger` and the package registers it as the session's `compaction.when` vote, so the auto gate travels with the package instead of the host. Past the gate it returns `{ compact: true }`, below it `{ compact: false }` (plan 194 Task 2), so the kernel's `compaction.thresholdEntries` fallback — now used only when every handler abstains — cannot override it. Omitted, no handler is registered and the fallback owns the decision. The model-ref config key now accepts a model object as well as a `"provider/model"` string (the outer schema node stays open so the `anyOf` branch validates the keys).
 
 ### Added
 
+- The LLM compactor's stored `compaction` entry now carries `data.trigger` (`"manual"`, `"auto"`, or `"overflow"`), matching the kernel compactor, so a host can tell why a branch was compacted (plan 194 Task 3). Progress events (`compaction.completed`) carry the same value.
 - `@arnilo/prism-memory-compaction` (plan 157 Task 3): the LLM summarization compactor moved out of
   `@arnilo/prism-memory`'s `./compaction/llm` subpath into a source-exported package on the lockstep
   line. The default export is a `definePackage` definition that claims the `compaction` slot and

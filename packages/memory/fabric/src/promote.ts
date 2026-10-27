@@ -20,7 +20,7 @@ export const HARD_PROMOTE_MIN_TURNS_BETWEEN = 1_000;
 export interface MemoryFabricPromoteConfig {
   /** The extractor model; default: the agent's model. */
   readonly model?: string;
-  /** Acceptance floor. Default 0.5 (provisional until plan 188.6). */
+  /** Acceptance floor. Default 0.5, a tuning default. */
   readonly minScore?: number;
   /** Per-term weight overrides; every term defaults to {@link DEFAULT_PROMOTION_WEIGHTS}. */
   readonly weights?: Partial<PromotionWeights>;

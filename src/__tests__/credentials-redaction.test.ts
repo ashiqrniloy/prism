@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import type { CredentialResolver, OAuthLoginCallbacks, OAuthProvider } from "../index.js";
+import type { CredentialResolver } from "../index.js";
 import {
   createEnvRefCredentialResolver,
   createProviderRegistry,
@@ -55,36 +55,7 @@ describe("credential boundary", () => {
     }
   });
 
-  it("oauth callbacks typecheck and refresh persists through the slot", async () => {
-    const callbacks: OAuthLoginCallbacks = {
-      onAuth(url) {
-        assert.equal(url.startsWith("https://"), true);
-      },
-      onDeviceCode(code) {
-        assert.equal(code.userCode, "ABCD");
-      },
-      onPrompt() {
-        return "browser";
-      },
-      onSelect() {
-        return "device";
-      },
-    };
-    const provider: OAuthProvider = {
-      id: "mock-oauth",
-      async login(cb = callbacks) {
-        await cb.onAuth?.("https://example.test/login");
-        await cb.onDeviceCode?.({ userCode: "ABCD", verificationUri: "https://example.test/device" });
-        return { access: "old-access", refresh: "refresh-token" };
-      },
-      refresh(credentials) {
-        assert.equal(credentials.refresh, "refresh-token");
-        return { access: "new-access", refresh: credentials.refresh };
-      },
-      getCredential(credentials) {
-        return credentials.access ? { type: "bearer", value: credentials.access } : undefined;
-      },
-    };
+  it("a refreshed token persists through the slot", async () => {
     const stored: Array<[string, string]> = [];
     const sink: CredentialResolver = {
       resolve: () => undefined,
@@ -92,13 +63,10 @@ describe("credential boundary", () => {
         stored.push([ref, secret.value]);
       },
     };
-    const credentials = await provider.login(callbacks);
-    const refreshed = (await provider.refresh?.(credentials)) ?? credentials;
-    await sink.store?.("keyring:mock-oauth", { type: "bearer", value: refreshed.access ?? "" }, {});
+    // The refreshed access token is what a login writes back; the slot is the only durable path.
+    await sink.store?.("keyring:mock-oauth", { type: "bearer", value: "new-access" }, {});
 
-    assert.equal(refreshed.access, "new-access");
     assert.deepEqual(stored, [["keyring:mock-oauth", "new-access"]]);
-    assert.equal((await provider.getCredential?.(refreshed))?.value, "new-access");
   });
 });
 

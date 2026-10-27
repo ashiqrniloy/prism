@@ -81,10 +81,12 @@ import {
   type MemoryFabricRecallOptions,
   type MemoryFabricRecallResult,
   parseMemoryNoteMetadata,
+  unreadableNoteReason,
 } from "./types.js";
 import { createMemoryWorkingStore } from "./working-memory.js";
 
 export {
+  CONVERSATIONAL_PRESET_REVISION,
   type MemoryFabricConfig,
   type MemoryFabricCoreConfig,
   type MemoryFabricCuesConfig,
@@ -93,13 +95,13 @@ export {
   type MemoryFabricLifecycleConfig,
   type MemoryFabricMarkdownStoreConfig,
   type MemoryFabricPostgresStoreConfig,
+  type MemoryFabricPresetName,
   type MemoryFabricProjectScopeConfig,
   type MemoryFabricScopedConfig,
   type MemoryFabricScopesConfig,
   type MemoryFabricTeamConfig,
   type MemoryFabricToolsConfig,
   memoryFabricConfigSchema,
-  memoryFabricLifecycleSchema,
   type ResolvedFabricCoreOptions,
   type ResolvedFabricExchangesOptions,
   type ResolvedFabricScope,
@@ -113,9 +115,8 @@ export { type MemoryConformanceStores, runMemoryConformance } from "./conformanc
 // The moved 0.12 library surface (fabric, scoped policy, memory, working memory, conformance).
 export * from "./exports.js";
 export { createMemory } from "./memory.js";
-export { type ProjectIdentity, projectResourceId, resolveProjectIdentity } from "./scope/identity.js";
 export * from "./scoped/index.js";
-export { createMemoryWorkingStore, type MemoryWorkingStoreOptions, validateWorkingValue } from "./working-memory.js";
+export { createMemoryWorkingStore, type MemoryWorkingStoreOptions } from "./working-memory.js";
 
 const FABRIC_ENABLED_KEY = "fabric.enabled";
 const TOUCHED_PATHS_KEY = "fabric.touchedPaths";
@@ -137,6 +138,15 @@ const definition = definePackage<MemoryFabricConfig>({
   setup: async (prism) => {
     const config = resolveMemoryFabricConfig(prism.config);
     if (config.scopeWarning !== undefined) prism.status.note("warn", config.scopeWarning);
+    if (config.preset !== undefined) {
+      const { name, revision, overridden } = config.preset;
+      prism.status.note("info", `memory-fabric: preset ${name} revision ${revision}`);
+      // An explicit field replaces the preset's whole value. Turning the archive off contradicts the preset's storage class.
+      if (overridden.length > 0) {
+        const storage = overridden.includes("exchanges") ? " (the preset's exchange archive is overridden)" : "";
+        prism.status.note("warn", `memory-fabric: explicit ${overridden.join(", ")} override preset ${name}${storage}`);
+      }
+    }
     const enabled = prism.state.session<boolean>(FABRIC_ENABLED_KEY, config.enabled);
     // Touched files arm a `path` note's prior. In memory per session; written once per turn on change.
     const touchedState = prism.state.session<JsonObject>(TOUCHED_PATHS_KEY, { paths: [] });
@@ -630,7 +640,7 @@ const definition = definePackage<MemoryFabricConfig>({
     // --- command: toggle this session's fabric without touching another session's state.
     prism.commands.register(createMemoryCommand(enabled));
     prism.commands.register(createMemoryConsolidateCommand(fabric, promoteState));
-    prism.commands.register(createMemoryStatusCommand(lifecycle, promoteState, team));
+    prism.commands.register(createMemoryStatusCommand(lifecycle, promoteState, team, config.preset, stores.unreadable));
     if (team !== undefined) {
       const ui = () => prism.host.ui;
       prism.commands.register(createMemoryShareCommand(team, memory, ui));
@@ -699,6 +709,8 @@ interface ResolvedFabricStores {
   readonly workingStore: WorkingMemoryStore;
   readonly close?: () => void | Promise<void>;
   readonly reindex?: FabricReindex;
+  /** Present on the markdown store: the notes it indexed but this version cannot read, across every scope. */
+  readonly unreadable?: () => MarkdownUnreadableCounts;
   /** Present on the markdown store: creates or updates a resource-level OKF file under its lock. */
   readonly updateResourceFile?: (
     scope: { readonly tenantId: string; readonly resourceId: string },
@@ -731,6 +743,7 @@ async function resolveStore(
     const stores = await createMarkdownMemoryStores({
       root: dir,
       ...(config.limits === undefined ? {} : { limits: config.limits }),
+      classifyNote: (record) => unreadableNoteReason(record.metadata),
     });
     return {
       vectorStore: stores.vectorStore,
@@ -738,6 +751,7 @@ async function resolveStore(
       close: () => stores.close(),
       updateResourceFile: (scope, name, update) => stores.updateResourceFile(scope, name, update),
       writeDerivedFile: (scope, name, body) => stores.writeDerivedFile(scope, name, body),
+      unreadable: () => stores.unreadable(),
       reindex: (options: FabricReindexOptions): Promise<MarkdownReconcileCounts> =>
         options.full ? stores.rebuild({ signal: options.signal }) : stores.reconcile({ signal: options.signal }),
     };
@@ -804,7 +818,12 @@ function scopedRecall(
 }
 
 /** What `memory:reindex` needs from the markdown store, structurally the store's reconcile report. */
-interface MarkdownReconcileCounts {
+interface MarkdownUnreadableCounts {
+  readonly unreadable: number;
+  readonly unreadableReasons: Readonly<Record<string, number>>;
+}
+
+interface MarkdownReconcileCounts extends MarkdownUnreadableCounts {
   readonly indexed: number;
   readonly removed: number;
   readonly malformed: number;
@@ -838,10 +857,16 @@ function createMemoryReindexCommand(reindex: FabricReindex | undefined): Package
       return {
         ok: true,
         ...report,
-        text: `Reindexed ${report.indexed} note(s), removed ${report.removed}, ${report.malformed} malformed${report.complete ? "" : " (partial pass; run memory:reindex again to continue)"}.`,
+        text: `Reindexed ${report.indexed} note(s), removed ${report.removed}, ${report.malformed} malformed${report.unreadable > 0 ? `, ${report.unreadable} unreadable (${formatReasons(report.unreadableReasons)}; written by a newer version, kept as written)` : ""}${report.complete ? "" : " (partial pass; run memory:reindex again to continue)"}.`,
       };
     },
   };
+}
+
+function formatReasons(reasons: Readonly<Record<string, number>>): string {
+  return Object.entries(reasons)
+    .map(([reason, count]) => `${reason}: ${count}`)
+    .join(", ");
 }
 
 /** What `memory:export` and `memory:import` need: the memory, its stores, and the jail root (both refuse without one). */
@@ -1079,7 +1104,13 @@ function createMemoryMaintainCommand(fabric: MemoryFabric): PackageCommand {
   };
 }
 
-function createMemoryStatusCommand(lifecycle: FabricLifecycle, promoteState: SessionState<JsonObject>, team?: FabricTeam): PackageCommand {
+function createMemoryStatusCommand(
+  lifecycle: FabricLifecycle,
+  promoteState: SessionState<JsonObject>,
+  team?: FabricTeam,
+  preset?: ResolvedMemoryFabricConfig["preset"],
+  unreadable?: () => MarkdownUnreadableCounts,
+): PackageCommand {
   const args: JsonSchema = { type: "object", additionalProperties: false, properties: {} };
   return {
     name: "memory:status",
@@ -1087,6 +1118,7 @@ function createMemoryStatusCommand(lifecycle: FabricLifecycle, promoteState: Ses
     args,
     async run(_args: JsonObject, context: PackageCommandContext): Promise<JsonObject> {
       const counts = await lifecycle.census();
+      const unreadableCounts = unreadable?.();
       const teamCounts = team === undefined ? undefined : await team.census();
       const state = context.session ? readPromoteState(promoteState.get(context.session)) : undefined;
       const refused = state?.refused ?? 0;
@@ -1098,10 +1130,12 @@ function createMemoryStatusCommand(lifecycle: FabricLifecycle, promoteState: Ses
       return {
         ok: true,
         ...counts,
+        ...(preset === undefined ? {} : { preset: preset.name, presetRevision: preset.revision }),
+        ...(unreadableCounts === undefined || unreadableCounts.unreadable === 0 ? {} : { ...unreadableCounts }),
         refused,
         ...(teamCounts === undefined ? {} : { team: { ...teamCounts } }),
         ...(last === undefined ? {} : { last: last as unknown as JsonObject }),
-        text: `Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}; ${refused} note(s) refused.${teamText}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
+        text: `${preset === undefined ? "" : `Preset ${preset.name} (revision ${preset.revision}). `}Fabric notes: ${counts.candidate} candidate, ${counts.verified} verified, ${counts.archived} archived${counts.reconsolidate ? `, ${counts.reconsolidate} reconsolidate` : ""}${unreadableCounts?.unreadable ? `, ${unreadableCounts.unreadable} unreadable (${formatReasons(unreadableCounts.unreadableReasons)}; written by a newer version, kept as written)` : ""}; ${refused} note(s) refused.${teamText}${last === undefined ? "" : ` Last pass: ${last.candidates} candidate(s), ${last.accepted} accepted, ${last.written} written, ${last.updated} updated, ${last.exceptions} exception(s), ${last.retired} retired, ${last.modelCalls} model call(s); rejected score ${last.rejected.score}, ephemeral ${last.rejected.ephemeral}, derivable ${last.rejected.derivable}, trust ${last.rejected.trust}, secret ${last.rejected.secret}.${failureText(last)}`}`,
       };
     },
   };

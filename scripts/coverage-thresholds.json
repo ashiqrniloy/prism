@@ -147,10 +147,20 @@
       "branches": null,
       "functions": 95.24
     },
+    "@arnilo/prism-provider-openai-codex": {
+      "lines": 93.5,
+      "branches": null,
+      "functions": 90.39
+    },
     "@arnilo/prism-provider-opencode-go": {
       "lines": 90.99,
       "branches": null,
       "functions": 97.62
+    },
+    "@arnilo/prism-provider-openrouter": {
+      "lines": 93.63,
+      "branches": null,
+      "functions": 95.48
     },
     "@arnilo/prism-provider-typesafe": {
       "lines": 97,

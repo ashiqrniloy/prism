@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "provider": "codex-cli",
+  "harness": "codex-cli 0.164.0",
+  "model": "gpt-6.1-sol",
+  "route": "private chatgpt.com/backend-api/codex (chatgpt auth mode)",
+  "affinity": null,
+  "requestedTurns": 1,
+  "requests": 1,
+  "inputTokens": 17888,
+  "cacheReadTokens": 12288,
+  "cacheWriteTokens": 0,
+  "reuse": 0.6869,
+  "status": "recorded",
+  "source": "plan 204 Task 1 (g): `codex exec --json --ephemeral --skip-git-repo-check \"<prompt>\"` on 2026-10-25, JSONL usage line. The raw JSONL was not kept; these are the numbers recorded from that run, not a re-measurement.",
+  "comparability": "Reference for the harness only: one request, and its 12288 cached tokens are the CLI's own fixed harness block, which the backend keeps warm across runs. It is not a conversation-reuse number. The two-turn run in codex-cli-turn2-2026-10-25.json measures that, and supersedes this cell.",
+  "supersededBy": "codex-cli-turn2-2026-10-25.json (two-turn like-for-like comparison, same model and account)"
+}

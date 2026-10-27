@@ -24,15 +24,9 @@ import {
 import { providerPackage } from "@arnilo/prism/provider-kit";
 import { createHashEmbedder, createMemoryVectorStore } from "@arnilo/prism-memory-core";
 import memoryObservational, { foldObservationalMemoryLedger, REFLECTIONS_RECORDED } from "@arnilo/prism-memory-observational";
-import memoryFabric, {
-  createMemory,
-  createMemoryFabric,
-  createMemoryWorkingStore,
-  encodeMemoryNoteMetadata,
-  MEMORY_NOTE_METADATA_KEY,
-  parseMemoryNoteMetadata,
-  resolvePromoteConfig,
-} from "../index.js";
+import memoryFabric, { createMemory, createMemoryFabric, createMemoryWorkingStore, encodeMemoryNoteMetadata, parseMemoryNoteMetadata } from "../index.js";
+import { MEMORY_NOTE_METADATA_KEY } from "../types.js";
+import { resolvePromoteConfig } from "../promote.js";
 
 const TIMESTAMP = "2026-01-01T00:00:00.000Z";
 const USER_TEXT = "Please keep the retry budget small.";
@@ -125,7 +119,7 @@ function omPackages(): readonly import("@arnilo/prism").PackageInstance[] {
     memoryObservational({
       observer: { model: "scripted/om", messageTokens: 1 },
       reflector: { model: "scripted/om", observationTokens: 1 },
-      context: { compactAfterTokens: 999_999 },
+      context: { compactAt: { maxTokens: 999_999 } },
       worker: { maxTurns: 1 },
     }),
   ];

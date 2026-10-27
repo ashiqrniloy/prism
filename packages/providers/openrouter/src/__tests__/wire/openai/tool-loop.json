@@ -1,0 +1,101 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/v1/chat/completions",
+    "requestBody": {
+      "model": "google/gemma-4-31b-it:free",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply hello"
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get weather",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "location"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"id\":\"gen-synthetic\",\"model\":\"google/gemma-4-31b-it:free\",\"provider\":\"Synthetic\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call-1\",\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"arguments\":\"{\\\"location\\\":\\\"Tokyo\\\"}\"}}]},\"finish_reason\":\"tool_calls\"}],\"usage\":{\"prompt_tokens\":9000,\"completion_tokens\":10,\"total_tokens\":9010,\"cost\":0,\"prompt_tokens_details\":{\"cached_tokens\":0,\"cache_write_tokens\":0}}}\n\ndata: [DONE]\n\n"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chat/completions",
+    "requestBody": {
+      "model": "google/gemma-4-31b-it:free",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Weather in Tokyo?"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call-1",
+              "type": "function",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"location\":\"Tokyo\"}"
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_call_id": "call-1",
+          "content": "cloudy"
+        }
+      ],
+      "stream": true,
+      "stream_options": {
+        "include_usage": true
+      },
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "description": "Get weather",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "location"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "status": 200,
+    "contentType": "text/event-stream",
+    "responseBody": "data: {\"id\":\"gen-synthetic\",\"model\":\"google/gemma-4-31b-it:free\",\"provider\":\"Synthetic\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Tokyo is cloudy.\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":9000,\"completion_tokens\":10,\"total_tokens\":9010,\"cost\":0,\"prompt_tokens_details\":{\"cached_tokens\":0,\"cache_write_tokens\":0}}}\n\ndata: [DONE]\n\n"
+  }
+]

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
 import {
-  createFetchMemo,
   DEFAULT_FETCH_CHARS,
   fetchParameters,
   fetchSliceArgs,
@@ -100,23 +99,5 @@ describe("truncateUtf8Bytes", () => {
     assert.equal(truncateUtf8Bytes("aé", 3), "aé");
     assert.equal(truncateUtf8Bytes("😀", 3), "", "a partial surrogate pair is dropped");
     assert.equal(truncateUtf8Bytes("short", 10), "short");
-  });
-});
-
-describe("createFetchMemo", () => {
-  it("keys by session and URL, bounds entries, and expires after ten minutes", () => {
-    let now = 0;
-    const memo = createFetchMemo<{ page: string }>(() => now);
-    memo.set("s1", "https://a", { page: "A" });
-    assert.equal(memo.get("s1", "https://a")?.page, "A");
-    assert.equal(memo.get("s2", "https://a"), undefined, "another session never reads it");
-    now = 10 * 60_000;
-    assert.equal(memo.get("s1", "https://a")?.page, "A", "the last ten minutes still count");
-    now += 1;
-    assert.equal(memo.get("s1", "https://a"), undefined, "an older page is refetched");
-    for (let i = 0; i < 10; i++) memo.set("s1", `https://${i}`, { page: String(i) });
-    assert.equal(memo.get("s1", "https://10"), undefined);
-    assert.equal(memo.get("s1", "https://0"), undefined, "the oldest entry is evicted first");
-    assert.equal(memo.get("s1", "https://9")?.page, "9");
   });
 });

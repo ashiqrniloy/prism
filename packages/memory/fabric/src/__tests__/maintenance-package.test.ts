@@ -11,13 +11,8 @@ import { describe, it } from "bun:test";
 import { createAgent, createMemorySessionStore, providerDone, providerTextDelta } from "@arnilo/prism";
 import { mockProvider } from "@arnilo/prism/testing";
 import { createSqliteMemoryStores } from "@arnilo/prism-memory-core/sqlite";
-import memoryFabric, {
-  createMemory,
-  createMemoryWorkingStore,
-  encodeMemoryNoteMetadata,
-  projectResourceId,
-  resolveProjectIdentity,
-} from "../index.js";
+import memoryFabric, { createMemory, createMemoryWorkingStore, encodeMemoryNoteMetadata } from "../index.js";
+import { projectResourceId, resolveProjectIdentity } from "../scope/identity.js";
 
 const OTHER_PROJECT = "projects/beta--22222222";
 const LESSON = "Drain the canary pool before every rollback";

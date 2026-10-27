@@ -90,7 +90,8 @@ describeProtected("Phase 7 protected process conformance", () => {
     const database = pool(16);
     const first = await createPostgresPersistence({ pool: database, schema: valueSchema, eventCursorSecret: cursorSecret });
     const input = { ownership, sessionId: "process-session", runId: "process-run" };
-    const received = take(first.events.subscribe(input), 16);
+    // The deadline includes migration/schema checks in all 16 producer processes.
+    const received = take(first.events.subscribe(input), 16, 30_000);
     await Promise.all(
       Array.from({ length: 16 }, (_, index) =>
         runWorker("append", { schema: valueSchema, event: event(`event-${index}`, input.sessionId, input.runId) }),

@@ -90,7 +90,7 @@ function whenTrigger(trigger: CompactionTrigger, sessionModel: ModelConfig = cap
             signal: context.signal,
           },
         );
-        return compact ? { compact: true } : undefined;
+        return compact ? { compact: true } : { compact: false };
       },
       { id: "compaction-trigger" },
     );

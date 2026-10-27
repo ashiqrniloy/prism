@@ -20,7 +20,7 @@ import { browserUnavailable } from "../scenarios/browser-unavailable.js";
 import { writeObscuraFixture } from "../scenarios/fixtures/obscura-fixture.js";
 import { researchCitationsFail, researchCitationsPass } from "../scenarios/research-citations.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 function config(root: string, binary: string): HostConfig {

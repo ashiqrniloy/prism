@@ -38,7 +38,12 @@ import {
 
 import { createObservationalCompactor } from "./compactor.js";
 import { createObservationalMemoryCommands } from "./commands.js";
-import { type MemoryObservationalConfig, memoryObservationalConfigSchema, resolveMemoryObservationalConfig } from "./config.js";
+import {
+  type MemoryObservationalConfig,
+  memoryObservationalConfigSchema,
+  resolveCompactAtThreshold,
+  resolveMemoryObservationalConfig,
+} from "./config.js";
 import { createCompactionContextCache } from "./context-cache.js";
 import { createObservationalFlush, type ObservationalWorkerKind } from "./flush.js";
 import { createObservationalRecallTool } from "./recall-tool.js";
@@ -114,7 +119,8 @@ const definition = definePackage<MemoryObservationalConfig>({
       session.background("om.observe", (signal) => flush.flush(session, { signal }));
     });
 
-    // --- compaction: request it past the configured gate, and compact from the ledger.
+    // --- compaction: request it past the configured gate, and compact from the ledger. While on,
+    // OM answers the vote (`false` below its gate) so the host's fallback does not override it.
     prism.hooks.on("compaction.when", async (payload, context) => {
       const session = context.session;
       if (!session || !read(session).enabled) return undefined;
@@ -126,7 +132,8 @@ const definition = definePackage<MemoryObservationalConfig>({
         if (compacted && typeof compacted === "object" && !Array.isArray(compacted) && coverage && coverage !== compacted.coversUpToId) return { compact: true };
       }
       if (!config.context.trigger) {
-        return (payload.estimatedTokens ?? 0) >= config.context.compactAfterTokens ? { compact: true } : undefined;
+        const threshold = resolveCompactAtThreshold(config.context.compactAt, session.model);
+        return (payload.estimatedTokens ?? 0) >= threshold ? { compact: true } : { compact: false };
       }
       const compact = await resolveShouldCompact(
         { trigger: config.context.trigger },
@@ -139,7 +146,7 @@ const definition = definePackage<MemoryObservationalConfig>({
           signal: context.signal,
         },
       );
-      return compact ? { compact: true } : undefined;
+      return compact ? { compact: true } : { compact: false };
     });
     prism.slots.compaction.provide(
       createObservationalCompactor({

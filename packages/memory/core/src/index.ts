@@ -1,20 +1,177 @@
-// The shared memory library surface. Every module here is internal to the memory packages, so the
-// root re-exports all of it; the Postgres stores are the one heavy dependency and live under
-// `@arnilo/prism-memory-core/postgres` instead.
-export * from "./acl.js";
-export * from "./directory.js";
-export * from "./embedder.js";
-export * from "./errors.js";
-export * from "./lexical.js";
-export * from "./limits.js";
-export * from "./lineage.js";
-export * from "./pagination.js";
-export * from "./propagation.js";
-export * from "./repoint.js";
-export * from "./schema.js";
-export * from "./scoring.js";
-export * from "./types.js";
-export * from "./util.js";
-export * from "./vector-memory.js";
-export * from "./fusion.js";
-export * from "./tail-context.js";
+// The shared memory library surface (plan 188.11 Task 5). Hosts use the stable tier (errors, the hash
+// embedder, the in-memory vector store, revocation and repoint helpers); the rest is the shared
+// tier the sibling memory packages import and carries no host promise. Everything else stays
+// inside the package; its own tests import it by relative path. The Postgres stores are the one
+// heavy dependency and live under `@arnilo/prism-memory-core/postgres`.
+export {
+  assertAccessConstraint,
+} from "./acl.js";
+export {
+  type MemoryDirectoryQuery,
+  type MemoryTagCount,
+  type MemoryTopTagsQuery,
+} from "./directory.js";
+export {
+  createHashEmbedder,
+  embedBatched,
+  type HashEmbedderOptions,
+} from "./embedder.js";
+export {
+  MemoryAbortError,
+  MemoryConflictError,
+  MemoryError,
+  MemoryLimitError,
+  MemoryScopeError,
+  MemoryValidationError,
+} from "./errors.js";
+export {
+  lexicalCoverage,
+  lexicalDice,
+  lexicalMatches,
+  lexicalTerms,
+  stemLexical,
+} from "./lexical.js";
+export {
+  DEFAULT_MAX_ENTRY_TEXT_CHARS,
+  DEFAULT_MEMORY_RETENTION_BATCH,
+  estimateTokens,
+  HARD_MEMORY_RETENTION_BATCH_CAP,
+  HARD_TOP_K_CAP,
+  type MemoryLimits,
+  type MemoryLimitsInput,
+  resolveMemoryLimits,
+} from "./limits.js";
+export {
+  collectInvalidationIds,
+  explainRecord,
+  HARD_INVALIDATION_BATCH,
+  indexInvalidations,
+  listInvalidatedIds,
+  recordBlocked,
+  revokedIdsAbsent,
+  shareGrantAllows,
+  stampLineage,
+  toInvalidationEvent,
+} from "./lineage.js";
+export {
+  createDeletionPropagator,
+  DELETION_REASON,
+  type DeletionPropagationContext,
+  type DeletionPropagationHandler,
+  type DeletionPropagationResult,
+  type DeletionPropagationStore,
+  type DeletionPropagator,
+  type DeletionPropagatorOptions,
+} from "./propagation.js";
+export {
+  applySourceRenames,
+  type ApplySourceRenamesOptions,
+  type ApplySourceRenamesResult,
+  type RepointContext,
+  type RepointHandler,
+  repointSource,
+  type RepointSourceOptions,
+  type RepointSourceResult,
+  type RepointStore,
+  type SourceRename,
+  type SourceRenameEvent,
+} from "./repoint.js";
+export {
+  validateAgainstJsonSchema,
+} from "./schema.js";
+export {
+  deriveEntryImportance,
+  type ImportanceFromReflection,
+  RECALL_OVERSAMPLE,
+  rerankRecallHits,
+  type ResolvedRecallScoring,
+  resolveRecallScoring,
+} from "./scoring.js";
+export {
+  type CreateMemoryOptions,
+  type Embedder,
+  type ExportMemoryOptions,
+  type LexicalMode,
+  type Memory,
+  type MemoryConsent,
+  type MemoryConsentInput,
+  type MemoryConsentScope,
+  type MemoryConsentSource,
+  type MemoryContextProviderOptions,
+  type MemoryEntryInput,
+  type MemoryExportIdentity,
+  type MemoryExportResult,
+  type MemoryInvalidationEvent,
+  type MemoryInvalidationReason,
+  type MemoryInvalidationRecord,
+  type MemoryRecallExplanation,
+  type MemoryRetentionPolicy,
+  type MemoryRetentionResult,
+  type MemoryScope,
+  type MemoryShareGrant,
+  type MemoryVectorHit,
+  type MemoryVectorListQuery,
+  type MemoryVectorMetadataPage,
+  type MemoryVectorMetadataRow,
+  type MemoryVectorOrder,
+  type MemoryVectorPage,
+  type MemoryVectorRecord,
+  type RagAccessConstraint,
+  type RebuildIndexOptions,
+  type RebuildIndexResult,
+  type RecallOptions,
+  type RecallResult,
+  type RecallScoringOptions,
+  type RememberInput,
+  type RememberOptions,
+  type RememberResult,
+  type ScopeCounterKey,
+  type ScopeCounterName,
+  type ScopeCounterStore,
+  type SourceAccessGrant,
+  type StoreDenial,
+  type StoreDenialReason,
+  type VectorDeleteFilter,
+  type VectorLexicalQuery,
+  type VectorListResourcesQuery,
+  type VectorQuery,
+  type VectorScanMetadataQuery,
+  type VectorStore,
+  type WorkingMemoryKey,
+  type WorkingMemoryProcessorOptions,
+  type WorkingMemoryRecord,
+  type WorkingMemoryStore,
+  type WorkingMemoryUpdateMode,
+  type WorkingMemoryUpdateOptions,
+} from "./types.js";
+export {
+  assertByteLimit,
+  assertFiniteVector,
+  assertNotAborted,
+  assertSameScope,
+  assertTextLimit,
+  byteLengthOfJson,
+  cloneJsonObject,
+  contentToText,
+  latestUserText,
+  mergeJsonObjects,
+  redactJson,
+  renderTemplate,
+  requireNonEmptyString,
+  requireScope,
+  scopeKey,
+} from "./util.js";
+export {
+  createMemoryVectorStore,
+  type MemoryVectorStoreOptions,
+  selectAdjacentRecords,
+  tokenizeLexical,
+} from "./vector-memory.js";
+export {
+  type FusedCandidate,
+  fuseRankings,
+  type RetrievalLeg,
+} from "./fusion.js";
+export {
+  withTailContext,
+} from "./tail-context.js";

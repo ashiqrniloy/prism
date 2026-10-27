@@ -18,22 +18,33 @@ export interface ObscuraSearchProfile {
   readonly extractionJs: string;
 }
 
-const DEFAULT_EXTRACTION_JS = `JSON.stringify(
-  [...document.querySelectorAll('#links .result')].slice(0, 50).map((r) => ({
-    url: r.querySelector('a.result__a')?.href ?? '',
-    title: r.querySelector('a.result__a')?.textContent?.trim() ?? '',
-    snippet: r.querySelector('.result__snippet')?.textContent?.trim() ?? '',
-  }))
-)`;
+const DEFAULT_EXTRACTION_JS = `(() => {
+  const blocked = Boolean(document.querySelector('.anomaly-modal, [data-testid="anomaly-modal"]'));
+  const results = [...document.querySelectorAll('#links .result:not(.result--ad):not(.result--sponsored)')].slice(0, 50).map((r) => {
+    const a = r.querySelector('a.result__a');
+    const href = a?.getAttribute('href') ?? '';
+    let url = href;
+    try {
+      const target = new URL(href, location.href);
+      if (target.pathname === '/l/') url = target.searchParams.get('uddg') ?? href;
+    } catch {}
+    return {
+      url,
+      title: a?.textContent?.trim() ?? '',
+      snippet: r.querySelector('.result__snippet')?.textContent?.trim() ?? '',
+    };
+  });
+  return JSON.stringify({ blocked, results });
+})()`;
 
 /** DuckDuckGo `df` windows. */
 const DDG_FRESHNESS: Readonly<Record<string, string>> = { day: "d", week: "w", month: "m", year: "y" };
 
 export const DEFAULT_OBSCURA_SEARCH_PROFILE: ObscuraSearchProfile = {
   id: "default",
-  // DuckDuckGo HTML endpoint: no JS requirement, stable result markup.
+  // DuckDuckGo HTML endpoint: no JS requirement, stable result markup; duckduckgo.com/html/ only 302s here.
   searchUrl: (query, controls = {}) => {
-    const url = new URL("https://duckduckgo.com/html/");
+    const url = new URL("https://html.duckduckgo.com/html/");
     url.searchParams.set("q", query);
     if (controls.freshness !== undefined) url.searchParams.set("df", DDG_FRESHNESS[controls.freshness]!);
     // `kl` is a region-language pair, so both controls travel in it; the wildcard region is DDG's "any".

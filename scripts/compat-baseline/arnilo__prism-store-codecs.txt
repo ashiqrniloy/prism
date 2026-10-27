@@ -7,6 +7,9 @@ DEFAULT_MAX_FEEDBACK_LINKS	export declare const DEFAULT_MAX_FEEDBACK_LINKS = 16
 DEFAULT_MAX_FEEDBACK_METADATA_BYTES	export declare const DEFAULT_MAX_FEEDBACK_METADATA_BYTES = 16384
 DEFAULT_MAX_FEEDBACK_TAGS	export declare const DEFAULT_MAX_FEEDBACK_TAGS = 16
 DEFAULT_MAX_HOLD_REASON_BYTES	export declare const DEFAULT_MAX_HOLD_REASON_BYTES = 1024
+EvaluationStoreError	export declare class EvaluationStoreError extends Error
+HARD_EVALUATION_RECORD_BYTES	export declare const HARD_EVALUATION_RECORD_BYTES: number
+HARD_EXPERIMENT_REPORT_BYTES	export declare const HARD_EXPERIMENT_REPORT_BYTES: number
 HARD_FEEDBACK_PAGE_SIZE	export declare const HARD_FEEDBACK_PAGE_SIZE = 500
 HARD_LIFECYCLE_PAGE_SIZE	export declare const HARD_LIFECYCLE_PAGE_SIZE = 500
 HARD_MAX_FEEDBACK_COMMENT_BYTES	export declare const HARD_MAX_FEEDBACK_COMMENT_BYTES = 16384
@@ -19,7 +22,7 @@ LeaseConflictError	export declare class LeaseConflictError extends Error
 MAX_FEEDBACK_ID_LENGTH	export declare const MAX_FEEDBACK_ID_LENGTH = 128
 MAX_FEEDBACK_TAG_LENGTH	export declare const MAX_FEEDBACK_TAG_LENGTH = 64
 PARAMETERIZED_QUERY_GUIDANCE	export declare const PARAMETERIZED_QUERY_GUIDANCE = "Bind every user-supplied value (session ids, idempotency keys, tenant ids, timestamps, JSON payloads) as a query parameter. Quote/validate schema and table identifiers only
-PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 10
+PERSISTENCE_SCHEMA_VERSION	export declare const PERSISTENCE_SCHEMA_VERSION = 11
 PersistenceLifecycleError	export declare class PersistenceLifecycleError extends Error
 RunFeedbackError	export declare class RunFeedbackError extends Error
 SESSION_LINK_COLUMN_NAMES	export declare const SESSION_LINK_COLUMN_NAMES: readonly ["parent_session_id", "agent_id", "workflow_run_id", "delegation_id", "actor_kind", "actor_agent", "actor_vendor"]
@@ -41,6 +44,8 @@ assertPersistenceSchemaShape	export declare function assertPersistenceSchemaShap
 assertTenantScopedQueryIsolation	export declare function assertTenantScopedQueryIsolation(queryByTenant: (tenantId: string) => Promise<readonly
 canonicalSessionTimestamp	export declare function canonicalSessionTimestamp(value: string): string
 clipSearchSnippet	export declare function clipSearchSnippet(value: string | undefined): string | undefined
+createMemoryEvaluationStore	export declare function createMemoryEvaluationStore(initial?: readonly EvaluationRecord[], options?: EvaluationCodecOptions): EvaluationStore
+createMemoryExperimentReportStore	export declare function createMemoryExperimentReportStore(initial?: readonly ExperimentReportRecord[], options?: EvaluationCodecOptions): ExperimentReportStore
 createMemoryRunFeedbackStore	export declare function createMemoryRunFeedbackStore(options: MemoryRunFeedbackStoreOptions): RunFeedbackStore
 createPersistenceMigrationContract	export declare function createPersistenceMigrationContract(): PersistenceMigrationContract
 createPersistenceSchemaModel	export declare function createPersistenceSchemaModel(): PersistenceSchemaModel
@@ -51,6 +56,7 @@ deepFreeze	export declare function deepFreeze<T>(value: T): T
 encodeBranchCursor	export declare function encodeBranchCursor(offset: number): string
 encodeCheckpointJson	export declare function encodeCheckpointJson(value: unknown, label: string): string
 entrySearchFields	export declare function entrySearchFields(entry: SessionEntry):
+evaluationStoreConformance	export declare function evaluationStoreConformance(factory: () =>
 getPersistencePaginationCursors	export declare function getPersistencePaginationCursors(): readonly PersistencePaginationCursor[]
 lifecyclePageLimit	export declare function lifecyclePageLimit(limit?: number): number
 ownershipColumns	export declare function ownershipColumns(scope: OwnershipScope): [string, string][]
@@ -58,6 +64,8 @@ ownershipScope	export declare function ownershipScope(input: OwnershipScope): Ow
 ownershipScopeMatches	export declare function ownershipScopeMatches(expected: OwnershipScope, actual: OwnershipScope): boolean
 parseSessionMetadata	export declare function parseSessionMetadata(raw: string | null): Readonly<Record<string, unknown>> | undefined
 parseStringArray	export declare function parseStringArray(value: unknown): string[]
+prepareEvaluationRecord	export declare function prepareEvaluationRecord(record: EvaluationRecord, options?: EvaluationCodecOptions): EvaluationRecord
+prepareExperimentReportRecord	export declare function prepareExperimentReportRecord(record: ExperimentReportRecord, options?: EvaluationCodecOptions): ExperimentReportRecord
 prepareRunFeedback	export declare function prepareRunFeedback(input: AppendRunFeedbackInput, options: PrepareRunFeedbackOptions): Promise<RunFeedbackRecord>
 requireRunFeedbackOwnership	export declare function requireRunFeedbackOwnership(input: OwnershipScope): Required<Pick<OwnershipScope, "tenantId">> & OwnershipScope
 rowToRunFeedbackRecord	export declare function rowToRunFeedbackRecord(row: Record<string, unknown>): RunFeedbackRecord

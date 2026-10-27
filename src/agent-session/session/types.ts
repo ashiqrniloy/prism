@@ -105,6 +105,8 @@ export type SessionHost = {
   appendMessage(message: Message, runId: string): Promise<void>;
   autoCompact(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void>;
   autoCompactTurn(runId: string, options: ResolvedRunOptions, signal: AbortSignal, turn: number): Promise<void>;
+  /** Overflow recovery: compact regardless of `compaction.when`; a failure propagates (plan 194 Task 3). */
+  compactOverflow(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void>;
   activeLoopHistory?: Message[];
   applyPendingSteers(runId: string, metadata: Readonly<Record<string, unknown>>, signal: AbortSignal): Promise<boolean>;
   drainSteers(runId: string, signal: AbortSignal): Promise<readonly Message[]>;

@@ -34,6 +34,7 @@ export {
   MIGRATION_008_SESSION_VERSION,
   MIGRATION_009_RUN_PROMPT_VERSION,
   MIGRATION_010_SESSION_LINKS,
+  MIGRATION_011_EVALUATIONS,
 } from "./ddl.js";
 export { createSqliteLeaseStore } from "./leases.js";
 export { createSqlitePersistenceLifecycle } from "./lifecycle.js";

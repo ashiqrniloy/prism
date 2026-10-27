@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { type ArtifactCitation, HARD_CITATION_EXCERPT_BYTES } from "@arnilo/prism";
 import { WebToolError } from "./transport.js";
-import type { WebCitation, WebProvider, WebProviderMetadata, WebSearchResult } from "./types.js";
+import type { WebCitation, WebProvider, WebProviderMetadata, WebSearchProvider, WebSearchResult } from "./types.js";
 
 export function canonicalUrl(input: string): string {
   let url: URL;
@@ -59,13 +59,14 @@ export function snapshotWebEvidence(input: {
 }
 /** Result rows only: provider/rate facts stay once at the response's top level, never per result. */
 export function normalizeSearchResults(
-  provider: "brave" | "exa",
+  provider: WebSearchProvider,
   _query: string,
   raw: unknown,
   maxResults: number,
 ): readonly WebSearchResult[] {
   const root = object(raw),
-    list = provider === "brave" ? object(root.web).results : root.results;
+    fields = SEARCH_FIELDS[provider],
+    list = fields.list(root);
   if (!Array.isArray(list)) throw new WebToolError("ERR_PRISM_WEB_RESPONSE", `${provider} response has no results`);
   const seen = new Set<string>(),
     retrievedAt = new Date().toISOString(),
@@ -83,14 +84,27 @@ export function normalizeSearchResults(
     out.push({
       ...base,
       title: text(item.title),
-      snippet: text(provider === "brave" ? item.description : item.text),
+      snippet: text(item[fields.snippet]),
       highlights,
-      publishedAt: text(provider === "brave" ? item.page_age : item.publishedDate),
+      publishedAt: text(item[fields.publishedAt]),
       retrievedAt,
     });
   }
   return out;
 }
+/** Where each backend keeps its rows, snippet, and publish date. One table instead of per-provider ternaries. */
+const SEARCH_FIELDS: Readonly<Record<WebSearchProvider, {
+  readonly list: (root: Record<string, unknown>) => unknown;
+  readonly snippet: string;
+  readonly publishedAt: string;
+}>> = {
+  brave: { list: (root) => object(root.web).results, snippet: "description", publishedAt: "page_age" },
+  exa: { list: (root) => root.results, snippet: "text", publishedAt: "publishedDate" },
+  searxng: { list: (root) => root.results, snippet: "content", publishedAt: "publishedDate" },
+  tavily: { list: (root) => root.results, snippet: "content", publishedAt: "published_date" },
+  kagi: { list: (root) => object(root.data).search, snippet: "snippet", publishedAt: "time" },
+};
+
 export function object(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value))
     throw new WebToolError("ERR_PRISM_WEB_RESPONSE", "Provider returned an invalid object");

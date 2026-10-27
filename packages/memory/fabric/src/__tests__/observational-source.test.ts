@@ -69,7 +69,7 @@ describe("memory fabric observational source", () => {
         memoryObservational({
           observer: { model: "worker/om-model", messageTokens: 1 },
           reflector: { model: "worker/om-model", observationTokens: 1 },
-          context: { compactAfterTokens: 999_999 },
+          context: { compactAt: { maxTokens: 999_999 } },
           worker: { maxTurns: 1 },
         }),
       ],

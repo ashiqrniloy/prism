@@ -8,6 +8,7 @@
     "prism-agent": "./bin/prism-agent.ts"
   },
   "scripts": {
+    "eval:baseline": "bun src/evals/suite.ts --write-baseline",
     "test": "bun ../../scripts/with-build-lock.mjs --shared bun test --parallel=4 --timeout=0 src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -15,14 +16,18 @@
     "@arnilo/prism-acp": "workspace:*",
     "@arnilo/prism-approval": "workspace:*",
     "@arnilo/prism-channels": "workspace:*",
+    "@arnilo/prism-context-engineering": "workspace:*",
     "@arnilo/prism-context-files": "workspace:*",
     "@arnilo/prism-delegate": "workspace:*",
     "@arnilo/prism-driver-process": "workspace:*",
+    "@arnilo/prism-evals": "workspace:*",
     "@arnilo/prism-headless": "workspace:*",
     "@arnilo/prism-hooks-json": "workspace:*",
     "@arnilo/prism-memory-compaction": "workspace:*",
+    "@arnilo/prism-memory-fabric": "workspace:*",
     "@arnilo/prism-memory-observational": "workspace:*",
     "@arnilo/prism-memory-rag": "workspace:*",
+    "@arnilo/prism-provider-hyper": "workspace:*",
     "@arnilo/prism-remote": "workspace:*",
     "@arnilo/prism-store-sqlite": "workspace:*",
     "@arnilo/prism-tools-browser": "workspace:*",

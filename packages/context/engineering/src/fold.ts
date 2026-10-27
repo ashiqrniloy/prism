@@ -1,10 +1,12 @@
 import type { Message, } from "@arnilo/prism";
-import { estimateTextBytes } from "@arnilo/prism";
+import { estimateTextBytes, estimateTextTokens } from "@arnilo/prism";
 
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS = 2;
 export const DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES = 4_096;
 export const DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 512;
 export const HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES = 4_096;
+export const DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST = 3;
+export const DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS = 0;
 
 export const TOOL_RESULT_FOLD_TURN_METADATA_KEY = "prismToolResultTurn" as const;
 
@@ -21,6 +23,12 @@ export interface ToolResultFoldOptions {
   readonly minAgeTurns?: number;
   readonly minBytes?: number;
   readonly maxSummaryBytes?: number;
+  /** Newest tool results batch mode never folds; ignored when `clearAtLeastTokens` is `0`. */
+  readonly keepLast?: number;
+  /** Tool names never folded. */
+  readonly excludeTools?: readonly string[];
+  /** Batch size in tokens. `0` keeps the per-turn behavior (fold every eligible result). */
+  readonly clearAtLeastTokens?: number;
   readonly summarize: (input: ToolResultFoldInput) => Promise<string> | string;
 }
 
@@ -28,6 +36,9 @@ export interface ResolvedToolResultFoldOptions {
   readonly minAgeTurns: number;
   readonly minBytes: number;
   readonly maxSummaryBytes: number;
+  readonly keepLast: number;
+  readonly excludeTools: readonly string[];
+  readonly clearAtLeastTokens: number;
   readonly summarize: (input: ToolResultFoldInput) => Promise<string> | string;
 }
 
@@ -36,6 +47,8 @@ export interface FoldToolResultsContext {
   readonly runId: string;
   readonly turn: number;
   readonly signal?: AbortSignal;
+  /** When set, only these tool-call ids are folded; every other row is returned untouched. */
+  readonly restrictToToolCallIds?: ReadonlySet<string>;
 }
 
 /** Run overrides agent; disabled when neither supplies `summarize`. */
@@ -48,13 +61,24 @@ export function resolveToolResultFold(
   const minAgeTurns = options.minAgeTurns ?? DEFAULT_TOOL_RESULT_FOLD_MIN_AGE_TURNS;
   const minBytes = options.minBytes ?? DEFAULT_TOOL_RESULT_FOLD_MIN_BYTES;
   const maxSummaryBytes = options.maxSummaryBytes ?? DEFAULT_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES;
+  const keepLast = options.keepLast ?? DEFAULT_TOOL_RESULT_FOLD_KEEP_LAST;
+  const clearAtLeastTokens = options.clearAtLeastTokens ?? DEFAULT_TOOL_RESULT_FOLD_CLEAR_AT_LEAST_TOKENS;
   assertPositiveInt(minAgeTurns, "minAgeTurns", 1, 1_024);
   assertPositiveInt(minBytes, "minBytes", 1, 32 * 1024 * 1024);
   assertPositiveInt(maxSummaryBytes, "maxSummaryBytes", 1, HARD_TOOL_RESULT_FOLD_MAX_SUMMARY_BYTES);
+  assertRange(keepLast, "keepLast", 0, 1_024);
+  assertRange(clearAtLeastTokens, "clearAtLeastTokens", 0, 2_000_000);
+  const excludeTools = [...(options.excludeTools ?? [])];
+  if (excludeTools.length > 1_024 || excludeTools.some((name) => typeof name !== "string" || name.length === 0 || name.length > 256)) {
+    throw new TypeError("toolResultFold.excludeTools must be at most 1024 non-empty names of at most 256 characters");
+  }
   return {
     minAgeTurns,
     minBytes,
     maxSummaryBytes,
+    keepLast,
+    excludeTools,
+    clearAtLeastTokens,
     summarize: options.summarize,
   };
 }
@@ -66,6 +90,7 @@ export async function foldToolResultHistory(
   context: FoldToolResultsContext,
 ): Promise<readonly Message[]> {
   if (history.length === 0) return history;
+  if (context.restrictToToolCallIds?.size === 0) return history;
   const turns = inferToolResultTurns(history);
   const out: Message[] = [];
   for (let index = 0; index < history.length; index += 1) {
@@ -79,6 +104,53 @@ export async function foldToolResultHistory(
   return out;
 }
 
+/** A batch decision: which rows this request folds, and which ids advance the persisted frontier. */
+export interface ToolResultFoldSelection {
+  readonly foldToolCallIds: ReadonlySet<string>;
+  readonly advance: readonly string[];
+}
+
+/** Cache-aware batch plan (plan 194 Task 4): fold every already-cleared row, and fold pending rows
+ *  only once their combined original size reaches `clearAtLeastTokens`. A held batch returns exactly
+ *  the frontier's rows, so the provider view is byte-identical up to the new tail. */
+export function planToolResultFoldBatch(
+  history: readonly Message[],
+  options: ResolvedToolResultFoldOptions,
+  context: { readonly turn: number; readonly clearedToolCallIds: ReadonlySet<string> },
+): ToolResultFoldSelection {
+  const turns = inferToolResultTurns(history);
+  const rows: { readonly toolCallId: string; readonly toolName: string; readonly text: string; readonly turn: number }[] = [];
+  for (let index = 0; index < history.length; index += 1) {
+    const message = history[index]!;
+    if (message.role !== "tool") continue;
+    const block = message.content.find((part) => part.type === "tool_result");
+    if (block?.type !== "tool_result") continue;
+    rows.push({
+      toolCallId: block.toolCallId,
+      toolName: block.name,
+      text: toolResultFoldText(block.result, block.error, message.content),
+      turn: turns[index] ?? context.turn,
+    });
+  }
+  const excluded = new Set(options.excludeTools);
+  const kept = new Set(rows.slice(Math.max(0, rows.length - options.keepLast)).map((row) => row.toolCallId));
+  const pending = rows.filter(
+    (row) =>
+      !context.clearedToolCallIds.has(row.toolCallId) &&
+      !kept.has(row.toolCallId) &&
+      !excluded.has(row.toolName) &&
+      context.turn - row.turn >= options.minAgeTurns &&
+      estimateTextBytes(row.text) >= options.minBytes,
+  );
+  const pendingTokens = pending.reduce((sum, row) => sum + estimateTextTokens(row.text), 0);
+  const advance =
+    pending.length > 0 && pendingTokens >= options.clearAtLeastTokens ? pending.map((row) => row.toolCallId) : [];
+  return {
+    foldToolCallIds: new Set([...context.clearedToolCallIds, ...advance]),
+    advance,
+  };
+}
+
 async function foldToolResultMessage(
   message: Message,
   options: ResolvedToolResultFoldOptions,
@@ -87,7 +159,10 @@ async function foldToolResultMessage(
   if (message.role !== "tool") return message;
   const block = message.content.find((part) => part.type === "tool_result");
   if (block?.type !== "tool_result") return message;
+  if (context.restrictToToolCallIds && !context.restrictToToolCallIds.has(block.toolCallId)) return message;
   const text = toolResultFoldText(block.result, block.error, message.content);
+  if (options.excludeTools.includes(block.name)) return message;
+  const textBytes = estimateTextBytes(text);
   const folded = await maybeFold({
     options,
     context,
@@ -100,7 +175,7 @@ async function foldToolResultMessage(
         part.type === "tool_result"
           ? {
               ...part,
-              result: foldedToolResultHeader(block.name, block.toolCallId, summary),
+              result: foldedToolResultStub(block.name, block.toolCallId, summary, textBytes),
               error: undefined,
             }
           : part,
@@ -152,6 +227,16 @@ export function foldedToolResultHeader(toolName: string, toolCallId: string, sum
   return `Tool result ${toolName} [${toolCallId}]: ${summary}`;
 }
 
+/** The fold stub: names the tool, the call id, and the original payload size, so the model can
+ *  decide to re-run the tool instead of guessing what it lost. */
+export function foldedToolResultStub(toolName: string, toolCallId: string, summary: string, originalBytes: number): string {
+  return `[folded: ${toolName} [${toolCallId}], ${formatByteCount(originalBytes)} bytes — re-run the tool to see it again] ${summary}`;
+}
+
+function formatByteCount(bytes: number): string {
+  return String(bytes).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 /** Text the fold summarizes for one tool result: the payload JSON, then any text blocks.
  *  Shared with the attention compiler so both hash/summarize the same bytes. */
 export function toolResultFoldText(result: unknown, error: unknown, extra?: readonly { readonly type: string }[]): string {
@@ -201,6 +286,10 @@ function readToolResultTurn(metadata: Readonly<Record<string, unknown>> | undefi
 }
 
 function assertPositiveInt(value: number, name: string, min: number, max: number): void {
+  assertRange(value, name, min, max);
+}
+
+function assertRange(value: number, name: string, min: number, max: number): void {
   if (!Number.isSafeInteger(value) || value < min || value > max) {
     throw new TypeError(`toolResultFold.${name} must be a safe integer from ${min} to ${max}`);
   }

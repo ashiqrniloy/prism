@@ -5,6 +5,8 @@ import { join } from "node:path";
 const FAKE_SCRIPT = `#!/usr/bin/env node
 // Fake Obscura CLI for the default network-free suite.
 // Behaviors via OBSCURA_FAKE: ok (default) | hang | exit | garbage | oversize.
+// Search output shape via OBSCURA_FAKE_SEARCH: ok (default) | empty | challenge.
+// Reported version via OBSCURA_FAKE_VERSION: a version string (default 0.2.5) | fail (exit 3) | garbage.
 const mode = process.env.OBSCURA_FAKE ?? "ok";
 const delay = Number(process.env.OBSCURA_FAKE_DELAY ?? 0);
 const args = process.argv.slice(2);
@@ -21,6 +23,29 @@ if (mode === "hang") {
 }
 
 function run() {
+  if (mode === "env") {
+    process.stdout.write(
+      JSON.stringify({
+        argv: args,
+        privateNetwork: process.env.OBSCURA_ALLOW_PRIVATE_NETWORK ?? null,
+        proxy: process.env.OBSCURA_PROXY ?? null,
+      }),
+    );
+    process.exit(0);
+  }
+  if (args[0] === "--version") {
+    const version = process.env.OBSCURA_FAKE_VERSION ?? "0.2.5";
+    if (version === "fail") {
+      console.error("simulated probe failure");
+      process.exit(3);
+    }
+    if (version === "garbage") {
+      process.stdout.write("obscura (no version information)");
+      process.exit(0);
+    }
+    process.stdout.write("obscura " + version);
+    process.exit(0);
+  }
   if (mode === "garbage") {
     process.stdout.write("this is not json");
     process.exit(0);
@@ -35,6 +60,15 @@ function run() {
     const dumpIndex = args.indexOf("--dump");
     const dump = dumpIndex === -1 ? "text" : args[dumpIndex + 1];
     if (args.includes("--eval")) {
+      const searchMode = process.env.OBSCURA_FAKE_SEARCH ?? "ok";
+      if (searchMode === "empty") {
+        process.stdout.write(JSON.stringify({ blocked: false, results: [] }));
+        process.exit(0);
+      }
+      if (searchMode === "challenge") {
+        process.stdout.write(JSON.stringify({ blocked: true, results: [] }));
+        process.exit(0);
+      }
       const searchUrl = new URL(url);
       const query = searchUrl.searchParams.get("q") ?? "";
       process.stdout.write(

@@ -1,22 +1,9 @@
-import type {
-  Agent,
-  AgentConfig,
-  Message,
-  OwnershipScope,
-  RunResult,
-  SecretRedactor,
-  Session,
-  SessionOptions,
-} from "@arnilo/prism";
-import type { ExecutionTimeline, TimelineFolder } from "./types.js";
 import { EvalError } from "./errors.js";
-import { failureInjection, failingStore, type FailureInjectionOptions } from "./failure-injection.js";
+import { type FailureInjectionOptions, failingStore, failureInjection } from "./failure-injection.js";
 import { HARD_MAX_TRIALS } from "./limits.js";
-import { scoreRun } from "./score.js";
-import type { EvalManifest, EvaluationRecord, ExperimentTrials, Scorer } from "./types.js";
-import { toErrorInfo } from "./util.js";
+import type { ExperimentReport, EvalManifest, ExperimentTrials } from "./types.js";
 
-export { failureInjection, failingStore, type FailureInjectionOptions };
+export { type FailureInjectionOptions, failingStore, failureInjection };
 
 // ─── Eval Manifest Validation (R-E12) ─────────────────────────────────────────
 
@@ -40,7 +27,7 @@ export function validateEvalManifest(manifest: EvalManifest): void {
  * Additive release-evidence binding. Requires the two-field manifest plus
  * promptVersion (or promptId+promptVersion), toolFingerprint, model, and policyRevision.
  */
-export function validateReleaseEvalManifest(manifest: EvalManifest): void {
+export function validateReleaseEvalManifest(manifest: EvalManifest, report?: ExperimentReport): void {
   validateEvalManifest(manifest);
   const promptVersion = typeof manifest.promptVersion === "string" ? manifest.promptVersion.trim() : "";
   if (!promptVersion) {
@@ -55,166 +42,16 @@ export function validateReleaseEvalManifest(manifest: EvalManifest): void {
   if (typeof manifest.policyRevision !== "string" || !manifest.policyRevision.trim()) {
     throw new EvalError("release eval manifest is missing required policyRevision", "ERR_PRISM_EVAL_MANIFEST");
   }
-}
-
-// ─── Multi-Turn Scenarios (R-E12) ─────────────────────────────────────────────
-
-export interface ScenarioTurn {
-  readonly user: string | Message;
-  /** Optional assertion verifying intermediate assistant reply. */
-  readonly assertReply?: (text: string, result: RunResult) => void;
-}
-
-export type AgentFactory = (extra: Pick<AgentConfig, "hooks" | "slots">) => Promise<Agent>;
-
-export interface ScenarioDefinition {
-  readonly turns: readonly (string | ScenarioTurn)[];
-  readonly scorers?: readonly Scorer[];
-  /** Session options for the scenario's single session; omitted = agent defaults. Guardrail packs are package config on the agent, not a session option (plan 159 Task 5). */
-  readonly sessionConfig?: SessionOptions;
-  readonly maxTurns?: number;
-  readonly redactor?: SecretRedactor;
-  readonly ownership?: OwnershipScope;
-  readonly signal?: AbortSignal;
-  readonly timeline?: "off" | "metadata" | "redacted_io";
-  readonly environment?: unknown;
-}
-
-export interface RunScenarioOptions extends Partial<ScenarioDefinition> {
-  readonly agent: Agent | AgentFactory;
-  readonly turns: readonly (string | ScenarioTurn)[];
-  readonly hooks?: AgentConfig["hooks"];
-  readonly slots?: AgentConfig["slots"];
-}
-
-export interface ScenarioResult {
-  readonly status: "succeeded" | "failed";
-  readonly turnsCompleted: number;
-  readonly finalResult?: RunResult;
-  readonly timeline?: ExecutionTimeline;
-  readonly evaluations: readonly EvaluationRecord[];
-  readonly error?: ReturnType<typeof toErrorInfo>;
-}
-
-export const DEFAULT_MAX_SCENARIO_TURNS = 8;
-export const HARD_MAX_SCENARIO_TURNS = 32;
-
-/** Collect session events until `work` settles, then close the subscriber. No timeout drain. */
-export async function collectWhileRunning<T>(
-  session: Pick<Session, "subscribe">,
-  folder: TimelineFolder | undefined,
-  work: () => Promise<T>,
-): Promise<T> {
-  if (!folder) return work();
-  const iterator = session.subscribe()[Symbol.asyncIterator]();
-  const pump = (async () => {
-    try {
-      for (;;) {
-        const next = await iterator.next();
-        if (next.done || !next.value) break;
-        folder.push(next.value);
-      }
-    } catch {
-      // subscriber closed or run aborted
-    }
-  })();
-  try {
-    return await work();
-  } finally {
-    await iterator.return?.();
-    await pump;
+  if (typeof manifest.datasetContentHash !== "string" || !/^sha256:[0-9a-f]{64}$/.test(manifest.datasetContentHash)) {
+    throw new EvalError("release eval manifest requires datasetContentHash (sha256)", "ERR_PRISM_EVAL_MANIFEST");
+  }
+  if (report && manifest.datasetContentHash !== report.datasetContentHash) {
+    throw new EvalError("release eval manifest datasetContentHash does not match report", "ERR_PRISM_EVAL_MANIFEST");
   }
 }
 
-/**
- * Executes a scripted multi-turn conversational scenario (e.g. clarification, refusal)
- * over a single session, capturing timeline and scoring the last result.
- * Supports passing an agent or an agent factory.
- */
-export async function runScenario(
-  optionsOrScenario: RunScenarioOptions | ScenarioDefinition,
-  maybeFactory?: AgentFactory,
-  extraOptions?: { readonly hooks?: AgentConfig["hooks"]; readonly slots?: AgentConfig["slots"] },
-): Promise<ScenarioResult> {
-  const options: RunScenarioOptions =
-    typeof maybeFactory === "function"
-      ? {
-          ...(optionsOrScenario as ScenarioDefinition),
-          agent: maybeFactory,
-          hooks: extraOptions?.hooks,
-          slots: extraOptions?.slots,
-        }
-      : (optionsOrScenario as RunScenarioOptions);
-
-  const maxTurns = Math.min(options.maxTurns ?? DEFAULT_MAX_SCENARIO_TURNS, HARD_MAX_SCENARIO_TURNS);
-  const turns = options.turns.slice(0, maxTurns);
-  const agent =
-    typeof options.agent === "function"
-      ? await options.agent({ hooks: options.hooks, slots: options.slots })
-      : options.agent;
-  const session = await agent.session(options.sessionConfig);
-  const shouldProject = options.timeline && options.timeline !== "off";
-  let folder: TimelineFolder | undefined;
-  if (shouldProject) {
-    const pkg = "@arnilo/prism-observability";
-    const { createTimelineFolder } = (await import(pkg)) as any;
-    folder = createTimelineFolder({ content: options.timeline, redactor: options.redactor });
-  }
-
-  let turnsCompleted = 0;
-  let lastResult: RunResult | undefined;
-  let scenarioError: ReturnType<typeof toErrorInfo> | undefined;
-
-  try {
-    // One subscription per turn: by default a subscriber is run-scoped and closes when the run settles
-    // (`SubscribeOptions.acrossRuns` opts out of that close), so a single default subscription around
-    // several runs would silently score a timeline missing every later turn.
-    for (const turn of turns) {
-      options.signal?.throwIfAborted();
-      const input = typeof turn === "string" ? turn : turn.user;
-      const result = await collectWhileRunning(session, folder, () =>
-        session.run(input, {
-          signal: options.signal,
-          ownership: options.ownership,
-          redactor: options.redactor,
-        }),
-      );
-      lastResult = result;
-      turnsCompleted++;
-      if (typeof turn === "object" && turn.assertReply) {
-        turn.assertReply(result.text, result);
-      }
-    }
-  } catch (err) {
-    scenarioError = toErrorInfo(err);
-  }
-
-  const timeline = folder?.snapshot();
-  const evaluations =
-    lastResult && options.scorers?.length
-      ? await scoreRun({
-          result: lastResult,
-          scorers: options.scorers,
-          ownership: options.ownership,
-          redactor: options.redactor,
-          signal: options.signal,
-          timeline: options.timeline ?? "metadata",
-          injectedTimeline: timeline,
-          environment: options.environment,
-        })
-      : [];
-
-  const status = scenarioError || lastResult?.status === "failed" ? "failed" : "succeeded";
-
-  return {
-    status,
-    turnsCompleted,
-    finalResult: lastResult,
-    timeline,
-    evaluations,
-    error: scenarioError,
-  };
-}
+export type { AgentFactory, ScenarioDefinition, ScenarioTurn, RunScenarioOptions, ScenarioResult } from "./scenario-runner.js";
+export { runScenario, collectWhileRunning, DEFAULT_MAX_SCENARIO_TURNS, HARD_MAX_SCENARIO_TURNS } from "./scenario-runner.js";
 
 // ─── Trials Resolution (R-E12) ────────────────────────────────────────────────
 
@@ -229,7 +66,7 @@ export function mulberry32(seed: number): () => number {
   };
 }
 
-export function resolveTrialsConfig(trials?: number, seed?: number): Omit<ExperimentTrials, "sampleCount" | "standardError"> {
+export function resolveTrialsConfig(trials?: number, seed?: number): Omit<ExperimentTrials, "sampleCount"> {
   const count = trials ?? 1;
   if (!Number.isInteger(count) || count < 1 || count > HARD_MAX_TRIALS) {
     throw new EvalError(`trials must be an integer in [1, ${HARD_MAX_TRIALS}]`, "ERR_PRISM_EVAL_TRIALS");
@@ -240,6 +77,5 @@ export function resolveTrialsConfig(trials?: number, seed?: number): Omit<Experi
   return {
     count,
     ...(seed !== undefined ? { seed } : {}),
-    uncertaintyMethod: count > 1 ? "standard_error" : "single_sample",
   };
 }

@@ -140,7 +140,7 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
 
 ## Tasks
 
-- [ ] Task 1: Review, assumption check and the roadmap entry (read-only)
+- [x] Task 1: Review, assumption check and the roadmap entry (read-only)
   - Acceptance Criteria:
     - Functional: The notes record, with `file:line`:
       - (a) **Contract inventory.** The tool input schemas (`packages/memory/fabric/src/tools.ts`), `VectorStore` (`packages/memory/core/src/types.ts:267–320`), the note metadata `v: 1` fields (`fabric/src/types.ts:613–700`), the preset table and contract (188.11 Task 3), and the stability tiers (188.11 Task 6). For each later task, record which additions are additive under those rules and which would need a new preset or a kernel change.
@@ -187,13 +187,111 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
     - `docs/index.md` update: no
     - Documentation structure reference: `.claude/skills/create-plan/references/prism-wiki.md`
 
+  - Notes (executed 2026-10-27):
+    - **Verdict: no kernel addition is needed. Three findings re-scope tasks, and one needs an owner decision before Task 2 freezes the criteria.** No product code changed. The only edits are this plan's checkbox, these notes and two BEAM track names in Task 2. Scratch probes ran in the session scratchpad, outside the repo. No credential was read, and no model or paid call was made. Network use was public Hugging Face and arXiv metadata only.
+    - **Entry blocker: plan 188.11 has not run.** All of its Tasks 1–9 are unchecked. In the tree, `grep -n preset packages/memory/fabric/src/config.ts` finds nothing, there is no `presetRevision`, no `x-prism-stability` annotation and no forward-compatible note reader. Plan 202 builds on all four, so (a) below records the contract from 188.11's text (Tasks 3, 4, 6) plus the code as it stands. Release-path order (188.11 → … → 202) already puts 188.11 first, so this is a sequencing fact, not a re-cut.
+    - **(a) Contract inventory.**
+      - Tools (`packages/memory/fabric/src/tools.ts`): `memory.view` (:182), `memory.read` (:239; `path` | `id` | `ids`, `MAX_READ_IDS = 8` at :65), `memory.insert` (:333; `kind` enum is `fact | preference | procedure` only), `memory.replace` (:449), `memory.recall` (:541; `kinds` enum includes `exchange`), `memory.forget` (:629). No schema sets `additionalProperties: false`, so new optional inputs are additive.
+      - `VectorStore` (`packages/memory/core/src/types.ts:267–320`) has three required methods (`upsert`, `query`, `delete`). Everything else is optional or a declared flag (`scopeCounter`, `lexicalModes`, `authorization`, `lineage`). `Embedder` is at `types.ts:49`.
+      - Note metadata `v: 1` is `MemoryNoteMetadata` at `fabric/src/types.ts:613–700`. The parser at `types.ts:736–858` rebuilds known fields only (e.g. `:849`), so an unknown key is **dropped on any rewrite** today. 188.11 Task 4 must land before Task 6's `dates` field and Task 5's `session` field can be called additive.
+      - Preset table and stability tiers: absent (see the blocker above).
+      - Classification of later tasks, against 188.11's rules:
+
+        | Task | Addition | Class |
+        | --- | --- | --- |
+        | 5 | `memory.read` `around` / `session` / `page`; deterministic `keywords` into the existing indexed field (`core/src/lexical.ts:74–94`); `recall` output lists unmatched terms | Additive tool inputs and output text, inside the preset. A session lookup needs an **optional store method** (see re-scope 1) |
+        | 6 | `dates` field; `recall` `from` / `to` / `order` | Additive `v: 1` field and tool inputs. Needs the 188.11 Task 4 unknown-key rule first. A date filter needs an optional store method or a metadata filter |
+        | 7 | Read-time grouping in `recall.ts`; opt-in `state: {}` | Grouping is inside the preset. `state` is an additive opt-in, contract tier |
+        | 8 | `inject` thresholds, pointer cards | Additive tuning-tier fields; delivery format is tuning |
+        | 9 | Recall summary and "no matching memory" text | Tool text, tuning tier |
+        | 10 | Adaptive delivery, `memory:status` field | Additive per-session state |
+        | 11 | `decision` kind, `coding` preset | **New stored kind → new preset name** (188.11 Task 3 rule). Touch points: `types.ts:29,34`, `tools.ts` insert and recall kind enums, `config.ts:244,624`, `lifecycle/strength.ts:47` (decay). A 0.13.0 reader must preserve and ignore it (188.11 Task 4) |
+        | 12 | `decisions: { model }` | Additive opt-in, contract tier. Reachability: see (f) |
+        | 13 | Link expansion input, new link relation | Additive |
+        | 14 | Possible `memory:delete-subject` command | Additive command, tentative |
+        | 15 | Capacity / maintenance settings | Additive config |
+        | 16 | OM changes | Keep OM contract fields (188.11 Task 6) |
+        | 17 | `conversational-facts` | New preset name (adds a write-path model call) |
+
+      - No row needs a kernel change.
+    - **(b) Hypotheses.**
+      - **R13 is confirmed, with a nuance.** Exchanges have no special status in the lifecycle. `merge.ts:42` excludes only `episode` and pinned notes, `lifecycle/strength.ts:47` gives `exchange` a decay of 0.5, and `capacity.ts` evicts anything unpinned below the storage threshold. Defaults are 500 notes and 60k tokens for `project` (`capacity.ts:20–24`), which a 500-session archive exceeds many times over. `memory:maintain` is not run by the benchmark and not by the `conversational` preset (`promote: false`). Offline probes with the in-memory store, 5 exchanges per session (scripts in the scratchpad, not committed):
+        - **Capacity:** with `capacity.project.notes = 20` and 40 distinct exchanges, `maintain()` archived exactly 20 with `auditVerb: "evicted"`, oldest first.
+        - **Age:** with 100 never-used exchanges, `maintain()` archived 0 at scope clock 40 and **100 of 100 at clock 60**. This matches `retrievalBelow = −2` with decay 0.5 (age ≳ e⁴ ≈ 55 sessions). The scope clock is the store's `sessions` counter.
+        - **Defaults at scale:** 650 distinct exchanges (~91k tokens) under default capacity: `maintain()` archived **294** (reported as `merged`), then stopped inside the 60k-token budget. **Unresolved:** `duplicateGroups` on the same text gave 0 groups and term-set Dice between two notes was 0.08, so the `merged` count is not explained by duplicate detection. The probe used a constant embedder, which makes every note "similar" in embedding space. Re-verify on a real write side in Task 4 before relying on that number.
+        - **Visibility after archive:** `recall.ts:213–217` appends archived hits only when the best active score is below `ARCHIVE_SEARCH_COVERAGE = 0.34`, capped at `MAX_ARCHIVED_HITS = 3` (`lifecycle/archive.ts:38–40`). Passive injection sets `archiveSearch: false` (`context.ts:288`). So an archived exchange is mostly unreachable unless the agent passes `includeArchived`.
+        - **Consequence for Task 15 and Task 4:** the growth criterion must run `memory:maintain` with a scope clock, not just write. The plan's example flags `--maintain --report-evictions` and `--subset dev-probe` do not exist, and neither does a `longmemeval-m` suite. Task 15 adds them if it needs a harness run.
+        - **Write cost:** 60 notes took 5.4 s (90 ms each); 650 distinct notes took 154 s. An earlier 500-session (2,500 exchange) run hit the 600 s timeout before it printed anything, so I never measured its full write time. Per-write cost grows with store size and was not profiled. A LongMemEval-M question with ~500 sessions will need a write phase measured in hours with this store. Task 4's budget and Task 15's scale criterion must price it, and Task 5 may need a cheaper write path.
+      - **R11, cache pricing and usage fields.**
+        - Usage: `Usage.cacheReadTokens` / `cacheWriteTokens` are subsets of `inputTokens` (`src/contracts-core/content.ts:228–243`). The OpenAI-compatible mapping reads `prompt_tokens_details.cached_tokens` or `prompt_cache_hit_tokens` (`src/provider-kit/openai-primitives.ts:82`) and reports **no cache-write tokens**. Hyper maps `cache_read_input_tokens` (`packages/providers/hyper/src/provider.ts:50`).
+        - Rates: `ModelCost` carries `cacheRead` / `cacheWrite` (`content.ts:176–185`), populated for most Hyper and OpenCode Go models (`opencode-go/src/models.ts:292–306`). The bench records `cacheReadTokens` only (`usage.mjs`, `journal.mjs:146`, `report.mjs:75`) and never prices it. Task 3's `rates.json` can be seeded from these catalogs.
+        - **Owner-decision input for Task 2's cost criterion BFC (iii).** `mimo-v2.5` prices cache reads at $0.0028 per M against $0.14 input, i.e. 2%. A warm-cache `full` arm with a 115k-token history costs ≈ $0.00032 per question. A memory arm that injects 3.5–6k *uncached* tokens per turn costs ≈ $0.0005–0.0008, so memory is *more* expensive than cached full context on this model. At a 10% ratio (a Hyper entry at `models.ts:345`: $0.1 cache read vs $1 input) the same arithmetic gives ≈ 43% of full, a borderline pass of the 50% criterion. The criterion's outcome therefore depends on the cache ratio and on whether the prefix is warm (cache TTLs are minutes). Before Task 2 freezes, the owner should choose: (1) report cost in both a cold regime (one-shot) and a warm regime and state which one governs the criterion, or (2) make the cost row informational. Task 8's precision-first injection and prefix-stable ordering directly move this number.
+      - **R10, tool-calling reliability metadata.** The only model-catalog fields are `ModelCapabilities.tools?: boolean` and `toolCallStrictness?: "strict" | "lenient" | "legacy"` (`content.ts:155–160`), both advisory. No provider package sets `toolCallStrictness`, and nothing reports a call rate. Task 10 cannot seed its start mode from the catalog, so its documented fallback applies: the start mode is pointers.
+    - **(c) Data availability and licences** (Hugging Face API, 2026-10-27; none gated).
+
+      | Suite | Source and licence | Finding |
+      | --- | --- | --- |
+      | LongMemEval-M | `xiaowu0162/longmemeval-cleaned`, MIT, same revision `98d7416c…` as the pinned S | `longmemeval_m_cleaned.json`: 2,737,100,077 bytes, SHA-256 `9d79e5524794a2e6900a3aa9cb7d9152c5a3e8319c9a87c25494ba1eacee495f`. **The loader cannot read it**: `loadPinnedArtifact` concatenates the file into one Buffer (Bun's maximum is 4 GiB, so that part fits) and `loadDataset` then calls `JSON.parse`, which needs a string over JavaScript's string length limit. Task 2 needs a streaming or per-question split reader |
+      | BEAM | `Mohammadta/BEAM`, CC BY-SA 4.0. Tracks `100K` (20 conversations), `500K` (35), `1M` (35); no "128k" | Parquet, 5.4 MB / 34 MB / 66 MB (SHA-256 `c0519be2…`, `af05921c…`, `41b5acb9…` for 100K, 500K, 1M). The existing parquet path (`datasets.mjs:127–137`) has `maxBuffer` 32 MiB and a 30 s timeout, too small for the 1M track (172 MB as JSON). Corrected in Task 2 |
+      | BEAM-10M | `Mohammadta/BEAM-10M`, CC BY-SA 4.0 | Two parquet files, 154 MB and 190 MB. Optional |
+      | LoCoMo | Already pinned, **CC BY-NC 4.0 (noncommercial)** | Benchmark use only. The owner should confirm the noncommercial licence is acceptable for the published evidence. Reports hold no text, which limits exposure |
+      | MemoryAgentBench-CR | Already pinned, MIT | Available. Only `Conflict_Resolution` is pinned; `Accurate_Retrieval` and `Long_Range_Understanding` also exist in the same repo |
+      | MemoryCode | `CohereLabsCommunity/memorycode`, Apache-2.0, revision `32d888b1…` | Available. 360 examples, one parquet (13 MB download). Pin its size and SHA-256 in Task 2 |
+      | VibeMemBench, DreamBench-SWE | Already pinned, Apache-2.0 | Available |
+      | StateMemBench | arXiv 2608.19652 exists (234 scenarios) | **No dataset or code release found** (Hugging Face search empty; the arXiv page lists no link). Treat as unavailable. If it is still missing at Task 2, drop it and map state tracking to MemoryAgentBench-CR, LongMemEval knowledge-update and BEAM contradiction resolution, as the task allows |
+      | Coding longitudinal | Project-owned synthetic generator (`lifecycle/synth.mjs:6`, `personas` is a parameter, default 4) | No licence issue. The 12 personas are a generator setting. Only persona p1887 has real evidence |
+
+    - **(d) Agent query logs: partial.** `replay.mjs:726–762` hooks `tool.call` / `tool.result`. It records tool *names* (`turnTrace`, ≤ 64) and counts, plus `recalledIds` from `memory.recall` hits (`:753–759`) and from passive blocks (`:768–793`). It does **not** record each call's input (queries, `kinds`), the unmatched terms, or ids returned by `memory.read`. So "was the needed round surfaced by any tool result" is computable for recall hits and passive blocks only. Task 5 adds the per-call input log and `memory.read` ids before it can claim the full measure, and the diagnostic must keep refusing held-out ids.
+    - **(e) Release-path dependencies** (plans 198–201 are fully checked: 7/7, 7/7, 6/6, 6/6). All of it lives in `packages/hosts/evals/src`, **not** in `scripts/memory-bench`.
+      - Statistics (`stats.ts`): `cohensKappa` :17, `fleissKappa` :415, `bootstrapInterval` :178, `clusteredStandardError` :162, `pairedPermutationTest` :234, `mcnemarExact` :217, `passAtK` :276 / `passHatK` :290, `pairedProportionPower` :309, `powerAnalysis` :355, `paretoFrontier` :390.
+      - Comparison and judging: `compareExperiments` (`compare-experiments.ts:44`), `createJudgePanel` (`judge-panel.ts:6`), `calibrateJudge` (`calibration.ts:21`), `runComparison` (`comparison.ts`).
+      - Data and safety: `defineDataset` / `validateSplit` (`dataset.ts:21,8`), the injection suite (`injection.ts:43,115`).
+      - **Re-scope 3 (Task 3):** `scripts/memory-bench/stats.mjs` still carries its own `clusterBootstrap` (:67), `pairedClusterPermutation` (:98), `holm` (:117), `powerForDiff` (:138), `pairedPowerSimulation` (:173) and `compare` (:237). It imports only `mcnemarExact` (:3). Task 3 says "no second statistics module; reuse plan 198's clustered CIs". Task 3 must therefore either delegate to the package (`bootstrapInterval`, `pairedPermutationTest`, `passHatK`, `cohensKappa`) or keep a bench function with a test that asserts agreement with the package. `createJudgePanel` composes `Scorer`s and requires distinct *models* (`requireDistinctModels`, `judgeModel`); it does not check model *family*. Task 3's "different families" rule needs an added family check, and `judge.mjs` (with its judge cache and split judging) needs a `Scorer` adapter to use the panel and `calibrateJudge`.
+      - **Open verification debt** (recorded by plan 198 Task 7 and plan 200; not rerun here): `scripts/memory-bench/run.test.mjs` exceeded its 300 s timeout and reports `retry_does_not_duplicate_om_workers_or_promotions`. Tasks 2–3 edit that harness, so triage it before they start.
+    - **(f) Structure and decision seams.**
+      - **`MemoryNoteLink` relations written today:**
+
+        | Relation | Written by | Place |
+        | --- | --- | --- |
+        | `part` | the exchange archive | `exchanges.ts:199` |
+        | `related` | the linker (embedding similarity) | `links.ts:29` |
+        | `similar` | the write planner | `create.ts:578` |
+        | `evidence` | consolidation | `consolidation/write.ts:168` |
+        | `contradicts` | consolidation | `consolidation/write.ts:178` |
+
+        Supersession is the `supersedes` field, not a link. The `conversational` preset writes only `part` (no embedder, no consolidation). Task 13's expansion therefore has nothing to follow on a preset-only store except `part`, and links need Task 5's navigation (`around`, `session`) to be useful.
+      - **Session addressing (re-scope 1, Task 5).** An exchange note id is a SHA-256 of `sessionId + user entry + assistant entry + part` (`exchanges.ts:102`). The note stores no session field under `fabric`. Only the top-level `generated.session` (`types.ts:112`), `sourceEntryIds` and `tRef` identify it. `scanMetadata` pages the whole resource by `(threadId, id)`, so `around` and `session` would scan O(n) on a 500-session store. Task 5's "session index (tentative)" becomes firm: add `session` as an additive `v: 1` field at archive time, plus an optional store method (`listBySession?`, with a fallback scan that emits a status note) per 188.11 Task 4's rule.
+      - **Consolidation decider:** `consolidate: { decider: "model" }` (`config.ts:794`) is read at `create.ts:235`; `decideConsolidation` (`decider.ts:8`) makes one bounded call through `resolveModelClient` (`index.ts:228`, `prism.models.client`). Task 12's P-points (consolidation among them) swap this call, not add one.
+      - **Path cues and pinned core:** `createFabricCues` (`index.ts:381`, `delivery/cues.ts`) is created only when `config.cues && config.semantic && vectorStore.scanMetadata && projectMemory`. The pinned core block is built at `context.ts:199–255` from `delivery/core.ts` and sits after the directory so the prefix stays cached. Both are existing delivery tiers that Task 11 reuses.
+      - **Decision models:** `prism.models.decisions(ref)` is on `PackageAPI` (`src/packages/api.ts:134`, `loader.ts:801`) and is gated by the `models` capability. The fabric already declares `models` (`index.ts:135`), so **Task 12 needs no manifest or capability change**. A string `ModelRef` carries no capabilities, so the adapter gates its own model (`loader.ts:809`).
+    - **Re-scopes summary** (Tasks 2–5 and 15 are the only ones moved; 16–19 are untouched):
+      1. Task 5: firm the session field and the optional store method; add the per-call query log and `memory.read` ids to the diagnostic; the plan's example commands do not exist.
+      2. Task 2: BEAM track names (edited above); a streaming reader for LongMemEval-M and larger parquet limits; StateMemBench is unavailable, so drop or map it; MemoryCode adapter added to the list; owner decision on LoCoMo's noncommercial licence; owner decision on the cost criterion (b above).
+      3. Task 3: stats and judge reuse as in (e); cache write tokens are not reported by the OpenAI-compatible route, so `rates.json` can price cache reads only for those models.
+      4. Task 4: the first real write-side measurement of R13; budget the LongMemEval-M write time.
+      5. Task 15: run `memory:maintain` with a scope clock; archive by age (≈ 55 sessions) is the first failure to cover, before capacity.
+    - **Roadmap bullet drafted for Phase 11 Scope** (Task 2 applies it to `roadmap.md`, after the "Evaluation rigor" bullet):
+
+      ```md
+      - **Memory robustness (owner decision 2026-10-24):** the memory fabric's `conversational` preset ships as a versioned contract (`presetRevision`), improved inside that contract, with no embeddings and no write-path model call:
+        - pre-registered definitions of "robust" and "better than full context", measured once on held-out partitions of LongMemEval-M, BEAM, LoCoMo, MemoryAgentBench and a coding lifecycle suite, on at least three answer models from two providers, under a cross-family judge panel with cache-adjusted cost and latency
+        - agentic lexical recall improvements: navigation around a hit, a resolved timeline, current-state grouping, precision-first delivery, and weaker tool-caller handling
+        - a `coding` preset with confirmed `decision` notes delivered by path cues
+        - opt-in decision-model gates, each shipped only if its own bench passes
+        - a safety gate (poisoning, cross-principal leakage, deletion cascade, false refusal, PII) that must pass before any memory default turns on
+        - claims limited to the criteria that passed
+        - Plan 202 carries this.
+      ```
+
+    - **Verification:** read-only. Plan 188.11, plans 198–201, the cited source spans, the Hugging Face dataset trees and arXiv metadata were read. The R13 probes are scratchpad scripts under `/tmp/claude-1000/…/scratchpad/` (`r13*.ts`, `dup.ts`, `dice.ts`); none is in the repo. No test, typecheck, gate or baseline run: nothing in the tree changed except this plan.
+
 - [ ] Task 2: The robustness suite, frozen partitions and pre-registered definitions
   - Acceptance Criteria:
-    - Functional: Adapters in `scripts/memory-bench/datasets.mjs` for every suite Task 1 (c) cleared: `longmemeval-m`, `beam` (tracks 128k / 1M; 10M optional), `locomo` (all conversations), `statemembench` (tentative), `memoryagentbench-cr`, `coding-longitudinal`, `memorycode` (MemoryCode, arXiv 2502.13791, instructions across sessions with revisions), and `vibemembench` / `dreambench-swe` through the existing licence-gated adapters (`scripts/memory-bench/coding.test.mjs`). Each is pinned by URL, byte size and SHA-256, with a licence file, as the existing suites are.
+    - Functional: Adapters in `scripts/memory-bench/datasets.mjs` for every suite Task 1 (c) cleared: `longmemeval-m`, `beam` (tracks 100K / 500K / 1M from `Mohammadta/BEAM`; 10M from `Mohammadta/BEAM-10M`, optional; Task 1 (c) corrected the "128k" track name), `locomo` (all conversations), `statemembench` (tentative), `memoryagentbench-cr`, `coding-longitudinal`, `memorycode` (MemoryCode, arXiv 2502.13791, instructions across sessions with revisions), and `vibemembench` / `dreambench-swe` through the existing licence-gated adapters (`scripts/memory-bench/coding.test.mjs`). Each is pinned by URL, byte size and SHA-256, with a licence file, as the existing suites are.
     - Functional: Each suite gets a label-blind, salted draw into `dev`, `heldout-a` and `heldout-b`. `heldout-b` is reserved for the single remediation round in the header and is never read otherwise. The draw reads only ids and ability labels and is stratified so **every ability, including abstention and preference, has items in both held-out partitions**. The files are committed in this task. The held-out guard (the 188.10 refusal of diagnostics on held-out ids) extends to every new `heldout` partition. LongMemEval-S is development-only from now on.
     - Functional: `scripts/memory-bench/robustness-criteria.json`, committed now and hashed into every later manifest, defines:
       - **Better than full context (BFC)**, per answer model in the acceptance set:
-        - (i) **in-window suites** (LongMemEval-M truncated arms excluded; BEAM-128k; LoCoMo; StateMemBench short): pooled paired diff vs `full` > 0 with 95% clustered-CI lower bound > 0, **and** non-inferior (3-point margin) on each suite;
+        - (i) **in-window suites** (LongMemEval-M truncated arms excluded; BEAM-100K; LoCoMo; StateMemBench short): pooled paired diff vs `full` > 0 with 95% clustered-CI lower bound > 0, **and** non-inferior (3-point margin) on each suite;
         - (ii) **beyond-window suites** (LongMemEval-M, BEAM-1M): CI lower bound > 0 vs `full-truncated` **and** vs `lexical-topk`;
         - (iii) **cost**: cache-adjusted input cost per question ≤ 50% of `full`'s on in-window suites;
         - (iv) **latency**: p95 per-turn added latency ≤ 2× `full`'s.
@@ -254,7 +352,7 @@ Code-structure graphs (for example Graphify's tree-sitter graphs) are the right 
 - [ ] Task 3: Measurement that a product decision can trust
   - Acceptance Criteria:
     - Functional: **Judge panel.** Every scored report uses ≥ 2 judges from different model families, built on plan 199's panel and calibration machinery, never the answer model alone. A human-audited set of 150 items (balanced by suite and ability, labelled by the owner or a delegate in a review page) fixes κ per judge. A judge below κ 0.8 is dropped from the panel.
-    - Functional: **First panel datum.** If plan 188.11 Task 1 (f) found the 188.10 held-out v3 answer checkpoints (`x`, `x-tools`, `full`), the panel re-scores them with `--phase judge`. It reports per-judge scores, agreement, κ, and the `x-tools` − `full` diff under each judge. This is the cheapest test of R1. It runs under Task 4's owner gate and makes no answer calls.
+    - Functional: **First panel datum.** *(Plan 188.11 Task 1 (f), 2026-10-27: the checkpoints are not retained — `.cache/memory-bench/answers` holds 14 smoke-run files and the accepted 188.10 reports keep verdicts but no answer text — so this is a re-answer of the three arms on the 100 held-out v3 ids, sized with the in-flight reservation of 250k tokens per request plus 500k per arm, `journal.mjs:13–15`; the original wording follows.)* If plan 188.11 Task 1 (f) found the 188.10 held-out v3 answer checkpoints (`x`, `x-tools`, `full`), the panel re-scores them with `--phase judge`. It reports per-judge scores, agreement, κ, and the `x-tools` − `full` diff under each judge. This is the cheapest test of R1. It runs under Task 4's owner gate and makes no answer calls.
     - Functional: **Cost model.** Each arm reports:
       - raw input and output tokens;
       - provider-reported cache read/write tokens;

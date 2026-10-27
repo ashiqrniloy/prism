@@ -58,15 +58,7 @@ export interface CredentialResolver {
   delete?(ref: string, ctx: CredentialContext): Promise<void> | void;
 }
 
-export interface OAuthLoginCallbacks {
-  onAuth?(url: string): void | Promise<void>;
-  onDeviceCode?(code: { readonly userCode: string; readonly verificationUri: string; readonly expiresAt?: string }): void | Promise<void>;
-  onPrompt?(message: string): string | undefined | Promise<string | undefined>;
-  onSelect?(prompt: { readonly message: string; readonly choices: readonly string[] }): string | undefined | Promise<string | undefined>;
-  /** Aborts OAuth login flows and device-code polling when signaled. */
-  readonly signal?: AbortSignal;
-}
-
+/** The keyring's stored OAuth record shape: `Secret` metadata converted for durable storage. */
 export interface OAuthCredentials {
   readonly access?: string;
   readonly refresh?: string;
@@ -75,12 +67,3 @@ export interface OAuthCredentials {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
-export interface OAuthProvider {
-  readonly id: string;
-  login(callbacks?: OAuthLoginCallbacks): Promise<OAuthCredentials> | OAuthCredentials;
-  refresh?(credentials: OAuthCredentials): Promise<OAuthCredentials> | OAuthCredentials;
-  /** Best-effort upstream revocation; the store delete is what fails closed locally. */
-  revoke?(credentials: OAuthCredentials): Promise<void> | void;
-  getCredential?(credentials: OAuthCredentials): Promise<Secret | undefined> | Secret | undefined;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}

@@ -9,7 +9,7 @@ import type { HostConfig } from "../host/index.js";
 import { externalUnsupportedControl, externalWorkerAttribution } from "../scenarios/external-worker-attribution.js";
 import { hostStreamCliDialect, hostStreamCliFixtures } from "../scenarios/stream-cli.dialect.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 function config(root: string): HostConfig {
   return {

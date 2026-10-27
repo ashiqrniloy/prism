@@ -32,7 +32,6 @@ test("072 invariant: revoked id absent from injected snapshot; score 0 cannot be
   const invariant = revokedIdsAbsent({ injectedIds: ["secret-fact"] }, ["secret-fact"]);
   const other = { score: 1 };
   const mean = (invariant.score + other.score) / 2;
-  assert.equal(invariant.metadata.invariant, true);
   assert.equal(invariant.score, 0);
   assert.ok(mean > 0);
 });

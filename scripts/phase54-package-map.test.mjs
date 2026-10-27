@@ -15,7 +15,7 @@ test("phase54 package map: exact manifest counts and topology invariants", () =>
 
   // Total current manifests in repo after consolidation and delegated CLI adapter removal.
   assert.ok(
-    [13, 12, 14, 16, 17, 26, 30, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 54, 58, 59, 60, 61, 62, 63, 65].includes(map.counts.totalCurrentManifests),
+    [13, 12, 14, 16, 17, 26, 30, 34, 35, 36, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 58, 59, 60, 61, 62, 63, 65].includes(map.counts.totalCurrentManifests),
     "Total repository manifests must be a recorded historical count (plan 174 Tasks 6-7 leave 60)",
   );
   assert.equal(map.counts.baselineManifests, 62, "Baseline 0.3.3 manifests count must be 62");
@@ -59,6 +59,10 @@ test("phase54 package map: partitioning - every current manifest is accounted fo
     "@arnilo/prism-provider-typesafe",
     // Plan 195 Task 5: the Liquid provider adapter.
     "@arnilo/prism-provider-liquid",
+    // Plan 203 Task 4: OpenRouter reuses its retired name for the new adapter.
+    "@arnilo/prism-provider-openrouter",
+    // Plan 204 Task 5: OpenAI models on a ChatGPT plan; the name never shipped in 0.3.x.
+    "@arnilo/prism-provider-openai-codex",
     // Plan 152 Task 7: the credentials-slot keyring package, added after the 0.4 consolidation.
     "@arnilo/prism-credentials-keyring",
     // Plan 153 Task 3: the JSONL session store package, moved out of the root `./node/` subpath.

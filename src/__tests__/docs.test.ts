@@ -600,12 +600,12 @@ describe("docs", () => {
         .filter((n) => !/prism-(documents|sheets|diagrams)$/.test(n) && !(n in truth.versions) && n !== "@arnilo/prism-code");
       // 55 legacy names were retired in 0.4; the
       // two `@arnilo/prism-provider-<vendor>` packages (hyper, opencode-go, typesafe, laya) are current
-      // manifests, so the live-docs sweep covers the 50 names that are not
+      // manifests; restored OpenRouter leaves 49 legacy names that are not
       // publishable. The 55-entry legacy registry plan stays frozen in the evidence file
       // and is asserted by the packaging suite. (`@arnilo/prism-providers` itself is not in
       // this list: the phase54 table names it in a numbered row, not the first-cell form the
       // derivation matches — `no_workspace_imports_prism_providers` guards it instead.)
-      assert.ok(retired.length === 50, `phase54 evidence must enumerate the 50 retired 0.3 packages, got ${retired.length}`);
+      assert.equal(retired.length, 49, `phase54 evidence must enumerate 49 still-retired 0.3 names after OpenRouter restoration, got ${retired.length}`);
       const exemptPages = new Set(["docs/migration.md"]); // per-era records live under docs/history/ (skipped above)
       // Lines tied to dated records (release decisions, plan/phase cites, version-pinned tags) or to
       // an explicit `formerly` alias stay exempt: the alias records where a package moved from, it
@@ -1532,6 +1532,7 @@ describe("docs", () => {
         "examples/web-no-key.ts",
         "examples/mcp-trust.ts",
         "examples/guardrail-packs.ts",
+        "examples/eval-judges.ts",
         "examples/governance-deny.ts",
         "examples/external-agent.ts",
         "examples/serve-tools.ts",
@@ -2014,6 +2015,46 @@ describe("docs", () => {
     const count = (JSON.parse(readFileSync("scripts/package-truth.json", "utf8")) as { counts: { publishable: number } }).counts
       .publishable;
     assert.equal(manifests.filter((manifest) => !manifest.private).length, count, "publishable package count drifted");
+  });
+
+  it("fabric_readme_makes_no_better_than_full_context_claim", () => {
+    const files = [
+      "packages/memory/fabric/README.md",
+      "packages/memory/observational/README.md",
+      "CHANGELOG.md",
+      "docs/_evidence/memory-bench-0.13.0.md",
+    ];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      assert.ok(!/better than full[- ]context/i.test(text), `${file} claims better than full context`);
+      assert.ok(!/full[- ]context[- ]substitute/i.test(text), `${file} uses the harness substitute label as prose`);
+    }
+    const fabric = readFileSync("packages/memory/fabric/README.md", "utf8");
+    for (const phrase of [
+      "non-inferior to whole-history context on LongMemEval-S held-out v3",
+      "about a quarter of the input tokens",
+      "same model judged",
+      "Passive injection\nalone scores below whole-history context",
+      "the read tools are required",
+      "1.5 tool calls per question",
+      "2% of questions hitting the eight-turn limit",
+      "### Known limitations",
+    ]) {
+      assert.ok(fabric.includes(phrase), `fabric README missing: ${phrase}`);
+    }
+    const limitations = JSON.parse(readFileSync("docs/_evidence/memory-bench/188.11/limitations.json", "utf8")) as {
+      id: string;
+      statement: string;
+      evidence: string;
+      plan202Task: number;
+    }[];
+    assert.equal(limitations.length, 12);
+    assert.equal(new Set(limitations.map((entry) => entry.id)).size, 12);
+    for (const entry of limitations) {
+      assert.ok(entry.id.length > 0 && entry.statement.length > 0, "limitation entries need an id and statement");
+      assert.ok(entry.plan202Task > 0, `${entry.id} names no plan 202 task`);
+      assert.ok(existsSync(entry.evidence), `${entry.id} evidence path is missing: ${entry.evidence}`);
+    }
   });
 
   it("readme_and_product_describe_0_13", () => {

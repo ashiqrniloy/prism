@@ -20,13 +20,8 @@ import {
   type RagAccessConstraint,
   repointSource,
 } from "@arnilo/prism-memory-core";
-import {
-  createFabricRepointHandler,
-  createMemory,
-  createMemoryFabric,
-  createMemoryWorkingStore,
-  parseMemoryNoteMetadata,
-} from "../index.js";
+import { createMemory, createMemoryFabric, createMemoryWorkingStore, parseMemoryNoteMetadata } from "../index.js";
+import { createFabricRepointHandler } from "../repoint.js";
 
 const thread: Required<MemoryScope> = { tenantId: "t1", resourceId: "r1", threadId: "th1" };
 const alice: RagAccessConstraint = { principalId: "alice", tenantId: thread.tenantId };

@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import type { HookRegistrar, HostPort, HostUi, ModelRef, OwnershipScope, PackageInstance } from "@arnilo/prism";
+import type { ToolsWebCacheConfig, ToolsWebDomainsConfig, ToolsWebFetchConfig } from "@arnilo/prism-tools-web";
 
 /** Modes the approval package owns. Passed through; the package validates. */
 export type HostApprovalMode = "deny" | "ask" | "edits" | "auto";
 
-export type HostWebBackend = "brave" | "exa" | "firecrawl" | "obscura";
+export type HostWebBackend = "brave" | "exa" | "firecrawl" | "obscura" | "searxng" | "tavily" | "kagi";
 
 /**
  * Refs, paths, and modes only. Package options stay in each factory call.
@@ -23,8 +24,18 @@ export interface HostConfig {
     readonly backend: HostWebBackend;
     readonly apiKey?: string;
     readonly obscuraBinary?: string;
+    /** Exact origin of the SearXNG instance; required when `backend` is `"searxng"`. */
+    readonly searxngOrigin?: string;
+    /** Second backend for `web_fetch` when `backend` is a keyed search backend. */
+    readonly fetch?: Pick<ToolsWebFetchConfig, "backend" | "apiKey">;
+    /** Host-enforced hostname permission for search results and every fetch path. */
+    readonly domains?: ToolsWebDomainsConfig;
+    /** Opt-in per-session page cache. */
+    readonly cache?: ToolsWebCacheConfig;
   };
   readonly embeddings?: { readonly model: ModelRef };
+  /** Opt-in conversational memory for the research and coding workers. Unset keeps memory-fabric out. */
+  readonly memory?: "conversational";
   /** Passed to tools-research and to `limits.maxContinuations`. Default 1. */
   readonly maxRepairs?: number;
   /**
@@ -71,15 +82,31 @@ export function hostPortOf(deps: HostDeps): HostPort | undefined {
   return deps.ui === undefined ? undefined : { ui: deps.ui };
 }
 
-const HOST_KEYS = new Set(["models", "storePath", "workspace", "approval", "web", "embeddings", "maxRepairs", "gate", "external", "schedule"]);
+const HOST_KEYS = new Set([
+  "models",
+  "storePath",
+  "workspace",
+  "approval",
+  "web",
+  "embeddings",
+  "memory",
+  "maxRepairs",
+  "gate",
+  "external",
+  "schedule",
+]);
 const GATE_KEYS = new Set(["command"]);
 const MODEL_KEYS = new Set(["orchestrator", "coding", "research"]);
-const WEB_KEYS = new Set(["backend", "apiKey", "obscuraBinary"]);
+const WEB_KEYS = new Set(["backend", "apiKey", "obscuraBinary", "searxngOrigin", "fetch", "domains", "cache"]);
+const WEB_FETCH_KEYS = new Set(["backend", "apiKey"]);
+const WEB_DOMAIN_KEYS = new Set(["allow", "block"]);
+const WEB_CACHE_KEYS = new Set(["ttlSeconds", "maxEntries", "maxBytes"]);
+const FETCH_BACKENDS = new Set(["native", "firecrawl", "off"]);
 const EMBED_KEYS = new Set(["model"]);
 const SCHEDULE_KEYS = new Set(["tz", "missed", "brief", "build"]);
 const EXTERNAL_KEYS = new Set(["binary", "args", "profile", "profilesRoot"]);
 const MODES = new Set<HostApprovalMode>(["deny", "ask", "edits", "auto"]);
-const BACKENDS = new Set<HostWebBackend>(["brave", "exa", "firecrawl", "obscura"]);
+const BACKENDS = new Set<HostWebBackend>(["brave", "exa", "firecrawl", "obscura", "searxng", "tavily", "kagi"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -94,7 +121,12 @@ function assertKeys(value: Record<string, unknown>, allowed: Set<string>, label:
 function modelRef(value: unknown, label: string): ModelRef {
   if (typeof value === "string" && value.length > 0) return value;
   if (isRecord(value) && typeof value.provider === "string" && typeof value.model === "string") {
-    return { provider: value.provider, model: value.model };
+    // A test or offline host may pin limits the provider catalog cannot supply; real refs resolve them.
+    return {
+      provider: value.provider,
+      model: value.model,
+      ...(isRecord(value.limits) ? { limits: value.limits as never } : {}),
+    };
   }
   throw new Error(`prism-agent config ${label} must be a model ref`);
 }
@@ -117,11 +149,66 @@ export function loadHostConfig(path: string): HostConfig {
   if (parsed.web.obscuraBinary !== undefined && typeof parsed.web.obscuraBinary !== "string") {
     throw new Error("prism-agent config web.obscuraBinary must be a string");
   }
+  if (parsed.web.searxngOrigin !== undefined && typeof parsed.web.searxngOrigin !== "string") {
+    throw new Error("prism-agent config web.searxngOrigin must be a string");
+  }
+  let fetch: HostConfig["web"]["fetch"];
+  if (parsed.web.fetch !== undefined) {
+    if (!isRecord(parsed.web.fetch)) throw new Error("prism-agent config web.fetch must be an object");
+    assertKeys(parsed.web.fetch, WEB_FETCH_KEYS, "web.fetch");
+    if (!FETCH_BACKENDS.has(parsed.web.fetch.backend as string)) {
+      throw new Error("prism-agent config web.fetch.backend must be native, firecrawl, or off");
+    }
+    if (parsed.web.fetch.apiKey !== undefined && typeof parsed.web.fetch.apiKey !== "string") {
+      throw new Error("prism-agent config web.fetch.apiKey must be a string");
+    }
+    fetch = {
+      backend: parsed.web.fetch.backend as NonNullable<HostConfig["web"]["fetch"]>["backend"],
+      ...(typeof parsed.web.fetch.apiKey === "string" ? { apiKey: parsed.web.fetch.apiKey } : {}),
+    };
+  }
+  let domains: HostConfig["web"]["domains"];
+  if (parsed.web.domains !== undefined) {
+    if (!isRecord(parsed.web.domains)) throw new Error("prism-agent config web.domains must be an object");
+    assertKeys(parsed.web.domains, WEB_DOMAIN_KEYS, "web.domains");
+    for (const key of ["allow", "block"] as const) {
+      const list = parsed.web.domains[key];
+      if (list !== undefined && (!Array.isArray(list) || list.some((entry) => typeof entry !== "string"))) {
+        throw new Error(`prism-agent config web.domains.${key} must be an array of strings`);
+      }
+    }
+    domains = {
+      ...(Array.isArray(parsed.web.domains.allow) ? { allow: parsed.web.domains.allow as string[] } : {}),
+      ...(Array.isArray(parsed.web.domains.block) ? { block: parsed.web.domains.block as string[] } : {}),
+    };
+  }
+  let cache: HostConfig["web"]["cache"];
+  if (parsed.web.cache !== undefined) {
+    if (!isRecord(parsed.web.cache)) throw new Error("prism-agent config web.cache must be an object");
+    assertKeys(parsed.web.cache, WEB_CACHE_KEYS, "web.cache");
+    if (typeof parsed.web.cache.ttlSeconds !== "number" || !Number.isInteger(parsed.web.cache.ttlSeconds)) {
+      throw new Error("prism-agent config web.cache.ttlSeconds must be an integer");
+    }
+    for (const key of ["maxEntries", "maxBytes"] as const) {
+      const value = parsed.web.cache[key];
+      if (value !== undefined && (typeof value !== "number" || !Number.isInteger(value))) {
+        throw new Error(`prism-agent config web.cache.${key} must be an integer`);
+      }
+    }
+    cache = {
+      ttlSeconds: parsed.web.cache.ttlSeconds,
+      ...(typeof parsed.web.cache.maxEntries === "number" ? { maxEntries: parsed.web.cache.maxEntries } : {}),
+      ...(typeof parsed.web.cache.maxBytes === "number" ? { maxBytes: parsed.web.cache.maxBytes } : {}),
+    };
+  }
   let embeddings: HostConfig["embeddings"];
   if (parsed.embeddings !== undefined) {
     if (!isRecord(parsed.embeddings)) throw new Error("prism-agent config embeddings must be an object");
     assertKeys(parsed.embeddings, EMBED_KEYS, "embeddings");
     embeddings = { model: modelRef(parsed.embeddings.model, "embeddings.model") };
+  }
+  if (parsed.memory !== undefined && parsed.memory !== "conversational") {
+    throw new Error("prism-agent config memory must be conversational");
   }
   if (parsed.maxRepairs !== undefined && (typeof parsed.maxRepairs !== "number" || !Number.isInteger(parsed.maxRepairs))) {
     throw new Error("prism-agent config maxRepairs must be an integer");
@@ -130,7 +217,11 @@ export function loadHostConfig(path: string): HostConfig {
   if (parsed.gate !== undefined) {
     if (!isRecord(parsed.gate)) throw new Error("prism-agent config gate must be an object");
     assertKeys(parsed.gate, GATE_KEYS, "gate");
-    if (!Array.isArray(parsed.gate.command) || parsed.gate.command.length === 0 || parsed.gate.command.some((arg) => typeof arg !== "string" || arg.length === 0)) {
+    if (
+      !Array.isArray(parsed.gate.command) ||
+      parsed.gate.command.length === 0 ||
+      parsed.gate.command.some((arg) => typeof arg !== "string" || arg.length === 0)
+    ) {
       throw new Error("prism-agent config gate.command must be a non-empty argv");
     }
     gate = { command: parsed.gate.command as string[] };
@@ -142,7 +233,10 @@ export function loadHostConfig(path: string): HostConfig {
     if (typeof parsed.external.binary !== "string" || parsed.external.binary.length === 0) {
       throw new Error("prism-agent config external needs a binary path");
     }
-    if (parsed.external.args !== undefined && (!Array.isArray(parsed.external.args) || parsed.external.args.some((arg) => typeof arg !== "string"))) {
+    if (
+      parsed.external.args !== undefined &&
+      (!Array.isArray(parsed.external.args) || parsed.external.args.some((arg) => typeof arg !== "string"))
+    ) {
       throw new Error("prism-agent config external.args must be an array of strings");
     }
     for (const key of ["profile", "profilesRoot"] as const) {
@@ -202,8 +296,13 @@ export function loadHostConfig(path: string): HostConfig {
       backend: parsed.web.backend as HostWebBackend,
       ...(typeof parsed.web.apiKey === "string" ? { apiKey: parsed.web.apiKey } : {}),
       ...(typeof parsed.web.obscuraBinary === "string" ? { obscuraBinary: parsed.web.obscuraBinary } : {}),
+      ...(typeof parsed.web.searxngOrigin === "string" ? { searxngOrigin: parsed.web.searxngOrigin } : {}),
+      ...(fetch === undefined ? {} : { fetch }),
+      ...(domains === undefined ? {} : { domains }),
+      ...(cache === undefined ? {} : { cache }),
     },
     ...(embeddings === undefined ? {} : { embeddings }),
+    ...(parsed.memory === "conversational" ? { memory: "conversational" as const } : {}),
     ...(typeof parsed.maxRepairs === "number" ? { maxRepairs: parsed.maxRepairs } : {}),
     ...(gate === undefined ? {} : { gate }),
     ...(external === undefined ? {} : { external }),

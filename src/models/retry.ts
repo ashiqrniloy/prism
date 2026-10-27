@@ -61,6 +61,9 @@ export function createDefaultRetryPolicy(options: DefaultRetryPolicyOptions = {}
 
 export function isTransientErrorInfo(error: ErrorInfo, transientCodes: ReadonlySet<string | number> = TRANSIENT_CODES): boolean {
   if (error.name === "AbortError" || /aborted|abort/i.test(error.message)) return false;
+  // A quota failure is a plan state, not congestion: the same attempt consumes the same allowance
+  // and cannot succeed until the caller acts, so a 429 alone must not make it transient.
+  if (error.failureClass === "quota") return false;
   if (error.code !== undefined && transientCodes.has(error.code)) return true;
   return /timeout|temporar|rate.?limit|overload|unavailable/i.test(error.message);
 }

@@ -166,7 +166,11 @@ export interface CompactionWhenPayload {
 }
 
 export interface CompactionWhenDecision {
-  readonly compact: true;
+  /**
+   * `true` requests compaction, `false` vetoes it. Returning `undefined` abstains: when every
+   * registered handler abstains, the configured `thresholdEntries` decides.
+   */
+  readonly compact: boolean;
 }
 
 /** Named catalog hooks (roadmap §2.4). Every `AgentEvent["type"]` is additionally an observe hook. */

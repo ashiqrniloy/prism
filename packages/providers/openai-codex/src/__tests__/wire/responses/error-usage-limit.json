@@ -1,0 +1,25 @@
+[
+  {
+    "method": "POST",
+    "path": "/v1/responses",
+    "requestBody": {
+      "model": "gpt-6.1-sol",
+      "store": false,
+      "stream": true,
+      "input": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "hi"
+            }
+          ]
+        }
+      ]
+    },
+    "status": 429,
+    "contentType": "application/json",
+    "responseBody": "{\"detail\": \"You've reached your ChatGPT plan usage limit. Try again later.\", \"code\": \"subscription_sharing_usage_limit_exceeded\"}"
+  }
+]

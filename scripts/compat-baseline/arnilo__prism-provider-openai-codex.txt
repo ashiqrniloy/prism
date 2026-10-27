@@ -1,0 +1,60 @@
+DYNAMIC_AGENT_CLIENT_ID	export declare const DYNAMIC_AGENT_CLIENT_ID = "dynamic_agent_client"
+IdTokenError	export declare class IdTokenError extends Error
+OPENAI_CODEX_AUTHORIZE_URL	export declare const OPENAI_CODEX_AUTHORIZE_URL = "https://auth.openai.com/api/accounts/authorize"
+OPENAI_CODEX_AUTH_ID	export declare const OPENAI_CODEX_AUTH_ID = "openai-codex"
+OPENAI_CODEX_CALLBACK_PATH	export declare const OPENAI_CODEX_CALLBACK_PATH = "/auth/callback"
+OPENAI_CODEX_DEFAULT_BASE_URL	export declare const OPENAI_CODEX_DEFAULT_BASE_URL = "https://api.openai.com/v1"
+OPENAI_CODEX_DEFAULT_CALLBACK_PORT	export declare const OPENAI_CODEX_DEFAULT_CALLBACK_PORT = 1455
+OPENAI_CODEX_DEFAULT_CREDENTIAL_REF	export declare const OPENAI_CODEX_DEFAULT_CREDENTIAL_REF = "keyring:openai-codex"
+OPENAI_CODEX_DIRECT_TOKEN_SCOPE	export declare const OPENAI_CODEX_DIRECT_TOKEN_SCOPE = "chatgpt.tokens.use.direct"
+OPENAI_CODEX_ERROR_CLASSES	export declare const OPENAI_CODEX_ERROR_CLASSES: Readonly<Record<string, ProviderFailureClass>>
+OPENAI_CODEX_EXPIRY_MARGIN_MS	export declare const OPENAI_CODEX_EXPIRY_MARGIN_MS = 300000
+OPENAI_CODEX_MODELS_MAX_BODY_BYTES	export declare const OPENAI_CODEX_MODELS_MAX_BODY_BYTES = 2000000
+OPENAI_CODEX_OIDC_URL	export declare const OPENAI_CODEX_OIDC_URL = "https://auth.openai.com/.well-known/openid-configuration"
+OPENAI_CODEX_REGISTRATION_MARKER	export declare const OPENAI_CODEX_REGISTRATION_MARKER = "registration-only"
+OPENAI_CODEX_RESOURCE	export declare const OPENAI_CODEX_RESOURCE = "https://api.openai.com/v1"
+OPENAI_CODEX_RESPONSES_ROUTE	export declare const OPENAI_CODEX_RESPONSES_ROUTE: RoutedProviderRoute<"openai-responses">
+OPENAI_CODEX_REVOKE_URL	export declare const OPENAI_CODEX_REVOKE_URL = "https://auth.openai.com/api/accounts/oauth/revoke"
+OPENAI_CODEX_ROUTE	export declare const OPENAI_CODEX_ROUTE = "responses"
+OPENAI_CODEX_SCOPE	export declare const OPENAI_CODEX_SCOPE = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct"
+OPENAI_CODEX_SESSION_ID_MAX_LENGTH	export declare const OPENAI_CODEX_SESSION_ID_MAX_LENGTH = 128
+OPENAI_CODEX_TERMINAL_REFRESH_CODES	export declare const OPENAI_CODEX_TERMINAL_REFRESH_CODES: readonly ["invalid_grant", "invalid_refresh_token", "token_expired", "refresh_token_expired", "refresh_token_invalidated", "refresh_token_reused"]
+OPENAI_CODEX_TOKEN_URL	export declare const OPENAI_CODEX_TOKEN_URL = "https://auth.openai.com/api/accounts/oauth/token"
+OpenAICodexAuthError	export declare class OpenAICodexAuthError extends Error
+OpenAICodexPlanUsageNotGrantedError	export declare class OpenAICodexPlanUsageNotGrantedError extends OpenAICodexAuthError
+OpenAICodexReauthorizeError	export declare class OpenAICodexReauthorizeError extends OpenAICodexAuthError
+OpenAICodexRegistrationError	export declare class OpenAICodexRegistrationError extends OpenAICodexAuthError
+USAGE_LIMIT_NOTE	export declare const USAGE_LIMIT_NOTE = "ChatGPT plan usage limit reached
+assertWritableCredentialRef	export declare function assertWritableCredentialRef(ref: string): void
+createOpenAICodexProvider	export declare function createOpenAICodexProvider(options?: OpenAICodexProviderOptions): ModelProvider
+credentialRecordFromSecret	export declare function credentialRecordFromSecret(secret: Secret | undefined): OpenAICodexCredentialRecord | undefined
+credentialRecordToSecret	export declare function credentialRecordToSecret(record: OpenAICodexCredentialRecord): Secret
+credentialRegistrationFromSecret	export declare function credentialRegistrationFromSecret(secret: Secret | undefined): OpenAICodexRegistration | undefined
+credentialRegistrationToSecret	export declare function credentialRegistrationToSecret(registration: OpenAICodexRegistration): Secret
+decodeIdToken	export declare function decodeIdToken(idToken: string): IdTokenParts
+default	export default
+defineOpenAICodexModel	export declare function defineOpenAICodexModel(config: OpenAICodexModelConfig): ModelConfig
+generatePkce	export declare function generatePkce(): Promise<
+listOpenAICodexModels	export declare function listOpenAICodexModels(options?: ListOpenAICodexModelsOptions): Promise<readonly ModelConfig[]>
+mapOpenAICodexModel	export declare function mapOpenAICodexModel(entry: OpenAICodexModelEntry, provider?: string): ModelConfig
+openAICodexAffinity	export declare function openAICodexAffinity(request: ProviderRequest): Record<string, string>
+openAICodexApiKey	export declare function openAICodexApiKey(config: OpenAICodexOAuthConfig): (signal?: AbortSignal) => Promise<string>
+openAICodexAuth	export declare function openAICodexAuth(config: OpenAICodexOAuthConfig): OpenAICodexAuthMethod
+openAICodexAuthorizeUrl	export declare function openAICodexAuthorizeUrl(params: OpenAICodexAuthorizeParams): string
+openAICodexErrorCode	export declare function openAICodexErrorCode(bodyText: string): string | undefined
+openAICodexHttpError	export declare function openAICodexHttpError(response: Response, bodyText: string, secrets: readonly (string | undefined)[]): Error
+openAICodexImportCredentials	export declare function openAICodexImportCredentials(config: OpenAICodexOAuthConfig): (ctx: AuthContext, record: unknown) => Promise<void>
+openAICodexLogout	export declare function openAICodexLogout(config: OpenAICodexOAuthConfig): (ctx: AuthContext) => Promise<void>
+openAICodexModels	export declare const openAICodexModels: readonly ModelConfig[]
+openAICodexThinkingLevels	export declare function openAICodexThinkingLevels(levels: readonly (string |
+openaiCodex	export declare function openaiCodex(options?: OpenAICodexProviderPackageOptions & OpenAICodexProviderConfig): PackageInstance
+parseCredentialRecord	export declare function parseCredentialRecord(value: unknown): OpenAICodexCredentialRecord | undefined
+type ListOpenAICodexModelsOptions	export { defineOpenAICodexModel, type ListOpenAICodexModelsOptions, listOpenAICodexModels, mapOpenAICodexModel, OPENAI_CODEX_DEFAULT_BASE_URL, OPENAI_CODEX_MODELS_MAX_BODY_BYTES, OPENAI_CODEX_ROUTE, type OpenAICodexModelConfig, type OpenAICodexModelEntry, openAICodexModels, openAICodexThinkingLevels, } from "./models.js"
+type OpenAICodexAuthMethod	export { assertWritableCredentialRef, credentialRecordFromSecret, credentialRecordToSecret, credentialRegistrationFromSecret, credentialRegistrationToSecret, DYNAMIC_AGENT_CLIENT_ID, OPENAI_CODEX_AUTH_ID, OPENAI_CODEX_DEFAULT_CALLBACK_PORT, OPENAI_CODEX_DIRECT_TOKEN_SCOPE, OPENAI_CODEX_EXPIRY_MARGIN_MS, OPENAI_CODEX_REGISTRATION_MARKER, OPENAI_CODEX_SCOPE, OpenAICodexAuthError, type OpenAICodexAuthMethod, type OpenAICodexCredentialRecord, type OpenAICodexCredentialSlot, type OpenAICodexOAuthConf
+type OpenAICodexCredentialRecord	export { assertWritableCredentialRef, credentialRecordFromSecret, credentialRecordToSecret, credentialRegistrationFromSecret, credentialRegistrationToSecret, DYNAMIC_AGENT_CLIENT_ID, OPENAI_CODEX_AUTH_ID, OPENAI_CODEX_DEFAULT_CALLBACK_PORT, OPENAI_CODEX_DIRECT_TOKEN_SCOPE, OPENAI_CODEX_EXPIRY_MARGIN_MS, OPENAI_CODEX_REGISTRATION_MARKER, OPENAI_CODEX_SCOPE, OpenAICodexAuthError, type OpenAICodexAuthMethod, type OpenAICodexCredentialRecord, type OpenAICodexCredentialSlot, type OpenAICodexOAuthConf
+type OpenAICodexCredentialSlot	export { assertWritableCredentialRef, credentialRecordFromSecret, credentialRecordToSecret, credentialRegistrationFromSecret, credentialRegistrationToSecret, DYNAMIC_AGENT_CLIENT_ID, OPENAI_CODEX_AUTH_ID, OPENAI_CODEX_DEFAULT_CALLBACK_PORT, OPENAI_CODEX_DIRECT_TOKEN_SCOPE, OPENAI_CODEX_EXPIRY_MARGIN_MS, OPENAI_CODEX_REGISTRATION_MARKER, OPENAI_CODEX_SCOPE, OpenAICodexAuthError, type OpenAICodexAuthMethod, type OpenAICodexCredentialRecord, type OpenAICodexCredentialSlot, type OpenAICodexOAuthConf
+type OpenAICodexModelConfig	export { defineOpenAICodexModel, type ListOpenAICodexModelsOptions, listOpenAICodexModels, mapOpenAICodexModel, OPENAI_CODEX_DEFAULT_BASE_URL, OPENAI_CODEX_MODELS_MAX_BODY_BYTES, OPENAI_CODEX_ROUTE, type OpenAICodexModelConfig, type OpenAICodexModelEntry, openAICodexModels, openAICodexThinkingLevels, } from "./models.js"
+type OpenAICodexModelEntry	export { defineOpenAICodexModel, type ListOpenAICodexModelsOptions, listOpenAICodexModels, mapOpenAICodexModel, OPENAI_CODEX_DEFAULT_BASE_URL, OPENAI_CODEX_MODELS_MAX_BODY_BYTES, OPENAI_CODEX_ROUTE, type OpenAICodexModelConfig, type OpenAICodexModelEntry, openAICodexModels, openAICodexThinkingLevels, } from "./models.js"
+type OpenAICodexOAuthConfig	export { assertWritableCredentialRef, credentialRecordFromSecret, credentialRecordToSecret, credentialRegistrationFromSecret, credentialRegistrationToSecret, DYNAMIC_AGENT_CLIENT_ID, OPENAI_CODEX_AUTH_ID, OPENAI_CODEX_DEFAULT_CALLBACK_PORT, OPENAI_CODEX_DIRECT_TOKEN_SCOPE, OPENAI_CODEX_EXPIRY_MARGIN_MS, OPENAI_CODEX_REGISTRATION_MARKER, OPENAI_CODEX_SCOPE, OpenAICodexAuthError, type OpenAICodexAuthMethod, type OpenAICodexCredentialRecord, type OpenAICodexCredentialSlot, type OpenAICodexOAuthConf
+type OpenAICodexRegistration	export { assertWritableCredentialRef, credentialRecordFromSecret, credentialRecordToSecret, credentialRegistrationFromSecret, credentialRegistrationToSecret, DYNAMIC_AGENT_CLIENT_ID, OPENAI_CODEX_AUTH_ID, OPENAI_CODEX_DEFAULT_CALLBACK_PORT, OPENAI_CODEX_DIRECT_TOKEN_SCOPE, OPENAI_CODEX_EXPIRY_MARGIN_MS, OPENAI_CODEX_REGISTRATION_MARKER, OPENAI_CODEX_SCOPE, OpenAICodexAuthError, type OpenAICodexAuthMethod, type OpenAICodexCredentialRecord, type OpenAICodexCredentialSlot, type OpenAICodexOAuthConf
+verifyIdToken	export declare function verifyIdToken(idToken: string, options: VerifyIdTokenOptions): Promise<Record<string, unknown>>

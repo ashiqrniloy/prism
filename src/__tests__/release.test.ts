@@ -64,8 +64,13 @@ test("0.3.0 release graph is independent, publishable, and documented", () => {
   // `@arnilo/prism-workflows` (plan 168 Task 2), which landed after this count was written.
   // Plan 174 Task 6 retires the core family package, so the graph is 63 packages. Plan 174
   // Task 7 retires the three 0.12 workspaces (coding-tools, agent-sdk, acp-agent), so 60.
-  // Plan 182 Task 2 retires the 17 provider packages, so 43.
-  assert.equal(release.packages.length, 43);
+  // Plan 182 Task 2 retires the 17 provider packages, so 43. Plan 196 adds `provider-liquid`, plan
+  // 203 `provider-openrouter`, and plan 204 `provider-openai-codex`, so 46 — and the graph already loaded
+  // 46 workspaces at HEAD while this line still said 43, so one earlier addition had gone uncounted.
+  // Plan 204 Task 8 re-anchors the check to the loaded graph (47 = root + 46 workspaces) instead of
+  // guessing which plan owned that one; from here it catches any further drift.
+  assert.equal(release.packages.length, 47);
+  assert.equal(new Set(release.packages.map((pkg: { manifest: { name: string } }) => pkg.manifest.name)).size, 47);
   assert.doesNotThrow(() =>
     validateReleaseIndependent(release, {
       baseline: "HEAD",

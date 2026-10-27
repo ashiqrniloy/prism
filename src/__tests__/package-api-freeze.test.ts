@@ -1,9 +1,9 @@
+import { describe, it } from "bun:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { describe, it } from "bun:test";
 import type { AgentConfig, PackageAPI, PackageInstance, PackageLoadErrorCode, PackageSource } from "../index.js";
-import type { PackageConfigSource } from "../packages/config.js";
 import { CAPABILITIES, type Capability } from "../packages/capabilities.js";
+import type { PackageConfigSource } from "../packages/config.js";
 
 /**
  * Phase 3 freeze (plan 147 Task 6). The package surface Phase 3 builds on is pinned as data.
@@ -41,6 +41,8 @@ const FROZEN_CAPABILITIES: readonly Capability[] = [
   "session-state",
   "background",
   "credentials",
+  // Plan 204 Task 2: writes through a writable slot; docs/packages.md lists it beside `credentials`.
+  "credentials:write",
   "slot:loop",
   "slot:compaction",
   "slot:store",

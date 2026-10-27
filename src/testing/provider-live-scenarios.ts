@@ -45,7 +45,7 @@ export const LIVE_WEATHER_TOOL: ToolDefinition = {
   }),
 };
 
-export type LiveRouteName = "openai" | "anthropic";
+export type LiveRouteName = "openai" | "anthropic" | "responses";
 
 export interface LiveRouteConfig {
   readonly model: string | ModelConfig;
@@ -62,15 +62,18 @@ export interface LiveRouteConfig {
 export type LiveRouteInput = string | ModelConfig | LiveRouteConfig;
 
 export interface ProviderLiveScenariosOptions {
+  /** Restrict probes, e.g. a separately budgeted paid cache row. Absent runs all scenarios. */
+  readonly scenarios?: readonly ("text" | "tool-loop" | "structured-output" | "abort" | "error" | "cache")[];
   /** Provider instance or factory. If a PackageInstance is given, it is automatically resolved. */
   readonly provider:
     | ModelProvider
     | PackageInstance
     | ((options?: { fetch?: typeof fetch }) => ModelProvider | PackageInstance | Promise<ModelProvider | PackageInstance>);
-  /** Route definitions: chat/openai, anthropic/messages. */
+  /** Route definitions: chat/openai, anthropic/messages, responses (OpenAI Responses, stateless). */
   readonly routes: {
     readonly openai?: LiveRouteInput;
     readonly anthropic?: LiveRouteInput;
+    readonly responses?: LiveRouteInput;
   };
   /** Name of env var holding secret (e.g. "HYPER_API_KEY", "OPENCODE_GO_API_KEY"). */
   readonly secretEnv?: string | readonly string[];
@@ -515,10 +518,7 @@ export async function liveScenarioCacheProbe(options: {
     const usage = events.find((e) => e.type === "usage")?.usage;
     assert.ok(usage, "Hermetic cache recording must include usage");
     assert.ok((usage.cacheReadTokens ?? 0) > 0, "Hermetic cache recording reported no cached tokens");
-    assert.ok(
-      (usage.inputTokens ?? 0) >= (usage.cacheReadTokens ?? 0),
-      "inputTokens must be >= cacheReadTokens",
-    );
+    assert.ok((usage.inputTokens ?? 0) >= (usage.cacheReadTokens ?? 0), "inputTokens must be >= cacheReadTokens");
     assertNoSecretLeak(events, options.secrets);
     return { turn2Usage: usage };
   }
@@ -551,7 +551,8 @@ export async function liveScenarioCacheProbe(options: {
     return { turn1Usage: u1, turn2Usage: u2 };
   }
 
-  // OpenAI chat route prefix cache probe
+  // Keep routing affinity and explicit cache boundary on the stable prefix across turns.
+  const sessionId = options.sessionId ?? `live-cache-chat-${Date.now()}`;
   const makeTurn = (label: string): ProviderRequest => ({
     model: options.model,
     messages: [
@@ -559,7 +560,8 @@ export async function liveScenarioCacheProbe(options: {
       { role: "user", content: [{ type: "text", text: `Reply with exactly the word: ${label}` }] },
     ],
     options: {
-      sessionId: options.sessionId ?? `live-cache-chat-${Date.now()}`,
+      sessionId,
+      ...(options.model.cache?.kind === "cache_control" ? { cache: { breakpoints: [{ location: "stable_context" as const }] } } : {}),
     },
   });
 
@@ -640,10 +642,7 @@ export async function systemOneScenarioToolsRejected(options: {
   assertNoSecretLeak(events, options.secrets);
 }
 
-export async function systemOneScenarioAbort(options: {
-  readonly provider: ModelProvider;
-  readonly model: ModelConfig;
-}): Promise<void> {
+export async function systemOneScenarioAbort(options: { readonly provider: ModelProvider; readonly model: ModelConfig }): Promise<void> {
   await assertAbortIsObserved({
     provider: options.provider,
     request: {
@@ -698,76 +697,83 @@ export async function executeProviderLiveScenarios(
   const routeEntries: [LiveRouteName, LiveRouteInput][] = [];
   if (options.routes.openai) routeEntries.push(["openai", options.routes.openai]);
   if (options.routes.anthropic) routeEntries.push(["anthropic", options.routes.anthropic]);
+  if (options.routes.responses) routeEntries.push(["responses", options.routes.responses]);
 
   for (const [routeName, routeInput] of routeEntries) {
     const { model, config } = await resolveModelConfig(provider, routeInput, routeName);
 
-    // 1. Text stream
-    const textRes = await liveScenarioTextStream({
-      provider,
-      model,
-      route: routeName,
-      secrets,
-      sessionId: config.sessionId,
-    });
-    results.push({ scenario: "text", route: routeName, ok: true, details: textRes });
-
-    // 2. Tool loop with thinking replay
-    const toolRes = await liveScenarioToolLoop({
-      provider,
-      model,
-      route: routeName,
-      secrets,
-      sessionId: config.sessionId,
-    });
-    results.push({ scenario: "tool-loop", route: routeName, ok: true, details: toolRes });
-
-    // 3. Structured output (or documented rejection)
-    const structRes = await liveScenarioStructuredOutput({
-      provider,
-      model,
-      route: routeName,
-      secrets,
-      sessionId: config.sessionId,
-      structuredOutput: config.structuredOutput ?? (model.capabilities?.structuredOutput === "json_schema" ? "json_schema" : undefined),
-    });
-    results.push({ scenario: "structured-output", route: routeName, ok: true, details: structRes });
-
-    // 4. Abort before first request
-    await liveScenarioAbort({
-      provider,
-      model,
-      route: routeName,
-      sessionId: config.sessionId,
-    });
-    results.push({ scenario: "abort", route: routeName, ok: true });
-
-    // 5. Error leaking no secret
-    await liveScenarioErrorResponse({
-      provider,
-      model,
-      route: routeName,
-      secrets,
-      sessionId: config.sessionId,
-    });
-    results.push({ scenario: "error", route: routeName, ok: true });
-
-    // 6. Warm-prefix cache probe
-    let cacheProbeModel = model;
-    if (config.cacheModel) {
-      const resolved = await resolveModelConfig(provider, config.cacheModel, routeName);
-      cacheProbeModel = resolved.model;
+    if (!options.scenarios || options.scenarios.includes("text")) {
+      const textRes = await liveScenarioTextStream({
+        provider,
+        model,
+        route: routeName,
+        secrets,
+        sessionId: config.sessionId,
+      });
+      results.push({ scenario: "text", route: routeName, ok: true, details: textRes });
     }
-    const cacheRes = await liveScenarioCacheProbe({
-      provider,
-      model: cacheProbeModel,
-      route: routeName,
-      secrets,
-      sessionId: config.sessionId,
-      cachePrefix: config.cachePrefix,
-      isHermetic: options.isHermetic,
-    });
-    results.push({ scenario: "cache", route: routeName, ok: true, details: cacheRes });
+
+    if (!options.scenarios || options.scenarios.includes("tool-loop")) {
+      const toolRes = await liveScenarioToolLoop({
+        provider,
+        model,
+        route: routeName,
+        secrets,
+        sessionId: config.sessionId,
+      });
+      results.push({ scenario: "tool-loop", route: routeName, ok: true, details: toolRes });
+    }
+
+    if (!options.scenarios || options.scenarios.includes("structured-output")) {
+      const structRes = await liveScenarioStructuredOutput({
+        provider,
+        model,
+        route: routeName,
+        secrets,
+        sessionId: config.sessionId,
+        structuredOutput: config.structuredOutput ?? (model.capabilities?.structuredOutput === "json_schema" ? "json_schema" : undefined),
+      });
+      results.push({ scenario: "structured-output", route: routeName, ok: true, details: structRes });
+    }
+
+    if (!options.scenarios || options.scenarios.includes("abort")) {
+      await liveScenarioAbort({
+        provider,
+        model,
+        route: routeName,
+        sessionId: config.sessionId,
+      });
+      results.push({ scenario: "abort", route: routeName, ok: true });
+    }
+
+    if (!options.scenarios || options.scenarios.includes("error")) {
+      await liveScenarioErrorResponse({
+        provider,
+        model,
+        route: routeName,
+        secrets,
+        sessionId: config.sessionId,
+      });
+      results.push({ scenario: "error", route: routeName, ok: true });
+    }
+
+    if (!options.scenarios || options.scenarios.includes("cache")) {
+      let cacheProbeModel = model;
+      if (config.cacheModel) {
+        const resolved = await resolveModelConfig(provider, config.cacheModel, routeName);
+        cacheProbeModel = resolved.model;
+      }
+      const cacheRes = await liveScenarioCacheProbe({
+        provider,
+        model: cacheProbeModel,
+        route: routeName,
+        secrets,
+        sessionId: config.sessionId,
+        cachePrefix: config.cachePrefix,
+        isHermetic: options.isHermetic,
+      });
+      results.push({ scenario: "cache", route: routeName, ok: true, details: cacheRes });
+    }
   }
 
   return { ok: true, scenarios: results };
@@ -842,6 +848,7 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
     const routeEntries: [LiveRouteName, LiveRouteInput][] = [];
     if (options.routes.openai) routeEntries.push(["openai", options.routes.openai]);
     if (options.routes.anthropic) routeEntries.push(["anthropic", options.routes.anthropic]);
+    if (options.routes.responses) routeEntries.push(["responses", options.routes.responses]);
 
     for (const [routeName, routeInput] of routeEntries) {
       describe(`${routeName} route`, () => {
@@ -859,29 +866,35 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
           }
         }
 
-        it("live_text_generation_streams_and_leaks_no_secret", async () => {
-          await init();
-          await liveScenarioTextStream({
-            provider,
-            model,
-            route: routeName,
-            secrets,
-            sessionId: routeConfig.sessionId,
-          });
-        });
+        (!options.scenarios || options.scenarios.includes("text") ? it : it.skip)(
+          "live_text_generation_streams_and_leaks_no_secret",
+          async () => {
+            await init();
+            await liveScenarioTextStream({
+              provider,
+              model,
+              route: routeName,
+              secrets,
+              sessionId: routeConfig.sessionId,
+            });
+          },
+        );
 
-        it("live_two_turn_tool_loop_with_thinking_replay", async () => {
-          await init();
-          await liveScenarioToolLoop({
-            provider,
-            model,
-            route: routeName,
-            secrets,
-            sessionId: routeConfig.sessionId,
-          });
-        });
+        (!options.scenarios || options.scenarios.includes("tool-loop") ? it : it.skip)(
+          "live_two_turn_tool_loop_with_thinking_replay",
+          async () => {
+            await init();
+            await liveScenarioToolLoop({
+              provider,
+              model,
+              route: routeName,
+              secrets,
+              sessionId: routeConfig.sessionId,
+            });
+          },
+        );
 
-        it("live_structured_output", async () => {
+        (!options.scenarios || options.scenarios.includes("structured-output") ? it : it.skip)("live_structured_output", async () => {
           await init();
           await liveScenarioStructuredOutput({
             provider,
@@ -893,17 +906,20 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
           });
         });
 
-        it("live_abort_signal_is_observed_before_first_request", async () => {
-          await init();
-          await liveScenarioAbort({
-            provider,
-            model,
-            route: routeName,
-            sessionId: routeConfig.sessionId,
-          });
-        });
+        (!options.scenarios || options.scenarios.includes("abort") ? it : it.skip)(
+          "live_abort_signal_is_observed_before_first_request",
+          async () => {
+            await init();
+            await liveScenarioAbort({
+              provider,
+              model,
+              route: routeName,
+              sessionId: routeConfig.sessionId,
+            });
+          },
+        );
 
-        it("live_error_response_leaks_no_secret", async () => {
+        (!options.scenarios || options.scenarios.includes("error") ? it : it.skip)("live_error_response_leaks_no_secret", async () => {
           await init();
           await liveScenarioErrorResponse({
             provider,
@@ -914,7 +930,7 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
           });
         });
 
-        it("live_warm_prefix_cache_probe", async () => {
+        (!options.scenarios || options.scenarios.includes("cache") ? it : it.skip)("live_warm_prefix_cache_probe", async () => {
           await init();
           let cacheProbeModel = model;
           if (routeConfig.cacheModel) {
@@ -941,9 +957,7 @@ export function runProviderLiveScenarios(options: ProviderLiveScenariosOptions):
  * Runs tier-1 shared live scenarios for System One decision model provider packages.
  * Automatically skips cleanly when credentials, opt-in flags, or servers are absent.
  */
-export async function runSystemOneLiveScenarios(
-  options: SystemOneLiveScenariosOptions,
-): Promise<LiveSuiteRegistrationResult> {
+export async function runSystemOneLiveScenarios(options: SystemOneLiveScenariosOptions): Promise<LiveSuiteRegistrationResult> {
   let skipReason = determineSkipReason(options);
 
   if (!skipReason && options.reachabilityCheck) {

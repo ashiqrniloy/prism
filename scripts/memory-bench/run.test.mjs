@@ -536,7 +536,7 @@ test("memory_bench_keeps_small_om_history_without_duplicate_injection", async ()
   assert.ok(report.injections.every((item) => item.source === "om" && item.id && item.placement));
 });
 test("memory_bench_compare_is_paired_mcnemar", () => {
-  assert.equal(mcnemar(0, 5), 0.0625);
+  assert.ok(Math.abs(mcnemar(0, 5) - 0.0625) < 1e-14);
   assert.equal(mcnemar(0, 0), 1);
   const a = { suite: "s", subset: "base", results: [{ id: "1", ability: "a", correct: true }] };
   const b = { ...a, results: [{ id: "2", ability: "a", correct: false }] };
@@ -2401,7 +2401,7 @@ async function multiSessionFixture({ instances = false } = {}) {
 }
 
 test("fabric_x_tools_keeps_memory_tools_and_injection", async () => {
-  const { isToolsConfig, memoryConfigs } = await import("./ablations.mjs");
+  const { isToolsConfig, memoryConfigs, resolvedMemoryConfigs } = await import("./ablations.mjs");
   // Plan 188.10 Task 4: the product's shape is passive injection *and* tools; agentic is tools only.
   assert.equal(isToolsConfig("fabric-x-tools"), true);
   assert.equal(isToolsConfig("fabric-xc-tools"), true);
@@ -2410,9 +2410,12 @@ test("fabric_x_tools_keeps_memory_tools_and_injection", async () => {
   for (const config of ["fabric-x", "fabric-xc", "fabric", "fabric-hybrid", "om+fabric"])
     assert.equal(isToolsConfig(config), false, `${config} keeps the shipped no-tools passive shape`);
   const x = memoryConfigs({ config: "fabric-x-tools" });
-  assert.deepEqual(x.fabric.inject, { query: "task", kinds: ["exchange"] });
-  assert.equal(x.fabric.promote, undefined, "fabric-x-tools is the exchange store's local write side");
-  assert.deepEqual(x.fabric.exchanges, {});
+  // Plan 188.11 Task 3: the arm is the conversational preset; the resolved values are the 188.10 arm's.
+  assert.equal(x.fabric.preset, "conversational");
+  const resolvedX = resolvedMemoryConfigs(x).fabric;
+  assert.deepEqual(resolvedX.inject, { query: "task", kinds: ["exchange"] });
+  assert.equal(resolvedX.promote.enabled, false, "fabric-x-tools is the exchange store's local write side");
+  assert.equal(resolvedX.exchanges.enabled, true);
   const xc = memoryConfigs({ config: "fabric-xc-tools" });
   assert.deepEqual(xc.fabric.inject, { query: "task", kinds: ["fact", "exchange"] });
   assert.deepEqual(xc.fabric.promote, {}, "the xc write side promotes exchanges into facts");

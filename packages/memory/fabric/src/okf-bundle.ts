@@ -13,7 +13,7 @@ import {
   type WorkingMemoryStore,
 } from "@arnilo/prism-memory-core";
 import { scanScopedMemoryContent } from "./scoped/trust.js";
-import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, parseMemoryNoteMetadata, stampProvenance } from "./types.js";
+import { encodeMemoryNoteMetadata, MEMORY_NOTE_METADATA_KEY, parseMemoryNoteMetadata, stampProvenance, unreadableNoteReason } from "./types.js";
 import type { JsonObject } from "@arnilo/prism";
 
 /**
@@ -172,6 +172,11 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
           skippedHeld += 1;
           continue;
         }
+        // A note a newer version wrote is carried as written: no trust stamp, no re-render.
+        if (unreadableNoteReason(source.metadata) !== undefined) {
+          batch.push(source);
+          continue;
+        }
         const stamped = stampImported(source, at);
         if (stamped.flagged) flagged += 1;
         batch.push(stamped.record);
@@ -193,7 +198,10 @@ export async function importMemoryOkf(memory: Memory, options: ImportMemoryOkfOp
     if (options.mode === "replace") {
       const doomed: string[] = [];
       for await (const records of pages(vectorStore, scope, memory.limits.rebuildBatchSize, options.signal)) {
-        for (const record of records) if (!keep.has(record.id) && !held.has(record.id)) doomed.push(record.id);
+        // Replace never deletes a note this version cannot read; only `memory.forget` does.
+        for (const record of records) {
+          if (!keep.has(record.id) && !held.has(record.id) && unreadableNoteReason(record.metadata) === undefined) doomed.push(record.id);
+        }
       }
       for (let offset = 0; offset < doomed.length; offset += memory.limits.rebuildBatchSize) {
         removed += await vectorStore.delete({ ...scope, ids: doomed.slice(offset, offset + memory.limits.rebuildBatchSize) }, { signal: options.signal });

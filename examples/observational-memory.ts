@@ -45,7 +45,7 @@ import { sqliteStore } from "@arnilo/prism-store-sqlite";
  * secret and the demo asserts the ledger and the events never render it. Run: `bun examples/observational-memory.ts`
  */
 
-const MAIN_MODEL = "mock/main";
+const MAIN_MODEL = { provider: "mock", model: "main", limits: { contextWindow: 64_000, maxOutputTokens: 0 } } as const;
 const OBSERVER_MODEL = "mock/observer";
 const OBSERVATION = "OBSERVED-FACT: the retry budget is capped at three attempts.";
 /** A secret-shaped sentinel: the ledger and the events must never render it. */

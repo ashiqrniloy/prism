@@ -105,7 +105,10 @@ function extractRunIO(trace: EvaluationTrace): { input: Message | undefined; out
 
 function nextVersion(previous: string | undefined): string {
   const current = previous ?? "1";
-  return /^\d+$/.test(current) ? String(Number(current) + 1) : `${current}-2`;
+  if (/^\d+$/.test(current)) return String(Number(current) + 1);
+  // Non-numeric labels keep their prefix and count in a trailing `.N`: `v1` → `v1.1` → `v1.2`.
+  const [, prefix = current, counter] = /^(.*?)(?:\.(\d+))?$/.exec(current) ?? [];
+  return `${prefix}.${Number(counter ?? "0") + 1}`;
 }
 
 /** Append production runs to a dataset as a new immutable version: resolve → redact → map → append. */
@@ -144,7 +147,15 @@ export async function datasetFromRuns<TInput = unknown, TExpected = unknown>(
 
   const redactor = resolveRedactor(input.redactor, input.secrets);
   const toItem = input.toItem ?? defaultCurateToItem;
-  const ordered = [...targets.entries()].sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+  // Datasets are immutable versions: a run already curated is skipped, never replaced.
+  const seen = new Set(input.dataset.items.map((item) => item.id));
+  const ordered = [...targets.entries()]
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .filter(([runId]) => {
+      if (!seen.has(runId)) return true;
+      skipped.push({ id: runId, reason: "already in dataset" });
+      return false;
+    });
 
   // One bounded feedback query per batch (the feedback store enforces its own page caps);
   // newest record wins per run. ponytail: single owner-scoped page — feedback beyond the
@@ -198,6 +209,7 @@ export async function datasetFromRuns<TInput = unknown, TExpected = unknown>(
           id: redactedDraft.id ?? runId,
           input: redactedDraft.input,
           expected: redactedDraft.expected,
+          label: { source: feedbackByRun.get(runId)?.metadata?.expected !== undefined ? "human" : "curated" },
           metadata: redactedDraft.metadata,
         };
         const serialized = JSON.stringify(item) ?? "";
@@ -220,13 +232,24 @@ export async function datasetFromRuns<TInput = unknown, TExpected = unknown>(
 
   const added: DatasetItem<TInput, TExpected>[] = [];
   for (const outcome of outcomes) {
-    if ("item" in outcome) added.push(outcome.item);
-    else skipped.push(outcome);
+    if (!("item" in outcome)) {
+      skipped.push(outcome);
+      continue;
+    }
+    // A custom `toItem` can map to an id the run id pre-check could not see.
+    if (seen.has(outcome.item.id)) {
+      skipped.push({ id: outcome.item.id, reason: "already in dataset" });
+      continue;
+    }
+    seen.add(outcome.item.id);
+    added.push(outcome.item);
   }
   if (added.length === 0) return { dataset: input.dataset, version: input.dataset.version, added: 0, skipped };
   const version = nextVersion(input.dataset.version);
   const dataset = defineDataset<TInput, TExpected>({
     id: input.dataset.id,
+    metadata: input.dataset.metadata,
+    canary: input.dataset.canary,
     version,
     items: [...input.dataset.items, ...added],
   });

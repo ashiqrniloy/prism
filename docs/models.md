@@ -147,23 +147,34 @@ echoes the `Authorization` header is redacted. A spec with no `credential` sends
 A `models.client` call is retried only before its first event reaches the caller; after that a failure is a
 redacted `error` event. `done.stopReason` lands on the closed taxonomy on both paths.
 
+Transience is the `ErrorInfo` the provider failure carries: a numeric status in the transient set, a transient
+network code, or a message naming congestion. One exception is deliberate — a failure classified
+`failureClass: "quota"` is never retried (`isTransientErrorInfo`), because the same attempt spends the same
+allowance and cannot succeed until the caller acts. A plan usage limit (a `429` whose body names usage or quota,
+e.g. Sign in with ChatGPT's `subscription_sharing_usage_limit_exceeded`) therefore stops the run and the user sees
+where to look, while an ordinary `429` rate limit still backs off.
+
 ## Agents with no model
 
 `AgentConfig.model` is optional only for a loop that declares `usesModel: false` (see [loop.md](loop.md)). On such an agent `agent.config.model` is `undefined`, `agent.models.list()` lists only what providers declare, `session.contextMeter()` omits the input cap, and `models.client()` / `models.embeddings()` / `models.decisions()` with no reference throw a `TypeError` naming the missing model. A missing model never falls back to a default provider.
 
 ## Provider packages
 
-Prism 0.13.0 ships 5 provider packages: `@arnilo/prism-provider-{hyper, laya, liquid, opencode-go, typesafe}`. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-provider-liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
+Prism 0.13.0 ships 7 provider packages: `@arnilo/prism-provider-{hyper, laya, liquid, openai-codex, opencode-go, openrouter, typesafe}`. Other providers can be built on `@arnilo/prism/provider-kit`. `@arnilo/prism-provider-liquid` registers two providers — hosted `liquid` (`d1.1`, `d1-ultra`) and `liquid-local` (`d1-3B` served by llama.cpp `llama-server`).
 Listing one registers its provider(s); no package imports a sibling. `apiKey` (and every
 other credential field) is an `env:`/`keyring:` ref resolved per request through the `credentials` slot,
 OAuth methods go through `host.ui`, and `keyring:` refs resolve through `@arnilo/prism-credentials-keyring`.
+A provider package that rotates tokens at request time (an OAuth refresh) persists the new record through
+`credentials.store`/`delete`, which needs the `credentials:write` capability; `env:` refs are never writable.
 The package README carries the config table, the named exports, and the vendor wire notes:
 
 | Package | README |
 | --- | --- |
 | `@arnilo/prism-provider-hyper` | [README](../packages/providers/hyper/README.md) |
 | `@arnilo/prism-provider-laya` | [README](../packages/providers/laya/README.md) |
+| `@arnilo/prism-provider-openai-codex` | [README](../packages/providers/openai-codex/README.md) |
 | `@arnilo/prism-provider-opencode-go` | [README](../packages/providers/opencode-go/README.md) |
+| `@arnilo/prism-provider-openrouter` | [README](../packages/providers/openrouter/README.md) |
 | `@arnilo/prism-provider-typesafe` | [README](../packages/providers/typesafe/README.md) |
 
 ## Usage and token accounting

@@ -1,5 +1,6 @@
 /** Context-assembly + runInternal orchestrator (plan 059). */
 
+import { ContextOverflowError, contextOverflowMessage, ProviderOverflowRecovery } from "../context-overflow.js";
 import { ModelError } from "../model-errors.js";
 import type { ActiveDurableRun } from "../../agent-approval.js";
 import { AgentRunSuspended } from "../../agent-approval.js";
@@ -27,6 +28,7 @@ import type { AgentInput } from "../../input.js";
 import { assembleProviderInput } from "../../input.js";
 import type { AskRequest, AskResolution, LoopStrategy, RunTurnOptions } from "../../loop/index.js";
 import { createRunController } from "../../loop/index.js";
+import { applyRequestTransforms } from "../../loop/request-draft.js";
 import { applyDefaultProviderRequestOptions } from "../../provider-kit/provider-request-policy.js";
 import { errorToErrorInfo, redactRunLedgerRecord } from "../../redaction.js";
 import { describeBudgetExhaustion, RunLimitError, RunLimitTracker, resolveRunLimits } from "../../run-limits.js";
@@ -402,6 +404,74 @@ async function assembleRoundContext(params: {
   const dispatchBound = bindDispatchToolCall(ctx);
   ctx.dispatchToolCall = dispatchBound;
 
+  /** Assemble one request without the per-turn bookkeeping, so overflow recovery can rebuild it. */
+  const buildTurnRequest = async (
+    nextInput: AgentInput,
+    toolResults: readonly import("../../contracts.js").ToolResult[] | undefined,
+    turn: number | undefined,
+    runOptions?: RunTurnOptions,
+  ): Promise<import("../../contracts.js").ProviderRequest> => {
+    const turnIndex = turn ?? 1;
+    let turnTools = tools;
+    // Package tools hidden by their `when` predicate for this session: not advertised and not
+    // callable (`dispatchFilter` allows only `turnAllow`), unless `allowHiddenToolCalls` is set.
+    const hidden = hiddenPackageTools(session, tools);
+    if (hidden) {
+      turnTools = tools.filter((tool) => !hidden.has(tool.name));
+      ctx.turnAllow = hidden.size > 0 ? turnTools.map((tool) => tool.name) : undefined;
+    }
+    const requestedTools = runOptions?.tools;
+    if (requestedTools === false) {
+      turnTools = [];
+      ctx.turnAllow = [];
+    } else if (Array.isArray(requestedTools)) {
+      const clamped = clampTurnToolNames(turnTools, requestedTools);
+      if (clamped.dropped.length > 0) {
+        session.emit({
+          type: "package.event",
+          sessionId: session.id,
+          runId,
+          package: "kernel",
+          name: "tools.clamped",
+          data: { turn: turnIndex, dropped: clamped.dropped } as unknown as JsonValue,
+        });
+      }
+      turnTools = clamped.tools;
+      ctx.turnAllow = turnTools.map((tool) => tool.name);
+    }
+    const turnModel = options.model ?? session.agent.config.model;
+    if (!turnModel) throw new ModelError("no_model", "A provider turn needs a model, and this agent was created without one");
+    const request = await assembleProviderInput({
+      model: turnModel,
+      input: nextInput,
+      history: session.history,
+      summaries: (await session.snapshot()).summaries,
+      toolResults: toolResults ?? [],
+      turn,
+      inputLayout,
+      systemInstructions: runOptions?.system ?? systemInstructions,
+      skills: session.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, session.restoredSkillBodies) : activeSkills,
+      skillsDisclosure: session.agent.config.skills?.disclosure,
+      deferSkillsCatalog: true,
+      loadedSkills: session.loadedSkills,
+      tailSegments: session.tailSegments,
+      tools: turnTools,
+      resourceLoader: session.agent.config.resourceLoader,
+      trust: session.agent.config.trust,
+      providerOptions,
+      redactor: session.activeRedactor,
+      sessionId: session.id,
+      runId,
+      metadata,
+      signal: controller.signal,
+    });
+    ctx.assembledTurn = true;
+    return request;
+  };
+
+  /** The inputs of the last assembly: an overflow retry rebuilds from these, not from the old bytes. */
+  let lastAssembly: { readonly nextInput: AgentInput; readonly turn: number; readonly runOptions?: RunTurnOptions } | undefined;
+
   const loopInternals: LoopInternals = {
     sessionId: session.id,
     runId,
@@ -418,61 +488,8 @@ async function assembleRoundContext(params: {
       if (turnIndex > 1) {
         await session.autoCompactTurn(runId, options, controller.signal, turnIndex);
       }
-      let turnTools = tools;
-      // Package tools hidden by their `when` predicate for this session: not advertised and not
-      // callable (`dispatchFilter` allows only `turnAllow`), unless `allowHiddenToolCalls` is set.
-      const hidden = hiddenPackageTools(session, tools);
-      if (hidden) {
-        turnTools = tools.filter((tool) => !hidden.has(tool.name));
-        ctx.turnAllow = hidden.size > 0 ? turnTools.map((tool) => tool.name) : undefined;
-      }
-      const requestedTools = runOptions?.tools;
-      if (requestedTools === false) {
-        turnTools = [];
-        ctx.turnAllow = [];
-      } else if (Array.isArray(requestedTools)) {
-        const clamped = clampTurnToolNames(turnTools, requestedTools);
-        if (clamped.dropped.length > 0) {
-          session.emit({
-            type: "package.event",
-            sessionId: session.id,
-            runId,
-            package: "kernel",
-            name: "tools.clamped",
-            data: { turn: turnIndex, dropped: clamped.dropped } as unknown as JsonValue,
-          });
-        }
-        turnTools = clamped.tools;
-        ctx.turnAllow = turnTools.map((tool) => tool.name);
-      }
-      const turnModel = options.model ?? session.agent.config.model;
-      if (!turnModel) throw new ModelError("no_model", "A provider turn needs a model, and this agent was created without one");
-      const request = await assembleProviderInput({
-        model: turnModel,
-        input: nextInput,
-        history: session.history,
-        summaries: (await session.snapshot()).summaries,
-        toolResults: toolResults ?? [],
-        turn,
-        inputLayout,
-        systemInstructions: runOptions?.system ?? systemInstructions,
-        skills: session.restoredSkillBodies.length ? applyRestoredSkillBodies(activeSkills, session.restoredSkillBodies) : activeSkills,
-        skillsDisclosure: session.agent.config.skills?.disclosure,
-        deferSkillsCatalog: true,
-        loadedSkills: session.loadedSkills,
-        tailSegments: session.tailSegments,
-        tools: turnTools,
-        resourceLoader: session.agent.config.resourceLoader,
-        trust: session.agent.config.trust,
-        providerOptions,
-        redactor: session.activeRedactor,
-        sessionId: session.id,
-        runId,
-        metadata,
-        signal: controller.signal,
-      });
-      ctx.assembledTurn = true;
-      return request;
+      lastAssembly = { nextInput, turn: turnIndex, ...(runOptions === undefined ? {} : { runOptions }) };
+      return buildTurnRequest(nextInput, toolResults, turn, runOptions);
     },
     chargeToolRound: bindChargeToolRound(ctx),
     generate: async (request, requestSecrets) => {
@@ -483,28 +500,57 @@ async function assembleRoundContext(params: {
       // cannot un-redact. A `model.call` handler answers without a provider request by skipping `next`.
       // Fill-if-missing sessionId / cacheKey / cache defaults and the portable thinking intent, then
       // redact: both run after `model.request`, so a transform can neither skip them nor un-redact.
-      const stamped = applyDefaultProviderRequestOptions(request, {
-        sessionId: session.id,
-        thinkingLevel: options.thinkingLevel ?? session.agent.config.thinkingLevel,
-      });
-      const redactedRequest = session.redactProviderRequest(stamped);
-      try {
-        return await generateWithRetry(
+      const send = (candidate: import("../../contracts.js").ProviderRequest, secrets: readonly (string | undefined)[]) => {
+        const stamped = applyDefaultProviderRequestOptions(candidate, {
+          sessionId: session.id,
+          thinkingLevel: options.thinkingLevel ?? session.agent.config.thinkingLevel,
+        });
+        const redactedRequest = session.redactProviderRequest(stamped);
+        return generateWithRetry(
           session,
           redactedRequest,
           runId,
           options,
           controller.signal,
-          requestSecrets ?? [],
+          [...secrets],
           session.activeLoopTurn,
           (turnUsage, turn, attempt) => recordProviderUsage(ctx, turnUsage, turn, attempt, redactedRequest),
           ctx.toolResults,
         );
+      };
+      try {
+        return await send(request, requestSecrets ?? []);
       } catch (error) {
         if (isSteerSoftInterrupt(error)) {
           return { content: [], calls: [], started: false, usage: undefined };
         }
-        throw error;
+        if (!(error instanceof ProviderOverflowRecovery)) throw error;
+        // The provider rejected the request for size before any output. Compact once (the provider
+        // already decided; `compaction.when` is not consulted), rebuild from the shrunken branch,
+        // and retry the same turn exactly once. No `maxTurns` charge: this is still one turn.
+        if (!lastAssembly) {
+          const counts = { ...error.counts, afterCompaction: true };
+          throw new ContextOverflowError(contextOverflowMessage(counts), counts, error.info);
+        }
+        try {
+          await session.compactOverflow(runId, options, controller.signal, ctx.inputMessages);
+        } catch (compactionError) {
+          // An abort during recovery propagates (the run appends nothing); only a real compaction
+          // failure becomes the terminal overflow error.
+          throwIfAborted(controller.signal);
+          const counts = { ...error.counts, afterCompaction: true };
+          throw new ContextOverflowError(contextOverflowMessage(counts), counts, compactionError);
+        }
+        throwIfAborted(controller.signal);
+        const rebuilt = await buildTurnRequest(lastAssembly.nextInput, undefined, lastAssembly.turn, lastAssembly.runOptions);
+        const retry = await applyRequestTransforms(session.hooks(), { sessionId: session.id, runId }, rebuilt);
+        try {
+          return await send(retry.request, retry.secrets);
+        } catch (retryError) {
+          if (!(retryError instanceof ProviderOverflowRecovery)) throw retryError;
+          const counts = { ...retryError.counts, afterCompaction: true };
+          throw new ContextOverflowError(contextOverflowMessage(counts), counts, retryError.info);
+        }
       }
     },
     isToolCallExclusive: (call) => registry.get(call.name)?.exclusive === true,

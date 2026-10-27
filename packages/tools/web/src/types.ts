@@ -1,6 +1,10 @@
-import type { CredentialValueSource, JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition } from "@arnilo/prism";
+import type { CredentialValueSource, JsonObject, JsonValue, SsrfPolicy, ToolArgumentValidator, ToolDefinition, Usage } from "@arnilo/prism";
 
-export type WebProvider = "brave" | "exa" | "firecrawl" | "obscura";
+import type { DomainPolicy } from "./domains.js";
+
+export type WebProvider = "brave" | "exa" | "firecrawl" | "native" | "obscura" | "searxng" | "tavily" | "kagi";
+/** The backends that answer `web_search` (the others are fetch/extract only). */
+export type WebSearchProvider = "brave" | "exa" | "searxng" | "tavily" | "kagi";
 export interface WebRateMetadata {
   readonly limit?: number;
   readonly remaining?: number;
@@ -26,9 +30,11 @@ export interface WebSearchResult extends WebCitation {
   readonly retrievedAt: string;
 }
 export interface WebSearchResponse {
-  readonly provider: "brave" | "exa";
+  readonly provider: WebSearchProvider;
   readonly query: string;
   readonly results: readonly WebSearchResult[];
+  /** Results dropped by the host domain policy. */
+  readonly filtered?: number;
   readonly metadata?: WebProviderMetadata;
   readonly untrusted: true;
 }
@@ -37,7 +43,12 @@ export interface WebDocument extends WebCitation {
   readonly markdown: string;
   /** The page was longer than the fetch limit; `markdown` keeps its head only. */
   readonly sourceTruncated?: boolean;
+  /** Targets followed, in order; `url` is the final one. Only the `native` backend reports them. */
+  readonly redirects?: readonly string[];
   readonly retrievedAt: string;
+  /** Served from the session cache; `cachedAgeMs` is how old the stored copy is. Only with `cache` config. */
+  readonly cached?: true;
+  readonly cachedAgeMs?: number;
   readonly metadata?: WebProviderMetadata;
   readonly untrusted: true;
 }
@@ -91,22 +102,37 @@ export interface SearchControls {
   readonly offset?: number;
 }
 export type SearchControl = keyof SearchControls;
+/** Narrowed value sets for a control a backend supports only partly (the tool schema follows them). */
+export interface WebSearchControlValues {
+  readonly freshness?: readonly SearchFreshness[];
+}
 export interface WebSearchCall extends SearchControls {
   readonly count?: number;
   readonly signal?: AbortSignal;
 }
 export interface WebSearchAdapter {
-  readonly provider: "brave" | "exa";
+  readonly provider: WebSearchProvider;
   /** Resolved limits, so `web_search` can state the real `count` maximum. */
   readonly limits?: WebLimits;
   /** One table per adapter, read by the tool builder and by the adapter's own validation. */
   readonly supports: ReadonlySet<SearchControl>;
+  /** The values a backend accepts for a supported control, when it accepts only some (e.g. no `week`). */
+  readonly controlValues?: WebSearchControlValues;
   search(query: string, options?: WebSearchCall): Promise<WebSearchResponse>;
 }
+/** One fetch request. `sessionId` opts into the per-session cache; `refresh` bypasses a cached page. */
+export interface WebFetchOptions {
+  readonly signal?: AbortSignal;
+  /** Lowers the Markdown kept (`maxMarkdownBytes` is the ceiling) and flags the truncation. */
+  readonly maxBytes?: number;
+  /** The session the page belongs to. Without it the cache is not consulted and nothing is stored. */
+  readonly sessionId?: string;
+  /** Fetch again even when the session has a fresh cached page. */
+  readonly refresh?: boolean;
+}
 export interface WebFetchAdapter {
-  readonly provider: "firecrawl";
-  /** `maxBytes` lowers the Markdown kept (`maxMarkdownBytes` is the ceiling) and flags the truncation. */
-  fetch(url: string, options?: { readonly signal?: AbortSignal; readonly maxBytes?: number }): Promise<WebDocument>;
+  readonly provider: "firecrawl" | "native";
+  fetch(url: string, options?: WebFetchOptions): Promise<WebDocument>;
 }
 export interface WebExtractAdapter {
   readonly provider: "firecrawl";
@@ -121,15 +147,49 @@ export interface FirecrawlExtractOptions extends WebAdapterOptions, FirecrawlTar
   readonly validator: ToolArgumentValidator;
 }
 export interface FirecrawlFetchOptions extends WebAdapterOptions, FirecrawlTargetPolicy {}
+/** A page and how long ago it was fetched, as the cache returns it. */
+export interface CachedPage {
+  readonly document: WebDocument;
+  readonly ageMs: number;
+}
+/**
+ * A session-scoped page cache. `annotated` marks entries with `cached`/`cachedAgeMs` and adds the
+ * model's `refresh` argument; the fixed memo Prism keeps without `cache` config is anonymous.
+ */
+export interface FetchCache {
+  readonly annotated: boolean;
+  /** Keyed by session id plus canonical URL; `undefined` never matches and never stores. */
+  read(sessionId: string | undefined, url: string, now?: number): CachedPage | undefined;
+  write(sessionId: string | undefined, url: string, document: WebDocument): void;
+  /** Drops one session's pages; called from the `session.closed` hook. */
+  dropSession(sessionId: string): void;
+}
+/** The answer to a `web_fetch` question, plus what the sub-call cost (outside the run's budget). */
+export interface PromptAnswer {
+  readonly answer: string;
+  readonly inputChars: number;
+  readonly sourceTruncated: boolean;
+  readonly usage?: Usage;
+}
+/** Opt-in `fetch.prompt` support: one bounded, tool-free model call over the page. */
+export interface PromptFetch {
+  answer(page: WebDocument, question: string, options?: { readonly signal?: AbortSignal }): Promise<PromptAnswer>;
+}
 export interface WebToolsOptions {
   readonly search?: WebSearchAdapter;
   readonly fetch?: WebFetchAdapter;
   readonly extract?: WebExtractAdapter;
+  /** Host-owned permission: filters search rows and refuses non-permitted fetch/extract targets. */
+  readonly domains?: DomainPolicy;
+  /** Per-session page cache; without it `web_fetch` uses the short anonymous paging memo. */
+  readonly cache?: FetchCache;
+  /** Adds the `web_fetch` `prompt` argument: one model call answers a question from the page. */
+  readonly prompt?: PromptFetch;
 }
 
 /** The `web.fetch` service `@arnilo/prism-tools-web` provides when a fetch backend is configured. */
 export interface WebFetchService {
-  fetch(url: string, options?: { readonly signal?: AbortSignal; readonly maxBytes?: number }): Promise<WebDocument>;
+  fetch(url: string, options?: WebFetchOptions): Promise<WebDocument>;
 }
 /**
  * @deprecated No replacement: nothing reads it since the 0.13 split. Kept for the deprecation

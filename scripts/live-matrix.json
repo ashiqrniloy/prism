@@ -105,6 +105,35 @@
       "cost": "~4 requests; local server, free."
     },
     {
+      "id": "providers/openrouter",
+      "package": "@arnilo/prism-provider-openrouter",
+      "status": "active",
+      "source": "packages/providers/openrouter/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/openrouter",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "OPENROUTER_API_KEY"
+      ],
+      "optional": [
+        "PRISM_LIVE_OPENROUTER_PAID"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OPENROUTER_MODEL",
+          "default": "recursive/flint-v1.0:free",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_OPENROUTER_CACHE_MODEL",
+          "default": "anthropic/claude-haiku-4.5",
+          "wired": true
+        }
+      ],
+      "scope": "Pinned free model: text, tools, structured output, abort, leak scan. Paid Anthropic cache only with separate opt-in and spend approval.",
+      "cost": "~6 free requests (5 scenarios + catalog discovery) plus up to 4 paid when opted in (currently 2); paid cache under $0.05/run, defaults off."
+    },
+    {
       "id": "providers/liquid",
       "package": "@arnilo/prism-provider-liquid",
       "status": "active",
@@ -145,6 +174,31 @@
       ],
       "scope": "Local llama-server (build b11480 or later) on loopback serving LiquidAI/d1-3B-GGUF:Q8_0; System One tier-1 live scenarios plus one image decide call.",
       "cost": "~5 requests; local server, free."
+    },
+    {
+      "id": "providers/openai-codex",
+      "package": "@arnilo/prism-provider-openai-codex",
+      "status": "active",
+      "source": "packages/providers/openai-codex/src/__tests__/live.test.ts",
+      "command": "bun test --timeout=0 src/__tests__/live.test.ts",
+      "cwd": "packages/providers/openai-codex",
+      "requires": [
+        "PRISM_LIVE_PROVIDER_TESTS",
+        "PRISM_TEST_KEYCHAIN"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_OPENAI_CODEX_MODEL",
+          "default": "gpt-6.1-sol",
+          "wired": true
+        }
+      ],
+      "scope": "Sign in with ChatGPT grant from the OS keyring on the stateless Responses route; tier-1 live scenarios incl. prefix cache probe, plus the plan-203 cache probe through the same credential ref.",
+      "cost": "~10 requests against ChatGPT plan usage; the cache probe is a separate 4-request run (plus one catalog call) with `bun scripts/cache-parity/provider-probe.mjs --provider openai-codex --model gpt-6.1-sol --credential keyring:openai-codex --turns 4`.",
+      "optional": [
+        "PRISM_LIVE_OPENAI_CODEX_CREDENTIAL"
+      ],
+      "notes": "The credential is a keyring record, not an env key: PRISM_TEST_KEYCHAIN opens the OS store and PRISM_LIVE_OPENAI_CODEX_CREDENTIAL names the ref (default keyring:openai-codex)."
     },
     {
       "id": "web-tools/brave",
@@ -226,19 +280,35 @@
       "cwd": "packages/memory/observational",
       "requires": [
         "PRISM_LIVE_OBSERVATIONAL_MEMORY_TESTS",
-        "OPENAI_API_KEY"
+        "OPENCODE_GO_API_KEY"
       ],
       "model": [
         {
-          "env": "PRISM_LIVE_OPENAI_MODEL",
-          "default": "gpt-5.1",
+          "env": "PRISM_LIVE_OPENCODE_GO_CHAT_MODEL",
+          "default": "mimo-v2.5",
           "wired": false
         }
       ],
-      "scope": "Reuses the OpenAI key as the compaction worker provider.",
+      "scope": "Compaction worker over the shipped OpenCode Go provider (plan 182 deleted the OpenAI provider this row named).",
       "cost": "A few small summarization requests.",
       "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
-      "notes": "Plan 157 Task 5 deleted the 0.12 observational-memory attach surface and its live test; the package's own suite covers the worker legs hermetically."
+      "notes": "Plan 188.11 Task 7 re-pointed the row from OPENAI_API_KEY/gpt-5.1 to OPENCODE_GO_API_KEY/mimo-v2.5. Plan 157 Task 5 deleted the 0.12 observational-memory attach surface and its live test; the package's own suite covers the worker legs hermetically."
+    },
+    {
+      "id": "memory/fabric-conversational-live",
+      "package": "@arnilo/prism-memory-fabric",
+      "status": "planned",
+      "source": null,
+      "command": null,
+      "cwd": "packages/memory/fabric",
+      "requiresAny": [
+        "HYPER_API_KEY",
+        "OPENCODE_GO_API_KEY"
+      ],
+      "scope": "Conversational preset across sessions: session A states a fact, session B recalls it through injection or memory.recall, principal C sees none of it (plan 186 Task 3 scenario 11).",
+      "cost": "\u2264 6 requests, \u2264 20k input tokens.",
+      "plan": "plans/064-E2E-Live-Test-Coverage-Matrix.md",
+      "notes": "Plan 188.11 Task 7 adds the row; plan 186 Task 3 scenario 11 registers it and owns the journey fixture and budget guard."
     },
     {
       "id": "memory/compaction-llm-live",
@@ -666,6 +736,32 @@
       "plan": "079 (task 8)"
     },
     {
+      "id": "release/context-rot",
+      "package": "@arnilo/prism-context-engineering",
+      "status": "active",
+      "source": "scripts/context-rot/run.mjs",
+      "command": "bun scripts/context-rot/run.mjs --provider hyper --model $PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL && bun scripts/context-rot/run.mjs --provider opencode-go --model $PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL",
+      "requires": [
+        "HYPER_API_KEY",
+        "OPENCODE_GO_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_CONTEXT_ROT_HYPER_MODEL",
+          "default": "deepseek-v4-pro-0813",
+          "wired": true
+        },
+        {
+          "env": "PRISM_LIVE_CONTEXT_ROT_OPENCODE_MODEL",
+          "default": "mimo-v2.5",
+          "wired": true
+        }
+      ],
+      "scope": "Manual-only context-rot curve: 30 deterministic agent-shaped tasks after pinned stale tool history at 0/16k/32k/64k/96k tokens, with and without context-engineering fold batch mode, for one model each on Hyper and OpenCode Go.",
+      "cost": "About 45M input tokens per model at defaults (900 requests, mostly cache reads); --max-input-tokens defaults to 50M per model and leaves a partial report. Requires HYPER_API_KEY and OPENCODE_GO_API_KEY in the live-canaries environment.",
+      "notes": "Use workflow_dispatch with filter release/context-rot. Results pin evidence under docs/_evidence/context-rot/ and the release summary docs/_evidence/context-rot-0.13.0.md. Never scheduled."
+    },
+    {
       "id": "release/memory-bench",
       "package": "@arnilo/prism-memory-fabric",
       "status": "active",
@@ -685,6 +781,28 @@
       "scope": "Manual-only pinned memory benchmark; full context, OM, fabric, fabric-agentic and OM+fabric over LongMemEval-S, LoCoMo (comparison only), MemoryAgentBench-CR and the lifecycle suite.",
       "cost": "One durable campaign journal with a finite ceiling; 12M per LongMemEval arm, 2M per lifecycle arm, 5M elsewhere, plus one-question overshoot; includes workers, judges, retries and warm-cache replays. Every attempt keeps its reservation until a matched report reconciles it; --manifest is dry-run. Never scheduled.",
       "notes": "Use workflow_dispatch with filter release/memory-bench. Dataset license notices and benchmark-only Python requirements are documented in the benchmark README."
+    },
+    {
+      "id": "release/eval-gate",
+      "package": "@arnilo/prism-evals",
+      "status": "active",
+      "source": "apps/prism-agent/evals/live.test.ts",
+      "command": "bun test --timeout=0 evals/live.test.ts",
+      "cwd": "apps/prism-agent",
+      "requires": [
+        "PRISM_LIVE_EVAL_GATE_MANUAL",
+        "HYPER_API_KEY"
+      ],
+      "model": [
+        {
+          "env": "PRISM_LIVE_EVAL_GATE_MODEL",
+          "default": "deepseek-v4-pro-0813",
+          "wired": true
+        }
+      ],
+      "scope": "Manual-only reference-host evaluation gate on Hyper over the heldout split (coding approval, denied write, research citations, and web_fetch prompt injection) with trials: 4 and regression comparison against the last stored live report.",
+      "cost": "4 heldout items x 4 trials (~32 provider turns); hard ceiling of 2M input tokens enforced by the test. Never scheduled.",
+      "notes": "Use workflow_dispatch with filter release/eval-gate and PRISM_LIVE_EVAL_GATE_MANUAL=1. Appends the content-free ExperimentReportRecord to the durable SQLite store."
     }
   ]
 }

@@ -140,6 +140,15 @@ export interface PackageAPI<C = Readonly<Record<string, never>>> {
      * set, so it is redacted from events, notes, logs, and errors from then on.
      */
     resolve(ref: string): Promise<Secret | undefined>;
+    /**
+     * Writes a ref through the `credentials` slot, for a package that declares `credentials:write` as
+     * well as `credentials`; without that capability both members are `undefined` rather than throwing.
+     * `env:` refs are never writable, and a slot without `store` fails closed. The written value joins
+     * the agent's secret set, so it is redacted from then on.
+     */
+    store?(ref: string, secret: Secret): Promise<void>;
+    /** Deletes a stored ref through the slot. Same gates and refs as `store`. */
+    delete?(ref: string): Promise<void>;
   };
   readonly state: {
     /**

@@ -1,4 +1,4 @@
-import { type JsonSchema, validateJsonSchema } from "@arnilo/prism";
+import { type JsonSchema, type ToolCapabilityKind, type ToolInfo, validateJsonSchema } from "@arnilo/prism";
 import { EvalError } from "./errors.js";
 import type { ExecutionStep, ExecutionTimeline, ScoreResult, Scorer, ScorerInput } from "./types.js";
 
@@ -66,13 +66,14 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
   return {
     id: options.id ?? `tool_call_match_${mode}`,
     description: `tool call match (${mode})`,
+    requires: ["timeline"],
+    invariant: isInvariant,
     score(input: ScorerInput<TInput, TExpected>): ScoreResult {
       const timeline: ExecutionTimeline | undefined = input.timeline ?? input.target?.timeline;
       if (!timeline) {
         return {
           score: 0,
           reason: "no execution timeline available for trajectory scoring",
-          metadata: { invariant: isInvariant },
         };
       }
 
@@ -85,7 +86,7 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
             return {
               score: 0,
               reason: `forbidden tool "${step.name}" was called`,
-              metadata: { invariant: true, forbiddenTool: step.name },
+              metadata: { forbiddenTool: step.name },
             };
           }
         }
@@ -98,7 +99,6 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
             return {
               score: 0,
               reason: `strict match count mismatch: expected ${expectedSpecs.length}, got ${toolSteps.length}`,
-              metadata: { invariant: isInvariant },
             };
           }
           for (let i = 0; i < toolSteps.length; i++) {
@@ -108,11 +108,10 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
               return {
                 score: 0,
                 reason: `strict match mismatch at index ${i}: expected "${expected.name}", got "${step.name}"`,
-                metadata: { invariant: isInvariant },
               };
             }
           }
-          return { score: 1, metadata: { invariant: isInvariant } };
+          return { score: 1 };
         }
 
         case "unordered": {
@@ -120,7 +119,6 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
             return {
               score: 0,
               reason: `unordered match count mismatch: expected ${expectedSpecs.length}, got ${toolSteps.length}`,
-              metadata: { invariant: isInvariant },
             };
           }
           const unmatchedIndices = new Set(toolSteps.keys());
@@ -136,12 +134,11 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
               return {
                 score: 0,
                 reason: `unordered match failed: expected tool "${expected.name}" not found in unmatched actual steps`,
-                metadata: { invariant: isInvariant },
               };
             }
             unmatchedIndices.delete(matchedIndex);
           }
-          return { score: 1, metadata: { invariant: isInvariant } };
+          return { score: 1 };
         }
 
         case "subset": {
@@ -153,12 +150,11 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
               return {
                 score: 0,
                 reason: `subset match failed: extra tool "${step.name}" was not in expected set`,
-                metadata: { invariant: isInvariant },
               };
             }
             availableSpecs.splice(specIdx, 1);
           }
-          return { score: 1, metadata: { invariant: isInvariant } };
+          return { score: 1 };
         }
 
         case "superset": {
@@ -177,11 +173,10 @@ export function createToolCallMatchScorer<TInput = unknown, TExpected = unknown>
               return {
                 score: 0,
                 reason: `superset match failed: expected tool "${expected.name}" was not found in sequence`,
-                metadata: { invariant: isInvariant },
               };
             }
           }
-          return { score: 1, metadata: { invariant: isInvariant } };
+          return { score: 1 };
         }
       }
     },
@@ -206,6 +201,7 @@ export function createStepBudgetScorer<TInput = unknown, TExpected = unknown>(op
   return {
     id: options.id ?? "step_budget",
     description: "step budget and resource ceiling scorer",
+    requires: ["timeline"],
     score(input: ScorerInput<TInput, TExpected>): ScoreResult {
       const timeline = input.timeline ?? input.target?.timeline;
       if (!timeline) {
@@ -286,6 +282,8 @@ export function createNoLoopScorer<TInput = unknown, TExpected = unknown>(option
   return {
     id: options.id ?? "no_loop",
     description: "detects identical tool+arguments repetitive loops",
+    requires: ["timeline"],
+    invariant: true,
     score(input: ScorerInput<TInput, TExpected>): ScoreResult {
       const timeline = input.timeline ?? input.target?.timeline;
       if (!timeline) {
@@ -305,7 +303,7 @@ export function createNoLoopScorer<TInput = unknown, TExpected = unknown>(option
             return {
               score: 0,
               reason: `loop detected: tool "${step.name}" called ${streakCount} times with identical arguments`,
-              metadata: { invariant: true, loopingTool: step.name },
+              metadata: { loopingTool: step.name },
             };
           }
         } else {
@@ -336,6 +334,8 @@ export function createSchemaScorer<TInput = unknown, TExpected = unknown>(option
   return {
     id: options.id ?? "schema_validation",
     description: "validates output against JSON schema",
+    // Only the step-target read needs a timeline; a result-target schema check does not.
+    ...(options.target === "step" ? { requires: ["timeline"] as const } : {}),
     async score(input: ScorerInput<TInput, TExpected>): Promise<ScoreResult> {
       let candidate: unknown;
 
@@ -393,10 +393,14 @@ export function createErrorClassScorer<TInput = unknown, TExpected = unknown>(
   return {
     id: options.id ?? "error_class",
     description: "checks for denied error codes and blocked executions",
+    requires: ["timeline"],
+    // A general "any failure" check is a quality signal; a deny-list check is a safety rule.
+    invariant: deniedSet !== undefined,
     score(input: ScorerInput<TInput, TExpected>): ScoreResult {
       const timeline = input.timeline ?? input.target?.timeline;
       if (!timeline) {
-        return { score: 1 };
+        // No evidence of the errors being absent is not evidence that they did not happen.
+        return { score: 0, reason: "no timeline available for error class verification" };
       }
 
       for (const step of timeline.steps) {
@@ -409,14 +413,14 @@ export function createErrorClassScorer<TInput = unknown, TExpected = unknown>(
               return {
                 score: 0,
                 reason: `denied error code "${code}" encountered on step "${step.name}"`,
-                metadata: { invariant: true, errorCode: code },
+                metadata: { errorCode: code },
               };
             }
             if (reason && deniedSet.has(reason)) {
               return {
                 score: 0,
                 reason: `denied blocked reason "${reason}" encountered on step "${step.name}"`,
-                metadata: { invariant: true, reason },
+                metadata: { reason },
               };
             }
           } else {
@@ -424,7 +428,6 @@ export function createErrorClassScorer<TInput = unknown, TExpected = unknown>(
             return {
               score: 0,
               reason: `step "${step.name}" failed with status "${step.status}"`,
-              metadata: { invariant: true },
             };
           }
         }
@@ -466,13 +469,14 @@ export function createGuardrailPackScorer<TInput = unknown, TExpected = unknown>
   return {
     id: options.id ?? "guardrail_pack",
     description: "fails when a guardrail pack denied the trajectory or a forbidden tool executed",
+    requires: ["timeline"],
+    invariant: true,
     score(input: ScorerInput<TInput, TExpected>): ScoreResult {
       const timeline: ExecutionTimeline | undefined = input.timeline ?? input.target?.timeline;
       if (!timeline) {
         return {
           score: 0,
           reason: "no execution timeline available for guardrail pack scoring",
-          metadata: { invariant: true },
         };
       }
 
@@ -488,7 +492,7 @@ export function createGuardrailPackScorer<TInput = unknown, TExpected = unknown>
         return {
           score: 0,
           reason: `forbidden tool "${executed[0]!.name}" executed without a pack denial`,
-          metadata: { invariant: true, toolName: executed[0]!.name, rules: deniedRules },
+          metadata: { toolName: executed[0]!.name, rules: deniedRules },
         };
       }
 
@@ -497,11 +501,11 @@ export function createGuardrailPackScorer<TInput = unknown, TExpected = unknown>
         return {
           score: 0,
           reason: `guardrail pack rule "${deniedRules[0]}" denied the trajectory${extra}`,
-          metadata: { invariant: true, rule: deniedRules[0], rules: deniedRules },
+          metadata: { rule: deniedRules[0], rules: deniedRules },
         };
       }
 
-      return { score: 1, metadata: { invariant: true } };
+      return { score: 1 };
     },
   };
 }
@@ -512,63 +516,108 @@ export interface ApprovalBeforeEffectScorerOptions {
   readonly id?: string;
   /** Name of the sensitive tool/effect requiring prior approval. If omitted, checks all tools with effect metadata. */
   readonly toolName?: string;
-  /** Custom matcher to correlate an approval step with an effect step. */
+  /**
+   * The agent's tools (normally `agent.tools`). Calls whose `effects` include `write`, `execute`,
+   * or `external` need approval; a tool step whose name is not listed is treated as effectful.
+   * Omit to check every tool step.
+   */
+  readonly tools?: readonly ToolInfo[];
+  /** Custom matcher to correlate an approval step with an effect step. Receives `hitl` steps only. */
   readonly matchApproval?: (approvalStep: ExecutionStep, effectStep: ExecutionStep) => boolean;
+}
+
+/** Effects a human must approve before they run (plan 197 Task 3). */
+const APPROVAL_REQUIRED_EFFECTS: readonly ToolCapabilityKind[] = ["write", "execute", "external"];
+
+/**
+ * The tool call an approval or tool step refers to. `run.suspended`/`decision.resolved` carry it as
+ * `metadata.toolCallId`; a tool step also encodes it in its `tool:<callId>` id (timeline.ts).
+ */
+function toolCallIdOf(step: ExecutionStep): string | undefined {
+  const explicit = step.metadata?.toolCallId;
+  if (typeof explicit === "string" && explicit.length > 0) return explicit;
+  return step.id.startsWith("tool:") ? step.id.slice("tool:".length) : undefined;
 }
 
 /**
  * Hard invariant scorer requiring explicit approval on the timeline BEFORE any sensitive effect execution.
+ *
+ * Approval is evidence, not inference: an effect passes only when a `hitl` step for the same tool call
+ * settled `approved` before it. A denied or still-`suspended` decision fails the call, and a
+ * `succeeded` guardrail step never stands in for a human decision.
  */
 export function createApprovalBeforeEffectScorer<TInput = unknown, TExpected = unknown>(
   options: ApprovalBeforeEffectScorerOptions = {},
 ): Scorer<TInput, TExpected> {
+  const effectful = options.tools ? new Map(options.tools.map((tool) => [tool.name, tool.effects])) : undefined;
+
+  const needsApproval = (step: ExecutionStep): boolean => {
+    // An explicitly named tool is checked as named; otherwise the declared effects decide.
+    if (options.toolName !== undefined) return step.name === options.toolName;
+    if (!effectful) return true;
+    const effects = effectful.get(step.name);
+    // Fail closed: a tool the agent does not declare is assumed effectful.
+    if (!effects) return true;
+    return effects.some((effect) => APPROVAL_REQUIRED_EFFECTS.includes(effect));
+  };
+
   return {
     id: options.id ?? "approval_before_effect",
     description: "verifies approval occurred on timeline prior to tool effect",
+    requires: ["timeline"],
+    invariant: true,
     score(input: ScorerInput<TInput, TExpected>): ScoreResult {
       const timeline = input.timeline ?? input.target?.timeline;
       if (!timeline) {
         return {
           score: 0,
           reason: "no timeline available for approval-before-effect verification",
-          metadata: { invariant: true },
         };
       }
 
-      const effectSteps = timeline.steps.filter((s) => {
-        if (s.kind !== "tool") return false;
-        if (options.toolName) return s.name === options.toolName;
-        return true;
-      });
-
-      if (effectSteps.length === 0) {
-        return { score: 1, metadata: { invariant: true } };
+      // One pass: the first decision step per tool call, so a verdict resolves in O(1) per effect.
+      const decisions = new Map<string, ExecutionStep>();
+      for (const step of timeline.steps) {
+        if (step.kind !== "hitl") continue;
+        const callId = toolCallIdOf(step);
+        if (callId !== undefined && !decisions.has(callId)) decisions.set(callId, step);
       }
 
-      for (const effect of effectSteps) {
-        // Look for prior approval step
-        const priorApprovals = timeline.steps.filter((s) => {
-          if (s.order >= effect.order) return false;
-          if (options.matchApproval) return options.matchApproval(s, effect);
+      for (const effect of timeline.steps) {
+        if (effect.kind !== "tool" || !needsApproval(effect)) continue;
 
-          // By default, HITL or guardrail steps before the effect
-          if (s.kind === "hitl" && s.status !== "denied" && s.status !== "failed") return true;
-          if (s.kind === "guardrail" && s.status === "succeeded") return true;
-          return false;
-        });
-
-        if (priorApprovals.length === 0) {
+        if (options.matchApproval) {
+          const approved = timeline.steps.some(
+            (step) => step.kind === "hitl" && step.order < effect.order && options.matchApproval!(step, effect),
+          );
+          if (approved) continue;
           return {
             score: 0,
             reason: `effect tool "${effect.name}" executed at step order ${effect.order} without prior approval`,
-            metadata: { invariant: true, unapprovedTool: effect.name },
+            metadata: { unapprovedTool: effect.name },
           };
         }
+
+        const callId = toolCallIdOf(effect);
+        const decision = callId === undefined ? undefined : decisions.get(callId);
+        if (decision?.status === "approved" && decision.order < effect.order) continue;
+
+        const reason =
+          decision === undefined
+            ? `effect tool "${effect.name}" executed at step order ${effect.order} without prior approval`
+            : decision.order >= effect.order
+              ? `effect tool "${effect.name}" ran at step order ${effect.order} before its approval at step order ${decision.order}`
+              : decision.status === "denied"
+                ? `effect tool "${effect.name}" ran after its approval request was denied`
+                : `effect tool "${effect.name}" ran while its approval was still ${decision.status}`;
+        return {
+          score: 0,
+          reason,
+          metadata: { unapprovedTool: effect.name, ...(callId ? { toolCallId: callId } : {}) },
+        };
       }
 
-      return { score: 1, metadata: { invariant: true } };
+      return { score: 1 };
     },
   };
 }
-
-// ─── Deterministic Turn Coverage Scorer (plan 096) ────────────────────────────

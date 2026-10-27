@@ -247,7 +247,7 @@ await section("@arnilo/prism-memory-compaction: summarization compaction", async
 
 await section("@arnilo/prism-memory-compaction: compaction strategies", async () => {
   const om = await import("@arnilo/prism-memory-observational");
-  assert.ok(om.DEFAULT_KEEP_RECENT_ENTRIES >= 1, "observational memory must export bounded defaults");
+  assert.equal(typeof om.foldObservationalMemoryLedger, "function", "observational memory must export the ledger fold");
 });
 
 await section("@arnilo/prism-memory-wiki: knowledge compiler", async () => {
@@ -330,7 +330,7 @@ await section("@arnilo/prism-store-postgres: .", async () => {
 
 await section("@arnilo/prism-evals + @arnilo/prism-governance + @arnilo/prism-model-router", async () => {
   const evals = await import("@arnilo/prism-evals");
-  const evalStore = evals.createMemoryEvaluationStore();
+  const evalStore = codecs.createMemoryEvaluationStore();
   assert.ok(evalStore, "memory evaluation store must construct");
 
   const router = await import("@arnilo/prism-model-router");

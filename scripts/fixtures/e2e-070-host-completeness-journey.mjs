@@ -266,6 +266,7 @@ assert.equal(writeRan, 1, "restart must execute the interrupted write exactly on
 mark("CODING OK");
 
 // --- R07 evals ---
+const countDataset = defineDataset({ id: "count", items: [{ id: "i", input: "x" }] });
 const manifest = {
   promptId: "prompt:host-completeness:v1",
   promptVersion: "1",
@@ -274,6 +275,7 @@ const manifest = {
   policyRevision: "policy-1",
   runtimeRevision: "0.7.0",
   datasetVersion: "1.0.0",
+  datasetContentHash: countDataset.contentHash,
 };
 validateReleaseEvalManifest(manifest);
 
@@ -283,6 +285,7 @@ function countingAgent(onRun) {
     async session() {
       return {
         id: "s",
+        async *subscribe() {},
         async run() {
           onRun();
           return { sessionId: "s", runId: "r", status: "completed", text: "ok", content: [], messages: [] };
@@ -297,12 +300,13 @@ const trialReport = await runExperiment({
   agent: countingAgent(() => {
     trialRuns += 1;
   }),
-  dataset: defineDataset({ id: "count", items: [{ id: "i", input: "x" }] }),
+  dataset: countDataset,
   scorers: [defineScorer({ id: "ok", score: () => ({ score: 1 }) })],
   trials: 3,
   seed: 1,
   manifest,
 });
+validateReleaseEvalManifest(manifest, trialReport);
 assert.equal(trialRuns, 3);
 assert.equal(trialReport.trials?.sampleCount, 3);
 
@@ -378,10 +382,8 @@ try {
   writeFileSync(fixture, "ok\n");
   const oracle = defineScorer({
     id: "test-oracle",
-    score: ({ environment }) => ({
-      score: environment?.testsPassed ? 1 : 0,
-      metadata: { invariant: true },
-    }),
+    invariant: true,
+    score: ({ environment }) => ({ score: environment?.testsPassed ? 1 : 0 }),
   });
   const red = await runExperiment({
     agent: await createAgent({
@@ -564,7 +566,7 @@ const scopeAgent = await createAgent({
     memoryObservational({
       observer: { model: { provider: "memory", model: "worker" }, messageTokens: 1 },
       reflector: { model: { provider: "memory", model: "worker" }, observationTokens: 1 },
-      context: { compactAfterTokens: 999_999 },
+      context: { compactAt: { maxTokens: 999_999 } },
       worker: { maxTurns: 1 },
     }),
   ],

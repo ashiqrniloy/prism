@@ -10,12 +10,8 @@ function createStaticSettingsProvider(settings: Record<string, unknown>) {
     },
   };
 }
-import {
-  defaultObservationalMemorySettings,
-  HARD_MAX_WORKER_TURNS,
-  type ObservationalMemorySettingsInput,
-  resolveObservationalMemorySettings,
-} from "../index.js";
+import { defaultObservationalMemorySettings, type ObservationalMemorySettingsInput, resolveObservationalMemorySettings } from "../settings.js";
+import { HARD_MAX_WORKER_TURNS } from "../limits.js";
 
 const workerModel = { provider: "mock", model: "legacy" };
 
@@ -38,7 +34,7 @@ describe("observational memory settings", () => {
     assert.equal(resolved.context.recentMessages, 4);
     assert.equal(resolved.agentMaxTurns, 2);
     assert.equal(resolved.passive, false);
-    assert.equal(resolved.context.compactAfterTokens, defaultObservationalMemorySettings.context.compactAfterTokens);
+    assert.deepEqual(resolved.context.compactAt, defaultObservationalMemorySettings.context.compactAt);
   });
 
   it("observational_memory_settings_resolve_nested_thresholds_and_worker_models", async () => {
@@ -46,7 +42,7 @@ describe("observational memory settings", () => {
       observation: { messageTokens: 11, model: workerModel },
       reflection: { observationTokens: 22, model: workerModel },
       context: {
-        compactAfterTokens: 33,
+        compactAt: { ratio: 0.5, maxTokens: 33 },
         recentMessages: 3,
         observationsPoolMaxTokens: 44,
         observationsPoolTargetTokens: 55,
@@ -54,7 +50,7 @@ describe("observational memory settings", () => {
     });
     assert.equal(resolved.observation.messageTokens, 11);
     assert.equal(resolved.reflection.observationTokens, 22);
-    assert.equal(resolved.context.compactAfterTokens, 33);
+    assert.deepEqual(resolved.context.compactAt, { ratio: 0.5, maxTokens: 33 });
     assert.equal(resolved.context.recentMessages, 3);
     assert.equal(resolved.context.observationsPoolMaxTokens, 44);
     assert.equal(resolved.context.observationsPoolTargetTokens, 55);
@@ -67,7 +63,7 @@ describe("observational memory settings", () => {
     const removed: readonly [key: string, replacement: string][] = [
       ["observeAfterTokens", "observation.messageTokens"],
       ["reflectAfterTokens", "reflection.observationTokens"],
-      ["compactAfterTokens", "context.compactAfterTokens"],
+      ["compactAfterTokens", "context.compactAt"],
       ["keepRecentEntries", "context.recentMessages"],
       ["recentMessageMaxTokens", "context.recentMessageMaxTokens"],
       ["observationsPoolMaxTokens", "context.observationsPoolMaxTokens"],
@@ -102,7 +98,7 @@ describe("observational memory settings", () => {
     const a: ObservationalMemorySettingsInput = { observeAfterTokens: 1 };
     // @ts-expect-error removed in 0.1.5; use reflection.observationTokens
     const b: ObservationalMemorySettingsInput = { reflectAfterTokens: 1 };
-    // @ts-expect-error removed in 0.1.5; use context.compactAfterTokens
+    // @ts-expect-error removed in 0.1.5; use context.compactAt
     const c: ObservationalMemorySettingsInput = { compactAfterTokens: 1 };
     // @ts-expect-error removed in 0.1.5; use context.recentMessages
     const d: ObservationalMemorySettingsInput = { keepRecentEntries: 1 };

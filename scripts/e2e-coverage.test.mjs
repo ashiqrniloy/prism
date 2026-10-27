@@ -149,8 +149,10 @@ test("real repo: manifest covers every exports surface in baseline mode", () => 
   // plan 188.1 Task 4: plus `@arnilo/prism-memory-core/fabric` (74 -> 75); the WIP 0.13 package
   // restructuring had already added one more surface without updating this count, so the live
   // total was 76. Plan 191 Task 8 adds `@arnilo/prism-advisor` and a later surface added one more,
-  // so the live total is 78.
-  assert.equal(summary.total, 78);
+  // so the live total is 78. Plan 204 Task 5 adds `@arnilo/prism-provider-openai-codex`, and the
+  // regeneration also picked up the OpenRouter package plan 203 added without a row, so the live
+  // total is 80.
+  assert.equal(summary.total, 80);
   assert.equal(summary.pending, 4, "four surfaces are unannotated after the 0.13 regeneration");
 });
 

@@ -4,6 +4,10 @@
 
 ### Added
 
+- Export surface (plan 188.11 Task 5): the root keeps the stable tier (errors, `createHashEmbedder`, `createMemoryVectorStore`, revocation and repoint helpers) and the shared tier the sibling memory packages import. The 68 internal helpers and constants (cursor codecs, `parseLineage`, `scanDirectory`, `clampImportance`, `cosineSimilarity`, `HARD_*` caps nobody imports, …) and `validateIdentifier` on `./postgres` are no longer exported. The `export *` barrel is now an explicit list, so a new module export is not public until it is named. `root-exports.test.ts` freezes the root and the three subpaths.
+
+- Forward-compatible note files (plan 188.11 Task 4): `parseNoteFile(content, path, classify?)` marks a note whose `fabric.v` is above 1 (or that `classify` rejects) unreadable and keeps its whole file in `metadata.okf.raw`, which `renderNoteFile` re-emits unchanged; unknown top-level frontmatter keys are kept in `metadata.okf.extra` and written back. `createMarkdownMemoryStores({ classifyNote })`, `reconcile()`/`rebuild()` report `unreadable` and `unreadableReasons`, `stores.unreadable()` returns the same counts, and the store never renames, moves or rewrites an unreadable file. README `## Compatibility` freezes the `VectorStore` and `Embedder` contracts at API level 1.
+
 - `noteRelPath` is exported from `@arnilo/prism-memory-core/fabric`, so a caller can name a note's OKF file before it is written (`memory:share` shows the target path for approval).
 
 - `MarkdownMemoryStores.writeDerivedFile(scope, name, body)` (plan 188.5 Task 1): writes a derived resource file such as `core.md` under the store lock. The file starts with a `<!-- prism:derived content_hash=… -->` marker that hashes its own body, so a manual edit is detected, overwritten, and logged once in `log.md` (`**overwritten**: core.md — … pinned: true …`); an unchanged body is not rewritten. `LogEntry` gained an optional `note` that `renderLogFile`/`parseLogFile` round-trip after an em dash.

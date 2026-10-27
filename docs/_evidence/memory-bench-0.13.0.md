@@ -418,6 +418,8 @@ fresh draw: passive injection **plus** the `memory.*` read tools over the same e
 Development moved multi-session 8/30 → 22/30 with no ability regression, so Stage B (extraction) was
 dropped and the tools arm went to held-out v3 — 100 ids never read before (multi-session 40,
 knowledge-update 20, temporal-reasoning 20, single-session-user 14, single-session-assistant 6).
+The run used OpenCode Go `mimo-v2.5`, temperature 0, max output 4,096, protocol v2; the same model
+judged.
 
 | Arm | Scored | Correct | Input tokens | Tokens/question | Notes |
 | --- | ---: | ---: | ---: | ---: | --- |
@@ -428,9 +430,10 @@ knowledge-update 20, temporal-reasoning 20, single-session-user 14, single-sessi
 All three pre-registered primary criteria hold: **multi-session 28/40** (target 24/40), a paired
 **+0.45** against the passive reference (95% CI 0.275..0.625, McNemar p = 2e-4), and no
 non-regression (knowledge-update +2, temporal-reasoning +5, single-session-user +1,
-single-session-assistant +1; overall +0.27, CI 0.17..0.37). Against full context the selected arm is
-**+0.07** (95% CI -0.03..0.17), inside the 3-point margin, so the substitution verdict is
-**full-context-substitute**: 76/100 at 26% of full context's input tokens.
+single-session-assistant +1; overall +0.27, CI 0.17..0.37). Against whole-history context the selected arm is
+**+0.07** (95% CI -0.03..0.17), inside the 3-point non-inferiority margin: **non-inferior** at 26%
+of whole history's input tokens, while passive injection alone scores below whole history, so the
+read tools are required.
 
 Attribution is the tool channel, not a bigger window: `evidenceRoundCoverage` 0.628 → 0.834,
 `evidenceAllRequired` 52 → 76, irrelevant injection 0.810 → 0.777, and conditional accuracy 44/52
@@ -468,7 +471,7 @@ knowledge-update **+0.5** (Holm p 0.0078). Multi-session +0.25 (Holm p 0.19), te
 +0.25 (Holm p 0.25) and single-session-user +0.15 (Holm p 0.25) are positive but not significant
 after Holm. Against full context, `fabric-x` is **-0.03** (95% CI -0.12..0.06): the gap is nearly
 closed but the non-inferiority margin (3 points) is missed at the CI's lower bound, so it is an
-**opt-in improvement, not a full-context substitute**. F13 stays `unresolved` for the same reason.
+**opt-in improvement, not non-inferior to whole history**. F13 stays `unresolved` for the same reason.
 
 Delivery attribution on the exchange store: of 24 failures, partial_evidence 8, candidate_gap 5,
 fine_selection_gap 4, answer_gap 5 and 2 without usable gold. Conditional accuracy is 63/68 (93%)
@@ -478,7 +481,7 @@ a stage table.
 
 Full evidence, the reproduced screen correction and the aborted-attempt accounting are in
 [`memory-bench/188.9/README.md`](memory-bench/188.9/README.md). Defaults stay off and provisional:
-the 188.6 enablement rule needs a full-context-substitute verdict, which this evidence does not give.
+the 188.6 enablement rule needs a non-inferiority verdict, which this evidence does not give.
 
 ## Plan 188.8 held-out acceptance (2026-10-23)
 

@@ -28,6 +28,8 @@ export interface JsonSchema {
   readonly title?: string;
   /** The field holds a credential: only an `env:` or `keyring:` ref is accepted, never a literal. */
   readonly "x-prism-secret"?: boolean;
+  /** Documentation only: `contract` is frozen at API level 1, `tuning` may change in a minor version. Ignored by validation. */
+  readonly "x-prism-stability"?: "contract" | "tuning";
 }
 
 export type SchemaErrorRule =
@@ -88,6 +90,7 @@ const SUPPORTED_KEYWORDS = new Set([
   "description",
   "title",
   "x-prism-secret",
+  "x-prism-stability",
 ]);
 const TYPES = new Set(["string", "number", "integer", "boolean", "object", "array", "null"]);
 
@@ -164,6 +167,10 @@ function compile(schema: unknown, path: string, depth: number): Node {
   const secret = s["x-prism-secret"];
   if (secret !== undefined && typeof secret !== "boolean") unsupported(path, '"x-prism-secret" must be a boolean');
   if (secret === true && s.type !== undefined && s.type !== "string") unsupported(path, 'a secret field must be of type "string"');
+  const stability = s["x-prism-stability"];
+  if (stability !== undefined && stability !== "contract" && stability !== "tuning") {
+    unsupported(path, '"x-prism-stability" must be "contract" or "tuning"');
+  }
 
   let regex: RegExp | undefined;
   if (s.pattern !== undefined) {

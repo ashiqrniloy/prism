@@ -1,5 +1,6 @@
 export type { AgentEventSourceErrorCode, CheckpointRestoreAudit, CheckpointRestoreAuditEntry } from "./contracts-protocol.js";
 export { AgentEventSourceError, isTerminalAgentEventType } from "./contracts-protocol.js";
+export { ContextOverflowError } from "./agent-session/context-overflow.js";
 export type { PendingToolCall, StoredAgentRunState } from "./agent-run-state.js";
 export { AGENT_RUN_STATE_SCHEMA_VERSION, agentFingerprint, DEFAULT_MAX_AGENT_RUN_STATE_BYTES, HARD_MAX_AGENT_RUN_STATE_BYTES } from "./agent-run-state.js";
 export { EventSubscriber, SubscriberOverflowError } from "./agent-session/event-subscriber.js";
@@ -73,6 +74,15 @@ export {
 export type { ContextSource } from "./context-build.js";
 export { registerContextSources, withContextBlocks } from "./context-build.js";
 export type * from "./contracts.js";
+export type {
+  EvaluationRecord,
+  EvaluationStatus,
+  EvaluationQuery,
+  EvaluationStore,
+  ExperimentReportRecord,
+  ExperimentReportQuery,
+  ExperimentReportStore,
+} from "./contracts-core/persistence.js";
 export type {
   ApprovalOutcome,
   CompactionTrigger,
@@ -203,6 +213,7 @@ export type { Principal } from "./contracts-core/principal.js";
 export { parseAgentFile, parseSkillFile } from "./contribution-parsing.js";
 export type { CredentialRecord, CredentialValueSource } from "./credentials/index.js";
 export { resolveCredentialValue } from "./credentials/index.js";
+export { CredentialRefNotWritableError, CredentialStoreUnavailableError } from "./credentials/index.js";
 
 export type { GuardrailRunResult, RunGuardrailListOptions } from "./guardrails.js";
 export {

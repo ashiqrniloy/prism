@@ -37,11 +37,7 @@ describeIntegration("postgres store workflow services", () => {
     const seen: ServiceSpy = {};
     const agent = await createAgent({
       model: { provider: "mock", model: "demo" },
-      packages: [
-        mockProvider(),
-        postgresStore({ url: "env:PRISM_TEST_POSTGRES_URL", schema: uniqueSchema() }),
-        serviceSpyPackage(seen),
-      ],
+      packages: [mockProvider(), postgresStore({ url: "env:PRISM_TEST_POSTGRES_URL", schema: uniqueSchema() }), serviceSpyPackage(seen)],
     });
     try {
       assert.equal(typeof (seen.checkpoints as CheckpointStore | undefined)?.saveCheckpoint, "function");
@@ -58,6 +54,8 @@ describeIntegration("postgres store workflow services", () => {
 
   it("postgres_leases_pass_conformance", async () => {
     const schema = uniqueSchema();
-    await leaseConformance(async () => (await createPostgresPersistence({ connectionString: postgresUrl, schema })).leases);
+    await leaseConformance(async () => (await createPostgresPersistence({ connectionString: postgresUrl, schema })).leases, {
+      ttlMs: 3000,
+    });
   });
 });

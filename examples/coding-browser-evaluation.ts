@@ -4,6 +4,7 @@
  *
  * Runnable: `node examples/coding-browser-evaluation.ts`
  */
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -12,6 +13,7 @@ import { createAgent, providerDone, providerTextDelta } from "@arnilo/prism";
 import { createReadOnlyTools } from "@arnilo/prism-tools-coding";
 import {
   assertEvaluationThreshold,
+  wilsonInterval,
   defineDataset,
   defineScorer,
   type ExperimentReport,
@@ -115,10 +117,8 @@ try {
     .digest("hex");
   const oracle = defineScorer({
     id: "test-oracle",
-    score: ({ environment }) => ({
-      score: (environment as { testsPassed?: boolean } | undefined)?.testsPassed ? 1 : 0,
-      metadata: { invariant: true },
-    }),
+    invariant: true,
+    score: ({ environment }) => ({ score: (environment as { testsPassed?: boolean } | undefined)?.testsPassed ? 1 : 0 }),
   });
   const mock = await createAgent({
     model: { provider: "mock", model: "offline" },
@@ -145,7 +145,7 @@ try {
     scorers: [oracle],
     toEnvironment,
   });
-  assertEvaluationThreshold(green, { minimumMean: 1, requireInvariants: true });
+  assertEvaluationThreshold(green, { minimumMacroMean: 1, requireInvariants: true });
   oracleGreen = true;
   const red = await runExperiment({
     agent: mock,
@@ -156,7 +156,12 @@ try {
     scorers: [oracle],
     toEnvironment,
   });
-  if (red.aggregate.invariantsPassed) throw new Error("red fixture hash must fail the oracle");
+  // A failing invariant must block the release, not just lower the mean.
+  assert.throws(
+    () => assertEvaluationThreshold(red, { minimumMacroMean: 1, requireInvariants: true }),
+    /hard invariant failed/,
+  );
+  assert.equal(red.aggregate.invariantsPassed, false);
   oracleRedBlocked = true;
 } finally {
   await rm(cwd, { recursive: true, force: true });
@@ -176,15 +181,15 @@ const report = {
     scoredCount: scored.length,
     skippedCount: 0,
     failedCount: evaluations.filter((e) => e.status === "failed").length,
-    meanScore: mean,
-    scoresByScorer: { "pass-flag": { count: scored.length, mean } },
+    macroMean: mean,
+    scorers: { "pass-flag": { items: scored.length, records: scored.length, mean: mean ?? 0, passRate: scored.filter(e => e.score === 1).length / scored.length, method: "wilson" as const, ci95: wilsonInterval(scored.filter(e => e.score === 1).length, scored.length) } },
   },
 } satisfies ExperimentReport;
 
-assertEvaluationThreshold(report, { minimumMean: 1, maximumFailures: 0 });
+assertEvaluationThreshold(report, { minimumMacroMean: 1, maximumFailures: 0 });
 console.log(
   serializeEvaluationReport({
-    mean: report.aggregate.meanScore,
+    mean: report.aggregate.macroMean,
     scored: report.aggregate.scoredCount,
     dataset: dataset.id,
     oracleGreen,

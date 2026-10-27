@@ -13,6 +13,7 @@ import type {
   AgentRunState,
   AgentRunStatus,
   CompactionOptions,
+  CompactionReason,
   CompactionResult,
   ContextMeter,
   Decision,
@@ -1001,9 +1002,22 @@ export class RuntimeAgentSession implements Session {
   }
 
   /**
-   * Resolve the auto-compaction decision, or `undefined` when there is nothing to do. A registered
-   * `compaction.when` handler owns the decision (roadmap §2.4): the configured `trigger`/
-   * `thresholdEntries` is the fallback used only when no handler is registered.
+   * Compact because the provider rejected the request for size (plan 194 Task 3). The provider
+   * already decided, so `compaction.when` is not consulted; a failure propagates so recovery can
+   * fail closed with `ContextOverflowError` instead of retrying an oversized request.
+   */
+  async compactOverflow(runId: string, options: ResolvedRunOptions, signal: AbortSignal, inputMessages: readonly Message[]): Promise<void> {
+    const compaction = mergeCompaction(this.agent.config.compaction, options.compaction) ?? {};
+    await this.compactBranch(compaction, runId, signal, "overflow");
+    const compacted = await this.snapshot();
+    this.replaceHistory(withoutTrailingInput(compacted.messages, inputMessages));
+  }
+
+  /**
+   * Resolve the auto-compaction decision, or `undefined` when there is nothing to do. A
+   * `compaction.when` handler votes `true`/`false` or abstains; the configured
+   * `trigger`/`thresholdEntries` is the fallback used only when every registered handler abstains
+   * (or none is registered).
    */
   private async resolveAutoCompact(
     runId: string,
@@ -1021,9 +1035,9 @@ export class RuntimeAgentSession implements Session {
     const estimateInputTokens = () =>
       estimateAssemblyTokens(snapshot.messages) + snapshot.summaries.reduce((sum, summary) => sum + estimateTextTokens(summary), 0);
     if (hasWhen) {
-      // The handler is the whole decision while it is registered: an abstaining handler (`undefined`)
-      // means no compaction, not a fallback to the configured trigger.
-      const forced = await this.hooks().decide("compaction.when", {
+      // Tri-state: `true` compacts, `false` vetoes, and an abstention (`undefined`) falls through to
+      // the configured trigger, so a handler with nothing to say cannot disable the host's gate.
+      const decision = await this.hooks().decide("compaction.when", {
         sessionId: this.id,
         runId,
         messages: snapshot.messages,
@@ -1031,7 +1045,7 @@ export class RuntimeAgentSession implements Session {
         ...(turn === undefined ? {} : { turn }),
         estimatedTokens: estimateInputTokens(),
       });
-      return forced?.compact === true ? (compaction ?? {}) : undefined;
+      if (decision !== undefined) return decision.compact ? (compaction ?? {}) : undefined;
     }
     if (!compaction) return undefined;
     const compact = await resolveShouldCompact(
@@ -1060,12 +1074,12 @@ export class RuntimeAgentSession implements Session {
     options: CompactionOptions,
     runId: string | undefined,
     signal: AbortSignal | undefined,
-    trigger: "manual" | "auto",
+    trigger: CompactionReason,
   ): Promise<void> {
     try {
       await this.compactBranch(options, runId, signal, trigger);
     } catch (error) {
-      this.emit({ type: "compaction.completed", sessionId: this.id, runId, error: errorToErrorInfo(error) });
+      this.emit({ type: "compaction.completed", sessionId: this.id, runId, trigger, error: errorToErrorInfo(error) });
     }
   }
 
@@ -1073,7 +1087,7 @@ export class RuntimeAgentSession implements Session {
     options: CompactionOptions,
     runId: string | undefined,
     signal: AbortSignal | undefined,
-    trigger: "manual" | "auto",
+    trigger: CompactionReason,
   ): Promise<CompactionResult> {
     throwIfAbortedSignal(signal);
     const entries = await this.entries();
@@ -1109,7 +1123,7 @@ export class RuntimeAgentSession implements Session {
     const finalResult = { ...result, entries: [entry] };
     const throughIndex = data?.throughEntryId ? entries.findIndex((e) => e.id === data.throughEntryId) : -1;
     const entriesCompacted = throughIndex >= 0 ? throughIndex + 1 : Math.max(0, entries.length - (options.keepRecentEntries ?? 8));
-    this.emit({ type: "compaction.completed", sessionId: this.id, runId, summary: finalResult.summary, entriesCompacted });
+    this.emit({ type: "compaction.completed", sessionId: this.id, runId, summary: finalResult.summary, entriesCompacted, trigger });
     await this.rebuildHistory();
     return finalResult;
   }

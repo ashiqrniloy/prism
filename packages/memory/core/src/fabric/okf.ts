@@ -49,6 +49,58 @@ function json(value: unknown): string {
     .replace(/\u2029/g, "\\u2029");
 }
 
+/**
+ * Reserved record metadata the codec owns (never written under `prism.metadata`): `extra` holds top-level
+ * frontmatter keys this version does not know, re-emitted on every render; `unreadable` marks a note a newer
+ * version wrote, with the whole file in `raw` so every writer re-emits it byte for byte.
+ */
+export const OKF_METADATA_KEY = "okf";
+
+const KNOWN_FRONTMATTER_KEYS: ReadonlySet<string> = new Set([
+  "type",
+  "title",
+  "description",
+  "tags",
+  "keywords",
+  "status",
+  "flags",
+  "applies_to",
+  "valid_from",
+  "valid_to",
+  "supersedes",
+  "sources",
+  "generated",
+  "prism",
+]);
+
+function okfMetadata(metadata: JsonObject | undefined): Record<string, unknown> | undefined {
+  const raw = metadata?.[OKF_METADATA_KEY];
+  return isRecord(raw) ? raw : undefined;
+}
+
+/** The reason a record was classified unreadable when its file was parsed, if it was. */
+export function unreadableReason(record: Pick<MemoryVectorRecord, "metadata">): string | undefined {
+  const reason = okfMetadata(record.metadata)?.unreadable;
+  return typeof reason === "string" ? reason : undefined;
+}
+
+/**
+ * Classifies a parsed note. A fabric object whose `v` is above 1 is always unreadable; `classify` adds
+ * the reasons only the owning package can know (a field it refuses).
+ */
+export type NoteClassifier = (record: MemoryVectorRecord) => string | undefined;
+
+function builtinUnreadable(record: MemoryVectorRecord): string | undefined {
+  const version = fabricFields(record.metadata)?.v;
+  return typeof version === "number" && version > 1 ? "version>1" : undefined;
+}
+
+function withoutOkfMetadata(metadata: JsonObject | undefined): JsonObject | undefined {
+  if (metadata === undefined || !(OKF_METADATA_KEY in metadata)) return metadata;
+  const { [OKF_METADATA_KEY]: _owned, ...rest } = metadata;
+  return Object.keys(rest).length === 0 ? undefined : rest;
+}
+
 function fabricFields(metadata: JsonObject | undefined): Record<string, unknown> | undefined {
   const raw = metadata?.fabric;
   return isRecord(raw) ? raw : undefined;
@@ -83,12 +135,14 @@ function prismMap(record: MemoryVectorRecord): Record<string, unknown> {
     ...(record.embedderId === undefined ? {} : { embedder_id: record.embedderId }),
     ...(record.generation === undefined ? {} : { generation: encodeGeneration(record.generation) }),
     ...(fabric?.flags === undefined ? {} : { flags: fabric.flags }),
-    ...(record.metadata === undefined ? {} : { metadata: record.metadata }),
+    ...(withoutOkfMetadata(record.metadata) === undefined ? {} : { metadata: withoutOkfMetadata(record.metadata) }),
   };
 }
 
 /** The whole note as an OKF markdown file: frontmatter plus the record text. */
 export function renderNoteFile(record: MemoryVectorRecord): string {
+  const owned = okfMetadata(record.metadata);
+  if (typeof owned?.unreadable === "string" && typeof owned.raw === "string") return owned.raw;
   const fabric = fabricFields(record.metadata);
   const lines = [
     "---",
@@ -108,6 +162,11 @@ export function renderNoteFile(record: MemoryVectorRecord): string {
     lines.push(`sources: ${json(fabric.sourceEntryIds.map((id) => ({ id, resource: `prism-session:${id}` })))}`);
   }
   if (record.metadata?.generated !== undefined) lines.push(`generated: ${json(record.metadata.generated)}`);
+  if (isRecord(owned?.extra)) {
+    for (const [key, value] of Object.entries(owned.extra)) {
+      if (!KNOWN_FRONTMATTER_KEYS.has(key)) lines.push(`${/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : json(key)}: ${json(value)}`);
+    }
+  }
   lines.push(`prism: ${json(prismMap(record))}`);
   lines.push("---");
   return `${lines.join("\n")}\n\n${record.text}`;
@@ -137,7 +196,7 @@ function setFabric(metadata: JsonObject | undefined, patch: Record<string, unkno
 }
 
 /** Rebuild one record from its OKF file. Editable OKF fields win over `prism` duplicates. */
-export function parseNoteFile(content: string, filePath: string): MemoryVectorRecord {
+export function parseNoteFile(content: string, filePath: string, classify?: NoteClassifier): MemoryVectorRecord {
   const { frontmatter, body } = splitFrontmatter(content, filePath);
   let parsed: unknown;
   try {
@@ -180,12 +239,15 @@ export function parseNoteFile(content: string, filePath: string): MemoryVectorRe
   // The editable frontmatter `flags:` line wins over the `prism` duplicate.
   if (Array.isArray(parsed.flags)) metadata = setFabric(metadata, { flags: parsed.flags });
 
+  const extra = Object.fromEntries(Object.entries(parsed).filter(([key]) => !KNOWN_FRONTMATTER_KEYS.has(key)));
+  if (Object.keys(extra).length > 0) metadata = { ...(metadata ?? {}), [OKF_METADATA_KEY]: { extra } as JsonObject };
+
   const importance = prism.importance;
   if (importance !== undefined && (typeof importance !== "number" || !Number.isFinite(importance))) {
     throw new MemoryValidationError(`note ${filePath} has an invalid prism.importance`);
   }
   const generation = decodeGeneration(prism.generation);
-  return {
+  const record: MemoryVectorRecord = {
     id,
     tenantId,
     resourceId,
@@ -201,6 +263,10 @@ export function parseNoteFile(content: string, filePath: string): MemoryVectorRe
     ...(generation === undefined ? {} : { generation }),
     ...(metadata === undefined ? {} : { metadata }),
   };
+  const reason = builtinUnreadable(record) ?? classify?.(record);
+  if (reason === undefined) return record;
+  // Unreadable: keep the file as written. Nothing here parses it further, and a render emits `raw` unchanged.
+  return { ...record, metadata: { ...(record.metadata ?? {}), [OKF_METADATA_KEY]: { unreadable: reason, raw: content } as JsonObject } };
 }
 
 /** Working memory: a short header plus one fenced JSON block. */

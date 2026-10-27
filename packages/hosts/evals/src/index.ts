@@ -9,7 +9,14 @@ export type {
   CitationIntegrityResult,
   CitationLiveSource,
 } from "./citation-integrity.js";
+export { compareExperiments } from "./compare-experiments.js";
+export type { Split } from "./types.js";
+export type { CompareExperimentsOptions, ExperimentComparison } from "./types.js";
 export { runComparison } from "./comparison.js";
+export { calibrateJudge, labeledItemsFromFeedback } from "./calibration.js";
+export type { CalibrateJudgeOptions, LabeledItemsFromFeedbackOptions } from "./calibration.js";
+export type { CalibrationItem, CalibrationReport } from "./types.js";
+export { bradleyTerry, cohensKappa, krippendorffAlpha, spearman } from "./stats.js";
 export type {
   CuratedItemDraft,
   CuratedRun,
@@ -25,13 +32,18 @@ export { EvalDatasetError, EvalError, EvalScoreError } from "./errors.js";
 export { runExperiment } from "./experiment.js";
 export type { AppendEvaluationFeedbackInput } from "./feedback.js";
 export { appendEvaluationFeedback } from "./feedback.js";
+export { createJudgePanel } from "./judge-panel.js";
+export type { JudgePanelOptions } from "./types.js";
 export { createModelJudge } from "./judge.js";
+export { createRubricJudge, createPairwiseJudge, PAIRWISE_JUDGE_TEMPLATE_VERSION, RUBRIC_JUDGE_TEMPLATE_VERSION } from "./rubric-judge.js";
+export type { JudgeRubric, RubricJudgeOptions, PairwiseJudgeOptions } from "./types.js";
 export {
   DEFAULT_CANDIDATE_MAX_BYTES,
   DEFAULT_COMPARISON_CANDIDATES,
   DEFAULT_EVALUATION_PAGE_SIZE,
   DEFAULT_EXPERIMENT_CONCURRENCY,
   DEFAULT_JUDGE_MAX_ATTEMPTS,
+  DEFAULT_RUBRIC_JUDGE_MAX_ATTEMPTS,
   DEFAULT_JUDGE_MAX_INPUT_BYTES,
   DEFAULT_JUDGE_MAX_OUTPUT_BYTES,
   DEFAULT_JUDGE_MAX_RUBRIC_BYTES,
@@ -57,6 +69,7 @@ export {
   HARD_MAX_STEP_SCORES,
   HARD_MAX_TRIALS,
   HARD_REPORT_MAX_BYTES,
+  HARD_STATS_RESAMPLES,
   HARD_TRACE_MAX_BYTES,
   HARD_TRACE_PAGE_SIZE,
   HARD_TRACE_PAGES,
@@ -81,7 +94,14 @@ export {
 } from "./scenarios.js";
 export { defaultToAgentInput, scoreRun, scoreRunLive } from "./score.js";
 export { defineScorer } from "./scorer.js";
-export { createMemoryEvaluationStore } from "./store.js";
+export { createStateMatchScorer } from "./state-match.js";
+export type { StateMatchScorerOptions } from "./state-match.js";
+export {
+  estimateOnline, fleissKappa, benjaminiHochberg, bootstrapInterval, clusteredStandardError, mcnemarExact,
+  minimumDetectableEffect, pairedPermutationTest, pairedProportionPower, powerAnalysis,
+  paretoFrontier, passAtK, passHatK, wilsonInterval,
+} from "./stats.js";
+export { toExperimentReportRecord } from "./report-record.js";
 export { assertEvaluationThreshold, EvalThresholdError, serializeEvaluationReport } from "./threshold.js";
 export { createPersistenceTraceResolver } from "./trace.js";
 export type {
@@ -116,10 +136,6 @@ export type {
   DefineDatasetInput,
   DefineScorerInput,
   EvalManifest,
-  EvaluationQuery,
-  EvaluationRecord,
-  EvaluationStatus,
-  EvaluationStore,
   EvaluationTarget,
   EvaluationThresholds,
   EvaluationTrace,
@@ -145,3 +161,14 @@ export type {
   TraceResolverInput,
 } from "./types.js";
 export { mapPool, normalizeConcurrency, randomId, toErrorInfo } from "./util.js";
+
+export type { ScorerStats } from "./types.js";
+
+export type { ScenarioInput, UserSimulatorSpec, UserSimulator, UserSimulation } from "./types.js";
+
+export { createUserSimulator, USER_SIMULATOR_TEMPLATE_VERSION } from "./user-simulator.js";
+
+export { BUILTIN_INJECTION_ATTACKS, createInjectionDataset, injectionHooks, runInjectionSuite } from "./injection.js";
+export type { InjectionAttack, InjectionCarrier, InjectionSpec, InjectionRate, InjectionMetrics, RunInjectionSuiteOptions } from "./injection.js";
+
+export type { EvaluationTelemetrySink, EvaluationSampling, EvaluationSamplingMetadata, EstimateOnlineOptions, OnlineEstimate } from "./types.js";

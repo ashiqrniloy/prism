@@ -14,25 +14,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "bun:test";
 import type { SessionEntry } from "@arnilo/prism";
-import { buildObservationalMemoryProjection, OBSERVATIONS_RECORDED } from "@arnilo/prism-memory-observational";
-import {
-  applySourceRenames,
-  createDeletionPropagator,
-  createHashEmbedder,
-  createMemoryVectorStore,
-  HARD_REPOINT_RECORDS,
-  listInvalidatedIds,
-  MemoryAbortError,
-  MemoryLimitError,
-  type MemoryScope,
-  MemoryScopeError,
-  MemoryValidationError,
-  type MemoryVectorRecord,
-  repointSource,
-  type SourceRename,
-  type SourceRenameEvent,
-  type VectorStore,
-} from "@arnilo/prism-memory-core";
+import { OBSERVATIONS_RECORDED } from "@arnilo/prism-memory-observational";
+import { buildObservationalMemoryProjection } from "../../../observational/src/projection.js";
+import { applySourceRenames, createDeletionPropagator, createHashEmbedder, createMemoryVectorStore, listInvalidatedIds, MemoryAbortError, MemoryLimitError, type MemoryScope, MemoryScopeError, MemoryValidationError, type MemoryVectorRecord, repointSource, type SourceRename, type SourceRenameEvent, type VectorStore } from "@arnilo/prism-memory-core";
+import { HARD_REPOINT_RECORDS } from "../../../core/src/repoint.js";
 import { chunkText, indexChunks, type RagScope, retrieveContext } from "@arnilo/prism-memory-rag";
 import { createWikiRepointHandler, repointWikiSources } from "@arnilo/prism-memory-wiki";
 

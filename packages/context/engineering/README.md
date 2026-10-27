@@ -38,6 +38,8 @@ no change to the request bytes.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
+| `accounting` | `false` | Emit a `context.accounted` package event once per provider request. Any configured stage emits it too, so a host that uses the package can always measure it. |
+| `blocks.maxShare` | none | Cap the injected context blocks (prefix and tail) at this fraction of the model input cap. Mutually exclusive with `budget`. |
 | `budget.maxInputTokens` | none | Token cap for the whole draft. One of the two caps is required with `budget`. |
 | `budget.maxInputBytes` | none | Byte cap for the whole draft. |
 | `budget.reportOmissions` | `false` | Emit a `context.omissions` package event for every dropped row. |
@@ -45,6 +47,9 @@ no change to the request bytes.
 | `fold.minBytes` | `4096` | Results smaller than this are never folded. |
 | `fold.maxSummaryBytes` | `512` | Cap on the stub body (hard cap 4096). |
 | `fold.summarize` | `"truncate"` | `"truncate"` keeps the head of the payload with no model call; `{ model }` summarizes with one model call per newly folded result. |
+| `fold.keepLast` | `3` | Newest tool results batch mode never folds. Ignored when `clearAtLeastTokens` is `0`. |
+| `fold.excludeTools` | `[]` | Tool names whose results are never folded. |
+| `fold.clearAtLeastTokens` | `0` | `0` folds every eligible result per turn; a positive value clears in batches of at least that many tokens. |
 | `toolSearch.disclosure` | `"all"` | `"search"` narrows `draft.tools` to the activated and top-k set and registers `search_tools`. |
 | `toolSearch.topK` | `16` | Tools disclosed per turn (clamped to 64). |
 | `attention.maxInputTokens` | model window | Host input cap; wins over `model.limits.contextWindow`. |
@@ -57,14 +62,44 @@ no change to the request bytes.
 | `attention.trigger` | `triggerRatio` | Fold axes (`input_ratio`, `run_input_ratio`, `token_floor`), any-of, first match attributed. |
 
 `budget` and `attention` are **mutually exclusive**: both evict from the same request for the same
-reason, and configuring both fails the load with a message naming both.
+reason, and configuring both fails the load with a message naming both. `blocks` is likewise
+mutually exclusive with `budget`, because both drop context blocks from the final request.
 
 ## What it changes
 
 **Fold.** Old tool-result messages are rewritten in the provider view only. `"truncate"` keeps the
 head of the payload, capped at `fold.maxSummaryBytes`; `{ model }` calls the model once per newly
 folded result and caches the body per session by tool-call id, so a result is summarized once.
-Neither touches the store: `session.messages()` still holds the full result.
+Neither touches the store: `session.messages()` still holds the full result. The stub names the
+tool, the call id, and the original size (`[folded: read [call_1], 18,240 bytes — re-run the tool
+to see it again] …`), so the model can choose to re-run it.
+
+**Fold batch mode.** Per-turn folding rewrites one older position every turn, so from the first
+fold on every request misses the provider's prefix cache. `fold.clearAtLeastTokens` changes that:
+the package keeps a per-session frontier of cleared tool-call ids (its own state key, separate from
+the attention frontier), sums the foldable results newer than it, and folds them all only once that
+sum reaches the threshold; the newest `fold.keepLast` results never fold. Below the threshold the
+provider view is byte-identical to the previous request up to the new tail. Size it at roughly 10%
+of the input cap (about 12,000 tokens for a 128k window): one cache miss per batch has to be worth
+less than carrying the stale output it replaces. `clearAtLeastTokens: 0` keeps the per-turn
+behavior, and `keepLast` is ignored there so existing hosts see no change.
+
+**Accounting.** One pass over the final provider request emits `context.accounted` with `turn`,
+`inputCapTokens` (the model window minus output and reserve; `0` when the model declares none),
+`totalTokens` (messages plus the assembler's tool-declaration text), and `bySource` counts for
+`system`, `instructions`, `skills`, `history`, `toolResults`, `folded`, `input`, prefix `blocks`
+keyed by `metadata.source` (falling back to the title), and `tail` blocks from
+`metadata.contextBlocks`. Blocks keep the source keys the memory packages set (`om`,
+`fabric-working`, `fabric-semantic`, …); `context-files-nested` and every message without a source
+stay under `instructions`. The event carries counts and source names only, never text, and writes
+no store entry. With no cap configured the only cost is that one estimate pass.
+
+**Block share cap.** `blocks.maxShare` (0 < share ≤ 1) keeps all injected prefix and tail blocks
+under `maxShare × inputCap`. When over, whole blocks are dropped by lowest `priority` first, then
+latest-added, until the rest fit; each drop is reported as `{ source, tokens }` in the event's
+`dropped`. The system prompt and instruction layers are never entries in this budget, so they can
+neither be counted against the share nor dropped by it. If the model declares no input cap the
+cap is skipped (`inputCapTokens: 0`) rather than dropping everything.
 
 **Tool search.** The handler narrows `draft.tools` to the activated set plus the top-k for the turn
 and publishes that list as the index `search_tools` scores against. The index is built from
@@ -77,7 +112,7 @@ first. A still-firing gate after every eligible row fails the run closed with `A
 (the honest answer is a new prefix, not silent deletion). The sticky frontier and the fold ledger
 live in the session's own package state, so a reopened session re-applies the same stub bytes. Each
 mutated turn emits an `attention.compiled` package event with counts and the measured ratio inputs.
-Past `compactRatio`, the `compaction.when` handler asks for compaction.
+Past `compactRatio`, the `compaction.when` handler asks for compaction; below it the handler abstains, so a host trigger (or the kernel `thresholdEntries` fallback) can still fire.
 
 **Budget.** The whole draft is measured — messages, context blocks another handler added, and tool
 declarations. Droppable rows are evicted oldest-first, tool results before other history, then the

@@ -140,3 +140,23 @@ void describe("persistence schema model", () => {
     await assert.rejects(() => assertTenantScopedQueryIsolation(async (tenantId) => [{ id: "shared", tenantId }]), /Tenant collision/);
   });
 });
+
+it("evaluation migration preserves shipped checksums for steps 1–10", () => {
+  assert.deepEqual(
+    createPersistenceMigrationContract()
+      .steps.slice(0, 10)
+      .map((step) => step.checksum),
+    [
+      "1076a7ec27098334a839403e1eaa401ece2fbb7079647d8c60669a315a797aed",
+      "611372c6b892358a43138cc051330be68a2761eb745a75f8467d13a591ab3196",
+      "c851934ffe7efe005504c80ace432143b09e9fd55f677d3169535477a640e1e1",
+      "b5dab838ef42a425ea878c78b14322e64ccacd427ffede54ffeef74429c90335",
+      "8548b1e5e5ceeb29042522c9679319b20214a483f49bb059ad203f32c4ebc27c",
+      "12b4a8281cd7b0ff60db51cbdca8012c4ebd459f07f14301588fde5703dbc6d9",
+      "7301f3ba7598ff5a12069e9243e21799c7a6616f4f8efc1b13acecf62fff990e",
+      "f4b7bb20e97dcadfbf3dd921f3c762659c1f4f8271fea15290adbaaa22d85f99",
+      "4e0cd1848160a1209f7de80141d1dcd400ee5aa625a22942a8f6b5a95d5a1e6b",
+      "871434bf1c688a29f8d0e437ccfd2f213b5ca360df267215fad0642d07eac7f5",
+    ],
+  );
+});

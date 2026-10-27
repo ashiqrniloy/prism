@@ -116,6 +116,7 @@ from `{ ...agent.config }` reloads independently.
 | `models.embeddings(ref?)` | Needs `models`. The model's embeddings adapter (see [Models](models.md)). |
 | `models.decisions(ref?)` | Needs `models`. The model's typed decision adapter, with the resolved model id bound (see [Decisions](decisions.md)). |
 | `credentials.resolve(ref)` | Needs `credentials`. Resolves `env:`/`keyring:` refs through the `credentials` slot and returns a `Secret`. The value is added to the agent's secret set. |
+| `credentials.store(ref, secret)` / `credentials.delete(ref)` | Needs `credentials` **and** `credentials:write`. Writes a rotated credential through the slot, which is the only way a package can persist one (a refresh token rotates, so keeping it in memory loses the login). `env:` refs are never writable (`CredentialRefNotWritableError`, `credential_ref_unsupported`); a slot with no `store` fails closed (`CredentialStoreUnavailableError`, `credential_store_unavailable`); the written value joins the agent's secret set. Without the capability both members are `undefined` rather than throwing. |
 | `state.session(key, initial)` / `state.agent(key, initial)` | Session state persisted as `package_state` entries (needs `session-state`), and process memory. See "Session state and background work". |
 | `services.provide / consume / require` | A duplicate is `service_conflict`. `consume` returns `undefined` when absent, and a later package's service is visible at call time. `require` throws `missing_service`. |
 | `host.ui.request(...)` | Needs `host-ui`. Answers `unavailable` with no UI attached. `package` is stamped by the kernel. |
@@ -225,6 +226,8 @@ packages again, so a `PackageInstance` is reusable across agents and a config cl
   gets, and the host-driver seam it used to carry is gone.
 - **Credentials.** `credentials.resolve` returns the value to the package and adds it to the agent's
   secret set, so events, status notes, logs, hook errors, and load errors redact it from then on.
+  `credentials.store`/`delete` write through the same slot for a package that declares
+  `credentials:write` — the OAuth refresh-token path — and a written value joins the set the same way.
 
 ### `disable`
 
@@ -272,6 +275,7 @@ access. They are not a process sandbox. A call without the capability throws `Pa
 | `background` | `SessionContext.background` |
 | `models` | `models.client`, `models.embeddings`, `models.decisions` |
 | `credentials` | `credentials.resolve` |
+| `credentials:write` | `credentials.store`, `credentials.delete` (both are `undefined` without it) |
 | `session-state` | `state.session`, `state.log`, `SessionContext.entries` |
 
 ### Errors
@@ -328,11 +332,12 @@ rejects every keyword it does not implement, so a schema can never pass a check 
 | `oneOf`, `anyOf` | Exactly one, or at least one, branch must match. |
 | `title`, `description` | Annotations. |
 | `x-prism-secret` | `true` marks a string field that holds a credential ref (below). |
+| `x-prism-stability` | `contract` or `tuning`; documentation only, ignored by validation (a package README explains it). |
 
 Not supported, and rejected with `config_schema_unsupported`: `$ref` and `$defs`,
 `patternProperties`, `allOf`, `not`, `if`/`then`/`else`, `format`, `uniqueItems`, `multipleOf`,
 `exclusiveMinimum`/`exclusiveMaximum`, `minProperties`/`maxProperties`, `dependencies`, an
-array-valued `type`, tuple-form `items`, and any other `x-*` key. A malformed supported keyword
+array-valued `type`, tuple-form `items`, and any other `x-*` key beyond the two above. A malformed supported keyword
 (for example `"minLength": -1`) gets the same code.
 
 Config is JSON only. A function, class instance, symbol, bigint, non-finite number, or cyclic value
@@ -406,7 +411,7 @@ A rename, addition, or removal fails `src/__tests__/package-api-freeze.test.ts`,
 
 `PackageAPI` members: `name`, `config`, `configSources`, `packages`, `hooks`, `slots`, `tools`, `skills`, `providers`, `commands`, `models`, `credentials`, `state`, `services`, `host`, `events`, `status`, `log`, `onDispose`.
 
-`Capability`: `models`, `host-ui`, `session-state`, `background`, `credentials`, `slot:loop`, `slot:compaction`, `slot:store`, `slot:credentials`.
+`Capability`: `models`, `host-ui`, `session-state`, `background`, `credentials`, `credentials:write`, `slot:loop`, `slot:compaction`, `slot:store`, `slot:credentials`.
 
 `AgentConfig` package fields: `packages`, `packageConfig`, `disable`.
 

@@ -4,6 +4,9 @@ import type { ErrorInfo } from "./content.js";
 import type { SessionEntry } from "./session.js";
 import type { SessionContext } from "../session-context.js";
 
+/** Who asked for a compaction: the kernel's configured trigger, a manual `session.compact()`, or overflow recovery. */
+export type CompactionReason = "manual" | "auto" | "overflow";
+
 export interface CompactionContext {
   readonly sessionId: string;
   /**
@@ -13,7 +16,7 @@ export interface CompactionContext {
   readonly session?: SessionContext;
   readonly entries: readonly SessionEntry[];
   readonly keepRecentEntries?: number;
-  readonly trigger?: "manual" | "auto" | string;
+  readonly trigger?: CompactionReason | string;
   readonly secrets?: readonly (string | undefined)[];
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly signal?: AbortSignal;
@@ -91,7 +94,7 @@ export function assertCompactionTrigger(trigger: CompactionTrigger): CompactionT
  * .compaction` disables compaction entirely.
  */
 export interface CompactionOptions {
-  /** Entry-count gate for the kernel's default auto trigger; ignored when a `compaction.when` handler is registered. */
+  /** Entry-count gate for the kernel's default auto trigger; used only when every `compaction.when` handler abstains. */
   readonly thresholdEntries?: number;
   readonly keepRecentEntries?: number;
   readonly maxSummaryChars?: number;
@@ -106,8 +109,6 @@ export interface ResolveShouldCompactOptions {
   readonly trigger?: CompactionTrigger;
   /** Session gate: compact when the branch holds more than this many entries. */
   readonly thresholdEntries?: number;
-  /** Attach-loop gate: compact when the estimated input is at or above this many tokens. */
-  readonly compactAfterTokens?: number;
 }
 
 /** Everything a compaction decision reads. Estimates only — never raw payloads. */
@@ -147,7 +148,6 @@ export async function resolveShouldCompact(options: ResolveShouldCompactOptions,
   const trigger = options.trigger;
   if (trigger === undefined) {
     if (options.thresholdEntries !== undefined) return input.entryCount > options.thresholdEntries;
-    if (options.compactAfterTokens !== undefined) return estimateOnce() >= options.compactAfterTokens;
     return false;
   }
   assertCompactionTrigger(trigger);
@@ -182,7 +182,7 @@ export interface CompactionEntryData {
   readonly throughEntryId?: string;
   readonly keepEntryIds?: readonly string[];
   readonly strategy?: string;
-  readonly trigger?: "manual" | "auto" | string;
+  readonly trigger?: CompactionReason | string;
 }
 
 export interface RetryPolicy {

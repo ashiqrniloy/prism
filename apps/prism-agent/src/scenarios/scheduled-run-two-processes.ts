@@ -58,7 +58,7 @@ export async function scheduledRunTwoProcesses(options: ScheduledRunOptions): Pr
   const clockPath = join(options.root, "clock");
   const configPath = join(options.root, "prism-agent.json");
   const storePath = join(options.root, "s.db");
-  const model = { provider: "mock", model: "m" };
+  const model = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
   const config: HostConfig = {
     models: { orchestrator: model, coding: model, research: model },
     storePath,

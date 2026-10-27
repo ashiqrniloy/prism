@@ -17,7 +17,7 @@ mock.module("playwright-core", () => ({
   },
 }));
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 const BIN = join(dirname(fileURLToPath(import.meta.url)), "../../bin/prism-agent.ts");
 const PLANTED = "planted-secret-value-9f3a";
 

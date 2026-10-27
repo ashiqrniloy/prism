@@ -7,7 +7,7 @@ import { DEFAULT_MAX_FAN_OUT } from "@arnilo/prism-workflows";
 import { REMOTE_ENDPOINT, type HostConfig } from "../host/index.js";
 import { gateThrowFails, orchestratedWorkflow } from "../scenarios/orchestrated-workflow.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 function config(root: string): HostConfig {
   return {

@@ -7,6 +7,7 @@ import type { RemoteAgentFactory } from "../testing.js";
 const modulePath = process.argv[2];
 const stateDirectory = process.argv[3];
 assert.ok(modulePath && stateDirectory, "expected factory module and state directory");
+// host-gate: the factory module path is this fixture's CLI argument.
 const create: RemoteAgentFactory = (await import(modulePath)).create;
 const hostUi = remoteHostUi();
 const agent = await create({ hostUi, stateDirectory });

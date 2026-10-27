@@ -58,7 +58,7 @@ to `searchSessions` (record-scoped) but not to `listSessions`.
 Companion stores ship as named exports from the same persistence object, because they share one
 database and one migration history: `createSqliteCheckpointStore`, `createSqliteLeaseStore`,
 `createSqlitePersistenceLifecycle`, the migration/DDL constants (`MIGRATION_001_INIT` …
-`MIGRATION_009_RUN_PROMPT_VERSION`, `ADAPTER_TABLE_NAMES`, `ADAPTER_INDEX_NAMES`), and
+`MIGRATION_011_EVALUATIONS`, `ADAPTER_TABLE_NAMES`, `ADAPTER_INDEX_NAMES`), and
 `applySqliteMigrations`/`assertSqliteSchemaReady`/`verifyMigrationIdempotency`. Their *contracts*
 (`CheckpointStore`, `LeaseStore`) are the `checkpoints`/`leases` service contracts in
 `@arnilo/prism-workflows`; this package depends on them with `import type` only.
@@ -108,3 +108,19 @@ await persistence.append({ id: "e1", sessionId: "s1", timestamp: new Date().toIS
 MIT
 
 - Session links (`SessionOptions.parent` / `actor`): migration `010_session_links` adds nullable, indexed `agent_id`, `workflow_run_id`, `delegation_id`, `actor_kind`, `actor_agent`, and `actor_vendor` columns to `prism_sessions` (beside `parent_session_id`). The session's first `metadata` entry stays the source of truth and `append` mirrors it into the row, so `fork` and export carry it. `listSessions` and `searchSessions` filter on the columns. A database from before the migration opens, gains the columns, and lists old sessions with absent links.
+
+## Durable evaluations
+
+`createSqlitePersistence` returns `evaluations` and `experiments`. Migration
+`011_evaluations` adds `prism_evaluations` and `prism_experiment_reports` in place,
+with owner/created and dataset indexes, plus evaluation run, experiment, session,
+and scorer indexes. Each append is one insert (one row per evaluation or experiment
+summary), validated and capped at 1 MiB by `@arnilo/prism-store-codecs`.
+`evaluationRedactor` is a code-only factory option for reasons, errors and metadata.
+
+Queries match all three ownership fields exactly; omitted fields match only absent
+fields, so an unscoped query sees only unowned records. Queries default to 100 rows
+(maximum 1,000); use the returned opaque `nextCursor` for the next page.
+`experiments.latest({ datasetId, ...ownership, manifestMatch })` returns the newest
+matching content-free summary. Session deletion and retention remove associated
+evaluations; experiment summaries remain independent of session lifetime.

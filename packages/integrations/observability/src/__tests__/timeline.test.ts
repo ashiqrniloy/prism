@@ -716,3 +716,148 @@ test("workflow resume projects the same restore audit shape", () => {
   ]);
   assert.equal(neverResumed.restore, undefined);
 });
+
+// ─── Approval decisions (plan 197 Task 2) ────────────────────────────────────
+
+test("timeline_hitl_step_resolves_to_denied_on_resume", () => {
+  const events: AgentEvent[] = [
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.suspended", {
+      version: 1,
+      interruption: {
+        kind: "tool_approval",
+        reason: "approval_required",
+        toolCallId: "c1",
+        toolName: "delete_row",
+        pendingDecisions: [
+          { approvalId: "a1", kind: "tool_approval", toolCallId: "c1", scope: { toolName: "delete_row" }, reason: "approval_required" },
+        ],
+      },
+    }),
+    agentEvent("decision.resolved", { decisions: [{ toolCallId: "c1", outcome: "deny" }], via: "resume" }),
+    agentEvent("run.completed", { status: "completed" }),
+  ];
+
+  const timeline = projectAgentTimeline(events);
+  const hitl = timeline.steps.filter((s) => s.kind === "hitl");
+  assert.equal(hitl.length, 1);
+  assert.equal(hitl[0].status, "denied");
+  assert.equal(hitl[0].metadata?.toolCallId, "c1");
+  assert.equal(hitl[0].metadata?.via, "resume");
+  // The run step keeps today's behavior.
+  assert.equal(timeline.steps.find((s) => s.kind === "run")?.status, "succeeded");
+});
+
+test("timeline_inline_approval_adds_approved_hitl_step", () => {
+  const events: AgentEvent[] = [
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("decision.resolved", { decisions: [{ toolCallId: "c1", outcome: "allow" }], via: "inline" }),
+    agentEvent("tool.started", { call: { id: "c1", name: "search", arguments: { q: "hello" } } }),
+    agentEvent("tool.completed", { result: { toolCallId: "c1", name: "search", value: "ok" }, metadata: { durationMs: 1 } }),
+    agentEvent("run.completed", { status: "completed" }),
+  ];
+
+  const timeline = projectAgentTimeline(events);
+  const hitl = timeline.steps.filter((s) => s.kind === "hitl");
+  const tool = timeline.steps.find((s) => s.kind === "tool");
+  assert.equal(hitl.length, 1);
+  assert.equal(hitl[0].status, "approved");
+  assert.equal(hitl[0].metadata?.via, "inline");
+  assert.ok(tool && hitl[0].order < tool.order, "approval step must precede the tool step");
+});
+
+test("timeline_batch_suspension_has_one_hitl_step_per_call", () => {
+  const events: AgentEvent[] = [
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.suspended", {
+      version: 1,
+      interruption: {
+        kind: "tool_approval",
+        reason: "approval_required",
+        pendingDecisions: [
+          { approvalId: "a1", kind: "tool_approval", toolCallId: "c1", scope: { toolName: "write_file" }, reason: "approval_required" },
+          { approvalId: "a2", kind: "tool_approval", toolCallId: "c2", scope: { toolName: "delete_row" }, reason: "approval_required" },
+        ],
+      },
+    }),
+    agentEvent("decision.resolved", {
+      decisions: [
+        { toolCallId: "c1", outcome: "allow" },
+        { toolCallId: "c2", outcome: "deny" },
+      ],
+      via: "resume",
+    }),
+    agentEvent("run.completed", { status: "completed" }),
+  ];
+
+  const hitl = projectAgentTimeline(events).steps.filter((s) => s.kind === "hitl");
+  assert.deepStrictEqual(
+    hitl.map((s) => [s.metadata?.toolCallId, s.status]),
+    [
+      ["c1", "approved"],
+      ["c2", "denied"],
+    ],
+  );
+});
+
+test("timeline_hitl_metadata_carries_no_arguments", () => {
+  const events: AgentEvent[] = [
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.suspended", {
+      version: 1,
+      interruption: {
+        kind: "tool_approval",
+        reason: "approval_required",
+        pendingDecisions: [
+          {
+            approvalId: "a1",
+            kind: "tool_approval",
+            toolCallId: "c1",
+            scope: { toolName: "delete_row", effectKind: "write", argumentsHash: "sha256:abc" },
+            reason: "approval_required",
+          },
+        ],
+      },
+    }),
+    agentEvent("decision.resolved", { decisions: [{ toolCallId: "c1", outcome: "allow" }], via: "resume" }),
+    agentEvent("run.completed", { status: "completed" }),
+  ];
+
+  // Even with I/O capture on, a decision step never carries payload.
+  const hitl = projectAgentTimeline(events, { content: "full_io" }).steps.filter((s) => s.kind === "hitl");
+  assert.equal(hitl.length, 1);
+  assert.deepStrictEqual(Object.keys(hitl[0].metadata ?? {}).sort(), ["approvalId", "toolCallId", "toolName", "via"]);
+  assert.equal(hitl[0].input, undefined);
+  assert.equal(hitl[0].output, undefined);
+  assert.doesNotMatch(JSON.stringify(hitl[0]), /sha256:abc/);
+});
+
+test("timeline_suspension_without_tool_call_keeps_one_hitl_step", () => {
+  const events: AgentEvent[] = [
+    agentEvent("run.started"),
+    agentEvent("turn.started", { turn: 1, metadata: { providerId: "mock", model: "gpt-4", attempt: 1 } }),
+    agentEvent("run.suspended", {
+      version: 1,
+      interruption: {
+        kind: "elicitation",
+        reason: "input_required",
+        pendingDecisions: [{ approvalId: "a1", kind: "elicitation", scope: {}, reason: "input_required" }],
+      },
+    }),
+    agentEvent("decision.resolved", { decisions: [{ toolCallId: "c1", outcome: "allow" }], via: "resume" }),
+    agentEvent("run.completed", { status: "completed" }),
+  ];
+
+  const hitl = projectAgentTimeline(events).steps.filter((s) => s.kind === "hitl");
+  assert.deepStrictEqual(
+    hitl.map((s) => [s.name, s.status]),
+    [
+      ["input_required", "suspended"],
+      ["approval", "approved"],
+    ],
+  );
+});

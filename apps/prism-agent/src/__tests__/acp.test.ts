@@ -8,7 +8,7 @@ import { mockProvider, providerDone, providerTextDelta, providerToolCall, toolCa
 import { type ServeAcpOptions, serveAcp } from "@arnilo/prism-acp";
 import { createCodingWorker, type HostConfig } from "../host/index.js";
 
-const MODEL = { provider: "mock", model: "m" };
+const MODEL = { provider: "mock", model: "m", limits: { contextWindow: 64_000, maxOutputTokens: 0 } };
 
 type Stream = NonNullable<ServeAcpOptions["stream"]>;
 type Wire = Stream extends { readable: ReadableStream<infer Message> } ? Message : never;

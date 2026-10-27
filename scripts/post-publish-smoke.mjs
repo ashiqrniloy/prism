@@ -85,7 +85,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAgent, definePackage, providerTextDelta, providerDone } from "@arnilo/prism";
 import { providerPackage } from "@arnilo/prism/provider-kit";
-import { createHashEmbedder, createMemory, createMemoryFabric, createScopedMemoryPolicy } from "@arnilo/prism-memory-fabric";
+import { createHashEmbedder } from "@arnilo/prism-memory-core";
+import { createMemory, createMemoryFabric, createScopedMemoryPolicy } from "@arnilo/prism-memory-fabric";
 import hooksJson, { hookCommandHash } from "@arnilo/prism-hooks-json";
 
 const checks = [];

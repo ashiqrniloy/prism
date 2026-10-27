@@ -32,9 +32,9 @@
       "name": "@arnilo/prism-providers",
       "range": "*",
       "reused": false,
-      "successor": "@arnilo/prism-provider-{hyper,opencode-go,typesafe,laya} and @arnilo/prism/provider-kit",
+      "successor": "@arnilo/prism-provider-{hyper,laya,liquid,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit",
       "anchor": "#012-family-package-native-package-map",
-      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-provider-{hyper,opencode-go,typesafe,laya} and @arnilo/prism/provider-kit. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+      "message": "Legacy 0.12 package. Prism 0.13+: @arnilo/prism-provider-{hyper,laya,liquid,openai-codex,opencode-go,openrouter,typesafe} and @arnilo/prism/provider-kit. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
     },
     {
       "name": "@arnilo/prism-coding-tools",
@@ -234,15 +234,15 @@
       "reused": false,
       "successor": "@arnilo/prism/provider-kit",
       "anchor": "#012-family-package-native-package-map",
-      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+      "message": "Not shipped in Prism 0.13.0. For ChatGPT-plan access use @arnilo/prism-provider-openai-codex (OpenAI's sanctioned Sign in with ChatGPT flow); otherwise build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
     },
     {
       "name": "@arnilo/prism-provider-openrouter",
-      "range": "*",
-      "reused": false,
-      "successor": "@arnilo/prism/provider-kit",
+      "range": "<0.13.0",
+      "reused": true,
+      "successor": "@arnilo/prism-provider-openrouter@0.13.0",
       "anchor": "#012-family-package-native-package-map",
-      "message": "Not shipped in Prism 0.13.0. Build a provider on @arnilo/prism/provider-kit: https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
+      "message": "Legacy 0.12 release. Prism 0.13+ republishes this name at 0.13.0: @arnilo/prism-provider-openrouter@0.13.0. https://github.com/ashiqrniloy/prism/blob/main/docs/migrate-to-0.13.md#012-family-package-native-package-map"
     },
     {
       "name": "@arnilo/prism-provider-vertex",

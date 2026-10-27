@@ -3,23 +3,24 @@
  * per cluster. The planner is pure — grouping is deterministic and bounded — so the pass in
  * `create.ts` only performs the writes the plan names.
  */
+
+import type { JsonObject, ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism";
 import { lexicalDice, lexicalTerms } from "@arnilo/prism-memory-core";
 import { measureWorkerJson, type ResolvedMemoryWorkerLimits, runMemoryWorkerLoop } from "@arnilo/prism-memory-observational";
-import type { JsonObject, ModelClient, SecretRedactor, ToolDefinition } from "@arnilo/prism";
-import { mergeNoteLinks } from "../links.js";
 import { unionStrings } from "../consolidate.js";
-import { MAX_USE_EVENTS, type MemoryNoteUseEvent, readUseEvents } from "./events.js";
+import { mergeNoteLinks } from "../links.js";
+import { scanScopedMemoryContent } from "../scoped/trust.js";
 import type { MemoryNoteLink, MemoryNoteMetadata, MemoryNotePromotionStamp } from "../types.js";
 import { type CapacityNote, compareNotes } from "./capacity.js";
+import { MAX_USE_EVENTS, type MemoryNoteUseEvent, readUseEvents } from "./events.js";
 import { type StorageWeights, storageStrength } from "./strength.js";
-import { scanScopedMemoryContent } from "../scoped/trust.js";
 
 /** Cosine-free floor for "the same note twice": term-set Dice over the active lexical mode. */
 export const DEFAULT_DUPLICATE_DICE = 0.8;
 export const MAX_DUPLICATE_DICE = 1;
 export const MIN_DUPLICATE_DICE = 0.5;
 export const MAX_EPISODE_CLUSTER = 50;
-/** Clusters smaller than this are two episodes, not a history; provisional until plan 188.6. */
+/** Clusters smaller than this are two episodes, not a history; a tuning default. */
 export const DEFAULT_EPISODE_MIN_CLUSTER = 5;
 
 export interface DuplicateGroup {
@@ -124,10 +125,7 @@ export function mergedMetadata(survivor: MemoryNoteMetadata, others: readonly Me
   const keywords = sorted.reduce<readonly string[] | undefined>((all, note) => unionStrings(all, note.keywords), undefined);
   const tags = sorted.reduce<readonly string[] | undefined>((all, note) => unionStrings(all, note.tags), undefined);
   const links = sorted.reduce<readonly MemoryNoteLink[] | undefined>((all, note) => mergeNoteLinks(all, note.links), undefined);
-  const sourceEntryIds = sorted.reduce<readonly string[] | undefined>(
-    (all, note) => unionStrings(all, note.sourceEntryIds),
-    undefined,
-  );
+  const sourceEntryIds = sorted.reduce<readonly string[] | undefined>((all, note) => unionStrings(all, note.sourceEntryIds), undefined);
   const { mergedInto: _mergedInto, ...base } = survivor;
   const promotion = bestPromotion(sorted);
   return {
